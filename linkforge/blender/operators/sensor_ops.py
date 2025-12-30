@@ -57,7 +57,7 @@ class LINKFORGE_OT_create_sensor(Operator):
             pass
 
         # Create Empty at 0,0,0 initially (we will snap it)
-        bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
+        bpy.ops.object.empty_add(type="SPHERE", location=(0, 0, 0))
         sensor_empty = context.active_object
 
         # Ensure unique name
