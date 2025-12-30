@@ -4,7 +4,11 @@
             "release-type": "simple",
             "package-name": "linkforge",
             "extra-files": [
-                "blender_manifest.toml"
+                "blender_manifest.toml",
+                "pyproject.toml",
+                "linkforge/__init__.py",
+                "docs/source/conf.py",
+                "README.md"
             ],
             "changelog-sections": [
                 {
