@@ -9,7 +9,8 @@
 [![Documentation](https://readthedocs.org/projects/linkforge/badge/?version=latest)](https://linkforge.readthedocs.io/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/download/)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-yellow.svg)](https://www.python.org/)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 LinkForge is a professional Blender extension for roboticists.
 
@@ -23,6 +24,17 @@ LinkForge removes that friction. Model your robot in Blender as naturally as scu
 4.  **Export Production Code**: Generate clean, validated URDF/XACRO files.
 
 **From idea → robot → ready for simulation.** All inside Blender.
+
+### 🛠️ Technical Specifications
+
+| Feature | Support | Details |
+| :--- | :--- | :--- |
+| **Joint Types** | ✅ Full | Fixed, Revolute, Continuous, Prismatic, Planar, Floating |
+| **Physics** | ✅ Full | Automatic Mass & Inertia (Primitive & Mesh) |
+| **Sensors** | ✅ Full | Camera, LiDAR, IMU, GPS, Depth, Contact |
+| **Formats** | ✅ Full | URDF 1.0, XACRO (Macros & Properties) |
+| **Dynamics** | ✅ Full | Damping, Friction, Safety Limits |
+| **Control** | ✅ Full | `ros2_control` & Gazebo Classic/Sim |
 
 ## 🚀 Key Features
 
@@ -195,42 +207,27 @@ LinkForge uses a "Self-Contained" bundling strategy for wheels. To update or add
 - [Example Files](https://github.com/arounamounchili/linkforge/tree/main/examples) - Sample URDF files
 - [Community Forum](https://github.com/arounamounchili/linkforge/discussions) - Ask questions
 
+## 🗺️ Roadmap
+
+- [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
+- [ ] **v1.1.0**: Enhanced XACRO optimization & material sharing.
+- [ ] **v1.2.0**: Integration with `moveit_setup_assistant` style kinematic validation.
+- [ ] **v2.0.0**: Direct Isaac Sim / Omniverse bridge.
+
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Quick Start for Contributors
-
-```bash
-# Clone repository
-git clone https://github.com/arounamounchili/linkforge.git
-cd linkforge
-
-# Install dependencies
-uv sync
-
-# Run tests
-uv run pytest
-
-# Build extension
-python3 build_extension.py
-```
+We welcome contributions! LinkForge is an community-driven project.
+- 🙋 Review our [Contributing Guide](CONTRIBUTING.md).
+- 🏗️ Check our [Architecture](ARCHITECTURE.md) to understand the internals.
+- 💬 Join the conversation on [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).
 
 ## 📄 License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- ROS and Gazebo communities for URDF/XACRO standards
-- Blender Foundation for the amazing 3D software
-
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/arounamounchili/linkforge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions)
+This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-**Made with ❤️ for roboticists worldwide**
+<p align="center">
+  <b>Made with ❤️ for roboticists worldwide</b><br/>
+  <i>Precision engineering meets creative modeling.</i>
+</p>

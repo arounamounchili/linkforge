@@ -2,24 +2,27 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  check-and-build:
-    name: Check & Build
+  tests:
+    name: Tests (${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           enable-cache: true
 
       - name: Install dependencies
@@ -49,8 +52,21 @@ jobs:
 
       - name: Upload artifact
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: blender-extension
           path: dist/linkforge-*.zip
           retention-days: 7
+
+  check-and-build:
+    name: Check & Build
+    needs: tests
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Pass if all tests succeeded
+        if: ${{ needs.tests.result == 'success' }}
+        run: exit 0
+      - name: Fail if tests failed
+        if: ${{ needs.tests.result != 'success' }}
+        run: exit 1

@@ -97,6 +97,19 @@ See [ARCHITECTURE](https://linkforge.readthedocs.io/en/latest/explanation/ARCHIT
 
 ## Development Workflow
 
+```mermaid
+graph LR
+    A[Fork & Clone] --> B[Feature Branch]
+    B --> C[Code & Test]
+    C --> D[pre-commit Checks]
+    D --> E[Pull Request]
+    E --> F{Review}
+    F -- Fixes --> C
+    F -- Approved --> G[Merge to main]
+    G --> H[Automated Release PR]
+    H --> I[Tag & Release]
+```
+
 ### 1. Create a Feature Branch
 
 ```bash
