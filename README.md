@@ -10,7 +10,6 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/download/)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 LinkForge is a professional Blender extension for roboticists.
 
@@ -96,35 +95,7 @@ LinkForge removes that friction. Model your robot in Blender as naturally as scu
 3. Edit in Blender
 4. Export back to URDF/XACRO
 
-## 🛠️ Workflow
 
-LinkForge follows a structured **Forge → Perceive → Control → Export** workflow:
-
-### 1. Forge Links
-- Convert meshes to robot links with automatic naming
-- Generate optimized collision geometry
-- Calculate physics properties (mass, inertia)
-- Reversible actions (safely remove links)
-
-### 2. Forge Joints
-- Connect links with precise joint configuration
-- Visual feedback for joint axes in viewport
-- Full CRUD operations (Create, Read, Update, Delete)
-- Support for all URDF joint types
-
-### 3. Perceive (Sensors)
-- Attach sensors to links
-- Configure update rates, resolutions, noise models
-- Gazebo plugin integration
-
-### 4. Control (Transmissions)
-- Configure hardware interfaces (Position, Velocity, Effort)
-- Set up mechanical reductions and joint limits
-- Auto-generate `ros2_control` tags
-
-### 5. Validate & Export
-- Built-in validator catches common errors
-- Export to URDF or XACRO with mesh handling
 
 ## 📚 Examples
 
@@ -136,10 +107,12 @@ Complete examples in `examples/` directory:
 - `quadruped_robot.urdf`: A 4-legged robot demonstrating complex kinematic chains and multi-link assemblies.
 
 
-## 🎓 Documentation
+## 📚 Documentation
 
-- **[User Guide](https://linkforge.readthedocs.io/en/latest/tutorials/building_diff_drive.html)** - Getting started and usage instructions
-- **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** - Programmatic usage
+- **[User Guide](https://linkforge.readthedocs.io/en/latest/tutorials/index.html)** - Comprehensive tutorials and getting started.
+- **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** - Technical reference for developers.
+- **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** - System design and internals.
+- **[CHANGELOG](CHANGELOG.md)** - Version history.
 - **Examples**: [examples/](https://github.com/arounamounchili/linkforge/tree/main/examples)
 
 ## 💻 Development
@@ -194,13 +167,7 @@ LinkForge uses a "Self-Contained" bundling strategy for wheels. To update or add
 1. Open `build_extension.py` and update the `DEP_CONFIG` dictionary.
 2. Run `python3 build_extension.py sync` to download wheels for Windows, Linux, and Mac (Python 3.10 & 3.11).
 
-## 📚 Documentation
 
-- **[Read the Docs](https://linkforge.readthedocs.io/)** - Complete documentation
-- **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** - System design with diagrams
-- **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/)** - Programmatic usage
-- **[Getting Started](https://linkforge.readthedocs.io/en/latest/tutorials/index.html)** - User guide
-- **[CHANGELOG](CHANGELOG.md)** - Version history
 
 ## 🎓 Learning Resources
 
@@ -210,9 +177,10 @@ LinkForge uses a "Self-Contained" bundling strategy for wheels. To update or add
 ## 🗺️ Roadmap
 
 - [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
-- [ ] **v1.1.0**: Enhanced XACRO optimization & material sharing.
-- [ ] **v1.2.0**: Integration with `moveit_setup_assistant` style kinematic validation.
-- [ ] **v2.0.0**: Direct Isaac Sim / Omniverse bridge.
+- [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
+- [ ] **v1.2.0**: **MJCF (MuJoCo) Export Support** (High demand for RL).
+- [ ] **v1.3.0**: **Kinematic Validation** (MoveIt style checks).
+- [ ] **v2.0.0**: **Omniverse / USD Bridge** (For Isaac Sim).
 
 ## 🤝 Contributing
 
