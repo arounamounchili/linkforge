@@ -813,7 +813,7 @@ class XACROGenerator(URDFGenerator):
         # Add XML declaration and header comment
         from datetime import datetime
 
-        from linkforge import __version__
+        from ... import __version__
 
         header = f"""\
 <?xml version="1.0"?>
