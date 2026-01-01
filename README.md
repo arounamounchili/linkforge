@@ -14,15 +14,15 @@
 LinkForge is a professional Blender extension for roboticists.
 
 **In robotics, creativity starts in your head — but getting that idea into a simulator usually means hours of writing XML, fixing joint limits, and fighting coordinate systems.**
-
-LinkForge removes that friction. Model your robot in Blender as naturally as sculpting a 3D scene, then let LinkForge handle the engineering:
-
-1.  **Forge Structure**: Define links, joints, masses, and inertias visually.
-2.  **Perceive Environment**: Attach sensors like LiDAR, IMU, and Depth Cameras.
-3.  **Control Movement**: Configure transmissions and `ros2_control` interfaces.
-4.  **Export Production Code**: Generate clean, validated URDF/XACRO files.
-
-**From idea → robot → ready for simulation.** All inside Blender.
+ 
+ LinkForge removes that friction. It acts as a **bridge between creativity and engineering**, allowing you to model your robot in Blender as naturally as sculpting a 3D scene, while guaranteeing the output is rigorous, simulation-ready code.
+ 
+ 1.  **Forge Structure**: Define links, joints, masses, and inertias visually.
+ 2.  **Perceive Environment**: Attach sensors like LiDAR, IMU, and Depth Cameras.
+ 3.  **Control Movement**: Configure transmissions and `ros2_control` interfaces.
+ 4.  **Export Production Code**: Generate clean, validated URDF/XACRO files.
+ 
+ **From idea → robot → ready for simulation.** All inside Blender.
 
 ### 🛠️ Technical Specifications
 
@@ -39,7 +39,7 @@ LinkForge removes that friction. Model your robot in Blender as naturally as scu
 
 - **Bidirectional Workflow**: Seamlessly import existing URDF/XACRO files for editing or build complex robot models from scratch using Blender's native tools.
 - **Production-Ready Export**: Generates strictly compliant URDF/XACRO files optimized for ROS, ROS 2, and Gazebo. Output is clean, validated, and requires no manual post-processing.
-- **Smart Validation**: Built-in integrity checker inspects robot topology, physics data, and joint limits to prevent common simulation crashes before they happen.
+- **Smart Validation (The Safety Net)**: Built-in integrity checker inspects robot topology, physics data, and joint limits. It catches "exploding robot" errors (negative inertias, detached links) *before* you export.
 - **ROS2 Control Support**: Automatically generates hardware interface configurations for `ros2_control`, compatible with Gazebo, Webots, Isaac Sim, and physical hardware.
 - **Complete Sensor Suite**: Integrated support for Camera, Depth Camera, LiDAR, IMU, GPS, and Force/Torque sensors with configurable noise models.
 - **Automatic Physics**: Scientifically accurate calculation of mass properties and inertia tensors for both primitive shapes and complex arbitrary meshes.
@@ -181,6 +181,14 @@ LinkForge uses a "Self-Contained" bundling strategy for wheels. To update or add
 - [ ] **v1.2.0**: **MJCF (MuJoCo) Export Support** (High demand for RL).
 - [ ] **v1.3.0**: **Kinematic Validation** (MoveIt style checks).
 - [ ] **v2.0.0**: **Omniverse / USD Bridge** (For Isaac Sim).
+
+## 🔮 Our Transparency Commitment
+
+We believe in being upfront about what LinkForge does—and what it doesn't do.
+
+1.  **Standard Compliance**: We guarantee 100% compliance with the official URDF/XACRO specifications. Your robot will work in any standard parser.
+2.  **The "Wild URDF" Limit**: We aim for lossless Round-Trip (Import → Edit → Export). However, if you import a "Wild" URDF containing non-standard tags, custom XML comments, or parser-specific hacks, **we do not guarantee their preservation**. We clean the code to ensure validity.
+3.  **Beta Features**: Advanced features like `ros2_control` are evolving. We commit to vigilance in updating them, but syntax changes in ROS 2 may require extension updates.
 
 ## 🤝 Contributing
 

@@ -430,6 +430,13 @@ import subprocess
 subprocess.run(["pytest", "tests/integration/"])
 ```
 
+## Maintenance Notes
+
+### `ros2_control` Support
+Supporting `ros2_control` requires vigilance as the API evolves with each ROS distribution (Humble, Rolling, Jazzy, etc.).
+*   **When editing generators**: Always verify the exported syntax against the latest official `ros2_control` demos.
+*   **Breaking Changes**: If a new ROS version breaks our export, creating a fix takes priority.
+
 ## Getting Help
 
 - **Documentation**: Check the [Official Documentation](https://linkforge.readthedocs.io/) and [Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)
