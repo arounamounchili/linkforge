@@ -138,7 +138,7 @@ class LINKFORGE_PT_links(Panel):
                 else:
                     row.label(text=f"Detected: {detected_type}", icon="OUTLINER_DATA_MESH")
 
-            if not is_primitive:
+            if detected_type == "CONVEX_HULL":
                 # Show slider for meshes (only relevant for non-primitives)
                 box.separator()
                 row = box.row()

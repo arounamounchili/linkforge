@@ -348,7 +348,7 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
             # Set collision geometry type for UI consistency
             if isinstance(collision.geometry, Mesh):
-                collision_obj["collision_geometry_type"] = "CONVEX_HULL"
+                collision_obj["collision_geometry_type"] = "MESH"
             elif isinstance(collision.geometry, Box):
                 collision_obj["collision_geometry_type"] = "BOX"
             elif isinstance(collision.geometry, Cylinder):

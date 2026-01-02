@@ -280,7 +280,7 @@ def get_object_geometry(
         # Use detected primitive (cleaner URDF) or fallback to mesh for complex shapes
         actual_geometry_type = detected_type or "MESH"
 
-    if actual_geometry_type == "MESH":
+    if actual_geometry_type in ("MESH", "CONVEX_HULL"):
         # Export actual mesh file if meshes_dir is provided
         if meshes_dir and link_name and obj.type == "MESH":
             from .mesh_export import export_link_mesh
