@@ -47,8 +47,8 @@ jobs:
         run: |
           echo "Downloading Blender 4.2.0..."
           curl -SL https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz -o blender.tar.xz
-          tar -xf blender.tar.xz
-          mv blender-4.2.0-linux-x64 blender
+          mkdir -p blender
+          tar -xf blender.tar.xz -C blender --strip-components=1
           echo "$(pwd)/blender" >> $GITHUB_PATH
 
       - name: Run tests
