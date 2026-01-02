@@ -37,6 +37,12 @@ jobs:
           uv venv
           uv pip install -e .
 
+      - name: Setup Blender
+        if: ${{ steps.release.outputs.release_created }}
+        uses: legoroiler/blender-setup-action@v1
+        with:
+          blender-version: '4.2.0'
+
       - name: Build extension
         if: ${{ steps.release.outputs.release_created }}
         run: uv run python build_extension.py

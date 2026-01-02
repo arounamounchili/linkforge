@@ -201,8 +201,23 @@ def build_extension() -> Path:
 
     print(f"🚀 Building split-platform packages...")
 
-    # Use the official Blender CLI build command with split-platforms
-    blender_path = "/Applications/Blender.app/Contents/MacOS/Blender"
+    # Find Blender CLI
+    # 1. Check environment variable
+    # 2. Check standard 'blender' command in PATH
+    # 3. Fallback to common Mac path for local dev
+    import os
+    blender_path = os.environ.get("BLENDER_PATH", "blender")
+    
+    # Verify if blender is accessible
+    if not shutil.which(blender_path):
+        # Specific fallback for Mac local development
+        mac_fallback = "/Applications/Blender.app/Contents/MacOS/Blender"
+        if Path(mac_fallback).exists():
+            blender_path = mac_fallback
+        else:
+            print(f"❌ Error: Blender command '{blender_path}' not found in PATH.")
+            print("Please install Blender or set the BLENDER_PATH environment variable.")
+            sys.exit(1)
     
     try:
         subprocess.run(
