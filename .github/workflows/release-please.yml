@@ -37,11 +37,14 @@ jobs:
           uv venv
           uv pip install -e .
 
-      - name: Setup Blender
+      - name: Setup Blender (Manual)
         if: ${{ steps.release.outputs.release_created }}
-        uses: legoroiler/blender-setup-action@v1
-        with:
-          blender-version: '4.2.0'
+        run: |
+          echo "Downloading Blender 4.2.0..."
+          curl -SL https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz -o blender.tar.xz
+          tar -xf blender.tar.xz
+          mv blender-4.2.0-linux-x64 blender
+          echo "$(pwd)/blender" >> $GITHUB_PATH
 
       - name: Build extension
         if: ${{ steps.release.outputs.release_created }}
