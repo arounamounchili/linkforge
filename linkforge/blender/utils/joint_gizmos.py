@@ -10,7 +10,6 @@ matching the professional appearance of RViz.
 """
 
 from __future__ import annotations
-from ..preferences import get_addon_id, get_addon_prefs
 
 import math
 
@@ -18,6 +17,8 @@ import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
+
+from ..preferences import get_addon_prefs
 
 # Global drawing handle
 _draw_handle = None
@@ -320,10 +321,7 @@ def update_viz_handle(context):
     # Get preferences
     addon_prefs = get_addon_prefs(context)
 
-    if addon_prefs:
-        show_axes = getattr(addon_prefs, "show_joint_axes", False)
-    else:
-        show_axes = False
+    show_axes = getattr(addon_prefs, "show_joint_axes", False) if addon_prefs else False
 
     if show_axes and _draw_handle is None:
         # Register handler only when needed
