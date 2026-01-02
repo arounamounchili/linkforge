@@ -346,6 +346,16 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
             collision_obj.display_type = "WIRE"
             collision_obj.hide_render = True
 
+            # Set collision geometry type for UI consistency
+            if isinstance(collision.geometry, Mesh):
+                collision_obj["collision_geometry_type"] = "CONVEX_HULL"
+            elif isinstance(collision.geometry, Box):
+                collision_obj["collision_geometry_type"] = "BOX"
+            elif isinstance(collision.geometry, Cylinder):
+                collision_obj["collision_geometry_type"] = "CYLINDER"
+            elif isinstance(collision.geometry, Sphere):
+                collision_obj["collision_geometry_type"] = "SPHERE"
+
     # Set mass and inertia properties on link object
     if link.inertial and hasattr(link_obj, "linkforge"):
         props = link_obj.linkforge

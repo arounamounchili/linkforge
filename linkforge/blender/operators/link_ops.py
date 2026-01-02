@@ -152,6 +152,9 @@ def regenerate_collision_mesh(link_obj, collision_obj):
     merged_obj.hide_viewport = old_hide_viewport
     merged_obj.hide_render = old_hide_render
 
+    # Persist collision type for UI consistency
+    merged_obj["collision_geometry_type"] = "CONVEX_HULL"
+
     # Ensure it's in the same collection
     for collection in merged_obj.users_collection:
         collection.objects.unlink(merged_obj)
