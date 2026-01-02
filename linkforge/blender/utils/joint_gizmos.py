@@ -156,10 +156,11 @@ def generate_axis_geometry(obj, axis_length: float = 0.2) -> dict:
 
 def draw_joint_axes():
     """Draw RGB axes for all joint objects in the scene.
-    
+
     Draws RViz-style arrows with colored shafts and arrow heads.
     """
     _draw_internal()
+
 
 def _draw_internal():
     context = bpy.context
@@ -181,12 +182,12 @@ def _draw_internal():
     # Check for region_data to prevent crashes in non-3D View contexts
     if not hasattr(context, "region_data") or context.region_data is None:
         return
-    
+
     all_line_positions = []
     all_line_colors = []
     all_tri_positions = []
     all_tri_colors = []
-    
+
     for obj in scene.objects:
         if obj.type == "EMPTY":
             # Check if this is a joint Empty
@@ -216,7 +217,7 @@ def _draw_internal():
             {"pos": all_line_positions, "color": all_line_colors},
         )
         matrix = gpu.matrix.get_projection_matrix() @ gpu.matrix.get_model_view_matrix()
-        
+
         gpu.state.line_width_set(4.0)
         shader.bind()
         shader.uniform_float("ModelViewProjectionMatrix", matrix)
@@ -235,7 +236,7 @@ def _draw_internal():
         shader.bind()
         shader.uniform_float("ModelViewProjectionMatrix", matrix)
         batch.draw(shader)
-    
+
     # Reset GPU state
     gpu.state.line_width_set(1.0)
     gpu.state.blend_set("NONE")
@@ -290,7 +291,7 @@ def register():
     # Fix joints and restore draw handler state when file is loaded
     if fix_existing_joints not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(fix_existing_joints)
-    
+
     # Also fix current scene and restore draw handler on registration
     bpy.app.timers.register(fix_current_scene, first_interval=0.1)
 
@@ -311,14 +312,14 @@ def unregister():
 
 def update_viz_handle(context):
     """Enable or disable the draw handler based on user preferences.
-    
+
     This is called by the preference update function.
     """
     global _draw_handle
 
     # Get preferences
     addon_prefs = get_addon_prefs(context)
-    
+
     if addon_prefs:
         show_axes = getattr(addon_prefs, "show_joint_axes", False)
     else:
@@ -333,7 +334,7 @@ def update_viz_handle(context):
         # Remove handler when not in use to save memory
         bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
         _draw_handle = None
-    
+
     # Force redraw
     for window in context.window_manager.windows:
         for area in window.screen.areas:

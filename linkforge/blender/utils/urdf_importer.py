@@ -428,6 +428,7 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
     """
     empty_size = 0.2  # Default fallback
     from ..preferences import get_addon_prefs
+
     addon_prefs = get_addon_prefs(bpy.context)
     if addon_prefs:
         empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)

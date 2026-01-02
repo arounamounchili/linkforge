@@ -48,6 +48,7 @@ class LINKFORGE_OT_create_sensor(Operator):
         # Get preferred empty size from addon preferences
         empty_size = 0.1  # Default fallback
         from ..preferences import get_addon_prefs
+
         addon_prefs = get_addon_prefs(context)
         if addon_prefs:
             empty_size = getattr(addon_prefs, "sensor_empty_size", empty_size)

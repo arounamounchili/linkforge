@@ -41,6 +41,7 @@ class LINKFORGE_OT_create_joint(Operator):
 
         # Get preferred empty size from addon preferences
         from ..preferences import get_addon_prefs
+
         addon_prefs = get_addon_prefs(context)
         if addon_prefs:
             empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)

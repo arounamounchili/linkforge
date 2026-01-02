@@ -559,6 +559,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             link_name = "link"
 
         from ..preferences import get_addon_prefs
+
         addon_prefs = get_addon_prefs(context)
         if addon_prefs:
             empty_size = getattr(addon_prefs, "link_empty_size", empty_size)

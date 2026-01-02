@@ -74,6 +74,7 @@ def sync_object_names(scene):
             # Update cache
             _name_cache[obj_id] = current_name
 
+
 def register():
     """Register event handlers."""
     handlers = bpy.app.handlers

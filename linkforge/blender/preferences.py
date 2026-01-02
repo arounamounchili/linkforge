@@ -13,6 +13,7 @@ from bpy.types import AddonPreferences
 def update_joint_axes_visibility(self, context):
     """Callback when show_joint_axes changes - manage draw handler and force viewport redraw."""
     from .utils import joint_gizmos
+
     joint_gizmos.update_viz_handle(context)
 
 
@@ -21,6 +22,7 @@ def update_joint_empty_size(self, context):
     # From here, we also need to trigger the draw handler update check
     # so the GPU overlay picks up the new size immediately
     from .utils import joint_gizmos
+
     joint_gizmos.update_viz_handle(context)
 
     # Update all existing joint empties in the scene
@@ -103,7 +105,7 @@ def update_link_empty_size(self, context):
 
 def get_addon_id():
     """Determine the addon/extension ID for preference access.
-    
+
     In Blender 4.2+, extensions use a namespace like 'bl_ext.user_default.linkforge'.
     Traditional addons use just the package name 'linkforge'.
     """
