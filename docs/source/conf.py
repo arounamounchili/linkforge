@@ -70,9 +70,11 @@ html_context = {
 # Disable 'View page source' for a cleaner professional look
 html_show_sourcelink = False
 
+
 # Custom CSS
 def setup(app):
     app.add_css_file("css/custom.css")
+
 
 # -- Extension configuration -------------------------------------------------
 
@@ -132,4 +134,3 @@ myst_fence_as_directive = ["mermaid"]
 
 # Mock imports for Blender-specific modules
 autodoc_mock_imports = ["bpy", "bpy_extras", "mathutils", "gpu", "gpu_extras"]
-

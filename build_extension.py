@@ -32,7 +32,12 @@ except ImportError:
 DEP_CONFIG = {
     "PyYAML": {
         "version": "6.0.3",
-        "platforms": ["win_amd64", "manylinux2014_x86_64", "macosx_11_0_arm64", "macosx_11_0_x86_64"],
+        "platforms": [
+            "win_amd64",
+            "manylinux2014_x86_64",
+            "macosx_11_0_arm64",
+            "macosx_11_0_x86_64",
+        ],
         "py_versions": ["311"],  # Standardize on 3.11+ for modern Blender versions
     },
     "xacrodoc": {"version": "1.3.0", "universal": True},
@@ -160,13 +165,14 @@ def is_excluded(path: Path, root: Path, patterns: list[str]) -> bool:
 
 import shutil
 
+
 def build_extension() -> Path:
     """Build the Blender Extension package using official Blender CLI."""
     root_dir = Path(__file__).parent
     version = read_manifest_value("version")
     dist_dir = root_dir / "dist"
     dist_dir.mkdir(exist_ok=True)
-    
+
     # Create a staging directory for the flattened structure
     # Blender Extension expects __init__.py at the root for "add-on" type
     staging_dir = dist_dir / "staging"
@@ -206,8 +212,9 @@ def build_extension() -> Path:
     # 2. Check standard 'blender' command in PATH
     # 3. Fallback to common Mac path for local dev
     import os
+
     blender_path = os.environ.get("BLENDER_PATH", "blender")
-    
+
     # Verify if blender is accessible
     if not shutil.which(blender_path):
         # Specific fallback for Mac local development
@@ -218,7 +225,7 @@ def build_extension() -> Path:
             print(f"❌ Error: Blender command '{blender_path}' not found in PATH.")
             print("Please install Blender or set the BLENDER_PATH environment variable.")
             sys.exit(1)
-    
+
     try:
         subprocess.run(
             [
@@ -231,7 +238,7 @@ def build_extension() -> Path:
                 str(dist_dir),
             ],
             check=True,
-            cwd=str(staging_dir)
+            cwd=str(staging_dir),
         )
     except subprocess.CalledProcessError as e:
         print(f"❌ Error building extension: {e}")
