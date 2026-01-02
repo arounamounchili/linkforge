@@ -144,14 +144,10 @@ def import_mesh_file(mesh_path: Path, name: str):
         elif ext in (".glb", ".gltf"):
             # Import GLB/GLTF
             try:
-                bpy.ops.import_scene.gltf(filepath=str(mesh_path))
+                bpy.ops.wm.gltf_import(filepath=str(mesh_path))
             except AttributeError:
-                # Fallback for some Blender 4.2+ extension-based setups
-                try:
-                    bpy.ops.valkyrie.gltf(filepath=str(mesh_path))
-                except AttributeError:
-                    # If all else fails, report failure but don't crash
-                    return None
+                # Fallback for older 4.x versions
+                bpy.ops.import_scene.gltf(filepath=str(mesh_path))
         else:
             return None
 
@@ -430,16 +426,11 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
         Blender Empty object or None
 
     """
-    # Get preferred empty size from addon preferences
     empty_size = 0.2  # Default fallback
-    try:
-        addon_prefs = bpy.context.preferences.addons.get("bl_ext.user_default.linkforge")
-        if addon_prefs and hasattr(addon_prefs, "preferences"):
-            prefs = addon_prefs.preferences
-            if hasattr(prefs, "joint_empty_size"):
-                empty_size = prefs.joint_empty_size
-    except (AttributeError, KeyError):
-        pass
+    from ..preferences import get_addon_prefs
+    addon_prefs = get_addon_prefs(bpy.context)
+    if addon_prefs:
+        empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
 
     # Create Empty object (ARROWS shows RGB colored axes)
     bpy.ops.object.empty_add(type="ARROWS", location=(0, 0, 0))

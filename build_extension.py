@@ -32,8 +32,8 @@ except ImportError:
 DEP_CONFIG = {
     "PyYAML": {
         "version": "6.0.3",
-        "platforms": ["win_amd64", "manylinux2014_x86_64", "macosx_11_0_arm64"],
-        "py_versions": ["310", "311"],
+        "platforms": ["win_amd64", "manylinux2014_x86_64", "macosx_11_0_arm64", "macosx_11_0_x86_64"],
+        "py_versions": ["311"],  # Standardize on 3.11+ for modern Blender versions
     },
     "xacrodoc": {"version": "1.3.0", "universal": True},
     "rospkg": {"version": "1.6.1", "universal": True},
@@ -158,16 +158,77 @@ def is_excluded(path: Path, root: Path, patterns: list[str]) -> bool:
     return False
 
 
+import shutil
+
 def build_extension() -> Path:
-    """Build the Blender Extension package."""
+    """Build the Blender Extension package using official Blender CLI."""
     root_dir = Path(__file__).parent
     version = read_manifest_value("version")
     dist_dir = root_dir / "dist"
     dist_dir.mkdir(exist_ok=True)
+    
+    # Create a staging directory for the flattened structure
+    # Blender Extension expects __init__.py at the root for "add-on" type
+    staging_dir = dist_dir / "staging"
+    if staging_dir.exists():
+        shutil.rmtree(staging_dir)
+    staging_dir.mkdir(parents=True)
 
-    output_file = dist_dir / f"linkforge-{version}.zip"
+    print(f"📦 Staging LinkForge Extension v{version} for build...")
 
-    print(f"📦 Building LinkForge Extension v{version}")
+    # 1. Copy manifest
+    shutil.copy(root_dir / "blender_manifest.toml", staging_dir)
+
+    # 2. Copy source code (Flattened)
+    # We copy the contents of linkforge/ so __init__.py is at the root of staging_dir
+    src_dir = root_dir / "linkforge"
+    for item in src_dir.iterdir():
+        if item.name.startswith((".", "__pycache__")):
+            continue
+        dest = staging_dir / item.name
+        if item.is_dir():
+            shutil.copytree(item, dest)
+        else:
+            shutil.copy2(item, dest)
+
+    # 3. Copy wheels
+    shutil.copytree(root_dir / "wheels", staging_dir / "wheels")
+
+    # 4. Copy license/readme
+    for f in ["LICENSE", "README.md", "THIRD_PARTY_LICENSES.md"]:
+        if (root_dir / f).exists():
+            shutil.copy2(root_dir / f, staging_dir)
+
+    print(f"🚀 Building split-platform packages...")
+
+    # Use the official Blender CLI build command with split-platforms
+    blender_path = "/Applications/Blender.app/Contents/MacOS/Blender"
+    
+    try:
+        subprocess.run(
+            [
+                blender_path,
+                "--command",
+                "extension",
+                "build",
+                "--split-platforms",
+                "--output-dir",
+                str(dist_dir),
+            ],
+            check=True,
+            cwd=str(staging_dir)
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Error building extension: {e}")
+        # Clean up staging on failure
+        # shutil.rmtree(staging_dir)
+        sys.exit(1)
+
+    # Clean up staging on success
+    shutil.rmtree(staging_dir)
+
+    print(f"\n✅ Created split-platform packages in {dist_dir}/")
+    return dist_dir
 
     # Exclude patterns (standard for python/blender projects)
     exclude_patterns = [
@@ -184,6 +245,8 @@ def build_extension() -> Path:
         "clean.sh",
         "coverage.xml",
         ".coverage",
+        "examples",
+        "tools",
     ]
 
     with ZipFile(output_file, "w", ZIP_DEFLATED) as zipf:

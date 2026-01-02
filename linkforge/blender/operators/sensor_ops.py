@@ -47,14 +47,10 @@ class LINKFORGE_OT_create_sensor(Operator):
 
         # Get preferred empty size from addon preferences
         empty_size = 0.1  # Default fallback
-        try:
-            addon_prefs = context.preferences.addons.get("bl_ext.user_default.linkforge")
-            if addon_prefs and hasattr(addon_prefs, "preferences"):
-                prefs = addon_prefs.preferences
-                if hasattr(prefs, "sensor_empty_size"):
-                    empty_size = prefs.sensor_empty_size
-        except (AttributeError, KeyError):
-            pass
+        from ..preferences import get_addon_prefs
+        addon_prefs = get_addon_prefs(context)
+        if addon_prefs:
+            empty_size = getattr(addon_prefs, "sensor_empty_size", empty_size)
 
         # Create Empty at 0,0,0 initially (we will snap it)
         bpy.ops.object.empty_add(type="SPHERE", location=(0, 0, 0))

@@ -40,15 +40,10 @@ class LINKFORGE_OT_create_joint(Operator):
         link_obj = obj if obj.linkforge.is_robot_link else obj.parent
 
         # Get preferred empty size from addon preferences
-        empty_size = 0.2  # Default fallback
-        try:
-            addon_prefs = context.preferences.addons.get("bl_ext.user_default.linkforge")
-            if addon_prefs and hasattr(addon_prefs, "preferences"):
-                prefs = addon_prefs.preferences
-                if hasattr(prefs, "joint_empty_size"):
-                    empty_size = prefs.joint_empty_size
-        except (AttributeError, KeyError):
-            pass
+        from ..preferences import get_addon_prefs
+        addon_prefs = get_addon_prefs(context)
+        if addon_prefs:
+            empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
 
         # Get link object's world location and rotation
         location = link_obj.matrix_world.translation.copy()

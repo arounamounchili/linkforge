@@ -74,46 +74,12 @@ def sync_object_names(scene):
             # Update cache
             _name_cache[obj_id] = current_name
 
-
-@persistent
-def validate_robot_topology(scene):
-    """Validate robot topology connectivity.
-
-    Ensures that joints do not point to non-existent links.
-    In Blender, PointerProperty naturally becomes None when the object is deleted.
-    This handler ensures the internal hierarchy (parenting) stays clean.
-    """
-    if not bpy or not scene:
-        return
-
-    # Check all joints for stale references
-    for obj in scene.objects:
-        if (
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and obj.linkforge_joint.is_robot_joint
-        ):
-            # Validate robot topology connectivity
-
-            # If either parent or child pointer is None, the system might need
-            # a hierarchy sync (unparenting). Since PointerProperty updates
-            # trigger their 'update' callback on deletion, we mostly rely on that.
-            # This handler serves as a secondary sweep for scene integrity.
-
-            # (Logic is now mostly handled by PointerProperty update callbacks
-            # but we keep this as a hook for future complex topology validations)
-            pass
-
-
 def register():
     """Register event handlers."""
     handlers = bpy.app.handlers
 
     if sync_object_names not in handlers.depsgraph_update_post:
         handlers.depsgraph_update_post.append(sync_object_names)
-
-    if validate_robot_topology not in handlers.depsgraph_update_post:
-        handlers.depsgraph_update_post.append(validate_robot_topology)
 
     if clear_cache_on_load not in handlers.load_post:
         handlers.load_post.append(clear_cache_on_load)
@@ -125,9 +91,6 @@ def unregister():
 
     if sync_object_names in handlers.depsgraph_update_post:
         handlers.depsgraph_update_post.remove(sync_object_names)
-
-    if validate_robot_topology in handlers.depsgraph_update_post:
-        handlers.depsgraph_update_post.remove(validate_robot_topology)
 
     if clear_cache_on_load in handlers.load_post:
         handlers.load_post.remove(clear_cache_on_load)

@@ -11,28 +11,17 @@ from bpy.types import AddonPreferences
 
 
 def update_joint_axes_visibility(self, context):
-    """Callback when show_joint_axes changes - force viewport redraw."""
-    # Force all 3D viewports to redraw
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == "VIEW_3D":
-                area.tag_redraw()
-
-
-def update_joint_axis_length(self, context):
-    """Callback when joint_axis_length changes - force viewport redraw."""
-    # Force all 3D viewports to redraw
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == "VIEW_3D":
-                area.tag_redraw()
+    """Callback when show_joint_axes changes - manage draw handler and force viewport redraw."""
+    from .utils import joint_gizmos
+    joint_gizmos.update_viz_handle(context)
 
 
 def update_joint_empty_size(self, context):
-    """Callback when joint_empty_size changes - update all joint empties."""
-
-    # Get new size
-    new_size = self.joint_empty_size
+    """Callback when joint_empty_size changes - update all joint empties and viewport."""
+    # From here, we also need to trigger the draw handler update check
+    # so the GPU overlay picks up the new size immediately
+    from .utils import joint_gizmos
+    joint_gizmos.update_viz_handle(context)
 
     # Update all existing joint empties in the scene
     for obj in context.scene.objects:
@@ -41,7 +30,7 @@ def update_joint_empty_size(self, context):
             and hasattr(obj, "linkforge_joint")
             and obj.linkforge_joint.is_robot_joint
         ):
-            obj.empty_display_size = new_size
+            obj.empty_display_size = self.joint_empty_size
 
     # Force viewport redraw
     for window in context.window_manager.windows:
@@ -112,10 +101,34 @@ def update_link_empty_size(self, context):
                 area.tag_redraw()
 
 
+def get_addon_id():
+    """Determine the addon/extension ID for preference access.
+    
+    In Blender 4.2+, extensions use a namespace like 'bl_ext.user_default.linkforge'.
+    Traditional addons use just the package name 'linkforge'.
+    """
+    pkg = __package__
+    if pkg and pkg.startswith("bl_ext."):
+        # Extension path: bl_ext.<repo>.<id>
+        return ".".join(pkg.split(".")[:3])
+    return pkg.split(".")[0] if pkg else "linkforge"
+
+
+def get_addon_prefs(context=None):
+    """Retrieve the LinkForge preferences object reliably."""
+    if context is None:
+        context = bpy.context
+    addon_id = get_addon_id()
+    addon = context.preferences.addons.get(addon_id)
+    if addon:
+        return addon.preferences
+    return None
+
+
 class LinkForgePreferences(AddonPreferences):
     """User preferences for LinkForge extension."""
 
-    bl_idname = "bl_ext.user_default.linkforge"
+    bl_idname = get_addon_id()
 
     # Joint axis visualization (GPU overlay - optional enhancement)
     show_joint_axes: BoolProperty(  # type: ignore
@@ -125,23 +138,9 @@ class LinkForgePreferences(AddonPreferences):
         update=update_joint_axes_visibility,
     )
 
-    joint_axis_length: FloatProperty(  # type: ignore
-        name="Axis Length",
-        description="How long the RGB arrows should be (adjust based on your robot size)",
-        default=0.2,
-        min=0.01,
-        max=100.0,
-        soft_min=0.05,
-        soft_max=5.0,
-        step=5,
-        precision=2,
-        unit="LENGTH",
-        update=update_joint_axis_length,
-    )
-
     joint_empty_size: FloatProperty(  # type: ignore
-        name="Empty Size",
-        description="Size of the joint markers in viewport (bigger = easier to select, smaller = cleaner view)",
+        name="Joint Display Size",
+        description="Size of the joint markers and GPU axes in viewport",
         default=0.2,
         min=0.01,
         max=100.0,
@@ -150,7 +149,7 @@ class LinkForgePreferences(AddonPreferences):
         step=1,
         precision=2,
         unit="LENGTH",
-        update=update_joint_empty_size,  # Update all joint empties when changed
+        update=update_joint_empty_size,  # Update all joint empties and GPU overlay
     )
 
     sensor_empty_size: FloatProperty(  # type: ignore
@@ -203,29 +202,23 @@ class LinkForgePreferences(AddonPreferences):
         box = layout.box()
         box.label(text="Joint Visualization", icon="EMPTY_ARROWS")
 
-        # Empty display settings (always visible)
+        # Joint sizing (controls both Empty arrows and GPU overlay)
         row = box.row()
-        row.label(text="Empty Display:", icon="EMPTY_AXIS")
-        row = box.row()
-        row.prop(self, "joint_empty_size", text="Size", slider=True)
+        row.prop(self, "joint_empty_size", text="Joint Size", slider=True)
 
         col = box.column(align=True)
         col.scale_y = 0.7
-        col.label(text="Joint empties show RGB colored axes (Red=X, Green=Y, Blue=Z)")
+        col.label(text="Controls size of both joint markers and enhanced visualization")
 
         # GPU overlay (optional enhancement)
         box.separator()
         row = box.row()
-        row.prop(self, "show_joint_axes", text="Enhanced GPU Overlay (RViz-style)")
-
-        row = box.row()
-        row.prop(self, "joint_axis_length", text="Overlay Length", slider=True)
-        row.enabled = self.show_joint_axes
+        row.prop(self, "show_joint_axes", text="Enhanced Visualization (RViz-style)")
 
         if self.show_joint_axes:
             col = box.column(align=True)
             col.scale_y = 0.7
-            col.label(text="Adds thicker, more prominent axes with arrow cones", icon="INFO")
+            col.label(text="High-visibility thick axes with arrow cones", icon="INFO")
 
         # Sensor visualization
         layout.separator()

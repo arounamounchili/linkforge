@@ -558,16 +558,10 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         if not link_name:
             link_name = "link"
 
-        # Get preferred empty size from addon preferences
-        empty_size = 0.1  # Default fallback
-        try:
-            addon_prefs = context.preferences.addons.get("bl_ext.user_default.linkforge")
-            if addon_prefs and hasattr(addon_prefs, "preferences"):
-                prefs = addon_prefs.preferences
-                if hasattr(prefs, "link_empty_size"):
-                    empty_size = prefs.link_empty_size
-        except (AttributeError, KeyError):
-            pass
+        from ..preferences import get_addon_prefs
+        addon_prefs = get_addon_prefs(context)
+        if addon_prefs:
+            empty_size = getattr(addon_prefs, "link_empty_size", empty_size)
 
         # Rename mesh FIRST to free up the name for the Empty
         # This prevents Blender from auto-renaming the Empty to "name.001"

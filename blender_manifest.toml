@@ -41,17 +41,24 @@ website = "https://github.com/arounamounchili/linkforge"
 # Tags for categorization on extensions.blender.org
 tags = [
     "Import-Export",
-    "Animation",
-    "Modeling",
+    "Rigging",
+    "Physics",
+    "Pipeline",
+]
+
+# Supported platforms
+platforms = [
+    "windows-x64",
+    "macos-arm64",
+    "macos-x64",
+    "linux-x64",
 ]
 
 # Python wheels (dependencies)
 # BEGIN AUTOMATED WHEELS
 wheels = [
     "./wheels/docutils-0.21.2-py3-none-any.whl",
-    "./wheels/pyyaml-6.0.3-cp310-cp310-macosx_11_0_arm64.whl",
-    "./wheels/pyyaml-6.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
-    "./wheels/pyyaml-6.0.3-cp310-cp310-win_amd64.whl",
+    "./wheels/pyyaml-6.0.3-cp311-cp311-macosx_10_13_x86_64.whl",
     "./wheels/pyyaml-6.0.3-cp311-cp311-macosx_11_0_arm64.whl",
     "./wheels/pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
     "./wheels/pyyaml-6.0.3-cp311-cp311-win_amd64.whl",

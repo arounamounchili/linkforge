@@ -10,6 +10,7 @@ matching the professional appearance of RViz.
 """
 
 from __future__ import annotations
+from ..preferences import get_addon_id, get_addon_prefs
 
 import math
 
@@ -155,10 +156,12 @@ def generate_axis_geometry(obj, axis_length: float = 0.2) -> dict:
 
 def draw_joint_axes():
     """Draw RGB axes for all joint objects in the scene.
-
-    This is called as a SpaceView3D draw handler.
+    
     Draws RViz-style arrows with colored shafts and arrow heads.
     """
+    _draw_internal()
+
+def _draw_internal():
     context = bpy.context
     scene = context.scene
 
@@ -166,67 +169,73 @@ def draw_joint_axes():
     show_axes = True
     axis_length = 0.2
 
-    try:
-        addon_prefs = context.preferences.addons.get("bl_ext.user_default.linkforge")
-        if addon_prefs and hasattr(addon_prefs, "preferences"):
-            prefs = addon_prefs.preferences
-            if hasattr(prefs, "show_joint_axes"):
-                show_axes = prefs.show_joint_axes
-            if hasattr(prefs, "joint_axis_length"):
-                axis_length = prefs.joint_axis_length
-    except (AttributeError, KeyError):
-        pass
+    addon_prefs = get_addon_prefs(context)
+
+    if addon_prefs:
+        show_axes = getattr(addon_prefs, "show_joint_axes", show_axes)
+        axis_length = getattr(addon_prefs, "joint_empty_size", axis_length)
 
     if not show_axes:
         return
 
-    # Collect all joint geometry
+    # Check for region_data to prevent crashes in non-3D View contexts
+    if not hasattr(context, "region_data") or context.region_data is None:
+        return
+    
     all_line_positions = []
     all_line_colors = []
     all_tri_positions = []
     all_tri_colors = []
-
+    
     for obj in scene.objects:
-        # Check if this is a joint Empty
-        if (
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and obj.linkforge_joint.is_robot_joint
-        ):
-            # Generate axis geometry for this joint
-            axis_data = generate_axis_geometry(obj, axis_length)
-            all_line_positions.extend(axis_data["lines"])
-            all_line_colors.extend(axis_data["line_colors"])
-            all_tri_positions.extend(axis_data["tris"])
-            all_tri_colors.extend(axis_data["tri_colors"])
+        if obj.type == "EMPTY":
+            # Check if this is a joint Empty
+            if hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint:
+                # Generate axis geometry for this joint
+                axis_data = generate_axis_geometry(obj, axis_length)
+                all_line_positions.extend(axis_data["lines"])
+                all_line_colors.extend(axis_data["line_colors"])
+                all_tri_positions.extend(axis_data["tris"])
+                all_tri_colors.extend(axis_data["tri_colors"])
 
-    # Set up GPU state
-    gpu.state.depth_test_set("LESS_EQUAL")
+    if not all_line_positions:
+        return
+
+    # Set up GPU state - ALWAYS draw over meshes for RViz style
+    gpu.state.depth_test_set("ALWAYS")
     gpu.state.blend_set("ALPHA")
 
     # Draw lines (shafts)
     if all_line_positions:
-        shader = gpu.shader.from_builtin("FLAT_COLOR")
+        # Blender 4.3+ renamed 3D_FLAT_COLOR to FLAT_COLOR
+        shader_name = "FLAT_COLOR" if bpy.app.version >= (4, 3, 0) else "3D_FLAT_COLOR"
+        shader = gpu.shader.from_builtin(shader_name)
         batch = batch_for_shader(
             shader,
             "LINES",
             {"pos": all_line_positions, "color": all_line_colors},
         )
+        matrix = gpu.matrix.get_projection_matrix() @ gpu.matrix.get_model_view_matrix()
+        
         gpu.state.line_width_set(4.0)
         shader.bind()
+        shader.uniform_float("ModelViewProjectionMatrix", matrix)
         batch.draw(shader)
 
     # Draw triangles (arrow cones)
     if all_tri_positions:
-        shader = gpu.shader.from_builtin("FLAT_COLOR")
+        shader_name = "FLAT_COLOR" if bpy.app.version >= (4, 3, 0) else "3D_FLAT_COLOR"
+        shader = gpu.shader.from_builtin(shader_name)
         batch = batch_for_shader(
             shader,
             "TRIS",
             {"pos": all_tri_positions, "color": all_tri_colors},
         )
+        matrix = gpu.matrix.get_projection_matrix() @ gpu.matrix.get_model_view_matrix()
         shader.bind()
+        shader.uniform_float("ModelViewProjectionMatrix", matrix)
         batch.draw(shader)
-
+    
     # Reset GPU state
     gpu.state.line_width_set(1.0)
     gpu.state.blend_set("NONE")
@@ -248,14 +257,9 @@ def fix_existing_joints(dummy=None):
 
     # Get preferred empty size from addon preferences
     empty_size = 0.2  # Default fallback
-    try:
-        addon_prefs = bpy.context.preferences.addons.get("bl_ext.user_default.linkforge")
-        if addon_prefs and hasattr(addon_prefs, "preferences"):
-            prefs = addon_prefs.preferences
-            if hasattr(prefs, "joint_empty_size"):
-                empty_size = prefs.joint_empty_size
-    except (AttributeError, KeyError):
-        pass
+    addon_prefs = get_addon_prefs()
+    if addon_prefs:
+        empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
 
     for obj in scene.objects:
         if (
@@ -277,44 +281,64 @@ def fix_current_scene():
     in the currently open scene. Returns None to prevent the timer from repeating.
     """
     fix_existing_joints()
+    update_viz_handle(bpy.context)
     return None  # Don't repeat
 
 
 def register():
-    """Register the draw handler for joint axes visualization."""
-    global _draw_handle
-
-    # Add draw handler
-    if _draw_handle is None:
-        _draw_handle = bpy.types.SpaceView3D.draw_handler_add(
-            draw_joint_axes, (), "WINDOW", "POST_VIEW"
-        )
-
-    # Fix joints when file is loaded
+    """Register the joint axes visualization components."""
+    # Fix joints and restore draw handler state when file is loaded
     if fix_existing_joints not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(fix_existing_joints)
-
-    # Fix joints in the current scene using a timer
-    # This ensures Blender context is fully available after registration
+    
+    # Also fix current scene and restore draw handler on registration
     bpy.app.timers.register(fix_current_scene, first_interval=0.1)
 
 
 def unregister():
-    """Unregister the draw handler."""
+    """Unregister the joint axes visualization components."""
     global _draw_handle
-
-    # Remove timer (if still registered)
-    if bpy.app.timers.is_registered(fix_current_scene):
-        bpy.app.timers.unregister(fix_current_scene)
 
     # Remove load handler
     if fix_existing_joints in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(fix_existing_joints)
 
-    # Remove draw handler
+    # Remove draw handler if it exists
     if _draw_handle is not None:
         bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
         _draw_handle = None
+
+
+def update_viz_handle(context):
+    """Enable or disable the draw handler based on user preferences.
+    
+    This is called by the preference update function.
+    """
+    global _draw_handle
+
+    # Get preferences
+    addon_prefs = get_addon_prefs(context)
+    
+    if addon_prefs:
+        show_axes = getattr(addon_prefs, "show_joint_axes", False)
+    else:
+        show_axes = False
+
+    if show_axes and _draw_handle is None:
+        # Register handler only when needed
+        _draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+            draw_joint_axes, (), "WINDOW", "POST_VIEW"
+        )
+    elif not show_axes and _draw_handle is not None:
+        # Remove handler when not in use to save memory
+        bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
+        _draw_handle = None
+    
+    # Force redraw
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == "VIEW_3D":
+                area.tag_redraw()
 
 
 if __name__ == "__main__":

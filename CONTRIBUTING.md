@@ -348,7 +348,7 @@ Pre-commit automatically runs on `git commit`:
    - [ ] Extension builds (`python3 build_extension.py`)
 
 4. **Code Review**
-   - Address reviewer feedback
+   - Address review comments
    - Keep commits clean and logical
    - Squash commits if requested
 

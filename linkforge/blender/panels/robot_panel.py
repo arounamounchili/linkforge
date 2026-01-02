@@ -67,9 +67,6 @@ class LINKFORGE_OT_select_tree_object(Operator):
 
     def execute(self, context):
         """Execute the operator."""
-        if not bpy:
-            return {"CANCELLED"}
-
         # Find the object
         obj = context.scene.objects.get(self.object_name)
         if not obj:
