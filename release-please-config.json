@@ -2,7 +2,6 @@
     "packages": {
         ".": {
             "release-type": "simple",
-            "package-name": "linkforge",
             "extra-files": [
                 "blender_manifest.toml",
                 "pyproject.toml",

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0](https://github.com/arounamounchili/linkforge/compare/linkforge-v1.0.0...linkforge-v1.1.0) (2025-12-30)
 
+> [!NOTE]
+> v1.1.0: Documentation Overhaul & Enhanced Sensor Suite
+
 
 ### 🚀 Features
 
@@ -54,7 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2025-12-23
 
-### Initial Release
+> [!NOTE]
+> v1.0.0: Initial Production-Ready Release
 
 LinkForge 1.0.0 is the first production-ready release of the professional URDF & XACRO exporter for Blender.
 

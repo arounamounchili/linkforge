@@ -374,6 +374,13 @@ LinkForge uses **Release Please** to automate versioning and changelogs.
 3. **Merging**: Once a maintainer merges this Release PR, a GitHub Tag and Release are automatically created.
 4. **Distribution**: The `release.yml` workflow will then build the extension `.zip` and attach it to the GitHub Release.
 
+### Release Standards
+
+To maintain a professional and consistent appearance:
+- **Tagging**: Always use simple `v` prefixed tags (e.g., `v1.2.0`). This is handled automatically by the configuration.
+- **Release Titles**: Follow the format `v1.x.x: [Major Highlight]`. For example: `v1.2.0: Enhanced Sensor Suite & UI Refinement`.
+- **Changelog**: Use the project's custom sections (🚀 Features, 🐞 Bug Fixes, etc.) to keep notes organized.
+
 > [!NOTE]
 > This is why **Conventional Commits** are required. Without them, the release automation cannot determine if a change should bump the MAJOR, MINOR, or PATCH version.
 
