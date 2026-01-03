@@ -148,7 +148,7 @@ python3 build_extension.py
 # 1. Open Blender
 # 2. Edit > Preferences > Get Extensions
 # 3. Dropdown (⌄) > Install from Disk
-# 4. Select dist/linkforge-1.0.0.zip
+# 4. Select dist/linkforge-1.1.0-macos_arm64.zip (or your platform variant)
 ```
 
 ### 5. Commit Changes
