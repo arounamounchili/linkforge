@@ -5,6 +5,20 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/arounamounchili/linkforge/compare/linkforge-v1.1.0...linkforge-v1.2.0) (2026-01-03)
+
+
+### 🚀 Features
+
+* align documentation and versioning with product strategy ([#18](https://github.com/arounamounchili/linkforge/issues/18)) ([5e0ebee](https://github.com/arounamounchili/linkforge/commit/5e0ebeeeae09173b3c1cbe3207e45ca76c925cad))
+
+
+### 🐞 Bug Fixes
+
+* **blender:** modernize extension logic and fix GPU overlay ([#20](https://github.com/arounamounchili/linkforge/issues/20)) ([29a9dfb](https://github.com/arounamounchili/linkforge/commit/29a9dfb1d1b7db9ecf95ee33b74e7737686dfedb))
+* **blender:** resolve UnboundLocalError and finalize v1.1.0 community standards ([#21](https://github.com/arounamounchili/linkforge/issues/21)) ([f4215fd](https://github.com/arounamounchili/linkforge/commit/f4215fd05ea0f34746fde7da558550f6f70f928f))
+* **blender:** robust DAE export and Blender 5.0 compatibility ([#23](https://github.com/arounamounchili/linkforge/issues/23)) ([d3ac437](https://github.com/arounamounchili/linkforge/commit/d3ac43708ab829c1514ddc38ac28a4a5e9799cd5))
+
 ## [1.1.0](https://github.com/arounamounchili/linkforge/compare/linkforge-v1.0.0...linkforge-v1.1.0) (2025-12-30)
 
 
