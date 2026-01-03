@@ -33,7 +33,7 @@ class LINKFORGE_OT_create_transmission(Operator):
         obj = context.active_object
 
         # Get preferred empty size from addon preferences
-        empty_size = 0.1  # Default fallback (matches TRANSMISSION_EMPTY_DISPLAY_SIZE)
+        empty_size = 0.05  # Default fallback (matches TRANSMISSION_EMPTY_DISPLAY_SIZE)
         from ..preferences import get_addon_prefs
 
         addon_prefs = get_addon_prefs(context)

@@ -43,6 +43,10 @@ class LINKFORGE_OT_create_joint(Operator):
         from ..preferences import get_addon_prefs
 
         addon_prefs = get_addon_prefs(context)
+        
+        # Initialize default size
+        empty_size = 0.2
+
         if addon_prefs:
             empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
 
