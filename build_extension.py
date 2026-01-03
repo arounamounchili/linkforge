@@ -19,7 +19,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
 
 # Use tomllib (Py3.11+) or fall back to string parsing for manifest metadata
 try:
@@ -163,9 +162,6 @@ def is_excluded(path: Path, root: Path, patterns: list[str]) -> bool:
     return False
 
 
-import shutil
-
-
 def build_extension() -> Path:
     """Build the Blender Extension package using official Blender CLI."""
     root_dir = Path(__file__).parent
@@ -205,7 +201,7 @@ def build_extension() -> Path:
         if (root_dir / f).exists():
             shutil.copy2(root_dir / f, staging_dir)
 
-    print(f"🚀 Building split-platform packages...")
+    print("🚀 Building split-platform packages...")
 
     # Find Blender CLI
     # 1. Check environment variable
@@ -251,72 +247,6 @@ def build_extension() -> Path:
 
     print(f"\n✅ Created split-platform packages in {dist_dir}/")
     return dist_dir
-
-    # Exclude patterns (standard for python/blender projects)
-    exclude_patterns = [
-        "**/__pycache__",
-        "*.pyc",
-        "venv",
-        ".*",
-        "tests",
-        "docs",
-        "dist",
-        "uv.lock",
-        "pyproject.toml",
-        "build_extension.py",
-        "clean.sh",
-        "coverage.xml",
-        ".coverage",
-        "examples",
-        "tools",
-    ]
-
-    with ZipFile(output_file, "w", ZIP_DEFLATED) as zipf:
-        # 1. Base files
-        for f in ["blender_manifest.toml", "LICENSE", "README.md", "THIRD_PARTY_LICENSES.md"]:
-            file_path = root_dir / f
-            if file_path.exists():
-                zipf.write(file_path, f)
-                print(f"  Added: {f}")
-
-        # 2. Source code (Flatten to root for Blender Extension)
-        src_dir = root_dir / "linkforge"
-        for py_file in src_dir.rglob("*.py"):
-            if is_excluded(py_file, root_dir, exclude_patterns):
-                continue
-            rel = py_file.relative_to(src_dir)
-            zipf.write(py_file, rel)
-            print(f"  Added: {rel}")
-
-        # 3. Examples (Keep directory)
-        examples_dir = root_dir / "examples"
-        if examples_dir.exists():
-            for ex in examples_dir.rglob("*"):
-                if ex.is_file() and not is_excluded(ex, root_dir, exclude_patterns):
-                    rel = ex.relative_to(root_dir)
-                    zipf.write(ex, rel)
-                    print(f"  Added: {rel}")
-
-        # 4. Tools (Keep directory)
-        tools_dir = root_dir / "tools"
-        if tools_dir.exists():
-            for tool in tools_dir.rglob("*.py"):
-                if tool.is_file() and not is_excluded(tool, root_dir, exclude_patterns):
-                    rel = tool.relative_to(root_dir)
-                    zipf.write(tool, rel)
-                    print(f"  Added: {rel}")
-
-        # 5. Bundled wheels
-        wheels_dir = root_dir / "wheels"
-        if wheels_dir.exists():
-            for whl in wheels_dir.glob("*.whl"):
-                rel = f"wheels/{whl.name}"
-                zipf.write(whl, rel)
-                print(f"  Added: {rel}")
-
-    print(f"\n✅ Created: {output_file} ({output_file.stat().st_size / 1024:.1f} KB)")
-    print("\nNext steps: Drag & Drop the zip into Blender or use 'Install from Disk'")
-    return output_file
 
 
 def clean():
