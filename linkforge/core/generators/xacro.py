@@ -25,7 +25,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from ..models.geometry import Geometry, GeometryType
+from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
 from ..models.joint import Joint
 from ..models.link import Link, Visual
 from ..models.material import Material
@@ -84,7 +84,7 @@ class XACROGenerator(URDFGenerator):
 
         # Track extracted properties
         self.material_properties: dict[str, str] = {}
-        self.dimension_properties: dict[str, float] = {}
+        self.dimension_properties: dict[str, str] = {}
         self.generated_macros: list[dict[str, Any]] = []
 
     def generate(self, robot: Robot, validate: bool = True) -> str:
@@ -271,10 +271,6 @@ class XACROGenerator(URDFGenerator):
             robot: Robot model to scan
             properties: List to append (name, value) tuples to
         """
-        from collections import defaultdict
-
-        from ..models.geometry import Box, Cylinder, Sphere
-
         # Collect all dimensions from visual geometries
         # Format: {dimension_key: [(link_name, value), ...]}
         dimensions: dict[str, list[tuple[str, float]]] = defaultdict(list)
@@ -322,8 +318,6 @@ class XACROGenerator(URDFGenerator):
         Returns:
             Dictionary mapping rounded values to lists of link names
         """
-        from collections import defaultdict
-
         groups: dict[float, list[str]] = defaultdict(list)
 
         for link_name, value in dim_values:
@@ -452,13 +446,13 @@ class XACROGenerator(URDFGenerator):
             geom = visual.geometry
             parts.append(f"v_{geom.type.value}")
 
-            if geom.type == GeometryType.BOX:
+            if isinstance(geom, Box):
                 parts.extend([f"{geom.size.x:.3f}", f"{geom.size.y:.3f}", f"{geom.size.z:.3f}"])
-            elif geom.type == GeometryType.CYLINDER:
+            elif isinstance(geom, Cylinder):
                 parts.extend([f"{geom.radius:.3f}", f"{geom.length:.3f}"])
-            elif geom.type == GeometryType.SPHERE:
+            elif isinstance(geom, Sphere):
                 parts.extend([f"{geom.radius:.3f}"])
-            elif geom.type == GeometryType.MESH:
+            elif isinstance(geom, Mesh):
                 parts.append(str(geom.filepath))
 
             # Include visual origin (Critical for transform fidelity)
@@ -481,13 +475,13 @@ class XACROGenerator(URDFGenerator):
             geom = collision.geometry
             parts.append(f"c_{geom.type.value}")
 
-            if geom.type == GeometryType.BOX:
+            if isinstance(geom, Box):
                 parts.extend([f"{geom.size.x:.3f}", f"{geom.size.y:.3f}", f"{geom.size.z:.3f}"])
-            elif geom.type == GeometryType.CYLINDER:
+            elif isinstance(geom, Cylinder):
                 parts.extend([f"{geom.radius:.3f}", f"{geom.length:.3f}"])
-            elif geom.type == GeometryType.SPHERE:
+            elif isinstance(geom, Sphere):
                 parts.extend([f"{geom.radius:.3f}"])
-            elif geom.type == GeometryType.MESH:
+            elif isinstance(geom, Mesh):
                 parts.append(str(geom.filepath))
 
             # Include collision origin
@@ -662,8 +656,6 @@ class XACROGenerator(URDFGenerator):
         Overrides parent method to substitute dimensions with XACRO properties
         when extract_dimensions is enabled.
         """
-        from ..models.geometry import Box, Cylinder, Mesh, Sphere
-
         geom_elem = ET.SubElement(parent, "geometry")
 
         if isinstance(geometry, Box):

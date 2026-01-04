@@ -15,6 +15,8 @@ simulators (Gazebo, Webots, Isaac Sim, etc.) by handling:
 
 from __future__ import annotations
 
+__all__ = ["URDFGenerator", "format_float", "format_vector"]
+
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -447,11 +449,15 @@ class URDFGenerator:
         ET.SubElement(joint_elem, "child", link=joint.child)
 
         # Axis (only for revolute, continuous, prismatic, planar)
-        if joint.type in (
-            JointType.REVOLUTE,
-            JointType.CONTINUOUS,
-            JointType.PRISMATIC,
-            JointType.PLANAR,
+        if (
+            joint.type
+            in (
+                JointType.REVOLUTE,
+                JointType.CONTINUOUS,
+                JointType.PRISMATIC,
+                JointType.PLANAR,
+            )
+            and joint.axis
         ):
             axis_str = format_vector(joint.axis.x, joint.axis.y, joint.axis.z)
             ET.SubElement(joint_elem, "axis", xyz=axis_str)
