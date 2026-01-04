@@ -14,14 +14,14 @@
 LinkForge is a professional Blender extension for roboticists.
 
 **In robotics, creativity starts in your head — but getting that idea into a simulator usually means hours of writing XML, fixing joint limits, and fighting coordinate systems.**
- 
+
  LinkForge removes that friction. It acts as a **bridge between creativity and engineering**, allowing you to model your robot in Blender as naturally as sculpting a 3D scene, while guaranteeing the output is rigorous, simulation-ready code.
- 
+
  1.  **Forge Structure**: Define links, joints, masses, and inertias visually.
  2.  **Perceive Environment**: Attach sensors like LiDAR, IMU, and Depth Cameras.
  3.  **Control Movement**: Configure transmissions and `ros2_control` interfaces.
  4.  **Export Production Code**: Generate clean, validated URDF/XACRO files.
- 
+
  **From idea → robot → ready for simulation.** All inside Blender.
 
 ### 🛠️ Technical Specifications

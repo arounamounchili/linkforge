@@ -24,7 +24,7 @@ graph TD
 
 ## Step 1: Create the Base Link
 
-1. **Add a Mesh**: In Blender, press `Shift + A` and select **Mesh > Cube**. 
+1. **Add a Mesh**: In Blender, press `Shift + A` and select **Mesh > Cube**.
 2. **Scale the Base**: Set the dimensions to roughly `0.4m x 0.3m x 0.1m`.
 3. **Forge the Link**:
    - Open the **Links** panel in the LinkForge sidebar (`N` key).
@@ -91,7 +91,7 @@ Always keep LinkForge's **Auto-Calculate Inertia** checkbox enabled rather than 
 
 To make our robot actuable in ROS 2 or Gazebo, we need to add transmissions to the joints we want to control (the wheels).
 
-1. **Select Left Wheel Joint**: 
+1. **Select Left Wheel Joint**:
    - Note: In LinkForge, transmissions are attached to joints.
    - Select the `left_wheel_joint` (the Empty object representing the joint).
 2. **Add Transmission**:
@@ -112,7 +112,7 @@ To make our robot actuable in ROS 2 or Gazebo, we need to add transmissions to t
 :class: warning
 Exporting without validation may result in a URDF that causes simulators to crash or behave erratically. Fix all red markers before proceeding.
 :::
-2. **Export**: 
+2. **Export**:
    - Go to the **Validate & Export** panel.
    - Select **Format**: `URDF`.
    - Click **Export URDF** and choose a location.

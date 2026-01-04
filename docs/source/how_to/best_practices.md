@@ -24,7 +24,7 @@ Physics engines like Gazebo or Bullet are highly sensitive to how geometry and m
 If you are building a complex robot (e.g., a quadruped or a high-DOF arm), modularity is key.
 
 ### Use Macros for Repetition
-Instead of defining 4 identical leg links manually, use LinkForge's **XACRO Export** settings to group identical meshes. 
+Instead of defining 4 identical leg links manually, use LinkForge's **XACRO Export** settings to group identical meshes.
 
 ### Separation of Concerns
 Consider organizing your robot into:

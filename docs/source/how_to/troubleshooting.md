@@ -42,7 +42,7 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 ### Properties changing across "Duplicate" Links
 **Cause**: Blender's Linked Data (instancing).
 **Solutions**:
-- If you change the mass of one link and others change unexpectedly, the objects are sharing Mesh Data. 
+- If you change the mass of one link and others change unexpectedly, the objects are sharing Mesh Data.
 - Fix: `Object > Relations > Make Single User > Object & Data`.
 
 ## 🛠️ UI & Viewport

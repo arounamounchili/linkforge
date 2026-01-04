@@ -187,18 +187,18 @@ def test_stacked_links_export():
     collision1_origin = cylinder1.collisions[0].origin
     assert collision1_origin.xyz.x == pytest.approx(0.0)
     assert collision1_origin.xyz.y == pytest.approx(0.0)
-    assert collision1_origin.xyz.z == pytest.approx(0.0), (
-        "Collision origin should be link-relative (0,0,0), not world coordinate (0,0,2)"
-    )
+    assert collision1_origin.xyz.z == pytest.approx(
+        0.0
+    ), "Collision origin should be link-relative (0,0,0), not world coordinate (0,0,2)"
 
     cylinder2 = next(link for link in parsed_robot.links if link.name == "cylinder_link2")
     assert len(cylinder2.collisions) == 1
     collision2_origin = cylinder2.collisions[0].origin
     assert collision2_origin.xyz.x == pytest.approx(0.0)
     assert collision2_origin.xyz.y == pytest.approx(0.0)
-    assert collision2_origin.xyz.z == pytest.approx(0.0), (
-        "Collision origin should be link-relative (0,0,0), not world coordinate (0,0,4)"
-    )
+    assert collision2_origin.xyz.z == pytest.approx(
+        0.0
+    ), "Collision origin should be link-relative (0,0,0), not world coordinate (0,0,4)"
 
 
 def test_stacked_links_roundtrip(tmp_path: Path):
@@ -236,9 +236,9 @@ def test_stacked_links_roundtrip(tmp_path: Path):
             for collision in link.collisions:
                 assert collision.origin.xyz.x == pytest.approx(0.0)
                 assert collision.origin.xyz.y == pytest.approx(0.0)
-                assert collision.origin.xyz.z == pytest.approx(0.0), (
-                    f"Link '{link.name}' collision origin should be (0,0,0), not world coordinates"
-                )
+                assert collision.origin.xyz.z == pytest.approx(
+                    0.0
+                ), f"Link '{link.name}' collision origin should be (0,0,0), not world coordinates"
 
     # Re-export
     urdf_path2 = tmp_path / "stacked_robot_reexport.urdf"

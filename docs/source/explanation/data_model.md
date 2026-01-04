@@ -1,6 +1,6 @@
 # Explanation: The LinkForge Data Model
 
-To understand how LinkForge converts a Blender scene into a URDF, it's important to understand the philosophy behind its data model. 
+To understand how LinkForge converts a Blender scene into a URDF, it's important to understand the philosophy behind its data model.
 
 ## The Semantic Bridge
 
