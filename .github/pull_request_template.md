@@ -33,7 +33,7 @@ Fixes # (issue)
 - [ ] ⚠️ Breaking change
 
 ## ✅ Checklist:
-- [ ] I have run `uv run pytest` and all 470+ tests pass
+- [ ] I have run `uv run pytest` and all tests pass
 - [ ] I have run `uv run pre-commit run --all-files` and all hooks pass
 - [ ] I have verified the changes manually in the Blender viewport
 - [ ] I have updated the documentation or verified no changes are needed
