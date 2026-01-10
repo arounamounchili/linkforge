@@ -433,12 +433,23 @@ import subprocess
 subprocess.run(["pytest", "tests/integration/"])
 ```
 
-## Maintenance Notes
+## Technical Considerations
 
-### `ros2_control` Support
-Supporting `ros2_control` requires vigilance as the API evolves with each ROS distribution (Humble, Rolling, Jazzy, etc.).
-*   **When editing generators**: Always verify the exported syntax against the latest official `ros2_control` demos.
-*   **Breaking Changes**: If a new ROS version breaks our export, creating a fix takes priority.
+To maintain LinkForge's status as a professional-grade tool, we prioritize stability in three key areas:
+
+### 1. The Blender Bridge (Foundation)
+LinkForge must remain compatible with the latest Blender LTS (Long Term Support) and the current stable release.
+- **Vigilance**: When a new Blender version (e.g., 5.0) enters Beta, we prioritize testing our `export_ops.py` to ensure no API breaking changes affect our users.
+
+### 2. URDF/XACRO Fidelity (Core)
+Our primary goal is 100% compliance with official specifications.
+- **Cross-Simulator Support**: We ensure that generated files work seamlessly across Gazebo (Classic & Sim), Webots, Isaac Sim, and MuJoCo.
+- **Precision**: Physics calculations (inertia tensors) must remain scientifically accurate, as they are the "brain" of the exported robot.
+
+### 3. The ROS 2 Ecosystem (Integration)
+While LinkForge supports `ros2_control`, it is designed to be distribution-agnostic where possible.
+- **Compatibility**: We target compatibility with active ROS 2 LTS distributions (like Humble and Jazzy) and Rolling.
+- **Maintenance**: If the official `ros2_control` XML syntax changes in a newer ROS version, we update our generators to support those changes while maintaining backward compatibility.
 
 ## Getting Help
 
