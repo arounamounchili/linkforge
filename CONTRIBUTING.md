@@ -339,13 +339,9 @@ Pre-commit automatically runs on `git commit`:
    - Fill out the PR template
    - Link any related issues
 
-3. **PR Checklist**
-   - [ ] PR title follows **Conventional Commits** (e.g. `feat: ...`, `fix: ...`)
-   - [ ] Tests pass (`uv run pytest`)
-   - [ ] Linting passes (`uv run ruff check linkforge/`)
-   - [ ] Code is formatted (`uv run ruff format linkforge/`)
-   - [ ] Documentation updated (if needed)
-   - [ ] Extension builds (`python3 build_extension.py`)
+3. **Check Pull Request Status**
+   - Ensure the CI pipeline passes (GitHub Actions).
+   - Once you create the PR, follow the automated checklist provided in the PR description template. This ensures all standards (tests, linting, quality) are met before maintainer review.
 
 4. **Code Review**
    - Address review comments
@@ -370,7 +366,7 @@ Use conventional commits:
 LinkForge uses **Release Please** to automate versioning and changelogs.
 
 1. **Automation**: When code is merged into `main`, Release Please will automatically create (or update) a "Release PR".
-2. **Versioning**: This PR will contain a version bump in `blender_manifest.toml` and an updated `CHANGELOG.md` based on your commit messages.
+2. **Versioning**: This PR will contain a version bump in `blender_manifest.toml`, `CITATION.cff`, and an updated `CHANGELOG.md` based on your commit messages.
 3. **Merging**: Once a maintainer merges this Release PR, a GitHub Tag and Release are automatically created.
 4. **Distribution**: The `release.yml` workflow will then build the extension `.zip` and attach it to the GitHub Release.
 
@@ -452,9 +448,12 @@ Supporting `ros2_control` requires vigilance as the API evolves with each ROS di
 
 ## Recognition
 
-Contributors are recognized in:
-- CHANGELOG.md
+We value every contribution, big or small. Contributors are recognized in:
+- `CHANGELOG.md`
 - GitHub contributors page
 - Release notes
+
+### Academic Recognition
+For significant core contributions (new sensor systems, physics engine refinements, major architectural changes), we may invite you to be listed as a co-author in the `CITATION.cff` file and the official documentation, ensuring your work is properly attributed in academic research using LinkForge.
 
 Thank you for contributing to LinkForge! 🚀
