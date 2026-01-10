@@ -3,8 +3,8 @@ title: "LinkForge"
 message: "If you use this software, please cite it as below."
 type: software
 authors:
-  - family-names: "Mounchili"
-    given-names: "Arouna Patouossa"
+  - family-names: "Patouossa Mounchili"
+    given-names: "Arouna"
     alias: "arounamounchili"
 version: 1.1.0
 date-released: 2026-01-10

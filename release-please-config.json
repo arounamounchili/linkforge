@@ -3,7 +3,8 @@
         ".": {
             "release-type": "python",
             "extra-files": [
-                "blender_manifest.toml"
+                "blender_manifest.toml",
+                "CITATION.cff"
             ],
             "changelog-sections": [
                 {
