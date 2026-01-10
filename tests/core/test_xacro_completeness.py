@@ -380,6 +380,6 @@ def test_xacro_suppresses_existing_ros2_control(simple_robot: Robot, tmp_path: P
 
     # Verify ros2_control is NOT exported
     ros2_control_elems = root.findall("ros2_control")
-    assert len(ros2_control_elems) == 0, (
-        "Existing ros2_control should be suppressed when use_ros2_control=False"
-    )
+    assert (
+        len(ros2_control_elems) == 0
+    ), "Existing ros2_control should be suppressed when use_ros2_control=False"

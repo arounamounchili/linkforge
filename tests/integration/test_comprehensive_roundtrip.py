@@ -55,21 +55,21 @@ def test_comprehensive_roundtrip_preserves_structure():
             link2 = link_map2[link_name]
 
             # Verify visual count
-            assert len(link2.visuals) == len(link1.visuals), (
-                f"Link {link_name}: visual count mismatch"
-            )
+            assert len(link2.visuals) == len(
+                link1.visuals
+            ), f"Link {link_name}: visual count mismatch"
 
             # Verify collision count
-            assert len(link2.collisions) == len(link1.collisions), (
-                f"Link {link_name}: collision count mismatch"
-            )
+            assert len(link2.collisions) == len(
+                link1.collisions
+            ), f"Link {link_name}: collision count mismatch"
 
             # Verify inertial properties
             if link1.inertial:
                 assert link2.inertial is not None, f"Link {link_name}: missing inertial"
-                assert abs(link2.inertial.mass - link1.inertial.mass) < 0.001, (
-                    f"Link {link_name}: mass mismatch"
-                )
+                assert (
+                    abs(link2.inertial.mass - link1.inertial.mass) < 0.001
+                ), f"Link {link_name}: mass mismatch"
 
                 # Verify inertia tensor
                 i1 = link1.inertial.inertia
@@ -90,24 +90,24 @@ def test_comprehensive_roundtrip_preserves_structure():
             for i, (vis1, vis2) in enumerate(zip(link1.visuals, link2.visuals, strict=False)):
                 if vis1.origin:
                     assert vis2.origin is not None, f"Link {link_name} visual {i}: missing origin"
-                    assert abs(vis2.origin.xyz.x - vis1.origin.xyz.x) < 0.001, (
-                        f"Link {link_name} visual {i}: x mismatch"
-                    )
-                    assert abs(vis2.origin.xyz.y - vis1.origin.xyz.y) < 0.001, (
-                        f"Link {link_name} visual {i}: y mismatch"
-                    )
-                    assert abs(vis2.origin.xyz.z - vis1.origin.xyz.z) < 0.001, (
-                        f"Link {link_name} visual {i}: z mismatch"
-                    )
+                    assert (
+                        abs(vis2.origin.xyz.x - vis1.origin.xyz.x) < 0.001
+                    ), f"Link {link_name} visual {i}: x mismatch"
+                    assert (
+                        abs(vis2.origin.xyz.y - vis1.origin.xyz.y) < 0.001
+                    ), f"Link {link_name} visual {i}: y mismatch"
+                    assert (
+                        abs(vis2.origin.xyz.z - vis1.origin.xyz.z) < 0.001
+                    ), f"Link {link_name} visual {i}: z mismatch"
 
                 # Verify material
                 if vis1.material:
-                    assert vis2.material is not None, (
-                        f"Link {link_name} visual {i}: missing material"
-                    )
-                    assert vis2.material.name == vis1.material.name, (
-                        f"Link {link_name} visual {i}: material name mismatch"
-                    )
+                    assert (
+                        vis2.material is not None
+                    ), f"Link {link_name} visual {i}: missing material"
+                    assert (
+                        vis2.material.name == vis1.material.name
+                    ), f"Link {link_name} visual {i}: material name mismatch"
 
         # ========== VERIFY JOINTS ==========
         joint_map1 = {joint.name: joint for joint in robot1.joints}
@@ -124,83 +124,83 @@ def test_comprehensive_roundtrip_preserves_structure():
             assert joint2.child == joint1.child, f"Joint {joint_name}: child link mismatch"
 
             # Verify joint type
-            assert joint2.type == joint1.type, (
-                f"Joint {joint_name}: type mismatch ({joint2.type} vs {joint1.type})"
-            )
+            assert (
+                joint2.type == joint1.type
+            ), f"Joint {joint_name}: type mismatch ({joint2.type} vs {joint1.type})"
 
             # Verify joint origin
             if joint1.origin:
                 assert joint2.origin is not None, f"Joint {joint_name}: missing origin"
-                assert abs(joint2.origin.xyz.x - joint1.origin.xyz.x) < 0.001, (
-                    f"Joint {joint_name}: origin x mismatch"
-                )
-                assert abs(joint2.origin.xyz.y - joint1.origin.xyz.y) < 0.001, (
-                    f"Joint {joint_name}: origin y mismatch"
-                )
-                assert abs(joint2.origin.xyz.z - joint1.origin.xyz.z) < 0.001, (
-                    f"Joint {joint_name}: origin z mismatch"
-                )
-                assert abs(joint2.origin.rpy.x - joint1.origin.rpy.x) < 0.001, (
-                    f"Joint {joint_name}: origin roll mismatch"
-                )
-                assert abs(joint2.origin.rpy.y - joint1.origin.rpy.y) < 0.001, (
-                    f"Joint {joint_name}: origin pitch mismatch"
-                )
-                assert abs(joint2.origin.rpy.z - joint1.origin.rpy.z) < 0.001, (
-                    f"Joint {joint_name}: origin yaw mismatch"
-                )
+                assert (
+                    abs(joint2.origin.xyz.x - joint1.origin.xyz.x) < 0.001
+                ), f"Joint {joint_name}: origin x mismatch"
+                assert (
+                    abs(joint2.origin.xyz.y - joint1.origin.xyz.y) < 0.001
+                ), f"Joint {joint_name}: origin y mismatch"
+                assert (
+                    abs(joint2.origin.xyz.z - joint1.origin.xyz.z) < 0.001
+                ), f"Joint {joint_name}: origin z mismatch"
+                assert (
+                    abs(joint2.origin.rpy.x - joint1.origin.rpy.x) < 0.001
+                ), f"Joint {joint_name}: origin roll mismatch"
+                assert (
+                    abs(joint2.origin.rpy.y - joint1.origin.rpy.y) < 0.001
+                ), f"Joint {joint_name}: origin pitch mismatch"
+                assert (
+                    abs(joint2.origin.rpy.z - joint1.origin.rpy.z) < 0.001
+                ), f"Joint {joint_name}: origin yaw mismatch"
 
             # Verify axis
             if joint1.axis:
                 assert joint2.axis is not None, f"Joint {joint_name}: missing axis"
-                assert abs(joint2.axis.x - joint1.axis.x) < 0.001, (
-                    f"Joint {joint_name}: axis x mismatch"
-                )
-                assert abs(joint2.axis.y - joint1.axis.y) < 0.001, (
-                    f"Joint {joint_name}: axis y mismatch"
-                )
-                assert abs(joint2.axis.z - joint1.axis.z) < 0.001, (
-                    f"Joint {joint_name}: axis z mismatch"
-                )
+                assert (
+                    abs(joint2.axis.x - joint1.axis.x) < 0.001
+                ), f"Joint {joint_name}: axis x mismatch"
+                assert (
+                    abs(joint2.axis.y - joint1.axis.y) < 0.001
+                ), f"Joint {joint_name}: axis y mismatch"
+                assert (
+                    abs(joint2.axis.z - joint1.axis.z) < 0.001
+                ), f"Joint {joint_name}: axis z mismatch"
 
             # Verify limits
             if joint1.limits:
                 assert joint2.limits is not None, f"Joint {joint_name}: missing limits"
-                assert abs(joint2.limits.lower - joint1.limits.lower) < 0.001, (
-                    f"Joint {joint_name}: lower limit mismatch"
-                )
-                assert abs(joint2.limits.upper - joint1.limits.upper) < 0.001, (
-                    f"Joint {joint_name}: upper limit mismatch"
-                )
-                assert abs(joint2.limits.effort - joint1.limits.effort) < 0.001, (
-                    f"Joint {joint_name}: effort limit mismatch"
-                )
-                assert abs(joint2.limits.velocity - joint1.limits.velocity) < 0.001, (
-                    f"Joint {joint_name}: velocity limit mismatch"
-                )
+                assert (
+                    abs(joint2.limits.lower - joint1.limits.lower) < 0.001
+                ), f"Joint {joint_name}: lower limit mismatch"
+                assert (
+                    abs(joint2.limits.upper - joint1.limits.upper) < 0.001
+                ), f"Joint {joint_name}: upper limit mismatch"
+                assert (
+                    abs(joint2.limits.effort - joint1.limits.effort) < 0.001
+                ), f"Joint {joint_name}: effort limit mismatch"
+                assert (
+                    abs(joint2.limits.velocity - joint1.limits.velocity) < 0.001
+                ), f"Joint {joint_name}: velocity limit mismatch"
 
             # Verify dynamics
             if joint1.dynamics:
                 assert joint2.dynamics is not None, f"Joint {joint_name}: missing dynamics"
-                assert abs(joint2.dynamics.damping - joint1.dynamics.damping) < 0.001, (
-                    f"Joint {joint_name}: damping mismatch"
-                )
-                assert abs(joint2.dynamics.friction - joint1.dynamics.friction) < 0.001, (
-                    f"Joint {joint_name}: friction mismatch"
-                )
+                assert (
+                    abs(joint2.dynamics.damping - joint1.dynamics.damping) < 0.001
+                ), f"Joint {joint_name}: damping mismatch"
+                assert (
+                    abs(joint2.dynamics.friction - joint1.dynamics.friction) < 0.001
+                ), f"Joint {joint_name}: friction mismatch"
 
             # Verify mimic
             if joint1.mimic:
                 assert joint2.mimic is not None, f"Joint {joint_name}: missing mimic"
-                assert joint2.mimic.joint == joint1.mimic.joint, (
-                    f"Joint {joint_name}: mimic joint mismatch"
-                )
-                assert abs(joint2.mimic.multiplier - joint1.mimic.multiplier) < 0.001, (
-                    f"Joint {joint_name}: mimic multiplier mismatch"
-                )
-                assert abs(joint2.mimic.offset - joint1.mimic.offset) < 0.001, (
-                    f"Joint {joint_name}: mimic offset mismatch"
-                )
+                assert (
+                    joint2.mimic.joint == joint1.mimic.joint
+                ), f"Joint {joint_name}: mimic joint mismatch"
+                assert (
+                    abs(joint2.mimic.multiplier - joint1.mimic.multiplier) < 0.001
+                ), f"Joint {joint_name}: mimic multiplier mismatch"
+                assert (
+                    abs(joint2.mimic.offset - joint1.mimic.offset) < 0.001
+                ), f"Joint {joint_name}: mimic offset mismatch"
 
         # ========== VERIFY TRANSMISSIONS ==========
         assert len(robot2.transmissions) == len(robot1.transmissions), "Transmission count mismatch"
@@ -213,9 +213,9 @@ def test_comprehensive_roundtrip_preserves_structure():
             trans2 = trans_map2[trans_name]
 
             assert trans2.type == trans1.type, f"Transmission {trans_name}: type mismatch"
-            assert len(trans2.joints) == len(trans1.joints), (
-                f"Transmission {trans_name}: joint count mismatch"
-            )
+            assert len(trans2.joints) == len(
+                trans1.joints
+            ), f"Transmission {trans_name}: joint count mismatch"
 
         # ========== VERIFY SENSORS ==========
         assert len(robot2.sensors) == len(robot1.sensors), "Sensor count mismatch"
@@ -227,15 +227,15 @@ def test_comprehensive_roundtrip_preserves_structure():
             sensor1 = sensor_map1[sensor_name]
             sensor2 = sensor_map2[sensor_name]
 
-            assert sensor2.type == sensor1.type, (
-                f"Sensor {sensor_name}: type mismatch ({sensor2.type} vs {sensor1.type})"
-            )
-            assert sensor2.link_name == sensor1.link_name, (
-                f"Sensor {sensor_name}: link name mismatch"
-            )
-            assert abs(sensor2.update_rate - sensor1.update_rate) < 0.01, (
-                f"Sensor {sensor_name}: update rate mismatch"
-            )
+            assert (
+                sensor2.type == sensor1.type
+            ), f"Sensor {sensor_name}: type mismatch ({sensor2.type} vs {sensor1.type})"
+            assert (
+                sensor2.link_name == sensor1.link_name
+            ), f"Sensor {sensor_name}: link name mismatch"
+            assert (
+                abs(sensor2.update_rate - sensor1.update_rate) < 0.01
+            ), f"Sensor {sensor_name}: update rate mismatch"
 
     finally:
         # Cleanup
