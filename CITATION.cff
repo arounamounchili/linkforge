@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+title: "LinkForge"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: "Mounchili"
+    given-names: "Arouna Patouossa"
+    alias: "arounamounchili"
+version: 1.1.0
+date-released: 2026-01-10
+url: "https://github.com/arounamounchili/linkforge"
+repository-code: "https://github.com/arounamounchili/linkforge"
+license: GPL-3.0-or-later
+keywords:
+  - robotics
+  - blender
+  - urdf
+  - xacro
+  - simulation
+  - gazebo
+  - ros2
+abstract: >-
+  LinkForge is a professional Blender extension for roboticists, providing a seamless bridge
+  between 3D modeling and robotics simulation by exporting production-ready URDF and XACRO files.
