@@ -10,7 +10,8 @@ This document provides a technical specification of how LinkForge maps Blender o
 | **Visual** | `Mesh` | Textured/Solid | Must be a child of a Link Empty. |
 | **Collision** | `Mesh` | Wireframe | Must be a child of a Link Empty. |
 | **Joint** | `Empty` | Arrows | Colored axes (RGB for XYZ). |
-| **Sensor** | `Empty` | Plain Axes | Must be a child of a Link Empty. |
+| **Sensor** | `Empty` | Sphere | Wireframe sphere. Must be a child of a Link Empty. |
+| **Transmission** | `Empty` | Single Arrow | Shows actuation axis. Aligned with Joint. |
 
 ## Naming Conventions
 
