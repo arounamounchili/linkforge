@@ -125,7 +125,7 @@ class LINKFORGE_PT_validate_export(Panel):
         if num_links == 0:
             box = layout.box()
             box.label(text="No robot in scene", icon="INFO")
-            box.label(text="Create links in Build panel to start", icon="FORWARD")
+            box.label(text="Create links in Forge panel to start", icon="FORWARD")
             return
 
         # Build tree structure to find root

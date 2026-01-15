@@ -157,7 +157,7 @@ class URDFGenerator:
 
         # Add transmissions
         if robot.transmissions:
-            root.append(ET.Comment(" Transmissions "))
+            root.append(ET.Comment(" Transmissions (Kept for backward compatibility) "))
         for transmission in robot.transmissions:
             self._add_transmission_element(root, transmission)
 
@@ -537,6 +537,8 @@ class URDFGenerator:
                 # Normalize to short name (position, velocity, effort)
                 iface_elem.text = self._normalize_interface_name(interface)
 
+            # Always export mechanical reduction for backward compatibility and round-trip fidelity,
+            # even if it is 1.0. This ensures we don't lose data when re-importing legacy files.
             # Add mechanical reduction (always include for round-trip fidelity)
             if actuator.mechanical_reduction is not None:
                 reduction_elem = ET.SubElement(actuator_elem, "mechanicalReduction")

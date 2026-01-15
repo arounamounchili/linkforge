@@ -21,6 +21,3 @@ A transmission can support multiple hardware interfaces. For most ROS 2 controll
 
 ## 4. Mechanical Reduction
 You can set a **Mechanical Reduction** factor (default is 1.0). This generates the `<mechanicalReduction>` tag in the URDF, which is used by some physics engines to simulate gearboxes.
-
-## 5. Multiple Actuators
-If your joint is driven by multiple motors (rare but supported by URDF), you can add multiple actuators to a single transmission by clicking the **+** button in the list.
