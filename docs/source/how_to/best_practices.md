@@ -15,7 +15,7 @@ Physics engines like Gazebo or Bullet are highly sensitive to how geometry and m
 - **Avoid "Thin" Colliders**: Very thin meshes (like a piece of paper) can cause tunneling errors in physics engines. Give your colliders some thickness.
 
 ### 3. Orientation
-- **X-Forward, Z-Up**: While LinkForge handles coordinate transforms, following the ROS standard (X-axis forward, Y-axis left, Z-axis up) for your links will make joint configuration much more intuitive.
+- **X-Forward, Z-Up**: LinkForge uses **direct 1:1 coordinate mapping** (no automatic rotations). Following the ROS standard (X-axis forward, Y-axis left, Z-axis up) when modeling your robot in Blender will make joint configuration intuitive and match ROS expectations.
 
 ---
 
