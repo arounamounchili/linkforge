@@ -70,7 +70,8 @@ class Robot:
     def _rebuild_indices(self) -> None:
         """Rebuild internal O(1) lookup indices.
 
-        Called automatically after __post_init__ and when components are added/removed.
+        Called once during __post_init__. When components are added via add_*
+        methods, they update the indices directly for efficiency.
         """
         self._link_index = {link.name: link for link in self.links}
         self._joint_index = {joint.name: joint for joint in self.joints}
@@ -139,9 +140,8 @@ class Robot:
             raise ValueError(f"Transmission '{transmission.name}' already exists")
 
         # Validate that all referenced joints exist
-        joint_names = {joint.name for joint in self.joints}
         for trans_joint in transmission.joints:
-            if trans_joint.name not in joint_names:
+            if trans_joint.name not in self._joint_index:
                 raise ValueError(
                     f"Transmission '{transmission.name}': joint '{trans_joint.name}' not found"
                 )
@@ -338,8 +338,8 @@ class Robot:
         """
         errors = []
 
-        # Build a map of joint names for quick lookup
-        joint_map = {joint.name: joint for joint in self.joints}
+        # Use existing joint index for O(1) lookup
+        joint_map = self._joint_index
 
         for joint in self.joints:
             if joint.mimic is None:

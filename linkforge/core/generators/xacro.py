@@ -211,7 +211,7 @@ class XACROGenerator(URDFGenerator):
 
         # Add transmissions
         if robot.transmissions:
-            root.append(ET.Comment(" Transmissions "))
+            root.append(ET.Comment(" Transmissions (Kept for backward compatibility) "))
         for transmission in robot.transmissions:
             self._add_transmission_element(root, transmission)
 
