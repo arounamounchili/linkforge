@@ -42,9 +42,17 @@ Joints in LinkForge operate differently than standard Blender parent-child relat
 - This allows LinkForge to build a kinematic tree that stays 100% compliant with URDF, regardless of how objects are organized in the Blender Outliner.
 
 ### 3. Coordinate Systems
-LinkForge handles the conversion between Blender's **Z-Up** system and URDF's **Right-Handed** conventions.
-- **Joint Axes**: Selecting "X", "Y", or "Z" in the Joint panel automatically assigns the correct vector (e.g., `1 0 0`) based on the Joint Empty's orientation.
-- **Origins**: The `location` and `rotation` of the Link Empty in Blender are converted to the `<origin>` tag of its parent Joint.
+Both Blender and URDF use **Z-up, right-handed** coordinate systems. LinkForge uses **direct 1:1 coordinate mapping** (no rotations applied during import/export).
+
+**Coordinate Conventions:**
+- **Blender Default:** Z-up, Y-forward, X-right
+- **URDF/ROS (REP-103):** Z-up, X-forward, Y-left
+
+**Recommendation:** Model your robot using ROS conventions (X-forward) in Blender for intuitive joint configuration, even though Blender's default is Y-forward.
+
+- **Joint Axes**: Selecting "X", "Y", or "Z" in the Joint panel assigns the exact vector (e.g., `1 0 0`) based on the Joint Empty's local orientation.
+- **Origins**: The `location` and `rotation` of Empties in Blender map directly to the `<origin>` tag in URDF (XYZ position, RPY rotation).
+
 
 ## Property Storage
 LinkForge stores all metadata as **Custom Properties** on the Blender objects. These can be inspected in the "Custom Properties" panel of the Object Data tab, though it is recommended to use the LinkForge Sidebar for editing.
