@@ -211,10 +211,11 @@ def create_collision_for_link(link_obj, collision_type, context):
             detected = detect_primitive_type(visual_children[0])
             collision_type = detected if detected else "CONVEX_HULL"
 
-    # Generate collision mesh
+    # Determine collision type and generate geometry
+    local_offset = mathutils.Vector((0, 0, 0))
     if collision_type in ("BOX", "SPHERE", "CYLINDER"):
         # Primitives only make sense for single visuals
-        collision_obj = _create_primitive_collision(
+        collision_obj, local_offset = _create_primitive_collision(
             visual_children[0], collision_type, link_name, context
         )
         reference_visual = visual_children[0]
@@ -223,16 +224,25 @@ def create_collision_for_link(link_obj, collision_type, context):
         collision_obj = _create_convex_hull_collision_compound(visual_children, link_name, context)
         # Use first visual as reference for positioning
         reference_visual = visual_children[0]
+        # Convex hull geometry is already offset relative to origin by the merger
+        local_offset = mathutils.Vector((0, 0, 0))
 
     if collision_obj is None:
         return None
 
+    # Parent to link using Strict Alignment
     collision_obj.parent = link_obj
 
     # Copy both local transform AND parent inverse to ensure perfect alignment
     # even if the visual mesh was manually parented with "Keep Transform"
     collision_obj.matrix_parent_inverse = reference_visual.matrix_parent_inverse.copy()
-    collision_obj.matrix_local = reference_visual.matrix_local.copy()
+
+    # Align with strict precision: Visual Matrix x Local Primitive Offset
+    # This accounts for cases where the visual origin is at a pivot point
+    # but the geometry is offset from that pivot.
+    collision_obj.matrix_local = reference_visual.matrix_local @ mathutils.Matrix.Translation(
+        local_offset
+    )
 
     collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
 
@@ -265,29 +275,29 @@ def create_collision_for_link(link_obj, collision_type, context):
 
 
 def _create_primitive_collision(visual_obj, prim_type, link_name, context):
-    """Create primitive collision geometry."""
+    """Create primitive collision geometry aligned with geometry center.
+
+    Returns:
+        tuple: (collision_obj, local_center_offset)
+    """
+    # Calculate geometric center from bounding box in local space
+    # This allows correctly centering primitives even if the mesh origin is offset
+    local_bbox = [mathutils.Vector(v) for v in visual_obj.bound_box]
+    local_center = sum(local_bbox, mathutils.Vector((0, 0, 0))) / 8.0
+
     # Get visual's dimensions and parent scale
-    # visual_obj.dimensions gives world-space size (includes parent scale)
-    # We need to create collision at LOCAL size (divide by parent scale)
-    # because it will be parented to the link and inherit parent scale
     world_dims = visual_obj.dimensions.copy()
+    local_dims = world_dims.copy()
 
     # Get parent scale to convert world dims to local dims
     if visual_obj.parent:
         parent_scale = visual_obj.parent.scale
-        # Divide world dimensions by parent scale to get local dimensions
-        local_dims = mathutils.Vector(
-            (
-                world_dims.x / parent_scale.x,
-                world_dims.y / parent_scale.y,
-                world_dims.z / parent_scale.z,
-            )
-        )
-    else:
-        local_dims = world_dims
+        local_dims.x /= parent_scale.x
+        local_dims.y /= parent_scale.y
+        local_dims.z /= parent_scale.z
 
     if prim_type == "BOX":
-        # Create cube at local size (will be scaled by parent when parented)
+        # Create cube at local size
         bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
         collision_obj = context.active_object
         collision_obj.dimensions = local_dims
@@ -306,7 +316,7 @@ def _create_primitive_collision(visual_obj, prim_type, link_name, context):
         collision_obj = context.active_object
 
     else:
-        return None
+        return None, mathutils.Vector((0, 0, 0))
 
     # Apply scale to bake dimensions into geometry
     # This ensures collision has scale=1.0 with geometry at local size
@@ -321,9 +331,7 @@ def _create_primitive_collision(visual_obj, prim_type, link_name, context):
     # Name it
     collision_obj.name = f"{link_name}_collision"
 
-    # NOTE: location/rotation are set by caller using Strict Alignment relative to Visual
-
-    return collision_obj
+    return collision_obj, local_center
 
 
 def _merge_visual_meshes(visual_objects, context):
