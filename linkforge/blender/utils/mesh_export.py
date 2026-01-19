@@ -192,14 +192,17 @@ def create_simplified_mesh(obj: Any, decimation_ratio: float) -> Any | None:
     if obj is None or obj.type != "MESH":
         return None
 
-    # Duplicate the object
-    bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.duplicate()
+    # Use data-level copy instead of high-level duplicate operator to ensure
+    # operation succeeds regardless of viewport visibility (hide_viewport state).
+    simplified_obj = obj.copy()
+    simplified_obj.data = obj.data.copy()
 
-    # Get the duplicated object
-    simplified_obj = bpy.context.active_object
+    # Ensure temporary object is visible for modifier application
+    simplified_obj.hide_viewport = False
+
+    # Link to the same collections as the original
+    for col in obj.users_collection:
+        col.objects.link(simplified_obj)
 
     # Add Decimate modifier
     decimate_mod = simplified_obj.modifiers.new(name="Decimate", type="DECIMATE")
@@ -207,6 +210,8 @@ def create_simplified_mesh(obj: Any, decimation_ratio: float) -> Any | None:
     decimate_mod.decimate_type = "COLLAPSE"
 
     # Apply the modifier
+    bpy.ops.object.select_all(action="DESELECT")
+    simplified_obj.select_set(True)
     bpy.context.view_layer.objects.active = simplified_obj
     bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
 
@@ -313,17 +318,23 @@ def export_link_mesh(
     if dry_run:
         return filepath
 
-    # CRITICAL: Create a temporary duplicate with transforms applied
-    # This ensures the mesh file contains geometry at correct scale but centered at origin
-    # The visual origin in URDF will handle positioning
+    # Create a temporary clone with transforms applied for mesh export.
+    # Data-level copying is used to avoid dependencies on Blender's operator context
+    # and viewport visibility states.
+    temp_export_obj = obj.copy()
+    temp_export_obj.data = obj.data.copy()
 
-    # Select and duplicate the object
+    # Temporarily unhide the duplication (not the original) for transform application
+    temp_export_obj.hide_viewport = False
+
+    # Link to the same collections as the original
+    for col in obj.users_collection:
+        col.objects.link(temp_export_obj)
+
+    # Select and make active for transform application
     bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.duplicate()
-
-    temp_export_obj = bpy.context.active_object
+    temp_export_obj.select_set(True)
+    bpy.context.view_layer.objects.active = temp_export_obj
 
     # CRITICAL FIX: Clear parent to ensure world-space positioning
     # Without this, setting location=(0,0,0) moves to parent's local origin,

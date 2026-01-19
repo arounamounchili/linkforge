@@ -316,6 +316,10 @@ def _create_primitive_collision(visual_obj, prim_type, link_name, context):
     # This ensures collision has scale=1.0 with geometry at local size
     # When parented to link, it will inherit parent's scale to reach correct world size
     bpy.context.view_layer.objects.active = collision_obj
+
+    # Ensure object is visible for transform_apply operator
+    collision_obj.hide_viewport = False
+
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
     # Name it
@@ -348,17 +352,27 @@ def _merge_visual_meshes(visual_objects, context):
     for i, vis in enumerate(visual_objects):
         logger.info(f"  [{i + 1}] {vis.name}")
 
-    # Duplicate all visual objects
+    # Create clones of visual objects using data-level duplication to ensure
+    # robustness against object visibility states in the viewport.
     duplicates = []
     for visual_obj in visual_objects:
-        bpy.ops.object.select_all(action="DESELECT")
-        visual_obj.select_set(True)
-        context.view_layer.objects.active = visual_obj
-        bpy.ops.object.duplicate()
-        dup = context.active_object
+        dup = visual_obj.copy()
+        dup.data = visual_obj.data.copy()
+
+        # Ensure temporary duplicate is visible for join operation
+        dup.hide_viewport = False
+
+        # Link to the same collections as the original
+        for col in visual_obj.users_collection:
+            col.objects.link(dup)
 
         # Clear parent and apply transforms to bake world position into geometry
         dup.parent = None
+
+        # Select and make active for transform application
+        bpy.ops.object.select_all(action="DESELECT")
+        dup.select_set(True)
+        context.view_layer.objects.active = dup
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         duplicates.append(dup)
