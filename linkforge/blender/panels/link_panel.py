@@ -26,11 +26,17 @@ class LINKFORGE_PT_links(Panel):
 
         # Early exit if nothing selected
         if obj is None or not obj.select_get():
-            # Still show Create button when nothing selected
+            # Nothing selected - offer to create an empty link
             box = layout.box()
-            row = box.row()
+            box.label(text="Link Creation", icon="PLUS")
+            col = box.column(align=True)
+            col.operator("linkforge.add_empty_link", icon="EMPTY_DATA", text="Add Empty Link Frame")
+
+            row = col.row()
             row.enabled = False
-            row.operator("linkforge.create_link_from_mesh", icon="ADD", text="Create Link")
+            row.operator(
+                "linkforge.create_link_from_mesh", icon="ADD", text="Create Link from Mesh"
+            )
             return
 
         props = obj.linkforge
@@ -54,9 +60,12 @@ class LINKFORGE_PT_links(Panel):
         # Only show Create button when NOT editing a link
         if not is_link:
             box = layout.box()
-            row = box.row()
-            # Button enabled only if operator poll returns True (mesh selected, not already a link)
-            row.operator("linkforge.create_link_from_mesh", icon="ADD", text="Create Link")
+            box.label(text="Link Creation", icon="PLUS")
+            col = box.column(align=True)
+            col.operator(
+                "linkforge.create_link_from_mesh", icon="ADD", text="Create Link from Mesh"
+            )
+            col.operator("linkforge.add_empty_link", icon="EMPTY_DATA", text="Add Empty Link Frame")
 
         # Show link properties only if a link is selected (edit mode)
         if not is_link:
@@ -64,7 +73,17 @@ class LINKFORGE_PT_links(Panel):
 
         # IS A LINK - Show link properties
         box = layout.box()
-        box.label(text=f"Link: {obj.name}", icon="LINKED")
+        visual_count = sum(1 for child in obj.children if "_visual" in child.name.lower())
+        collision_count = sum(1 for child in obj.children if "_collision" in child.name.lower())
+        is_virtual = visual_count == 0 and collision_count == 0
+
+        title = f"Link: {obj.name}"
+        icon = "EMPTY_DATA" if is_virtual else "LINKED"
+        box.label(text=title, icon=icon)
+
+        if is_virtual:
+            status_box = box.box()
+            status_box.label(text="Status: Virtual Frame (No Geometry)", icon="INFO")
 
         # Link name
         box.prop(props, "link_name")
@@ -73,76 +92,64 @@ class LINKFORGE_PT_links(Panel):
         box.separator()
         box.label(text="Geometry", icon="MESH_CUBE")
 
-        # Show child mesh count
-        visual_count = sum(1 for child in obj.children if "_visual" in child.name.lower())
-        collision_count = sum(1 for child in obj.children if "_collision" in child.name.lower())
-
         # Visual/Collision status row with counts
         row = box.row(align=True)
         row.label(text=f"Visual: {visual_count}", icon="SHADING_RENDERED")
         row.label(text=f"Collision: {collision_count}", icon="MOD_PHYSICS")
 
-        # Collision Type (Always visible)
+        # Collision Configuration
         row = box.row()
+        row.enabled = not is_virtual
         row.prop(props, "collision_type", text="Collision Type")
 
-        # Collision quality slider (show before actions for better workflow)
-        # User sets quality FIRST, then generates/manages collision
-        if collision_count > 0:
-            # Check if collision is a primitive (no quality slider needed)
-            is_primitive = False
+        # Geometry Detection Info
+        detected_type = "None (Virtual Frame)"
+        is_primitive = False
+        collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
 
-            collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
+        if collision_obj:
+            # 1. Check explicit URDF tag (Strongest guarantee)
+            if "urdf_geometry_type" in collision_obj:
+                detected_type = collision_obj["urdf_geometry_type"]
+                is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
 
-            # Resolve actual geometry type for UX feedback
-            detected_type = "UNKNOWN"
-            is_primitive = False
+            # 2. Check generator tag (from generate_collision operator)
+            elif collision_obj.get("collision_geometry_type", "AUTO") in (
+                "BOX",
+                "CYLINDER",
+                "SPHERE",
+            ):
+                detected_type = collision_obj["collision_geometry_type"]
+                is_primitive = True
 
-            if collision_obj:
-                # 1. Check explicit URDF tag (Strongest guarantee)
-                if "urdf_geometry_type" in collision_obj:
-                    detected_type = collision_obj["urdf_geometry_type"]
-                    is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
+            elif collision_obj.get("collision_geometry_type", "AUTO") == "CONVEX_HULL":
+                detected_type = "CONVEX_HULL"
+                is_primitive = False
 
-                # 2. Check generator tag (from generate_collision operator)
-                elif collision_obj.get("collision_geometry_type", "AUTO") in (
-                    "BOX",
-                    "CYLINDER",
-                    "SPHERE",
-                ):
-                    detected_type = collision_obj["collision_geometry_type"]
-                    is_primitive = True
-
-                elif collision_obj.get("collision_geometry_type", "AUTO") == "CONVEX_HULL":
-                    detected_type = "CONVEX_HULL"
-                    is_primitive = False
-
-                # 3. Fallback to heuristic detection
-                elif detect_primitive_type is not None:
-                    try:
-                        heuristic_type = detect_primitive_type(collision_obj)
-                        if heuristic_type:
-                            detected_type = heuristic_type
-                            is_primitive = True
-                        else:
-                            detected_type = "MESH"
-                    except Exception:
-                        detected_type = "MESH"
-                else:
+            # 3. Fallback to heuristic detection
+            elif detect_primitive_type:
+                try:
+                    heuristic_type = detect_primitive_type(collision_obj)
+                    detected_type = heuristic_type if heuristic_type else "MESH"
+                    is_primitive = heuristic_type is not None
+                except Exception:
                     detected_type = "MESH"
+            else:
+                detected_type = "MESH"
 
-                # Display detected type
-                row = box.row()
-                if is_primitive:
-                    row.label(text=f"Detected: {detected_type}", icon="MESH_ICOSPHERE")
-                else:
-                    row.label(text=f"Detected: {detected_type}", icon="OUTLINER_DATA_MESH")
+        # Display detected type
+        row = box.row()
+        icon = "INFO"
+        if collision_obj:
+            icon = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
 
-            if detected_type == "CONVEX_HULL":
-                # Show slider for meshes (only relevant for non-primitives)
-                box.separator()
-                row = box.row()
-                row.prop(props, "collision_quality", text="Collision Quality", slider=True)
+        row.label(text=f"Detected Collision: {detected_type}", icon=icon)
+
+        # Show slider for meshes (only relevant for non-primitives)
+        if collision_obj and detected_type == "CONVEX_HULL":
+            box.separator()
+            row = box.row()
+            row.prop(props, "collision_quality", text="Collision Quality", slider=True)
 
         # Collision actions (after quality setting for logical workflow)
         col = box.column(align=True)
@@ -174,8 +181,12 @@ class LINKFORGE_PT_links(Panel):
         # Auto-inertia (always on by default, simplified)
         box.separator()
         row = box.row()
+        row.enabled = not is_virtual  # Cannot auto-calculate without geometry
         row.prop(props, "use_auto_inertia", text="Auto-Calculate Inertia")
-        if props.use_auto_inertia:
+
+        if is_virtual:
+            row.label(text=" (N/A for frames)", icon="ERROR")
+        elif props.use_auto_inertia:
             row.label(text="", icon="CHECKMARK")
         else:
             # Manual inertia input - 2x3 compact table layout

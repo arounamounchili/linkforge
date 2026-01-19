@@ -227,18 +227,14 @@ def create_collision_for_link(link_obj, collision_type, context):
     if collision_obj is None:
         return None
 
-    # Parent to link using Strict Alignment
-    # We want Collision to exactly match Visual in Local space relative to Link
-    # This ensures URDF exporter (which reads Local) gets correct relative values
-
     collision_obj.parent = link_obj
-    collision_obj.matrix_parent_inverse.identity()
 
-    # Copy local transforms from reference visual to collision
-    # (Since we used Identity inverse, 'Location' property aligns perfectly to Parent info)
-    collision_obj.location = reference_visual.location
-    collision_obj.rotation_euler = reference_visual.rotation_euler
-    collision_obj.scale = (1, 1, 1)  # Scale was baked into geometry
+    # Copy both local transform AND parent inverse to ensure perfect alignment
+    # even if the visual mesh was manually parented with "Keep Transform"
+    collision_obj.matrix_parent_inverse = reference_visual.matrix_parent_inverse.copy()
+    collision_obj.matrix_local = reference_visual.matrix_local.copy()
+
+    collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
 
     # IMPORTANT: Ensure collision is actually a child in the collection hierarchy
     # If collision was created in a different collection, it won't show as child in outliner
@@ -521,6 +517,54 @@ def calculate_inertia_for_link(link_obj):
     except Exception as e:
         logger.error(f"Error calculating inertia for {link_obj.name}: {e}", exc_info=True)
         return False
+
+
+class LINKFORGE_OT_add_empty_link(Operator):
+    """Add a new robot link frame (virtual link) at 3D cursor"""
+
+    bl_idname = "linkforge.add_empty_link"
+    bl_label = "Add Empty Link"
+    bl_description = "Create a new empty link frame at the 3D cursor position"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context: Context):
+        """Execute the operator."""
+        from ..preferences import get_addon_prefs
+
+        # Initialize default size and prefix
+        empty_size = 0.1
+        link_name = "base_link"
+
+        addon_prefs = get_addon_prefs(context)
+        if addon_prefs:
+            empty_size = getattr(addon_prefs, "link_empty_size", empty_size)
+
+        # Create Empty object as link frame
+        empty = bpy.data.objects.new(link_name, None)
+        empty.empty_display_type = "PLAIN_AXES"
+        empty.empty_display_size = empty_size
+
+        # Add to scene
+        context.collection.objects.link(empty)
+
+        # Place at 3D cursor
+        empty.location = context.scene.cursor.location.copy()
+        # Rotation matched to cursor too for convenience
+        empty.rotation_euler = context.scene.cursor.rotation_euler.copy()
+
+        # Mark as robot link
+        empty.linkforge.is_robot_link = True
+
+        # Select the new link
+        bpy.ops.object.select_all(action="DESELECT")
+        empty.select_set(True)
+        context.view_layer.objects.active = empty
+
+        # Ensure name is sanitized
+        empty.linkforge.link_name = empty.name
+
+        self.report({"INFO"}, f"Added virtual link frame '{empty.name}' at cursor.")
+        return {"FINISHED"}
 
 
 class LINKFORGE_OT_create_link_from_mesh(Operator):
@@ -951,43 +995,49 @@ class LINKFORGE_OT_remove_link(Operator):
         ]
 
         if not visual_children:
-            self.report({"ERROR"}, "No visual mesh found to restore")
-            return {"CANCELLED"}
+            # VIRTUAL LINK / EMPTY FRAME - Robust handling
+            # If no visual mesh, we simply delete the collision children and the frame itself
+            collision_children = [c for c in link_obj.children if "_collision" in c.name.lower()]
+            for col in collision_children:
+                bpy.data.objects.remove(col, do_unlink=True)
 
-        visual_obj = visual_children[0]
+            bpy.data.objects.remove(link_obj, do_unlink=True)
+            self.report({"INFO"}, f"Removed virtual link frame '{link_name}'")
+            return {"FINISHED"}
 
-        # Store world transform of visual object
-        world_matrix = visual_obj.matrix_world.copy()
+        # Restore ALL visual objects
+        # We unparent them and keep their world transforms
+        for visual_obj in visual_children:
+            original_world_matrix = visual_obj.matrix_world.copy()
+            visual_obj.parent = None
+            visual_obj.matrix_world = original_world_matrix
 
-        # Unparent visual object
-        visual_obj.parent = None
-        visual_obj.matrix_world = world_matrix
+            # Restore name (remove _visual suffix / link prefix)
+            if visual_obj.name.endswith("_visual"):
+                visual_obj.name = visual_obj.name[:-7]
+            elif visual_obj.name.startswith(f"{link_name}_visual"):
+                visual_obj.name = link_name
 
         # Delete collision objects
         collision_children = [c for c in link_obj.children if "_collision" in c.name.lower()]
         for col in collision_children:
             bpy.data.objects.remove(col, do_unlink=True)
 
-        # Delete the link empty FIRST to free up the name
+        # Delete the link empty
         bpy.data.objects.remove(link_obj, do_unlink=True)
 
-        # Force update to ensure name is freed
+        # Force update to ensure name namespace is freed in Blender
         if context.view_layer:
             context.view_layer.update()
 
-        # Restore name (remove _visual suffix)
-        # Now that Empty is gone, we can safely use the original name
-        if visual_obj.name.endswith("_visual"):
-            visual_obj.name = visual_obj.name[:-7]  # Remove last 7 chars "_visual"
-        elif visual_obj.name.startswith(f"{link_name}_visual"):
-            visual_obj.name = link_name
+        # Select the (first) restored visual object for consistency
+        if visual_children:
+            bpy.ops.object.select_all(action="DESELECT")
+            visual_children[0].select_set(True)
+            context.view_layer.objects.active = visual_children[0]
 
-        # Select the restored visual object
-        bpy.ops.object.select_all(action="DESELECT")
-        visual_obj.select_set(True)
-        context.view_layer.objects.active = visual_obj
-
-        self.report({"INFO"}, f"Removed link properties. Restored mesh: '{visual_obj.name}'")
+        msg = f"Removed link '{link_name}'. Restored {len(visual_children)} mesh(es)."
+        self.report({"INFO"}, msg)
         return {"FINISHED"}
 
 
@@ -1054,6 +1104,7 @@ class LINKFORGE_OT_add_material_slot(Operator):
 
 # Registration
 classes = [
+    LINKFORGE_OT_add_empty_link,
     LINKFORGE_OT_create_link_from_mesh,
     LINKFORGE_OT_generate_collision,
     LINKFORGE_OT_generate_collision_all,
