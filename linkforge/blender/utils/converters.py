@@ -463,19 +463,9 @@ def blender_link_to_core_with_origin(
         child_name = child.name
 
         if "_visual" in child_name:
-            # Extract origin from object transform
-            origin = Transform(
-                xyz=Vector3(
-                    clean_float(child.location.x),
-                    clean_float(child.location.y),
-                    clean_float(child.location.z),
-                ),
-                rpy=Vector3(
-                    clean_float(child.rotation_euler.x),
-                    clean_float(child.rotation_euler.y),
-                    clean_float(child.rotation_euler.z),
-                ),
-            )
+            # Extract relative origin using matrix math (robust against 'Keep Transform')
+            relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
+            origin = matrix_to_transform(relative_matrix)
 
             # Extract material
             material = get_object_material(child, props)
@@ -499,19 +489,9 @@ def blender_link_to_core_with_origin(
                 )
 
         elif "_collision" in child_name:
-            # Extract origin from object transform
-            origin = Transform(
-                xyz=Vector3(
-                    clean_float(child.location.x),
-                    clean_float(child.location.y),
-                    clean_float(child.location.z),
-                ),
-                rpy=Vector3(
-                    clean_float(child.rotation_euler.x),
-                    clean_float(child.rotation_euler.y),
-                    clean_float(child.rotation_euler.z),
-                ),
-            )
+            # Extract relative origin using matrix math (robust against 'Keep Transform')
+            relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
+            origin = matrix_to_transform(relative_matrix)
 
             # CRITICAL FIX: Check if this collision was imported from URDF
             # Imported meshes should NOT be re-simplified to prevent degradation
@@ -952,25 +932,14 @@ def scene_to_robot(
                     if link_name in link_frames and Matrix:
                         link_obj = link_objects.get(link_name)
                         if link_obj and obj.parent == link_obj:
-                            sensor_local = obj.matrix_local.copy()
-                            sensor_translation = sensor_local.to_translation()
-                            sensor_rotation = sensor_local.to_quaternion()
-                            sensor_transform = (
-                                Matrix.Translation(sensor_translation)
-                                @ sensor_rotation.to_matrix().to_4x4()
-                            )
-                            corrected_origin = matrix_to_transform(sensor_transform)
+                            # Extract relative origin using matrix math (robust against 'Keep Transform')
+                            sensor_relative = link_obj.matrix_world.inverted() @ obj.matrix_world
+                            corrected_origin = matrix_to_transform(sensor_relative)
                             sensor = replace(sensor, origin=corrected_origin)
                         else:
+                            # Not direct child, but link_name is specified (custom mount)
                             link_frame_inv = link_frames[link_name].inverted()
-                            sensor_world = obj.matrix_world.copy()
-                            sensor_translation = sensor_world.to_translation()
-                            sensor_rotation = sensor_world.to_quaternion()
-                            sensor_transform = (
-                                Matrix.Translation(sensor_translation)
-                                @ sensor_rotation.to_matrix().to_4x4()
-                            )
-                            sensor_relative = link_frame_inv @ sensor_transform
+                            sensor_relative = link_frame_inv @ obj.matrix_world
                             corrected_origin = matrix_to_transform(sensor_relative)
                             sensor = replace(sensor, origin=corrected_origin)
 

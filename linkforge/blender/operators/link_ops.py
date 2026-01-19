@@ -286,8 +286,7 @@ def _create_primitive_collision(visual_obj, prim_type, link_name, context):
     local_center = sum(local_bbox, mathutils.Vector((0, 0, 0))) / 8.0
 
     # Get visual's dimensions and parent scale
-    world_dims = visual_obj.dimensions.copy()
-    local_dims = world_dims.copy()
+    local_dims = visual_obj.dimensions.copy()
 
     # Get parent scale to convert world dims to local dims
     if visual_obj.parent:
