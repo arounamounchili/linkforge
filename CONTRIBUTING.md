@@ -86,8 +86,10 @@ linkforge/
 │       ├── physics/       # Inertia calculations
 │       └── validation/    # Validation & security
 ├── tests/                 # Test suite
-│   ├── core/             # Core logic tests
-│   └── integration/      # Full workflow tests
+│   ├── unit/              # Isolated tests
+│   │   ├── core/          # Model & math tests
+│   │   └── blender/       # Mocked Blender logic tests
+│   └── integration/      # System workflow and round-trip tests
 ├── examples/             # Example URDF files
 ├── docs/                 # Documentation
 └── build_extension.py    # Extension builder script
@@ -176,13 +178,13 @@ git commit -m "feat: add your feature description"
 uv run pytest
 
 # Run specific test file
-uv run pytest tests/core/test_robot.py
+uv run pytest tests/unit/core/test_robot.py
 
 # Run with coverage
 uv run pytest --cov=linkforge --cov-report=html
 
 # Run only fast tests (skip integration)
-uv run pytest -m "not integration"
+uv run pytest tests/unit/
 ```
 
 ### Writing Tests
@@ -225,11 +227,8 @@ def test_sensor_roundtrip():
     assert robot2.sensors[0].origin == robot.sensors[0].origin
 ```
 
-### Test Categories
-
-- **Unit Tests** (`tests/core/test_*.py`): Test individual functions/classes
-- **Integration Tests** (`tests/integration/test_*.py`): Test full workflows
-- **Round-Trip Tests**: Verify import → export → import fidelity
+- **Unit Tests** (`tests/unit/`): Test individual functions/classes in isolation (Core or Blender).
+- **Integration Tests** (`tests/integration/`): Test full workflows and round-trips.
 
 ## Code Style
 
@@ -412,7 +411,7 @@ To maintain a professional and consistent appearance:
 
 5. **Add UI** (`linkforge/blender/panels/sensor_panel.py`)
 
-6. **Add tests** (`tests/core/test_sensor.py`)
+6. **Add tests** (`tests/unit/core/test_sensor.py`)
 
 ### Debugging in Blender
 

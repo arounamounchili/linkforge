@@ -375,21 +375,23 @@ class Robot:
 ```mermaid
 graph TB
     subgraph "Test Pyramid"
-        Integration[Integration Tests<br/>Full workflows]
-        Core[Core Tests<br/>Unit + Round-trip]
+        Integration[Integration Tests<br/>System Workflows]
+        Blender[Blender Unit Tests<br/>Mocked API]
+        Core[Core Unit Tests<br/>Pure Logic]
     end
 
-    Integration --> Core
+    Integration --> Blender
+    Blender --> Core
 
     style Integration fill:#4fc3f7
+    style Blender fill:#ba68c8
     style Core fill:#81c784
 ```
 
 ### Test Categories
-- **Unit Tests**: Individual functions and classes
-- **Round-Trip Tests**: Import → Export → Import verification
-- **Integration Tests**: Full workflow validation
-- **Security Tests**: Path traversal, XML bombs, etc.
+- **Unit Tests (Core)**: Isolated tests for platform-independent data models and math.
+- **Unit Tests (Blender)**: Isolated tests for Blender-specific logic using mocks.
+- **Integration Tests**: Full workflow validation, multi-file parsing, and end-to-end round-trips.
 
 ## Security Architecture
 
