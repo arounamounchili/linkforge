@@ -72,7 +72,7 @@ def test_urdf_generator_complex_scenarios():
     robot.add_link(
         Link(name="l2", visuals=[Visual(geometry=Box(Vector3(1, 1, 1)), material=mat_inline)])
     )
-    robot.add_joint(Joint(Joint(name="j2", parent="base", child="l2", type=JointType.FIXED)))
+    robot.add_joint(Joint(name="j2", parent="base", child="l2", type=JointType.FIXED))
 
     # Fallback to absolute paths when mesh relativization is cross-volume or invalid
     abs_mesh = Path("/different/volume/mesh.stl")
@@ -115,7 +115,9 @@ def test_parser_collision_resolution():
     xml = """
     <robot name="r">
         <link name="l1"/><link name="l1_duplicate_1"/><link name="l1_duplicate_2"/><link name="l1"/>
-        <joint name="j1"/><joint name="j1_duplicate_1"/><joint name="j1"/>
+        <joint name="j1" type="fixed"><parent link="l1"/><child link="l1_duplicate_1"/></joint>
+        <joint name="j1_duplicate_1" type="fixed"><parent link="l1"/><child link="l1_duplicate_1"/></joint>
+        <joint name="j1" type="fixed"><parent link="l1"/><child link="l1_duplicate_1"/></joint>
     </robot>
     """
     r = parse_urdf_string(xml)

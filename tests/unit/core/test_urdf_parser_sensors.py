@@ -1,4 +1,4 @@
-"""Tests for URDF parser sensor and Gazebo features to reach 100% coverage."""
+"""Tests for URDF parser sensor and Gazebo features."""
 
 from __future__ import annotations
 
@@ -13,16 +13,16 @@ from linkforge.core.parsers.urdf_parser import (
 def test_parse_all_sensor_types_from_gazebo():
     """Test parsing every sensor type from Gazebo XML."""
     sensor_types = [
-        ("gpu_lidar", SensorType.LIDAR),
-        ("navsat", SensorType.GPS),
-        ("camera", SensorType.CAMERA),
-        ("depth_camera", SensorType.DEPTH_CAMERA),
-        ("imu", SensorType.IMU),
-        ("contact", SensorType.CONTACT),
-        ("force_torque", SensorType.FORCE_TORQUE),
+        ("gpu_lidar", SensorType.LIDAR, ""),
+        ("navsat", SensorType.GPS, "<gps/>"),
+        ("camera", SensorType.CAMERA, ""),
+        ("depth_camera", SensorType.DEPTH_CAMERA, ""),
+        ("imu", SensorType.IMU, "<imu/>"),
+        ("contact", SensorType.CONTACT, "<contact><collision>c1</collision></contact>"),
+        ("force_torque", SensorType.FORCE_TORQUE, "<force_torque/>"),
     ]
 
-    for sim_type, internal_type in sensor_types:
+    for sim_type, internal_type, extra_xml in sensor_types:
         xml = f"""
         <gazebo reference="link1">
             <sensor name="my_sensor" type="{sim_type}">
@@ -31,6 +31,7 @@ def test_parse_all_sensor_types_from_gazebo():
                 <visualize>true</visualize>
                 <topic>/test_topic</topic>
                 <pose>1 2 3 0 0 0</pose>
+                {extra_xml}
             </sensor>
         </gazebo>
         """

@@ -811,6 +811,7 @@ def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
     type_map = {
         "camera": SensorType.CAMERA,
         "depth": SensorType.DEPTH_CAMERA,
+        "depth_camera": SensorType.DEPTH_CAMERA,  # Standard Gazebo depth camera
         "multicamera": SensorType.CAMERA,
         "ray": SensorType.LIDAR,
         "lidar": SensorType.LIDAR,  # Modern Gazebo uses "lidar" instead of "ray"
