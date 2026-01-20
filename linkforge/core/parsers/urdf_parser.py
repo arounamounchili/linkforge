@@ -818,6 +818,7 @@ def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
         "gpu_lidar": SensorType.LIDAR,  # Normalize GPU lidar to internal LIDAR type
         "imu": SensorType.IMU,
         "gps": SensorType.GPS,
+        "navsat": SensorType.GPS,  # Gazebo Sim uses navsat for GPS
         "contact": SensorType.CONTACT,
         "force_torque": SensorType.FORCE_TORQUE,
     }
