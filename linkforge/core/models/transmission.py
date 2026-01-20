@@ -6,6 +6,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from enum import Enum
 
+from ..utils.string_utils import is_valid_urdf_name
+
 
 class TransmissionType(str, Enum):
     """Standard transmission types in ros2_control."""
@@ -101,7 +103,7 @@ class Transmission:
             raise ValueError("Transmission type cannot be empty")
 
         # Validate naming convention
-        if not all(c.isalnum() or c in ("_", "-") for c in self.name):
+        if not is_valid_urdf_name(self.name):
             raise ValueError(
                 f"Transmission name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."

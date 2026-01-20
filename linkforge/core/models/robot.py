@@ -19,6 +19,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, field
 
+from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
 from .joint import Joint
 from .link import Link
@@ -58,7 +59,7 @@ class Robot:
             raise ValueError("Robot name cannot be empty")
 
         # Validate naming convention
-        if not all(c.isalnum() or c in ("_", "-") for c in self.name):
+        if not is_valid_urdf_name(self.name):
             raise ValueError(
                 f"Robot name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."

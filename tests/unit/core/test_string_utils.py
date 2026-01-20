@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from linkforge.core.utils.string_utils import sanitize_name
+from linkforge.core.utils.string_utils import is_valid_urdf_name, sanitize_name
 
 
 def test_sanitize_name_basic():
@@ -40,3 +40,58 @@ def test_sanitize_name_too_long():
 def test_sanitize_name_all_special():
     """Test names made only of special characters."""
     assert sanitize_name("!@#$") == "____"
+
+
+# Tests for is_valid_urdf_name
+
+
+def test_is_valid_urdf_name_valid():
+    """Test valid URDF names."""
+    assert is_valid_urdf_name("base_link") is True
+    assert is_valid_urdf_name("link1") is True
+    assert is_valid_urdf_name("my_robot_link") is True
+    assert is_valid_urdf_name("LinkName") is True
+
+
+def test_is_valid_urdf_name_with_hyphen():
+    """Test names with hyphens."""
+    assert is_valid_urdf_name("base-link") is True
+    assert is_valid_urdf_name("base-link", allow_hyphen=True) is True
+    assert is_valid_urdf_name("base-link", allow_hyphen=False) is False
+    assert is_valid_urdf_name("my-robot-link") is True
+
+
+def test_is_valid_urdf_name_empty():
+    """Test empty names are invalid."""
+    assert is_valid_urdf_name("") is False
+
+
+def test_is_valid_urdf_name_starts_with_digit():
+    """Test names starting with digits are invalid."""
+    assert is_valid_urdf_name("1link") is False
+    assert is_valid_urdf_name("2nd_link") is False
+    assert is_valid_urdf_name("0base") is False
+
+
+def test_is_valid_urdf_name_special_characters():
+    """Test names with invalid special characters."""
+    assert is_valid_urdf_name("base link") is False  # Space
+    assert is_valid_urdf_name("base@link") is False  # @
+    assert is_valid_urdf_name("base#link") is False  # #
+    assert is_valid_urdf_name("base!link") is False  # !
+    assert is_valid_urdf_name("base$link") is False  # $
+    assert is_valid_urdf_name("base.link") is False  # .
+
+
+def test_is_valid_urdf_name_underscore_only():
+    """Test names with only underscores."""
+    assert is_valid_urdf_name("_") is True
+    assert is_valid_urdf_name("__") is True
+    assert is_valid_urdf_name("_link") is True
+
+
+def test_is_valid_urdf_name_mixed_case():
+    """Test names with mixed case."""
+    assert is_valid_urdf_name("BaseLink") is True
+    assert is_valid_urdf_name("base_Link") is True
+    assert is_valid_urdf_name("BASE_LINK") is True

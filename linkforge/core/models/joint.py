@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Transform, Vector3
 
 
@@ -92,7 +93,7 @@ class Joint:
             raise ValueError("Joint name cannot be empty")
 
         # Validate naming convention
-        if not all(c.isalnum() or c in ("_", "-") for c in self.name):
+        if not is_valid_urdf_name(self.name):
             raise ValueError(
                 f"Joint name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."

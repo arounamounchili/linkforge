@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Geometry, Transform
 from .material import Material
 
@@ -99,7 +100,7 @@ class Link:
             raise ValueError("Link name cannot be empty")
 
         # URDF naming convention: lowercase with underscores
-        if not all(c.isalnum() or c in ("_", "-") for c in self.name):
+        if not is_valid_urdf_name(self.name):
             raise ValueError(
                 f"Link name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."
