@@ -260,16 +260,27 @@ class TestJoint:
                 child="link2",
             )
 
-    def test_fixed_with_limits(self):
-        """Test that fixed joint with limits raises error."""
-        with pytest.raises(ValueError, match="Fixed joints cannot have limits"):
-            Joint(
-                name="joint1",
-                type=JointType.FIXED,
-                parent="link1",
-                child="link2",
-                limits=JointLimits(lower=0.0, upper=1.0),
-            )
+    def test_fixed_with_limits(self, caplog):
+        """Test that fixed joint with limits logs warning and auto-fixes."""
+        import logging
+
+        joint = Joint(
+            name="joint1",
+            type=JointType.FIXED,
+            parent="link1",
+            child="link2",
+            limits=JointLimits(lower=0.0, upper=1.0),
+        )
+
+        # Verify limits were removed
+        assert joint.limits is None
+
+        # Verify warning was logged
+        assert any(
+            "Fixed joint 'joint1' has limits (ignored)" in record.message
+            for record in caplog.records
+            if record.levelno == logging.WARNING
+        )
 
     def test_zero_axis(self):
         """Test that zero axis vector raises error."""
