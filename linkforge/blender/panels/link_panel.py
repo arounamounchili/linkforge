@@ -103,7 +103,7 @@ class LINKFORGE_PT_links(Panel):
         row.prop(props, "collision_type", text="Collision Type")
 
         # Geometry Detection Info
-        detected_type = "None (Virtual Frame)"
+        detected_type = None
         is_primitive = False
         collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
 
@@ -138,12 +138,12 @@ class LINKFORGE_PT_links(Panel):
                 detected_type = "MESH"
 
         # Display detected type
-        row = box.row()
-        icon = "INFO"
+        # Display detected type - ONLY if collision exists
         if collision_obj:
+            row = box.row()
+            icon = "INFO"
             icon = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
-
-        row.label(text=f"Detected Collision: {detected_type}", icon=icon)
+            row.label(text=f"Detected Collision: {detected_type}", icon=icon)
 
         # Show slider for meshes (only relevant for non-primitives)
         if collision_obj and detected_type == "CONVEX_HULL":

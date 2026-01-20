@@ -106,29 +106,21 @@ def is_dae_supported() -> bool:
     """Check if COLLADA (DAE) export is supported in the current environment.
 
     Blender 5.0+ has removed built-in COLLADA support. For older versions,
-    support depends on whether the 'io_scene_collada' addon is enabled.
+    support depends on whether the Collada operator is available.
 
     Returns:
         True if the exporter is available, False otherwise.
 
     """
-    # Blender 5.0+ officially removed COLLADA support
-    if bpy.app.version >= (5, 0, 0):
-        logger.error(
+    if bpy.app.version >= (5, 0, 0) or not hasattr(bpy.ops.wm, "collada_export"):
+        msg = (
             "COLLADA (DAE) support was removed in Blender 5.0. "
             "Please use glTF (.glb) for textured visual meshes."
         )
+        logger.error(msg)
         return False
 
-    # For 4.x, check if the operator exists
-    if hasattr(bpy.ops.wm, "collada_export"):
-        return True
-
-    logger.error(
-        "COLLADA exporter (bpy.ops.wm.collada_export) is not available. "
-        "Please ensure the 'Collada (Default)' addon is enabled in Blender Preferences."
-    )
-    return False
+    return True
 
 
 def export_mesh_dae(obj: Any, filepath: Path) -> bool:

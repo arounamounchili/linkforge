@@ -135,15 +135,20 @@ def import_mesh_file(mesh_path: Path, name: str):
         elif ext == ".stl":
             bpy.ops.wm.stl_import(filepath=str(mesh_path))
         elif ext == ".dae":
-            # DAE might not be available in all Blender versions
-            bpy.ops.wm.collada_import(filepath=str(mesh_path))
+            # DAE might not be available in all Blender versions (Removed in 5.0)
+            if hasattr(bpy.ops.wm, "collada_import"):
+                bpy.ops.wm.collada_import(filepath=str(mesh_path))
+            else:
+                msg = (
+                    f"COLLADA (.dae) support was removed in Blender 5.0.\n"
+                    f"Failed to import mesh '{mesh_path.name}'.\n"
+                    "Please convert the mesh to .glb or .obj format."
+                )
+                logger.error(msg)
+                return None
         elif ext in (".glb", ".gltf"):
-            # Import GLB/GLTF
-            try:
-                bpy.ops.wm.gltf_import(filepath=str(mesh_path))
-            except AttributeError:
-                # Fallback for older 4.x versions
-                bpy.ops.import_scene.gltf(filepath=str(mesh_path))
+            # Import GLB/GLTF (available in Blender 4.1+)
+            bpy.ops.wm.gltf_import(filepath=str(mesh_path))
         else:
             return None
 
