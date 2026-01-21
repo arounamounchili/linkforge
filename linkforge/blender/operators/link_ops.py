@@ -64,7 +64,7 @@ def execute_collision_preview_update():
         return None
 
     # Check if it's a primitive (don't regenerate primitives)
-    from ..utils.converters import detect_primitive_type
+    from ..converters import detect_primitive_type
 
     primitive_type = detect_primitive_type(collision_obj)
     if primitive_type is not None:
@@ -199,7 +199,7 @@ def create_collision_for_link(link_obj, collision_type, context):
         bpy.data.objects.remove(col, do_unlink=True)
 
     # Import here to avoid circular dependency
-    from ..utils.converters import detect_primitive_type
+    from ..converters import detect_primitive_type
 
     # Determine collision type
     if collision_type == "AUTO":
@@ -446,7 +446,7 @@ def calculate_inertia_for_link(link_obj):
 
     # Import here to avoid circular dependency
     from ...core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
-    from ..utils.converters import extract_mesh_triangles
+    from ..converters import extract_mesh_triangles
 
     # Calculate inertia from child meshes (new architecture: link Empty + children)
     try:
@@ -481,7 +481,7 @@ def calculate_inertia_for_link(link_obj):
             mass = 1.0  # Default to 1kg if not set
 
         # Try to detect primitive type first (faster/cleaner)
-        from ..utils.converters import detect_primitive_type
+        from ..converters import detect_primitive_type
 
         prim_type = detect_primitive_type(target_obj)
 

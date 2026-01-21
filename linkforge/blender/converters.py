@@ -21,8 +21,8 @@ else:
 
 from dataclasses import dataclass
 
-from ...core.logging_config import get_logger
-from ...core.models import (
+from ..core.logging_config import get_logger
+from ..core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -59,9 +59,9 @@ from ...core.models import (
     Vector3,
     Visual,
 )
-from ...core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
-from ...core.utils.math_utils import clean_float, normalize_vector
-from ...core.utils.string_utils import sanitize_name
+from ..core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
+from ..core.utils.math_utils import clean_float, normalize_vector
+from ..core.utils.string_utils import sanitize_name
 
 # Constants
 logger = get_logger(__name__)

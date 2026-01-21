@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from linkforge.core.generators import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.models import (
     Box,
     CameraInfo,
@@ -636,7 +636,7 @@ class TestURDFGenerator:
 
     def test_format_float_trailing_zeros(self):
         """Test format_float removes trailing zeros."""
-        from linkforge.core.generators.urdf import format_float
+        from linkforge.core import format_float
 
         assert format_float(1.0) == "1"
         assert format_float(1.5) == "1.5"
@@ -646,7 +646,7 @@ class TestURDFGenerator:
 
     def test_format_vector(self):
         """Test format_vector."""
-        from linkforge.core.generators.urdf import format_vector
+        from linkforge.core import format_vector
 
         assert format_vector(1.0, 2.0, 3.0) == "1 2 3"
         assert format_vector(1.5, 2.5, 3.5) == "1.5 2.5 3.5"

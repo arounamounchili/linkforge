@@ -2,7 +2,7 @@
 
 import xml.etree.ElementTree as ET
 
-from linkforge.core.generators.urdf import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.models import (
     Joint,
     JointLimits,

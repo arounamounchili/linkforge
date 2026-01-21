@@ -6,8 +6,8 @@ from pathlib import Path
 
 import bpy
 
-from ...core.logging_config import get_logger
-from ...core.models import (
+from ..core.logging_config import get_logger
+from ..core.models import (
     Box,
     Color,
     Cylinder,
@@ -17,7 +17,7 @@ from ...core.models import (
     Robot,
     Sphere,
 )
-from ..preferences import get_addon_prefs
+from .preferences import get_addon_prefs
 
 logger = get_logger(__name__)
 
@@ -344,6 +344,9 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
             # Set display properties for collision (wireframe, non-rendering)
             collision_obj.display_type = "WIRE"
+            collision_obj.show_in_front = (
+                True  # X-ray mode for consistency with generated collisions
+            )
             collision_obj.hide_render = True
 
             # Set collision geometry type for UI consistency

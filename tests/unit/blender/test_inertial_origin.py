@@ -90,7 +90,7 @@ def apply_mocks():
 
 def test_inertial_origin_extraction():
     """Verify that inertial origin properties are correctly converted to Core model."""
-    from linkforge.blender.utils.converters import blender_link_to_core_with_origin
+    from linkforge.blender.converters import blender_link_to_core_with_origin
 
     # Setup mock object
     mock_obj = MagicMock()
@@ -120,7 +120,7 @@ def test_inertial_origin_extraction():
 
     # Call conversion
     # We patch clean_float to just return the value for simplicity
-    with patch("linkforge.blender.utils.converters.clean_float", side_effect=lambda x: float(x)):
+    with patch("linkforge.blender.converters.clean_float", side_effect=lambda x: float(x)):
         # We need to mock Robot properties if used, but here we can pass None
         link = blender_link_to_core_with_origin(mock_obj)
 

@@ -14,8 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from linkforge.core.generators.urdf import URDFGenerator
-from linkforge.core.generators.xacro import XACROGenerator
+from linkforge.core import URDFGenerator, XACROGenerator
 from linkforge.core.models import (
     Box,
     CameraInfo,

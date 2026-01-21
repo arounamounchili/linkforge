@@ -128,7 +128,7 @@ def blender_env():
 def test_is_dae_supported_on_blender_4x_operator_present(blender_env):
     """Test is_dae_supported on Blender 4.x when operator is present."""
     bpy = blender_env
-    from linkforge.blender.utils.mesh_export import is_dae_supported
+    from linkforge.blender.mesh_export import is_dae_supported
 
     bpy.app.version = (4, 5, 0)
     bpy.ops.wm.collada_export = MagicMock()
@@ -139,7 +139,7 @@ def test_is_dae_supported_on_blender_4x_operator_present(blender_env):
 def test_is_dae_supported_on_blender_4x_operator_missing(blender_env):
     """Test is_dae_supported on Blender 4.x when operator is missing."""
     bpy = blender_env
-    from linkforge.blender.utils.mesh_export import is_dae_supported
+    from linkforge.blender.mesh_export import is_dae_supported
 
     bpy.app.version = (4, 5, 0)
     if hasattr(bpy.ops.wm, "collada_export"):
@@ -151,7 +151,7 @@ def test_is_dae_supported_on_blender_4x_operator_missing(blender_env):
 def test_is_dae_supported_on_blender_5x(blender_env):
     """Test is_dae_supported on Blender 5.x."""
     bpy = blender_env
-    from linkforge.blender.utils.mesh_export import is_dae_supported
+    from linkforge.blender.mesh_export import is_dae_supported
 
     bpy.app.version = (5, 0, 0)
 
@@ -166,7 +166,7 @@ def test_export_mesh_dae_calls_operator_on_success(blender_env):
     bpy = blender_env
     from pathlib import Path
 
-    from linkforge.blender.utils.mesh_export import export_mesh_dae
+    from linkforge.blender.mesh_export import export_mesh_dae
 
     bpy.app.version = (4, 5, 0)
     bpy.ops.wm.collada_export = MagicMock()

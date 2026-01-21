@@ -49,7 +49,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     def execute(self, context: Context):
         """Execute the import."""
         from ...core.parsers.urdf_parser import parse_urdf, parse_urdf_string
-        from ..utils.urdf_importer import import_robot_to_scene
+        from ..urdf_importer import import_robot_to_scene
 
         # Parse URDF/XACRO file
         urdf_path = Path(self.filepath)

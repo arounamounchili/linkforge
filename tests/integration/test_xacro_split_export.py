@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from linkforge.core.generators.xacro import XACROGenerator
+from linkforge.core import XACROGenerator
 from linkforge.core.models import Color, Joint, JointType, Link, Material, Robot, Visual
 from linkforge.core.models.geometry import Cylinder, Transform, Vector3
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import bpy
 from bpy.types import Context, Panel
 
-from ..utils.converters import detect_primitive_type
+from ..converters import detect_primitive_type
 
 
 class LINKFORGE_PT_links(Panel):

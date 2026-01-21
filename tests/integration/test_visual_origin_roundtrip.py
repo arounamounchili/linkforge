@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from linkforge.core.generators.urdf import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.models import Cylinder, Link, Robot, Visual
 from linkforge.core.parsers.urdf_parser import parse_urdf
 

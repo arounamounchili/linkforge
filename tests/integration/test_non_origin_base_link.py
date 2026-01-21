@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 
-from linkforge.core.generators import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.models import (
     Box,
     Inertial,

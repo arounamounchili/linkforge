@@ -25,12 +25,12 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
-from ..models.joint import Joint
-from ..models.link import Link, Visual
-from ..models.material import Material
-from ..models.robot import Robot
-from .urdf import URDFGenerator, format_float, format_vector
+from .models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
+from .models.joint import Joint
+from .models.link import Link, Visual
+from .models.material import Material
+from .models.robot import Robot
+from .urdf_generator import URDFGenerator, format_float, format_vector
 
 
 class XACROGenerator(URDFGenerator):

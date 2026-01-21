@@ -1,6 +1,6 @@
 """Test ros2_control parsing and round-trip fidelity."""
 
-from linkforge.core.generators.urdf import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.parsers.urdf_parser import parse_urdf_string
 
 

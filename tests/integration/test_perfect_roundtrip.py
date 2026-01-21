@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from linkforge.core.generators.urdf import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.models import (
     Box,
     Collision,

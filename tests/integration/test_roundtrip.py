@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from linkforge.core.generators import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.parsers.urdf_parser import parse_urdf, parse_urdf_string
 
 

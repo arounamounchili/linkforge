@@ -20,14 +20,14 @@ __all__ = ["URDFGenerator", "format_float", "format_vector"]
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from ..models.gazebo import GazeboElement, GazeboPlugin
-from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform
-from ..models.joint import Joint, JointType
-from ..models.link import Collision, Inertial, Link, Visual
-from ..models.material import Material
-from ..models.robot import Robot
-from ..models.ros2_control import Ros2Control
-from ..models.sensor import (
+from .models.gazebo import GazeboElement, GazeboPlugin
+from .models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform
+from .models.joint import Joint, JointType
+from .models.link import Collision, Inertial, Link, Visual
+from .models.material import Material
+from .models.robot import Robot
+from .models.ros2_control import Ros2Control
+from .models.sensor import (
     CameraInfo,
     ContactInfo,
     ForceTorqueInfo,
@@ -38,8 +38,8 @@ from ..models.sensor import (
     SensorNoise,
     SensorType,
 )
-from ..models.transmission import Transmission
-from ..utils.math_utils import format_float
+from .models.transmission import Transmission
+from .utils.math_utils import format_float
 
 
 def format_vector(x: float, y: float, z: float, precision: int = 6) -> str:
@@ -1044,7 +1044,7 @@ class URDFGenerator:
         """
         from datetime import datetime
 
-        from ... import __version__
+        from .. import __version__
 
         return f"""\
 <?xml version="1.0"?>

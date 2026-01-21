@@ -60,8 +60,8 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
     def execute(self, context: Context):
         """Execute the export."""
         # Import here to avoid circular dependencies
-        from ...core.generators import URDFGenerator, XACROGenerator
-        from ..utils.converters import scene_to_robot
+        from ...core import URDFGenerator, XACROGenerator
+        from ..converters import scene_to_robot
 
         scene = context.scene
         robot_props = scene.linkforge
@@ -174,7 +174,7 @@ class LINKFORGE_OT_validate_robot(Operator):
     def execute(self, context: Context):
         """Execute validation."""
         from ...core.validation import RobotValidator
-        from ..utils.converters import scene_to_robot
+        from ..converters import scene_to_robot
 
         # Clear previous results
         validation_props = context.window_manager.linkforge_validation

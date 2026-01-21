@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from linkforge.core.generators.urdf import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.models import (
     Box,
     GazeboElement,

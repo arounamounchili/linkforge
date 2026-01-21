@@ -103,7 +103,7 @@ def test_matrix_to_transform_precision():
     """Verify that matrix_to_transform correctly extracts XYZ/RPY."""
     from mathutils import Matrix
 
-    from linkforge.blender.utils.converters import matrix_to_transform
+    from linkforge.blender.converters import matrix_to_transform
 
     # Create a mock matrix that returns specific values
     m = Matrix()
@@ -130,7 +130,7 @@ def test_matrix_to_transform_precision():
 
 def test_detect_primitive_type_box():
     """Verify that a basic cube mesh is detected as BOX."""
-    from linkforge.blender.utils.converters import detect_primitive_type
+    from linkforge.blender.converters import detect_primitive_type
 
     mock_obj = MagicMock()
     mock_obj.type = "MESH"
@@ -153,7 +153,7 @@ def test_detect_primitive_type_box():
 
 def test_detect_primitive_type_sphere():
     """Verify that a sphere-like mesh is detected as SPHERE."""
-    from linkforge.blender.utils.converters import detect_primitive_type
+    from linkforge.blender.converters import detect_primitive_type
 
     mock_obj = MagicMock()
     mock_obj.type = "MESH"
@@ -172,7 +172,7 @@ def test_detect_primitive_type_sphere():
 
 def test_detect_primitive_type_cylinder():
     """Verify that a cylinder-like mesh is detected as CYLINDER."""
-    from linkforge.blender.utils.converters import detect_primitive_type
+    from linkforge.blender.converters import detect_primitive_type
 
     mock_obj = MagicMock()
     mock_obj.type = "MESH"
@@ -191,7 +191,7 @@ def test_detect_primitive_type_cylinder():
 
 def test_detect_primitive_type_none_case():
     """Vertex/Face count mismatch should return None (Complex Mesh)."""
-    from linkforge.blender.utils.converters import detect_primitive_type
+    from linkforge.blender.converters import detect_primitive_type
 
     mock_obj = MagicMock()
     mock_obj.type = "MESH"

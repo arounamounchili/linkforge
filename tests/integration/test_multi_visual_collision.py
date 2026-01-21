@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from linkforge.core.generators.urdf import URDFGenerator
+from linkforge.core import URDFGenerator
 from linkforge.core.models import Box, Collision, Cylinder, Link, Sphere, Vector3, Visual
 from linkforge.core.parsers.urdf_parser import parse_urdf_string
 
