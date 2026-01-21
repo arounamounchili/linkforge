@@ -103,6 +103,15 @@ def update_collision_quality(self, context):
     schedule_collision_preview_update(obj)
 
 
+def update_auto_inertia_toggle(self, context):
+    """Enable visualization when switching to manual inertia."""
+    if not self.use_auto_inertia:
+        # User switched to Manual Mode -> Enable visualization
+        from ..utils.inertia_gizmos import ensure_inertia_handler
+
+        ensure_inertia_handler()
+
+
 class LinkPropertyGroup(PropertyGroup):
     """Properties for a robot link stored on a Blender object."""
 
@@ -126,6 +135,7 @@ class LinkPropertyGroup(PropertyGroup):
         name="Auto-Calculate Inertia",
         description="Let LinkForge calculate physics properties from the 3D shape (recommended)",
         default=True,
+        update=update_auto_inertia_toggle,
     )
 
     mass: FloatProperty(  # type: ignore

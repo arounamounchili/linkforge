@@ -170,10 +170,12 @@ def draw_inertia_gizmos():
     gpu.state.line_width_set(1.0)
 
 
-def update_inertia_viz_handle():
-    """Update the draw handler."""
-    # We can probably leave this always on, as it has strict checks inside (Active Object + Manual Mode)
-    # This is efficient enough.
+def ensure_inertia_handler():
+    """Ensure the inertia visualization draw handler is registered.
+
+    This should be called when Manual Inertia is enabled or when a file is loaded
+    with Manual Inertia links. It is safe to call multiple times.
+    """
     global _draw_handle
     if _draw_handle is None:
         _draw_handle = bpy.types.SpaceView3D.draw_handler_add(
@@ -181,14 +183,37 @@ def update_inertia_viz_handle():
         )
 
 
+def check_manual_inertia_on_load(dummy=None):
+    """Check if any link has Manual Inertia on file load."""
+    try:
+        scene = bpy.context.scene
+    except (AttributeError, RuntimeError):
+        return
+
+    # Scan scene for any link with manual inertia
+    for obj in scene.objects:
+        if hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
+            if not obj.linkforge.use_auto_inertia:
+                ensure_inertia_handler()
+                return  # Found one, we're done
+
+
 def register():
-    """Register inertia visualization."""
-    update_inertia_viz_handle()
+    """Register inertia visualization components."""
+    # Register load handler to scan for manual inertia usage on file open
+    if check_manual_inertia_on_load not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(check_manual_inertia_on_load)
 
 
 def unregister():
-    """Unregister inertia visualization."""
+    """Unregister inertia visualization components."""
     global _draw_handle
+
+    # Remove load handler
+    if check_manual_inertia_on_load in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(check_manual_inertia_on_load)
+
+    # Remove draw handler
     if _draw_handle is not None:
         bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
         _draw_handle = None
