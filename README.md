@@ -180,8 +180,9 @@ LinkForge uses a "Self-Contained" bundling strategy for wheels. To update or add
 
 - [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
 - [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
-- [ ] **v1.2.0**: **MJCF (MuJoCo) Export Support** (High demand for RL).
-- [ ] **v1.3.0**: **Kinematic Validation** (MoveIt style checks).
+- [ ] **v1.2.0**: **Architectural Stability & Precision** (Hexagonal Core, Inertial Accuracy).
+- [ ] **v1.3.0**: **MJCF (MuJoCo) Export Support** (High demand for RL).
+- [ ] **v1.4.0**: **Kinematic Validation** (MoveIt style checks).
 
 
 ## 🔮 Our Transparency Commitment
