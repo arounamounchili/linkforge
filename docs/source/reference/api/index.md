@@ -42,7 +42,7 @@ Blender-specific integration.
 
 ```python
 from linkforge.core.models import Robot, Link, Joint, JointType, Inertial, InertiaTensor
-from linkforge.core.generators import URDFGenerator
+from linkforge.core import URDFGenerator
 
 # Create robot
 robot = Robot(

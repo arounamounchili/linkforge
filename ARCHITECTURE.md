@@ -71,17 +71,20 @@ graph LR
         Panels[Panels<br/>UI Display]
         Operators[Operators<br/>User Actions]
         Properties[Properties<br/>Data Storage]
-        Utils[Utils<br/>Converters & Helpers]
+        Adapters[Adapters<br/>Bridge & Mesh Export]
+        Utils[Utils<br/>Low-level Helpers]
     end
 
     Panels --> Operators
     Operators --> Properties
-    Operators --> Utils
-    Properties --> Utils
+    Operators --> Adapters
+    Properties --> Adapters
+    Adapters --> Utils
 
     style Panels fill:#4fc3f7
     style Operators fill:#4fc3f7
     style Properties fill:#81c784
+    style Adapters fill:#ce93d8
     style Utils fill:#ba68c8
 ```
 
@@ -92,7 +95,8 @@ graph LR
 | **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `transmission_panel.py`, `build_panel.py` |
 | **Operators** | User actions (import, export, etc.) | `import_ops.py`, `export_ops.py`, `link_ops.py`, `joint_ops.py`, `sensor_ops.py`, `transmission_ops.py` |
 | **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `transmission_props.py`, `validation_props.py` |
-| **Utils** | Conversion between Blender ↔ Core | `converters.py`, `urdf_importer.py`, `mesh_export.py`, `joint_gizmos.py`, `property_helpers.py` |
+| **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `urdf_importer.py`, `mesh_export.py` [PROMOTED] |
+| **Utils** | Blender-specific helpers | `joint_gizmos.py`, `property_helpers.py`, `transform_utils.py` |
 
 ### 2. Core Logic Layer (`linkforge/core/`)
 
@@ -125,14 +129,14 @@ graph TB
 
 #### Components
 
-| Module | Purpose | Key Classes |
+| Module | Purpose | Key Files/Classes |
 |--------|---------|-------------|
 | **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Transmission` |
-| **Parsers** | URDF/XACRO → Python objects | `parse_urdf()`, `parse_xacro()` |
-| **Generators** | Python objects → URDF/XACRO | `URDFGenerator`, `XACROGenerator` |
-| **Physics** | Mass & inertia calculations | `calculate_mesh_inertia()`, primitive formulas |
-| **Validation** | Error checking & security | `RobotValidator`, `validate_mesh_path()` |
-| **Utils** | Unified internal logic | `math_utils.py`, `string_utils.py` |
+| **Parsers** | URDF/XACRO → Python objects | `parsers/urdf_parser.py`, `parsers/xacro_parser.py` |
+| **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` [PROMOTED] |
+| **Physics** | Mass & inertia calculations | `physics/inertia.py` |
+| **Validation** | Error checking & security | `validation/validator.py`, `validation/security.py` |
+| **Utils** | Unified internal logic | `utils/math_utils.py`, `utils/string_utils.py` |
 
 ## Data Flow
 

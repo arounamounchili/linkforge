@@ -76,27 +76,38 @@ Blender scene properties for storing robot data.
    :show-inheritance:
 ```
 
-## Utilities
+## Adapters
 
 Conversion between Blender and core models.
 
 ```{eval-rst}
-.. automodule:: linkforge.blender.utils.converters
+.. automodule:: linkforge.blender.converters
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: linkforge.blender.utils.urdf_importer
+.. automodule:: linkforge.blender.urdf_importer
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: linkforge.blender.utils.mesh_export
+.. automodule:: linkforge.blender.mesh_export
    :members:
    :undoc-members:
    :show-inheritance:
+```
 
+## Utilities
+
+Blender-specific helpers.
+
+```{eval-rst}
 .. automodule:: linkforge.blender.utils.property_helpers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.utils.transform_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -108,7 +119,7 @@ Conversion between Blender and core models.
 
 ```python
 import bpy
-from linkforge.blender.utils.converters import scene_to_robot
+from linkforge.blender.converters import scene_to_robot
 
 # Convert current scene to robot model
 robot = scene_to_robot(bpy.context)

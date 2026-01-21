@@ -5,7 +5,7 @@ URDF and XACRO generators for converting Python objects to files.
 ## URDF Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.generators.urdf.URDFGenerator
+.. autoclass:: linkforge.core.urdf_generator.URDFGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,7 +14,7 @@ URDF and XACRO generators for converting Python objects to files.
 ## XACRO Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.generators.xacro.XACROGenerator
+.. autoclass:: linkforge.core.xacro_generator.XACROGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -26,7 +26,7 @@ URDF and XACRO generators for converting Python objects to files.
 
 ```python
 from linkforge.core.models import Robot, Link, Inertial, InertiaTensor
-from linkforge.core.generators import URDFGenerator
+from linkforge.core import URDFGenerator
 
 # Create robot
 robot = Robot(
@@ -54,7 +54,7 @@ with open("robot.urdf", "w") as f:
 ### Generate XACRO
 
 ```python
-from linkforge.core.generators import XACROGenerator
+from linkforge.core import XACROGenerator
 from pathlib import Path
 
 # Generate XACRO with split files
