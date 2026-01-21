@@ -48,6 +48,13 @@ Debug your robot topology with visual axis and limit indicators.
 Solutions for common import/export issues and validation errors.
 :::
 
+:::{grid-item-card} ⚖️ Physics & Inertia
+:link: physics
+:link-type: doc
+
+Configure mass, inertia tensors, and manual Center of Mass offsets.
+:::
+
 ::::
 
 ```{toctree}
@@ -59,5 +66,6 @@ add_sensors
 transmissions
 collision_geometry
 joint_viz
+physics
 troubleshooting
 ```
