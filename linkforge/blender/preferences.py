@@ -136,7 +136,7 @@ class LinkForgePreferences(AddonPreferences):
     show_joint_axes: BoolProperty(  # type: ignore
         name="Show GPU Overlay Axes",
         description="Show thick RGB arrows at each joint (Red=X, Green=Y, Blue=Z) like RViz visualization",
-        default=False,
+        default=True,
         update=update_joint_axes_visibility,
     )
 
