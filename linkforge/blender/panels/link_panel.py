@@ -205,6 +205,20 @@ class LINKFORGE_PT_links(Panel):
             row.prop(props, "inertia_ixz", text="Ixz")
             row.prop(props, "inertia_iyz", text="Iyz")
 
+            # Center of Mass (Inertial Origin)
+            inertia_box.separator()
+            inertia_box.label(text="Center of Mass")
+
+            # Position (XYZ)
+            row = inertia_box.row(align=True)
+            row.label(text="Position:", icon="EMPTY_AXIS")
+            row.prop(props, "inertia_origin_xyz", text="")
+
+            # Rotation (RPY)
+            row = inertia_box.row(align=True)
+            row.label(text="Rotation:", icon="ORIENTATION_GIMBAL")
+            row.prop(props, "inertia_origin_rpy", text="")
+
         # Material section
         box.separator()
         box.label(text="Material", icon="MATERIAL")
