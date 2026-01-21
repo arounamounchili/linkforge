@@ -78,13 +78,16 @@ linkforge/
 │   │   ├── operators/     # User actions (export, create, etc.)
 │   │   ├── panels/        # UI panels
 │   │   ├── properties/    # Blender scene properties
-│   │   └── utils/         # Blender-specific utilities
+│   │   ├── converters.py  # [PROMOTED] Bridge: Blender -> Core
+│   │   ├── urdf_importer.py # [PROMOTED] Bridge: Core -> Blender
+│   │   └── mesh_export.py # [PROMOTED] Mesh utilities
 │   └── core/              # Core logic (platform-independent)
 │       ├── models/        # Data structures (Robot, Link, Joint, etc.)
 │       ├── parsers/       # URDF/XACRO → Python objects
-│       ├── generators/    # Python objects → URDF/XACRO
 │       ├── physics/       # Inertia calculations
-│       └── validation/    # Validation & security
+│       ├── validation/    # Validation & security
+│       ├── urdf_generator.py # [PROMOTED] Models -> URDF
+│       └── xacro_generator.py # [PROMOTED] Models -> XACRO
 ├── tests/                 # Test suite
 │   ├── unit/              # Isolated tests
 │   │   ├── core/          # Model & math tests
@@ -403,7 +406,7 @@ To maintain a professional and consistent appearance:
        ...
    ```
 
-4. **Add generation** (`linkforge/core/generators/urdf.py`)
+4. **Add generation** (`linkforge/core/urdf_generator.py`)
    ```python
    def _add_my_new_sensor_info(self, parent: ET.Element, info: MyNewSensorInfo):
        ...
