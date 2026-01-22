@@ -12,6 +12,7 @@ Visualization Style:
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import bpy
@@ -108,7 +109,6 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
 
     # 3. Draw Center of Mass Sphere (Standard Robotics Style)
     # We draw 3 orthogonal rings to form a wireframe sphere
-    import math
 
     sphere_radius = axis_length * 0.2
     segments = 16
