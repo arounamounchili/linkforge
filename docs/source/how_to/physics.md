@@ -28,9 +28,10 @@ Sometimes, the geometric center is not the physical center of mass (e.g., a batt
 
 ### 🎯 Visualizing the Center of Mass
 When you modify the Inertial Origin:
-- An **Orange/White Axis** wireframe appears in the viewport.
-- This represents the **Principal Axes of Inertia**.
-- Moving the "Pos" values will move this wireframe relative to the link origin.
+- A **Yellow Wireframe Sphere** (Center of Mass) with **Orange/White Axes** will be **permanently visible** in the viewport.
+- This represents the **Principal Axes of Inertia** and the exact physical center of the object.
+- Moving the **Pos** values will shift this visualization relative to the link origin.
+- Use **Global Preferences > Inertia Visualization** to resize or hide these markers.
 
 ### Example: Lowering the COM
 To make a mobile robot more stable, you often want the center of mass to be low.

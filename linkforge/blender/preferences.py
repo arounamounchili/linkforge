@@ -10,14 +10,14 @@ from bpy.props import BoolProperty, FloatProperty
 from bpy.types import AddonPreferences, Context
 
 
-def update_joint_axes_visibility(self: LinkForgePreferences, context: Context):
+def update_joint_axes_visibility(self: LinkForgePreferences, context: Context) -> None:
     """Callback when show_joint_axes changes - manage draw handler and force viewport redraw."""
     from .utils import joint_gizmos
 
     joint_gizmos.update_viz_handle(context)
 
 
-def update_joint_empty_size(self: LinkForgePreferences, context: Context):
+def update_joint_empty_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when joint_empty_size changes - update all joint empties and viewport."""
     # From here, we also need to trigger the draw handler update check
     # so the GPU overlay picks up the new size immediately
@@ -41,7 +41,7 @@ def update_joint_empty_size(self: LinkForgePreferences, context: Context):
                 area.tag_redraw()
 
 
-def update_sensor_empty_size(self: LinkForgePreferences, context: Context):
+def update_sensor_empty_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when sensor_empty_size changes - update all sensor empties."""
 
     # Get new size
@@ -63,7 +63,7 @@ def update_sensor_empty_size(self: LinkForgePreferences, context: Context):
                 area.tag_redraw()
 
 
-def update_transmission_empty_size(self: LinkForgePreferences, context: Context):
+def update_transmission_empty_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when transmission_empty_size changes - update all transmission empties."""
 
     # Get new size
@@ -85,7 +85,7 @@ def update_transmission_empty_size(self: LinkForgePreferences, context: Context)
                 area.tag_redraw()
 
 
-def update_link_empty_size(self: LinkForgePreferences, context: Context):
+def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when link_empty_size changes - update all link empties."""
 
     # Get new size
@@ -103,7 +103,24 @@ def update_link_empty_size(self: LinkForgePreferences, context: Context):
                 area.tag_redraw()
 
 
-def get_addon_id():
+def update_inertia_visibility(self: LinkForgePreferences, context: Context) -> None:
+    """Callback when show_inertia_gizmos changes."""
+    from .utils import inertia_gizmos
+
+    inertia_gizmos.tag_redraw()
+    # If the user just enabled it, make sure the handler is registered
+    if self.show_inertia_gizmos:
+        inertia_gizmos.ensure_inertia_handler()
+
+
+def update_inertia_size(self: LinkForgePreferences, context: Context) -> None:
+    """Callback when inertia_gizmo_size changes."""
+    from .utils import inertia_gizmos
+
+    inertia_gizmos.tag_redraw()
+
+
+def get_addon_id() -> str:
     """Determine the addon/extension ID for preference access.
 
     In Blender 4.2+, extensions use a namespace like 'bl_ext.user_default.linkforge'.
@@ -196,7 +213,29 @@ class LinkForgePreferences(AddonPreferences):
         update=update_link_empty_size,  # Update all link empties when changed
     )
 
-    def draw(self, context: Context):
+    # Inertia Visualization
+    show_inertia_gizmos: BoolProperty(  # type: ignore
+        name="Show Inertia Frames",
+        description="Globally toggle visualization for links with manual inertia (CoM Sphere and Principal Axes)",
+        default=True,
+        update=update_inertia_visibility,
+    )
+
+    inertia_gizmo_size: FloatProperty(  # type: ignore
+        name="Inertia Frame Size",
+        description="Standard display size for CoM spheres and principal axes",
+        default=0.1,
+        min=0.01,
+        max=100.0,
+        soft_min=0.05,
+        soft_max=5.0,
+        step=1,
+        precision=2,
+        unit="LENGTH",
+        update=update_inertia_size,
+    )
+
+    def draw(self, context: Context) -> None:
         """Draw the preferences UI."""
         layout = self.layout
 
@@ -243,6 +282,17 @@ class LinkForgePreferences(AddonPreferences):
         row = box.row()
         row.prop(self, "link_empty_size", text="Link Empty Size", slider=True)
 
+        # Inertia visualization
+        layout.separator()
+        box = layout.box()
+        box.label(text="Inertia Visualization", icon="PHYSICS")
+        row = box.row()
+        row.prop(self, "show_inertia_gizmos", text="Show Inertia Frames")
+
+        if self.show_inertia_gizmos:
+            row = box.row()
+            row.prop(self, "inertia_gizmo_size", text="Frame Size", slider=True)
+
         # General help text
         layout.separator()
         col = layout.column(align=True)
@@ -257,7 +307,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register preferences."""
     for cls in classes:
         try:
@@ -267,7 +317,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister preferences."""
     for cls in reversed(classes):
         try:

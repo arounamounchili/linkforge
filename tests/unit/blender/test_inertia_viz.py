@@ -27,6 +27,19 @@ def setup_blender_mocks():
     class MockEvent:
         pass
 
+    class MockContext:
+        selected_objects = []
+        visible_objects = []
+        active_object = None
+        scene = MagicMock()
+        scene.objects = []
+
+        class MockPreferences:
+            addons = MagicMock()
+            addons.get.return_value = None  # Return None to use defaults
+
+        preferences = MockPreferences()
+
     mock_bpy = MagicMock()
     mock_props = MagicMock()
     mock_types = MagicMock()
@@ -34,7 +47,7 @@ def setup_blender_mocks():
 
     # Assign conflict-free classes
     mock_types.Operator = MockOperator
-    mock_types.Context = MagicMock
+    mock_types.Context = MockContext
     mock_types.AddonPreferences = MockAddonPreferences
     mock_types.Panel = MockPanel
     mock_types.PropertyGroup = MockPropertyGroup
@@ -43,6 +56,8 @@ def setup_blender_mocks():
     mock_bpy.props = mock_props
     mock_bpy.types = mock_types
     mock_bpy.app = mock_app
+    # Ensure context is available via bpy.context as well
+    mock_bpy.context = MockContext
 
     mock_mathutils = MagicMock()
 
@@ -146,6 +161,49 @@ def apply_mocks():
         yield
 
 
+def test_draw_inertia_gizmos_iteration():
+    """Test that draw function iterates over selected objects."""
+    from linkforge.blender.utils.inertia_gizmos import draw_inertia_gizmos
+
+    # Mock objects
+    obj1 = MagicMock()
+    obj1.linkforge.is_robot_link = True
+    obj1.linkforge.use_auto_inertia = False  # Should draw
+    obj1.linkforge.inertia_origin_xyz = (1, 0, 0)
+
+    obj2 = MagicMock()
+    obj2.linkforge.is_robot_link = True
+    obj2.linkforge.use_auto_inertia = True  # Should NOT draw
+
+    obj3 = MagicMock()
+    del obj3.linkforge  # Not a link -> Should NOT draw (AttributeError handling check)
+
+    # Setup context
+    import bpy
+
+    # Setup context
+
+    bpy.context.visible_objects = [obj1, obj2, obj3]
+    bpy.context.scene.objects = [obj1, obj2, obj3]  # Fallback coverage
+
+    with (
+        patch("linkforge.blender.utils.inertia_gizmos.generate_inertia_axes_geometry") as mock_gen,
+        patch("linkforge.blender.utils.inertia_gizmos.batch_for_shader") as mock_batch,
+        patch("linkforge.blender.utils.inertia_gizmos.get_shader"),
+    ):
+        mock_gen.return_value = {
+            "lines": [(0, 0, 0), (1, 1, 1)],
+            "line_colors": [(1, 1, 1, 1), (1, 1, 1, 1)],
+        }
+        draw_inertia_gizmos()
+
+        # Should have called generator for obj1 only
+        mock_gen.assert_called_once_with(obj1, axis_length=0.1)
+
+        # Should have called batch_for_shader once
+        mock_batch.assert_called_once()
+
+
 def test_generate_inertia_axes_geometry_empty():
     """Test graceful handling of None object."""
     from linkforge.blender.utils.inertia_gizmos import generate_inertia_axes_geometry
@@ -167,12 +225,10 @@ def test_generate_inertia_axes_geometry_values():
     # Call function
     data = generate_inertia_axes_geometry(mock_obj)
 
-    # Expect 4 lines total:
-    # 1. Dashed line (2 segments/points) linking origin to COM
-    # 2. X axis (2 points)
-    # 3. Y axis (2 points)
-    # 4. Z axis (2 points)
-    # Total points = 2 + 2 + 2 + 2 = 8
-
-    assert len(data["lines"]) == 8
-    assert len(data["line_colors"]) == 8
+    # Expect 104 points:
+    # - 3 axes * 2 points = 6 points
+    # - 1 connector * 2 points = 2 points
+    # - 3 rings * 16 segments * 2 points = 96 points
+    # Total = 104 points
+    assert len(data["lines"]) == 104
+    assert len(data["line_colors"]) == 104
