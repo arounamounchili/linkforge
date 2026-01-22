@@ -471,13 +471,26 @@ def parse_link(
 
         inertia_elem = inertial_elem.find("inertia")
         if inertia_elem is not None:
+            # Helper to sanitize diagonal inertia moments
+            def sanitize_inertia(val: float, name: str) -> float:
+                if val <= 0:
+                    logger.warning(
+                        f"Sanitizing invalid inertia {name}={val} to 1e-6 for link '{name}'"
+                    )
+                    return 1e-6
+                return val
+
+            ixx = parse_float(inertia_elem.get("ixx"), "ixx", default=1.0)
+            iyy = parse_float(inertia_elem.get("iyy"), "iyy", default=1.0)
+            izz = parse_float(inertia_elem.get("izz"), "izz", default=1.0)
+
             inertia = InertiaTensor(
-                ixx=parse_float(inertia_elem.get("ixx"), "ixx", default=1.0),
+                ixx=sanitize_inertia(ixx, "ixx"),
                 ixy=parse_float(inertia_elem.get("ixy"), "ixy", default=0.0),
                 ixz=parse_float(inertia_elem.get("ixz"), "ixz", default=0.0),
-                iyy=parse_float(inertia_elem.get("iyy"), "iyy", default=1.0),
+                iyy=sanitize_inertia(iyy, "iyy"),
                 iyz=parse_float(inertia_elem.get("iyz"), "iyz", default=0.0),
-                izz=parse_float(inertia_elem.get("izz"), "izz", default=1.0),
+                izz=sanitize_inertia(izz, "izz"),
             )
             inertial = Inertial(mass=mass, origin=origin, inertia=inertia)
 

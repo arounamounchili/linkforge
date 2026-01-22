@@ -190,6 +190,13 @@ uv run pytest --cov=linkforge --cov-report=html
 uv run pytest tests/unit/
 ```
 
+### Manual QA (Mandatory)
+
+For features involving UI, viewport transforms, or complex exports, automated tests are not enough. Contributors **must** follow and pass the [Manual QA Protocol](https://github.com/arounamounchili/linkforge/blob/main/docs/testing/manual_qa.md) before submitting a PR.
+
+- **Objective**: Ensure export validity (URDF/XACRO standards), correct physics calculations, and UI stability across macOS, Windows, and Linux.
+- **Protocol**: Follow the 5-Phase checklist in `docs/testing/manual_qa.md`.
+
 ### Writing Tests
 
 #### Unit Test Example
@@ -279,7 +286,7 @@ def parse_float(text, default=None):
 
 ### Docstrings
 
-Use Google-style docstrings:
+Always use **Google-style docstrings**. This is critical for generating high-quality API documentation on ReadTheDocs.
 
 ```python
 def my_function(param1: str, param2: int) -> bool:

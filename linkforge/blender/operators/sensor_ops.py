@@ -6,6 +6,7 @@ import bpy
 from bpy.types import Context, Operator
 
 from ..properties.link_props import sanitize_urdf_name
+from ..utils.decorators import safe_execute
 
 
 class LINKFORGE_OT_create_sensor(Operator):
@@ -38,6 +39,7 @@ class LINKFORGE_OT_create_sensor(Operator):
 
         return False
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         obj = context.active_object
@@ -110,6 +112,7 @@ class LINKFORGE_OT_delete_sensor(Operator):
             return False
         return obj.type == "EMPTY" and obj.linkforge_sensor.is_robot_sensor
 
+    @safe_execute
     def execute(self, context):
         """Execute the operator."""
         obj = context.active_object

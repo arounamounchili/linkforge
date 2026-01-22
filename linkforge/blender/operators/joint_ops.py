@@ -6,6 +6,7 @@ import bpy
 from bpy.types import Context, Operator
 
 from ..properties.link_props import sanitize_urdf_name
+from ..utils.decorators import safe_execute
 
 
 class LINKFORGE_OT_create_joint(Operator):
@@ -32,6 +33,7 @@ class LINKFORGE_OT_create_joint(Operator):
             obj.parent and hasattr(obj.parent, "linkforge") and obj.parent.linkforge.is_robot_link
         )
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         obj = context.active_object
@@ -115,6 +117,7 @@ class LINKFORGE_OT_delete_joint(Operator):
             return False
         return obj.type == "EMPTY" and obj.linkforge_joint.is_robot_joint
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         obj = context.active_object
@@ -145,6 +148,7 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
             return False
         return obj.type == "EMPTY" and obj.linkforge_joint.is_robot_joint
 
+    @safe_execute
     def execute(self, context):
         """Execute the operator."""
         joint_empty = context.active_object

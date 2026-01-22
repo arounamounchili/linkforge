@@ -8,6 +8,7 @@ from bpy.types import Context, Operator
 
 from ...core.logging_config import get_logger
 from ..properties.link_props import sanitize_urdf_name
+from ..utils.decorators import safe_execute
 
 logger = get_logger(__name__)
 
@@ -535,6 +536,7 @@ class LINKFORGE_OT_add_empty_link(Operator):
     bl_description = "Create a new empty link frame at the 3D cursor position"
     bl_options = {"REGISTER", "UNDO"}
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         from ..preferences import get_addon_prefs
@@ -612,6 +614,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
 
         return True
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         mesh_obj = context.active_object
@@ -735,6 +738,7 @@ class LINKFORGE_OT_generate_collision(Operator):
 
         return False
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         obj = context.active_object
@@ -782,6 +786,7 @@ class LINKFORGE_OT_generate_collision_all(Operator):
     bl_description = "Generate collision geometry for all robot links in the scene"
     bl_options = {"REGISTER", "UNDO"}
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         count = 0
@@ -848,6 +853,7 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
 
         return False
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         obj = context.active_object
@@ -899,20 +905,24 @@ class LINKFORGE_OT_calculate_inertia(Operator):
 
         return obj.linkforge.is_robot_link
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         obj = context.active_object
 
-        # If selected object is a visual/collision child, use parent link
+        # Resolve target link
+        link_obj = obj
         if obj.parent and hasattr(obj.parent, "linkforge"):
-            if obj.parent.linkforge.is_robot_link and not obj.linkforge.is_robot_link:
-                obj = obj.parent
+            if obj.parent.linkforge.is_robot_link:
+                link_obj = obj.parent
 
-        if calculate_inertia_for_link(obj):
-            self.report({"INFO"}, f"Calculated inertia for '{obj.name}'")
+        success = calculate_inertia_for_link(link_obj)
+
+        if success:
+            self.report({"INFO"}, f"Calculated inertia for '{link_obj.linkforge.link_name}'")
             return {"FINISHED"}
         else:
-            self.report({"ERROR"}, "Failed to calculate inertia")
+            self.report({"WARNING"}, "Failed to calculate inertia (check geometry/mass)")
             return {"CANCELLED"}
 
 
@@ -924,6 +934,7 @@ class LINKFORGE_OT_calculate_inertia_all(Operator):
     bl_description = "Auto-calculate inertia tensor for all robot links in the scene"
     bl_options = {"REGISTER", "UNDO"}
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the operator."""
         count = 0
@@ -1075,6 +1086,7 @@ class LINKFORGE_OT_add_material_slot(Operator):
 
         return False
 
+    @safe_execute
     def execute(self, context):
         """Execute the operator."""
         obj = context.active_object

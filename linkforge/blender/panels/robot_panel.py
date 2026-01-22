@@ -5,6 +5,8 @@ from __future__ import annotations
 import bpy
 from bpy.types import Context, Operator, Panel
 
+from ..utils.decorators import safe_execute
+
 
 def build_tree_structure(scene):
     """Build robot tree structure from scene objects.
@@ -65,6 +67,7 @@ class LINKFORGE_OT_select_tree_object(Operator):
         name="Object Type", description="Type of object (link, joint, sensor, transmission)"
     )  # type: ignore
 
+    @safe_execute
     def execute(self, context):
         """Execute the operator."""
         # Find the object

@@ -147,8 +147,56 @@ def import_mesh_file(mesh_path: Path, name: str):
                 logger.error(msg)
                 return None
         elif ext in (".glb", ".gltf"):
-            # Import GLB/GLTF (available in Blender 4.1+)
-            bpy.ops.wm.gltf_import(filepath=str(mesh_path))
+            # glTF support: Try modern first, then legacy, then check addon
+            imported = False
+
+            # Attempt 1: Modern Blender 4.2+ (bpy.ops.wm.gltf_import)
+            if not imported:
+                try:
+                    bpy.ops.wm.gltf_import(filepath=str(mesh_path))
+                    imported = True
+                except (AttributeError, NameError):
+                    pass
+
+            # Attempt 2: Legacy Blender (bpy.ops.import_scene.gltf)
+            if not imported:
+                try:
+                    bpy.ops.import_scene.gltf(filepath=str(mesh_path))
+                    imported = True
+                except (AttributeError, NameError):
+                    pass
+
+            # Attempt 3: Enable Addon and Retry
+            if not imported:
+                import addon_utils
+
+                addon_name = "io_scene_gltf2"
+                is_enabled, _ = addon_utils.check(addon_name)
+
+                if not is_enabled:
+                    try:
+                        logger.info(f"Enabling {addon_name} addon...")
+                        addon_utils.enable(addon_name)
+
+                        # Retry Modern
+                        try:
+                            bpy.ops.wm.gltf_import(filepath=str(mesh_path))
+                            imported = True
+                        except (AttributeError, NameError):
+                            # Retry Legacy
+                            try:
+                                bpy.ops.import_scene.gltf(filepath=str(mesh_path))
+                                imported = True
+                            except (AttributeError, NameError):
+                                pass
+                    except Exception as e:
+                        logger.error(f"Failed to enable glTF addon: {e}")
+
+            if not imported:
+                logger.error(
+                    "glTF importer not found. Ensure 'Import-Export: glTF 2.0 format' addon is enabled."
+                )
+                return None
         else:
             return None
 

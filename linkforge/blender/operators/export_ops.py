@@ -16,6 +16,7 @@ from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
 
 from ...core.logging_config import get_logger
+from ..utils.decorators import safe_execute
 
 logger = get_logger(__name__)
 
@@ -57,6 +58,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         # Call parent invoke to open file browser
         return ExportHelper.invoke(self, context, event)
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute the export."""
         # Import here to avoid circular dependencies
@@ -126,42 +128,37 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
             return {"CANCELLED"}
 
         # Generate URDF/XACRO
-        try:
-            if robot_props.export_format == "URDF":
-                urdf_generator = URDFGenerator(
-                    pretty_print=True,
-                    urdf_path=output_path,
-                    use_ros2_control=robot_props.use_ros2_control,
-                )
-                urdf_generator.write(robot, output_path, validate=False)
-                msg = f"Exported URDF to {output_path}"
-                if meshes_dir:
-                    msg += f" (meshes in {meshes_dir})"
-                self.report({"INFO"}, msg)
-                logger.info(msg)
-            else:  # XACRO
-                xacro_generator = XACROGenerator(
-                    pretty_print=True,
-                    advanced_mode=True,
-                    extract_materials=robot_props.xacro_extract_materials,
-                    extract_dimensions=robot_props.xacro_extract_dimensions,
-                    generate_macros=robot_props.xacro_generate_macros,
-                    split_files=robot_props.xacro_split_files,
-                    urdf_path=output_path,
-                    use_ros2_control=robot_props.use_ros2_control,
-                )
-                xacro_generator.write(robot, output_path, validate=False)
-                msg = f"Exported XACRO to {output_path}"
-                if meshes_dir:
-                    msg += f" (meshes in {meshes_dir})"
-                self.report({"INFO"}, msg)
-                logger.info(msg)
+        if robot_props.export_format == "URDF":
+            urdf_generator = URDFGenerator(
+                pretty_print=True,
+                urdf_path=output_path,
+                use_ros2_control=robot_props.use_ros2_control,
+            )
+            urdf_generator.write(robot, output_path, validate=False)
+            msg = f"Exported URDF to {output_path}"
+            if meshes_dir:
+                msg += f" (meshes in {meshes_dir})"
+            self.report({"INFO"}, msg)
+            logger.info(msg)
+        else:  # XACRO
+            xacro_generator = XACROGenerator(
+                pretty_print=True,
+                advanced_mode=True,
+                extract_materials=robot_props.xacro_extract_materials,
+                extract_dimensions=robot_props.xacro_extract_dimensions,
+                generate_macros=robot_props.xacro_generate_macros,
+                split_files=robot_props.xacro_split_files,
+                urdf_path=output_path,
+                use_ros2_control=robot_props.use_ros2_control,
+            )
+            xacro_generator.write(robot, output_path, validate=False)
+            msg = f"Exported XACRO to {output_path}"
+            if meshes_dir:
+                msg += f" (meshes in {meshes_dir})"
+            self.report({"INFO"}, msg)
+            logger.info(msg)
 
-            return {"FINISHED"}
-
-        except Exception as e:
-            self.report({"ERROR"}, f"Export failed: {e}")
-            return {"CANCELLED"}
+        return {"FINISHED"}
 
 
 class LINKFORGE_OT_validate_robot(Operator):
@@ -171,6 +168,7 @@ class LINKFORGE_OT_validate_robot(Operator):
     bl_label = "Validate Robot"
     bl_description = "Validate the robot structure for errors"
 
+    @safe_execute
     def execute(self, context: Context):
         """Execute validation."""
         from ...core.validation import RobotValidator
