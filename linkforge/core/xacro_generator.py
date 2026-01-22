@@ -102,6 +102,13 @@ class XACROGenerator(URDFGenerator):
 
         This is used internally by generate() and for multi-file exports
         to preserve structural comments and metadata.
+
+        Args:
+            robot: Robot model to convert
+            validate: Whether to validate robot structure before generation
+
+        Returns:
+            XACRO XML Element tree
         """
         # Validate robot structure
         if validate:
@@ -244,7 +251,12 @@ class XACROGenerator(URDFGenerator):
         return root
 
     def _extract_materials(self, robot: Robot, properties: list[tuple[str, str]]) -> None:
-        """Extract unique materials as properties."""
+        """Extract unique materials as XACRO properties.
+
+        Args:
+            robot: Robot model to scan for materials
+            properties: List to append (name, value) tuples to
+        """
         materials = self._collect_materials(robot)
         for mat_name, mat in materials.items():
             # Skip materials without color (should not happen, but type-safe)
@@ -525,7 +537,13 @@ class XACROGenerator(URDFGenerator):
     def _generate_macro_definition(
         self, root: ET.Element, signature: str, group: list[tuple[Link, Joint | None]]
     ) -> None:
-        """Generate <xacro:macro> definition."""
+        """Generate <xacro:macro> definition.
+
+        Args:
+            root: Root XML element to append definition to
+            signature: Geometry signature for this macro
+            group: List of (link, joint) tuples that share this macro
+        """
         template_link, template_joint = group[0]
         if not template_joint:
             return
@@ -593,7 +611,14 @@ class XACROGenerator(URDFGenerator):
     def _generate_macro_call(
         self, root: ET.Element, signature: str, link: Link, joint: Joint | None
     ) -> None:
-        """Generate <xacro:call ... />."""
+        """Generate <xacro:call ... /> for a link/joint pair.
+
+        Args:
+            root: Parent XML element to append call to
+            signature: Geometry signature for the macro to call
+            link: Link instance to parameterize the call
+            joint: Joint instance providing origin data
+        """
         if not joint:
             return
 
@@ -610,7 +635,12 @@ class XACROGenerator(URDFGenerator):
         call_elem.set("rpy", rpy)
 
     def _add_visual_element(self, parent: ET.Element, visual: Visual) -> None:
-        """Add visual element to parent."""
+        """Add visual element to parent with XACRO property support.
+
+        Args:
+            parent: Parent XML element
+            visual: Visual component to add
+        """
         visual_elem = ET.SubElement(parent, "visual")
 
         if visual.name:
@@ -640,7 +670,12 @@ class XACROGenerator(URDFGenerator):
 
     # Override _add_material_element to use properties
     def _add_material_element(self, parent: ET.Element, material: Material) -> None:
-        """Add material element, using property if available."""
+        """Add material element, using property reference if available.
+
+        Args:
+            parent: Parent XML element
+            material: Material instance to add
+        """
         mat_elem = ET.SubElement(parent, "material", name=material.name)
 
         if self.extract_materials and material.name in self.material_properties:
@@ -736,7 +771,13 @@ class XACROGenerator(URDFGenerator):
             filepath.write_text(xacro_string, encoding="utf-8")
 
     def _write_split_files(self, robot: Robot, main_filepath: Path, validate: bool = True) -> None:
-        """Write robot to multiple XACRO files."""
+        """Write robot to multiple XACRO files (main, properties, macros).
+
+        Args:
+            robot: Robot model to export
+            main_filepath: Path to the main .xacro file
+            validate: Whether to validate robot structure before generation
+        """
         # Build the full element tree directly (preserves comments)
         root = self.generate_robot_element(robot, validate=validate)
 
