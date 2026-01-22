@@ -114,18 +114,13 @@ class LINKFORGE_PT_links(Panel):
                 is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
 
             # 2. Check generator tag (from generate_collision operator)
-            elif collision_obj.get("collision_geometry_type", "AUTO") in (
-                "BOX",
-                "CYLINDER",
-                "SPHERE",
-            ):
-                detected_type = collision_obj["collision_geometry_type"]
+            stored_type = collision_obj.get("collision_geometry_type", "AUTO")
+            if stored_type in ("BOX", "CYLINDER", "SPHERE"):
+                detected_type = stored_type
                 is_primitive = True
-
-            elif collision_obj.get("collision_geometry_type", "AUTO") == "CONVEX_HULL":
+            elif stored_type == "CONVEX_HULL":
                 detected_type = "CONVEX_HULL"
                 is_primitive = False
-
             # 3. Fallback to heuristic detection
             elif detect_primitive_type:
                 try:

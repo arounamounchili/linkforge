@@ -168,24 +168,33 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
         # Force property update to refresh enum items
         bpy.context.view_layer.update()
 
-        # Try to set parent and child links
-        try:
-            if len(links) >= 1:
-                parent_obj = links[0][0]
-                props.parent_link = parent_obj
-                self.report({"INFO"}, f"Set parent: {parent_obj.linkforge.link_name}")
-        except TypeError:
-            # Fallback: enum validation failed, but continue
-            self.report({"WARNING"}, "Could not set parent link in dropdown")
-
+        # Try to set parent and child links with "Smart Choice" logic
+        # Pro Rule: Joint Origin is usually coincident with Child Origin.
+        # So Closest = Child, Second Closest = Parent.
         try:
             if len(links) >= 2:
-                child_obj = links[1][0]
-                props.child_link = child_obj
-                self.report({"INFO"}, f"Set child: {child_obj.linkforge.link_name}")
-        except TypeError:
-            # Fallback: enum validation failed, but continue
-            self.report({"WARNING"}, "Could not set child link in dropdown")
+                link_a = links[0][0]
+                link_b = links[1][0]
+
+                # If child is already set (standard workflow), keep it and find parent
+                if props.child_link == link_a:
+                    props.parent_link = link_b
+                elif props.child_link == link_b:
+                    props.parent_link = link_a
+                else:
+                    # Nothing set or something far away set - use defaults
+                    props.child_link = link_a
+                    props.parent_link = link_b
+
+                self.report(
+                    {"INFO"}, f"Connected: {props.parent_link.name} -> {props.child_link.name}"
+                )
+            elif len(links) == 1:
+                # Only one link - must be child
+                props.child_link = links[0][0]
+                self.report({"INFO"}, f"Set child: {props.child_link.name} (No parent nearby)")
+        except Exception as e:
+            self.report({"WARNING"}, f"Auto-detect failed: {str(e)}")
 
         return {"FINISHED"}
 

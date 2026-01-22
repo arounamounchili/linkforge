@@ -64,7 +64,10 @@ class LINKFORGE_PT_joints(Panel):
 
         # Parent and child
         box.separator()
-        box.label(text="Connection:", icon="LINKED")
+        row = box.row()
+        row.label(text="Connection:", icon="LINKED")
+        row.operator("linkforge.auto_detect_parent_child", icon="AUTO", text="Detect")
+
         box.prop(props, "parent_link", icon="OUTLINER_OB_EMPTY")
         box.prop(props, "child_link", icon="OUTLINER_OB_EMPTY")
 

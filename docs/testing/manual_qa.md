@@ -19,37 +19,68 @@ This protocol defines the mandatory manual testing steps required before every r
 ## 📦 Phase 2: Link & Physics Workflow
 **Goal:** Verify geometry processing and mass property configuration.
 
-1.  [ ] **Link Creation**: Select a Mesh object and click `Create Link`.
-    - *Expected:* Object is renamed with `_link` suffix (or keeps custom name if set). Link properties appear in the panel.
-2.  [ ] **Collision Generation**: In the Link panel, click `Generate Collision`.
-    - *Expected:* A wireframe child object is created. Slider for `Collision Quality` regenerates the mesh on the fly.
-3.  [ ] **Manual Inertia**: Uncheck `Auto-Calculate Inertia`.
-    - *Expected:* **Yellow Wireframe Sphere** and **Orange/White Axes** appear at the link origin.
-4.  [ ] **Inertial Origin**: Offset the `Inertial Origin XYZ`.
-    - *Expected:* The visual markers move in sync with the coordinates. Visibility persists when selecting other objects.
+### 2.1 Creation & Setup
+1.  [ ] **Create Link from Mesh**: Select a Mesh and click `Create Link from Mesh`.
+    - *Expected:* The object **keeps its name**. A child mesh `[Object]_visual` is created.
+2.  [ ] **Add Empty Link Frame**: Click `Add Empty Link Frame` (with nothing or a non-mesh selected).
+    - *Expected:* An **Empty (Plain Axes)** is created at the cursor. It is marked as a link but has 0 visuals and 0 collisions.
+3.  [ ] **Status Visualization**: Select an Empty Link.
+    - *Expected:* The Link Panel shows **"Status: Virtual Frame (No Geometry)"**. It allows setting mass but hides collision generation tools.
+
+### 2.2 Collision Handling
+1.  [ ] **Generation**: Click `Generate Collision`.
+    - *Expected:* A wireframe child named `[Object]_collision` is created.
+2.  [ ] **Alignment (Offset Mesh)**: Move the `_visual` object away from the link origin (e.g., G X 1) and click `Regenerate Collision`.
+    - *Expected:* The collision mesh is **perfectly aligned** with the visual mesh, not doubled or shifted.
+3.  [ ] **Primitive Detection**: Create a Cube, Sphere, or Cylinder link and generate collision.
+    - *Expected:* Detected as `BOX/SPHERE/CYLINDER`. **Collision Quality** slider is hidden.
+4.  [ ] **Convex Hull (Forced)**: Create a Cylinder. Set `Collision Type` to `Convex Hull` and click `Regenerate`.
+    - *Expected:* Heuristic shows **"Type: CONVEX_HULL"** (not Cylinder).
+    - *Expected:* The wireframe is **perfectly aligned** with the cylinder, not at `0,0,0`.
+5.  [ ] **Convex Hull (Complex)**: Use a complex mesh and generate collision.
+    - *Expected:* Detected as `CONVEX_HULL`. **Collision Quality** slider is visible.
+    - *Expected:* Moving the slider regenerates the wireframe mesh (decimation).
+
+### 2.3 Mass Properties (Physics)
+1.  [ ] **Auto-Inertia**: Change `Mass` value with `Auto-Calculate` ON.
+    - *Expected:* No visual markers appear (LinkForge handles this behind the scenes).
+2.  [ ] **Manual Inertia**: Uncheck `Auto-Calculate Inertia`.
+    - *Expected:* **Yellow CoM Sphere** and **Orange/White Axes** appear at origin.
+3.  [ ] **Inertial Offset**: Change `Inertial Origin XYZ` values.
+    - *Expected:* Gizmos move relative to the link origin in real-time.
+    - *Expected:* Gizmos **stay visible** even if you select a different object.
 
 ---
 
 ## 🔗 Phase 3: Joint & Kinematics Workflow
 **Goal:** Validate robot assembly and hierarchy detection.
 
-1.  [ ] **Joint Creation**: Select a Link and click `Create Joint`.
+### 3.1 Joint Creation & Setup
+1.  [ ] **Joint Creation**: Select a Link and click `Create Joint` in the **Forge** or **Joints** panel.
     - *Expected:* A `Joint Empty` (Arrows) is created at the link's location.
-2.  [ ] **Auto-Detect**: Move two links near a joint and click `Auto-Detect Links`.
-    - *Expected:* Parent and Child fields are correctly populated in the Joint panel.
-3.  [ ] **Limits**: Set joint to `REVOLUTE` and enable `Use Limits`.
-    - *Expected:* Min/Max angle fields appear. Values are validated (Min < Max).
-4.  [ ] **Enhanced Viz**: Enable `Show Joint Frames` in Preferences and move the `Frame Size` slider.
+2.  [ ] **Auto-Detect (The Intelligent Assist)**: Select a Joint and click the **Auto (Auto)** icon next to "Connection".
+    - *Expected:* The nearest link becomes the **Child Link** (since joint origin = child origin).
+    - *Expected:* The second-nearest link becomes the **Parent Link**.
+    - *Note:* If you already manually set a Child, the tool is smart enough to keep it and only find the nearest **Parent**.
+3.  [ ] **Manual Override**: Verify you can still manually change the `Parent/Child Link` in the dropdowns.
+4.  [ ] **Joint Limits**: Set joint to `REVOLUTE` or `PRISMATIC`.
+    - *Expected:* Limit fields (Lower, Upper, Effort, Velocity) appear **immediately**.
+    - *Note:* There is no "Use Limits" checkbox for these types as URDF requires them.
+5.  [ ] **Optional Limits**: Set joint to `CONTINUOUS`.
+    - *Expected:* A `Use Limits` checkbox appears. Enabling it shows Effort/Velocity fields only.
+6.  [ ] **Mimic Joints**: Set a joint to `Mimic` another joint.
+    - *Expected:* Fields for `Multiplier` and `Offset` appear.
+5.  [ ] **Enhanced Viz**: Enable `Show Joint Frames` in Preferences and move the `Frame Size` slider.
     - *Expected:* Large RGB arrows appear and scale smoothly in the viewport.
 
 ---
 
-## 📡 Phase 4: Hardware (Sensors & Transmissions)
+## 📡 Phase 4: Hardware (Perceive & Control)
 **Goal:** Verify complex ROS 2 component metadata.
 
-1.  [ ] **Sensor Attachment**: Select a Link and click `Create Sensor` in the Perceive panel.
+1.  [ ] **Sensor Attachment**: Select a Link and click `Create Sensor` in the **Perceive** panel.
     - *Expected:* Sensor empty is created. Type-specific settings (e.g., Camera resolution) appear when switching `Sensor Type`.
-2.  [ ] **Transmission Setup**: Select a Joint and click `Create Transmission` in the Control panel.
+2.  [ ] **Transmission Setup**: Select a Joint and click `Create Transmission` in the **Control** panel.
     - *Expected:* Transmission object is created. Linked to the correct joint. Hardware interfaces (Position/Velocity/Effort) are selectable.
 
 ---
@@ -64,7 +95,14 @@ This protocol defines the mandatory manual testing steps required before every r
         - `xyz` and `rpy` values match Blender's transforms.
         - `mass` and `inertia` are non-zero.
         - Mesh paths are relative to the URDF folder.
-3.  [ ] **Mesh Staging**: Verify the `meshes/` folder is created next to the URDF if `Export Meshes` was checked.
+3.  [ ] **XACRO Advanced**: Switch to XACRO format and enable **Extract Materials**, **Extract Dimensions**, and **Generate Macros**.
+    - *Expected:* The output file uses `<xacro:macro>` and `<xacro:property>`.
+    - *Expected:* Property names starting with digits (e.g., `001`) are automatically sanitized (e.g., `_001`).
+4.  [ ] **XACRO Split Files**: Enable **Split Files**.
+    - *Expected:* Generation succeeds without `'str' object` or `ExpatError`.
+    - *Expected:* `*_robot.xacro` contains `<!-- Properties -->` and `<!-- Macros -->` comments above the corresponding `<xacro:include>` tags.
+    - *Expected:* Split files (`_properties.xacro`, etc.) contain their own structural headers.
+5.  [ ] **Mesh Staging**: Verify the `meshes/` folder is created next to the URDF if `Export Meshes` was checked.
 
 ---
 
