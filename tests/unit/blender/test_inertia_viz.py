@@ -1,5 +1,5 @@
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -190,6 +190,7 @@ def test_draw_inertia_gizmos_iteration():
         patch("linkforge.blender.utils.inertia_gizmos.generate_inertia_axes_geometry") as mock_gen,
         patch("linkforge.blender.utils.inertia_gizmos.batch_for_shader") as mock_batch,
         patch("linkforge.blender.utils.inertia_gizmos.get_shader"),
+        patch("linkforge.blender.utils.inertia_gizmos.bpy", bpy),
     ):
         mock_gen.return_value = {
             "lines": [(0, 0, 0), (1, 1, 1)],
@@ -232,3 +233,105 @@ def test_generate_inertia_axes_geometry_values():
     # Total = 104 points
     assert len(data["lines"]) == 104
     assert len(data["line_colors"]) == 104
+
+
+def test_ensure_inertia_handler():
+    """Test that draw handler is registered correctly."""
+    from linkforge.blender.utils import inertia_gizmos
+
+    # Reset global handle
+    inertia_gizmos._draw_handle = None
+
+    with patch("linkforge.blender.utils.inertia_gizmos.bpy") as mock_bpy:
+        # returns a mock handle
+        mock_bpy.types.SpaceView3D.draw_handler_add.return_value = "HANDLE"
+
+        inertia_gizmos.ensure_inertia_handler()
+
+        mock_bpy.types.SpaceView3D.draw_handler_add.assert_called_once()
+        assert inertia_gizmos._draw_handle == "HANDLE"
+
+        # Calling again should not re-register
+        inertia_gizmos.ensure_inertia_handler()
+        mock_bpy.types.SpaceView3D.draw_handler_add.assert_called_once()
+
+
+def test_check_manual_inertia_on_load():
+    """Test scanning of objects on load."""
+    from linkforge.blender.utils.inertia_gizmos import check_manual_inertia_on_load
+
+    # Mock objects
+    obj1 = MagicMock()
+    obj1.linkforge.is_robot_link = True
+    obj1.linkforge.use_auto_inertia = False  # Manual!
+
+    obj2 = MagicMock()
+    obj2.linkforge.is_robot_link = False
+
+    with (
+        patch("linkforge.blender.utils.inertia_gizmos.bpy") as mock_bpy,
+        patch("linkforge.blender.utils.inertia_gizmos.ensure_inertia_handler") as mock_ensure,
+    ):
+        mock_bpy.context.scene.objects = [obj2, obj1]
+
+        check_manual_inertia_on_load()
+
+        mock_ensure.assert_called_once()
+
+
+def test_check_manual_inertia_on_load_no_matches():
+    """Test scanning when no manual inertia links exist."""
+    from linkforge.blender.utils.inertia_gizmos import check_manual_inertia_on_load
+
+    obj1 = MagicMock()
+    obj1.linkforge.is_robot_link = True
+    obj1.linkforge.use_auto_inertia = True  # Auto
+
+    with (
+        patch("linkforge.blender.utils.inertia_gizmos.bpy") as mock_bpy,
+        patch("linkforge.blender.utils.inertia_gizmos.ensure_inertia_handler") as mock_ensure,
+    ):
+        mock_bpy.context.scene.objects = [obj1]
+
+        check_manual_inertia_on_load()
+
+        mock_ensure.assert_not_called()
+
+
+def test_lifecycle_register_unregister():
+    """Test register and unregister functions."""
+    from linkforge.blender.utils import inertia_gizmos
+
+    with patch("linkforge.blender.utils.inertia_gizmos.bpy") as mock_bpy:
+        # Setup handlers list
+        mock_bpy.app.handlers.load_post = []
+
+        # Register
+        inertia_gizmos.register()
+
+        # Verify handler added
+        assert inertia_gizmos.check_manual_inertia_on_load in mock_bpy.app.handlers.load_post
+        mock_bpy.app.timers.register.assert_called_once()
+
+        # Setup mock handle for unregister test
+        inertia_gizmos._draw_handle = "HANDLE"
+
+        # Unregister
+        inertia_gizmos.unregister()
+
+        # Verify handler removed
+        assert inertia_gizmos.check_manual_inertia_on_load not in mock_bpy.app.handlers.load_post
+        mock_bpy.types.SpaceView3D.draw_handler_remove.assert_called_once_with("HANDLE", "WINDOW")
+        assert inertia_gizmos._draw_handle is None
+
+
+def test_draw_inertia_gizmos_error_handling():
+    """Test that drawing suppresses exceptions."""
+    from linkforge.blender.utils.inertia_gizmos import draw_inertia_gizmos
+
+    with patch("linkforge.blender.utils.inertia_gizmos.bpy") as mock_bpy:
+        # Force an error accessing context
+        type(mock_bpy).context = PropertyMock(side_effect=Exception("Viewport Error"))
+
+        # Should not raise
+        draw_inertia_gizmos()
