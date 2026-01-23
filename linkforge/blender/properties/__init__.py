@@ -9,6 +9,7 @@ Property groups store data on Blender objects and scenes:
 from __future__ import annotations
 
 from . import (
+    control_props,
     joint_props,
     link_props,
     robot_props,
@@ -23,6 +24,7 @@ modules = [
     joint_props,
     sensor_props,
     transmission_props,
+    control_props,
     robot_props,
     validation_props,
 ]

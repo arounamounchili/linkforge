@@ -14,7 +14,7 @@ class LINKFORGE_PT_joints(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LinkForge"
-    bl_parent_id = "LINKFORGE_PT_build"
+    bl_parent_id = "LINKFORGE_PT_forge"
     bl_order = 2
 
     def draw(self, context: Context):

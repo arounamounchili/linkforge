@@ -14,8 +14,10 @@ URDF and XACRO generators, including:
 from __future__ import annotations
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, StringProperty
+from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
+
+from .control_props import Ros2ControlJointProperty
 
 
 class RobotPropertyGroup(PropertyGroup):
@@ -40,12 +42,51 @@ class RobotPropertyGroup(PropertyGroup):
         default="URDF",
     )
 
-    # ROS2 Control
     use_ros2_control: BoolProperty(  # type: ignore
         name="Generate ROS2 Control",
-        description="Generate ros2_control tags from transmissions",
+        description="Generate ros2_control tags from centralized system configuration",
         default=True,
     )
+
+    ros2_control_name: StringProperty(  # type: ignore
+        name="System Name",
+        description="Name of the ros2_control system",
+        default="GazeboSimSystem",
+    )
+
+    ros2_control_type: EnumProperty(  # type: ignore
+        name="System Type",
+        description="Type of the hardware system",
+        items=[
+            ("system", "System", "Full robot system with multiple joints"),
+            ("actuator", "Actuator", "Single actuator system"),
+            ("sensor", "Sensor", "Sensor-only system"),
+        ],
+        default="system",
+    )
+
+    hardware_plugin: StringProperty(  # type: ignore
+        name="Hardware Plugin",
+        description="ROS 2 Hardware Interface plugin name",
+        default="gz_ros2_control/GazeboSimSystem",
+    )
+
+    gazebo_plugin_name: StringProperty(  # type: ignore
+        name="Gazebo Plugin",
+        description="Gazebo ros2_control plugin name",
+        default="gz_ros2_control::GazeboSimROS2ControlPlugin",
+    )
+
+    controllers_yaml_path: StringProperty(  # type: ignore
+        name="Controllers YAML",
+        description="Path to controllers.yaml configuration file",
+        default="$(find robot_description)/config/controllers.yaml",
+        subtype="FILE_PATH",
+    )
+
+    # Centralized collection of controlled joints
+    ros2_control_joints: CollectionProperty(type=Ros2ControlJointProperty)  # type: ignore
+    ros2_control_active_joint_index: IntProperty()  # type: ignore
 
     export_meshes: BoolProperty(  # type: ignore
         name="Export Meshes",

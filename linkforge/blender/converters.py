@@ -47,6 +47,8 @@ from ..core.models import (
     Material,
     Mesh,
     Robot,
+    Ros2Control,
+    Ros2ControlJoint,
     Sensor,
     SensorNoise,
     SensorType,
@@ -949,19 +951,32 @@ def scene_to_robot(
                 raise  # Fail immediately in strict mode
             conversion_errors.append(f"Sensor '{obj.name}': {e}")
 
-    # Process Transmissions
-    for obj in transmission_objects:
+    # Process centralized ROS2 Control
+    if robot_props.use_ros2_control:
         try:
-            transmission = blender_transmission_to_core(obj)
-            if transmission:
-                robot.add_transmission(transmission)
+            ros2_control = blender_ros2_control_to_core(robot_props)
+            if ros2_control:
+                robot.add_ros2_control(ros2_control)
+
+            # Add Gazebo ros2_control plugin if configured
+            if robot_props.gazebo_plugin_name:
+                params = {}
+                if robot_props.controllers_yaml_path:
+                    params["parameters"] = robot_props.controllers_yaml_path
+
+                gazebo_plugin = GazeboPlugin(
+                    name="gazebo_ros2_control",
+                    filename="libgz_ros2_control-system.so",  # Default filename for simulation
+                    parameters=params,
+                )
+                # Note: We wrap the plugin in a GazeboElement without a reference (global)
+                from ..core.models.gazebo import GazeboElement
+
+                robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
         except Exception as e:
             if strict_mode:
-                raise  # Fail immediately in strict mode
-            conversion_errors.append(f"Transmission '{obj.name}': {e}")
-
-    # Note: ROS2 Control is NOT created here
-    # The URDFGenerator will create it from transmissions with Gazebo plugin
+                raise
+            conversion_errors.append(f"ROS2 Control System: {e}")
 
     # If there were any conversion errors (only reached if strict_mode=False)
     if conversion_errors:
@@ -1249,4 +1264,60 @@ def blender_transmission_to_core(obj: Any) -> Transmission | None:
         type=trans_type,
         joints=joints,
         actuators=actuators,
+    )
+
+
+def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
+    """Convert centralized Blender ros2_control properties to Core model.
+
+    Args:
+        props: RobotPropertyGroup containing ros2_control settings
+
+    Returns:
+        Core Ros2Control model or None
+    """
+    if not props or not props.ros2_control_name:
+        return None
+
+    joints: list[Ros2ControlJoint] = []
+    for item in props.ros2_control_joints:
+        cmd_ifs = []
+        if item.cmd_position:
+            cmd_ifs.append("position")
+        if item.cmd_velocity:
+            cmd_ifs.append("velocity")
+        if item.cmd_effort:
+            cmd_ifs.append("effort")
+
+        state_ifs = []
+        if item.state_position:
+            state_ifs.append("position")
+        if item.state_velocity:
+            state_ifs.append("velocity")
+        if item.state_effort:
+            state_ifs.append("effort")
+
+        if cmd_ifs or state_ifs:
+            # Note: Ros2ControlJoint requires at least one of each for validation in some versions
+            # But the core model we saw earlier had validation.
+            # Let's ensure we provide defaults if empty to avoid ValueError
+            if not cmd_ifs:
+                cmd_ifs = ["position"]
+            if not state_ifs:
+                state_ifs = ["position"]
+
+            joints.append(
+                Ros2ControlJoint(
+                    name=item.name, command_interfaces=cmd_ifs, state_interfaces=state_ifs
+                )
+            )
+
+    if not joints:
+        return None
+
+    return Ros2Control(
+        name=props.ros2_control_name,
+        type=props.ros2_control_type,
+        hardware_plugin=props.hardware_plugin,
+        joints=joints,
     )

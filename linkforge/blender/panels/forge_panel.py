@@ -1,6 +1,6 @@
 """Main UI Panel for LinkForge.
 
-This module defines the parent panel 'LINKFORGE_PT_build' that other panels attach to.
+This module defines the parent panel 'LINKFORGE_PT_forge' that other panels attach to.
 It must be registered BEFORE any child panels.
 """
 
@@ -10,12 +10,12 @@ import bpy
 from bpy.types import Context, Panel
 
 
-class LINKFORGE_PT_build(Panel):
+class LINKFORGE_PT_forge(Panel):
     """Parent panel for building robot structure."""
 
     bl_label = "Forge"
     bl_description = "Step 1: Create robot structure with links and joints"
-    bl_idname = "LINKFORGE_PT_build"
+    bl_idname = "LINKFORGE_PT_forge"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LinkForge"
@@ -36,7 +36,7 @@ class LINKFORGE_PT_build(Panel):
 
 # Registration
 classes = [
-    LINKFORGE_PT_build,
+    LINKFORGE_PT_forge,
 ]
 
 

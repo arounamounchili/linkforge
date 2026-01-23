@@ -63,28 +63,6 @@ def update_sensor_empty_size(self: LinkForgePreferences, context: Context) -> No
                 area.tag_redraw()
 
 
-def update_transmission_empty_size(self: LinkForgePreferences, context: Context) -> None:
-    """Callback when transmission_empty_size changes - update all transmission empties."""
-
-    # Get new size
-    new_size = self.transmission_empty_size
-
-    # Update all existing transmission empties in the scene
-    for obj in context.scene.objects:
-        if (
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_transmission")
-            and obj.linkforge_transmission.is_robot_transmission
-        ):
-            obj.empty_display_size = new_size
-
-    # Force viewport redraw
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == "VIEW_3D":
-                area.tag_redraw()
-
-
 def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when link_empty_size changes - update all link empties."""
 
@@ -185,20 +163,6 @@ class LinkForgePreferences(AddonPreferences):
         update=update_sensor_empty_size,  # Update all sensor empties when changed
     )
 
-    transmission_empty_size: FloatProperty(  # type: ignore
-        name="Transmission Empty Size",
-        description="Size of the transmission markers in viewport (bigger = easier to select, smaller = cleaner view)",
-        default=0.05,
-        min=0.01,
-        max=100.0,
-        soft_min=0.05,
-        soft_max=5.0,
-        step=1,
-        precision=2,
-        unit="LENGTH",
-        update=update_transmission_empty_size,  # Update all transmission empties when changed
-    )
-
     link_empty_size: FloatProperty(  # type: ignore
         name="Link Empty Size",
         description="Size of the link markers in viewport (bigger = easier to select, smaller = cleaner view)",
@@ -267,13 +231,6 @@ class LinkForgePreferences(AddonPreferences):
         box.label(text="Sensor Visualization", icon="LIGHT_SUN")
         row = box.row()
         row.prop(self, "sensor_empty_size", text="Sensor Empty Size", slider=True)
-
-        # Transmission visualization
-        layout.separator()
-        box = layout.box()
-        box.label(text="Transmission Visualization", icon="DRIVER")
-        row = box.row()
-        row.prop(self, "transmission_empty_size", text="Transmission Empty Size", slider=True)
 
         # Link visualization
         layout.separator()

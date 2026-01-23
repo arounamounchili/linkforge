@@ -92,7 +92,7 @@ graph LR
 
 | Module | Purpose | Key Files |
 |--------|---------|-----------|
-| **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `transmission_panel.py`, `build_panel.py` |
+| **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `control_panel.py`, `build_panel.py` |
 | **Operators** | User actions (import, export, etc.) | `import_ops.py`, `export_ops.py`, `link_ops.py`, `joint_ops.py`, `sensor_ops.py`, `transmission_ops.py` |
 | **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `transmission_props.py`, `validation_props.py` |
 | **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `urdf_importer.py`, `mesh_export.py` [PROMOTED] |

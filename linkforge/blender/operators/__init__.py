@@ -5,7 +5,7 @@ Operators are user actions/commands in Blender.
 
 from __future__ import annotations
 
-from . import export_ops, import_ops, joint_ops, link_ops, sensor_ops, transmission_ops
+from . import control_ops, export_ops, import_ops, joint_ops, link_ops, sensor_ops, transmission_ops
 
 # Module list for registration
 modules = [
@@ -13,6 +13,7 @@ modules = [
     joint_ops,
     sensor_ops,
     transmission_ops,
+    control_ops,
     import_ops,
     export_ops,
 ]
