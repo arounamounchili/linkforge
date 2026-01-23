@@ -123,6 +123,21 @@ class LINKFORGE_OT_delete_joint(Operator):
         obj = context.active_object
         joint_name = obj.name
 
+        # Remove from ROS2 Control list if present (Maintain Consistency)
+        scene = context.scene
+        if hasattr(scene, "linkforge") and hasattr(scene.linkforge, "ros2_control_joints"):
+            rc_joints = scene.linkforge.ros2_control_joints
+            # Find index by name
+            idx_to_remove = -1
+            for i, item in enumerate(rc_joints):
+                if item.name == joint_name:
+                    idx_to_remove = i
+                    break
+
+            if idx_to_remove >= 0:
+                rc_joints.remove(idx_to_remove)
+                self.report({"INFO"}, f"Removed '{joint_name}' from ROS2 Control")
+
         # Delete the Empty entirely
         bpy.data.objects.remove(obj, do_unlink=True)
 
