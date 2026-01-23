@@ -38,10 +38,6 @@ def get_shader():
     return gpu.shader.from_builtin(_builtin_shader_name)
 
 
-# Global drawing handle
-_draw_handle = None
-
-
 def generate_arrow_cone_vertices(
     origin: Vector, direction: Vector, length: float, cone_ratio: float = 0.2
 ) -> tuple[list, list]:
@@ -287,9 +283,10 @@ def fix_existing_joints(dummy=None):
             and hasattr(obj, "linkforge_joint")
             and obj.linkforge_joint.is_robot_joint
         ):
-            # Ensure ARROWS type (RGB colored axes - Red=X, Green=Y, Blue=Z)
-            if obj.empty_display_type != "ARROWS":
-                obj.empty_display_type = "ARROWS"
+            # Ensure PLAIN_AXES type (simple crosshair)
+            # We draw our own custom RViz-style arrows on top of this
+            if obj.empty_display_type != "PLAIN_AXES":
+                obj.empty_display_type = "PLAIN_AXES"
             # Set display size from preferences
             obj.empty_display_size = empty_size
 
@@ -317,16 +314,21 @@ def register():
 
 def unregister():
     """Unregister the joint axes visualization components."""
-    global _draw_handle
-
     # Remove load handler
     if fix_existing_joints in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(fix_existing_joints)
 
-    # Remove draw handler if it exists
-    if _draw_handle is not None:
-        bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
-        _draw_handle = None
+    # Remove draw handler if it exists (using persistent namespace)
+    handler = bpy.app.driver_namespace.get("linkforge_joint_gizmo_handler")
+    if handler is not None:
+        try:
+            bpy.types.SpaceView3D.draw_handler_remove(handler, "WINDOW")
+        except ValueError:
+            pass  # Handler might be already removed or invalid
+
+        # Clear from namespace
+        if "linkforge_joint_gizmo_handler" in bpy.app.driver_namespace:
+            del bpy.app.driver_namespace["linkforge_joint_gizmo_handler"]
 
 
 def update_viz_handle(context: Context):
@@ -334,22 +336,29 @@ def update_viz_handle(context: Context):
 
     This is called by the preference update function.
     """
-    global _draw_handle
-
     # Get preferences
     addon_prefs = get_addon_prefs(context)
-
     show_axes = getattr(addon_prefs, "show_joint_axes", False) if addon_prefs else False
 
-    if show_axes and _draw_handle is None:
+    # Check for existing handler in persistent storage
+    current_handler = bpy.app.driver_namespace.get("linkforge_joint_gizmo_handler")
+
+    if show_axes and current_handler is None:
         # Register handler only when needed
-        _draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+        new_handler = bpy.types.SpaceView3D.draw_handler_add(
             draw_joint_axes, (), "WINDOW", "POST_VIEW"
         )
-    elif not show_axes and _draw_handle is not None:
+        bpy.app.driver_namespace["linkforge_joint_gizmo_handler"] = new_handler
+
+    elif not show_axes and current_handler is not None:
         # Remove handler when not in use to save memory
-        bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
-        _draw_handle = None
+        try:
+            bpy.types.SpaceView3D.draw_handler_remove(current_handler, "WINDOW")
+        except ValueError:
+            pass  # Handle edge cases where handler is invalid
+
+        if "linkforge_joint_gizmo_handler" in bpy.app.driver_namespace:
+            del bpy.app.driver_namespace["linkforge_joint_gizmo_handler"]
 
     # Force redraw
     for window in context.window_manager.windows:
