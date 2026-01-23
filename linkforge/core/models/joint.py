@@ -122,8 +122,15 @@ class Joint:
             object.__setattr__(self, "axis", Vector3(1.0, 0.0, 0.0))
 
         if axis_forbidden and self.axis is not None:
-            # Enforce strictness: FIXED joints should not have axis
-            raise ValueError(f"Joint type {self.type.value} cannot have an axis")
+            # Enforce strictness: FIXED joints should not have axis, but we relax this for imports
+            from ...core.logging_config import get_logger
+
+            logger = get_logger(__name__)
+            logger.warning(
+                f"Joint '{self.name}' of type {self.type.value} has an axis (ignored). "
+                f"Fixed/Floating joints do not use axes."
+            )
+            object.__setattr__(self, "axis", None)
 
         # Validate Limits
         # Revolute and prismatic joints require limits
