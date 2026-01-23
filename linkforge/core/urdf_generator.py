@@ -20,6 +20,7 @@ __all__ = ["URDFGenerator", "format_float", "format_vector"]
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from .base import RobotGenerator
 from .models.gazebo import GazeboElement, GazeboPlugin
 from .models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform
 from .models.joint import Joint, JointType
@@ -66,7 +67,7 @@ def format_vector(x: float, y: float, z: float, precision: int = 6) -> str:
     return f"{format_float(x, precision)} {format_float(y, precision)} {format_float(z, precision)}"
 
 
-class URDFGenerator:
+class URDFGenerator(RobotGenerator[str]):
     """Generate URDF XML from Robot model."""
 
     def __init__(
@@ -127,6 +128,19 @@ class URDFGenerator:
             - Transmissions and ros2_control (if enabled)
             - Gazebo-specific elements at the end
         """
+        root = self.generate_robot_element(robot, validate=validate)
+        return self._element_to_string(root)
+
+    def generate_robot_element(self, robot: Robot, validate: bool = True) -> ET.Element:
+        """Generate URDF XML Element tree from robot.
+
+        Args:
+            robot: Robot model with links, joints, sensors, etc.
+            validate: Whether to validate robot structure before generation (default: True)
+
+        Returns:
+            URDF XML Element tree
+        """
         # Validate robot structure
         if validate:
             errors = robot.validate_tree_structure()
@@ -144,52 +158,56 @@ class URDFGenerator:
             self._add_material_element(root, material)
 
         # Add links
-        if robot.links:
-            root.append(ET.Comment(" Links "))
-        for link in robot.links:
-            self._add_link_element(root, link)
+        self.add_links_section(root, robot)
 
         # Add joints
-        if robot.joints:
-            root.append(ET.Comment(" Joints "))
-        for joint in robot.joints:
-            self._add_joint_element(root, joint)
+        self.add_joints_section(root, robot)
 
         # Add transmissions
-        if robot.transmissions:
-            root.append(ET.Comment(" Transmissions (Kept for backward compatibility) "))
-        for transmission in robot.transmissions:
-            self._add_transmission_element(root, transmission)
+        self.add_transmissions(root, robot)
 
         # Add ROS2 Control
-        # Priority: use parsed ros2_control if available, otherwise generate from transmissions
         if self.use_ros2_control:
-            if robot.ros2_controls:
-                # Use parsed ros2_control data (from imported URDF)
-                root.append(ET.Comment(" ROS2 Control "))
-                for rc in robot.ros2_controls:
-                    self._add_parsed_ros2_control_element(root, rc)
-            elif robot.transmissions:
-                # Generate ros2_control from transmissions (from Blender scene) if enabled
-                root.append(ET.Comment(" ROS2 Control "))
-                self._add_ros2_control_element(root, robot)
+            self.add_ros2_control(root, robot)
 
         # Add Gazebo elements (including sensors - all gazebo tags together)
         # Note: Sensors create <gazebo reference="link"> tags, so we add them first
         # to keep all gazebo elements together at the end
-        if robot.gazebo_elements:
-            root.append(ET.Comment(" Gazebo "))
-        for gazebo_elem in robot.gazebo_elements:
-            self._add_gazebo_element(root, gazebo_elem)
+        self.add_gazebo(root, robot)
 
         # Add sensors (Gazebo format) - these also create <gazebo> tags
-        if robot.sensors:
-            root.append(ET.Comment(" Sensors "))
-        for sensor in robot.sensors:
-            self._add_sensor_element(root, sensor)
+        self.add_sensors(root, robot)
 
-        # Convert to string
-        return self._element_to_string(root)
+        return root
+
+    def add_links_section(self, parent: ET.Element, robot: Robot) -> None:
+        """Add Links section to parent element.
+
+        This follows the Template Method pattern. It handles the section header (comment)
+        and iteration, delegating the specific element creation to _add_link_to_xml.
+        """
+        if robot.links:
+            parent.append(ET.Comment(" Links "))
+        for link in robot.links:
+            self._add_link_to_xml(parent, link, robot)
+
+    def add_joints_section(self, parent: ET.Element, robot: Robot) -> None:
+        """Add Joints section to parent element.
+
+        Template Method for joints section.
+        """
+        if robot.joints:
+            parent.append(ET.Comment(" Joints "))
+        for joint in robot.joints:
+            self._add_joint_to_xml(parent, joint, robot)
+
+    def _add_link_to_xml(self, parent: ET.Element, link: Link, robot: Robot) -> None:
+        """Hook for adding a single link. Can be overridden (e.g. for XACRO macros)."""
+        self._add_link_element(parent, link)
+
+    def _add_joint_to_xml(self, parent: ET.Element, joint: Joint, robot: Robot) -> None:
+        """Hook for adding a single joint. Can be overridden."""
+        self._add_joint_element(parent, joint)
 
     def write(self, robot: Robot, filepath: Path, validate: bool = True) -> None:
         """Write URDF to file with proper formatting.
@@ -917,6 +935,64 @@ class URDFGenerator:
             for key, value in plugin.parameters.items():
                 param_elem = ET.SubElement(plugin_elem, key)
                 param_elem.text = value
+
+    def add_ros2_control(self, parent: ET.Element, robot: Robot) -> None:
+        """Add ros2_control to parent element.
+
+        This method centralizes the logic for choosing between parsed (centralized)
+        ROS 2 Control configuration and legacy transmission-based generation.
+        It ensures consistent XML structure and comments across URDF and XACRO export.
+
+        Args:
+            parent: Parent XML element (robot)
+            robot: Robot model
+        """
+        # Priority: use parsed ros2_control if available, otherwise generate from transmissions
+        if robot.ros2_controls:
+            # Use parsed ros2_control data (Preferred)
+            parent.append(ET.Comment(" ROS2 Control "))
+            for rc in robot.ros2_controls:
+                self._add_parsed_ros2_control_element(parent, rc)
+        elif robot.transmissions:
+            # Generate ros2_control from transmissions (from Blender scene) if enabled
+            parent.append(ET.Comment(" ROS2 Control "))
+            self._add_ros2_control_element(parent, robot)
+
+    def add_transmissions(self, parent: ET.Element, robot: Robot) -> None:
+        """Add transmissions section to parent element.
+
+        Args:
+            parent: Parent XML element (robot)
+            robot: Robot model
+        """
+        if robot.transmissions:
+            parent.append(ET.Comment(" Transmissions "))
+        for transmission in robot.transmissions:
+            self._add_transmission_element(parent, transmission)
+
+    def add_gazebo(self, parent: ET.Element, robot: Robot) -> None:
+        """Add Gazebo section to parent element.
+
+        Args:
+            parent: Parent XML element (robot)
+            robot: Robot model
+        """
+        if robot.gazebo_elements:
+            parent.append(ET.Comment(" Gazebo "))
+        for gazebo_elem in robot.gazebo_elements:
+            self._add_gazebo_element(parent, gazebo_elem)
+
+    def add_sensors(self, parent: ET.Element, robot: Robot) -> None:
+        """Add Sensors section to parent element.
+
+        Args:
+            parent: Parent XML element (robot)
+            robot: Robot model
+        """
+        if robot.sensors:
+            parent.append(ET.Comment(" Sensors "))
+        for sensor in robot.sensors:
+            self._add_sensor_element(parent, sensor)
 
     def _add_ros2_control_element(self, parent: ET.Element, robot: Robot) -> None:
         """Add ros2_control block for ROS2 standard with Gazebo Sim (Ignition) plugin.

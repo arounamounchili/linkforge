@@ -1,4 +1,4 @@
-"""URDF importer utilities for creating Blender objects from URDF models."""
+"""Scene Builder utilities for creating Blender objects from generic Robot models."""
 
 from __future__ import annotations
 
@@ -762,208 +762,6 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
     return empty
 
 
-def create_transmission_object(
-    transmission,
-    joint_objects: dict | None = None,
-    collection=None,
-    explicit_axis: tuple[float, float, float] | None = None,
-) -> object | None:
-    """Create Empty object from Transmission model.
-
-    Args:
-        transmission: Transmission model from core
-        joint_objects: Dictionary mapping joint names to Blender Empty objects (joints)
-        collection: Blender Collection to add object to
-        explicit_axis: Optional explicit axis vector (x,y,z) to skip property lookup
-
-    Returns:
-        Blender Empty object or None
-
-    """
-    # Create Empty object for transmission (SINGLE_ARROW for actuation vector)
-    bpy.ops.object.empty_add(type="SINGLE_ARROW", location=(0, 0, 0))
-    empty = bpy.context.active_object
-    empty.name = transmission.name
-
-    # Set display size from preferences
-    prefs = get_addon_prefs()
-    empty.empty_display_size = prefs.transmission_empty_size if prefs else 0.05
-
-    # ALIGNMENT:
-    # By default, SINGLE_ARROW points +Z. We want it to point along the Joint Axis.
-    target_axis = None
-
-    # Priority 1: Explicit axis passed from importer (most reliable)
-    if explicit_axis:
-        target_axis = explicit_axis
-
-    # Priority 2: Look up from joint object properties (fallback)
-    elif joint_objects and transmission.joints:
-        joint_name = transmission.joints[0].name
-        if joint_name in joint_objects:
-            joint_obj = joint_objects[joint_name]
-            if hasattr(joint_obj, "linkforge_joint"):
-                jp = joint_obj.linkforge_joint
-                if jp.axis == "X":
-                    target_axis = (1, 0, 0)
-                elif jp.axis == "Y":
-                    target_axis = (0, 1, 0)
-                elif jp.axis == "Z":
-                    target_axis = (0, 0, 1)
-                elif jp.axis == "NEG_X":
-                    target_axis = (-1, 0, 0)
-                elif jp.axis == "NEG_Y":
-                    target_axis = (0, -1, 0)
-                elif jp.axis == "NEG_Z":
-                    target_axis = (0, 0, -1)
-                elif jp.axis == "CUSTOM":
-                    target_axis = (jp.custom_axis_x, jp.custom_axis_y, jp.custom_axis_z)
-
-    # Apply alignment if we have a target
-    if target_axis:
-        from mathutils import Vector
-
-        vec = Vector(target_axis)
-        if vec.length > 0:
-            # 'TRACK' aligns Z axis to vector
-            rot_quat = Vector((0, 0, 1)).rotation_difference(vec)
-            empty.rotation_euler = rot_quat.to_euler()
-
-    # Set transmission properties
-    # (Original logic continues here)
-    if hasattr(empty, "linkforge_transmission"):
-        props = empty.linkforge_transmission
-        props.is_robot_transmission = True
-        props.transmission_name = transmission.name
-
-        # Map transmission type
-        type_map = {
-            "transmission_interface/SimpleTransmission": "SIMPLE",
-            "transmission_interface/DifferentialTransmission": "DIFFERENTIAL",
-            "transmission_interface/FourBarLinkageTransmission": "FOUR_BAR_LINKAGE",
-        }
-
-        # Check if it's a known type or custom
-        if transmission.type in type_map:
-            props.transmission_type = type_map[transmission.type]
-        else:
-            props.transmission_type = "CUSTOM"
-            props.custom_type = transmission.type
-
-        # Set joints based on transmission type
-        if len(transmission.joints) == 1:
-            # Simple transmission
-            joint = transmission.joints[0]
-            if joint_objects:
-                props.joint_name = joint_objects.get(joint.name)
-
-            # Hardware interface
-            if joint.hardware_interfaces:
-                hw_iface = joint.hardware_interfaces[0]
-                if "position" in hw_iface.lower():
-                    props.hardware_interface = "POSITION"
-                elif "velocity" in hw_iface.lower():
-                    props.hardware_interface = "VELOCITY"
-                elif "effort" in hw_iface.lower():
-                    props.hardware_interface = "EFFORT"
-
-            # Actuator properties (mechanical reduction typically on actuator in URDF)
-            if transmission.actuators:
-                actuator = transmission.actuators[0]
-                props.use_custom_actuator_name = True
-                props.actuator_name = actuator.name
-
-                # Mechanical properties from actuator (standard URDF location)
-                if actuator.mechanical_reduction:
-                    props.mechanical_reduction = actuator.mechanical_reduction
-                if actuator.offset:
-                    props.offset = actuator.offset
-            # Fallback to joint mechanical properties if actuator doesn't have them
-            elif joint.mechanical_reduction:
-                props.mechanical_reduction = joint.mechanical_reduction
-            if joint.offset and not transmission.actuators:
-                props.offset = joint.offset
-
-        elif len(transmission.joints) == 2:
-            # Differential transmission
-            joint1 = transmission.joints[0]
-            joint2 = transmission.joints[1]
-            if joint_objects:
-                props.joint1_name = joint_objects.get(joint1.name)
-                props.joint2_name = joint_objects.get(joint2.name)
-
-            # Hardware interface
-            if joint1.hardware_interfaces:
-                hw_iface = joint1.hardware_interfaces[0]
-                if "position" in hw_iface.lower():
-                    props.hardware_interface = "POSITION"
-                elif "velocity" in hw_iface.lower():
-                    props.hardware_interface = "VELOCITY"
-                elif "effort" in hw_iface.lower():
-                    props.hardware_interface = "EFFORT"
-
-            # Mechanical properties from actuator (standard URDF location)
-            if transmission.actuators and len(transmission.actuators) >= 1:
-                actuator1 = transmission.actuators[0]
-                if actuator1.mechanical_reduction:
-                    props.mechanical_reduction = actuator1.mechanical_reduction
-                if actuator1.offset:
-                    props.offset = actuator1.offset
-            # Fallback to joint mechanical properties if actuator doesn't have them
-            elif joint1.mechanical_reduction:
-                props.mechanical_reduction = joint1.mechanical_reduction
-            if joint1.offset and not transmission.actuators:
-                props.offset = joint1.offset
-
-            # Actuator names
-            if len(transmission.actuators) >= 2:
-                props.use_custom_actuator_name = True
-                props.actuator1_name = transmission.actuators[0].name
-                props.actuator2_name = transmission.actuators[1].name
-
-    # Parent transmission to the joint's location (if joint_objects provided)
-    # Transmissions control joints, so we parent them to the joint Empty objects
-    # This ensures they move with the robot when links are repositioned
-    if joint_objects and transmission.joints:
-        # Get the first joint (for simple transmissions or primary joint of differential)
-        first_joint_name = transmission.joints[0].name
-        if first_joint_name in joint_objects:
-            joint_empty = joint_objects[first_joint_name]
-            empty.parent = joint_empty
-
-            # Snap to Joint Origin (Local 0,0,0) with aligned rotation
-            empty.matrix_parent_inverse.identity()
-            empty.location = (0, 0, 0)
-
-            # Note: empty.rotation_euler was already set by ALIGNMENT logic above.
-            # Since matrix_parent_inverse is identity, rotation_euler is relative to Parent Frame.
-            # This is exactly what we want if we calculated rotation relative to local axes.
-
-            # Move to correct collection
-            if collection:
-                for coll in list(empty.users_collection):
-                    if coll != collection:
-                        coll.objects.unlink(empty)
-                if empty not in collection.objects[:]:
-                    collection.objects.link(empty)
-            # Reset local position to be at joint origin
-            empty.location = (0, 0, 0)
-            # Alignment rotation is already set above, do not reset it!
-
-    # Add to collection
-    if collection:
-        for coll in list(empty.users_collection):
-            if coll != collection:
-                coll.objects.unlink(empty)
-        if empty not in collection.objects[:]:
-            collection.objects.link(empty)
-
-    # Hide from render
-    empty.hide_render = True
-
-    return empty
-
-
 def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
     """Import Robot model to Blender scene.
 
@@ -980,12 +778,50 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
     scene = context.scene
     scene.linkforge.robot_name = robot.name
 
-    # Check for ROS2 Control
-    if robot.ros2_controls:
+    # Reset Global LinkForge State
+    # Since LinkForge manages a single centralized configuration per scene,
+    # we must clear old data to prevent stale conflicts or merging issues.
+    scene.linkforge.use_ros2_control = False
+    scene.linkforge.ros2_control_joints.clear()
+
+    # Populate centralized ROS2 Control
+    if hasattr(robot, "ros2_controls") and robot.ros2_controls:
         scene.linkforge.use_ros2_control = True
+        # Take the first system (most URDFs have only one system-level ros2_control)
+        rc = robot.ros2_controls[0]
+        scene.linkforge.ros2_control_name = rc.name
+        scene.linkforge.ros2_control_type = rc.type
+        scene.linkforge.hardware_plugin = rc.hardware_plugin
+
+        # Map joints to the centralized collection
+        scene.linkforge.ros2_control_joints.clear()
+        for rc_joint in rc.joints:
+            item = scene.linkforge.ros2_control_joints.add()
+            item.name = rc_joint.name
+
+            # Map interfaces
+            item.cmd_position = "position" in rc_joint.command_interfaces
+            item.cmd_velocity = "velocity" in rc_joint.command_interfaces
+            item.cmd_effort = "effort" in rc_joint.command_interfaces
+
+            item.state_position = "position" in rc_joint.state_interfaces
+            item.state_velocity = "velocity" in rc_joint.state_interfaces
+            item.state_effort = "effort" in rc_joint.state_interfaces
     else:
-        # Default to False if not present in imported URDF
         scene.linkforge.use_ros2_control = False
+
+    # Check for legacy Gazebo ros2_control plugin settings
+    if hasattr(robot, "gazebo_elements"):
+        for element in robot.gazebo_elements:
+            for plugin in element.plugins:
+                if "ros2_control" in plugin.name.lower():
+                    scene.linkforge.gazebo_plugin_name = plugin.name
+                    if "parameters" in plugin.parameters:
+                        scene.linkforge.controllers_yaml_path = plugin.parameters["parameters"]
+                    break
+            else:
+                continue
+            break
 
     # Create collection for this robot
     collection = bpy.data.collections.new(robot.name)
@@ -1072,104 +908,90 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
             if create_sensor_object(sensor, link_objects, collection):
                 sensors_created += 1
 
-    # Create transmission objects (pass joint_objects for parenting)
-    transmissions_created = 0
+    # Auto-Convert Legacy Transmissions to Centralized Dashboard
+    # Priority Rule: If modern ros2_control exists, we prefer it.
+    # If NOT, we read the legacy transmissions and convert them directly to the new system.
+    has_ros2_control = hasattr(scene, "linkforge") and scene.linkforge.use_ros2_control
+
     if hasattr(robot, "transmissions") and robot.transmissions:
-        # Create joint map for looking up joint models (to get axis info)
-        joint_model_map = {j.name: j for j in robot.joints}
+        if not has_ros2_control:
+            logger.info("Auto-converting legacy transmissions to Centralized Control system...")
 
-        for transmission in robot.transmissions:
-            # Look up explicit axis from joint model
-            explicit_axis = None
-            if transmission.joints:
-                j_name = transmission.joints[0].name
-                if j_name in joint_model_map:
-                    ax = joint_model_map[j_name].axis
-                    if ax:
-                        explicit_axis = (ax.x, ax.y, ax.z)
+            # Enable the system
+            scene.linkforge.use_ros2_control = True
 
-            if create_transmission_object(
-                transmission, joint_objects, collection, explicit_axis=explicit_axis
-            ):
-                transmissions_created += 1
+            # Track added joints to prevent duplicates
+            added_joints = {item.name for item in scene.linkforge.ros2_control_joints}
+            converted_count = 0
 
-    # Forward Compatibility: If no standard transmissions found, try to reconstruct from ros2_control
-    # This allows importing "modern-only" URDFs and getting editable transmission objects in UI
+            for transmission in robot.transmissions:
+                # We need at least one joint and an actuator/interface definition
+                if not transmission.joints:
+                    continue
+
+                joint_name = transmission.joints[0].name
+
+                # If we've already configured this joint, skip
+                if joint_name in added_joints:
+                    continue
+
+                # Create new item in dashboard
+                item = scene.linkforge.ros2_control_joints.add()
+                item.name = joint_name
+                added_joints.add(joint_name)
+                converted_count += 1
+
+                # Determine Interface Mode
+                is_position = False
+                is_velocity = False
+                is_effort = False
+
+                # Check transmission type first
+                t_type = transmission.type.lower()
+                if "position" in t_type:
+                    is_position = True
+                elif "velocity" in t_type:
+                    is_velocity = True
+                elif "effort" in t_type:
+                    is_effort = True
+
+                # Check actuators (more standard)
+                for actuator in transmission.actuators:
+                    hw = actuator.hardware_interface.lower() if actuator.hardware_interface else ""
+                    if "position" in hw:
+                        is_position = True
+                    elif "velocity" in hw:
+                        is_velocity = True
+                    elif "effort" in hw:
+                        is_effort = True
+
+                # Fallback: Default to Position if nothing specific found (safest for most arms)
+                if not (is_position or is_velocity or is_effort):
+                    is_position = True
+
+                # Apply to Item
+                if is_position:
+                    item.cmd_position = True
+                    item.state_position = True
+                if is_velocity:
+                    item.cmd_velocity = True
+                    item.state_velocity = True
+                if is_effort:
+                    item.cmd_effort = True
+                    item.state_effort = True
+
+            logger.info(f"Auto-converted {converted_count} legacy transmissions to Dashboard")
+        else:
+            logger.info(
+                f"Skipped {len(robot.transmissions)} legacy transmissions (ros2_control active)"
+            )
+
+    # Reconstruct from ros2_control? (Handled primarily by Centralized migration)
+    # But for backward compatibility with 3rd party URDFs that use ros2_control
+    # but NO transmissions, we already populated the Centralized list above.
+    # No need to create redundant "Transmission" Empty objects.
     elif hasattr(robot, "ros2_controls") and robot.ros2_controls:
-        logger.info(
-            "No standard transmissions found. Attempting to reconstruct from ros2_control..."
-        )
-
-        # Create joint map if not created above (optimization: do standard check first)
-        joint_model_map = {j.name: j for j in robot.joints}
-
-        for rc in robot.ros2_controls:
-            for joint in rc.joints:
-                # Determine interface type (simplified heuristic)
-                hw_iface = "POSITION"
-                if "effort" in joint.command_interfaces:
-                    hw_iface = "EFFORT"
-                elif "velocity" in joint.command_interfaces:
-                    hw_iface = "VELOCITY"
-
-                # Check if we already have a transmission for this joint (avoid duplicates)
-                # (Though standard transmissions loop above handles this, checking here is safe)
-
-                # Create a pseudo-transmission object
-                # We do this by calling create_transmission_object with a synthesized Transmission model
-                # or by manually creating the object. Manually is safer here to avoid model dependency issues.
-
-                if joint.name in joint_objects:
-                    # Create Empty object for transmission
-                    # Use SINGLE_ARROW to represent actuation vector (less cluttered than ARROWS)
-                    bpy.ops.object.empty_add(type="SINGLE_ARROW", location=(0, 0, 0))
-                    empty = bpy.context.active_object
-                    empty.name = f"{joint.name}_trans"
-
-                    # Set display size from preferences
-                    prefs = get_addon_prefs()
-                    empty.empty_display_size = prefs.transmission_empty_size if prefs else 0.05
-
-                    if hasattr(empty, "linkforge_transmission"):
-                        props = empty.linkforge_transmission
-                        props.is_robot_transmission = True
-                        props.transmission_name = f"{joint.name}_trans"
-                        props.transmission_type = "SIMPLE"  # Default to simple
-                        props.joint_name = joint_obj  # Assign the object pointer
-                        props.hardware_interface = hw_iface
-
-                    joint_obj = joint_objects[joint.name]
-                    empty.parent = joint_obj
-                    empty.matrix_parent_inverse.identity()
-                    empty.location = (0, 0, 0)
-
-                    # ALIGNMENT: Point arrow along Joint Axis
-                    # Reconstruct axis vector from joint props (or model if available)
-                    axis_vec = None
-                    if joint.name in joint_model_map:
-                        ax = joint_model_map[joint.name].axis
-                        if ax:
-                            axis_vec = (ax.x, ax.y, ax.z)
-
-                    if axis_vec:
-                        from mathutils import Vector
-
-                        vec = Vector(axis_vec)
-                        if vec.length > 0:
-                            rot_quat = Vector((0, 0, 1)).rotation_difference(vec)
-                            empty.rotation_euler = rot_quat.to_euler()
-                    else:
-                        empty.rotation_euler = (0, 0, 0)
-
-                    # Add to collection
-                    if collection:
-                        for coll in list(empty.users_collection):
-                            if coll != collection:
-                                coll.objects.unlink(empty)
-                        if empty not in collection.objects[:]:
-                            collection.objects.link(empty)
-
-                    transmissions_created += 1
+        logger.info("Imported centralized ros2_control config. (Skipping legacy transmissions)")
 
     # Update scene to ensure all transforms are calculated correctly
     # This is critical for round-trip: ensures child link locations are properly evaluated
@@ -1183,8 +1005,6 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
     ]
     if sensor_count > 0:
         completion_parts.append(f"{sensors_created}/{sensor_count} sensors")
-    if transmission_count > 0:
-        completion_parts.append(f"{transmissions_created}/{transmission_count} transmissions")
 
     logger.info(f"Import complete - {', '.join(completion_parts)} created")
     return True

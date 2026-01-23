@@ -135,14 +135,14 @@ class XACROGenerator(URDFGenerator):
                 self._extract_dimensions(robot, properties)
 
         # 2. Identify Macros
-        macro_groups = {}
-        links_in_macros = set()
+        self.macro_groups = {}
+        self.links_in_macros = set()
 
         if self.generate_macros:
-            macro_groups = self._identify_macro_groups(robot)
-            for group in macro_groups.values():
+            self.macro_groups = self._identify_macro_groups(robot)
+            for group in self.macro_groups.values():
                 for link, _ in group:
-                    links_in_macros.add(link.name)
+                    self.links_in_macros.add(link.name)
 
         # 3. Add Properties to Root
         if properties:
@@ -175,80 +175,60 @@ class XACROGenerator(URDFGenerator):
                 self._add_material_element(root, material)
 
         # 4. Generate Macro Definitions
-        if self.generate_macros and macro_groups:
+        if self.generate_macros and self.macro_groups:
             root.append(ET.Comment(" Macros "))
         if self.generate_macros:
-            for signature, group in macro_groups.items():
+            for signature, group in self.macro_groups.items():
                 self._generate_macro_definition(root, signature, group)
 
-        # 5. Generate Links and Joints (or Macro Calls)
-        if robot.links:
-            root.append(ET.Comment(" Links "))
-
-        # Iterate through links
-        for link in robot.links:
-            # Check if this link is part of a macro group
-            if link.name in links_in_macros:
-                # Find which group it belongs to
-                link_sig: str | None = self._get_link_signature(link)
-                if link_sig and link_sig in macro_groups:
-                    # Find the joint for this link
-                    joint = None
-                    for j in robot.joints:
-                        if j.child == link.name:
-                            joint = j
-                            break
-
-                    # Generate Macro Call
-                    self._generate_macro_call(root, link_sig, link, joint)
-            else:
-                # Standard Link Generation
-                self._add_link_element(root, link)
-
-        # Iterate through joints
-        if robot.joints:
-            root.append(ET.Comment(" Joints "))
-        for joint in robot.joints:
-            # If joint is part of a macro (child link is in macro), skip it
-            # because the macro call includes the joint
-            if joint.child in links_in_macros:
-                continue
-
-            # Standard Joint Generation
-            self._add_joint_element(root, joint)
+        # 5. Generate Links and Joints (using unified Template Method)
+        self.add_links_section(root, robot)
+        self.add_joints_section(root, robot)
 
         # Add transmissions
-        if robot.transmissions:
-            root.append(ET.Comment(" Transmissions (Kept for backward compatibility) "))
-        for transmission in robot.transmissions:
-            self._add_transmission_element(root, transmission)
+        self.add_transmissions(root, robot)
 
         # Add ROS2 Control
-        # Priority: use parsed ros2_control if available, otherwise generate from transmissions
         if self.use_ros2_control:
-            if robot.ros2_controls:
-                # Use parsed ros2_control data (from imported URDF)
-                root.append(ET.Comment(" ROS2 Control "))
-                for rc in robot.ros2_controls:
-                    self._add_parsed_ros2_control_element(root, rc)
-            elif robot.transmissions:
-                # Generate ros2_control from transmissions (from Blender scene) if enabled
-                root.append(ET.Comment(" ROS2 Control "))
-                self._add_ros2_control_element(root, robot)
+            self.add_ros2_control(root, robot)
 
         # Add Gazebo extensions (robot level)
-        if robot.gazebo_elements:
-            root.append(ET.Comment(" Gazebo "))
-        for gazebo_elem in robot.gazebo_elements:
-            self._add_gazebo_element(root, gazebo_elem)
+        self.add_gazebo(root, robot)
 
-        # Add sensors (Gazebo format) - these also create <gazebo> tags
-        if robot.sensors:
-            root.append(ET.Comment(" Sensors "))
-        for sensor in robot.sensors:
-            self._add_sensor_element(root, sensor)
+        # Add sensors (Gazebo format)
+        self.add_sensors(root, robot)
 
         return root
+
+    def _add_link_to_xml(self, parent: ET.Element, link: Link, robot: Robot) -> None:
+        """Override: Check for macro usage before adding link."""
+        # Check if this link is part of a macro group
+        if link.name in self.links_in_macros:
+            # Find which group it belongs to
+            link_sig: str | None = self._get_link_signature(link)
+            if link_sig and link_sig in self.macro_groups:
+                # Find the joint for this link
+                joint = None
+                for j in robot.joints:
+                    if j.child == link.name:
+                        joint = j
+                        break
+
+                # Generate Macro Call
+                self._generate_macro_call(parent, link_sig, link, joint)
+        else:
+            # Standard Link Generation
+            self._add_link_element(parent, link)
+
+    def _add_joint_to_xml(self, parent: ET.Element, joint: Joint, robot: Robot) -> None:
+        """Override: Skip joint if it's included in a macro call."""
+        # If joint is part of a macro (child link is in macro), skip it
+        # because the macro call includes the joint
+        if joint.child in self.links_in_macros:
+            return
+
+        # Standard Joint Generation
+        self._add_joint_element(parent, joint)
 
     def _extract_materials(self, robot: Robot, properties: list[tuple[str, str]]) -> None:
         """Extract unique materials as XACRO properties.

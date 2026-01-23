@@ -719,3 +719,93 @@ class TestURDFGenerator:
         texture_elem = mat_elem.find("texture")
         assert texture_elem is not None
         assert texture_elem.get("filename") == "textures/metal.png"
+
+    def test_centralized_ros2_control_priority(self):
+        """Test that centralized ros2_control is prioritized over transmissions."""
+        from linkforge.core.models import Ros2Control, Ros2ControlJoint, Transmission
+
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+        robot.add_joint(
+            Joint(
+                name="joint1",
+                type=JointType.REVOLUTE,
+                parent="link1",
+                child="link2",
+                limits=JointLimits(lower=-1.0, upper=1.0),
+            )
+        )
+
+        # 1. Add legacy transmission
+        trans = Transmission.create_simple(name="legacy_trans", joint_name="joint1")
+        robot.add_transmission(trans)
+
+        # 2. Add modern centralized ros2_control
+        rc_joint = Ros2ControlJoint(
+            name="joint1",
+            command_interfaces=["position", "velocity"],
+            state_interfaces=["position", "velocity"],
+        )
+        rc = Ros2Control(
+            name="ModernSystem", hardware_plugin="modern_hw/ModernHW", joints=[rc_joint]
+        )
+        robot.add_ros2_control(rc)
+
+        generator = URDFGenerator()
+        urdf = generator.generate(robot)
+        root = ET.fromstring(urdf)
+
+        # Verify centralized one exists
+        rc_elems = root.findall("ros2_control")
+        assert len(rc_elems) == 1
+        assert rc_elems[0].get("name") == "ModernSystem"
+
+        # Verify it has our specific interfaces
+        cmd_ifs = [iface.get("name") for iface in rc_elems[0].findall("./joint/command_interface")]
+        assert "position" in cmd_ifs
+        assert "velocity" in cmd_ifs
+
+        # Verify fallback one DOES NOT exist (len is 1)
+        assert not any(rc.get("name") == "GazeboSimSystem" for rc in rc_elems)
+
+    def test_ros2_control_with_gazebo_parameters(self):
+        """Test that ros2_control is exported with Gazebo parameters if provided."""
+        from linkforge.core.models import GazeboElement, GazeboPlugin, Ros2Control, Ros2ControlJoint
+
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+        robot.add_joint(
+            Joint(
+                name="j1",
+                type=JointType.REVOLUTE,
+                parent="link1",
+                child="link2",
+                limits=JointLimits(0, 1, 1, 1),
+            )
+        )
+
+        rc = Ros2Control(
+            name="GzSys",
+            hardware_plugin="gz_ros2_control/GazeboSimSystem",
+            joints=[Ros2ControlJoint("j1", ["position"], ["position"])],
+        )
+        robot.add_ros2_control(rc)
+
+        # Add Gazebo plugin element
+        plugin = GazeboPlugin(
+            name="gz_ros2_control",
+            filename="libgz_ros2_control-system.so",
+            parameters={"parameters": "config/ctrl.yaml"},
+        )
+        robot.add_gazebo_element(GazeboElement(plugins=[plugin]))
+
+        generator = URDFGenerator()
+        urdf = generator.generate(robot)
+        root = ET.fromstring(urdf)
+
+        # Check plugin element
+        plugin_elem = root.find(".//gazebo/plugin[@name='gz_ros2_control']")
+        assert plugin_elem is not None
+        assert plugin_elem.find("parameters").text == "config/ctrl.yaml"
