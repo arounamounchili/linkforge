@@ -7,7 +7,7 @@ schema_version = "1.0.0"
 id = "linkforge"
 
 # Version follows semantic versioning (MAJOR.MINOR.PATCH)
-version = "1.1.0"
+version = "1.2.0"
 
 # Display name shown in Blender
 name = "LinkForge"

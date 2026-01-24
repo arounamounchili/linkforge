@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # Project metadata (PEP 621)
 [project]
 name = "linkforge"
-version = "1.1.0"
+version = "1.2.0"
 description = "Professional URDF & XACRO Bridge for Blender. Build Simulation-Ready Robots."
 readme = "README.md"
 requires-python = ">=3.11"

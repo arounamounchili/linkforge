@@ -5,6 +5,63 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/arounamounchili/linkforge/compare/v1.1.0...v1.2.0) (2026-01-24)
+
+
+### 🚀 Features
+
+* add centralized ros2_control dashboard and refine export logic ([69894bc](https://github.com/arounamounchili/linkforge/commit/69894bcb544cc1f35f89514e69a42746dbb11911))
+* add CODEOWNERS, citations, and refine guidelines ([#39](https://github.com/arounamounchili/linkforge/issues/39)) ([#40](https://github.com/arounamounchili/linkforge/issues/40)) ([2fd4752](https://github.com/arounamounchili/linkforge/commit/2fd4752ed9a1b6963bdf1603833c32d282fc86be))
+* **blender:** expose inertial origin in physics panel ([#70](https://github.com/arounamounchili/linkforge/issues/70)) ([#71](https://github.com/arounamounchili/linkforge/issues/71)) ([45b9bc2](https://github.com/arounamounchili/linkforge/commit/45b9bc2d659090edf69a466032491db830c397de))
+* **blender:** implement robust persistent inertia visualization with CoM sphere ([#74](https://github.com/arounamounchili/linkforge/issues/74)) ([6d35659](https://github.com/arounamounchili/linkforge/commit/6d35659dbd08bd0f4905d4719db141fd64c3dcff))
+* **blender:** modernize GPU overlays and fix viewport drawing logic ([684d6a8](https://github.com/arounamounchili/linkforge/commit/684d6a88df810d4a4d13936bff2df705608404f2))
+* full core coverage ([#67](https://github.com/arounamounchili/linkforge/issues/67)) ([217123d](https://github.com/arounamounchili/linkforge/commit/217123df48309801ffc71f255c4d202f11fdb1c4))
+* implement professional virtual link handling and robust alignment ([#62](https://github.com/arounamounchili/linkforge/issues/62)) ([838f25c](https://github.com/arounamounchili/linkforge/commit/838f25cca3ed78555f0a15e9f717b2c73a949bf4))
+
+
+### 🐞 Bug Fixes
+
+* add missing register/unregister logic to import_ops.py ([3017eca](https://github.com/arounamounchili/linkforge/commit/3017eca93a01edf33f62b47cdc3bcde797564bcf))
+* **blender:** handle Collada removal in Blender 5.0+ ([#68](https://github.com/arounamounchili/linkforge/issues/68)) ([8e2ffbf](https://github.com/arounamounchili/linkforge/commit/8e2ffbf1b9e017cea0c49cc975ab247c9c6b4b34))
+* **blender:** restore missing bpy import and add type hints to utilities ([e4cbf56](https://github.com/arounamounchili/linkforge/commit/e4cbf56032ca3b20353984340e02345d4b18bcff))
+* **ci:** simplify release-please extra-files by removing dynamic docs and README ([0812552](https://github.com/arounamounchili/linkforge/commit/0812552b21d082fa97ad2d44f25fbf0f384bf6a5))
+* **ci:** split blender setup steps in release pipeline ([dab8293](https://github.com/arounamounchili/linkforge/commit/dab8293d07ee9e974a9435283309989aa984a6dc))
+* **ci:** switch release-please to python type for robust versioning ([1d182fd](https://github.com/arounamounchili/linkforge/commit/1d182fdddc957e2e620b5fc517287b5b33109282))
+* Collision import preventing accidental degradation during the import-export cycle ([18c2530](https://github.com/arounamounchili/linkforge/commit/18c2530e3736b885c157c118f101ade80d448599))
+* **core:** correct string formatting in XACRO detection error msg ([d76f0f9](https://github.com/arounamounchili/linkforge/commit/d76f0f96d05edff8effdc6f9a93a8bdadc4df675))
+* implement data-level mesh cloning for export robustness ([#59](https://github.com/arounamounchili/linkforge/issues/59)) ([#60](https://github.com/arounamounchili/linkforge/issues/60)) ([9ddb06a](https://github.com/arounamounchili/linkforge/commit/9ddb06a94f9409f182e44294b4a98d1c441fc9ad))
+* make all property group registrations idempotent to prevent double registration errors ([1d54cd0](https://github.com/arounamounchili/linkforge/commit/1d54cd01ad872773022b5aabd62cce7f42f0c017))
+* Xacro split-file generation and  manual qa doc ([#75](https://github.com/arounamounchili/linkforge/issues/75)) ([6719a70](https://github.com/arounamounchili/linkforge/commit/6719a708ad80b34eed779b67eb9c832149df5f61))
+
+
+### 📚 Documentation
+
+* **branding:** update social preview with new tagline ([dd89679](https://github.com/arounamounchili/linkforge/commit/dd89679b487b535f7aeded79479fcbb4d7b3567b))
+* clarify coordinate system uses 1:1 mapping, not conversion ([#56](https://github.com/arounamounchili/linkforge/issues/56)) ([b025d57](https://github.com/arounamounchili/linkforge/commit/b025d572177f6f7f3f640156e432d227e03a1115))
+* correct object mapping table ([#45](https://github.com/arounamounchili/linkforge/issues/45)) ([de008b5](https://github.com/arounamounchili/linkforge/commit/de008b5365faa1c611328421e64ad3583a52b986))
+* finalize architecture and contributing guides for v1.1.0 release ([ffb8aa6](https://github.com/arounamounchili/linkforge/commit/ffb8aa695ab242aae796c43d74d89061ff64ec9e))
+* improve pre-commit installation instructions in README and CONTRIBUTING ([fd3f746](https://github.com/arounamounchili/linkforge/commit/fd3f746e5ca0ae5c58ceda7e851740d364ca73df))
+* make documentation version dynamic by importing from package ([1d8b393](https://github.com/arounamounchili/linkforge/commit/1d8b39324de9d8919cbd0e3de6060bf327811366))
+* refine tagline and enhance technical specifications ([24ef9fd](https://github.com/arounamounchili/linkforge/commit/24ef9fd340a4904af982f129ca453feea8afe67f))
+* sync architecture and API references with modular codebase ([cf91bd9](https://github.com/arounamounchili/linkforge/commit/cf91bd9259955c8d2854528fcfb52eefd39466b4))
+* sync documentation version and add automation hint ([0e80499](https://github.com/arounamounchili/linkforge/commit/0e80499089cf9b895d0a15150c6bd30c3a6ebf65))
+* synchronize all documentation with v1.2.0 features ([#78](https://github.com/arounamounchili/linkforge/issues/78)) ([7f10ca8](https://github.com/arounamounchili/linkforge/commit/7f10ca8ed1c626fb027c332f5c625485f3c89f56))
+* update the roadmap ([fd8d3aa](https://github.com/arounamounchili/linkforge/commit/fd8d3aacb0b230399671328aaf67d6b9766dc13d))
+* use standard version variable in conf.py for automation ([d3a08da](https://github.com/arounamounchili/linkforge/commit/d3a08daf88dc5730c9d3b533a5c82bb24a9efced))
+
+
+### 🛠️ Refactors
+
+* **core:** eliminate redundant index rebuilds and harmonize comm… ([#58](https://github.com/arounamounchili/linkforge/issues/58)) ([189b6a6](https://github.com/arounamounchili/linkforge/commit/189b6a6901d20f9ee242878a149d1edb52b34c9a))
+* **core:** eliminate redundant index rebuilds and harmonize comments ([189b6a6](https://github.com/arounamounchili/linkforge/commit/189b6a6901d20f9ee242878a149d1edb52b34c9a))
+* delete tools directory and remove related code references ([3039e9e](https://github.com/arounamounchili/linkforge/commit/3039e9e79e1b68ddce2702ef9f38772777753316))
+* delete tools directory and remove related code references ([3a83616](https://github.com/arounamounchili/linkforge/commit/3a836165bd3cd3035d999e631dbc0ae37c30d80f))
+* formalize hexagonal architecture and unify collision display ([#72](https://github.com/arounamounchili/linkforge/issues/72)) ([#73](https://github.com/arounamounchili/linkforge/issues/73)) ([92c8b75](https://github.com/arounamounchili/linkforge/commit/92c8b75b8ec5ec7bb5ba66fe20f9a015066ed6dd))
+* polish error message formatting in urdf_parser.py ([0240a64](https://github.com/arounamounchili/linkforge/commit/0240a642b9315ad89017e0e2e4560502c6760296))
+* remove tool reference from urdf_parser.py ([ce1d403](https://github.com/arounamounchili/linkforge/commit/ce1d403fe819a8b7d9316e91567b93be4f60076e))
+* restructure test suite into tiered architecture ([#63](https://github.com/arounamounchili/linkforge/issues/63)) ([#64](https://github.com/arounamounchili/linkforge/issues/64)) ([6bfb262](https://github.com/arounamounchili/linkforge/commit/6bfb262c2728aba8a767657df186aeebba3b0381))
+* separate import/export logic and refine xacro error message ([5649837](https://github.com/arounamounchili/linkforge/commit/56498379e8c11d2379c259904b3d778411d29ad2))
+
 ## [1.1.0](https://github.com/arounamounchili/linkforge/compare/v1.0.0...v1.1.0) (2026-01-07)
 
 

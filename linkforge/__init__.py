@@ -12,7 +12,7 @@ from __future__ import annotations
 # Metadata is defined in blender_manifest.toml
 
 # Package version and metadata
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __all__ = ["register", "unregister"]
 
 # Import blender module if bpy is available (inside Blender)
