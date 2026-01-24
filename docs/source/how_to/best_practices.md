@@ -41,3 +41,17 @@ Too many high-resolution meshes in a simulation will drop the Real-Time Factor (
 
 ### Sensor Update Rates
 Don't set sensor update rates higher than necessary. A 100Hz LiDAR might be overkill for a slow-moving mobile robot and will consume unnecessary CPU cycles.
+
+---
+
+## Control Configuration
+
+### Prefer Centralized Control
+Instead of managing individual transmissions on every joint, use the centralized **Control Dashboard**. It provides a single view of all your hardware interfaces and ensures your `ros2_control` tags are generated correctly for modern Gazebo/ROS 2 integration.
+
+---
+
+## Data Preservation
+
+### Importing Robots
+When importing an existing robot (URDF/XACRO), LinkForge automatically disables **Auto-Calculate Inertia** to preserve your original, scientifically calibrated inertia tensors. **Do not re-enable** this checkmark unless you have modified the geometry significantly and want LinkForge to re-approximate the physics properties.
