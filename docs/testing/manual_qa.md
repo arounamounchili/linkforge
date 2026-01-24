@@ -12,7 +12,7 @@ This protocol defines the mandatory manual testing steps required before every r
 2.  [ ] **Panel Visibility**: Check the `N-Panel` (Sidebar) in the 3D Viewport.
     - *Expected:* The **LinkForge** tab exists with panels: *Forge*, *Perceive*, *Control*, and *Validate & Export*.
 3.  [ ] **Preferences**: Open `Edit > Preferences > Extensions > LinkForge`.
-    - *Expected:* Settings for **Joint Visualization** and **Inertia Visualization** are visible and functional.
+    - *Expected:* Settings for **Joint Visualization** (Unified Size) and **Inertia Visualization** are visible and functional.
 
 ---
 
@@ -40,6 +40,8 @@ This protocol defines the mandatory manual testing steps required before every r
 5.  [ ] **Convex Hull (Complex)**: Use a complex mesh and generate collision.
     - *Expected:* Detected as `CONVEX_HULL`. **Collision Quality** slider is visible.
     - *Expected:* Moving the slider regenerates the wireframe mesh (decimation).
+6.  [ ] **Merged Hull**: Create a link with **two separate meshes** as children and click `Generate Collision`.
+    - *Expected:* LinkForge generates a **single** convex hull that encapsulates both meshes.
 
 ### 2.3 Mass Properties (Physics)
 1.  [ ] **Auto-Inertia**: Change `Mass` value with `Auto-Calculate` ON.
@@ -114,6 +116,7 @@ This protocol defines the mandatory manual testing steps required before every r
 1.  [ ] **Round-Trip Import**: Export your robot, then use `File > Import > LinkForge URDF (.urdf/.xacro)` to import it back into a clean scene.
     - *Expected:* The robot hierarchy is recreated exactly. Sensors are attached to the correct links.
     - *Expected:* Physics properties (Mass, Inertia) match the original values.
+    - *Expected:* All links show the 🔒 **Locked** status for collision and inertia.
 2.  [ ] **Undo/Redo Stress Test**: Create a Joint, move it, then press `Ctrl+Z` (Undo) and `Ctrl+Shift+Z` (Redo) multiple times.
     - *Expected:* The object disappears and reappears cleanly without Python errors.
 3.  [ ] **Deletion Cleanup**: Delete a Link object (Empty) in the viewport.

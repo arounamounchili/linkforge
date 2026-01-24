@@ -8,7 +8,7 @@ This document provides a technical specification of how LinkForge maps Blender o
 | :--- | :--- | :--- | :--- |
 | **Link** | `Empty` | Plain Axes | The coordinate frame of the link. |
 | **Visual** | `Mesh` | Textured/Solid | Must be a child of a Link Empty. |
-| **Collision** | `Mesh` | Wireframe | Must be a child of a Link Empty. |
+| **Collision** | `Mesh` | Wireframe | Must be a child of a Link Empty. LinkForge merges multiple visual children into a single convex hull by default. |
 | **Joint** | `Empty` | Arrows | Colored axes (RGB for XYZ). |
 | **Sensor** | `Empty` | Sphere | Wireframe sphere. Must be a child of a Link Empty. |
 
@@ -43,6 +43,11 @@ Joints in LinkForge operate differently than standard Blender parent-child relat
 
 ### 3. Coordinate Systems
 Both Blender and URDF use **Z-up, right-handed** coordinate systems. LinkForge uses **direct 1:1 coordinate mapping** (no rotations applied during import/export).
+
+## Data Integrity & Status
+When working with imported robots, LinkForge displays status labels on the Link Empty to communicate data safety:
+- 🔒 **Imported collision: Geometry preserved**: Indicates the collision mesh is locked to the original URDF source.
+- **Auto-Calculate Inertia (Locked)**: Physics properties are preserved from the original `<inertial>` tags.
 
 **Coordinate Conventions:**
 - **Blender Default:** Z-up, Y-forward, X-right

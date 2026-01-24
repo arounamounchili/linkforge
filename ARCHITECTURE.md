@@ -92,9 +92,9 @@ graph LR
 
 | Module | Purpose | Key Files |
 |--------|---------|-----------|
-| **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `control_panel.py`, `build_panel.py` |
-| **Operators** | User actions (import, export, etc.) | `import_ops.py`, `export_ops.py`, `link_ops.py`, `joint_ops.py`, `sensor_ops.py`, `transmission_ops.py` |
-| **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `transmission_props.py`, `validation_props.py` |
+| **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `control_panel.py`, `forge_panel.py` |
+| **Operators** | User actions (import, export, etc.) | `import_ops.py`, `export_ops.py`, `link_ops.py`, `joint_ops.py`, `sensor_ops.py`, `control_ops.py`, `transmission_ops.py` (Legacy) |
+| **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `control_props.py`, `transmission_props.py` (Legacy) |
 | **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `scene_builder.py`, `mesh_export.py` |
 | **Utils** | Blender-specific helpers | `joint_gizmos.py`, `property_helpers.py`, `transform_utils.py` |
 
@@ -131,7 +131,7 @@ graph TB
 
 | Module | Purpose | Key Files/Classes |
 |--------|---------|-------------|
-| **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Transmission` |
+| **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission` (Legacy) |
 | **Parsers** | URDF/XACRO → Python objects | `parsers/urdf_parser.py`, `parsers/xacro_parser.py` |
 | **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` |
 | **Physics** | Mass & inertia calculations | `physics/inertia.py` |
@@ -240,6 +240,7 @@ classDiagram
     }
 
     class Transmission {
+        <<Legacy>>
         +str name
         +str type
         +list~TransmissionJoint~ joints
@@ -249,7 +250,7 @@ classDiagram
     Robot "1" *-- "many" Link
     Robot "1" *-- "many" Joint
     Robot "1" *-- "many" Sensor
-    Robot "1" *-- "many" Transmission
+    Robot "1" o-- "many" Transmission : legacy
     Link "1" *-- "many" Visual
     Link "1" *-- "many" Collision
     Link "1" *-- "1" Inertial
@@ -422,7 +423,10 @@ graph TB
 - Parser handles files up to 100 MB
 - Blender integration tested with complex quadrupeds
 
+### 5. **Data Integrity & Preservation**
+LinkForge distinguishes between user-created assets and imported "Source of Truth" assets. Imported assets are locked to prevent accidental modification during the Blender iterative workflow.
+
 ---
 
-**Last Updated:** 2026-01-10
-**Version:** 1.1.0
+**Last Updated:** 2026-01-24
+**Version:** 1.2.0

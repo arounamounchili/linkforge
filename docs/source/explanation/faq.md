@@ -21,4 +21,4 @@ Physics engines are extremely sensitive to incorrect inertia tensors. A common c
 LinkForge is designed for **Blender 4.2+**, utilizing the new Extension Platform system.
 
 ## Where did the "Transmissions" panel go?
-In v1.1.0, we replaced the manual "Transmission" workflow with a modern **Control Dashboard**. Enable **Use ROS2 Control** in the Control panel to access it. This new system is faster, less error-prone, and fully supports ROS 2 standards.
+In v1.2.0, we replaced the manual "Transmission" workflow with a modern **Control Dashboard**. Enable **Use ROS2 Control** in the Control panel to access it. This new system is faster, less error-prone, and fully supports ROS 2 standards.
