@@ -14,7 +14,7 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 ### Joints are "weak" or non-responsive
 **Cause**: Mismatch between control expectations and URDF definitions.
 **Solutions**:
-- **Verify Transmission**: Ensure the joint has a **Create Transmission** entry in the **Control** panel.
+- **Check Control Dashboard**: Ensure the joint is added to the **Control** panel's dashboard and has a valid Command Interface.
 - **Interface Mismatch**: Ensure your hardware interface (Position, Velocity, or Effort) matches your ROS 2 controller configuration.
 
 ## 🌳 Kinematic Integrity
