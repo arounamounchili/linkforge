@@ -173,8 +173,33 @@ If you followed the steps correctly, your exported URDF should look similar to t
       <inertia ixx="0.001354" ixy="0" ixz="0" iyy="0.001354" iyz="0" izz="0.0025" />
     </inertial>
   </link>
-  <!-- ... (right_wheel and lidar_link omitted for brevity) ... -->
-
+  <link name="right_wheel">
+    <visual>
+      <geometry>
+        <cylinder radius="0.1" length="0.05" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.1" length="0.05" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5" />
+      <inertia ixx="0.001354" ixy="0" ixz="0" iyy="0.001354" iyz="0" izz="0.0025" />
+    </inertial>
+  </link>
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.03174" length="0.037866" />
+      </geometry>
+    </visual>
+    <inertial>
+      <mass value="1" />
+      <inertia ixx="0.000371" ixy="0" ixz="0" iyy="0.000371" iyz="0" izz="0.000504" />
+    </inertial>
+  </link>
   <!-- Joints -->
   <joint name="left_wheel_joint" type="continuous">
     <origin xyz="0 0.175 0" rpy="1.570796 0 0" />
@@ -183,8 +208,18 @@ If you followed the steps correctly, your exported URDF should look similar to t
     <axis xyz="0 1 0" />
     <limit effort="10" velocity="1" />
   </joint>
-  <!-- ... (other joints) ... -->
-
+  <joint name="right_wheel_joint" type="continuous">
+    <origin xyz="0 -0.175 0" rpy="1.570796 0 0" />
+    <parent link="base_link" />
+    <child link="right_wheel" />
+    <axis xyz="0 1 0" />
+    <limit effort="10" velocity="1" />
+  </joint>
+  <joint name="lidar_link_joint" type="fixed">
+    <origin xyz="0 0 0.064282" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="lidar_link" />
+  </joint>
   <!-- ROS2 Control -->
   <ros2_control name="GazeboSimSystem" type="system">
     <hardware>
@@ -201,8 +236,9 @@ If you followed the steps correctly, your exported URDF should look similar to t
       <state_interface name="velocity" />
     </joint>
   </ros2_control>
+  <!-- Gazebo -->
   <gazebo>
-    <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+    <plugin name="gazebo_ros2_control" filename="libgz_ros2_control-system.so">
       <parameters>$(find robot_description)/config/controllers.yaml</parameters>
     </plugin>
   </gazebo>
@@ -212,6 +248,7 @@ If you followed the steps correctly, your exported URDF should look similar to t
       <always_on>true</always_on>
       <update_rate>30</update_rate>
       <visualize>false</visualize>
+      <topic>/lidar_link_sensor</topic>
       <ray>
         <scan>
           <horizontal>
