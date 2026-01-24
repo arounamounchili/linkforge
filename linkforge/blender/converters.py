@@ -958,21 +958,21 @@ def scene_to_robot(
             if ros2_control:
                 robot.add_ros2_control(ros2_control)
 
-            # Add Gazebo ros2_control plugin if configured
-            if robot_props.gazebo_plugin_name:
-                params = {}
-                if robot_props.controllers_yaml_path:
-                    params["parameters"] = robot_props.controllers_yaml_path
+                # Add Gazebo ros2_control plugin if configured (ONLY if we have valid control config)
+                if robot_props.gazebo_plugin_name:
+                    params = {}
+                    if robot_props.controllers_yaml_path:
+                        params["parameters"] = robot_props.controllers_yaml_path
 
-                gazebo_plugin = GazeboPlugin(
-                    name="gazebo_ros2_control",
-                    filename="libgz_ros2_control-system.so",  # Default filename for simulation
-                    parameters=params,
-                )
-                # Note: We wrap the plugin in a GazeboElement without a reference (global)
-                from ..core.models.gazebo import GazeboElement
+                    gazebo_plugin = GazeboPlugin(
+                        name="gazebo_ros2_control",
+                        filename="libgz_ros2_control-system.so",  # Default filename for simulation
+                        parameters=params,
+                    )
+                    # Note: We wrap the plugin in a GazeboElement without a reference (global)
+                    from ..core.models.gazebo import GazeboElement
 
-                robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
+                    robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
         except Exception as e:
             if strict_mode:
                 raise
