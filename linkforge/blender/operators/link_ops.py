@@ -71,6 +71,10 @@ def execute_collision_preview_update():
     if primitive_type is not None:
         return None
 
+    # Check if it's imported from URDF (don't regenerate imported collisions)
+    if collision_obj.get("imported_from_urdf"):
+        return None
+
     # Regenerate collision mesh with new quality
     regenerate_collision_mesh(obj, collision_obj)
 

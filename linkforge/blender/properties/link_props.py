@@ -97,6 +97,14 @@ def update_collision_quality(self, context):
     collision_children = [c for c in obj.children if "_collision" in c.name.lower()]
     if not collision_children:
         return
+
+    # IMPORTANT: Skip update if collision was imported from URDF
+    # We want to preserve imported custom collision geometry and origins.
+    # The 'imported_from_urdf' flag is set in scene_builder.py during import.
+    for col in collision_children:
+        if col.get("imported_from_urdf"):
+            return
+
     # Schedule regeneration (debounced via timer to prevent lag)
     from ..operators.link_ops import schedule_collision_preview_update
 
