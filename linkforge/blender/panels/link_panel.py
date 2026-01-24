@@ -144,7 +144,13 @@ class LINKFORGE_PT_links(Panel):
         if collision_obj and detected_type == "CONVEX_HULL":
             box.separator()
             row = box.row()
+            # Disable slider if imported from URDF (cannot be simplified via slider)
+            row.enabled = not collision_obj.get("imported_from_urdf")
             row.prop(props, "collision_quality", text="Collision Quality", slider=True)
+
+            if not row.enabled:
+                row = box.row()
+                row.label(text="Imported collision: Quality locked to 100%", icon="LOCKED")
 
         # Collision actions (after quality setting for logical workflow)
         col = box.column(align=True)
