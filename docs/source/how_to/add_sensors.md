@@ -16,7 +16,7 @@ A sensor in URDF is usually attached to a specific link. You can either attach i
 ## 3. Configuration
 Once added, you can configure the sensor properties:
 - **Update Rate**: How many times per second the sensor scans (e.g., 30Hz).
-- **Topics**: The ROS topic name where data will be published.
+- **Topic**: The ROS topic name where sensor data will be published (e.g., `/scan` or `/camera/image_raw`).
 - **Noise Models**: Add Gaussian noise to simulate real-world sensor inaccuracies.
 
 ### Common Sensor Types:
