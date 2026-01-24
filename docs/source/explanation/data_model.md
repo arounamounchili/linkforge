@@ -31,6 +31,13 @@ Note: LinkForge calculates the inertia tensor based on the primary collision or 
 
 ---
 
+### 4. The Control Layer
+Modern robotics (ROS 2) separates the *description* of the robot from its *control*. LinkForge aligns with this by abstracting control data:
+- **Interfaces, Not Transmissions**: Instead of manually building transmission chains, you simply declare "I want to control velocity on this joint."
+- **Centralized Dashboard**: All control logic is aggregated in the **Control Dashboard**, allowing LinkForge to generate the complex `ros2_control` XML blocks automatically while keeping your viewports clean.
+
+---
+
 :::{tip}
 For a technical breakdown of naming conventions and object types, see the [Robot Structure Reference](../reference/robot_structure.md).
 :::
