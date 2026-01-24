@@ -14,8 +14,8 @@ The base of the robot's kinematic tree. A robot can only have one root link, and
 ## Inertia Tensor
 A 3x3 matrix representing the rotational inertia of a rigid body. LinkForge simplifies this by calculating the moments of inertia (`ixx`, `iyy`, `izz`) based on the object's geometry and mass.
 
-## Transmission
-**Legacy**. In URDF, a transmission links an actuator to a joint. In LinkForge's modern ROS 2 workflow, this is handled by **Control Interfaces** and generated automatically within the `<ros2_control>` block.
+## Joint Interface
+The configuration of how a joint is controlled in ROS 2. Includes **Command Interfaces** (e.g., Velocity) and **State Interfaces** (e.g., Position, Velocity).
 
 ## Sensor
 A device that provides feedback from the environment (e.g., Camera, Lidar, IMU). In LinkForge, sensors are specialized Empty objects attached to Links that generate `<sensor>` tags and their associated Gazebo configurations.
@@ -34,4 +34,4 @@ An XML format used in ROS to describe the physical properties of a robot.
 An XML macro language used to simplify URDF files by allowing variables, math, and macros.
 
 ## Actuation Vector
-The visual representation in Blender showing the direction of force or movement for a specific joint transmission.
+The visual representation in Blender showing the direction of force or movement for a specific joint interface.

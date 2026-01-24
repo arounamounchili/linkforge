@@ -6,7 +6,7 @@ In this tutorial, you will learn how to build a fully functional differential dr
 - How to create and configure **Links**.
 - How to connect links with **Joints**.
 - How to add a **Lidar Sensor**.
-- How to configure **Transmissions**.
+- How to configure **Control Interfaces**.
 - How to **Validate** and **Export** your robot.
 
 ## 🌳 Kinematic Tree
@@ -89,7 +89,7 @@ Always keep LinkForge's **Auto-Calculate Inertia** checkbox enabled rather than 
 
 ## Step 5: Configure Control
 
-To make our robot actuable in ROS 2 or Gazebo, we need to add standard interfaces (Velocity) to the wheels.
+To make our robot actuable in ROS 2 or Gazebo, we need to add standard interfaces (Velocity) to the wheels using the **ros2_control** system.
 
 1. **Open Control Dashboard**:
    - Go to the **Control** panel in the LinkForge sidebar.
@@ -135,7 +135,7 @@ You now have a production-ready, actuable URDF file. You can now load this file 
 
 ### 📄 Sample URDF Output
 
-If you followed the steps correctly, your exported URDF should look similar to the following. Note the clean `ros2_control` block and absence of legacy transmission tags.
+If you followed the steps correctly, your exported URDF should look similar to the following. Note the clean `ros2_control` block and absence of legacy `<transmission>` tags.
 
 ```{dropdown} Click to view diff_drive_robot.urdf
 ```xml

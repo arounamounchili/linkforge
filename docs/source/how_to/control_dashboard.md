@@ -10,7 +10,7 @@ To generate valid ROS 2 control tags, enablement is required:
 This activates the dashboard and sets the default hardware plugin to `GazeboSimSystem`.
 
 ## 2. The Control Dashboard
-Instead of configuring individual transmissions, LinkForge now provides a unified list of all controlled joints.
+LinkForge provides a unified dashboard for managing all actuable joints in one place.
 
 ### Adding a Joint
 1. Click the **Add (+)** button next to the "Joint Interfaces" list.

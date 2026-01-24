@@ -47,7 +47,7 @@ Don't set sensor update rates higher than necessary. A 100Hz LiDAR might be over
 ## Control Configuration
 
 ### Prefer Centralized Control
-Instead of managing individual transmissions on every joint, use the centralized **Control Dashboard**. It provides a single view of all your hardware interfaces and ensures your `ros2_control` tags are generated correctly for modern Gazebo/ROS 2 integration.
+Use the centralized **Control Dashboard** to manage all joint interfaces. It provides a single view of all hardware configurations and ensures your `ros2_control` tags are generated correctly for modern Gazebo/ROS 2 integration.
 
 ---
 
