@@ -11,7 +11,7 @@ This document provides a technical specification of how LinkForge maps Blender o
 | **Collision** | `Mesh` | Wireframe | Must be a child of a Link Empty. |
 | **Joint** | `Empty` | Arrows | Colored axes (RGB for XYZ). |
 | **Sensor** | `Empty` | Sphere | Wireframe sphere. Must be a child of a Link Empty. |
-| **Transmission** | `Empty` | Single Arrow | Shows actuation axis. Aligned with Joint. |
+
 
 ## Naming Conventions
 
@@ -59,7 +59,7 @@ LinkForge stores all metadata as **Custom Properties** on the Blender objects. T
 
 | Component | Property Prefix |
 | :--- | :--- |
-| **Link** | `linkforge_link.*` |
+| **Link** | `linkforge.*` |
 | **Joint** | `linkforge_joint.*` |
 | **Transmission** | `linkforge_transmission.*` |
 | **Sensor** | `linkforge_sensor.*` |

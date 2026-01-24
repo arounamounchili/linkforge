@@ -72,25 +72,6 @@ LinkForge 1.0.0 is the first production-ready release of the professional URDF &
 - **XML Hardening**: Protection against XML bomb attacks through depth limits.
 - **Input Sanitization**: Numeric constraints to prevent NaN/Inf injection.
 
----
 
-## Release Notes - v1.0.0
-
-**Installation:**
-```bash
-# From Blender Extensions
-Edit > Preferences > Get Extensions > Search "LinkForge"
-
-# Or manual installation
-Download linkforge-1.0.0.zip from releases
-Edit > Preferences > Get Extensions > Install from Disk
-```
-
-**Documentation:**
-- [Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)
-- [Contributing Guide](CONTRIBUTING.md)
-
-**Contributors:**
-- Arouna Patouossa Mounchili ([@arounamounchili](https://github.com/arounamounchili))
 
 [1.0.0]: https://github.com/arounamounchili/linkforge/releases/tag/v1.0.0

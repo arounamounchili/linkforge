@@ -25,9 +25,12 @@ In a standard Blender hierarchy, you might parent a wheel mesh to a car body mes
 This structure allows for **non-destructive editing**. You can hide all collision meshes to work on aesthetics, or hide visuals to inspect the physics layout, all without breaking the kinematic tree.
 
 ### 3. Automatic Physics
-LinkForge bridges the gap between Blender's visual bounding boxes and URDF's inertia tensors. Because it understands the Link Frame separately from the meshes, it can automatically sum up the masses of all visual children and calculate a consistent inertia tensor, even for complex arbitrary shapes.
+LinkForge bridges the gap between Blender's visual bounding boxes and URDF's inertia tensors. Because it understands the Link Frame separately from the meshes, it can automatically calculate a physically consistent inertia tensor based on the link's geometry and total mass.
+
+Note: LinkForge calculates the inertia tensor based on the primary collision or visual geometry and scales it to match the total mass you define in the Link properties.
 
 ---
 
-> [!TIP]
-> For a technical breakdown of naming conventions and object types, see the [Robot Structure Reference](../reference/robot_structure.md).
+:::{tip}
+For a technical breakdown of naming conventions and object types, see the [Robot Structure Reference](../reference/robot_structure.md).
+:::

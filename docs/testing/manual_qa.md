@@ -25,7 +25,7 @@ This protocol defines the mandatory manual testing steps required before every r
 2.  [ ] **Add Empty Link Frame**: Click `Add Empty Link Frame` (with nothing or a non-mesh selected).
     - *Expected:* An **Empty (Plain Axes)** is created at the cursor. It is marked as a link but has 0 visuals and 0 collisions.
 3.  [ ] **Status Visualization**: Select an Empty Link.
-    - *Expected:* The Link Panel shows **"Status: Virtual Frame (No Geometry)"**. It allows setting mass but hides collision generation tools.
+    - *Expected:* The Link Panel shows properties but **Mass** is the only physics option. **Collision tools** are disabled until geometry is added.
 
 ### 2.2 Collision Handling
 1.  [ ] **Generation**: Click `Generate Collision`.
@@ -45,7 +45,7 @@ This protocol defines the mandatory manual testing steps required before every r
 1.  [ ] **Auto-Inertia**: Change `Mass` value with `Auto-Calculate` ON.
     - *Expected:* No visual markers appear (LinkForge handles this behind the scenes).
 2.  [ ] **Manual Inertia**: Uncheck `Auto-Calculate Inertia`.
-    - *Expected:* **Yellow CoM Sphere** and **Orange/White Axes** appear at origin.
+    - *Expected:* **CoM Gizmos (Sphere and Axes)** appear at origin.
 3.  [ ] **Inertial Offset**: Change `Inertial Origin XYZ` values.
     - *Expected:* Gizmos move relative to the link origin in real-time.
     - *Expected:* Gizmos **stay visible** even if you select a different object.
@@ -80,8 +80,10 @@ This protocol defines the mandatory manual testing steps required before every r
 
 1.  [ ] **Sensor Attachment**: Select a Link and click `Create Sensor` in the **Perceive** panel.
     - *Expected:* Sensor empty is created. Type-specific settings (e.g., Camera resolution) appear when switching `Sensor Type`.
-2.  [ ] **Transmission Setup**: Select a Joint and click `Create Transmission` in the **Control** panel.
-    - *Expected:* Transmission object is created. Linked to the correct joint. Hardware interfaces (Position/Velocity/Effort) are selectable.
+2.  [ ] **ROS 2 Control Config**: Go to the **Control** panel and enable `Use ROS2 Control`.
+    - *Expected:* "Joint Interfaces" list appears.
+    - *Action:* Click `+` (Add Joint) and select a joint.
+    - *Expected:* The joint is added to the list. Clicking it reveals checkboxes for `Command Interfaces` (Position/Velocity/Effort) and `State Interfaces`. Verify you can toggle them.
 
 ---
 
@@ -99,10 +101,24 @@ This protocol defines the mandatory manual testing steps required before every r
     - *Expected:* The output file uses `<xacro:macro>` and `<xacro:property>`.
     - *Expected:* Property names starting with digits (e.g., `001`) are automatically sanitized (e.g., `_001`).
 4.  [ ] **XACRO Split Files**: Enable **Split Files**.
-    - *Expected:* Generation succeeds without `'str' object` or `ExpatError`.
+    - *Expected:* Generation completes successfully.
     - *Expected:* `*_robot.xacro` contains `<!-- Properties -->` and `<!-- Macros -->` comments above the corresponding `<xacro:include>` tags.
-    - *Expected:* Split files (`_properties.xacro`, etc.) contain their own structural headers.
+    - *Expected:* Split files (`*_properties.xacro`, `*_macros.xacro`) are created and contain their own `<robot>` root tags.
 5.  [ ] **Mesh Staging**: Verify the `meshes/` folder is created next to the URDF if `Export Meshes` was checked.
+
+---
+
+## 🛟 Phase 6: Advanced Stability
+**Goal:** Verify round-trip integrity and data resilience.
+
+1.  [ ] **Round-Trip Import**: Export your robot, then use `File > Import > LinkForge URDF (.urdf/.xacro)` to import it back into a clean scene.
+    - *Expected:* The robot hierarchy is recreated exactly. Sensors are attached to the correct links.
+    - *Expected:* Physics properties (Mass, Inertia) match the original values.
+2.  [ ] **Undo/Redo Stress Test**: Create a Joint, move it, then press `Ctrl+Z` (Undo) and `Ctrl+Shift+Z` (Redo) multiple times.
+    - *Expected:* The object disappears and reappears cleanly without Python errors.
+3.  [ ] **Deletion Cleanup**: Delete a Link object (Empty) in the viewport.
+    - *Expected:* Its children (Visuals/Collisions) remain but are no longer locked to the LinkForge system.
+    - *Expected:* No "ghost" data remains in the scene properties.
 
 ---
 

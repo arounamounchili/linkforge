@@ -34,7 +34,7 @@ User actions and commands.
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: linkforge.blender.operators.transmission_ops
+.. automodule:: linkforge.blender.operators.control_ops
    :members:
    :undoc-members:
    :show-inheritance:
@@ -65,7 +65,7 @@ Blender scene properties for storing robot data.
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: linkforge.blender.properties.transmission_props
+.. automodule:: linkforge.blender.properties.control_props
    :members:
    :undoc-members:
    :show-inheritance:
@@ -86,7 +86,7 @@ Conversion between Blender and core models.
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: linkforge.blender.urdf_importer
+.. automodule:: linkforge.blender.scene_builder
    :members:
    :undoc-members:
    :show-inheritance:
