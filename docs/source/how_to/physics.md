@@ -17,6 +17,10 @@ The inertia tensor will be computed using the bounding box (for primitives) or t
 For complex meshes, the automatic calculation approximates the shape as a solid primitives (Box/Cylinder/Sphere) based on the visual geometry dimensions. For higher precision, consider decomposing your mesh or providing custom inertia values.
 :::
 
+:::{note}
+**Importing Robots**: When importing an existing URDF/XACRO, LinkForge disables **Auto-Calculate Inertia** by default. This ensures that the scientifically accurate inertia tensors from your original file are preserved and not overwritten by Blender's approximations.
+:::
+
 ## Manual Center of Mass (Inertial Origin)
 
 Sometimes, the geometric center is not the physical center of mass (e.g., a battery pack inside a chassis). You can manually offset the Center of Mass (COM).

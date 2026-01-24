@@ -1,6 +1,6 @@
 # LinkForge Documentation
 
-Welcome to the official LinkForge documentation. LinkForge is a professional Blender extension designed to bridge the gap between 3D modeling and robotics simulation.
+Welcome to the official LinkForge documentation. LinkForge is a Professional URDF & XACRO Bridge for Blender, designed to provide a bidirectional workflow between 3D modeling and robotics simulation.
 
 ## 🔄 Workflow at a Glance
 
