@@ -126,7 +126,7 @@ def test_quadruped_roundtrip():
     # Verify structure
     assert len(robot.links) == 17  # Base + 4 legs * 4 links (hip, thigh, calf, foot)
     assert len(robot.joints) == 16  # 4 legs * 4 joints
-    assert len(robot.transmissions) == 12  # 3 actuated joints per leg * 4 legs
+    assert len(robot.transmissions) == 0  # Replaced by ros2_control
     assert len(robot.ros2_controls) == 1  # 1 system tag
 
     # 2. Generate URDF from model

@@ -37,19 +37,21 @@ def test_diff_drive_robot_structure():
     assert robot.name == "diff_drive_robot"
     assert len(robot.links) == 4
     assert len(robot.joints) == 3
-    assert len(robot.transmissions) == 2
+    assert len(robot.transmissions) == 0
     assert len(robot.sensors) == 1
     assert len(robot.gazebo_elements) == 1
+    assert len(robot.ros2_controls) == 1
 
     # Check root link
     all_children = {j.child for j in robot.joints}
     root_links = [link.name for link in robot.links if link.name not in all_children]
     assert root_links == ["base_link"]
 
-    # Check transmissions
-    trans_names = {t.name for t in robot.transmissions}
-    assert "left_wheel_transmission" in trans_names
-    assert "right_wheel_transmission" in trans_names
+    # Check ros2_control joints
+    rc = robot.ros2_controls[0]
+    rc_joints = {j.name for j in rc.joints}
+    assert "left_wheel_joint" in rc_joints
+    assert "right_wheel_joint" in rc_joints
 
 
 def test_roundtrip_test_robot_structure():
@@ -59,9 +61,10 @@ def test_roundtrip_test_robot_structure():
     assert robot.name == "comprehensive_test_robot"
     assert len(robot.links) == 15  # Added planar_platform and floating_sensor
     assert len(robot.joints) == 14  # Added planar_joint and floating_joint
-    assert len(robot.transmissions) == 6
+    assert len(robot.transmissions) == 0
     assert len(robot.sensors) == 3
-    assert len(robot.gazebo_elements) == 1  # ros2_control plugin
+    assert len(robot.ros2_controls) == 1
+    assert len(robot.gazebo_elements) == 1
 
     # Check root link
     all_children = {j.child for j in robot.joints}
@@ -95,10 +98,16 @@ def test_roundtrip_test_robot_structure():
     assert right_finger.mimic.joint == "left_finger_joint"
     assert right_finger.mimic.multiplier == -1.0
 
-    # Check transmissions
-    trans_types = {t.type for t in robot.transmissions}
-    assert "transmission_interface/SimpleTransmission" in trans_types
-    assert "transmission_interface/DifferentialTransmission" in trans_types
+    # Check ros2_control
+    rc = robot.ros2_controls[0]
+    rc_joints = {j.name for j in rc.joints}
+    assert "arm_base_joint" in rc_joints
+    assert "shoulder_joint" in rc_joints
+
+    # Verify interfaces
+    arm_joint = next(j for j in rc.joints if j.name == "arm_base_joint")
+    assert "effort" in arm_joint.command_interfaces
+    assert "position" in arm_joint.state_interfaces
 
     # Check sensors
     sensor_types = {s.type.value for s in robot.sensors}
