@@ -3,7 +3,7 @@
 </div>
 
 # LinkForge
-**Build Simulation-Ready Robots in Blender**
+**Professional URDF & XACRO Bridge for Blender**
 
 [![Latest Release](https://img.shields.io/github/v/release/arounamounchili/linkforge)](https://github.com/arounamounchili/linkforge/releases/latest)
 [![CI](https://github.com/arounamounchili/linkforge/actions/workflows/ci.yml/badge.svg)](https://github.com/arounamounchili/linkforge/actions)
@@ -82,8 +82,9 @@ LinkForge is a professional **URDF & XACRO Bridge** for Blender.
    - Configure sensor type, update rate, and noise parameters
 
 4. **Configure Control** (Optional)
-   - Select a joint → **Create Transmission**
-   - Configure hardware interfaces (Position, Velocity, or Effort)
+   - Go to **Control Panel** → Enable **Use ROS2 Control**
+   - Click `+` to add joints to the Dashboard
+   - Configure interfaces (Position, Velocity, Effort)
 
 5. **Validate & Export**
    - Click **Validate Robot** to check for errors
