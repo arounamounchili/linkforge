@@ -61,5 +61,5 @@ LinkForge stores all metadata as **Custom Properties** on the Blender objects. T
 | :--- | :--- |
 | **Link** | `linkforge.*` |
 | **Joint** | `linkforge_joint.*` |
-| **Transmission** | `linkforge_transmission.*` |
+| **Control** | `linkforge_control.*` |
 | **Sensor** | `linkforge_sensor.*` |

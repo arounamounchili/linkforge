@@ -78,16 +78,16 @@ linkforge/
 │   │   ├── operators/     # User actions (export, create, etc.)
 │   │   ├── panels/        # UI panels
 │   │   ├── properties/    # Blender scene properties
-│   │   ├── converters.py  # [PROMOTED] Bridge: Blender -> Core
-│   │   ├── urdf_importer.py # [PROMOTED] Bridge: Core -> Blender
-│   │   └── mesh_export.py # [PROMOTED] Mesh utilities
+│   │   ├── converters.py  # Bridge: Blender -> Core
+│   │   ├── urdf_importer.py # Bridge: Core -> Blender
+│   │   └── mesh_export.py # Mesh utilities
 │   └── core/              # Core logic (platform-independent)
 │       ├── models/        # Data structures (Robot, Link, Joint, etc.)
 │       ├── parsers/       # URDF/XACRO → Python objects
 │       ├── physics/       # Inertia calculations
 │       ├── validation/    # Validation & security
-│       ├── urdf_generator.py # [PROMOTED] Models -> URDF
-│       └── xacro_generator.py # [PROMOTED] Models -> XACRO
+│       ├── urdf_generator.py # Models -> URDF
+│       └── xacro_generator.py # Models -> XACRO
 ├── tests/                 # Test suite
 │   ├── unit/              # Isolated tests
 │   │   ├── core/          # Model & math tests
