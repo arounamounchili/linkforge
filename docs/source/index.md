@@ -40,10 +40,10 @@ LinkForge removes the friction from robotics modeling:
 
 ## 🎯 Quick Start
 
-1.  **Create Links**: Select a mesh and click **Create Link** in the LinkForge panel.
+1.  **Create Links**: Select a mesh and click **Create Link from Mesh** in the LinkForge panel.
 2.  **Connect Joints**: Select child link and click **Create Joint**.
 3.  **Add Sensors**: Attach cameras or LiDARs to your links.
-4.  **Configure Control**: Add transmissions to your joints for motor actuation.
+4.  **Configure Control**: Enable ROS 2 Control and configure interfaces in the Control Dashboard.
 5.  **Validate & Export**: Run the validator and export to URDF or XACRO.
 
 ---
@@ -141,8 +141,9 @@ citation
 
 ---
 
-> [!NOTE]
-> **Scientific Accuracy**: LinkForge is built for precision. All inertia calculations use solid-body dynamics formulas to ensure simulation fidelity.
+:::{note}
+**Scientific Accuracy**: LinkForge is built for precision. All inertia calculations use solid-body dynamics formulas to ensure simulation fidelity.
+:::
 
 ## 👥 Community & Support
 
