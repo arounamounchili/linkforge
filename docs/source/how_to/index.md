@@ -20,11 +20,11 @@ Guidelines for cross-platform compatibility and efficient robot modeling.
 How to attach and configure LiDAR, Cameras, and IMU sensors.
 :::
 
-:::{grid-item-card} ⚙️ Transmissions
-:link: transmissions
+:::{grid-item-card} 🎮 Control Dashboard
+:link: control_dashboard
 :link-type: doc
 
-Actuate your robot with ROS 2 transmissions and hardware interfaces.
+Actuate your robot with ros2_control interfaces (Position, Velocity, Effort).
 :::
 
 :::{grid-item-card} 🧱 Collision Geometry
@@ -63,7 +63,7 @@ Configure mass, inertia tensors, and manual Center of Mass offsets.
 
 best_practices
 add_sensors
-transmissions
+control_dashboard
 collision_geometry
 joint_viz
 physics
