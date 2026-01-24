@@ -95,7 +95,7 @@ graph LR
 | **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `control_panel.py`, `build_panel.py` |
 | **Operators** | User actions (import, export, etc.) | `import_ops.py`, `export_ops.py`, `link_ops.py`, `joint_ops.py`, `sensor_ops.py`, `transmission_ops.py` |
 | **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `transmission_props.py`, `validation_props.py` |
-| **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `urdf_importer.py`, `mesh_export.py` [PROMOTED] |
+| **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `scene_builder.py`, `mesh_export.py` |
 | **Utils** | Blender-specific helpers | `joint_gizmos.py`, `property_helpers.py`, `transform_utils.py` |
 
 ### 2. Core Logic Layer (`linkforge/core/`)
@@ -133,7 +133,7 @@ graph TB
 |--------|---------|-------------|
 | **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Transmission` |
 | **Parsers** | URDF/XACRO → Python objects | `parsers/urdf_parser.py`, `parsers/xacro_parser.py` |
-| **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` [PROMOTED] |
+| **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` |
 | **Physics** | Mass & inertia calculations | `physics/inertia.py` |
 | **Validation** | Error checking & security | `validation/validator.py`, `validation/security.py` |
 | **Utils** | Unified internal logic | `utils/math_utils.py`, `utils/string_utils.py` |
