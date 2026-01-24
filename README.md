@@ -12,7 +12,7 @@
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/download/)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
-LinkForge is a professional Blender extension for roboticists.
+LinkForge is a professional **URDF & XACRO Bridge** for Blender.
 
 **In robotics, creativity starts in your head — but getting that idea into a simulator usually means hours of writing XML, fixing joint limits, and fighting coordinate systems.**
 
