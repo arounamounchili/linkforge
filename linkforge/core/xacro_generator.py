@@ -768,7 +768,7 @@ class XACROGenerator(URDFGenerator):
 
         # Extract top-level properties (materials, dimensions, etc.)
         properties_root = ET.Element("robot")
-        if any(root.findall(f"{XACRO_NS}property")):
+        if root.findall(f"{XACRO_NS}property"):
             properties_root.append(ET.Comment(" Properties "))
 
         # Extract properties
@@ -778,7 +778,7 @@ class XACROGenerator(URDFGenerator):
 
         # Extract macros (top-level)
         macros_root = ET.Element("robot")
-        if any(root.findall(f"{XACRO_NS}macro")):
+        if root.findall(f"{XACRO_NS}macro"):
             macros_root.append(ET.Comment(" Macros "))
 
         for macro_elem in list(root.findall(f"{XACRO_NS}macro")):
@@ -805,8 +805,8 @@ class XACROGenerator(URDFGenerator):
         # Clean up remaining comments in root that are no longer relevant
         # (e.g. if we moved all properties, remove the "Properties" comment)
         for child in list(root):
-            if isinstance(child, ET.Element) and child.tag is ET.Comment:
-                if child.text.strip() in ("Properties", "Macros"):
+            if child.tag is ET.Comment:  # type: ignore[comparison-overlap]
+                if child.text and child.text.strip() in ("Properties", "Macros"):
                     root.remove(child)
 
         # Copy remaining content (Links, Joints, etc.)
