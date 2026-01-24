@@ -7,9 +7,9 @@ LinkForge bundles several third-party Python libraries to provide a self-contain
 | Library | Version | License | Link |
 | :--- | :--- | :--- | :--- |
 | **PyYAML** | 6.0.3 | [MIT](https://spdx.org/licenses/MIT.html) | [pyyaml.org](https://pyyaml.org/) |
-| **xacrodoc** | 1.3.0 | [MIT](https://spdx.org/licenses/MIT.html) | [adamheins/xacrodoc](https://github.com/adamheins/xacrodoc) |
+| **xacrodoc** | 1.3.1 | [MIT](https://spdx.org/licenses/MIT.html) | [adamheins/xacrodoc](https://github.com/adamheins/xacrodoc) |
 | **rospkg** | 1.6.1 | [BSD-3-Clause](https://spdx.org/licenses/BSD-3-Clause.html) | [ROS Wiki](http://wiki.ros.org/rospkg) |
-| **docutils** | 0.21.2 | [Public Domain / BSD-2-Clause](https://docutils.sourceforge.io/COPYING.html) | [SourceForge](https://docutils.sourceforge.io/) |
+| **docutils** | 0.22.4 | [Public Domain / BSD-2-Clause](https://docutils.sourceforge.io/COPYING.html) | [SourceForge](https://docutils.sourceforge.io/) |
 
 ## Bundled Components
 

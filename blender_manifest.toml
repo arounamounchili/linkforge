@@ -57,13 +57,13 @@ platforms = [
 # Python wheels (dependencies)
 # BEGIN AUTOMATED WHEELS
 wheels = [
-    "./wheels/docutils-0.21.2-py3-none-any.whl",
+    "./wheels/docutils-0.22.4-py3-none-any.whl",
     "./wheels/pyyaml-6.0.3-cp311-cp311-macosx_10_13_x86_64.whl",
     "./wheels/pyyaml-6.0.3-cp311-cp311-macosx_11_0_arm64.whl",
     "./wheels/pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
     "./wheels/pyyaml-6.0.3-cp311-cp311-win_amd64.whl",
     "./wheels/rospkg-1.6.1-py3-none-any.whl",
-    "./wheels/xacrodoc-1.3.0-py3-none-any.whl",
+    "./wheels/xacrodoc-1.3.1-py3-none-any.whl",
 ]
 # END AUTOMATED WHEELS
 

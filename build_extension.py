@@ -39,9 +39,9 @@ DEP_CONFIG = {
         ],
         "py_versions": ["311"],  # Standardize on 3.11+ for modern Blender versions
     },
-    "xacrodoc": {"version": "1.3.0", "universal": True},
+    "xacrodoc": {"version": "1.3.1", "universal": True},
     "rospkg": {"version": "1.6.1", "universal": True},
-    "docutils": {"version": "0.21.2", "universal": True},
+    "docutils": {"version": "0.22.4", "universal": True},
 }
 
 
