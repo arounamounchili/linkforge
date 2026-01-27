@@ -34,6 +34,7 @@ dev = [
 # Shared Tool Configs
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["core/src", "platforms/blender"]
 addopts = ["--verbose", "--cov=linkforge_core", "--cov=platforms/blender/linkforge"]
 
 [tool.ruff]
