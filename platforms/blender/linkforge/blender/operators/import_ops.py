@@ -14,8 +14,8 @@ import bpy
 from bpy.props import StringProperty
 from bpy.types import Context, Operator
 from bpy_extras.io_utils import ImportHelper
-from linkforge_core.logging_config import get_logger
 
+from ...linkforge_core.logging_config import get_logger
 from ..utils.decorators import safe_execute
 
 logger = get_logger(__name__)
@@ -49,8 +49,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     @safe_execute
     def execute(self, context: Context):
         """Execute the import."""
-        from linkforge_core.parsers.urdf_parser import parse_urdf, parse_urdf_string
-
+        from ...linkforge_core.parsers.urdf_parser import parse_urdf, parse_urdf_string
         from ..scene_builder import import_robot_to_scene
 
         # Parse URDF/XACRO file

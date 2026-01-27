@@ -7,8 +7,8 @@ import contextlib
 import bpy
 import mathutils
 from bpy.types import Context, Operator
-from linkforge_core.logging_config import get_logger
 
+from ...linkforge_core.logging_config import get_logger
 from ..properties.link_props import sanitize_urdf_name
 from ..utils.decorators import safe_execute
 
@@ -451,8 +451,7 @@ def calculate_inertia_for_link(link_obj):
     props = link_obj.linkforge
 
     # Import here to avoid circular dependency
-    from linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
-
+    from ...linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
     from ..converters import extract_mesh_triangles
 
     # Calculate inertia from child meshes (new architecture: link Empty + children)

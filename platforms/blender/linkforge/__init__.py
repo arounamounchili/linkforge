@@ -11,19 +11,19 @@ from __future__ import annotations
 # Blender Extension Entry Point
 # Metadata is defined in blender_manifest.toml
 
-# Package version and metadata
-__version__ = "1.2.0"
-__all__ = ["register", "unregister"]
-
 # Import blender module if bpy is available (inside Blender)
 try:
     import bpy
 
     from . import blender
-except ImportError:
-    # Running outside Blender (e.g. for testing core logic or generating docs)
-    bpy = None
-    blender = None
+except ImportError as e:
+    # If the error is about bpy itself, we're likely running outside Blender
+    if "bpy" in str(e):
+        bpy = None
+        blender = None
+    else:
+        # Re-raise so we can see what's actually failing in the Blender console
+        raise e
 
 
 def register() -> None:

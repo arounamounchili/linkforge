@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import bpy
-from linkforge_core.logging_config import get_logger
+
+from ..linkforge_core.logging_config import get_logger
 
 logger = get_logger(__name__)
 

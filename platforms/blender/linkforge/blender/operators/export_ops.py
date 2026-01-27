@@ -14,8 +14,8 @@ import bpy
 from bpy.props import StringProperty
 from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
-from linkforge_core.logging_config import get_logger
 
+from ...linkforge_core.logging_config import get_logger
 from ..utils.decorators import safe_execute
 
 logger = get_logger(__name__)
@@ -62,8 +62,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
     def execute(self, context: Context):
         """Execute the export."""
         # Import here to avoid circular dependencies
-        from linkforge_core import URDFGenerator, XACROGenerator
-
+        from ...linkforge_core import URDFGenerator, XACROGenerator
         from ..converters import scene_to_robot
 
         scene = context.scene
@@ -93,7 +92,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
                 self.report({"ERROR"}, f"Failed to build robot model: {e}")
                 return {"CANCELLED"}
 
-            from linkforge_core.validation import RobotValidator
+            from ...linkforge_core.validation import RobotValidator
 
             validator = RobotValidator(robot_dry_run)
             result = validator.validate()
@@ -172,8 +171,7 @@ class LINKFORGE_OT_validate_robot(Operator):
     @safe_execute
     def execute(self, context: Context):
         """Execute validation."""
-        from linkforge_core.validation import RobotValidator
-
+        from ...linkforge_core.validation import RobotValidator
         from ..converters import scene_to_robot
 
         # Clear previous results

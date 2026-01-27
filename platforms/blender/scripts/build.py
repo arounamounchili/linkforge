@@ -156,7 +156,7 @@ def build_extension() -> Path:
     # 2. Copy source code (Extension)
     # Copy contents of platforms/blender/linkforge/ so __init__.py is at root
     for item in SOURCE_DIR.iterdir():
-        if item.name.startswith((".", "__pycache__")):
+        if item.name.startswith((".", "__pycache__")) or item.name == "linkforge_core":
             continue
         dest = staging_dir / item.name
         if item.is_dir():
@@ -165,7 +165,7 @@ def build_extension() -> Path:
             shutil.copy2(item, dest)
 
     # 3. Copy Core Library (linkforge_core)
-    # Bundle it at the root of the extension so it's importable
+    # Bundle it inside the linkforge package for policy compliance and reliable imports
     if not CORE_DIR.exists():
         print(f"❌ Error: Core directory {CORE_DIR} not found.")
         sys.exit(1)

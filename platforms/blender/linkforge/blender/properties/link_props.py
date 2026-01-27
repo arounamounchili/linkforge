@@ -14,7 +14,8 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import PropertyGroup
-from linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+
+from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 
 
 def get_link_name(self):
