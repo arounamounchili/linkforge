@@ -36,21 +36,7 @@ WHEELS_DIR = PLATFORM_DIR / "wheels"
 DIST_DIR = REPO_ROOT / "dist"  # Keep dist in root for easy access
 
 # Packages to bundle as wheels for cross-platform/cross-version compatibility
-DEP_CONFIG = {
-    "PyYAML": {
-        "version": "6.0.3",
-        "platforms": [
-            "win_amd64",
-            "manylinux2014_x86_64",
-            "macosx_11_0_arm64",
-            "macosx_11_0_x86_64",
-        ],
-        "py_versions": ["311"],  # Standardize on 3.11+ for modern Blender versions
-    },
-    "xacrodoc": {"version": "1.3.1", "universal": True},
-    "rospkg": {"version": "1.6.1", "universal": True},
-    "docutils": {"version": "0.22.4", "universal": True},
-}
+DEP_CONFIG = {}
 
 
 def read_manifest_value(key: str) -> str:

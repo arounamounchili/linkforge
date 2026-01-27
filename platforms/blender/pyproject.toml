@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "linkforge-core",
-    "pyyaml>=6.0",
 ]
 
 [build-system]
