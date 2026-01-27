@@ -31,14 +31,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv venv
-          uv pip install -e ".[dev,docs]"
+          uv sync --all-groups
 
       - name: Check formatting
-        run: uv run ruff format --check linkforge tests
+        run: uv run ruff format --check .
 
       - name: Lint code
-        run: uv run ruff check linkforge tests
+        run: uv run ruff check .
 
       - name: Build documentation
         run: |
@@ -67,7 +66,7 @@ jobs:
         # Only build the artifact on a single matrix job and only on main push
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && matrix.python-version == '3.12'
         run: |
-          uv run python build_extension.py
+          uv run python platforms/blender/scripts/build.py
           ls -lh dist/
 
       - name: Upload artifact

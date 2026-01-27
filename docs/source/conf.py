@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath("../../platforms/blender"))  # For linkforge 
 from linkforge_core import __version__
 
 project = "LinkForge"
-copyright = "2025, Arouna Patouossa Mounchili"  # noqa: A001
+copyright = "2026, Arouna Patouossa Mounchili"  # noqa: A001
 author = "Arouna Patouossa Mounchili"
 # The full version, including alpha/beta/rc tags
 release = __version__
