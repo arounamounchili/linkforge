@@ -5,7 +5,7 @@ Robot validation and security checks.
 ## Robot Validator
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.validation.validator.RobotValidator
+.. autoclass:: linkforge_core.validation.validator.RobotValidator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,7 +14,7 @@ Robot validation and security checks.
 ## Validation Result
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.validation.result.ValidationResult
+.. autoclass:: linkforge_core.validation.result.ValidationResult
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ Robot validation and security checks.
 ## Security
 
 ```{eval-rst}
-.. automodule:: linkforge.core.validation.security
+.. automodule:: linkforge_core.validation.security
    :members:
    :undoc-members:
    :show-inheritance:
@@ -34,7 +34,7 @@ Robot validation and security checks.
 ### Validate Robot
 
 ```python
-from linkforge.core.validation.validator import RobotValidator
+from linkforge_core.validation.validator import RobotValidator
 
 validator = RobotValidator()
 result = validator.validate(robot)
@@ -54,7 +54,7 @@ else:
 ### Security Checks
 
 ```python
-from linkforge.core.validation.security import validate_mesh_path, validate_package_uri
+from linkforge_core.validation.security import validate_mesh_path, validate_package_uri
 
 # Validate mesh path (prevents path traversal)
 try:

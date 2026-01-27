@@ -5,7 +5,7 @@ Inertia tensor calculations for various geometries.
 ## Inertia Calculations
 
 ```{eval-rst}
-.. automodule:: linkforge.core.physics.inertia
+.. automodule:: linkforge_core.physics.inertia
    :members:
    :undoc-members:
    :show-inheritance:
@@ -16,8 +16,8 @@ Inertia tensor calculations for various geometries.
 ### Box Inertia
 
 ```python
-from linkforge.core.physics.inertia import calculate_box_inertia
-from linkforge.core.models.geometry import Box, Vector3
+from linkforge_core.physics.inertia import calculate_box_inertia
+from linkforge_core.models.geometry import Box, Vector3
 
 box = Box(size=Vector3(1.0, 0.5, 0.3))
 inertia = calculate_box_inertia(box, mass=10.0)
@@ -30,8 +30,8 @@ print(f"Izz: {inertia.izz}")
 ### Cylinder Inertia
 
 ```python
-from linkforge.core.physics.inertia import calculate_cylinder_inertia
-from linkforge.core.models.geometry import Cylinder
+from linkforge_core.physics.inertia import calculate_cylinder_inertia
+from linkforge_core.models.geometry import Cylinder
 
 cylinder = Cylinder(radius=0.1, length=0.5)
 inertia = calculate_cylinder_inertia(cylinder, mass=5.0)
@@ -40,8 +40,8 @@ inertia = calculate_cylinder_inertia(cylinder, mass=5.0)
 ### Sphere Inertia
 
 ```python
-from linkforge.core.physics.inertia import calculate_sphere_inertia
-from linkforge.core.models.geometry import Sphere
+from linkforge_core.physics.inertia import calculate_sphere_inertia
+from linkforge_core.models.geometry import Sphere
 
 sphere = Sphere(radius=0.2)
 inertia = calculate_sphere_inertia(sphere, mass=3.0)
@@ -50,8 +50,8 @@ inertia = calculate_sphere_inertia(sphere, mass=3.0)
 ### Mesh Inertia
 
 ```python
-from linkforge.core.physics.inertia import calculate_mesh_inertia
-from linkforge.core.models.geometry import Mesh
+from linkforge_core.physics.inertia import calculate_mesh_inertia
+from linkforge_core.models.geometry import Mesh
 from pathlib import Path
 
 mesh = Mesh(filepath=Path("robot_part.stl"))

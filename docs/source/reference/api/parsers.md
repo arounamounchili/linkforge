@@ -7,27 +7,27 @@ URDF and XACRO parsers for converting files to Python objects.
 ### Main Functions
 
 ```{eval-rst}
-.. autofunction:: linkforge.core.parsers.urdf_parser.parse_urdf
+.. autofunction:: linkforge_core.parsers.urdf_parser.parse_urdf
 
-.. autofunction:: linkforge.core.parsers.urdf_parser.parse_urdf_string
+.. autofunction:: linkforge_core.parsers.urdf_parser.parse_urdf_string
 ```
 
 ### Geometry Parsing
 
 ```{eval-rst}
-.. autofunction:: linkforge.core.parsers.urdf_parser.parse_geometry
+.. autofunction:: linkforge_core.parsers.urdf_parser.parse_geometry
 
-.. autofunction:: linkforge.core.parsers.urdf_parser.parse_origin
+.. autofunction:: linkforge_core.parsers.urdf_parser.parse_origin
 ```
 
 ### Component Parsing
 
 ```{eval-rst}
-.. autofunction:: linkforge.core.parsers.urdf_parser.parse_link
+.. autofunction:: linkforge_core.parsers.urdf_parser.parse_link
 
-.. autofunction:: linkforge.core.parsers.urdf_parser.parse_joint
+.. autofunction:: linkforge_core.parsers.urdf_parser.parse_joint
 
-.. autofunction:: linkforge.core.parsers.urdf_parser.parse_sensor_from_gazebo
+.. autofunction:: linkforge_core.parsers.urdf_parser.parse_sensor_from_gazebo
 ```
 
 ## Usage Examples
@@ -35,7 +35,7 @@ URDF and XACRO parsers for converting files to Python objects.
 ### Parse URDF File
 
 ```python
-from linkforge.core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers.urdf_parser import parse_urdf
 from pathlib import Path
 
 robot = parse_urdf(Path("my_robot.urdf"))
@@ -47,7 +47,7 @@ print(f"Joints: {len(robot.joints)}")
 ### Parse URDF String
 
 ```python
-from linkforge.core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import parse_urdf_string
 
 urdf_content = """
 <?xml version="1.0"?>

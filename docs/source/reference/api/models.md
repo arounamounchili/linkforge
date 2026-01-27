@@ -5,7 +5,7 @@ Core data structures for representing robots.
 ## Robot
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.robot.Robot
+.. autoclass:: linkforge_core.models.robot.Robot
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,27 +14,27 @@ Core data structures for representing robots.
 ## Link
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.link.Link
+.. autoclass:: linkforge_core.models.link.Link
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.link.Visual
+.. autoclass:: linkforge_core.models.link.Visual
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.link.Collision
+.. autoclass:: linkforge_core.models.link.Collision
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.link.Inertial
+.. autoclass:: linkforge_core.models.link.Inertial
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.link.InertiaTensor
+.. autoclass:: linkforge_core.models.link.InertiaTensor
    :members:
    :undoc-members:
    :show-inheritance:
@@ -43,27 +43,27 @@ Core data structures for representing robots.
 ## Joint
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.joint.Joint
+.. autoclass:: linkforge_core.models.joint.Joint
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.joint.JointType
+.. autoclass:: linkforge_core.models.joint.JointType
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.joint.JointLimits
+.. autoclass:: linkforge_core.models.joint.JointLimits
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.joint.JointDynamics
+.. autoclass:: linkforge_core.models.joint.JointDynamics
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.joint.JointMimic
+.. autoclass:: linkforge_core.models.joint.JointMimic
    :members:
    :undoc-members:
    :show-inheritance:
@@ -72,32 +72,32 @@ Core data structures for representing robots.
 ## Geometry
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.geometry.Box
+.. autoclass:: linkforge_core.models.geometry.Box
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.geometry.Cylinder
+.. autoclass:: linkforge_core.models.geometry.Cylinder
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.geometry.Sphere
+.. autoclass:: linkforge_core.models.geometry.Sphere
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.geometry.Mesh
+.. autoclass:: linkforge_core.models.geometry.Mesh
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.geometry.Vector3
+.. autoclass:: linkforge_core.models.geometry.Vector3
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.geometry.Transform
+.. autoclass:: linkforge_core.models.geometry.Transform
    :members:
    :undoc-members:
    :show-inheritance:
@@ -106,32 +106,32 @@ Core data structures for representing robots.
 ## Sensor
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.sensor.Sensor
+.. autoclass:: linkforge_core.models.sensor.Sensor
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.sensor.SensorType
+.. autoclass:: linkforge_core.models.sensor.SensorType
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.sensor.CameraInfo
+.. autoclass:: linkforge_core.models.sensor.CameraInfo
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.sensor.LidarInfo
+.. autoclass:: linkforge_core.models.sensor.LidarInfo
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.sensor.IMUInfo
+.. autoclass:: linkforge_core.models.sensor.IMUInfo
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.sensor.GPSInfo
+.. autoclass:: linkforge_core.models.sensor.GPSInfo
    :members:
    :undoc-members:
    :show-inheritance:
@@ -142,17 +142,17 @@ Core data structures for representing robots.
 Legacy support for standard URDF transmissions. Modern workflows use `Ros2Control`.
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.transmission.Transmission
+.. autoclass:: linkforge_core.models.transmission.Transmission
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.transmission.TransmissionJoint
+.. autoclass:: linkforge_core.models.transmission.TransmissionJoint
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.transmission.TransmissionActuator
+.. autoclass:: linkforge_core.models.transmission.TransmissionActuator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -161,12 +161,12 @@ Legacy support for standard URDF transmissions. Modern workflows use `Ros2Contro
 ## Material
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.material.Material
+.. autoclass:: linkforge_core.models.material.Material
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.material.Color
+.. autoclass:: linkforge_core.models.material.Color
    :members:
    :undoc-members:
    :show-inheritance:
@@ -175,12 +175,12 @@ Legacy support for standard URDF transmissions. Modern workflows use `Ros2Contro
 ## Gazebo
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.gazebo.GazeboElement
+.. autoclass:: linkforge_core.models.gazebo.GazeboElement
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.gazebo.GazeboPlugin
+.. autoclass:: linkforge_core.models.gazebo.GazeboPlugin
    :members:
    :undoc-members:
    :show-inheritance:
@@ -189,12 +189,12 @@ Legacy support for standard URDF transmissions. Modern workflows use `Ros2Contro
 ## ROS2 Control
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.ros2_control.Ros2Control
+.. autoclass:: linkforge_core.models.ros2_control.Ros2Control
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: linkforge.core.models.ros2_control.Ros2ControlJoint
+.. autoclass:: linkforge_core.models.ros2_control.Ros2ControlJoint
    :members:
    :undoc-members:
    :show-inheritance:

@@ -28,6 +28,7 @@ dev = [
     "sphinx-autodoc-typehints>=2.0.0",
     "sphinx-rtd-theme>=2.0.0",
     "sphinxcontrib-mermaid>=0.9.2",
+    "sphinx-design>=0.5.0",
 ]
 
 # Shared Tool Configs

@@ -12,6 +12,8 @@ sphinx:
 python:
   install:
     - method: pip
+      path: core
+    - method: pip
       path: .
       extra_requirements:
-        - docs
+        - dev

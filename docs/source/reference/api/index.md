@@ -17,7 +17,7 @@ blender
 
 LinkForge is organized into two main layers:
 
-### Core Layer (`linkforge.core`)
+### Core Layer (`linkforge_core`)
 
 Platform-independent robot modeling and URDF/XACRO processing.
 
@@ -41,8 +41,8 @@ Blender-specific integration.
 ### Creating a Robot Programmatically
 
 ```python
-from linkforge.core.models import Robot, Link, Joint, JointType, Inertial, InertiaTensor
-from linkforge.core import URDFGenerator
+from linkforge_core.models import Robot, Link, Joint, JointType, Inertial, InertiaTensor
+from linkforge_core import URDFGenerator
 
 # Create robot
 robot = Robot(
@@ -79,7 +79,7 @@ with open("robot.urdf", "w") as f:
 ### Parsing URDF
 
 ```python
-from linkforge.core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers.urdf_parser import parse_urdf
 from pathlib import Path
 
 # Parse URDF file
@@ -98,8 +98,8 @@ for link in robot.links:
 ### Calculating Inertia
 
 ```python
-from linkforge.core.physics.inertia import calculate_box_inertia, calculate_cylinder_inertia
-from linkforge.core.models.geometry import Box, Cylinder, Vector3
+from linkforge_core.physics.inertia import calculate_box_inertia, calculate_cylinder_inertia
+from linkforge_core.models.geometry import Box, Cylinder, Vector3
 
 # Box inertia
 box = Box(size=Vector3(1.0, 0.5, 0.3))
@@ -113,7 +113,7 @@ inertia = calculate_cylinder_inertia(cylinder, mass=5.0)
 ### Validation
 
 ```python
-from linkforge.core.validation.validator import RobotValidator
+from linkforge_core.validation.validator import RobotValidator
 
 # Validate robot
 validator = RobotValidator()
