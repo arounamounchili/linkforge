@@ -24,7 +24,7 @@ We use `pytest` for unit and integration testing.
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=linkforge --cov-report=html
+uv run pytest --cov=linkforge_core --cov=platforms/blender/linkforge --cov-report=html
 ```
 
 ## ✨ Code Quality
@@ -39,7 +39,7 @@ uv run ruff format .
 uv run ruff check .
 
 # Type check
-uv run mypy linkforge
+uv run mypy core/src/linkforge_core platforms/blender/linkforge
 
 # Install all hooks (code quality and conventional commit messages)
 uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
@@ -51,15 +51,15 @@ To package LinkForge as a Blender extension:
 
 ```bash
 # General build (automatic wheel bundling)
-python3 build_extension.py
+uv run python platforms/blender/scripts/build.py
 
 # Sync dependencies (update wheels for all platforms)
-python3 build_extension.py sync
+uv run python platforms/blender/scripts/build.py sync
 ```
 
 The package will be created in the `dist/` directory.
 
 ### Managing Dependencies
 LinkForge uses a "Self-Contained" bundling strategy. To update dependencies:
-1. Update the `DEP_CONFIG` dictionary in `build_extension.py`.
-2. Run `python3 build_extension.py sync` to download wheels for all supported platforms.
+1. Update the `DEP_CONFIG` dictionary in `platforms/blender/scripts/build.py`.
+2. Run `uv run python platforms/blender/scripts/build.py sync` to download wheels for all supported platforms.
