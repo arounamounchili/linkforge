@@ -22,13 +22,13 @@ modules = [
 ]
 
 
-def register():
+def register() -> None:
     """Register all Blender components."""
     for module in modules:
         module.register()
 
 
-def unregister():
+def unregister() -> None:
     """Unregister all Blender components."""
     import contextlib
 

@@ -16,14 +16,12 @@ try:
     import bpy
 
     from . import blender
-except ImportError as e:
-    # If the error is about bpy itself, we're likely running outside Blender
-    if "bpy" in str(e):
-        bpy = None
-        blender = None
-    else:
-        # Re-raise so we can see what's actually failing in the Blender console
-        raise e
+except ImportError:
+    # Handle environment where bpy is not available (e.g., CI, non-Blender python)
+    import typing
+
+    bpy: typing.Any = None
+    blender: typing.Any = None
 
 
 def register() -> None:

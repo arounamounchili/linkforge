@@ -135,7 +135,6 @@ reference/testing/manual_qa
 CHANGELOG
 CONTRIBUTING
 LICENSE
-THIRD_PARTY_LICENSES
 citation
 ```
 
