@@ -59,6 +59,11 @@ def sync_dependencies():
     if WHEELS_DIR.exists():
         print("  Cleaning existing wheels in platforms/blender/wheels/...")
         shutil.rmtree(WHEELS_DIR)
+
+    if not DEP_CONFIG:
+        print("  Zero dependencies configured. Nothing to sync.")
+        return
+
     WHEELS_DIR.mkdir(exist_ok=True, parents=True)
 
     for pkg, config in DEP_CONFIG.items():
@@ -173,8 +178,10 @@ def build_extension() -> Path:
     shutil.copytree(CORE_DIR, staging_dir / "linkforge_core")
     print(f"  Bundled linkforge_core -> {staging_dir / 'linkforge_core'}")
 
-    # 3. Copy wheels
-    shutil.copytree(WHEELS_DIR, staging_dir / "wheels")
+    # 3. Copy wheels (if any)
+    if WHEELS_DIR.exists() and any(WHEELS_DIR.iterdir()):
+        shutil.copytree(WHEELS_DIR, staging_dir / "wheels")
+        print(f"  Bundled wheels -> {staging_dir / 'wheels'}")
 
     # 4. Copy license/readme
     for f in ["LICENSE", "README.md", "THIRD_PARTY_LICENSES.md"]:
@@ -239,7 +246,8 @@ if __name__ == "__main__":
     if cmd == "sync":
         sync_dependencies()
     elif cmd == "build":
-        update_manifest_wheels()
+        if DEP_CONFIG:
+            update_manifest_wheels()
         build_extension()
     elif cmd == "clean":
         clean()

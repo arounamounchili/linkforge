@@ -54,13 +54,6 @@ platforms = [
     "linux-x64",
 ]
 
-# Python wheels (dependencies)
-# BEGIN AUTOMATED WHEELS
-wheels = [
-
-]
-# END AUTOMATED WHEELS
-
 # Permissions required by the extension
 # https://docs.blender.org/manual/en/latest/advanced/extensions/addons.html#permissions
 [permissions]
