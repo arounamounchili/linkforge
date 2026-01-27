@@ -6,7 +6,6 @@ This script manages dependencies, updates the manifest, and creates a .zip packa
 2. build: Packages the extension into a .zip file.
 
 Usage:
-    python3 platforms/blender/scripts/build.py sync   # Update dependencies and manifest
     python3 platforms/blender/scripts/build.py build  # Create the extension package
     python3 platforms/blender/scripts/build.py clean  # Remove build artifacts
 """
@@ -25,7 +24,6 @@ try:
 except ImportError:
     tomllib = None
 
-# --- Configuration ---
 # --- Configuration ---
 REPO_ROOT = Path(__file__).resolve().parents[3]  # platforms/blender/scripts/build.py -> root
 PLATFORM_DIR = REPO_ROOT / "platforms" / "blender"
@@ -178,13 +176,13 @@ def build_extension() -> Path:
     shutil.copytree(CORE_DIR, staging_dir / "linkforge_core")
     print(f"  Bundled linkforge_core -> {staging_dir / 'linkforge_core'}")
 
-    # 3. Copy wheels (if any)
+    # 3. Copy dependencies (if any)
     if WHEELS_DIR.exists() and any(WHEELS_DIR.iterdir()):
-        shutil.copytree(WHEELS_DIR, staging_dir / "wheels")
-        print(f"  Bundled wheels -> {staging_dir / 'wheels'}")
+        shutil.copytree(WHEELS_DIR, staging_dir / "dependencies")
+        print(f"  Bundled dependencies -> {staging_dir / 'dependencies'}")
 
     # 4. Copy license/readme
-    for f in ["LICENSE", "README.md", "THIRD_PARTY_LICENSES.md"]:
+    for f in ["LICENSE", "README.md"]:
         if (REPO_ROOT / f).exists():
             shutil.copy2(REPO_ROOT / f, staging_dir)
 

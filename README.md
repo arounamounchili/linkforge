@@ -162,14 +162,6 @@ python3 platforms/blender/scripts/build.py
 ```
 The package will be created in the `dist/` directory.
 
-### Managing Dependencies
-LinkForge follows a "Strict Minimal" philosophy.
-- **Runtime**: Zero third-party runtime dependencies.
-- **Development**: Managed via `uv`.
-- **Bundling**: The core library is automatically "vendorized" into the extension namespace during the build process, ensuring 100% compliance with Blender Extension security policies.
-
-
-
 ## 🎓 Learning Resources
 
 - [Example Files](https://github.com/arounamounchili/linkforge/tree/main/examples) - Sample URDF files
@@ -183,7 +175,6 @@ LinkForge follows a "Strict Minimal" philosophy.
 - [ ] **v1.3.0**: **High-Fidelity Expansion** (MJCF/MuJoCo & SDF/Gazebo support).
 - [ ] **v1.4.0**: **Mechanical Debugging** (Real-time IK & Collision Interference Validation).
 - [ ] **v2.0.0**: **Intelligence-Driven Rigging** (AI-assisted geometry analysis & Auto-Rigging).
-
 
 ## 🔭 Vision & Future
 For a deep dive into our long-term strategy, the **Digital Twin** philosophy, and our technical roadmap for AI and Kinematics, please read our [Project Vision](VISION.md).

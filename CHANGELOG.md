@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **blender:** modernize GPU overlays and fix viewport drawing logic ([684d6a8](https://github.com/arounamounchili/linkforge/commit/684d6a88df810d4a4d13936bff2df705608404f2))
 * full core coverage ([#67](https://github.com/arounamounchili/linkforge/issues/67)) ([217123d](https://github.com/arounamounchili/linkforge/commit/217123df48309801ffc71f255c4d202f11fdb1c4))
 * implement professional virtual link handling and robust alignment ([#62](https://github.com/arounamounchili/linkforge/issues/62)) ([838f25c](https://github.com/arounamounchili/linkforge/commit/838f25cca3ed78555f0a15e9f717b2c73a949bf4))
-* **core:** implement 100% dependency-free robotics logic (removed numpy, scipy, xacrodoc, rospkg)
-* **blender:** transition to "Zero-Wheel" extension architecture for 90% size reduction
+* **core:** implement 100% dependency-free robotics logic
+* **blender:** transition to dependency-free extension architecture for 90% size reduction
 
 
 ### 🐞 Bug Fixes
@@ -132,7 +132,5 @@ LinkForge 1.0.0 is the first production-ready release of the professional URDF &
 - **Path Validation**: Strict validation of mesh paths to prevent path traversal vulnerabilities.
 - **XML Hardening**: Protection against XML bomb attacks through depth limits.
 - **Input Sanitization**: Numeric constraints to prevent NaN/Inf injection.
-
-
 
 [1.0.0]: https://github.com/arounamounchili/linkforge/releases/tag/v1.0.0
