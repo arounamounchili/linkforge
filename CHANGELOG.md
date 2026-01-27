@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **blender:** modernize GPU overlays and fix viewport drawing logic ([684d6a8](https://github.com/arounamounchili/linkforge/commit/684d6a88df810d4a4d13936bff2df705608404f2))
 * full core coverage ([#67](https://github.com/arounamounchili/linkforge/issues/67)) ([217123d](https://github.com/arounamounchili/linkforge/commit/217123df48309801ffc71f255c4d202f11fdb1c4))
 * implement professional virtual link handling and robust alignment ([#62](https://github.com/arounamounchili/linkforge/issues/62)) ([838f25c](https://github.com/arounamounchili/linkforge/commit/838f25cca3ed78555f0a15e9f717b2c73a949bf4))
+* **core:** implement 100% dependency-free robotics logic (removed numpy, scipy, xacrodoc, rospkg)
+* **blender:** transition to "Zero-Wheel" extension architecture for 90% size reduction
 
 
 ### 🐞 Bug Fixes
@@ -60,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * polish error message formatting in urdf_parser.py ([0240a64](https://github.com/arounamounchili/linkforge/commit/0240a642b9315ad89017e0e2e4560502c6760296))
 * remove tool reference from urdf_parser.py ([ce1d403](https://github.com/arounamounchili/linkforge/commit/ce1d403fe819a8b7d9316e91567b93be4f60076e))
 * restructure test suite into tiered architecture ([#63](https://github.com/arounamounchili/linkforge/issues/63)) ([#64](https://github.com/arounamounchili/linkforge/issues/64)) ([6bfb262](https://github.com/arounamounchili/linkforge/commit/6bfb262c2728aba8a767657df186aeebba3b0381))
+* **arch:** formalize monorepo structure with decoupled `core` and `blender` packages
+* **blender:** implement policy-compliant vendorizing for core logic (Zero `sys.path` changes)
 * separate import/export logic and refine xacro error message ([5649837](https://github.com/arounamounchili/linkforge/commit/56498379e8c11d2379c259904b3d778411d29ad2))
 
 ## [1.1.0](https://github.com/arounamounchili/linkforge/compare/v1.0.0...v1.1.0) (2026-01-07)
