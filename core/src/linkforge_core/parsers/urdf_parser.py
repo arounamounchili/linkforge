@@ -6,8 +6,8 @@ high-fidelity round-tripping and includes:
 
 - **Comprehensive Parsing**: Full support for all URDF joint types, multiple
   visual/collision elements, and complex nested structures.
-- **XACRO Documentation Support**: Integration with `xacrodoc` for seamless
-  processing of parameterized models and relative includes.
+- **XACRO Documentation Support**: Built-in support for resolving XACRO macros,
+  properties, and includes without external dependencies.
 - **Security & Validation**: Built-in protection against XML attacks (depth
   limits) and strict validation of mesh paths and numeric values.
 - **Error Resilience**: Informative error messages and fallback mechanisms
@@ -728,6 +728,16 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
         plugin_elem.text.strip() if plugin_elem is not None and plugin_elem.text else ""
     )
 
+    # Parse parameters (optional)
+    parameters: dict[str, str] = {}
+
+    # Parse hardware parameters
+    if hw_elem is not None:
+        for param_elem in hw_elem.findall("param"):
+            p_name = param_elem.get("name")
+            if p_name and param_elem.text:
+                parameters[f"hardware.{p_name}"] = param_elem.text.strip()
+
     # Parse joints
     joints: list[Ros2ControlJoint] = []
     for joint_elem in rc_elem.findall("joint"):
@@ -755,8 +765,7 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
                 )
             )
 
-    # Parse extra parameters (optional)
-    parameters: dict[str, str] = {}
+    # Parse remaining top-level parameters
     for child in rc_elem:
         if child.tag not in ("hardware", "joint") and child.text:
             parameters[child.tag] = child.text.strip()
@@ -1251,9 +1260,9 @@ def _detect_xacro_file(root: ET.Element, filepath: Path) -> None:
             "This parser handles URDF files only. For XACRO files, use the 'Import Robot' "
             "operator in Blender which automatically converts XACRO to URDF.\n\n"
             "If using this parser programmatically, convert XACRO to URDF first:\n"
-            "   from xacrodoc import XacroDoc\n"
-            f"   doc = XacroDoc.from_file('{filepath.name}')\n"
-            "   robot = parse_urdf_string(doc.to_urdf_string())\n"
+            "   from linkforge_core.parsers import XacroResolver\n"
+            f"   resolver = XacroResolver()\n"
+            "   robot = parse_urdf_string(resolver.resolve_file(filepath))\n"
         )
 
         if xacro_elements:
@@ -1266,7 +1275,7 @@ def parse_urdf(filepath: Path) -> Robot:
     """Parse URDF file and return Robot model.
 
     Note: This function parses URDF files only. For XACRO files,
-    use parse_urdf_string() with xacrodoc, or use the Blender
+    use XacroResolver to resolve the file first, or use the Blender
     "Import Robot" operator which handles XACRO automatically.
 
     Args:

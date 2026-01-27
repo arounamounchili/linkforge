@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
-from . import urdf_parser
+from . import urdf_parser, xacro_parser
+from .xacro_parser import XacroResolver
 
-__all__ = ["urdf_parser"]
+__all__ = ["urdf_parser", "xacro_parser", "XacroResolver"]

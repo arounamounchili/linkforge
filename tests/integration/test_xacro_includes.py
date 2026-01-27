@@ -15,10 +15,7 @@ from linkforge_core.parsers.urdf_parser import parse_urdf_string
 
 def test_xacro_with_relative_includes():
     """Test that XACRO files with relative includes are processed correctly."""
-    # Skip if xacrodoc is not available
-    pytest.importorskip("xacrodoc")
-
-    from xacrodoc import XacroDoc
+    from linkforge_core.parsers import XacroResolver
 
     # Create temporary directory structure
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -80,9 +77,8 @@ def test_xacro_with_relative_includes():
 
         old_cwd = os.getcwd()
         try:
-            os.chdir(urdf_dir)
-            doc = XacroDoc.from_file(robot_xacro.name)
-            urdf_string = doc.to_urdf_string()
+            resolver = XacroResolver(search_paths=[urdf_dir])
+            urdf_string = resolver.resolve_file(robot_xacro)
         finally:
             os.chdir(old_cwd)
 
@@ -113,9 +109,7 @@ def test_xacro_with_relative_includes():
 
 def test_xacro_nested_includes():
     """Test XACRO files with multiple levels of includes."""
-    pytest.importorskip("xacrodoc")
-
-    from xacrodoc import XacroDoc
+    from linkforge_core.parsers import XacroResolver
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
@@ -168,9 +162,8 @@ def test_xacro_nested_includes():
 
         old_cwd = os.getcwd()
         try:
-            os.chdir(urdf_dir)
-            doc = XacroDoc.from_file(robot_xacro.name)
-            urdf_string = doc.to_urdf_string()
+            resolver = XacroResolver(search_paths=[urdf_dir])
+            urdf_string = resolver.resolve_file(robot_xacro)
         finally:
             os.chdir(old_cwd)
 
@@ -186,9 +179,7 @@ def test_xacro_nested_includes():
 
 def test_xacro_absolute_path_includes():
     """Test that absolute path includes still work."""
-    pytest.importorskip("xacrodoc")
-
-    from xacrodoc import XacroDoc
+    from linkforge_core.parsers import XacroResolver
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
@@ -225,9 +216,8 @@ def test_xacro_absolute_path_includes():
 
         old_cwd = os.getcwd()
         try:
-            os.chdir(robot_xacro.parent)
-            doc = XacroDoc.from_file(robot_xacro.name)
-            urdf_string = doc.to_urdf_string()
+            resolver = XacroResolver()
+            urdf_string = resolver.resolve_file(robot_xacro)
         finally:
             os.chdir(old_cwd)
 

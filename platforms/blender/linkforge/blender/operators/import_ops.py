@@ -87,52 +87,27 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
 
         # XACRO PROCESSING (Triggered by extension OR fallback detection)
         if is_xacro:
-            # Convert XACRO to URDF using xacrodoc (bundled dependency)
-            from xacrodoc import XacroDoc
+            # Convert XACRO to URDF using native XacroResolver
+            from ...linkforge_core.parsers import XacroResolver
 
             self.report({"INFO"}, f"Processing XACRO file: {urdf_path.name}")
 
-            # Change to XACRO file's directory to resolve relative includes
-            # xacrodoc resolves <xacro:include> paths relative to CWD
             urdf_string = None
-
             try:
-                # Use context manager to safely change working directory
-                with working_directory(urdf_path.parent):
-                    doc = XacroDoc.from_file(urdf_path.name)
-                    urdf_string = doc.to_urdf_string()
+                resolver = XacroResolver()
+                urdf_string = resolver.resolve_file(urdf_path)
             except Exception as e:
-                # Check if this is a PackageNotFoundError or XacroException wrapping it
-                exception_name = type(e).__name__
-                exception_str = str(e)
-
-                is_package_error = exception_name == "PackageNotFoundError" or (
-                    exception_name == "XacroException" and "PackageNotFoundError" in exception_str
-                )
-
-                if is_package_error:
-                    # Extract package name from error message
-                    package_name = "unknown"
-                    if "PackageNotFoundError" in exception_str:
-                        parts = exception_str.split(":")
-                        if len(parts) > 1:
-                            package_name = parts[-1].strip().split()[0]
-                        else:
-                            package_name = exception_str.split()[-1]
-
-                    # Show professional error message with actionable guidance
-                    error_msg = (
-                        f"XACRO processing failed: Missing ROS package '{package_name}'.\n\n"
-                        f"Solutions:\n"
-                        f"1. Use the URDF version of this file instead.\n"
-                        f"2. Install the required ROS package on your system.\n"
-                        f"3. Edit the XACRO file to use relative paths instead of $(find ...)."
+                # Provide a professional error message for XACRO failures
+                error_msg = f"XACRO processing failed: {e}\n\n"
+                if "PackageNotFoundError" in str(e) or "$(find" in str(e):
+                    error_msg += (
+                        "Solutions:\n"
+                        "1. Use the URDF version of this file instead.\n"
+                        "2. Ensure all required ROS packages are in ROS_PACKAGE_PATH.\n"
+                        "3. Edit the XACRO file to use relative paths instead of $(find ...)."
                     )
-                    self.report({"ERROR"}, error_msg)
-                    return {"CANCELLED"}
-                else:
-                    # Not a package error, re-raise
-                    raise
+                self.report({"ERROR"}, error_msg)
+                return {"CANCELLED"}
 
             # Parse URDF string with directory for mesh path validation
             self.report({"INFO"}, "Parsing URDF...")
