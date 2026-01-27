@@ -63,10 +63,10 @@ uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
 uv run pytest
 
 # Run linter
-uv run ruff check linkforge/
+uv run ruff check .
 
 # Build extension
-python3 platforms/blender/scripts/build.py
+uv run python platforms/blender/scripts/build.py
 ```
 
 ## Project Structure
@@ -129,13 +129,13 @@ git checkout -b feature/your-feature-name
 uv run pytest
 
 # Run linter and auto-fix issues
-uv run ruff check linkforge/ --fix
+uv run ruff check . --fix
 
 # Format code
-uv run ruff format linkforge/
+uv run ruff format .
 
 # Type checking (optional but recommended)
-uv run mypy linkforge/core/
+uv run mypy core/src/linkforge_core platforms/blender/linkforge
 ```
 
 ### 4. Test in Blender
@@ -179,7 +179,7 @@ uv run pytest
 uv run pytest tests/unit/core/test_robot.py
 
 # Run with coverage
-uv run pytest --cov=linkforge --cov-report=html
+uv run pytest --cov=linkforge_core --cov=platforms/blender/linkforge --cov-report=html
 
 # Run only fast tests (skip integration)
 uv run pytest tests/unit/

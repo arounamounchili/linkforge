@@ -136,7 +136,7 @@ uv sync
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=linkforge --cov-report=html
+uv run pytest --cov=linkforge_core --cov=platforms/blender/linkforge --cov-report=html
 ```
 
 ### Code Quality
@@ -148,7 +148,7 @@ uv run ruff format .
 uv run ruff check .
 
 # Type check
-uv run mypy linkforge
+uv run mypy core/src/linkforge_core platforms/blender/linkforge
 
 # Install all hooks (code quality and conventional commit messages)
 uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
