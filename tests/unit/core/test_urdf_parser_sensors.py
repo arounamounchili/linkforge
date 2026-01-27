@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-from linkforge.core.models import SensorType
-from linkforge.core.parsers.urdf_parser import (
+from linkforge_core.models import SensorType
+from linkforge_core.parsers.urdf_parser import (
     parse_sensor_from_gazebo,
 )
 
@@ -45,7 +45,7 @@ def test_parse_all_sensor_types_from_gazebo():
 
 def test_parse_sensor_noise_details():
     """Test parsing detailed sensor noise parameters."""
-    from linkforge.core.parsers.urdf_parser import parse_sensor_noise
+    from linkforge_core.parsers.urdf_parser import parse_sensor_noise
 
     xml = """
     <noise type="gaussian">
@@ -61,7 +61,7 @@ def test_parse_sensor_noise_details():
 
 def test_parse_ros2_control_joint_interfaces():
     """Test parsing ros2_control with various joint interfaces."""
-    from linkforge.core.parsers.urdf_parser import parse_ros2_control
+    from linkforge_core.parsers.urdf_parser import parse_ros2_control
 
     xml = """
     <ros2_control name="test" type="system">

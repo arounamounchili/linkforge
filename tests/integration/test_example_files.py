@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from linkforge.core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers.urdf_parser import parse_urdf
 
 
 def get_examples_dir() -> Path:
@@ -72,7 +72,7 @@ def test_roundtrip_test_robot_structure():
     assert root_links == ["base_link"]
 
     # Check joint types are present (now includes ALL 6 types)
-    from linkforge.core.models.joint import JointType
+    from linkforge_core.models.joint import JointType
 
     joint_types = {j.type for j in robot.joints}
     assert JointType.FIXED in joint_types
@@ -116,7 +116,7 @@ def test_roundtrip_test_robot_structure():
     assert "imu" in sensor_types
 
     # Check geometry types
-    from linkforge.core.models.geometry import Box, Cylinder, Sphere
+    from linkforge_core.models.geometry import Box, Cylinder, Sphere
 
     geom_types = set()
     for link in robot.links:
@@ -138,7 +138,7 @@ def test_roundtrip_robot_has_all_joint_types():
     """Verify roundtrip_test_robot.urdf includes ALL 6 URDF joint types."""
     robot = parse_urdf(get_examples_dir() / "roundtrip_test_robot.urdf")
 
-    from linkforge.core.models.joint import JointType
+    from linkforge_core.models.joint import JointType
 
     joint_types = {j.type for j in robot.joints}
 

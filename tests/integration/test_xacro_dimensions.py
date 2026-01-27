@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-from linkforge.core import XACROGenerator
-from linkforge.core.models import Color, Joint, JointType, Link, Material, Robot, Visual
-from linkforge.core.models.geometry import Box, Cylinder, Sphere, Transform, Vector3
+from linkforge_core import XACROGenerator
+from linkforge_core.models import Color, Joint, JointType, Link, Material, Robot, Visual
+from linkforge_core.models.geometry import Box, Cylinder, Sphere, Transform, Vector3
 
 
 def test_extract_dimensions_cylinders():

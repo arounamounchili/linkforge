@@ -10,9 +10,9 @@ Yes! Since LinkForge exports standard URDFs, you can use any URDF importer for t
 
 ## How do I contribute a new sensor type?
 We welcome contributions! Please check our **[Contributing Guide](../CONTRIBUTING.md)** for developer setup instructions. Adding a sensor involves:
-1. Defining the sensor model in `linkforge/core/models/sensor.py`.
-2. Adding a parser in `linkforge/core/parsers/urdf_parser.py`.
-3. Adding a generator in `linkforge/core/urdf_generator.py`.
+1. Defining the sensor model in `core/src/linkforge_core/models/sensor.py`.
+2. Adding a parser in `core/src/linkforge_core/parsers/urdf_parser.py`.
+3. Adding a generator in `core/src/linkforge_core/urdf_generator.py`.
 
 ## Why does LinkForge calculate inertia automatically?
 Physics engines are extremely sensitive to incorrect inertia tensors. A common cause of "exploding" simulations is a mass that is too large for its inertia. LinkForge uses proven geometric formulas to ensure your robot stays physically stable.

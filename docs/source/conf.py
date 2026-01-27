@@ -6,15 +6,16 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(0, os.path.abspath("../../core/src"))  # For linkforge_core
+sys.path.insert(0, os.path.abspath("../../platforms/blender"))  # For linkforge (blender)
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-from linkforge import __version__
+from linkforge_core import __version__
 
 project = "LinkForge"
-copyright = "2025, Arouna Patouossa Mounchili"
+copyright = "2025, Arouna Patouossa Mounchili"  # noqa: A001
 author = "Arouna Patouossa Mounchili"
 # The full version, including alpha/beta/rc tags
 release = __version__

@@ -10,8 +10,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
-from linkforge.core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import parse_urdf_string
 
 
 def test_xacro_with_relative_includes():
@@ -99,7 +98,7 @@ def test_xacro_with_relative_includes():
         wheel_link = next(link for link in robot.links if link.name == "wheel")
         assert len(wheel_link.visuals) == 1
 
-        from linkforge.core.models import Cylinder
+        from linkforge_core.models import Cylinder
 
         geometry = wheel_link.visuals[0].geometry
         assert isinstance(geometry, Cylinder)

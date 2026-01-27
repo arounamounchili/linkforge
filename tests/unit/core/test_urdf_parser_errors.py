@@ -5,8 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-
-from linkforge.core.parsers.urdf_parser import (
+from linkforge_core.parsers.urdf_parser import (
     _validate_xml_depth,
     parse_float,
     parse_geometry,

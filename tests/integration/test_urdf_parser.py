@@ -6,8 +6,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-
-from linkforge.core.models import (
+from linkforge_core.models import (
     Box,
     Color,
     Cylinder,
@@ -16,7 +15,7 @@ from linkforge.core.models import (
     Mesh,
     Sphere,
 )
-from linkforge.core.parsers.urdf_parser import (
+from linkforge_core.parsers.urdf_parser import (
     parse_geometry,
     parse_joint,
     parse_link,

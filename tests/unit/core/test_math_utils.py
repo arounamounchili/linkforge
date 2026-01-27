@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from linkforge.core.utils.math_utils import clean_float, format_float, normalize_vector
+from linkforge_core.utils.math_utils import clean_float, format_float, normalize_vector
 
 
 def test_clean_float():

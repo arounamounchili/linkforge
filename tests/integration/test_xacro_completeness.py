@@ -13,9 +13,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-
-from linkforge.core import URDFGenerator, XACROGenerator
-from linkforge.core.models import (
+from linkforge_core import URDFGenerator, XACROGenerator
+from linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,

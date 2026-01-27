@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
-from linkforge.core.models import Box, Cylinder, InertiaTensor, Mesh, Sphere, Vector3
-from linkforge.core.physics import (
+from linkforge_core.models import Box, Cylinder, InertiaTensor, Mesh, Sphere, Vector3
+from linkforge_core.physics import (
     calculate_box_inertia,
     calculate_cylinder_inertia,
     calculate_inertia,

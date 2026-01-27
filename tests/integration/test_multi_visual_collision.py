@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from linkforge.core import URDFGenerator
-from linkforge.core.models import Box, Collision, Cylinder, Link, Sphere, Vector3, Visual
-from linkforge.core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core import URDFGenerator
+from linkforge_core.models import Box, Collision, Cylinder, Link, Sphere, Vector3, Visual
+from linkforge_core.parsers.urdf_parser import parse_urdf_string
 
 
 class TestMultipleVisualElements:
@@ -149,7 +149,7 @@ class TestURDFGeneratorMultipleElements:
 
     def test_generate_multiple_visuals(self):
         """Test generating URDF with multiple visual elements."""
-        from linkforge.core.models import Robot
+        from linkforge_core.models import Robot
 
         robot = Robot(name="test_robot")
 
@@ -172,7 +172,7 @@ class TestURDFGeneratorMultipleElements:
 
     def test_generate_multiple_collisions(self):
         """Test generating URDF with multiple collision elements."""
-        from linkforge.core.models import Robot
+        from linkforge_core.models import Robot
 
         robot = Robot(name="test_robot")
 
@@ -269,7 +269,7 @@ class TestExportCheckboxBehavior:
 
     def test_link_with_no_visuals_exports_correctly(self):
         """Test that link with empty visuals list generates valid URDF."""
-        from linkforge.core.models import Robot
+        from linkforge_core.models import Robot
 
         robot = Robot(name="test_robot")
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
@@ -293,7 +293,7 @@ class TestExportCheckboxBehavior:
 
     def test_link_with_no_collisions_exports_correctly(self):
         """Test that link with empty collisions list generates valid URDF."""
-        from linkforge.core.models import Robot
+        from linkforge_core.models import Robot
 
         robot = Robot(name="test_robot")
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
@@ -317,7 +317,7 @@ class TestExportCheckboxBehavior:
 
     def test_link_with_neither_visual_nor_collision(self):
         """Test that link with no geometry at all is valid."""
-        from linkforge.core.models import Robot
+        from linkforge_core.models import Robot
 
         robot = Robot(name="test_robot")
 

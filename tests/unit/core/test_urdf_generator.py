@@ -6,9 +6,8 @@ import math
 import xml.etree.ElementTree as ET
 
 import pytest
-
-from linkforge.core import URDFGenerator
-from linkforge.core.models import (
+from linkforge_core import URDFGenerator
+from linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -323,7 +322,7 @@ class TestURDFGenerator:
 
     def test_transmission_export_simple(self):
         """Test that simple transmissions are exported to URDF."""
-        from linkforge.core.models import Transmission
+        from linkforge_core.models import Transmission
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="link1"))
@@ -357,7 +356,7 @@ class TestURDFGenerator:
 
     def test_gazebo_element_robot_level(self):
         """Test that robot-level Gazebo elements are exported."""
-        from linkforge.core.models import GazeboElement
+        from linkforge_core.models import GazeboElement
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -381,7 +380,7 @@ class TestURDFGenerator:
 
     def test_gazebo_element_link_level(self):
         """Test that link-level Gazebo elements are exported."""
-        from linkforge.core.models import GazeboElement
+        from linkforge_core.models import GazeboElement
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -404,7 +403,7 @@ class TestURDFGenerator:
 
     def test_gazebo_plugin(self):
         """Test that Gazebo plugins are exported."""
-        from linkforge.core.models import GazeboElement, GazeboPlugin
+        from linkforge_core.models import GazeboElement, GazeboPlugin
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -436,7 +435,7 @@ class TestURDFGenerator:
         """Test mesh geometry export."""
         from pathlib import Path
 
-        from linkforge.core.models import Mesh
+        from linkforge_core.models import Mesh
 
         robot = Robot(name="test_robot")
         # Use non-default scale to test scale export
@@ -456,7 +455,7 @@ class TestURDFGenerator:
 
     def test_joint_dynamics(self):
         """Test joint dynamics export."""
-        from linkforge.core.models import JointDynamics
+        from linkforge_core.models import JointDynamics
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="link1"))
@@ -484,7 +483,7 @@ class TestURDFGenerator:
 
     def test_joint_mimic(self):
         """Test joint mimic export."""
-        from linkforge.core.models import JointMimic
+        from linkforge_core.models import JointMimic
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="link1"))
@@ -525,7 +524,7 @@ class TestURDFGenerator:
 
     def test_lidar_sensor_export(self):
         """Test LIDAR sensor export."""
-        from linkforge.core.models import LidarInfo
+        from linkforge_core.models import LidarInfo
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -562,7 +561,7 @@ class TestURDFGenerator:
 
     def test_imu_sensor_export(self):
         """Test IMU sensor export."""
-        from linkforge.core.models import IMUInfo
+        from linkforge_core.models import IMUInfo
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -587,7 +586,7 @@ class TestURDFGenerator:
 
     def test_gps_sensor_export(self):
         """Test GPS sensor export."""
-        from linkforge.core.models import GPSInfo
+        from linkforge_core.models import GPSInfo
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -636,7 +635,7 @@ class TestURDFGenerator:
 
     def test_format_float_trailing_zeros(self):
         """Test format_float removes trailing zeros."""
-        from linkforge.core import format_float
+        from linkforge_core import format_float
 
         assert format_float(1.0) == "1"
         assert format_float(1.5) == "1.5"
@@ -646,7 +645,7 @@ class TestURDFGenerator:
 
     def test_format_vector(self):
         """Test format_vector."""
-        from linkforge.core import format_vector
+        from linkforge_core import format_vector
 
         assert format_vector(1.0, 2.0, 3.0) == "1 2 3"
         assert format_vector(1.5, 2.5, 3.5) == "1.5 2.5 3.5"
@@ -722,7 +721,7 @@ class TestURDFGenerator:
 
     def test_centralized_ros2_control_priority(self):
         """Test that centralized ros2_control is prioritized over transmissions."""
-        from linkforge.core.models import Ros2Control, Ros2ControlJoint, Transmission
+        from linkforge_core.models import Ros2Control, Ros2ControlJoint, Transmission
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="link1"))
@@ -771,7 +770,7 @@ class TestURDFGenerator:
 
     def test_ros2_control_with_gazebo_parameters(self):
         """Test that ros2_control is exported with Gazebo parameters if provided."""
-        from linkforge.core.models import GazeboElement, GazeboPlugin, Ros2Control, Ros2ControlJoint
+        from linkforge_core.models import GazeboElement, GazeboPlugin, Ros2Control, Ros2ControlJoint
 
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="link1"))

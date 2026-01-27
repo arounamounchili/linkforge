@@ -7,13 +7,12 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from linkforge.core.parsers.urdf_parser import (
+from linkforge_core.parsers.urdf_parser import (
     parse_gazebo_element,
     parse_sensor_from_gazebo,
     parse_urdf_string,
 )
-from linkforge.core.validation.security import validate_mesh_path
+from linkforge_core.validation.security import validate_mesh_path
 
 
 def test_urdf_parser_duplicate_links():
@@ -51,7 +50,7 @@ def test_urdf_parser_duplicate_joints():
 def test_urdf_parser_large_file_rejection():
     """Test rejection of oversized URDF files."""
     with (
-        patch("linkforge.core.parsers.urdf_parser.MAX_FILE_SIZE", 10),
+        patch("linkforge_core.parsers.urdf_parser.MAX_FILE_SIZE", 10),
         pytest.raises(ValueError, match="URDF string too large"),
     ):
         parse_urdf_string("a" * 100)
@@ -100,7 +99,7 @@ def test_urdf_parser_xacro_unicode_error():
     mock_path.name = "test.urdf"
     mock_path.read_text.side_effect = UnicodeDecodeError("utf-8", b"", 0, 1, "error")
 
-    from linkforge.core.parsers.urdf_parser import _detect_xacro_file
+    from linkforge_core.parsers.urdf_parser import _detect_xacro_file
 
     # Should not raise ValueError (swallows UnicodeDecodeError and assumes not XACRO namespace)
     _detect_xacro_file(ET.Element("robot"), mock_path)

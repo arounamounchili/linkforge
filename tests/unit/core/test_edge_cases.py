@@ -10,9 +10,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-
-from linkforge.core import URDFGenerator
-from linkforge.core.models import (
+from linkforge_core import URDFGenerator
+from linkforge_core.models import (
     Box,
     Color,
     GazeboElement,
@@ -34,11 +33,11 @@ from linkforge.core.models import (
     Vector3,
     Visual,
 )
-from linkforge.core.parsers.urdf_parser import (
+from linkforge_core.parsers.urdf_parser import (
     parse_sensor_from_gazebo,
     parse_urdf_string,
 )
-from linkforge.core.validation.security import validate_package_uri
+from linkforge_core.validation.security import validate_package_uri
 
 
 def test_security_uri_validation():

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
-from linkforge.core import URDFGenerator
-from linkforge.core.models import (
+from linkforge_core import URDFGenerator
+from linkforge_core.models import (
     Box,
     GazeboElement,
     GazeboPlugin,
@@ -21,7 +20,7 @@ from linkforge.core.models import (
     Vector3,
     Visual,
 )
-from linkforge.core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import parse_urdf_string
 
 
 class TestTransmissionRoundtrip:

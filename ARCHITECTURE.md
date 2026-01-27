@@ -61,7 +61,7 @@ graph TB
 
 ## Module Structure
 
-### 1. Blender Integration Layer (`linkforge/blender/`)
+### 1. Blender Integration Layer (`platforms/blender/`)
 
 Handles all Blender-specific functionality and UI.
 
@@ -98,7 +98,7 @@ graph LR
 | **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `scene_builder.py`, `mesh_export.py` |
 | **Utils** | Blender-specific helpers | `joint_gizmos.py`, `property_helpers.py`, `transform_utils.py` |
 
-### 2. Core Logic Layer (`linkforge/core/`)
+### 2. Core Logic Layer (`core/src/linkforge_core/`)
 
 Platform-independent robot modeling and URDF/XACRO processing.
 

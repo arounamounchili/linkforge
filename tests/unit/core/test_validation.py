@@ -1,9 +1,9 @@
 """Tests for the enhanced validation system."""
 
-from linkforge.core.models.joint import Joint, JointLimits, JointType
-from linkforge.core.models.link import Inertial, Link
-from linkforge.core.models.robot import Robot
-from linkforge.core.validation import RobotValidator, ValidationResult
+from linkforge_core.models.joint import Joint, JointLimits, JointType
+from linkforge_core.models.link import Inertial, Link
+from linkforge_core.models.robot import Robot
+from linkforge_core.validation import RobotValidator, ValidationResult
 
 
 def test_validation_result_creation():

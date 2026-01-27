@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from unittest.mock import patch
 
-from linkforge.core.parsers.urdf_parser import (
+from linkforge_core.parsers.urdf_parser import (
     parse_geometry,
     parse_link,
     parse_ros2_control,
@@ -37,7 +37,7 @@ def test_parse_geometry_validation_calls():
     mesh = ET.SubElement(geom_elem, "mesh")
     mesh.set("filename", "relative/path.stl")
 
-    with patch("linkforge.core.parsers.urdf_parser.validate_mesh_path") as mock_val:
+    with patch("linkforge_core.parsers.urdf_parser.validate_mesh_path") as mock_val:
         parse_geometry(geom_elem, urdf_directory=Path("/tmp"))
         mock_val.assert_called_once()
 

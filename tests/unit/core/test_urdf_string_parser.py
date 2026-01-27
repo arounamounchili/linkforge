@@ -1,9 +1,8 @@
 """Tests for parsing URDF from string (used by XACRO import)."""
 
 import pytest
-
-from linkforge.core.models.robot import Robot
-from linkforge.core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.models.robot import Robot
+from linkforge_core.parsers.urdf_parser import parse_urdf_string
 
 
 class TestParseURDFString:

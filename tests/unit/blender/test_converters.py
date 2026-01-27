@@ -93,7 +93,7 @@ def apply_mocks():
     with (
         patch.dict(sys.modules, MOCK_MODULES),
         patch(
-            "linkforge.core.utils.math_utils.clean_float", side_effect=lambda v: round(float(v), 6)
+            "linkforge_core.utils.math_utils.clean_float", side_effect=lambda v: round(float(v), 6)
         ),
     ):
         yield
@@ -101,9 +101,8 @@ def apply_mocks():
 
 def test_matrix_to_transform_precision():
     """Verify that matrix_to_transform correctly extracts XYZ/RPY."""
-    from mathutils import Matrix
-
     from linkforge.blender.converters import matrix_to_transform
+    from mathutils import Matrix
 
     # Create a mock matrix that returns specific values
     m = Matrix()

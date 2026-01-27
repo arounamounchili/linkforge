@@ -3,8 +3,7 @@
 from pathlib import Path
 
 import pytest
-
-from linkforge.core.validation.security import validate_mesh_path
+from linkforge_core.validation.security import validate_mesh_path
 
 
 class TestValidateMeshPath:

@@ -22,8 +22,8 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 # --- Safety Check ---
 # Ensure we are in the project root
-if [[ ! -f "blender_manifest.toml" ]]; then
-    error "This script must be run from the LinkForge project root."
+if [[ ! -f "pyproject.toml" ]]; then
+    error "This script must be run from the LinkForge project root (pyproject.toml not found)."
 fi
 
 # --- Argument Parsing ---
@@ -44,9 +44,10 @@ find . -type f -name "*\$py.class" -delete
 
 # --- 2. Build Artifacts ---
 info "Cleaning build artifacts (dist, build, .egg-info)..."
-rm -rf dist/
-rm -rf build/
-rm -rf *.egg-info/
+# Clean recursively for all workspace members
+find . -type d -name "dist" -exec rm -rf {} +
+find . -type d -name "build" -exec rm -rf {} +
+find . -type d -name "*.egg-info" -exec rm -rf {} +
 rm -rf .wheels/
 
 # --- 3. Test & Lint Caches ---

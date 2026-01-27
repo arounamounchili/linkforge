@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import pytest
-
-from linkforge.core.utils.string_utils import is_valid_urdf_name, sanitize_name
+from linkforge_core.utils.string_utils import is_valid_urdf_name, sanitize_name
 
 
 def test_sanitize_name_basic():

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import pytest
-
-from linkforge.core.models import Color, Material
+from linkforge_core.models import Color, Material
 
 
 class TestColor:

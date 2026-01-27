@@ -66,36 +66,31 @@ uv run pytest
 uv run ruff check linkforge/
 
 # Build extension
-python3 build_extension.py
+python3 platforms/blender/scripts/build.py
 ```
 
 ## Project Structure
 
 ```
 linkforge/
-├── linkforge/              # Main package
-│   ├── blender/           # Blender integration layer
-│   │   ├── operators/     # User actions (export, create, etc.)
-│   │   ├── panels/        # UI panels
-│   │   ├── properties/    # Blender scene properties
-│   │   ├── converters.py  # Bridge: Blender -> Core
-│   │   ├── urdf_importer.py # Bridge: Core -> Blender
-│   │   └── mesh_export.py # Mesh utilities
-│   └── core/              # Core logic (platform-independent)
-│       ├── models/        # Data structures (Robot, Link, Joint, etc.)
-│       ├── parsers/       # URDF/XACRO → Python objects
-│       ├── physics/       # Inertia calculations
-│       ├── validation/    # Validation & security
-│       ├── urdf_generator.py # Models -> URDF
-│       └── xacro_generator.py # Models -> XACRO
-├── tests/                 # Test suite
-│   ├── unit/              # Isolated tests
-│   │   ├── core/          # Model & math tests
-│   │   └── blender/       # Mocked Blender logic tests
-│   └── integration/      # System workflow and round-trip tests
+├── core/                  # Core Robotics Logic  (.pip package)
+│   └── src/
+│       └── linkforge_core/
+│           ├── models/    # Data structures
+│           ├── parsers/   # URDF/XACRO parsers
+│           └── ...
+├── platforms/
+│   └── blender/          # Blender Add-on (.zip extension)
+│       └── linkforge/
+│           ├── __init__.py
+│           ├── converters.py
+│           └── ...
+│       ├── scripts/      # Build tools
+│       │   └── build.py
+│       └── blender_manifest.toml
+├── tests/                # Workspace Test Suite
 ├── examples/             # Example URDF files
-├── docs/                 # Documentation
-└── build_extension.py    # Extension builder script
+└── pyproject.toml        # Workspace config
 ```
 
 See [ARCHITECTURE](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html) for detailed architecture diagrams.
@@ -147,7 +142,7 @@ uv run mypy linkforge/core/
 
 ```bash
 # Build extension
-python3 build_extension.py
+python3 platforms/blender/scripts/build.py
 
 # Install in Blender:
 # 1. Open Blender

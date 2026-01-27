@@ -12,7 +12,7 @@ class MockOperator:
     bl_idname = "test.operator"
     bl_label = "Test Operator"
 
-    def report(self, type, message):
+    def report(self, report_type, message):
         pass
 
 

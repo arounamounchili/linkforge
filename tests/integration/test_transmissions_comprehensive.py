@@ -2,8 +2,8 @@
 
 import xml.etree.ElementTree as ET
 
-from linkforge.core import URDFGenerator
-from linkforge.core.models import (
+from linkforge_core import URDFGenerator
+from linkforge_core.models import (
     Joint,
     JointLimits,
     JointType,
@@ -13,7 +13,7 @@ from linkforge.core.models import (
     TransmissionActuator,
     TransmissionJoint,
 )
-from linkforge.core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import parse_urdf_string
 
 
 def test_simple_transmission():
