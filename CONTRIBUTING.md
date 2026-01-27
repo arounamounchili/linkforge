@@ -42,11 +42,6 @@ cd linkforge
 ```bash
 # Install all development dependencies
 uv sync
-
-# Activate virtual environment
-source .venv/bin/activate  # On macOS/Linux
-# or
-.venv\Scripts\activate  # On Windows
 ```
 
 ### 2. Install Pre-commit Hooks
