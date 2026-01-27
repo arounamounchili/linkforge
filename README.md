@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/linkforge_logo.png" width="128" alt="LinkForge Logo"/>
+  <img src="docs/assets/linkforge_logo.png" width="300px" alt="LinkForge Logo"/>
 </div>
 
 # LinkForge
@@ -181,10 +181,16 @@ LinkForge uses a "Self-Contained" bundling strategy for wheels. To update or add
 
 - [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
 - [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
-- [x] **v1.2.0**: **Architectural Stability & Precision** (Hexagonal Core, Inertial Accuracy).
-- [ ] **v1.3.0**: **MJCF (MuJoCo) Export Support** (High demand for RL).
-- [ ] **v1.4.0**: **Kinematic Validation** (MoveIt style checks).
+- [x] **v1.2.0**: **Architectural Stability** (Hexagonal Core, Numerical Precision).
+- [ ] **v1.3.0**: **High-Fidelity Expansion** (MJCF/MuJoCo & SDF/Gazebo support).
+- [ ] **v1.4.0**: **Mechanical Debugging** (Real-time IK & Collision Interference Validation).
+- [ ] **v2.0.0**: **Intelligence-Driven Rigging** (AI-assisted geometry analysis & Auto-Rigging).
 
+
+## 🔭 Vision & Future
+For a deep dive into our long-term strategy, the **Digital Twin** philosophy, and our technical roadmap for AI and Kinematics, please read our [Project Vision](VISION.md).
+
+---
 
 ## 🔮 Our Transparency Commitment
 

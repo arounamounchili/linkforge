@@ -460,6 +460,23 @@ While LinkForge supports `ros2_control`, it is designed to be distribution-agnos
 - **Compatibility**: We target compatibility with active ROS 2 LTS distributions (like Humble and Jazzy) and Rolling.
 - **Maintenance**: If the official `ros2_control` XML syntax changes in a newer ROS version, we update our generators to support those changes while maintaining backward compatibility.
 
+## Maintainer Expectations
+
+As a maintainer-driven project, we aim to be transparent about our availability and response times:
+
+- **Review Cycle**: Expect an initial response or feedback on PRs within **7 business days**.
+- **Issue Triage**: New issues are usually triaged during our weekly maintenance window (typically weekends).
+- **Public Communication**: We prefer all discussions to happen in public issues or GitHub Discussions to ensure the community benefits from the shared knowledge.
+- **Decision Making**: For major architectural changes, we follow a consensus-based approach among core maintainers. If you are proposing a large change, please open a Discussion first to get early feedback.
+
+## Governance
+
+LinkForge is currently maintained by @arounamounchili and the community.
+
+- **Core Maintainers**: Responsible for architectural oversight and final merging.
+- **Contributors**: Anyone who submits code, documentation, or feedback.
+- **Recognition**: We follow the [All Contributors](https://allcontributors.org/) specification to recognize all types of contributions.
+
 ## Getting Help
 
 - **Documentation**: Check the [Official Documentation](https://linkforge.readthedocs.io/) and [Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)

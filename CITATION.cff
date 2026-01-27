@@ -6,8 +6,8 @@ authors:
   - family-names: "Patouossa Mounchili"
     given-names: "Arouna"
     alias: "arounamounchili"
-version: 1.1.0
-date-released: 2026-01-10
+version: 1.2.0
+date-released: 2026-01-25
 url: "https://github.com/arounamounchili/linkforge"
 repository-code: "https://github.com/arounamounchili/linkforge"
 license: GPL-3.0-or-later
