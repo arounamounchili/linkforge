@@ -2,7 +2,7 @@
 
 import pytest
 from linkforge_core.models.robot import Robot
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 class TestParseURDFString:
@@ -21,7 +21,7 @@ class TestParseURDFString:
     </link>
 </robot>
 """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
 
         assert isinstance(robot, Robot)
         assert robot.name == "test_robot"
@@ -46,7 +46,7 @@ class TestParseURDFString:
     </link>
 </robot>
 """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
 
         assert robot.name == "test_robot"
         assert len(robot.links) == 1
@@ -70,7 +70,7 @@ class TestParseURDFString:
     </joint>
 </robot>
 """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
 
         assert robot.name == "test_robot"
         assert len(robot.links) == 2
@@ -86,12 +86,13 @@ class TestParseURDFString:
 
     def test_parse_urdf_string_invalid_xml(self):
         """Test that invalid XML raises ParseError."""
-        import xml.etree.ElementTree as ET
 
         invalid_xml = "<robot name='test'><link></robot>"  # Unclosed link tag
 
-        with pytest.raises(ET.ParseError):
-            parse_urdf_string(invalid_xml)
+        from linkforge_core.base import RobotParserError
+
+        with pytest.raises(RobotParserError):
+            URDFParser().parse_string(invalid_xml)
 
     def test_parse_urdf_string_non_robot_root(self):
         """Test that non-robot root element raises ValueError."""
@@ -100,8 +101,10 @@ class TestParseURDFString:
     <link name="base_link"/>
 </model>
 """
-        with pytest.raises(ValueError, match="Root element must be <robot>"):
-            parse_urdf_string(urdf_xml)
+        from linkforge_core.base import RobotParserError
+
+        with pytest.raises(RobotParserError, match="Root element must be <robot>"):
+            URDFParser().parse_string(urdf_xml)
 
     def test_parse_urdf_string_with_inertial(self):
         """Test parsing URDF string with inertial properties."""
@@ -116,7 +119,7 @@ class TestParseURDFString:
     </link>
 </robot>
 """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
 
         link = robot.links[0]
         assert link.inertial is not None
@@ -129,7 +132,7 @@ class TestParseURDFString:
 <robot name="empty_robot">
 </robot>
 """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
 
         assert robot.name == "empty_robot"
         assert len(robot.links) == 0
@@ -175,7 +178,7 @@ class TestParseURDFString:
     </joint>
 </robot>
 """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
 
         assert robot.name == "complex_robot"
         assert len(robot.links) == 3

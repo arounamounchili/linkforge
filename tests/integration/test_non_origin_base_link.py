@@ -27,7 +27,7 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_base_link_at_non_origin_preserves_relative_positions():
@@ -91,7 +91,7 @@ def test_base_link_at_non_origin_preserves_relative_positions():
     urdf_string = generator.generate(robot)
 
     # Re-parse URDF
-    robot2 = parse_urdf_string(urdf_string)
+    robot2 = URDFParser().parse_string(urdf_string)
 
     # Verify structure preserved
     assert len(robot2.links) == 3
@@ -159,7 +159,7 @@ def test_base_link_with_rotation_preserves_child_orientations():
     # Export and re-import
     generator = URDFGenerator(pretty_print=False)
     urdf_string = generator.generate(robot)
-    robot2 = parse_urdf_string(urdf_string)
+    robot2 = URDFParser().parse_string(urdf_string)
 
     # Verify base link rotation is preserved
     base_link2 = next(link for link in robot2.links if link.name == "base_link")

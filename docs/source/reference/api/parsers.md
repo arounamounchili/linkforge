@@ -4,23 +4,16 @@ URDF and XACRO parsers for converting files to Python objects.
 
 ## URDF Parser
 
-### Main Functions
+### URDFParser Class
 
 ```{eval-rst}
-.. autofunction:: linkforge_core.parsers.urdf_parser.parse_urdf
-
-.. autofunction:: linkforge_core.parsers.urdf_parser.parse_urdf_string
+.. autoclass:: linkforge_core.parsers.urdf_parser.URDFParser
+   :members:
+   :undoc-members:
+   :show-inheritance:
 ```
 
-### Geometry Parsing
-
-```{eval-rst}
-.. autofunction:: linkforge_core.parsers.urdf_parser.parse_geometry
-
-.. autofunction:: linkforge_core.parsers.urdf_parser.parse_origin
-```
-
-### Component Parsing
+### Component Parsing Helpers
 
 ```{eval-rst}
 .. autofunction:: linkforge_core.parsers.urdf_parser.parse_link
@@ -35,28 +28,24 @@ URDF and XACRO parsers for converting files to Python objects.
 ### Parse URDF File
 
 ```python
-from linkforge_core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers import URDFParser
 from pathlib import Path
 
-robot = parse_urdf(Path("my_robot.urdf"))
+robot = URDFParser().parse(Path("my_robot.urdf"))
 print(f"Loaded robot: {robot.name}")
-print(f"Links: {len(robot.links)}")
-print(f"Joints: {len(robot.joints)}")
 ```
 
 ### Parse URDF String
 
 ```python
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers import URDFParser
 
-urdf_content = """
-<?xml version="1.0"?>
+urdf_content = """<?xml version="1.0"?>
 <robot name="simple_robot">
   <link name="base_link"/>
-</robot>
-"""
+</robot>"""
 
-robot = parse_urdf_string(urdf_content)
+robot = URDFParser().parse_string(urdf_content)
 ```
 
 ### Error Handling
@@ -77,7 +66,7 @@ urdf_with_errors = """
 </robot>
 """
 
-robot = parse_urdf_string(urdf_with_errors)
+robot = URDFParser().parse_string(urdf_with_errors)
 # Warning logged: "Invalid box geometry ignored"
 # Robot still created, but visual is skipped
 assert len(robot.links[0].visuals) == 0

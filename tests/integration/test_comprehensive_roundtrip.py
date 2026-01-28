@@ -16,14 +16,14 @@ from pathlib import Path
 
 import pytest
 from linkforge_core import URDFGenerator
-from linkforge_core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_comprehensive_roundtrip_preserves_structure():
     """Test that export → re-import preserves robot structure perfectly."""
     # Step 1: Import original URDF
     original_path = Path("examples/roundtrip_test_robot.urdf")
-    robot1 = parse_urdf(original_path)
+    robot1 = URDFParser().parse(original_path)
 
     # Step 2: Export to temporary file
     with tempfile.NamedTemporaryFile(mode="w", suffix=".urdf", delete=False) as f:
@@ -34,7 +34,7 @@ def test_comprehensive_roundtrip_preserves_structure():
 
     try:
         # Step 3: Re-import the exported URDF
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
 
         # ========== VERIFY STRUCTURE ==========
         assert robot2.name == robot1.name
@@ -244,7 +244,7 @@ def test_comprehensive_roundtrip_preserves_structure():
 def test_joint_origin_consistency():
     """Test that joint origins are consistent across import-export-import."""
     original_path = Path("examples/roundtrip_test_robot.urdf")
-    robot1 = parse_urdf(original_path)
+    robot1 = URDFParser().parse(original_path)
 
     # Export
     with tempfile.NamedTemporaryFile(mode="w", suffix=".urdf", delete=False) as f:
@@ -253,7 +253,7 @@ def test_joint_origin_consistency():
         f.write(generator.generate(robot1))
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
 
         # Check specific critical joints
         critical_joints = ["arm_base_joint", "shoulder_joint", "elbow_joint", "wrist_joint"]
@@ -288,7 +288,7 @@ def test_joint_origin_consistency():
 def test_visual_geometry_origins_preserved():
     """Test that visual geometry origins (offsets) are preserved."""
     original_path = Path("examples/roundtrip_test_robot.urdf")
-    robot1 = parse_urdf(original_path)
+    robot1 = URDFParser().parse(original_path)
 
     # Export
     with tempfile.NamedTemporaryFile(mode="w", suffix=".urdf", delete=False) as f:
@@ -297,7 +297,7 @@ def test_visual_geometry_origins_preserved():
         f.write(generator.generate(robot1))
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
 
         # Check links with visual offsets
         links_with_offsets = ["upper_arm", "forearm", "left_finger", "right_finger"]
@@ -335,7 +335,7 @@ def test_visual_geometry_origins_preserved():
 def test_inertial_origins_preserved():
     """Test that inertial origins (center of mass) are preserved in roundtrip."""
     original_path = Path("examples/roundtrip_test_robot.urdf")
-    robot1 = parse_urdf(original_path)
+    robot1 = URDFParser().parse(original_path)
 
     # Export
     with tempfile.NamedTemporaryFile(mode="w", suffix=".urdf", delete=False) as f:
@@ -344,7 +344,7 @@ def test_inertial_origins_preserved():
         f.write(generator.generate(robot1))
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
 
         # Check links with non-zero inertial origins
         links_with_com_offset = ["base_link", "upper_arm", "forearm", "left_finger", "right_finger"]

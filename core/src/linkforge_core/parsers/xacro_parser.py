@@ -11,7 +11,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+from ..base import RobotParser, RobotParserError
 from ..logging_config import get_logger
+from ..models.robot import Robot
 
 logger = get_logger(__name__)
 
@@ -29,18 +31,28 @@ class XacroResolver:
 
     def resolve_file(self, filepath: Path) -> str:
         """Resolve a XACRO file and return URDF string."""
-        tree = ET.parse(filepath)
-        root = tree.getroot()
+        try:
+            tree = ET.parse(filepath)
+            root = tree.getroot()
+        except ET.ParseError as e:
+            raise RobotParserError(f"Malformed XACRO XML in {filepath}: {e}") from e
+        except Exception as e:
+            raise RobotParserError(f"Failed to read XACRO file {filepath}: {e}") from e
 
         # Add parent directory to search paths for relative includes
         if filepath.parent not in self.search_paths:
             self.search_paths.insert(0, filepath.parent)
 
-        resolved_root = self.resolve_element(root)
+        try:
+            resolved_root = self.resolve_element(root)
 
-        # Clean up: strip xacro attributes and namespace-prefixed tags/attributes
-        # This is critical for URDF parsers to accept the output
-        return self._finalize_urdf(resolved_root)
+            # Clean up: strip xacro attributes and namespace-prefixed tags/attributes
+            # This is critical for URDF parsers to accept the output
+            return self._finalize_urdf(resolved_root)
+        except Exception as e:
+            if isinstance(e, RobotParserError):
+                raise
+            raise RobotParserError(f"XACRO resolution failed for {filepath}: {e}") from e
 
     def resolve_element(self, element: ET.Element) -> ET.Element:
         """Process XACRO elements, substitutions, and macro expansions."""
@@ -271,3 +283,24 @@ class XacroResolver:
             if candidate.exists():
                 return candidate
         return None
+
+
+class XACROParser(RobotParser):
+    """Refined XACRO Parser using a class-based interface."""
+
+    def parse(self, filepath: Path, **kwargs: Any) -> Robot:
+        """Parse XACRO file into a Robot model.
+
+        Args:
+            filepath: Path to the input file
+            **kwargs: Additional parsing options
+
+        Returns:
+            The generic Robot model (Intermediate Representation)
+        """
+        from .urdf_parser import URDFParser
+
+        resolver = XacroResolver(search_paths=kwargs.get("search_paths"))
+        urdf_string = resolver.resolve_file(filepath)
+
+        return URDFParser().parse_string(urdf_string, urdf_directory=filepath.parent, **kwargs)

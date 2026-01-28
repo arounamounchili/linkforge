@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from linkforge_core import URDFGenerator
 from linkforge_core.models import Cylinder, Link, Robot, Visual
-from linkforge_core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_cylinder_no_origin_roundtrip():
@@ -54,7 +54,7 @@ def test_cylinder_no_origin_roundtrip():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
 
         # Verify link exists
         assert len(robot2.links) == 1
@@ -93,7 +93,7 @@ def test_arm_base_specific_case():
     if not urdf_path.exists():
         pytest.skip("roundtrip_test_robot.urdf not found")
 
-    robot1 = parse_urdf(urdf_path)
+    robot1 = URDFParser().parse(urdf_path)
 
     # Find arm_base link
     arm_base = next((link for link in robot1.links if link.name == "arm_base"), None)
@@ -122,7 +122,7 @@ def test_arm_base_specific_case():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
 
         # Find arm_base in re-imported robot
         arm_base2 = next((link for link in robot2.links if link.name == "arm_base"), None)

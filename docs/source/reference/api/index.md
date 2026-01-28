@@ -79,11 +79,11 @@ with open("robot.urdf", "w") as f:
 ### Parsing URDF
 
 ```python
-from linkforge_core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers import URDFParser
 from pathlib import Path
 
 # Parse URDF file
-robot = parse_urdf(Path("robot.urdf"))
+robot = URDFParser().parse(Path("robot.urdf"))
 
 # Access components
 print(f"Robot: {robot.name}")

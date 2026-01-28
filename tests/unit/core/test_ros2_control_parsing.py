@@ -1,7 +1,7 @@
 """Test ros2_control parsing and round-trip fidelity."""
 
 from linkforge_core import URDFGenerator
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_parse_ros2_control_basic():
@@ -21,7 +21,7 @@ def test_parse_ros2_control_basic():
       </ros2_control>
     </robot>
     """
-    robot = parse_urdf_string(urdf_string)
+    robot = URDFParser().parse_string(urdf_string)
 
     assert len(robot.ros2_controls) == 1
     rc = robot.ros2_controls[0]
@@ -53,7 +53,7 @@ def test_parse_ros2_control_multiple_interfaces():
       </ros2_control>
     </robot>
     """
-    robot = parse_urdf_string(urdf_string)
+    robot = URDFParser().parse_string(urdf_string)
 
     rc = robot.ros2_controls[0]
     assert rc.joints[0].command_interfaces == ["position", "velocity"]
@@ -88,7 +88,7 @@ def test_ros2_control_roundtrip():
     """
 
     # Import
-    robot1 = parse_urdf_string(original_urdf)
+    robot1 = URDFParser().parse_string(original_urdf)
 
     # Verify parsed correctly
     assert len(robot1.ros2_controls) == 1
@@ -102,7 +102,7 @@ def test_ros2_control_roundtrip():
     exported_urdf = generator.generate(robot1)
 
     # Re-import
-    robot2 = parse_urdf_string(exported_urdf)
+    robot2 = URDFParser().parse_string(exported_urdf)
 
     # Verify ros2_control preserved
     assert len(robot2.ros2_controls) == 1
@@ -139,7 +139,7 @@ def test_ros2_control_multiple_joints():
     </robot>
     """
 
-    robot = parse_urdf_string(urdf_string)
+    robot = URDFParser().parse_string(urdf_string)
 
     rc = robot.ros2_controls[0]
     assert len(rc.joints) == 2

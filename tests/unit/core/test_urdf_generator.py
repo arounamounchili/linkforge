@@ -6,7 +6,7 @@ import math
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core import URDFGenerator
+from linkforge_core import RobotGeneratorError, URDFGenerator
 from linkforge_core.models import (
     Box,
     CameraInfo,
@@ -234,7 +234,7 @@ class TestURDFGenerator:
         )
 
         generator = URDFGenerator()
-        with pytest.raises(ValueError, match="validation failed"):
+        with pytest.raises(RobotGeneratorError, match="validation failed"):
             generator.generate(robot)
 
     def test_geometry_types(self):

@@ -6,12 +6,14 @@ import xml.etree.ElementTree as ET
 
 import pytest
 from linkforge_core.parsers.urdf_parser import (
-    _validate_xml_depth,
-    parse_float,
     parse_geometry,
-    parse_int,
     parse_material,
+)
+from linkforge_core.utils.xml_utils import (
+    parse_float,
+    parse_int,
     parse_vector3,
+    validate_xml_depth,
 )
 
 
@@ -25,7 +27,7 @@ def test_xml_depth_validation():
         curr = child
 
     with pytest.raises(ValueError, match="XML nesting too deep"):
-        _validate_xml_depth(root, 0)
+        validate_xml_depth(root, 0)
 
 
 def test_parse_float_errors():

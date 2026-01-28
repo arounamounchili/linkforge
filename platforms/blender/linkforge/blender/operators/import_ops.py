@@ -49,7 +49,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     @safe_execute
     def execute(self, context: Context):
         """Execute the import."""
-        from ...linkforge_core.parsers.urdf_parser import parse_urdf, parse_urdf_string
+        from ...linkforge_core.parsers import URDFParser
         from ..scene_builder import import_robot_to_scene
 
         # Parse URDF/XACRO file
@@ -72,7 +72,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
         if not is_xacro:
             try:
                 # Attempt standard URDF import
-                robot = parse_urdf(urdf_path)
+                robot = URDFParser().parse(urdf_path)
             except ValueError as e:
                 # Check if our parser detected hidden Xacro content
                 if "XACRO file detected" in str(e):
@@ -111,7 +111,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
 
             # Parse URDF string with directory for mesh path validation
             self.report({"INFO"}, "Parsing URDF...")
-            robot = parse_urdf_string(urdf_string, urdf_directory=urdf_path.parent)
+            robot = URDFParser().parse_string(urdf_string, urdf_directory=urdf_path.parent)
 
         # Import to scene
         success = import_robot_to_scene(robot, urdf_path, context)

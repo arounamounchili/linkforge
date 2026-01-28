@@ -15,12 +15,11 @@ simulators (Gazebo, Webots, Isaac Sim, etc.) by handling:
 
 from __future__ import annotations
 
-__all__ = ["URDFGenerator", "format_float", "format_vector"]
-
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
 
-from .base import RobotGenerator
+from .base import RobotGenerator, RobotGeneratorError
 from .models.gazebo import GazeboElement, GazeboPlugin
 from .models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform
 from .models.joint import Joint, JointType
@@ -40,31 +39,8 @@ from .models.sensor import (
     SensorType,
 )
 from .models.transmission import Transmission
-from .utils.math_utils import format_float
-
-
-def format_vector(x: float, y: float, z: float, precision: int = 6) -> str:
-    """Format 3D vector with reasonable precision.
-
-    Converts three float components into a space-separated string suitable
-    for URDF attributes like xyz, rpy, size, etc.
-
-    Args:
-        x, y, z: Vector components (positions in meters or angles in radians)
-        precision: Maximum number of decimal places (default: 6)
-
-    Returns:
-        Formatted string like "1.0 2.5 3.0" with trailing zeros removed
-
-    Example:
-        >>> format_vector(1.0, 2.0, 3.0)
-        '1 2 3'
-        >>> format_vector(1.5, 2.123456789, 3.0, precision=3)
-        '1.5 2.123 3'
-        >>> format_vector(0.0, -0.0, 0.0)
-        '0 0 0'
-    """
-    return f"{format_float(x, precision)} {format_float(y, precision)} {format_float(z, precision)}"
+from .utils.math_utils import format_float, format_vector
+from .utils.xml_utils import serialize_xml
 
 
 class URDFGenerator(RobotGenerator[str]):
@@ -98,38 +74,24 @@ class URDFGenerator(RobotGenerator[str]):
         self.urdf_path = urdf_path
         self.use_ros2_control = use_ros2_control
 
-    def generate(self, robot: Robot, validate: bool = True) -> str:
+    def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
         """Generate URDF XML string from robot.
 
         Args:
             robot: Robot model with links, joints, sensors, etc.
             validate: Whether to validate robot structure before generation (default: True)
+            **kwargs: Additional generation options
 
         Returns:
             URDF XML as formatted string with proper indentation
 
         Raises:
-            ValueError: If robot validation fails (checks for cycles, missing links, etc.)
-
-        Example:
-            >>> from linkforge.core.models import Robot, Link
-            >>> robot = Robot(name="my_robot")
-            >>> robot.add_link(Link(name="base_link"))
-            >>> generator = URDFGenerator()
-            >>> urdf_xml = generator.generate(robot)
-            >>> print(urdf_xml[:50])
-            <?xml version="1.0" encoding="utf-8"?>
-            <robot...
-
-        Note:
-            The generated URDF follows ROS/Gazebo conventions with:
-            - Material definitions at the top
-            - Links and joints in declaration order
-            - Transmissions and ros2_control (if enabled)
-            - Gazebo-specific elements at the end
+            RobotGeneratorError: If robot validation fails (checks for cycles, missing links, etc.)
         """
+        from . import __version__
+
         root = self.generate_robot_element(robot, validate=validate)
-        return self._element_to_string(root)
+        return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)
 
     def generate_robot_element(self, robot: Robot, validate: bool = True) -> ET.Element:
         """Generate URDF XML Element tree from robot.
@@ -145,7 +107,7 @@ class URDFGenerator(RobotGenerator[str]):
         if validate:
             errors = robot.validate_tree_structure()
             if errors:
-                raise ValueError("Robot validation failed:\n" + "\n".join(errors))
+                raise RobotGeneratorError("Robot validation failed:\n" + "\n".join(errors))
 
         # Create root element
         root = ET.Element("robot", name=robot.name)
@@ -208,38 +170,6 @@ class URDFGenerator(RobotGenerator[str]):
     def _add_joint_to_xml(self, parent: ET.Element, joint: Joint, robot: Robot) -> None:
         """Hook for adding a single joint. Can be overridden."""
         self._add_joint_element(parent, joint)
-
-    def write(self, robot: Robot, filepath: Path, validate: bool = True) -> None:
-        """Write URDF to file with proper formatting.
-
-        This is a convenience method that combines generation and file writing.
-        The file is created with UTF-8 encoding to support international characters
-        in robot names and comments.
-
-        Args:
-            robot: Robot model to export
-            filepath: Output file path (will be created if it doesn't exist)
-            validate: Whether to validate robot structure before generation (default: True)
-
-        Raises:
-            ValueError: If robot validation fails
-            IOError: If file cannot be written (permission issues, disk full, etc.)
-
-        Example:
-            >>> from pathlib import Path
-            >>> from linkforge.core.models import Robot, Link
-            >>> robot = Robot(name="my_robot")
-            >>> robot.add_link(Link(name="base_link"))
-            >>> generator = URDFGenerator()
-            >>> generator.write(robot, Path("/tmp/my_robot.urdf"))
-            >>> # File now exists at /tmp/my_robot.urdf
-
-        Note:
-            Parent directories must exist. Use `filepath.parent.mkdir(parents=True, exist_ok=True)`
-            if you need to create the directory structure first.
-        """
-        urdf_string = self.generate(robot, validate=validate)
-        filepath.write_text(urdf_string, encoding="utf-8")
 
     def _collect_materials(self, robot: Robot) -> dict[str, Material]:
         """Collect unique materials from all links for global material definitions.
@@ -1107,46 +1037,3 @@ class URDFGenerator(RobotGenerator[str]):
         if "effort" in hw_lower:
             return "effort"
         return "position"  # Default fallback
-
-    def _get_xml_header(self, element: ET.Element) -> str:
-        """Generate XML declaration and header comment with standardized metadata.
-
-        Args:
-            element: Root XML element (to extract robot name)
-
-        Returns:
-            Header string containing XML declaration and meta comment
-        """
-        from datetime import datetime
-
-        from . import __version__
-
-        return f"""\
-<?xml version="1.0"?>
-<!--
-  Robot: {element.get("name", "robot")}
-  Generated by: LinkForge v{__version__}
-  https://github.com/arounamounchili/linkforge
-  Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
--->
-"""
-
-    def _element_to_string(self, element: ET.Element) -> str:
-        """Convert XML element to string.
-
-        Args:
-            element: XML element
-
-        Returns:
-            XML string (pretty-printed if enabled)
-
-        """
-        if self.pretty_print:
-            # Use ET.indent for clean formatting (Python 3.9+)
-            ET.indent(element, space="  ", level=0)
-
-        # Convert to string
-        xml_str = ET.tostring(element, encoding="unicode")
-
-        # Add XML declaration and header comment
-        return self._get_xml_header(element) + xml_str

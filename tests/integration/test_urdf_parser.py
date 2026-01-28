@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
+from linkforge_core.base import RobotParserError
 from linkforge_core.models import (
     Box,
     Color,
@@ -16,12 +17,12 @@ from linkforge_core.models import (
     Sphere,
 )
 from linkforge_core.parsers.urdf_parser import (
+    URDFParser,
     parse_geometry,
     parse_joint,
     parse_link,
     parse_material,
     parse_origin,
-    parse_urdf,
     parse_vector3,
 )
 
@@ -583,7 +584,7 @@ class TestParseURDF:
         urdf_file = tmp_path / "simple.urdf"
         urdf_file.write_text(urdf_content)
 
-        robot = parse_urdf(urdf_file)
+        robot = URDFParser().parse(urdf_file)
 
         assert robot.name == "simple_robot"
         assert len(robot.links) == 1
@@ -618,7 +619,7 @@ class TestParseURDF:
         urdf_file = tmp_path / "two_link.urdf"
         urdf_file.write_text(urdf_content)
 
-        robot = parse_urdf(urdf_file)
+        robot = URDFParser().parse(urdf_file)
 
         assert robot.name == "two_link_robot"
         assert len(robot.links) == 2
@@ -661,7 +662,7 @@ class TestParseURDF:
         urdf_file = tmp_path / "colored.urdf"
         urdf_file.write_text(urdf_content)
 
-        robot = parse_urdf(urdf_file)
+        robot = URDFParser().parse(urdf_file)
 
         assert len(robot.links) == 2
         # Both links should reference the global materials
@@ -673,15 +674,15 @@ class TestParseURDF:
         nonexistent = tmp_path / "nonexistent.urdf"
 
         with pytest.raises(FileNotFoundError):
-            parse_urdf(nonexistent)
+            URDFParser().parse(nonexistent)
 
     def test_parse_invalid_xml(self, tmp_path: Path):
         """Test that invalid XML raises ParseError."""
         urdf_file = tmp_path / "invalid.urdf"
         urdf_file.write_text("<robot><link></robot>")  # Malformed XML
 
-        with pytest.raises(ET.ParseError):
-            parse_urdf(urdf_file)
+        with pytest.raises(RobotParserError):
+            URDFParser().parse(urdf_file)
 
     def test_parse_non_robot_root(self, tmp_path: Path):
         """Test that non-robot root element raises ValueError."""
@@ -693,8 +694,8 @@ class TestParseURDF:
         urdf_file = tmp_path / "invalid_root.urdf"
         urdf_file.write_text(urdf_content)
 
-        with pytest.raises(ValueError, match="Root element must be <robot>"):
-            parse_urdf(urdf_file)
+        with pytest.raises(RobotParserError, match="Root element must be <robot>"):
+            URDFParser().parse(urdf_file)
 
     def test_parse_complex_robot(self, tmp_path: Path):
         """Test parsing complex robot with multiple features."""
@@ -759,7 +760,7 @@ class TestParseURDF:
         urdf_file = tmp_path / "complex.urdf"
         urdf_file.write_text(urdf_content)
 
-        robot = parse_urdf(urdf_file)
+        robot = URDFParser().parse(urdf_file)
 
         assert robot.name == "complex_robot"
         assert len(robot.links) == 3
@@ -795,8 +796,8 @@ class TestXACRODetection:
         xacro_file = tmp_path / "test.xacro"
         xacro_file.write_text(xacro_content)
 
-        with pytest.raises(ValueError, match="XACRO file detected"):
-            parse_urdf(xacro_file)
+        with pytest.raises(RobotParserError, match="XACRO file detected"):
+            URDFParser().parse(xacro_file)
 
     def test_detect_xacro_properties(self, tmp_path: Path):
         """Test detection of XACRO property elements."""
@@ -815,8 +816,8 @@ class TestXACRODetection:
         xacro_file = tmp_path / "test_props.xacro"
         xacro_file.write_text(xacro_content)
 
-        with pytest.raises(ValueError, match="XACRO file detected"):
-            parse_urdf(xacro_file)
+        with pytest.raises(RobotParserError, match="XACRO file detected"):
+            URDFParser().parse(xacro_file)
 
     def test_detect_xacro_substitutions(self, tmp_path: Path):
         """Test detection of XACRO variable substitutions."""
@@ -835,8 +836,8 @@ class TestXACRODetection:
         xacro_file = tmp_path / "test_sub.xacro"
         xacro_file.write_text(xacro_content)
 
-        with pytest.raises(ValueError, match="XACRO file detected"):
-            parse_urdf(xacro_file)
+        with pytest.raises(RobotParserError, match="XACRO file detected"):
+            URDFParser().parse(xacro_file)
 
     def test_detect_xacro_macros(self, tmp_path: Path):
         """Test detection of XACRO macro definitions."""
@@ -856,8 +857,8 @@ class TestXACRODetection:
         xacro_file = tmp_path / "test_macro.xacro"
         xacro_file.write_text(xacro_content)
 
-        with pytest.raises(ValueError, match="XACRO file detected"):
-            parse_urdf(xacro_file)
+        with pytest.raises(RobotParserError, match="XACRO file detected"):
+            URDFParser().parse(xacro_file)
 
     def test_error_message_includes_conversion_instructions(self, tmp_path: Path):
         """Test that error message includes helpful conversion instructions."""
@@ -869,8 +870,8 @@ class TestXACRODetection:
         xacro_file = tmp_path / "robot.urdf.xacro"
         xacro_file.write_text(xacro_content)
 
-        with pytest.raises(ValueError) as exc_info:
-            parse_urdf(xacro_file)
+        with pytest.raises(RobotParserError) as exc_info:
+            URDFParser().parse(xacro_file)
 
         error_msg = str(exc_info.value)
         assert "convert" in error_msg.lower()
@@ -895,7 +896,7 @@ class TestXACRODetection:
         urdf_file.write_text(urdf_content)
 
         # Should not raise any error
-        robot = parse_urdf(urdf_file)
+        robot = URDFParser().parse(urdf_file)
         assert robot.name == "test_robot"
 
     def test_detect_package_substitution(self, tmp_path: Path):
@@ -914,8 +915,8 @@ class TestXACRODetection:
         xacro_file = tmp_path / "test_package.xacro"
         xacro_file.write_text(xacro_content)
 
-        with pytest.raises(ValueError, match="XACRO file detected"):
-            parse_urdf(xacro_file)
+        with pytest.raises(RobotParserError, match="XACRO file detected"):
+            URDFParser().parse(xacro_file)
 
 
 class TestURDFParserErrorHandling:
@@ -932,8 +933,8 @@ class TestURDFParserErrorHandling:
         urdf_file.write_text(urdf_content)
 
         # Parser uses default name "imported_robot" when name missing
-        robot = parse_urdf(urdf_file)
-        assert robot.name == "imported_robot"
+        robot = URDFParser().parse(urdf_file)
+        assert robot.name == "unnamed_robot"
 
     def test_malformed_xml(self, tmp_path: Path):
         """Test that malformed XML raises appropriate error."""
@@ -945,8 +946,8 @@ class TestURDFParserErrorHandling:
         urdf_file = tmp_path / "malformed.urdf"
         urdf_file.write_text(urdf_content)
 
-        with pytest.raises(ET.ParseError):
-            parse_urdf(urdf_file)
+        with pytest.raises(RobotParserError):
+            URDFParser().parse(urdf_file)
 
     def test_missing_joint_parent(self, tmp_path: Path):
         """Test that joint without parent link raises error."""
@@ -965,8 +966,8 @@ class TestURDFParserErrorHandling:
         urdf_file.write_text(urdf_content)
 
         # Joint validation catches missing parent
-        with pytest.raises(ValueError, match="Parent link name cannot be empty"):
-            parse_urdf(urdf_file)
+        with pytest.raises(RobotParserError, match="Parent link name cannot be empty"):
+            URDFParser().parse(urdf_file)
 
     def test_missing_joint_child(self, tmp_path: Path):
         """Test that joint without child link raises error."""
@@ -985,8 +986,8 @@ class TestURDFParserErrorHandling:
         urdf_file.write_text(urdf_content)
 
         # Joint validation catches missing child
-        with pytest.raises(ValueError, match="Child link name cannot be empty"):
-            parse_urdf(urdf_file)
+        with pytest.raises(RobotParserError, match="Child link name cannot be empty"):
+            URDFParser().parse(urdf_file)
 
     def test_invalid_geometry_values(self, tmp_path: Path):
         """Test that invalid geometry dimensions are handled gracefully."""
@@ -1005,7 +1006,7 @@ class TestURDFParserErrorHandling:
         urdf_file.write_text(urdf_content)
 
         # Parser is resilient - invalid geometry is skipped with warning
-        robot = parse_urdf(urdf_file)
+        robot = URDFParser().parse(urdf_file)
         assert robot.name == "test"
         assert len(robot.links) == 1
         # Visual with invalid geometry should be skipped
@@ -1029,7 +1030,7 @@ class TestURDFParserErrorHandling:
         urdf_file.write_text(urdf_content)
 
         # Revolute joint without limits should now succeed with defaults
-        robot = parse_urdf(urdf_file)
+        robot = URDFParser().parse(urdf_file)
         joint = robot.joints[0]
         assert joint.limits is not None
         # Should default to None (which implies 0 in physics/export logic usually)

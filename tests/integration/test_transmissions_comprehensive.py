@@ -13,7 +13,7 @@ from linkforge_core.models import (
     TransmissionActuator,
     TransmissionJoint,
 )
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_simple_transmission():
@@ -293,7 +293,7 @@ def test_transmission_roundtrip():
     """
 
     # Import
-    robot1 = parse_urdf_string(original_urdf)
+    robot1 = URDFParser().parse_string(original_urdf)
     assert len(robot1.transmissions) == 1
     trans1 = robot1.transmissions[0]
     assert trans1.name == "trans1"
@@ -305,7 +305,7 @@ def test_transmission_roundtrip():
     exported_urdf = generator.generate(robot1)
 
     # Re-import
-    robot2 = parse_urdf_string(exported_urdf)
+    robot2 = URDFParser().parse_string(exported_urdf)
     assert len(robot2.transmissions) == 1
     trans2 = robot2.transmissions[0]
     assert trans2.name == "trans1"
@@ -342,7 +342,7 @@ def test_ros1_hardware_interface_normalization():
     """
 
     # Import (should normalize)
-    robot = parse_urdf_string(urdf_with_ros1_interfaces)
+    robot = URDFParser().parse_string(urdf_with_ros1_interfaces)
     trans = robot.transmissions[0]
     assert trans.joints[0].hardware_interfaces == ["effort"]  # Normalized!
     assert trans.actuators[0].hardware_interfaces == ["effort"]  # Normalized!

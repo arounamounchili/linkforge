@@ -29,7 +29,7 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.parsers.urdf_parser import parse_urdf
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def compare_robots(robot1: Robot, robot2: Robot, context: str = "") -> list[str]:
@@ -313,7 +313,7 @@ def test_perfect_roundtrip_comprehensive_robot():
     """Test that comprehensive test robot survives perfect roundtrip."""
     # Load original
     original_path = Path("examples/roundtrip_test_robot.urdf")
-    robot1 = parse_urdf(original_path)
+    robot1 = URDFParser().parse(original_path)
 
     # Export
     generator = URDFGenerator(pretty_print=True)
@@ -325,7 +325,7 @@ def test_perfect_roundtrip_comprehensive_robot():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
 
         # Compare
         differences = compare_robots(robot1, robot2)
@@ -423,7 +423,7 @@ def test_geometry_types_roundtrip():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
         differences = compare_robots(robot, robot2)
 
         assert len(differences) == 0, f"Geometry roundtrip failed: {differences}"
@@ -501,7 +501,7 @@ def test_joint_types_roundtrip():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
         differences = compare_robots(robot, robot2)
 
         assert len(differences) == 0, f"Joint types roundtrip failed: {differences}"
@@ -547,7 +547,7 @@ def test_mimic_joint_roundtrip():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
         differences = compare_robots(robot, robot2)
 
         assert len(differences) == 0, f"Mimic joint roundtrip failed: {differences}"
@@ -611,7 +611,7 @@ def test_material_preservation_roundtrip():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
         differences = compare_robots(robot, robot2)
 
         assert len(differences) == 0, f"Material roundtrip failed: {differences}"
@@ -656,7 +656,7 @@ def test_collision_geometry_roundtrip():
         f.write(urdf_string)
 
     try:
-        robot2 = parse_urdf(temp_path)
+        robot2 = URDFParser().parse(temp_path)
         differences = compare_robots(robot, robot2)
 
         assert len(differences) == 0, f"Collision roundtrip failed: {differences}"

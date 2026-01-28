@@ -20,7 +20,7 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 class TestTransmissionRoundtrip:
@@ -56,7 +56,7 @@ class TestTransmissionRoundtrip:
         urdf_string = generator.generate(robot)
 
         # Parse back
-        parsed_robot = parse_urdf_string(urdf_string)
+        parsed_robot = URDFParser().parse_string(urdf_string)
 
         # Verify transmission
         assert len(parsed_robot.transmissions) == 1
@@ -106,7 +106,7 @@ class TestTransmissionRoundtrip:
         # Round-trip
         generator = URDFGenerator()
         urdf_string = generator.generate(robot)
-        parsed_robot = parse_urdf_string(urdf_string)
+        parsed_robot = URDFParser().parse_string(urdf_string)
 
         # Verify
         assert len(parsed_robot.transmissions) == 1
@@ -136,7 +136,7 @@ class TestGazeboRoundtrip:
         # Round-trip
         generator = URDFGenerator()
         urdf_string = generator.generate(robot)
-        parsed_robot = parse_urdf_string(urdf_string)
+        parsed_robot = URDFParser().parse_string(urdf_string)
 
         # Verify
         assert len(parsed_robot.gazebo_elements) == 1
@@ -165,7 +165,7 @@ class TestGazeboRoundtrip:
         # Round-trip
         generator = URDFGenerator()
         urdf_string = generator.generate(robot)
-        parsed_robot = parse_urdf_string(urdf_string)
+        parsed_robot = URDFParser().parse_string(urdf_string)
 
         # Verify
         assert len(parsed_robot.gazebo_elements) == 1
@@ -203,7 +203,7 @@ class TestGazeboRoundtrip:
         # Round-trip
         generator = URDFGenerator()
         urdf_string = generator.generate(robot)
-        parsed_robot = parse_urdf_string(urdf_string)
+        parsed_robot = URDFParser().parse_string(urdf_string)
 
         # Verify
         assert len(parsed_robot.gazebo_elements) == 1
@@ -308,7 +308,7 @@ class TestComplexRobotRoundtrip:
         # Round-trip
         generator = URDFGenerator()
         urdf_string = generator.generate(robot)
-        parsed_robot = parse_urdf_string(urdf_string)
+        parsed_robot = URDFParser().parse_string(urdf_string)
 
         # Verify structure
         assert parsed_robot.name == "mobile_robot"

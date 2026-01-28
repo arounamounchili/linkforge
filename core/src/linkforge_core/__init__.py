@@ -14,6 +14,7 @@ from __future__ import annotations
 __version__ = "1.2.0"
 
 from . import models, parsers, physics
+from .base import LinkForgeError, RobotGeneratorError, RobotParserError
 from .urdf_generator import URDFGenerator, format_float, format_vector
 from .xacro_generator import XACROGenerator
 
@@ -25,4 +26,7 @@ __all__ = [
     "XACROGenerator",
     "format_float",
     "format_vector",
+    "LinkForgeError",
+    "RobotGeneratorError",
+    "RobotParserError",
 ]

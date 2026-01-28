@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 from linkforge_core import URDFGenerator
-from linkforge_core.parsers.urdf_parser import parse_urdf, parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def get_examples_dir() -> Path:
@@ -30,7 +30,7 @@ def test_simple_arm_roundtrip():
     assert urdf_path.exists(), f"Example URDF not found at {urdf_path}"
 
     # Parse URDF
-    robot = parse_urdf(urdf_path)
+    robot = URDFParser().parse(urdf_path)
 
     # Verify basic structure
     assert robot.name == "comprehensive_test_robot"
@@ -63,7 +63,7 @@ def test_simple_arm_roundtrip():
         assert output_path.exists(), "Exported URDF file not created"
 
         # Re-parse exported URDF
-        robot2 = parse_urdf(output_path)
+        robot2 = URDFParser().parse(output_path)
 
         # Verify structure is preserved
         assert robot2.name == robot.name
@@ -84,7 +84,7 @@ def test_materials_preserved():
     examples_dir = get_examples_dir()
     urdf_path = examples_dir / "roundtrip_test_robot.urdf"
 
-    robot = parse_urdf(urdf_path)
+    robot = URDFParser().parse(urdf_path)
 
     # Check that materials are parsed
     materials_found = []
@@ -103,7 +103,7 @@ def test_inertial_preserved():
     examples_dir = get_examples_dir()
     urdf_path = examples_dir / "roundtrip_test_robot.urdf"
 
-    robot = parse_urdf(urdf_path)
+    robot = URDFParser().parse(urdf_path)
 
     # Check that all links have inertial properties
     for link in robot.links:
@@ -120,7 +120,7 @@ def test_quadruped_roundtrip():
         pytest.skip("quadruped_robot.urdf not found")
 
     # 1. Parse original URDF
-    robot = parse_urdf(urdf_path)
+    robot = URDFParser().parse(urdf_path)
 
     # Verify structure
     assert len(robot.links) == 17  # Base + 4 legs * 4 links (hip, thigh, calf, foot)
@@ -133,7 +133,7 @@ def test_quadruped_roundtrip():
     generated_urdf = generator.generate(robot)
 
     # 3. Parse generated URDF
-    robot_roundtrip = parse_urdf_string(generated_urdf)
+    robot_roundtrip = URDFParser().parse_string(generated_urdf)
 
     # 4. Compare
     assert robot_roundtrip.name == robot.name
@@ -153,7 +153,7 @@ def test_joint_limits_preserved():
     examples_dir = get_examples_dir()
     urdf_path = examples_dir / "roundtrip_test_robot.urdf"
 
-    robot = parse_urdf(urdf_path)
+    robot = URDFParser().parse(urdf_path)
 
     # Check that all joints have limits
     for joint in robot.joints:

@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_xacro_with_relative_includes():
@@ -83,7 +83,7 @@ def test_xacro_with_relative_includes():
             os.chdir(old_cwd)
 
         # Parse the generated URDF
-        robot = parse_urdf_string(urdf_string)
+        robot = URDFParser().parse_string(urdf_string)
 
         # Verify robot structure
         assert robot.name == "test_robot"
@@ -168,7 +168,7 @@ def test_xacro_nested_includes():
             os.chdir(old_cwd)
 
         # Parse and verify
-        robot = parse_urdf_string(urdf_string)
+        robot = URDFParser().parse_string(urdf_string)
         assert robot.name == "nested_robot"
         assert len(robot.links) == 1
 
@@ -222,5 +222,5 @@ def test_xacro_absolute_path_includes():
             os.chdir(old_cwd)
 
         # Parse and verify
-        robot = parse_urdf_string(urdf_string)
+        robot = URDFParser().parse_string(urdf_string)
         assert robot.links[0].inertial.mass == pytest.approx(42.0)

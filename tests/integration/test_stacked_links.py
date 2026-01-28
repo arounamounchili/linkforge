@@ -32,7 +32,7 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.parsers.urdf_parser import parse_urdf, parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def create_stacked_robot() -> Robot:
@@ -178,7 +178,7 @@ def test_stacked_links_export():
     # The bug would show: <collision><origin xyz="0 0 2"/> (WRONG - world coordinate leak)
 
     # Parse to verify collision origins
-    parsed_robot = parse_urdf_string(urdf_string)
+    parsed_robot = URDFParser().parse_string(urdf_string)
 
     # Check collision origins are identity (link-relative)
     cylinder1 = next(link for link in parsed_robot.links if link.name == "cylinder_link1")
@@ -216,7 +216,7 @@ def test_stacked_links_roundtrip(tmp_path: Path):
     generator.write(robot, urdf_path)
 
     # Re-import
-    reimported_robot = parse_urdf(urdf_path)
+    reimported_robot = URDFParser().parse(urdf_path)
 
     # Verify structure
     assert len(reimported_robot.links) == 3

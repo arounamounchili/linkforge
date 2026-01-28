@@ -34,8 +34,8 @@ from linkforge_core.models import (
     Visual,
 )
 from linkforge_core.parsers.urdf_parser import (
+    URDFParser,
     parse_sensor_from_gazebo,
-    parse_urdf_string,
 )
 from linkforge_core.validation.security import validate_package_uri
 
@@ -119,7 +119,7 @@ def test_parser_collision_resolution():
         <joint name="j1" type="fixed"><parent link="l1"/><child link="l1_duplicate_1"/></joint>
     </robot>
     """
-    r = parse_urdf_string(xml)
+    r = URDFParser().parse_string(xml)
     # Ensure the 4th 'l1' gets correctly suffixed past existing duplicates
     assert "l1_duplicate_3" in r._link_index
     assert "j1_duplicate_2" in r._joint_index

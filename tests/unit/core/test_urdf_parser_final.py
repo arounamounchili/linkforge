@@ -7,10 +7,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from linkforge_core.base import RobotParserError
 from linkforge_core.parsers.urdf_parser import (
+    URDFParser,
     parse_gazebo_element,
     parse_sensor_from_gazebo,
-    parse_urdf_string,
 )
 from linkforge_core.validation.security import validate_mesh_path
 
@@ -23,7 +24,7 @@ def test_urdf_parser_duplicate_links():
         <link name="base_link"></link>
     </robot>
     """
-    robot = parse_urdf_string(urdf)
+    robot = URDFParser().parse_string(urdf)
     assert "base_link" in robot._link_index
     assert "base_link_duplicate_1" in robot._link_index
 
@@ -42,7 +43,7 @@ def test_urdf_parser_duplicate_joints():
         </joint>
     </robot>
     """
-    robot = parse_urdf_string(urdf)
+    robot = URDFParser().parse_string(urdf)
     assert "j1" in robot._joint_index
     assert "j1_duplicate_1" in robot._joint_index
 
@@ -51,9 +52,9 @@ def test_urdf_parser_large_file_rejection():
     """Test rejection of oversized URDF files."""
     with (
         patch("linkforge_core.parsers.urdf_parser.MAX_FILE_SIZE", 10),
-        pytest.raises(ValueError, match="URDF string too large"),
+        pytest.raises(RobotParserError, match="URDF string too large"),
     ):
-        parse_urdf_string("a" * 100)
+        URDFParser().parse_string("a" * 100)
 
 
 def test_parse_sensor_missing_inner_elements():

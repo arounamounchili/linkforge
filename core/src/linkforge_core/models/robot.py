@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
+from typing import Any
 
 from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
@@ -41,12 +42,14 @@ class Robot:
     """
 
     name: str
+    version: str = "1.1"  # LinkForge IR Version
     links: list[Link] = field(default_factory=list)
     joints: list[Joint] = field(default_factory=list)
     sensors: list[Sensor] = field(default_factory=list)
     transmissions: list[Transmission] = field(default_factory=list)
     ros2_controls: list[Ros2Control] = field(default_factory=list)
     gazebo_elements: list[GazeboElement] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # Internal O(1) lookup indices (not exposed in __init__, rebuilt automatically)
     _link_index: dict[str, Link] = field(default_factory=dict, init=False, repr=False)

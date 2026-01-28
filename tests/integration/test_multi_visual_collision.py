@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from linkforge_core import URDFGenerator
 from linkforge_core.models import Box, Collision, Cylinder, Link, Sphere, Vector3, Visual
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 class TestMultipleVisualElements:
@@ -92,7 +92,7 @@ class TestURDFParserMultipleElements:
             </link>
         </robot>
         """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
         link = robot.links[0]
 
         assert len(link.visuals) == 2
@@ -115,7 +115,7 @@ class TestURDFParserMultipleElements:
             </link>
         </robot>
         """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
         link = robot.links[0]
 
         assert len(link.collisions) == 2
@@ -136,7 +136,7 @@ class TestURDFParserMultipleElements:
             </link>
         </robot>
         """
-        robot = parse_urdf_string(urdf_xml)
+        robot = URDFParser().parse_string(urdf_xml)
         link = robot.links[0]
 
         assert len(link.visuals) == 2
@@ -216,7 +216,7 @@ class TestRoundTripMultipleElements:
         """
 
         # Parse
-        robot1 = parse_urdf_string(urdf_xml)
+        robot1 = URDFParser().parse_string(urdf_xml)
         assert len(robot1.links[0].visuals) == 3
 
         # Generate
@@ -224,7 +224,7 @@ class TestRoundTripMultipleElements:
         urdf_xml2 = generator.generate(robot1)
 
         # Parse again
-        robot2 = parse_urdf_string(urdf_xml2)
+        robot2 = URDFParser().parse_string(urdf_xml2)
         assert len(robot2.links[0].visuals) == 3
 
         # Verify names preserved
@@ -247,13 +247,13 @@ class TestRoundTripMultipleElements:
         </robot>
         """
 
-        robot1 = parse_urdf_string(urdf_xml)
+        robot1 = URDFParser().parse_string(urdf_xml)
         assert len(robot1.links[0].collisions) == 2
 
         generator = URDFGenerator()
         urdf_xml2 = generator.generate(robot1)
 
-        robot2 = parse_urdf_string(urdf_xml2)
+        robot2 = URDFParser().parse_string(urdf_xml2)
         assert len(robot2.links[0].collisions) == 2
         assert robot2.links[0].collisions[0].name == "c1"
         assert robot2.links[0].collisions[1].name == "c2"
@@ -287,7 +287,7 @@ class TestExportCheckboxBehavior:
         assert "<visual>" not in urdf_xml
 
         # Verify round-trip
-        robot2 = parse_urdf_string(urdf_xml)
+        robot2 = URDFParser().parse_string(urdf_xml)
         assert len(robot2.links[0].visuals) == 0
         assert len(robot2.links[0].collisions) == 1
 
@@ -311,7 +311,7 @@ class TestExportCheckboxBehavior:
         assert "<collision>" not in urdf_xml
 
         # Verify round-trip
-        robot2 = parse_urdf_string(urdf_xml)
+        robot2 = URDFParser().parse_string(urdf_xml)
         assert len(robot2.links[0].visuals) == 1
         assert len(robot2.links[0].collisions) == 0
 
@@ -333,6 +333,6 @@ class TestExportCheckboxBehavior:
         assert "<collision>" not in urdf_xml
 
         # Verify round-trip
-        robot2 = parse_urdf_string(urdf_xml)
+        robot2 = URDFParser().parse_string(urdf_xml)
         assert len(robot2.links[0].visuals) == 0
         assert len(robot2.links[0].collisions) == 0

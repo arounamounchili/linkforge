@@ -221,7 +221,8 @@ def test_sensor_roundtrip():
     urdf = generator.generate(robot)
 
     # Re-import
-    robot2 = parse_urdf_string(urdf)
+    from linkforge_core.parsers import URDFParser
+    robot2 = URDFParser().parse_string(urdf)
 
     # Verify sensor origin preserved
     assert robot2.sensors[0].origin == robot.sensors[0].origin

@@ -31,8 +31,10 @@ from .models.joint import Joint
 from .models.link import Link, Visual
 from .models.material import Material
 from .models.robot import Robot
-from .urdf_generator import URDFGenerator, format_float, format_vector
+from .urdf_generator import URDFGenerator
+from .utils.math_utils import format_float, format_vector
 from .utils.string_utils import sanitize_name
+from .utils.xml_utils import serialize_xml
 
 # XACRO Namespace URI
 XACRO_URI = "http://www.ros.org/wiki/xacro"
@@ -93,10 +95,12 @@ class XACROGenerator(URDFGenerator):
         self.dimension_properties: dict[str, str] = {}
         self.generated_macros: list[dict[str, Any]] = []
 
-    def generate(self, robot: Robot, validate: bool = True) -> str:
+    def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
         """Generate XACRO XML string from robot."""
+        from . import __version__
+
         root = self.generate_robot_element(robot, validate=validate)
-        return self._element_to_string(root)
+        return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)
 
     def generate_robot_element(self, robot: Robot, validate: bool = True) -> ET.Element:
         """Generate XACRO XML Element tree from robot.
@@ -744,13 +748,15 @@ class XACROGenerator(URDFGenerator):
         lookup_key = f"{dim_key}:{rounded}"
         return self.dimension_properties.get(lookup_key)
 
-    def write(self, robot: Robot, filepath: Path, validate: bool = True) -> None:
+    def write(self, robot: Robot, filepath: Path, validate: bool = True, **kwargs: Any) -> None:
         """Write XACRO to file."""
         if self.split_files:
+            # Shared logic for directory creation
+            filepath.parent.mkdir(parents=True, exist_ok=True)
             self._write_split_files(robot, filepath, validate=validate)
         else:
-            xacro_string = self.generate(robot, validate=validate)
-            filepath.write_text(xacro_string, encoding="utf-8")
+            # Use base class template method (handles generate + mkdir + _save_to_file)
+            super().write(robot, filepath, validate=validate, **kwargs)
 
     def _write_split_files(self, robot: Robot, main_filepath: Path, validate: bool = True) -> None:
         """Write robot to multiple XACRO files (main, properties, macros).
@@ -818,28 +824,26 @@ class XACROGenerator(URDFGenerator):
         for child in list(root):
             main_root.append(child)
 
+        from . import __version__
+
+        ns = {"xacro": XACRO_URI}
+
         # Write files
         if len(properties_root) > 0:
             prop_path = base_dir / f"{robot_name}_properties.xacro"
-            prop_path.write_text(self._element_to_string(properties_root), encoding="utf-8")
+            prop_path.write_text(
+                serialize_xml(properties_root, self.pretty_print, __version__, ns),
+                encoding="utf-8",
+            )
 
         if len(macros_root) > 0:
             mac_path = base_dir / f"{robot_name}_macros.xacro"
-            mac_path.write_text(self._element_to_string(macros_root), encoding="utf-8")
+            mac_path.write_text(
+                serialize_xml(macros_root, self.pretty_print, __version__, ns),
+                encoding="utf-8",
+            )
 
-        main_filepath.write_text(self._element_to_string(main_root), encoding="utf-8")
-
-    def _element_to_string(self, element: ET.Element) -> str:
-        """Convert XML element to string with pretty printing."""
-        # Ensure xacro namespace uses the 'xacro' prefix
-        ET.register_namespace("xacro", XACRO_URI)
-
-        if self.pretty_print:
-            # Use ET.indent for clean formatting (Python 3.9+)
-            ET.indent(element, space="  ", level=0)
-
-        # Convert to string
-        xml_str = ET.tostring(element, encoding="unicode")
-
-        # Add XML declaration and header comment (Standardized via base class)
-        return self._get_xml_header(element) + xml_str
+        main_filepath.write_text(
+            serialize_xml(main_root, self.pretty_print, __version__, ns),
+            encoding="utf-8",
+        )

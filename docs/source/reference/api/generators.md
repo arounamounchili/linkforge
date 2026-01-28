@@ -86,7 +86,7 @@ urdf = generator.generate(robot)
 ### Round-Trip Verification
 
 ```python
-from linkforge_core.parsers.urdf_parser import parse_urdf_string
+from linkforge_core.parsers import URDFParser
 
 # Original robot
 robot1 = create_robot()
@@ -96,7 +96,7 @@ generator = URDFGenerator()
 urdf = generator.generate(robot1)
 
 # Re-import
-robot2 = parse_urdf_string(urdf)
+robot2 = URDFParser().parse_string(urdf)
 
 # Verify fidelity
 assert robot2.name == robot1.name
