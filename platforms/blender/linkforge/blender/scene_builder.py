@@ -428,6 +428,15 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
             props.inertia_origin_xyz = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
             props.inertia_origin_rpy = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
+    elif hasattr(link_obj, "linkforge"):
+        # IMPORTANT: If link has no inertial properties (e.g., dummy root link),
+        # explicitly set mass to 0.0 and disable auto-inertia.
+        # This prevents Blender from falling back to default 1.0kg, which would
+        # corrupt the physics model of lightweight robots.
+        props = link_obj.linkforge
+        props.mass = 0.0
+        props.use_auto_inertia = False
+
     # Helper to get geometry type string from instance
     def _get_geometry_type_str(geometry):
         """Get geometry type string from geometry instance."""
