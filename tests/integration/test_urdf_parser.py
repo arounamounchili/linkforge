@@ -1038,3 +1038,37 @@ class TestURDFParserErrorHandling:
         # Looking at code: lower/upper become None if attribute missing.
         assert joint.limits.lower is None
         assert joint.limits.upper is None
+
+    def test_massless_link_parsing(self, tmp_path: Path):
+        """Test that a link with no inertial tag is parsed as inertial=None."""
+        urdf_content = """<?xml version="1.0"?>
+<robot name="massless_bot">
+    <link name="root" />
+    <link name="child">
+        <inertial>
+            <mass value="1.0"/>
+            <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+        </inertial>
+    </link>
+    <joint name="fixed_base" type="fixed">
+        <parent link="root"/>
+        <child link="child"/>
+    </joint>
+</robot>
+"""
+        urdf_file = tmp_path / "massless.urdf"
+        urdf_file.write_text(urdf_content)
+
+        robot = URDFParser().parse(urdf_file)
+
+        # Verify root has no inertial
+        root = robot.get_link("root")
+        assert root is not None
+        assert root.inertial is None
+        assert root.mass == 0.0
+
+        # Verify child has inertial
+        child = robot.get_link("child")
+        assert child is not None
+        assert child.inertial is not None
+        assert child.mass == 1.0
