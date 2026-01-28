@@ -319,7 +319,7 @@ name = "linkforge-workspace"
 version = "1.2.0"
 source = { virtual = "." }
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 dev = [
     { name = "mypy" },
     { name = "myst-parser" },
@@ -336,21 +336,20 @@ dev = [
 ]
 
 [package.metadata]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.9.0" },
-    { name = "myst-parser", specifier = ">=2.0.0" },
-    { name = "pre-commit", specifier = ">=3.6.0" },
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-    { name = "ruff", specifier = ">=0.3.0" },
-    { name = "sphinx", specifier = ">=7.2.6" },
-    { name = "sphinx-autodoc-typehints", specifier = ">=2.0.0" },
-    { name = "sphinx-design", specifier = ">=0.5.0" },
-    { name = "sphinx-rtd-theme", specifier = ">=2.0.0" },
-    { name = "sphinxcontrib-mermaid", specifier = ">=0.9.2" },
+requires-dist = [
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
+    { name = "myst-parser", marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.6.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3.0" },
+    { name = "sphinx", marker = "extra == 'dev'", specifier = ">=7.2.6" },
+    { name = "sphinx-autodoc-typehints", marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "sphinx-design", marker = "extra == 'dev'", specifier = ">=0.5.0" },
+    { name = "sphinx-rtd-theme", marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "sphinxcontrib-mermaid", marker = "extra == 'dev'", specifier = ">=0.9.2" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "markdown-it-py"

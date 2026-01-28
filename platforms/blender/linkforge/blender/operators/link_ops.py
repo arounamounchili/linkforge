@@ -352,11 +352,11 @@ def _merge_visual_meshes(visual_objects, link_obj, context):
         return None
 
     # Log collision generation for debugging and user feedback
-    logger.info(
+    logger.debug(
         f"Compound collision: merging {len(visual_objects)} visual mesh(es) for {link_obj.name}"
     )
     for i, vis in enumerate(visual_objects):
-        logger.info(f"  [{i + 1}] {vis.name}")
+        logger.debug(f"  [{i + 1}] {vis.name}")
 
     # Create clones of visual objects using data-level duplication to ensure
     # robustness against object visibility states in the viewport.
@@ -399,7 +399,7 @@ def _merge_visual_meshes(visual_objects, link_obj, context):
     # Join into single mesh
     bpy.ops.object.join()
     merged_obj = context.active_object
-    logger.info(
+    logger.debug(
         f"Compound collision created: {merged_obj.name} ({len(merged_obj.data.vertices)} vertices)"
     )
 
