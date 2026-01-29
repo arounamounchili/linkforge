@@ -497,8 +497,8 @@ def test_create_primitive_mesh_invalid():
     assert obj is None
 
 
-def test_create_sensor_with_legacy_plugin():
-    """Test that legacy Gazebo plugins are filtered out during import."""
+def test_create_sensor_with_gazebo_plugin():
+    """Test that Gazebo plugins are preserved during import (no legacy filtering)."""
     bpy.ops.object.empty_add()
     link_obj = bpy.context.active_object
     link_obj.name = "base"
@@ -518,8 +518,9 @@ def test_create_sensor_with_legacy_plugin():
 
     obj = create_sensor_object(sensor, link_objects)
     assert obj is not None
-    # Legacy plugin should be filtered out
-    assert obj.linkforge_sensor.use_gazebo_plugin is False
+    # All plugins should now be preserved (no legacy filtering)
+    assert obj.linkforge_sensor.use_gazebo_plugin is True
+    assert obj.linkforge_sensor.plugin_filename == "libgazebo_ros_camera.so"
 
 
 def test_create_sensor_with_custom_plugin():
@@ -548,8 +549,8 @@ def test_create_sensor_with_custom_plugin():
     assert obj.linkforge_sensor.plugin_filename == "libmy_custom.so"
 
 
-def test_import_robot_with_legacy_transmissions():
-    """Test auto-conversion of legacy transmissions to ros2_control."""
+def test_import_robot_with_legacy_transmissions_skipped():
+    """Test that legacy transmissions are skipped (no auto-conversion)."""
     from linkforge_core.models import Transmission, TransmissionActuator, TransmissionJoint
 
     l1 = Link(name="base")
@@ -586,12 +587,10 @@ def test_import_robot_with_legacy_transmissions():
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
     assert success is True
 
-    # Verify auto-conversion
+    # Auto-conversion is now disabled/removed.
     scene = bpy.context.scene
-    assert scene.linkforge.use_ros2_control is True
-    assert len(scene.linkforge.ros2_control_joints) == 1
-    assert scene.linkforge.ros2_control_joints[0].name == "shoulder"
-    assert scene.linkforge.ros2_control_joints[0].cmd_position is True
+    assert scene.linkforge.use_ros2_control is False
+    assert len(scene.linkforge.ros2_control_joints) == 0
 
 
 def test_import_robot_skips_transmissions_when_ros2_control_exists():

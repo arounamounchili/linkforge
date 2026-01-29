@@ -913,10 +913,12 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
     logger.info(f"Import complete - {', '.join(completion_parts)} created")
     # Sync collision visibility with scene property
     # This ensures that if 'Show Collisions' is off (default), the newly imported collision meshes are hidden
-    if hasattr(scene, "linkforge") and hasattr(scene.linkforge, "update_collision_visibility"):
+    if hasattr(context.scene, "linkforge") and hasattr(
+        context.scene.linkforge, "update_collision_visibility"
+    ):
         # We need to pass the context or property group self. Since update method expects self,
         # we can call the function directly or trigger property update.
         # Calling the update function bound to the property group instance is safest.
-        scene.linkforge.update_collision_visibility(context)
+        context.scene.linkforge.update_collision_visibility(context)
 
     return True
