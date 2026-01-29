@@ -598,8 +598,8 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
             iface_name = state_elem.get("name", "position")
             state_interfaces.append(iface_name)
 
-        # Only add joint if it has at least one command and state interface
-        if command_interfaces and state_interfaces:
+        # Only add joint if it has at least one command OR state interface
+        if command_interfaces or state_interfaces:
             joints.append(
                 Ros2ControlJoint(
                     name=joint_name,

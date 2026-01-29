@@ -210,3 +210,43 @@ class TestRos2ControlValidation:
                 type="system",
                 hardware_plugin="",
             )
+
+
+def test_parse_ros2_control_readonly_joint():
+    """Test parsing a joint with ONLY state interfaces (should be valid)."""
+    xml = """
+    <robot name="test">
+        <ros2_control name="SensorSystem" type="system">
+            <hardware><plugin>mock</plugin></hardware>
+            <joint name="sensor_joint">
+                <state_interface name="position"/>
+            </joint>
+        </ros2_control>
+    </robot>
+    """
+    robot = URDFParser().parse_string(xml)
+    assert len(robot.ros2_controls) == 1
+    rc = robot.ros2_controls[0]
+    assert len(rc.joints) == 1
+    assert rc.joints[0].name == "sensor_joint"
+    assert rc.joints[0].state_interfaces == ["position"]
+
+
+def test_parse_ros2_control_writeonly_joint():
+    """Test parsing a joint with ONLY command interfaces (should be valid)."""
+    xml = """
+    <robot name="test">
+        <ros2_control name="ActuatorSystem" type="system">
+            <hardware><plugin>mock</plugin></hardware>
+            <joint name="actuator_joint">
+                <command_interface name="velocity"/>
+            </joint>
+        </ros2_control>
+    </robot>
+    """
+    robot = URDFParser().parse_string(xml)
+    assert len(robot.ros2_controls) == 1
+    rc = robot.ros2_controls[0]
+    assert len(rc.joints) == 1
+    assert rc.joints[0].name == "actuator_joint"
+    assert rc.joints[0].command_interfaces == ["velocity"]

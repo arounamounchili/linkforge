@@ -20,10 +20,10 @@ class Ros2ControlJoint:
         """Validate joint configuration."""
         if not self.name:
             raise ValueError("Joint name cannot be empty")
-        if not self.command_interfaces:
-            raise ValueError(f"Joint '{self.name}' must have at least one command interface")
-        if not self.state_interfaces:
-            raise ValueError(f"Joint '{self.name}' must have at least one state interface")
+        if not self.command_interfaces and not self.state_interfaces:
+            raise ValueError(
+                f"Joint '{self.name}' must have at least one command OR state interface"
+            )
 
 
 @dataclass

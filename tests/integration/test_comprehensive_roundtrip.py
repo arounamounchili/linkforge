@@ -236,6 +236,37 @@ def test_comprehensive_roundtrip_preserves_structure():
                 f"Sensor {sensor_name}: update rate mismatch"
             )
 
+        # ========== VERIFY ROS2 CONTROL ==========
+        assert len(robot2.ros2_controls) == len(robot1.ros2_controls), "Ros2Control count mismatch"
+
+        rc_map1 = {rc.name: rc for rc in robot1.ros2_controls}
+        rc_map2 = {rc.name: rc for rc in robot2.ros2_controls}
+
+        assert set(rc_map1.keys()) == set(rc_map2.keys()), "Ros2Control names don't match"
+
+        for rc_name in rc_map1:
+            rc1 = rc_map1[rc_name]
+            rc2 = rc_map2[rc_name]
+
+            assert rc2.type == rc1.type, f"Ros2Control {rc_name}: type mismatch"
+            assert rc2.hardware_plugin == rc1.hardware_plugin, (
+                f"Ros2Control {rc_name}: hardware plugin mismatch"
+            )
+            assert len(rc2.joints) == len(rc1.joints), (
+                f"Ros2Control {rc_name}: joint count mismatch"
+            )
+
+            # Check joints inside
+            rc_joints1 = {j.name: j for j in rc1.joints}
+            rc_joints2 = {j.name: j for j in rc2.joints}
+            assert set(rc_joints1.keys()) == set(rc_joints2.keys())
+
+            for j_name in rc_joints1:
+                j1 = rc_joints1[j_name]
+                j2 = rc_joints2[j_name]
+                assert set(j2.command_interfaces) == set(j1.command_interfaces)
+                assert set(j2.state_interfaces) == set(j1.state_interfaces)
+
     finally:
         # Cleanup
         temp_path.unlink()
