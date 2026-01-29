@@ -28,7 +28,7 @@ def test_extract_dimensions_cylinders():
         )
         joints.append(joint)
 
-    robot = Robot(name="test_robot", links=[base] + wheels, joints=joints)
+    robot = Robot(name="test_robot", initial_links=[base] + wheels, initial_joints=joints)
 
     # Generate XACRO with extract_dimensions=True
     gen = XACROGenerator(extract_dimensions=True, extract_materials=False)
@@ -68,7 +68,9 @@ def test_extract_dimensions_boxes():
     j1 = Joint("j1", JointType.FIXED, "base_link", "left_leg")
     j2 = Joint("j2", JointType.FIXED, "base_link", "right_leg")
 
-    robot = Robot(name="test_robot", links=[base, left_leg, right_leg], joints=[j1, j2])
+    robot = Robot(
+        name="test_robot", initial_links=[base, left_leg, right_leg], initial_joints=[j1, j2]
+    )
 
     # Generate XACRO
     gen = XACROGenerator(extract_dimensions=True, extract_materials=False)
@@ -104,7 +106,7 @@ def test_extract_dimensions_spheres():
         joint = Joint(f"j{i}", JointType.FIXED, "base_link", f"ball{i}")
         joints.append(joint)
 
-    robot = Robot(name="test_robot", links=[base] + balls, joints=joints)
+    robot = Robot(name="test_robot", initial_links=[base] + balls, initial_joints=joints)
 
     # Generate XACRO
     gen = XACROGenerator(extract_dimensions=True, extract_materials=False)
@@ -135,7 +137,7 @@ def test_no_extract_unique_dimensions():
     j1 = Joint("j1", JointType.FIXED, "base_link", "wheel1")
     j2 = Joint("j2", JointType.FIXED, "base_link", "wheel2")
 
-    robot = Robot(name="test_robot", links=[base, wheel1, wheel2], joints=[j1, j2])
+    robot = Robot(name="test_robot", initial_links=[base, wheel1, wheel2], initial_joints=[j1, j2])
 
     # Generate XACRO
     gen = XACROGenerator(extract_dimensions=True, extract_materials=False)
@@ -176,7 +178,9 @@ def test_extract_dimensions_mixed_geometries():
         Joint("j4", JointType.FIXED, "base_link", "leg2"),
     ]
 
-    robot = Robot(name="test_robot", links=[base, wheel1, wheel2, leg1, leg2], joints=joints)
+    robot = Robot(
+        name="test_robot", initial_links=[base, wheel1, wheel2, leg1, leg2], initial_joints=joints
+    )
 
     # Generate XACRO
     gen = XACROGenerator(extract_dimensions=True, extract_materials=False)
@@ -209,7 +213,7 @@ def test_dimension_floating_point_tolerance():
     j1 = Joint("j1", JointType.FIXED, "base_link", "wheel1")
     j2 = Joint("j2", JointType.FIXED, "base_link", "wheel2")
 
-    robot = Robot(name="test_robot", links=[base, wheel1, wheel2], joints=[j1, j2])
+    robot = Robot(name="test_robot", initial_links=[base, wheel1, wheel2], initial_joints=[j1, j2])
 
     # Generate XACRO
     gen = XACROGenerator(extract_dimensions=True, extract_materials=False)
@@ -238,7 +242,9 @@ def test_dimension_property_naming():
         Joint("j2", JointType.FIXED, "base_link", "fr_wheel"),
     ]
 
-    robot = Robot(name="test_robot", links=[base, fl_wheel, fr_wheel], joints=joints)
+    robot = Robot(
+        name="test_robot", initial_links=[base, fl_wheel, fr_wheel], initial_joints=joints
+    )
 
     gen = XACROGenerator(extract_dimensions=True, extract_materials=False)
     xml_str = gen.generate(robot, validate=False)
@@ -262,7 +268,7 @@ def test_extract_dimensions_disabled():
     j1 = Joint("j1", JointType.FIXED, "base_link", "wheel1")
     j2 = Joint("j2", JointType.FIXED, "base_link", "wheel2")
 
-    robot = Robot(name="test_robot", links=[base, wheel1, wheel2], joints=[j1, j2])
+    robot = Robot(name="test_robot", initial_links=[base, wheel1, wheel2], initial_joints=[j1, j2])
 
     # Generate XACRO with extract_dimensions=False
     gen = XACROGenerator(extract_dimensions=False, extract_materials=False)
@@ -296,7 +302,7 @@ def test_extract_dimensions_with_materials():
     j1 = Joint("j1", JointType.FIXED, "base_link", "wheel1")
     j2 = Joint("j2", JointType.FIXED, "base_link", "wheel2")
 
-    robot = Robot(name="test_robot", links=[base, wheel1, wheel2], joints=[j1, j2])
+    robot = Robot(name="test_robot", initial_links=[base, wheel1, wheel2], initial_joints=[j1, j2])
 
     # Generate XACRO with both features enabled
     gen = XACROGenerator(extract_dimensions=True, extract_materials=True)

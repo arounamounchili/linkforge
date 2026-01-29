@@ -33,7 +33,7 @@ def test_split_files_and_reimport_simulated():
             )
             joints.append(joint)
 
-        robot = Robot(name="test_bot", links=links, joints=joints)
+        robot = Robot(name="test_bot", initial_links=links, initial_joints=joints)
 
         # 2. Export with ALL features enabled
         gen = XACROGenerator(

@@ -37,7 +37,7 @@ def test_macro_generation_wheels():
         )
         joints.append(joint)
 
-    robot = Robot(name="car_robot", links=links, joints=joints)
+    robot = Robot(name="car_robot", initial_links=links, initial_joints=joints)
 
     # Generate XACRO
     gen = XACROGenerator(generate_macros=True)
@@ -88,7 +88,7 @@ def test_macro_generation_mixed():
     j2 = Joint("j2", JointType.FIXED, "base", "w2")
     j3 = Joint("j3", JointType.FIXED, "base", "arm")
 
-    robot = Robot("test", links=[base, wheel1, wheel2, arm], joints=[j1, j2, j3])
+    robot = Robot("test", initial_links=[base, wheel1, wheel2, arm], initial_joints=[j1, j2, j3])
 
     gen = XACROGenerator(generate_macros=True)
     xml_str = gen.generate(robot, validate=False)
