@@ -223,6 +223,177 @@ class TestMeshInertiaVerification:
         assert mesh_inertia.izz == pytest.approx(box_inertia.izz, rel=0.1)
 
 
+class TestInertiaEdgeCases:
+    """Test edge cases and error handling in inertia calculations."""
+
+    def test_box_zero_mass(self):
+        """Test that zero mass returns minimal inertia (1e-06 for numerical stability)."""
+        box = Box(size=Vector3(1.0, 1.0, 1.0))
+        inertia = calculate_box_inertia(box, mass=0.0)
+
+        # Returns minimal inertia for numerical stability
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_box_negative_mass(self):
+        """Test that negative mass returns minimal inertia."""
+        box = Box(size=Vector3(1.0, 1.0, 1.0))
+        inertia = calculate_box_inertia(box, mass=-5.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_cylinder_zero_mass(self):
+        """Test that zero mass returns minimal inertia."""
+        cyl = Cylinder(radius=1.0, length=2.0)
+        inertia = calculate_cylinder_inertia(cyl, mass=0.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_cylinder_negative_mass(self):
+        """Test that negative mass returns minimal inertia."""
+        cyl = Cylinder(radius=1.0, length=2.0)
+        inertia = calculate_cylinder_inertia(cyl, mass=-3.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_sphere_zero_mass(self):
+        """Test that zero mass returns minimal inertia."""
+        sphere = Sphere(radius=1.0)
+        inertia = calculate_sphere_inertia(sphere, mass=0.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_sphere_negative_mass(self):
+        """Test that negative mass returns minimal inertia."""
+        sphere = Sphere(radius=1.0)
+        inertia = calculate_sphere_inertia(sphere, mass=-2.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_mesh_zero_mass(self):
+        """Test that zero mass returns minimal inertia."""
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        triangles = [(0, 1, 2)]
+        inertia = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=0.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_mesh_negative_mass(self):
+        """Test that negative mass returns minimal inertia."""
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        triangles = [(0, 1, 2)]
+        inertia = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=-1.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_mesh_empty_vertices(self):
+        """Test that empty vertices raises ValueError."""
+        vertices = []
+        triangles = [(0, 1, 2)]
+
+        with pytest.raises(ValueError, match="empty mesh.*no vertices"):
+            calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+
+    def test_mesh_empty_triangles(self):
+        """Test that empty triangles raises ValueError."""
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        triangles = []
+
+        with pytest.raises(ValueError, match="empty mesh.*no triangles"):
+            calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+
+    def test_mesh_invalid_triangle_length(self):
+        """Test that triangle with != 3 indices raises ValueError."""
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)]
+        triangles = [(0, 1, 2, 3)]  # 4 indices instead of 3
+
+        with pytest.raises(ValueError, match="Triangle must have exactly 3 indices"):
+            calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+
+    def test_mesh_invalid_triangle_index(self):
+        """Test that out-of-bounds triangle index raises ValueError."""
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        triangles = [(0, 1, 5)]  # Index 5 is out of bounds
+
+        with pytest.raises(ValueError, match="Triangle index.*out of bounds"):
+            calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+
+    def test_mesh_degenerate_zero_volume(self):
+        """Test that mesh with zero volume raises ValueError."""
+        # All vertices coplanar (in XY plane)
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)]
+        triangles = [(0, 1, 2), (1, 3, 2)]
+
+        with pytest.raises(ValueError, match="zero volume"):
+            calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+
+    def test_calculate_inertia_unsupported_geometry(self):
+        """Test that unsupported geometry type raises ValueError."""
+        from linkforge_core.physics.inertia import calculate_inertia
+
+        # Create a mock geometry object that's not Box, Cylinder, Sphere, or Mesh
+        class UnsupportedGeometry:
+            pass
+
+        with pytest.raises(ValueError, match="Unsupported geometry type"):
+            calculate_inertia(UnsupportedGeometry(), mass=1.0)
+
+    def test_calculate_inertia_zero_mass(self):
+        """Test that calculate_inertia with zero mass returns minimal inertia."""
+        from linkforge_core.physics.inertia import calculate_inertia
+
+        box = Box(size=Vector3(1.0, 1.0, 1.0))
+        inertia = calculate_inertia(box, mass=0.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_calculate_mesh_inertia_zero_mass(self):
+        """Test calculate_mesh_inertia (approximation) with zero mass."""
+        from linkforge_core.models.geometry import Mesh
+        from linkforge_core.physics.inertia import calculate_mesh_inertia
+
+        mesh = Mesh(filepath="package://test/meshes/test.stl", scale=Vector3(1.0, 1.0, 1.0))
+        inertia = calculate_mesh_inertia(mesh, mass=0.0)
+
+        assert inertia.ixx == pytest.approx(1e-06)
+        assert inertia.iyy == pytest.approx(1e-06)
+        assert inertia.izz == pytest.approx(1e-06)
+
+    def test_calculate_mesh_inertia_approximation(self):
+        """Test that calculate_mesh_inertia uses bounding box approximation."""
+        from linkforge_core.models.geometry import Mesh
+        from linkforge_core.physics.inertia import calculate_mesh_inertia
+
+        # Mesh with scale 2x3x4
+        mesh = Mesh(filepath="package://test/meshes/test.stl", scale=Vector3(2.0, 3.0, 4.0))
+        inertia = calculate_mesh_inertia(mesh, mass=10.0)
+
+        # Should approximate as a box with the same scale
+        box = Box(size=Vector3(2.0, 3.0, 4.0))
+        box_inertia = calculate_box_inertia(box, mass=10.0)
+
+        assert inertia.ixx == box_inertia.ixx
+        assert inertia.iyy == box_inertia.iyy
+        assert inertia.izz == box_inertia.izz
+
+
 class TestInertiaTriangleInequality:
     """Verify that all calculated inertia tensors satisfy the triangle inequality.
 
