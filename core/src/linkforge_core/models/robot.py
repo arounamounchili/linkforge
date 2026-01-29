@@ -17,7 +17,8 @@ fidelity to generate highly optimized URDF/XACRO for ROS-ready environments.
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+from dataclasses import InitVar, dataclass, field
 from typing import Any
 
 from ..utils.string_utils import is_valid_urdf_name
@@ -43,21 +44,31 @@ class Robot:
 
     name: str
     version: str = "1.1"  # LinkForge IR Version
-    links: list[Link] = field(default_factory=list)
-    joints: list[Joint] = field(default_factory=list)
     sensors: list[Sensor] = field(default_factory=list)
     transmissions: list[Transmission] = field(default_factory=list)
     ros2_controls: list[Ros2Control] = field(default_factory=list)
     gazebo_elements: list[GazeboElement] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    # Internal O(1) lookup indices (not exposed in __init__, rebuilt automatically)
-    _link_index: dict[str, Link] = field(default_factory=dict, init=False, repr=False)
-    _joint_index: dict[str, Joint] = field(default_factory=dict, init=False, repr=False)
+    # Internal storage
+    _links: list[Link] = field(default_factory=list, init=False)
+    _joints: list[Joint] = field(default_factory=list, init=False)
+
+    # Fast lookup indices (name -> object)
+    _link_index: dict[str, Link] = field(default_factory=dict, init=False)
+    _joint_index: dict[str, Joint] = field(default_factory=dict, init=False)
     _sensor_index: dict[str, Sensor] = field(default_factory=dict, init=False, repr=False)
 
-    def __post_init__(self) -> None:
-        """Validate robot and build lookup indices."""
+    # Init args
+    initial_links: InitVar[Sequence[Link] | None] = None
+    initial_joints: InitVar[Sequence[Joint] | None] = None
+
+    def __post_init__(
+        self,
+        initial_links: Sequence[Link] | None,
+        initial_joints: Sequence[Joint] | None,
+    ) -> None:
+        """Initialize indices and validate structure."""
         if not self.name:
             raise ValueError("Robot name cannot be empty")
 
@@ -68,24 +79,32 @@ class Robot:
                 "Use only alphanumeric, underscore, or hyphen."
             )
 
-        # Build O(1) lookup indices
-        self._rebuild_indices()
+        # Initialize storage
+        if initial_links:
+            self._links.extend(initial_links)
+        if initial_joints:
+            self._joints.extend(initial_joints)
 
-    def _rebuild_indices(self) -> None:
-        """Rebuild internal O(1) lookup indices.
+        # Build indices
+        self._link_index = {}
+        for link in self._links:
+            if link.name in self._link_index:
+                raise ValueError(f"Duplicate link name: {link.name}")
+            self._link_index[link.name] = link
 
-        Called once during __post_init__. When components are added via add_*
-        methods, they update the indices directly for efficiency.
-        """
-        self._link_index = {link.name: link for link in self.links}
-        self._joint_index = {joint.name: joint for joint in self.joints}
+        self._joint_index = {}
+        for joint in self._joints:
+            if joint.name in self._joint_index:
+                raise ValueError(f"Duplicate joint name: {joint.name}")
+            self._joint_index[joint.name] = joint
+
         self._sensor_index = {sensor.name: sensor for sensor in self.sensors}
 
     def add_link(self, link: Link) -> None:
         """Add a link to the robot and update indices."""
         if link.name in self._link_index:
             raise ValueError(f"Link '{link.name}' already exists")
-        self.links.append(link)
+        self._links.append(link)
         self._link_index[link.name] = link
 
     def add_joint(self, joint: Joint) -> None:
@@ -99,7 +118,7 @@ class Robot:
         if joint.child not in self._link_index:
             raise ValueError(f"Child link '{joint.child}' not found")
 
-        self.joints.append(joint)
+        self._joints.append(joint)
         self._joint_index[joint.name] = joint
 
     def get_link(self, name: str) -> Link | None:
@@ -378,6 +397,22 @@ class Robot:
     def degrees_of_freedom(self) -> int:
         """Calculate total degrees of freedom (actuated joints only)."""
         return sum(joint.degrees_of_freedom for joint in self.joints)
+
+    @property
+    def links(self) -> tuple[Link, ...]:
+        """Get read-only view of links.
+
+        Use `add_link()` to modify the robot structure.
+        """
+        return tuple(self._links)
+
+    @property
+    def joints(self) -> tuple[Joint, ...]:
+        """Get read-only view of joints.
+
+        Use `add_joint()` to modify the robot structure.
+        """
+        return tuple(self._joints)
 
     def __str__(self) -> str:
         """String representation."""

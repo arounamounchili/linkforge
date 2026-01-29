@@ -182,8 +182,8 @@ class TestRobotValidation:
     def test_duplicate_link_names(self):
         """Test that duplicate link names fail validation."""
         robot = Robot(name="test_robot")
-        robot.links.append(Link(name="link1"))
-        robot.links.append(Link(name="link1"))  # Bypass add_link validation
+        robot._links.append(Link(name="link1"))
+        robot._links.append(Link(name="link1"))  # Bypass add_link validation
 
         errors = robot.validate_tree_structure()
         assert any("Duplicate link names" in err for err in errors)
@@ -198,8 +198,8 @@ class TestRobotValidation:
         joint1 = Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2")
         joint2 = Joint(name="joint1", type=JointType.FIXED, parent="link2", child="link3")
 
-        robot.joints.append(joint1)
-        robot.joints.append(joint2)
+        robot._joints.append(joint1)
+        robot._joints.append(joint2)
 
         errors = robot.validate_tree_structure()
         assert any("Duplicate joint names" in err for err in errors)
@@ -210,7 +210,7 @@ class TestRobotValidation:
         robot.add_link(Link(name="link2"))
 
         # Manually add joint to bypass add_joint validation
-        robot.joints.append(
+        robot._joints.append(
             Joint(
                 name="joint1",
                 type=JointType.FIXED,
@@ -229,12 +229,8 @@ class TestRobotValidation:
         robot.add_link(Link(name="link2"))
 
         # Create a cycle
-        robot.joints.append(
-            Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2")
-        )
-        robot.joints.append(
-            Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1")
-        )
+        robot.add_joint(Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2"))
+        robot.add_joint(Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1"))
 
         errors = robot.validate_tree_structure()
         assert any("cycle" in err.lower() for err in errors)
