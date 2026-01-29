@@ -138,67 +138,24 @@ def import_mesh_file(mesh_path: Path, name: str):
         elif ext == ".stl":
             bpy.ops.wm.stl_import(filepath=str(mesh_path))
         elif ext == ".dae":
-            # DAE might not be available in all Blender versions (Removed in 5.0)
-            if hasattr(bpy.ops.wm, "collada_import"):
-                bpy.ops.wm.collada_import(filepath=str(mesh_path))
-            else:
-                msg = (
-                    f"COLLADA (.dae) support was removed in Blender 5.0.\n"
-                    f"Failed to import mesh '{mesh_path.name}'.\n"
-                    "Please convert the mesh to .glb or .obj format."
-                )
-                logger.error(msg)
-                return None
+            # DAE is deprecated and unsupported in modern workflows.
+            logger.warning(
+                f"Skipping DAE import for '{mesh_path.name}'. "
+                "DAE is a legacy format. Please convert to glTF (.glb) or OBJ."
+            )
+            return None
         elif ext in (".glb", ".gltf"):
-            # glTF support: Try modern first, then legacy, then check addon
-            imported = False
-
-            # Attempt 1: Modern Blender 4.2+ (bpy.ops.wm.gltf_import)
-            if not imported:
-                try:
-                    bpy.ops.wm.gltf_import(filepath=str(mesh_path))
-                    imported = True
-                except (AttributeError, NameError):
-                    pass
-
-            # Attempt 2: Legacy Blender (bpy.ops.import_scene.gltf)
-            if not imported:
-                try:
-                    bpy.ops.import_scene.gltf(filepath=str(mesh_path))
-                    imported = True
-                except (AttributeError, NameError):
-                    pass
-
-            # Attempt 3: Enable Addon and Retry
-            if not imported:
-                import addon_utils
-
-                addon_name = "io_scene_gltf2"
-                is_enabled, _ = addon_utils.check(addon_name)
-
-                if not is_enabled:
-                    try:
-                        logger.info(f"Enabling {addon_name} addon...")
-                        addon_utils.enable(addon_name)
-
-                        # Retry Modern
-                        try:
-                            bpy.ops.wm.gltf_import(filepath=str(mesh_path))
-                            imported = True
-                        except (AttributeError, NameError):
-                            # Retry Legacy
-                            try:
-                                bpy.ops.import_scene.gltf(filepath=str(mesh_path))
-                                imported = True
-                            except (AttributeError, NameError):
-                                pass
-                    except Exception as e:
-                        logger.error(f"Failed to enable glTF addon: {e}")
-
-            if not imported:
-                logger.error(
-                    "glTF importer not found. Ensure 'Import-Export: glTF 2.0 format' addon is enabled."
-                )
+            # glTF support: Only use modern importer
+            try:
+                bpy.ops.wm.gltf_import(filepath=str(mesh_path))
+                # Get imported object (should be selected)
+                imported_objects = list(bpy.context.selected_objects)
+                if imported_objects:
+                    obj = imported_objects[0]
+                    obj.name = name
+                    return obj
+            except (AttributeError, NameError):
+                logger.error("Modern glTF importer not found (requires Blender 3.6+).")
                 return None
         else:
             return None
@@ -727,23 +684,11 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
 
         # Gazebo plugin
         if sensor.plugin:
-            # Smart Filter: Check for legacy Gazebo Classic plugins
-            # If we find a known legacy plugin (libgazebo_ros_*), we SKIP importing it.
-            # This ensures that when we re-export, we get a clean "Modern Gazebo Sim" definition
-            # (which uses built-in sensor behavior instead of plugins).
-            is_legacy_plugin = sensor.plugin.filename and "libgazebo_ros_" in sensor.plugin.filename
-
-            if is_legacy_plugin:
-                logger.info(
-                    f"Modernizing: Dropping legacy plugin '{sensor.plugin.filename}' from sensor '{sensor.name}'"
-                )
-            else:
-                # Only import if it's NOT a legacy plugin (e.g. custom user plugin)
-                props.use_gazebo_plugin = True
-                props.plugin_filename = sensor.plugin.filename
-                # Store raw XML for round-trip fidelity
-                if sensor.plugin.raw_xml:
-                    props.plugin_raw_xml = sensor.plugin.raw_xml
+            props.use_gazebo_plugin = True
+            props.plugin_filename = sensor.plugin.filename
+            # Store raw XML for round-trip fidelity
+            if sensor.plugin.raw_xml:
+                props.plugin_raw_xml = sensor.plugin.raw_xml
 
     link_obj = link_objects[sensor.link_name]
     empty.parent = link_obj
@@ -774,20 +719,17 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
     return empty
 
 
-def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
-    """Import Robot model to Blender scene.
+def setup_scene_for_robot(scene, robot: Robot):
+    """Initialize scene properties for a robot model.
+
+    This populates the Centralized Control Dashboard, Gazebo settings,
+    and metadata based on the robot model.
 
     Args:
-        robot: Robot model
-        urdf_path: Path to URDF file
-        context: Blender context
-
-    Returns:
-        True if import succeeded, False otherwise
-
+        scene: Blender Scene object
+        robot: Robot model to extract settings from
     """
     # Set robot name in scene properties
-    scene = context.scene
     scene.linkforge.robot_name = robot.name
 
     # Reset Global LinkForge State
@@ -834,6 +776,41 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
             else:
                 continue
             break
+
+    # Legacy Transmissions are no longer auto-converted.
+    # We strictly respect the presence of <ros2_control> tags.
+    if (
+        hasattr(robot, "transmissions")
+        and robot.transmissions
+        and not scene.linkforge.use_ros2_control
+    ):
+        logger.info(
+            f"Note: {len(robot.transmissions)} legacy transmissions found but skipped. "
+            "LinkForge requires explicit <ros2_control> configuration."
+        )
+
+    # Reconstruct from ros2_control? (Handled primarily by Centralized migration)
+    # But for backward compatibility with 3rd party URDFs that use ros2_control
+    # but NO transmissions, we already populated the Centralized list above.
+    # No need to create redundant "Transmission" Empty objects.
+    elif hasattr(robot, "ros2_controls") and robot.ros2_controls:
+        logger.info("Imported centralized ros2_control config. (Skipping legacy transmissions)")
+
+
+def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
+    """Import Robot model to Blender scene.
+
+    Args:
+        robot: Robot model
+        urdf_path: Path to URDF file
+        context: Blender context
+
+    Returns:
+        True if import succeeded, False otherwise
+
+    """
+    # Setup global scene properties (ros2_control, metadata, etc.)
+    setup_scene_for_robot(context.scene, robot)
 
     # Create collection for this robot
     collection = bpy.data.collections.new(robot.name)
@@ -919,93 +896,6 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
         for sensor in robot.sensors:
             if create_sensor_object(sensor, link_objects, collection):
                 sensors_created += 1
-
-    # Auto-Convert Legacy Transmissions to Centralized Dashboard
-    # Priority Rule: If modern ros2_control exists, we prefer it.
-    # If NOT, we read the legacy transmissions and convert them directly to the new system.
-    has_ros2_control = hasattr(scene, "linkforge") and scene.linkforge.use_ros2_control
-
-    if hasattr(robot, "transmissions") and robot.transmissions:
-        if not has_ros2_control:
-            logger.info("Auto-converting legacy transmissions to Centralized Control system...")
-
-            # Enable the system
-            scene.linkforge.use_ros2_control = True
-
-            # Track added joints to prevent duplicates
-            added_joints = {item.name for item in scene.linkforge.ros2_control_joints}
-            converted_count = 0
-
-            for transmission in robot.transmissions:
-                # We need at least one joint and an actuator/interface definition
-                if not transmission.joints:
-                    continue
-
-                joint_name = transmission.joints[0].name
-
-                # If we've already configured this joint, skip
-                if joint_name in added_joints:
-                    continue
-
-                # Create new item in dashboard
-                item = scene.linkforge.ros2_control_joints.add()
-                item.name = joint_name
-                added_joints.add(joint_name)
-                converted_count += 1
-
-                # Determine Interface Mode
-                is_position = False
-                is_velocity = False
-                is_effort = False
-
-                # Check transmission type first
-                t_type = transmission.type.lower()
-                if "position" in t_type:
-                    is_position = True
-                elif "velocity" in t_type:
-                    is_velocity = True
-                elif "effort" in t_type:
-                    is_effort = True
-
-                # Check actuators (more standard)
-                for actuator in transmission.actuators:
-                    # hardware_interfaces is a list
-                    for hw_interface in actuator.hardware_interfaces:
-                        hw = hw_interface.lower() if hw_interface else ""
-                        if "position" in hw:
-                            is_position = True
-                        elif "velocity" in hw:
-                            is_velocity = True
-                        elif "effort" in hw:
-                            is_effort = True
-
-                # Fallback: Default to Position if nothing specific found (safest for most arms)
-                if not (is_position or is_velocity or is_effort):
-                    is_position = True
-
-                # Apply to Item
-                if is_position:
-                    item.cmd_position = True
-                    item.state_position = True
-                if is_velocity:
-                    item.cmd_velocity = True
-                    item.state_velocity = True
-                if is_effort:
-                    item.cmd_effort = True
-                    item.state_effort = True
-
-            logger.info(f"Auto-converted {converted_count} legacy transmissions to Dashboard")
-        else:
-            logger.info(
-                f"Skipped {len(robot.transmissions)} legacy transmissions (ros2_control active)"
-            )
-
-    # Reconstruct from ros2_control? (Handled primarily by Centralized migration)
-    # But for backward compatibility with 3rd party URDFs that use ros2_control
-    # but NO transmissions, we already populated the Centralized list above.
-    # No need to create redundant "Transmission" Empty objects.
-    elif hasattr(robot, "ros2_controls") and robot.ros2_controls:
-        logger.info("Imported centralized ros2_control config. (Skipping legacy transmissions)")
 
     # Update scene to ensure all transforms are calculated correctly
     # This is critical for round-trip: ensures child link locations are properly evaluated

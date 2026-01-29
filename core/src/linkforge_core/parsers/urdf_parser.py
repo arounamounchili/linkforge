@@ -590,13 +590,13 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
         command_interfaces = []
         for cmd_elem in joint_elem.findall("command_interface"):
             iface_name = cmd_elem.get("name", "position")
-            command_interfaces.append(iface_name)
+            command_interfaces.append(_normalize_hardware_interface(iface_name))
 
         # Parse state interfaces
         state_interfaces = []
         for state_elem in joint_elem.findall("state_interface"):
             iface_name = state_elem.get("name", "position")
-            state_interfaces.append(iface_name)
+            state_interfaces.append(_normalize_hardware_interface(iface_name))
 
         # Only add joint if it has at least one command OR state interface
         if command_interfaces or state_interfaces:

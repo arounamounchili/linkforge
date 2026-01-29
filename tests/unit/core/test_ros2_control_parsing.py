@@ -163,23 +163,37 @@ class TestRos2ControlJointValidation:
                 state_interfaces=["position"],
             )
 
-    def test_missing_command_interfaces(self):
-        """Test that missing command interfaces raises error."""
-        with pytest.raises(ValueError, match="must have at least one command interface"):
+    def test_missing_all_interfaces(self):
+        """Test that missing ALL interfaces raises error."""
+        with pytest.raises(ValueError, match="must have at least one command OR state interface"):
             Ros2ControlJoint(
                 name="joint1",
                 command_interfaces=[],
-                state_interfaces=["position"],
-            )
-
-    def test_missing_state_interfaces(self):
-        """Test that missing state interfaces raises error."""
-        with pytest.raises(ValueError, match="must have at least one state interface"):
-            Ros2ControlJoint(
-                name="joint1",
-                command_interfaces=["position"],
                 state_interfaces=[],
             )
+
+
+def test_ros2_control_normalization():
+    """Test that interface names are normalized (e.g. full ROS paths to short names)."""
+    urdf_string = """<?xml version="1.0"?>
+    <robot name="test">
+      <link name="base_link"/>
+      <ros2_control name="TestSystem" type="system">
+        <hardware>
+          <plugin>test_plugin</plugin>
+        </hardware>
+        <joint name="joint1">
+          <command_interface name="hardware_interface/PositionJointInterface"/>
+          <state_interface name="hardware_interface/VelocityJointInterface"/>
+        </joint>
+      </ros2_control>
+    </robot>
+    """
+    robot = URDFParser().parse_string(urdf_string)
+
+    rc = robot.ros2_controls[0]
+    assert rc.joints[0].command_interfaces == ["position"]
+    assert rc.joints[0].state_interfaces == ["velocity"]
 
 
 class TestRos2ControlValidation:

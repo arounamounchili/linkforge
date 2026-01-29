@@ -17,6 +17,7 @@ from .scene_builder import (
     create_joint_object,
     create_link_object,
     create_sensor_object,
+    setup_scene_for_robot,
 )
 
 logger = get_logger(__name__)
@@ -53,14 +54,17 @@ class AsynchronousRobotBuilder:
 
     def _prepare_tasks(self):
         """Build the list of tasks to be performed."""
-        # 1. Create collection
+        # 1. Setup Scene (ROS 2 Control, Gazebo, etc.)
+        self.tasks.append(("setup_scene", None))
+
+        # 2. Create collection
         self.tasks.append(("create_collection", None))
 
-        # 2. Create link tasks
+        # 3. Create link tasks
         for link in self.robot.links:
             self.tasks.append(("create_link", link))
 
-        # 3. Create sorted joint tasks
+        # 4. Create sorted joint tasks
         # We need to sort joints topologically exactly like in scene_builder
         # We reuse the internal sort function logic
         def sort_joints_topological(joints, links):
@@ -92,16 +96,16 @@ class AsynchronousRobotBuilder:
         for joint in sorted_joints:
             self.tasks.append(("create_joint", joint))
 
-        # 4. Mimic joints resolution
+        # 5. Mimic joints resolution
         self.tasks.append(("resolve_mimics", None))
 
-        # 5. Sensors
+        # 6. Sensors
         if hasattr(self.robot, "sensors"):
             for sensor in self.robot.sensors:
                 # Assuming SceneBuilder can handle sensors
                 self.tasks.append(("create_sensor", sensor))
 
-        # 6. Finalization
+        # 7. Finalization
         self.tasks.append(("finalize", None))
 
     def start(self):
@@ -169,7 +173,10 @@ class AsynchronousRobotBuilder:
 
     def _execute_task(self, task_type, data):
         """Execute a single unit of work."""
-        if task_type == "create_collection":
+        if task_type == "setup_scene":
+            setup_scene_for_robot(self.context.scene, self.robot)
+
+        elif task_type == "create_collection":
             self.collection = bpy.data.collections.new(self.robot.name)
             self.context.scene.collection.children.link(self.collection)
 

@@ -111,11 +111,6 @@ class RobotPropertyGroup(PropertyGroup):
                 "STereoLithography without materials - for simple geometry or 3D printing",
             ),
             (
-                "DAE",
-                "DAE",
-                "COLLADA (Legacy) - Materials and animations. Unsupported in Blender 5.0+",
-            ),
-            (
                 "GLB",
                 "glTF Binary (.glb)",
                 "Modern, efficient standard - best for web/Foxglove/Isaac Sim",

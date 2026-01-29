@@ -1,5 +1,7 @@
 name: Blender Tests
 
+permissions:
+  contents: read
 on:
   push:
     branches: [main]
