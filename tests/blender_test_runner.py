@@ -16,17 +16,13 @@ def setup_environment():
     # Get the project root directory
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-    # Add core and platforms/blender to sys.path
-    core_src = os.path.join(project_root, "core", "src")
+    # Add platforms/blender to sys.path
     blender_path = os.path.join(project_root, "platforms", "blender")
 
-    if core_src not in sys.path:
-        sys.path.insert(0, core_src)
     if blender_path not in sys.path:
         sys.path.insert(0, blender_path)
 
     print(f"Project root: {project_root}")
-    print(f"Added to sys.path: {core_src}")
     print(f"Added to sys.path: {blender_path}")
 
     # Ensure pytest is available in Blender's Python
@@ -58,8 +54,7 @@ def run_tests():
         test_dir,
         "-v",
         "--tb=short",
-        # Avoid loading any root conftest.py that might try to import non-blender stuff
-        "--noconftest",
+        # We allow conftest.py in the blender test directory
     ]
 
     import pytest

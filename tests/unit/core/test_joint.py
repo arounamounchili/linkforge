@@ -437,3 +437,100 @@ class TestJointType:
     def test_joint_type_count(self):
         """Test that we have exactly 6 joint types."""
         assert len(JointType) == 6
+
+
+class TestJointAxisNormalization:
+    """Tests for joint axis normalization."""
+
+    def test_axis_normalization(self):
+        """Test that non-unit axis vectors are normalized."""
+        joint = Joint(
+            name="joint1",
+            type=JointType.REVOLUTE,
+            parent="link1",
+            child="link2",
+            axis=Vector3(2.0, 0.0, 0.0),  # Non-unit vector
+            limits=JointLimits(lower=0.0, upper=1.0),
+        )
+        # Should be normalized to unit vector
+        assert abs(joint.axis.x - 1.0) < 1e-6
+        assert abs(joint.axis.y) < 1e-6
+        assert abs(joint.axis.z) < 1e-6
+
+    def test_axis_normalization_complex(self):
+        """Test normalization of complex axis vector."""
+        joint = Joint(
+            name="joint1",
+            type=JointType.REVOLUTE,
+            parent="link1",
+            child="link2",
+            axis=Vector3(3.0, 4.0, 0.0),  # Magnitude = 5.0
+            limits=JointLimits(lower=0.0, upper=1.0),
+        )
+        # Should be normalized to (0.6, 0.8, 0.0)
+        assert abs(joint.axis.x - 0.6) < 1e-6
+        assert abs(joint.axis.y - 0.8) < 1e-6
+        assert abs(joint.axis.z) < 1e-6
+
+    def test_axis_already_normalized(self):
+        """Test that already-normalized axis is not modified."""
+        joint = Joint(
+            name="joint1",
+            type=JointType.REVOLUTE,
+            parent="link1",
+            child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),  # Already unit vector
+            limits=JointLimits(lower=0.0, upper=1.0),
+        )
+        # Should remain unchanged
+        assert joint.axis.x == 1.0
+        assert joint.axis.y == 0.0
+        assert joint.axis.z == 0.0
+
+
+class TestJointAxisWarnings:
+    """Tests for joint axis validation warnings."""
+
+    def test_fixed_joint_with_axis_warning(self, caplog):
+        """Test that fixed joint with axis logs warning and removes axis."""
+        import logging
+
+        joint = Joint(
+            name="fixed_joint",
+            type=JointType.FIXED,
+            parent="link1",
+            child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),  # Fixed joints shouldn't have axis
+        )
+
+        # Verify axis was removed
+        assert joint.axis is None
+
+        # Verify warning was logged
+        assert any(
+            "Fixed/Floating joints do not use axes" in record.message
+            for record in caplog.records
+            if record.levelno == logging.WARNING
+        )
+
+    def test_floating_joint_with_axis_warning(self, caplog):
+        """Test that floating joint with axis logs warning and removes axis."""
+        import logging
+
+        joint = Joint(
+            name="floating_joint",
+            type=JointType.FLOATING,
+            parent="link1",
+            child="link2",
+            axis=Vector3(0.0, 1.0, 0.0),  # Floating joints shouldn't have axis
+        )
+
+        # Verify axis was removed
+        assert joint.axis is None
+
+        # Verify warning was logged
+        assert any(
+            "Fixed/Floating joints do not use axes" in record.message
+            for record in caplog.records
+            if record.levelno == logging.WARNING
+        )

@@ -1,25 +1,41 @@
 import pytest
-from linkforge_core.base import RobotGenerator, RobotGeneratorError, RobotParserError
+from linkforge_core.base import (
+    LinkForgeError,
+    RobotGenerator,
+    RobotGeneratorError,
+    RobotParser,
+    RobotParserError,
+)
 from linkforge_core.models.robot import Robot
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-class MockStringGenerator(RobotGenerator[str]):
+class TestStringGenerator(RobotGenerator[str]):
     def generate(self, robot: Robot, **kwargs) -> str:
         suffix = kwargs.get("suffix", "")
         return f"Robot: {robot.name}{suffix}"
 
 
-class MockBinaryGenerator(RobotGenerator[bytes]):
+class TestBinaryGenerator(RobotGenerator[bytes]):
     def generate(self, robot: Robot, **kwargs) -> bytes:
         return b"\x00\x01\x02"
 
     # Needs no override for write(), but uses default bytes support
 
 
+class TestUnsupportedTypeGenerator(RobotGenerator[dict]):
+    def generate(self, robot: Robot, **kwargs) -> dict:
+        return {"name": robot.name}
+
+
+class TestLinkForgeErrorGenerator(RobotGenerator[str]):
+    def generate(self, robot: Robot, **kwargs) -> str:
+        raise LinkForgeError("Custom LinkForge error")
+
+
 def test_auto_directory_creation(tmp_path):
     robot = Robot(name="test_bot")
-    generator = MockStringGenerator()
+    generator = TestStringGenerator()
 
     deep_path = tmp_path / "a" / "b" / "c" / "robot.txt"
     generator.write(robot, deep_path)
@@ -30,7 +46,7 @@ def test_auto_directory_creation(tmp_path):
 
 def test_kwargs_in_generate(tmp_path):
     robot = Robot(name="test_bot")
-    generator = MockStringGenerator()
+    generator = TestStringGenerator()
 
     content = generator.generate(robot, suffix="!!!")
     assert content == "Robot: test_bot!!!"
@@ -38,7 +54,7 @@ def test_kwargs_in_generate(tmp_path):
 
 def test_binary_write_support(tmp_path):
     robot = Robot(name="test_bot")
-    generator = MockBinaryGenerator()
+    generator = TestBinaryGenerator()
 
     bin_path = tmp_path / "robot.bin"
     generator.write(robot, bin_path)
@@ -67,6 +83,30 @@ def test_custom_exception_wrapping(tmp_path):
     assert "Something went wrong internals" in str(excinfo.value)
 
 
+def test_linkforge_error_passthrough(tmp_path):
+    """Test that LinkForgeError is re-raised without wrapping."""
+    generator = TestLinkForgeErrorGenerator()
+    robot = Robot(name="test")
+
+    with pytest.raises(LinkForgeError) as excinfo:
+        generator.write(robot, tmp_path / "test.txt")
+
+    assert "Custom LinkForge error" in str(excinfo.value)
+    assert not isinstance(excinfo.value, RobotGeneratorError)
+
+
+def test_unsupported_content_type(tmp_path):
+    """Test that unsupported content types raise RobotGeneratorError."""
+    generator = TestUnsupportedTypeGenerator()
+    robot = Robot(name="test")
+
+    with pytest.raises(RobotGeneratorError) as excinfo:
+        generator.write(robot, tmp_path / "test.txt")
+
+    assert "does not support" in str(excinfo.value)
+    assert "TestUnsupportedTypeGenerator" in str(excinfo.value)
+
+
 def test_parser_detects_xacro_in_urdf():
     parser = URDFParser()
     xacro_content = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"></robot>'
@@ -90,3 +130,15 @@ def test_xacro_parser_basic(tmp_path):
 
     assert robot.name == "xacro_bot"
     assert any(link.name == "base_link" for link in robot.links)
+
+
+def test_abstract_generator_cannot_instantiate():
+    """Test that abstract RobotGenerator cannot be instantiated."""
+    with pytest.raises(TypeError):
+        RobotGenerator()  # type: ignore
+
+
+def test_abstract_parser_cannot_instantiate():
+    """Test that abstract RobotParser cannot be instantiated."""
+    with pytest.raises(TypeError):
+        RobotParser()  # type: ignore

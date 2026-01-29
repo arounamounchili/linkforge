@@ -184,7 +184,7 @@ def parse_geometry(
                 if urdf_directory is not None and not mesh_path.is_absolute():
                     # Validate that mesh path doesn't escape URDF directory
                     try:
-                        validate_mesh_path(mesh_path, urdf_directory)
+                        mesh_path = validate_mesh_path(mesh_path, urdf_directory)
                     except ValueError as e:
                         # Re-raise with more context
                         raise ValueError(f"Mesh path validation failed: {e}") from e
@@ -194,7 +194,7 @@ def parse_geometry(
                 if urdf_directory is not None:
                     # Validate that mesh path doesn't escape URDF directory
                     try:
-                        validate_mesh_path(mesh_path, urdf_directory)
+                        mesh_path = validate_mesh_path(mesh_path, urdf_directory)
                     except ValueError as e:
                         # Re-raise with more context
                         raise ValueError(f"Mesh path validation failed: {e}") from e
@@ -1102,6 +1102,14 @@ def _detect_xacro_file(root: ET.Element, filepath: Path) -> None:
 class URDFParser(RobotParser):
     """Refined URDF Parser using a class-based interface."""
 
+    def __init__(self, max_file_size: int = MAX_FILE_SIZE) -> None:
+        """Initialize parser.
+
+        Args:
+            max_file_size: Maximum allowed file size in bytes (default: 100MB)
+        """
+        self.max_file_size = max_file_size
+
     def parse(self, filepath: Path, **kwargs: Any) -> Robot:
         """Parse URDF file into a Robot model using iterative parsing.
 
@@ -1209,10 +1217,10 @@ class URDFParser(RobotParser):
         """
         # Check string size to prevent DoS
         string_size = len(urdf_string.encode("utf-8"))
-        if string_size > MAX_FILE_SIZE:
+        if string_size > self.max_file_size:
             raise RobotParserError(
                 f"URDF string too large: {string_size / (1024 * 1024):.1f} MB "
-                f"(maximum {MAX_FILE_SIZE / (1024 * 1024):.1f} MB)."
+                f"(maximum {self.max_file_size / (1024 * 1024):.1f} MB)."
             )
 
         try:

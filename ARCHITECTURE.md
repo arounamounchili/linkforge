@@ -381,7 +381,7 @@ class Robot:
 graph TB
     subgraph "Test Pyramid"
         Integration[Integration Tests<br/>System Workflows]
-        Blender[Blender Unit Tests<br/>Mocked API]
+        Blender[Blender Unit Tests<br/>Real Headless API]
         Core[Core Unit Tests<br/>Pure Logic]
     end
 
@@ -395,7 +395,7 @@ graph TB
 
 ### Test Categories
 - **Unit Tests (Core)**: Isolated tests for platform-independent data models and math.
-- **Unit Tests (Blender)**: Isolated tests for Blender-specific logic using mocks.
+- **Unit Tests (Blender)**: Tests for Blender-specific logic running in a real headless Blender environment.
 - **Integration Tests**: Full workflow validation, multi-file parsing, and end-to-end round-trips.
 
 ## Security Architecture

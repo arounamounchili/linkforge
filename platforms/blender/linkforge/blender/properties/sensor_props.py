@@ -137,6 +137,18 @@ class SensorPropertyGroup(PropertyGroup):
         precision=1,
     )
 
+    always_on: BoolProperty(  # type: ignore
+        name="Always On",
+        description="Whether the sensor is always active",
+        default=False,
+    )
+
+    visualize: BoolProperty(  # type: ignore
+        name="Visualize",
+        description="Enable visualization in the simulator",
+        default=False,
+    )
+
     topic_name: StringProperty(  # type: ignore
         name="Topic Name",
         description="ROS topic name for sensor data",

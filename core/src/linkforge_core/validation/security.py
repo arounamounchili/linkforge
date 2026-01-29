@@ -79,6 +79,28 @@ def validate_mesh_path(
         resolved = (urdf_directory / mesh_filepath).resolve()
 
     # Additional security: check for suspicious system paths
+    if is_suspicious_location(resolved):
+        logger.warning(
+            f"SECURITY: System path access attempt - '{mesh_filepath}' "
+            f"resolves to restricted location: {resolved}"
+        )
+        raise ValueError(
+            f"Mesh path '{mesh_filepath}' resolves to a restricted system location: {resolved}. "
+            "This is not allowed for security reasons."
+        )
+
+    return resolved
+
+
+def is_suspicious_location(path: Path) -> bool:
+    """Check if a path resolves to a suspicious system location.
+
+    Args:
+        path: The path to check (should be resolved/absolute)
+
+    Returns:
+        True if the path is suspicious/restricted
+    """
     suspicious_paths = [
         "/etc",
         "/sys",
@@ -88,32 +110,25 @@ def validate_mesh_path(
         "C:\\Windows",
         "C:\\System32",
     ]
+
+    # Ensure we are checking a resolved path if possible, but input might be whatever
+    # The caller usually resolves it first.
+
     for suspicious in suspicious_paths:
-        is_suspicious = False
         try:
-            resolved.relative_to(suspicious)
-            is_suspicious = True
+            path.relative_to(suspicious)
+            return True
         except ValueError:
             # Check relative to resolved suspicious path (handles symlinks e.g. /etc -> /private/etc)
             try:
                 s_path = Path(suspicious)
                 if s_path.exists():
-                    resolved.relative_to(s_path.resolve())
-                    is_suspicious = True
+                    path.relative_to(s_path.resolve())
+                    return True
             except (ValueError, OSError):
                 pass
 
-        if is_suspicious:
-            logger.warning(
-                f"SECURITY: System path access attempt - '{mesh_filepath}' "
-                f"resolves to restricted location: {resolved}"
-            )
-            raise ValueError(
-                f"Mesh path '{mesh_filepath}' resolves to a restricted system location: {resolved}. "
-                "This is not allowed for security reasons."
-            )
-
-    return resolved
+    return False
 
 
 def validate_package_uri(uri: str) -> str:

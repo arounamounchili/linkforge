@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from unittest.mock import patch
 
 from linkforge_core.parsers.urdf_parser import (
     parse_geometry,
@@ -37,9 +36,13 @@ def test_parse_geometry_validation_calls():
     mesh = ET.SubElement(geom_elem, "mesh")
     mesh.set("filename", "relative/path.stl")
 
-    with patch("linkforge_core.parsers.urdf_parser.validate_mesh_path") as mock_val:
-        parse_geometry(geom_elem, urdf_directory=Path("/tmp"))
-        mock_val.assert_called_once()
+    # If we provide a directory, the parser calls validate_mesh_path
+    # which resolves it to an absolute path.
+    urdf_dir = Path("/tmp")
+    geom = parse_geometry(geom_elem, urdf_directory=urdf_dir)
+
+    expected = (urdf_dir / "relative/path.stl").resolve()
+    assert geom.filepath == expected
 
 
 def test_parse_transmission_defaults():

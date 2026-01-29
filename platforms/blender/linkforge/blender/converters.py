@@ -1110,6 +1110,8 @@ def blender_sensor_to_core(obj: Any) -> Sensor | None:
         link_name=link_name,
         origin=origin,
         update_rate=props.update_rate,
+        always_on=props.always_on,
+        visualize=props.visualize,
         camera_info=camera_info,
         lidar_info=lidar_info,
         imu_info=imu_info,

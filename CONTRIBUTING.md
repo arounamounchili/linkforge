@@ -231,6 +231,19 @@ def test_sensor_roundtrip():
 - **Unit Tests** (`tests/unit/`): Test individual functions/classes in isolation (Core or Blender).
 - **Integration Tests** (`tests/integration/`): Test full workflows and round-trips.
 
+### Testing Philosophy ("Real Data over Mocks")
+
+We prioritize testing with **real objects and environments** over mocking.
+
+1.  **Blender Tests**: Do **not** mock `bpy` or Blender data structures.
+    - Our test runner launches a real, headless Blender instance.
+    - Use `bpy.ops.object.empty_add()` to create real objects in your test fixtures.
+    - **Avoid**: `MagicMock`, partial mocks of `bpy.types`, or "dummy" property classes.
+
+2.  **Core Tests**: Use real data models.
+    - Instantiate real `Robot`, `Link`, or `Joint` objects.
+    - Do not mock internal helper functions unless strictly necessary (e.g., file system I/O for security tests).
+
 ## Code Style
 
 ### Python Style Guide

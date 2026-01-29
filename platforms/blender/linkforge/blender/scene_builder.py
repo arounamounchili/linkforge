@@ -79,6 +79,7 @@ def create_primitive_mesh(geometry, name: str):
                 obj.name = name
                 obj.dimensions = (geometry.size.x, geometry.size.y, geometry.size.z)
                 obj["urdf_geometry_type"] = "BOX"
+                bpy.context.view_layer.update()
 
         elif isinstance(geometry, Cylinder):
             bpy.ops.mesh.primitive_cylinder_add(location=(0, 0, 0))
@@ -87,6 +88,7 @@ def create_primitive_mesh(geometry, name: str):
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.length)
                 obj["urdf_geometry_type"] = "CYLINDER"
+                bpy.context.view_layer.update()
 
         elif isinstance(geometry, Sphere):
             bpy.ops.mesh.primitive_uv_sphere_add(location=(0, 0, 0))
@@ -95,6 +97,7 @@ def create_primitive_mesh(geometry, name: str):
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
                 obj["urdf_geometry_type"] = "SPHERE"
+                bpy.context.view_layer.update()
 
         else:
             return None
@@ -966,13 +969,15 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
 
                 # Check actuators (more standard)
                 for actuator in transmission.actuators:
-                    hw = actuator.hardware_interface.lower() if actuator.hardware_interface else ""
-                    if "position" in hw:
-                        is_position = True
-                    elif "velocity" in hw:
-                        is_velocity = True
-                    elif "effort" in hw:
-                        is_effort = True
+                    # hardware_interfaces is a list
+                    for hw_interface in actuator.hardware_interfaces:
+                        hw = hw_interface.lower() if hw_interface else ""
+                        if "position" in hw:
+                            is_position = True
+                        elif "velocity" in hw:
+                            is_velocity = True
+                        elif "effort" in hw:
+                            is_effort = True
 
                 # Fallback: Default to Position if nothing specific found (safest for most arms)
                 if not (is_position or is_velocity or is_effort):

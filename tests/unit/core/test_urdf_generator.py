@@ -224,7 +224,7 @@ class TestURDFGenerator:
         robot.add_link(Link(name="link2"))
 
         # Add joint with missing parent (bypass validation)
-        robot.joints.append(
+        robot._joints.append(
             Joint(
                 name="joint1",
                 type=JointType.FIXED,

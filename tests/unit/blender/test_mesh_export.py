@@ -1,181 +1,248 @@
-import sys
-from unittest.mock import MagicMock, patch
-
+import bpy
 import pytest
-
-# CRITICAL: Mock all Blender-related modules BEFORE any linkforge imports.
-# This prevents ModuleNotFoundError when linkforge.blender submodules are imported.
-
-
-def setup_blender_mocks():
-    mock_bpy = MagicMock()
-    mock_app = MagicMock()
-    mock_handlers = MagicMock()
-    mock_ops = MagicMock()
-    mock_wm = MagicMock()
-    mock_props = MagicMock()
-    mock_types = MagicMock()
-    mock_utils = MagicMock()
-    mock_data = MagicMock()
-    mock_context = MagicMock()
-    mock_path_utils = MagicMock()
-
-    # Setup hierarchy
-    mock_bpy.app = mock_app
-    mock_app.handlers = mock_handlers
-    mock_bpy.ops = mock_ops
-    mock_ops.wm = mock_wm
-    mock_bpy.props = mock_props
-    mock_bpy.types = mock_types
-    mock_bpy.utils = mock_utils
-    mock_bpy.data = mock_data
-    mock_bpy.context = mock_context
-    mock_bpy.path_utils = mock_path_utils
-
-    # Mock mathutils
-    mock_mathutils = MagicMock()
-    mock_matrix = MagicMock()
-    mock_vector = MagicMock()
-    mock_mathutils.Matrix = mock_matrix
-    mock_mathutils.Vector = mock_vector
-
-    # Mock bpy_extras
-    mock_bpy_extras = MagicMock()
-    mock_io_utils = MagicMock()
-    mock_bpy_extras.io_utils = mock_io_utils
-
-    # Mock gpu and bgl
-    mock_gpu = MagicMock()
-    mock_bgl = MagicMock()
-    mock_blf = MagicMock()
-
-    # Mock base classes to avoid metaclass conflicts
-    class MockOperator:
-        bl_idname = "mock.operator"
-
-    class MockExportHelper:
-        filepath: str = ""
-
-    class MockImportHelper:
-        filepath: str = ""
-
-    mock_types.Operator = MockOperator
-    mock_io_utils.ExportHelper = MockExportHelper
-    mock_io_utils.ImportHelper = MockImportHelper
-
-    # Mock property types
-    mock_props.StringProperty = MagicMock()
-    mock_props.FloatProperty = MagicMock()
-    mock_props.IntProperty = MagicMock()
-    mock_props.BoolProperty = MagicMock()
-    mock_props.PointerProperty = MagicMock()
-    mock_props.CollectionProperty = MagicMock()
-    mock_props.EnumProperty = MagicMock()
-    mock_props.FloatVectorProperty = MagicMock()
-
-    # Mock 'persistent' decorator
-    def persistent_decorator(func):
-        return func
-
-    mock_handlers.persistent = persistent_decorator
-
-    # Define the modules to be injected into sys.modules
-    modules = {
-        "bpy": mock_bpy,
-        "bpy.app": mock_app,
-        "bpy.app.handlers": mock_handlers,
-        "bpy.ops": mock_ops,
-        "bpy.ops.wm": mock_wm,
-        "bpy.props": mock_props,
-        "bpy.types": mock_types,
-        "bpy.utils": mock_utils,
-        "bpy.data": mock_data,
-        "bpy.context": mock_context,
-        "bpy.path_utils": mock_path_utils,
-        "bpy_extras": mock_bpy_extras,
-        "bpy_extras.io_utils": mock_io_utils,
-        "mathutils": mock_mathutils,
-        "gpu": mock_gpu,
-        "gpu_extras": MagicMock(),
-        "gpu_extras.batch": MagicMock(),
-        "bgl": mock_bgl,
-        "blf": mock_blf,
-    }
-
-    return modules
+from linkforge.blender.mesh_export import (
+    create_simplified_mesh,
+    export_link_mesh,
+    export_mesh_dae,
+    export_mesh_glb,
+    export_mesh_obj,
+    export_mesh_stl,
+    get_mesh_filename,
+    is_dae_supported,
+)
 
 
-# Apply mocks immediately at module level
-MOCK_MODULES = setup_blender_mocks()
-PATCHER = patch.dict(sys.modules, MOCK_MODULES)
-PATCHER.start()
+def test_is_dae_supported():
+    """Test is_dae_supported on the current Blender version."""
+    major = bpy.app.version[0]
+
+    if major >= 5:
+        assert is_dae_supported() is False
+    else:
+        expected = hasattr(bpy.ops.wm, "collada_export")
+        assert is_dae_supported() == expected
 
 
-@pytest.fixture(autouse=True)
-def blender_env():
-    """Ensure mocks are fresh for each test."""
-    import bpy
+def test_export_mesh_dae_success(tmp_path):
+    """Test successful DAE export using a real mesh and operator."""
+    if not is_dae_supported():
+        pytest.skip("COLLADA export not supported in this Blender version")
 
-    # Reset version to 4.5.0 by default
-    bpy.app.version = (4, 5, 0)
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
 
-    # Clear previous side effects/returns
-    bpy.ops.wm.collada_export = MagicMock()
-
-    yield bpy
-
-
-def test_is_dae_supported_on_blender_4x_operator_present(blender_env):
-    """Test is_dae_supported on Blender 4.x when operator is present."""
-    bpy = blender_env
-    from linkforge.blender.mesh_export import is_dae_supported
-
-    bpy.app.version = (4, 5, 0)
-    bpy.ops.wm.collada_export = MagicMock()
-
-    assert is_dae_supported() is True
-
-
-def test_is_dae_supported_on_blender_4x_operator_missing(blender_env):
-    """Test is_dae_supported on Blender 4.x when operator is missing."""
-    bpy = blender_env
-    from linkforge.blender.mesh_export import is_dae_supported
-
-    bpy.app.version = (4, 5, 0)
-    if hasattr(bpy.ops.wm, "collada_export"):
-        del bpy.ops.wm.collada_export
-
-    assert is_dae_supported() is False
-
-
-def test_is_dae_supported_on_blender_5x(blender_env):
-    """Test is_dae_supported on Blender 5.x."""
-    bpy = blender_env
-    from linkforge.blender.mesh_export import is_dae_supported
-
-    bpy.app.version = (5, 0, 0)
-
-    # Even if operator exists, it should return False on 5.x
-    bpy.ops.wm.collada_export = MagicMock()
-
-    assert is_dae_supported() is False
-
-
-def test_export_mesh_dae_calls_operator_on_success(blender_env):
-    """Test export_mesh_dae successfully calls collada_export on 4.x."""
-    bpy = blender_env
-    from pathlib import Path
-
-    from linkforge.blender.mesh_export import export_mesh_dae
-
-    bpy.app.version = (4, 5, 0)
-    bpy.ops.wm.collada_export = MagicMock()
-
-    mock_obj = MagicMock()
-    test_path = Path("test.dae")
-
-    with patch("pathlib.Path.mkdir"):  # Avoid actual directory creation
-        result = export_mesh_dae(mock_obj, test_path)
+    export_path = tmp_path / "test_cube.dae"
+    result = export_mesh_dae(obj, export_path)
 
     assert result is True
-    bpy.ops.wm.collada_export.assert_called_once()
+    assert export_path.exists()
+    assert export_path.stat().st_size > 0
+
+
+def test_export_mesh_dae_invalid_object(tmp_path):
+    """Test DAE export failure with None object."""
+    export_path = tmp_path / "invalid.dae"
+    result = export_mesh_dae(None, export_path)
+    assert result is False
+    assert not export_path.exists()
+
+
+def test_export_mesh_stl_success(tmp_path):
+    """Test successful STL export."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    export_path = tmp_path / "test_cube.stl"
+    result = export_mesh_stl(obj, export_path)
+
+    assert result is True
+    assert export_path.exists()
+    assert export_path.stat().st_size > 0
+
+
+def test_export_mesh_stl_invalid_object(tmp_path):
+    """Test STL export failure with None object."""
+    export_path = tmp_path / "invalid.stl"
+    result = export_mesh_stl(None, export_path)
+    assert result is False
+
+
+def test_export_mesh_obj_success(tmp_path):
+    """Test successful OBJ export."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    export_path = tmp_path / "test_cube.obj"
+    result = export_mesh_obj(obj, export_path)
+
+    assert result is True
+    assert export_path.exists()
+    assert export_path.stat().st_size > 0
+
+
+def test_export_mesh_obj_invalid_object(tmp_path):
+    """Test OBJ export failure with None object."""
+    export_path = tmp_path / "invalid.obj"
+    result = export_mesh_obj(None, export_path)
+    assert result is False
+
+
+def test_export_mesh_glb_success(tmp_path):
+    """Test successful GLB export."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    export_path = tmp_path / "test_cube.glb"
+    result = export_mesh_glb(obj, export_path)
+
+    assert result is True
+    assert export_path.exists()
+    assert export_path.stat().st_size > 0
+
+
+def test_export_mesh_glb_invalid_object(tmp_path):
+    """Test GLB export failure with None object."""
+    export_path = tmp_path / "invalid.glb"
+    result = export_mesh_glb(None, export_path)
+    assert result is False
+
+
+def test_create_simplified_mesh():
+    """Test mesh simplification with decimation."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16)
+    obj = bpy.context.active_object
+    original_poly_count = len(obj.data.polygons)
+
+    simplified = create_simplified_mesh(obj, decimation_ratio=0.5)
+
+    assert simplified is not None
+    assert simplified.type == "MESH"
+    assert len(simplified.data.polygons) < original_poly_count
+
+    # Cleanup
+    bpy.data.objects.remove(simplified, do_unlink=True)
+
+
+def test_create_simplified_mesh_invalid_object():
+    """Test mesh simplification with invalid object."""
+    result = create_simplified_mesh(None, 0.5)
+    assert result is None
+
+
+def test_create_simplified_mesh_non_mesh():
+    """Test mesh simplification with non-mesh object."""
+    bpy.ops.object.empty_add()
+    obj = bpy.context.active_object
+
+    result = create_simplified_mesh(obj, 0.5)
+    assert result is None
+
+
+def test_get_mesh_filename():
+    """Test mesh filename generation."""
+    assert get_mesh_filename("base_link", "visual", "STL") == "base_link_visual.stl"
+    assert get_mesh_filename("arm_link", "collision", "OBJ") == "arm_link_collision.obj"
+    assert get_mesh_filename("gripper", "visual", "DAE") == "gripper_visual.dae"
+    assert get_mesh_filename("wheel", "collision", "GLB") == "wheel_collision.glb"
+
+
+def test_export_link_mesh_stl(tmp_path):
+    """Test export_link_mesh with STL format."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    result = export_link_mesh(
+        obj=obj,
+        link_name="test_link",
+        geometry_type="visual",
+        mesh_format="STL",
+        meshes_dir=tmp_path,
+    )
+
+    assert result is not None
+    assert result.exists()
+    assert result.name == "test_link_visual.stl"
+
+
+def test_export_link_mesh_with_simplification(tmp_path):
+    """Test export_link_mesh with mesh simplification."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16)
+    obj = bpy.context.active_object
+
+    result = export_link_mesh(
+        obj=obj,
+        link_name="collision_link",
+        geometry_type="collision",
+        mesh_format="STL",
+        meshes_dir=tmp_path,
+        simplify=True,
+        decimation_ratio=0.3,
+    )
+
+    assert result is not None
+    assert result.exists()
+
+
+def test_export_link_mesh_dry_run(tmp_path):
+    """Test export_link_mesh in dry run mode."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    result = export_link_mesh(
+        obj=obj,
+        link_name="dry_run_link",
+        geometry_type="visual",
+        mesh_format="OBJ",
+        meshes_dir=tmp_path,
+        dry_run=True,
+    )
+
+    assert result is not None
+    assert result == tmp_path / "dry_run_link_visual.obj"
+    assert not result.exists()  # Should not actually export
+
+
+def test_export_link_mesh_invalid_object(tmp_path):
+    """Test export_link_mesh with None object."""
+    result = export_link_mesh(
+        obj=None,
+        link_name="invalid",
+        geometry_type="visual",
+        mesh_format="STL",
+        meshes_dir=tmp_path,
+    )
+
+    assert result is None
+
+
+def test_export_link_mesh_non_mesh_object(tmp_path):
+    """Test export_link_mesh with non-mesh object."""
+    bpy.ops.object.empty_add()
+    obj = bpy.context.active_object
+
+    result = export_link_mesh(
+        obj=obj,
+        link_name="empty_obj",
+        geometry_type="visual",
+        mesh_format="STL",
+        meshes_dir=tmp_path,
+    )
+
+    assert result is None
+
+
+def test_export_link_mesh_unknown_format(tmp_path):
+    """Test export_link_mesh with unknown format defaults to OBJ."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    result = export_link_mesh(
+        obj=obj,
+        link_name="unknown_format",
+        geometry_type="visual",
+        mesh_format="UNKNOWN",
+        meshes_dir=tmp_path,
+    )
+
+    assert result is not None
+    assert result.suffix == ".obj"  # Should default to OBJ
