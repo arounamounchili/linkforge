@@ -1,50 +1,12 @@
 import bpy
-import pytest
 from linkforge.blender.mesh_export import (
     create_simplified_mesh,
     export_link_mesh,
-    export_mesh_dae,
     export_mesh_glb,
     export_mesh_obj,
     export_mesh_stl,
     get_mesh_filename,
-    is_dae_supported,
 )
-
-
-def test_is_dae_supported():
-    """Test is_dae_supported on the current Blender version."""
-    major = bpy.app.version[0]
-
-    if major >= 5:
-        assert is_dae_supported() is False
-    else:
-        expected = hasattr(bpy.ops.wm, "collada_export")
-        assert is_dae_supported() == expected
-
-
-def test_export_mesh_dae_success(tmp_path):
-    """Test successful DAE export using a real mesh and operator."""
-    if not is_dae_supported():
-        pytest.skip("COLLADA export not supported in this Blender version")
-
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-
-    export_path = tmp_path / "test_cube.dae"
-    result = export_mesh_dae(obj, export_path)
-
-    assert result is True
-    assert export_path.exists()
-    assert export_path.stat().st_size > 0
-
-
-def test_export_mesh_dae_invalid_object(tmp_path):
-    """Test DAE export failure with None object."""
-    export_path = tmp_path / "invalid.dae"
-    result = export_mesh_dae(None, export_path)
-    assert result is False
-    assert not export_path.exists()
 
 
 def test_export_mesh_stl_success(tmp_path):
@@ -142,7 +104,6 @@ def test_get_mesh_filename():
     """Test mesh filename generation."""
     assert get_mesh_filename("base_link", "visual", "STL") == "base_link_visual.stl"
     assert get_mesh_filename("arm_link", "collision", "OBJ") == "arm_link_collision.obj"
-    assert get_mesh_filename("gripper", "visual", "DAE") == "gripper_visual.dae"
     assert get_mesh_filename("wheel", "collision", "GLB") == "wheel_collision.glb"
 
 
