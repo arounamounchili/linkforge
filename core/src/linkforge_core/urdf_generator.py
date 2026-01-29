@@ -15,6 +15,12 @@ simulators (Gazebo, Webots, Isaac Sim, etc.) by handling:
 
 from __future__ import annotations
 
+__all__ = [
+    "URDFGenerator",
+    "format_float",
+    "format_vector",
+]
+
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any

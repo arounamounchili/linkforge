@@ -997,6 +997,7 @@ def parse_gazebo_element(gazebo_elem: ET.Element) -> GazeboElement:
             child.tag
             not in [
                 "plugin",
+                "sensor",
                 "material",
                 "selfCollide",
                 "static",
@@ -1009,6 +1010,9 @@ def parse_gazebo_element(gazebo_elem: ET.Element) -> GazeboElement:
                 "kd",
                 "stopCfm",
                 "stopErp",
+                "minDepth",
+                "maxVel",
+                "fdir1",
             ]
             and child.text
         ):
@@ -1144,6 +1148,9 @@ class URDFParser(RobotParser):
 
             if root.tag != "robot":
                 raise ValueError(f"Root element must be <robot>, found <{root.tag}>")
+
+            if filepath:
+                _detect_xacro_file(root, filepath)
 
             robot = Robot(name=root.get("name", "unnamed_robot"))
             materials: dict[str, Material] = {}
