@@ -192,6 +192,25 @@ class RobotPropertyGroup(PropertyGroup):
         update=update_collision_visibility,
     )
 
+    # Background Import State (Pro UX)
+    is_importing: BoolProperty(  # type: ignore
+        name="Is Importing",
+        description="True if a background import is currently active",
+        default=False,
+    )
+
+    abort_import: BoolProperty(  # type: ignore
+        name="Abort Import",
+        description="Request cancellation of the current background import",
+        default=False,
+    )
+
+    import_status: StringProperty(  # type: ignore
+        name="Import Status",
+        description="Current status message from the background importer",
+        default="",
+    )
+
 
 def update_collision_visibility(self, context):
     """Update visibility of all collision meshes in the scene."""

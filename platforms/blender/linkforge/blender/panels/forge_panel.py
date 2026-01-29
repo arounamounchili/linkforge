@@ -27,10 +27,27 @@ class LINKFORGE_PT_forge(Panel):
         """Draw the panel."""
         layout = self.layout
 
-        # Import URDF/XACRO
-        row = layout.row()
-        row.scale_y = 1.5
-        row.operator("linkforge.import_urdf", text="Import URDF/XACRO", icon="IMPORT")
+        # Import URDF/XACRO (Conditional UX)
+        scene_props = context.scene.linkforge
+
+        if scene_props.is_importing:
+            # Active Import Status
+            box = layout.box()
+            box.alert = True
+            row = box.row()
+            row.label(text=scene_props.import_status, icon="URL")
+
+            row = box.row()
+            row.scale_y = 1.2
+            row.prop(scene_props, "abort_import", text="Stop Import", toggle=True, icon="CANCEL")
+
+            # Prevent clicking import again
+            layout.separator()
+        else:
+            # Regular Import Button
+            row = layout.row()
+            row.scale_y = 1.5
+            row.operator("linkforge.import_urdf", text="Import URDF/XACRO", icon="IMPORT")
 
         layout.separator()
         layout.label(text="Create robot structure:", icon="TOOL_SETTINGS")

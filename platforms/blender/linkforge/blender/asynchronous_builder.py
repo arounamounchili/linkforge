@@ -108,6 +108,13 @@ class AsynchronousRobotBuilder:
         """Register the timer and start processing."""
         logger.info(f"Starting asynchronous import of '{self.robot.name}'...")
 
+        # Setup background state
+        scene = self.context.scene
+        if hasattr(scene, "linkforge"):
+            scene.linkforge.is_importing = True
+            scene.linkforge.abort_import = False
+            scene.linkforge.import_status = "Starting..."
+
         # Setup progress bar
         self.context.window_manager.progress_begin(0, self.total_tasks)
 
@@ -116,22 +123,42 @@ class AsynchronousRobotBuilder:
 
     def process_next_chunk(self) -> float | None:
         """Process a chunk of tasks. Return interval or None to stop."""
+        scene = self.context.scene
+
+        # Check for cancellation
+        if hasattr(scene, "linkforge") and scene.linkforge.abort_import:
+            logger.warning("Import aborted by user.")
+            self.error = "Import cancelled by user."
+            self.finish()
+            return None
+
         if not self.tasks:
             self.finish()
             return None
 
         try:
             processed_count = 0
+            current_status = ""
+
             while self.tasks and processed_count < self.chunk_size:
                 task_type, data = self.tasks.pop(0)
+
+                # Update status text based on task
+                if task_type == "create_link":
+                    current_status = f"Importing Link: {data.name}..."
+                elif task_type == "create_joint":
+                    current_status = f"Importing Joint: {data.name}..."
+
                 self._execute_task(task_type, data)
                 processed_count += 1
                 self.completed_tasks += 1
 
-            # Update progress
+            # Update UI
+            if current_status and hasattr(scene, "linkforge"):
+                scene.linkforge.import_status = current_status
+
             self.context.window_manager.progress_update(self.completed_tasks)
 
-            # Return very small interval for next frame
             return 0.001
 
         except Exception as e:
@@ -171,20 +198,26 @@ class AsynchronousRobotBuilder:
             if self.context.view_layer:
                 self.context.view_layer.update()
 
-            # Sync collision visibility if helper exists
+            # Sync collision visibility
             scene = self.context.scene
-            if hasattr(scene, "linkforge") and hasattr(
-                scene.linkforge, "update_collision_visibility"
-            ):
-                scene.linkforge.update_collision_visibility(self.context)
+            if hasattr(scene, "linkforge"):
+                # Force update collision visibility if the property exist
+                scene.linkforge.show_collisions = scene.linkforge.show_collisions
 
     def finish(self):
         """Clean up and finalize."""
         self.context.window_manager.progress_end()
         self.is_finished = True
 
+        # Clear background state
+        scene = self.context.scene
+        if hasattr(scene, "linkforge"):
+            scene.linkforge.is_importing = False
+            scene.linkforge.import_status = ""
+            scene.linkforge.abort_import = False
+
         if self.error:
-            # Map error reporting to UI
-            pass
+            # Report error if cancelled or failed
+            logger.info(f"Asynchronous import ended: {self.error}")
         else:
             logger.info(f"Asynchronous import complete - '{self.robot.name}' is ready.")

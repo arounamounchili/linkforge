@@ -19,6 +19,7 @@ high-fidelity round-tripping and includes:
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -1102,7 +1103,10 @@ class URDFParser(RobotParser):
     """Refined URDF Parser using a class-based interface."""
 
     def parse(self, filepath: Path, **kwargs: Any) -> Robot:
-        """Parse URDF file into a Robot model.
+        """Parse URDF file into a Robot model using iterative parsing.
+
+        This implementation uses iterparse to maintain O(1) memory complexity
+        even for massive URDF files.
 
         Args:
             filepath: Path to the input file
@@ -1126,12 +1130,69 @@ class URDFParser(RobotParser):
             )
 
         try:
-            with open(filepath, encoding="utf-8") as f:
-                urdf_string = f.read()
-        except Exception as e:
-            raise RobotParserError(f"Failed to read file {filepath}: {e}") from e
+            # We use iterparse to process elements as they are closed
+            context = ET.iterparse(str(filepath), events=("start", "end"))
+            event, root = next(context)  # Get the root element (start of <robot>)
 
-        return self.parse_string(urdf_string, urdf_directory=filepath.parent, **kwargs)
+            if root.tag != "robot":
+                raise ValueError(f"Root element must be <robot>, found <{root.tag}>")
+
+            robot = Robot(name=root.get("name", "unnamed_robot"))
+            materials: dict[str, Material] = {}
+            depth = 0
+
+            for event, elem in context:
+                if event == "start":
+                    depth += 1
+                elif event == "end":
+                    if depth == 1:
+                        # Direct children of <robot>
+                        if elem.tag == "material":
+                            mat = parse_material(elem, materials)
+                            if mat:
+                                materials[mat.name] = mat
+
+                        elif elem.tag == "link":
+                            link = parse_link(elem, materials, filepath.parent)
+                            with suppress(ValueError):
+                                robot.add_link(link)
+
+                        elif elem.tag == "joint":
+                            joint = parse_joint(elem)
+                            try:
+                                robot.add_joint(joint)
+                            except ValueError as e:
+                                logger.warning(f"Skipping invalid joint '{joint.name}': {e}")
+
+                        elif elem.tag == "transmission":
+                            transmission = parse_transmission(elem)
+                            robot.transmissions.append(transmission)
+
+                        elif elem.tag == "ros2_control":
+                            ros2_control = parse_ros2_control(elem)
+                            robot.ros2_controls.append(ros2_control)
+
+                        elif elem.tag == "gazebo":
+                            sensor = parse_sensor_from_gazebo(elem)
+                            if sensor:
+                                robot.sensors.append(sensor)
+                            else:
+                                gazebo_element = parse_gazebo_element(elem)
+                                robot.gazebo_elements.append(gazebo_element)
+
+                        # CRITICAL: Clear the element from root to save memory
+                        root.clear()
+
+                    depth -= 1
+
+            return robot
+
+        except ET.ParseError as e:
+            raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
+        except Exception as e:
+            if isinstance(e, RobotParserError):
+                raise
+            raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
     def parse_string(
         self, urdf_string: str, urdf_directory: Path | None = None, **kwargs: Any
