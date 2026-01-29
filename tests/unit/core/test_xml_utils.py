@@ -53,3 +53,20 @@ def test_serialize_xml():
 def test_validate_xml_depth_ok():
     root = ET.fromstring("<root><a/></root>")
     validate_xml_depth(root)  # Should not raise
+
+
+def test_serialize_xml_with_namespaces():
+    """Test XML serialization with custom namespaces."""
+    import xml.etree.ElementTree as ET
+
+    from linkforge_core.utils.xml_utils import serialize_xml
+
+    root = ET.Element("robot")
+    child = ET.SubElement(root, "link")
+    child.set("name", "test")
+
+    # Serialize with custom namespace
+    xml_str = serialize_xml(root, namespaces={"custom": "http://example.com/custom"})
+
+    assert "<robot" in xml_str
+    assert "test" in xml_str

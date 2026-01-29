@@ -33,6 +33,8 @@ pytest_cache/
 htmlcov/
 coverage.xml
 coverage.json
+coverage_report.txt
+full_coverage.txt
 *.cover
 .hypothesis/
 .tox/

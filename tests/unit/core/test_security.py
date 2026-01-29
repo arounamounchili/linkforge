@@ -65,12 +65,16 @@ class TestValidateMeshPath:
         resolved = validate_mesh_path(mesh_path, urdf_dir, allow_absolute=True)
         assert resolved == mesh_path
 
-    def test_block_suspicious_windows_paths(self, tmp_path):
-        """Test blocking Windows system paths."""
-        # Note: This checks string matching in the blacklist,
-        # might behave differently on non-Windows if resolve() doesn't handle C:\
-        # But our blacklist check is done on 'resolved' path.
-        # Mocking resolve or using a path that is strictly checked might be tricky cross-platform
-        # without mocking.
-        # For now, we skip heavy cross-platform simulation and trust the logic.
-        pass
+    def test_url_encoded_path(self, tmp_path):
+        """Test that URL-encoded paths are decoded."""
+        from linkforge_core.validation.security import validate_mesh_path
+
+        urdf_dir = tmp_path / "robot"
+        urdf_dir.mkdir()
+
+        # URL-encoded path (space as %20)
+        encoded_path = "meshes/my%20file.stl"
+        result = validate_mesh_path(encoded_path, urdf_dir)
+
+        # Should decode to normal path
+        assert "my file.stl" in str(result)

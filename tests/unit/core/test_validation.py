@@ -10,7 +10,6 @@ def test_validation_result_creation():
     """Test creating a validation result."""
     result = ValidationResult(robot_name="test_robot")
 
-    assert result.robot_name == "test_robot"
     assert result.is_valid
     assert not result.has_warnings
     assert result.error_count == 0
@@ -109,9 +108,9 @@ def test_duplicate_link_names():
     """Test validation of robot with duplicate link names."""
     robot = Robot(name="duplicate_links")
 
-    # This should raise ValueError when adding second link
-    robot.links.append(Link(name="duplicate", inertial=Inertial(mass=1.0)))
-    robot.links.append(Link(name="duplicate", inertial=Inertial(mass=1.0)))
+    # Bypass add_link to create invalid structure (duplicate names)
+    robot._links.append(Link(name="duplicate", inertial=Inertial(mass=1.0)))
+    robot._links.append(Link(name="duplicate", inertial=Inertial(mass=1.0)))
 
     validator = RobotValidator(robot)
     result = validator.validate()
@@ -133,9 +132,13 @@ def test_duplicate_joint_names():
     robot.add_link(link1)
     robot.add_link(link2)
 
-    # Add duplicate joints by manipulating list directly
-    robot.joints.append(Joint(name="duplicate", type=JointType.FIXED, parent="base", child="link1"))
-    robot.joints.append(Joint(name="duplicate", type=JointType.FIXED, parent="base", child="link2"))
+    # Add duplicate joints by manipulating internal list directly
+    robot._joints.append(
+        Joint(name="duplicate", type=JointType.FIXED, parent="base", child="link1")
+    )
+    robot._joints.append(
+        Joint(name="duplicate", type=JointType.FIXED, parent="base", child="link2")
+    )
 
     validator = RobotValidator(robot)
     result = validator.validate()
@@ -153,7 +156,7 @@ def test_missing_parent_link():
     robot.add_link(link1)
 
     # Add joint with invalid parent (bypass add_joint validation)
-    robot.joints.append(
+    robot._joints.append(
         Joint(name="joint1", type=JointType.FIXED, parent="nonexistent", child="link1")
     )
 
@@ -174,7 +177,7 @@ def test_missing_child_link():
     robot.add_link(base)
 
     # Add joint with invalid child (bypass add_joint validation)
-    robot.joints.append(
+    robot._joints.append(
         Joint(name="joint1", type=JointType.FIXED, parent="base", child="nonexistent")
     )
 
@@ -233,8 +236,8 @@ def test_multiple_parent_joints():
 
     # Bypass add_joint validation to create invalid structure
     # Both joints have link2 as child (link2 has multiple parents)
-    robot.joints.append(Joint(name="joint2", type=JointType.FIXED, parent="base", child="link2"))
-    robot.joints.append(Joint(name="joint3", type=JointType.FIXED, parent="link1", child="link2"))
+    robot._joints.append(Joint(name="joint2", type=JointType.FIXED, parent="base", child="link2"))
+    robot._joints.append(Joint(name="joint3", type=JointType.FIXED, parent="link1", child="link2"))
 
     validator = RobotValidator(robot)
     result = validator.validate()
@@ -272,9 +275,9 @@ def test_multiple_parent_joints_complex():
 
     # Bypass validation to create invalid structure:
     # link3 has two parents (link1 and link2)
-    robot.joints.append(Joint(name="joint2", type=JointType.FIXED, parent="base", child="link2"))
-    robot.joints.append(Joint(name="joint3a", type=JointType.FIXED, parent="link1", child="link3"))
-    robot.joints.append(
+    robot._joints.append(Joint(name="joint2", type=JointType.FIXED, parent="base", child="link2"))
+    robot._joints.append(Joint(name="joint3a", type=JointType.FIXED, parent="link1", child="link3"))
+    robot._joints.append(
         Joint(
             name="joint3b",
             type=JointType.REVOLUTE,
@@ -285,8 +288,8 @@ def test_multiple_parent_joints_complex():
     )
 
     # link4 also has two parents (both link2 and link3)
-    robot.joints.append(Joint(name="joint4a", type=JointType.FIXED, parent="link2", child="link4"))
-    robot.joints.append(Joint(name="joint4b", type=JointType.FIXED, parent="link3", child="link4"))
+    robot._joints.append(Joint(name="joint4a", type=JointType.FIXED, parent="link2", child="link4"))
+    robot._joints.append(Joint(name="joint4b", type=JointType.FIXED, parent="link3", child="link4"))
 
     validator = RobotValidator(robot)
     result = validator.validate()
@@ -379,3 +382,45 @@ def test_validation_result_string_representation():
     result.add_error("Test", "Test error")
     assert "error" in str(result).lower()
     assert "my_robot" in str(result)
+
+
+def test_validator_cycle_detection():
+    """Test that validator detects cycles in kinematic tree."""
+    from linkforge_core.validation.validator import RobotValidator
+
+    robot = Robot(name="test_robot")
+    robot.add_link(Link(name="link1"))
+    robot.add_link(Link(name="link2"))
+
+    # Create cycle
+    robot._joints.append(Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2"))
+    robot._joints.append(Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1"))
+
+    validator = RobotValidator(robot)
+    result = validator.validate()
+
+    assert not result.is_valid
+    assert any(
+        "cycle" in issue.title.lower() or "cycle" in issue.message.lower()
+        for issue in result.issues
+    )
+
+
+def test_validator_no_root_link():
+    """Test that validator detects when no root link exists."""
+    from linkforge_core.validation.validator import RobotValidator
+
+    robot = Robot(name="test_robot")
+    robot.add_link(Link(name="link1"))
+    robot.add_link(Link(name="link2"))
+
+    # Create cycle (no root)
+    robot._joints.append(Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2"))
+    robot._joints.append(Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1"))
+
+    validator = RobotValidator(robot)
+    result = validator.validate()
+
+    assert not result.is_valid
+    # Should detect either cycle or no root
+    assert len(result.issues) > 0

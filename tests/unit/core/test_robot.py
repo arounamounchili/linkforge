@@ -638,3 +638,258 @@ class TestRobotEdgeCases:
         robot.add_joint(joint2)
         # Circular dependency exists, validator should catch it
         assert len(robot.joints) == 2
+
+
+class TestRobotConstructorEdgeCases:
+    """Tests for Robot constructor with initial_links and initial_joints."""
+
+    def test_constructor_with_initial_links(self):
+        """Test Robot constructor with initial_links parameter."""
+        link1 = Link(name="link1", inertial=Inertial(mass=1.0))
+        link2 = Link(name="link2", inertial=Inertial(mass=0.5))
+
+        robot = Robot(name="test_robot", initial_links=[link1, link2])
+
+        assert len(robot.links) == 2
+        assert robot.get_link("link1") == link1
+        assert robot.get_link("link2") == link2
+
+    def test_constructor_with_initial_joints(self):
+        """Test Robot constructor with initial_joints parameter."""
+        link1 = Link(name="link1")
+        link2 = Link(name="link2")
+        joint1 = Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2")
+
+        robot = Robot(name="test_robot", initial_links=[link1, link2], initial_joints=[joint1])
+
+        assert len(robot.joints) == 1
+        assert robot.get_joint("joint1") == joint1
+
+    def test_constructor_duplicate_link_names(self):
+        """Test that constructor raises error for duplicate link names."""
+        link1 = Link(name="duplicate", inertial=Inertial(mass=1.0))
+        link2 = Link(name="duplicate", inertial=Inertial(mass=0.5))
+
+        with pytest.raises(ValueError, match="Duplicate link name"):
+            Robot(name="test_robot", initial_links=[link1, link2])
+
+    def test_constructor_duplicate_joint_names(self):
+        """Test that constructor raises error for duplicate joint names."""
+        link1 = Link(name="link1")
+        link2 = Link(name="link2")
+        link3 = Link(name="link3")
+        joint1 = Joint(name="duplicate", type=JointType.FIXED, parent="link1", child="link2")
+        joint2 = Joint(name="duplicate", type=JointType.FIXED, parent="link2", child="link3")
+
+        with pytest.raises(ValueError, match="Duplicate joint name"):
+            Robot(
+                name="test_robot",
+                initial_links=[link1, link2, link3],
+                initial_joints=[joint1, joint2],
+            )
+
+
+class TestRobotGetJointsForLink:
+    """Tests for get_joints_for_link method."""
+
+    def test_get_joints_for_link_as_parent(self):
+        """Test getting joints where link is parent."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="base"))
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+
+        robot.add_joint(Joint(name="joint1", type=JointType.FIXED, parent="base", child="link1"))
+        robot.add_joint(Joint(name="joint2", type=JointType.FIXED, parent="base", child="link2"))
+
+        joints = robot.get_joints_for_link("base", as_parent=True)
+
+        assert len(joints) == 2
+        assert all(j.parent == "base" for j in joints)
+
+    def test_get_joints_for_link_as_child(self):
+        """Test getting joints where link is child."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="base"))
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+
+        robot.add_joint(Joint(name="joint1", type=JointType.FIXED, parent="base", child="link1"))
+        robot.add_joint(Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1"))
+
+        joints = robot.get_joints_for_link("link1", as_parent=False)
+
+        assert len(joints) == 2
+        assert all(j.child == "link1" for j in joints)
+
+
+class TestRobotRos2ControlEdgeCases:
+    """Tests for ros2_control edge cases."""
+
+    def test_add_duplicate_ros2_control_name(self):
+        """Test that adding duplicate ros2_control name raises error."""
+        from linkforge_core.models import Ros2Control, Ros2ControlJoint
+
+        robot = Robot(name="test_robot")
+
+        rc1 = Ros2Control(
+            name="duplicate",
+            hardware_plugin="plugin1",
+            joints=[Ros2ControlJoint("j1", ["position"], ["position"])],
+        )
+        rc2 = Ros2Control(
+            name="duplicate",
+            hardware_plugin="plugin2",
+            joints=[Ros2ControlJoint("j2", ["position"], ["position"])],
+        )
+
+        robot.add_ros2_control(rc1)
+
+        with pytest.raises(ValueError, match="already exists"):
+            robot.add_ros2_control(rc2)
+
+
+class TestRobotRootLinkEdgeCases:
+    """Tests for get_root_link edge cases."""
+
+    def test_get_root_link_empty_robot(self):
+        """Test get_root_link returns None for empty robot."""
+        robot = Robot(name="empty")
+        assert robot.get_root_link() is None
+
+
+class TestRobotValidationEdgeCases:
+    """Tests for validation edge cases."""
+
+    def test_validation_joint_child_not_found(self):
+        """Test validation detects missing child link."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+
+        # Bypass add_joint validation
+        robot._joints.append(
+            Joint(name="joint1", type=JointType.FIXED, parent="link1", child="nonexistent")
+        )
+
+        errors = robot.validate_tree_structure()
+        assert any("child link 'nonexistent' not found" in err for err in errors)
+
+    def test_validation_no_root_link(self):
+        """Test validation detects when no root link exists."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+
+        # Create circular dependency (no root)
+        robot._joints.append(
+            Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2")
+        )
+        robot._joints.append(
+            Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1")
+        )
+
+        errors = robot.validate_tree_structure()
+        # Should detect cycle or no root
+        assert len(errors) > 0
+
+    def test_validation_multiple_parent_joints(self):
+        """Test validation detects links with multiple parents."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="base"))
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+
+        robot.add_joint(Joint(name="joint1", type=JointType.FIXED, parent="base", child="link1"))
+
+        # Bypass validation to create multiple parents
+        robot._joints.append(
+            Joint(name="joint2a", type=JointType.FIXED, parent="base", child="link2")
+        )
+        robot._joints.append(
+            Joint(name="joint2b", type=JointType.FIXED, parent="link1", child="link2")
+        )
+
+        errors = robot.validate_tree_structure()
+        assert any("has 2 parent joints" in err for err in errors)
+
+
+class TestRobotMimicValidation:
+    """Tests for mimic chain validation."""
+
+    def test_mimic_nonexistent_joint(self):
+        """Test validation detects mimic targeting non-existent joint."""
+        from linkforge_core.models import JointMimic
+
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+
+        robot.add_joint(
+            Joint(
+                name="joint1",
+                type=JointType.REVOLUTE,
+                parent="link1",
+                child="link2",
+                limits=JointLimits(lower=-1.0, upper=1.0),
+                mimic=JointMimic(joint="nonexistent"),
+            )
+        )
+
+        errors = robot._validate_mimic_chains()
+        assert any("mimics non-existent joint" in err for err in errors)
+
+    def test_mimic_circular_dependency(self):
+        """Test validation detects circular mimic dependencies."""
+        from linkforge_core.models import JointMimic
+
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="link2"))
+        robot.add_link(Link(name="link3"))
+
+        robot.add_joint(
+            Joint(
+                name="joint1",
+                type=JointType.REVOLUTE,
+                parent="link1",
+                child="link2",
+                limits=JointLimits(lower=-1.0, upper=1.0),
+                mimic=JointMimic(joint="joint2"),
+            )
+        )
+        robot.add_joint(
+            Joint(
+                name="joint2",
+                type=JointType.REVOLUTE,
+                parent="link2",
+                child="link3",
+                limits=JointLimits(lower=-1.0, upper=1.0),
+                mimic=JointMimic(joint="joint1"),
+            )
+        )
+
+        errors = robot._validate_mimic_chains()
+        assert any("Circular mimic dependency" in err for err in errors)
+
+
+class TestRobotReprEdgeCases:
+    """Tests for __repr__ with all optional fields."""
+
+    def test_repr_with_ros2_controls(self):
+        """Test __repr__ includes ros2_controls."""
+        from linkforge_core.models import Ros2Control, Ros2ControlJoint
+
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+
+        rc = Ros2Control(
+            name="system1",
+            hardware_plugin="plugin",
+            joints=[Ros2ControlJoint("j1", ["position"], ["position"])],
+        )
+        robot.add_ros2_control(rc)
+
+        repr_str = repr(robot)
+        # Just check that ros2_controls is in the repr, don't check exact format
+        assert "ros2_controls" in repr_str
+        assert "system1" in repr_str
