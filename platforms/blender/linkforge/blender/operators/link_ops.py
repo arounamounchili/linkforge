@@ -585,7 +585,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
     """Create a robot link from selected mesh object"""
 
     bl_idname = "linkforge.create_link_from_mesh"
-    bl_label = "Create Link"
+    bl_label = "Create Link from Mesh"
     bl_description = (
         "Convert selected mesh to a robot link (auto-creates Empty parent and proper naming)"
     )

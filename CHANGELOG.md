@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * implement professional virtual link handling and robust alignment ([#62](https://github.com/arounamounchili/linkforge/issues/62)) ([838f25c](https://github.com/arounamounchili/linkforge/commit/838f25cca3ed78555f0a15e9f717b2c73a949bf4))
 * **core:** implement 100% dependency-free robotics logic
 * **blender:** transition to dependency-free extension architecture for 90% size reduction
+* **blender:** remove legacy DAE/Collada support in favor of production-ready GLB/OBJ/STL metrics
+* **blender:** discontinue automatic transmission conversion in favor of explicit ROS 2 Control Dashboard configuration
+* **docs:** exhaustive documentation audit and synchronization with v1.2.0 UI terminology
+* **docs:** update all tutorials and how-to guides to reflect new "Create Link from Mesh" and "Create Sensor" labels
 
 
 ### 🐞 Bug Fixes

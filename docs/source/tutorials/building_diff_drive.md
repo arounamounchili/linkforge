@@ -28,7 +28,7 @@ graph TD
 2. **Scale the Base**: Set the dimensions to roughly `0.4m x 0.3m x 0.1m`.
 3. **Forge the Link**:
    - Open the **Links** panel in the LinkForge sidebar (`N` key).
-   - With the cube selected, click **Create Link**.
+   - With the cube selected, click **Create Link from Mesh**.
    - Name it `base_link`.
    - Set **Mass** to `5.0` kg.
    - Enable **Auto-Calculate Inertia** (LinkForge will automatically generate the inertia tensor for the box).
@@ -50,14 +50,14 @@ Always keep LinkForge's **Auto-Calculate Inertia** checkbox enabled rather than 
 
 ### Forge the Left Wheel
 1. Select the first cylinder.
-2. Click **Create Link**.
+2. Click **Create Link from Mesh**.
 3. Name it `left_wheel`.
 4. Set **Mass** to `0.5` kg.
 5. **Generate Collision**: Click **Generate Collision**.
 
 ### Forge the Right Wheel
 1. Select the second cylinder.
-2. Click **Create Link**.
+2. Click **Create Link from Mesh**.
 3. Name it `right_wheel`.
 4. Set **Mass** to `0.5` kg.
 5. **Generate Collision**: Click **Generate Collision**.
@@ -79,11 +79,11 @@ Always keep LinkForge's **Auto-Calculate Inertia** checkbox enabled rather than 
 ## Step 4: Add a Lidar Sensor
 
 1. **Create Lidar Mesh**: Add a small cylinder on top of the base.
-2. **Create Link**: Call it `lidar_link`.
+2. **Create Link from Mesh**: Call it `lidar_link`.
 3. **Create Fixed Joint**: Connect `lidar_link` to `base_link` using a `fixed` joint type.
 4. **Attach Sensor**:
    - Go to the **Perceive** panel in the LinkForge sidebar.
-   - With `lidar_link` selected, click **Add Sensor**.
+   - With `lidar_link` selected, click **Create Sensor**.
    - Select **Type**: `LIDAR` (LinkForge exports this as `gpu_lidar` for modern Gazebo).
    - Set **Update Rate** to `30` Hz.
 
@@ -121,7 +121,7 @@ Exporting without validation may result in a URDF that causes simulators to cras
 2. **Export**:
    - Go to the **Validate & Export** panel.
    - Select **Format**: `URDF`.
-   - Click **Export URDF** and choose a location.
+   - Click **Export URDF/XACRO** and choose a location.
 
 ---
 

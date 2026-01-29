@@ -250,7 +250,7 @@ classDiagram
     Robot "1" *-- "many" Link
     Robot "1" *-- "many" Joint
     Robot "1" *-- "many" Sensor
-    Robot "1" o-- "many" Transmission : legacy
+    Robot "1" o-- "many" Transmission : legacy (manual only)
     Link "1" *-- "many" Visual
     Link "1" *-- "many" Collision
     Link "1" *-- "1" Inertial
@@ -428,5 +428,5 @@ LinkForge distinguishes between user-created assets and imported "Source of Trut
 
 ---
 
-**Last Updated:** 2026-01-24
+**Last Updated:** 2026-01-30
 **Version:** 1.2.0

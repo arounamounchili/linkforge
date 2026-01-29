@@ -76,7 +76,7 @@ def matrix_to_transform(matrix: Any) -> Transform:
         matrix: Blender mathutils.Matrix (4x4)
 
     Returns:
-        Core Transform with XYZ position and RPY rotation
+        Core Transform with XYZ position and RPY rotation.
 
     """
     if matrix is None or Matrix is None:
@@ -268,7 +268,7 @@ def get_object_geometry(
         link_name: Name of the link (for mesh filename)
         geom_purpose: "visual" or "collision" (for mesh filename)
         meshes_dir: Directory to export mesh files to
-        mesh_format: "STL" or "DAE"
+        mesh_format: "STL", "OBJ", or "GLB"
         simplify: Whether to simplify mesh (for collision)
         decimation_ratio: Simplification ratio if simplify=True
 

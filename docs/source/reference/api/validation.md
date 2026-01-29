@@ -64,7 +64,7 @@ except ValueError as e:
 
 # Valid paths
 validate_mesh_path("meshes/robot.stl")  # OK
-validate_mesh_path("/absolute/path/to/mesh.dae")  # OK
+validate_mesh_path("/absolute/path/to/mesh.obj")  # OK
 
 # Validate package URI
 validate_package_uri("package://my_robot/meshes/part.stl")  # OK

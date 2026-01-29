@@ -11,7 +11,7 @@ A sensor in URDF is usually attached to a specific link. You can either attach i
 ## 2. Attaching the Sensor
 1. Select the link that should hold the sensor in the 3D Viewport.
 2. Open the **LinkForge** sidebar and navigate to the **Perceive** panel.
-3. Click **Add Sensor**.
+3. Click **Create Sensor**.
 
 ## 3. Configuration
 Once added, you can configure the sensor properties:

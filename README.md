@@ -29,7 +29,7 @@ LinkForge is a professional **URDF & XACRO Bridge** for Blender.
 
 | Feature | Support | Details |
 | :--- | :--- | :--- |
-| **Links** | ✅ Full | Visual/Collision Geometry, Materials, Inertial Properties |
+| **Links** | ✅ Full | Visual/Collision Geometry (STL/OBJ/GLB), Materials, Inertial Properties |
 | **Joint Types** | ✅ Full | Fixed, Revolute, Continuous, Prismatic, Planar, Floating |
 | **Physics** | ✅ Full | Automatic Mass & Inertia (Primitive & Mesh) |
 | **Sensors** | ✅ Full | Camera, LiDAR, IMU, GPS, Depth, Contact |
@@ -104,7 +104,7 @@ LinkForge is a professional **URDF & XACRO Bridge** for Blender.
 
 Complete examples in `examples/` directory:
 
-- `roundtrip_test_robot.urdf`: A comprehensive robot containing ALL 6 URDF joint types (fixed, revolute, continuous, prismatic, planar, floating), plus sensors and transmissions. Perfect for testing full roundtrip capabilities.
+- `roundtrip_test_robot.urdf`: A comprehensive robot containing ALL 6 URDF joint types (fixed, revolute, continuous, prismatic, planar, floating), plus sensors. Perfect for testing full roundtrip capabilities.
 - `mobile_robot.urdf`: A simple mobile robot base.
 - `diff_drive_robot.urdf`: A differential drive robot with wheels.
 - `quadruped_robot.urdf`: A 4-legged robot demonstrating complex kinematic chains and multi-link assemblies.

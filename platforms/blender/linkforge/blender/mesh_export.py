@@ -1,6 +1,6 @@
 """Mesh export utilities for LinkForge.
 
-Export Blender mesh objects to STL, OBJ, and DAE files for URDF.
+Export Blender mesh objects to STL, OBJ, and GLB files for URDF.
 """
 
 from __future__ import annotations
@@ -148,10 +148,10 @@ def get_mesh_filename(link_name: str, geometry_type: str, mesh_format: str) -> s
     Args:
         link_name: Name of the robot link
         geometry_type: "visual" or "collision"
-        mesh_format: "STL" or "DAE"
+        mesh_format: "STL", "OBJ", or "GLB"
 
     Returns:
-        Filename string (e.g., "base_link_visual.stl")
+        Filename string (e.g., "base_link_visual.stl").
 
     """
     ext = mesh_format.lower()
@@ -222,7 +222,7 @@ def export_link_mesh(
         obj: Blender Object to export
         link_name: Name of the robot link
         geometry_type: "visual" or "collision"
-        mesh_format: "STL" or "DAE"
+        mesh_format: "STL", "OBJ", or "GLB"
         meshes_dir: Directory where mesh files should be saved
         simplify: Whether to simplify mesh (for collision)
         decimation_ratio: Simplification ratio if simplify=True
