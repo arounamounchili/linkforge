@@ -1,0 +1,42 @@
+name: Blender Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  blender-tests:
+    name: Blender Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-groups --all-extras
+
+      - name: Setup Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxxf86vm-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev libglew-dev xvfb
+          echo "Downloading Blender 4.2.0..."
+          wget -q https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz
+          mkdir -p blender
+          tar -xf blender-4.2.0-linux-x64.tar.xz -C blender --strip-components=1
+          echo "$(pwd)/blender" >> $GITHUB_PATH
+
+      - name: Run Blender Tests
+        run: |
+          export BLENDER_PATH=$(pwd)/blender/blender
+          xvfb-run ./run_blender_tests.py

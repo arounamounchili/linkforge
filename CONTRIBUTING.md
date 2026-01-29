@@ -427,11 +427,18 @@ logger.error(f"Debug: {variable}")
 
 ### Running Tests in Blender
 
+Since standard `pytest` cannot access Blender's internal API (`bpy`), we use a custom runner that launches a headless Blender process to execute your tests.
+
 ```bash
-# From Blender's Python console:
-import subprocess
-subprocess.run(["pytest", "tests/integration/"])
+# Run all Blender unit tests
+./run_blender_tests.py
+
+# If Blender is not in your standard Applications folder (MacOS) or PATH (Linux),
+# specify the path explicitly:
+BLENDER_PATH=/path/to/blender ./run_blender_tests.py
 ```
+
+These tests cover critical UI logic, operators, and LinkForge -> Blender data conversions.
 
 ## Technical Considerations
 

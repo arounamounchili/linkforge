@@ -50,7 +50,6 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     def execute(self, context: Context):
         """Execute the import."""
         from ...linkforge_core.parsers import URDFParser
-        from ..scene_builder import import_robot_to_scene
 
         # Parse URDF/XACRO file
         urdf_path = Path(self.filepath)
@@ -113,34 +112,20 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
             self.report({"INFO"}, "Parsing URDF...")
             robot = URDFParser().parse_string(urdf_string, urdf_directory=urdf_path.parent)
 
-        # Import to scene
-        success = import_robot_to_scene(robot, urdf_path, context)
-        if success:
-            # Sync collision visibility with current scene settings
-            if hasattr(context.scene, "linkforge"):
-                robot_props = context.scene.linkforge
-                # Replicate simple visibility logic
-                if not robot_props.show_collisions:
-                    # Hide all collision meshes if toggle is off
-                    for obj in context.scene.objects:
-                        if (
-                            obj.parent
-                            and hasattr(obj.parent, "linkforge")
-                            and obj.parent.linkforge.is_robot_link
-                            and "_collision" in obj.name.lower()
-                        ):
-                            obj.hide_viewport = True
+        # Import to scene (Asynchronous)
+        from ..asynchronous_builder import AsynchronousRobotBuilder
 
-            file_type = "XACRO" if is_xacro else "URDF"
-            self.report(
-                {"INFO"},
-                f"Imported {file_type}: '{robot.name}' "
-                f"({len(robot.links)} links, {len(robot.joints)} joints)",
-            )
-            return {"FINISHED"}
-        else:
-            self.report({"ERROR"}, "Failed to import robot to scene")
-            return {"CANCELLED"}
+        builder = AsynchronousRobotBuilder(robot, urdf_path, context)
+        builder.start()
+
+        # We return FINISHED here, but the builder continues in the background via timers.
+        # This is standard for long-running non-blocking tasks in Blender.
+        file_type = "XACRO" if is_xacro else "URDF"
+        self.report(
+            {"INFO"},
+            f"Started background import of {file_type}: '{robot.name}'...",
+        )
+        return {"FINISHED"}
 
 
 # Registration
