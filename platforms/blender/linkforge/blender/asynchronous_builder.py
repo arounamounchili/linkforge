@@ -165,12 +165,7 @@ class AsynchronousRobotBuilder:
                 self.joint_objects[data.name] = obj
 
         elif task_type == "resolve_mimics":
-            for joint in self.robot.joints:
-                if joint.mimic and joint.name in self.joint_objects:
-                    joint_obj = self.joint_objects[joint.name]
-                    mimic_joint_obj = self.joint_objects.get(joint.mimic.joint)
-                    if mimic_joint_obj:
-                        joint_obj.linkforge_joint.mimic_joint = mimic_joint_obj
+            resolve_mimic_joints(self.robot.joints, self.joint_objects)
 
         elif task_type == "create_sensor":
             create_sensor_object(data, self.link_objects, self.collection)

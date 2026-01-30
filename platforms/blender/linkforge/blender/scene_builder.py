@@ -18,9 +18,27 @@ from ..linkforge_core.models import (
     Sphere,
 )
 from .preferences import get_addon_prefs
-from .utils.kinematics import sort_joints_topological
+from .utils.blender_utils import move_to_collection
+from .utils.kinematics import resolve_mimic_joints, sort_joints_topological
 
 logger = get_logger(__name__)
+
+
+def resolve_mesh_path(filepath: Path, urdf_dir: Path) -> Path:
+    """Resolve mesh path relative to URDF directory or as absolute path.
+
+    Args:
+        filepath: Original mesh filepath from URDF
+        urdf_dir: Directory containing the URDF file
+
+    Returns:
+        Resolved Path object
+    """
+    mesh_path = urdf_dir / filepath
+    if not mesh_path.exists():
+        # Try as absolute path
+        return Path(filepath)
+    return mesh_path
 
 
 def create_material_from_color(color: Color, name: str):
@@ -227,11 +245,7 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
     # Add to collection
     if collection:
-        for coll in list(link_obj.users_collection):
-            if coll != collection:
-                coll.objects.unlink(link_obj)
-        if link_obj not in collection.objects[:]:
-            collection.objects.link(link_obj)
+        move_to_collection(link_obj, collection)
 
     # Set link properties on the main link object
     if hasattr(link_obj, "linkforge"):
@@ -253,12 +267,8 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
         # Create geometry
         if isinstance(visual.geometry, Mesh):
-            # Resolve mesh path relative to URDF directory
-            mesh_path = urdf_dir / visual.geometry.filepath
-            if not mesh_path.exists():
-                # Try as absolute path
-                mesh_path = visual.geometry.filepath
-
+            # Resolve mesh path
+            mesh_path = resolve_mesh_path(visual.geometry.filepath, urdf_dir)
             visual_obj = import_mesh_file(mesh_path, visual_name)
 
             # Apply scale from URDF
@@ -293,11 +303,7 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
             # Add visual mesh to collection
             if collection:
-                for coll in list(visual_obj.users_collection):
-                    if coll != collection:
-                        coll.objects.unlink(visual_obj)
-                if visual_obj not in collection.objects[:]:
-                    collection.objects.link(visual_obj)
+                move_to_collection(visual_obj, collection)
 
             # Apply material to visual mesh
             if visual.material and visual.material.color:
@@ -320,12 +326,8 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
         # Create geometry
         if isinstance(collision.geometry, Mesh):
-            # Resolve mesh path relative to URDF directory
-            mesh_path = urdf_dir / collision.geometry.filepath
-            if not mesh_path.exists():
-                # Try as absolute path
-                mesh_path = collision.geometry.filepath
-
+            # Resolve mesh path
+            mesh_path = resolve_mesh_path(collision.geometry.filepath, urdf_dir)
             collision_obj = import_mesh_file(mesh_path, collision_name)
 
             # Apply scale from URDF
@@ -365,11 +367,7 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
             # Add collision mesh to collection
             if collection:
-                for coll in list(collision_obj.users_collection):
-                    if coll != collection:
-                        coll.objects.unlink(collision_obj)
-                if collision_obj not in collection.objects[:]:
-                    collection.objects.link(collision_obj)
+                move_to_collection(collision_obj, collection)
 
             # Clear materials from collision mesh (collision doesn't need materials)
             # Materials may come from imported mesh files (OBJ, DAE, etc.)
@@ -423,19 +421,19 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
         props.mass = 0.0
         props.use_auto_inertia = False
 
-    # Helper to get geometry type string from instance
-    def _get_geometry_type_str(geometry):
-        """Get geometry type string from geometry instance."""
-        geometry_type_map = {
-            Box: "BOX",
-            Cylinder: "CYLINDER",
-            Sphere: "SPHERE",
-            Mesh: "MESH",
-        }
-        for geom_class, type_str in geometry_type_map.items():
-            if isinstance(geometry, geom_class):
-                return type_str
-        return "MESH"  # Default fallback
+
+def _get_geometry_type_str(geometry):
+    """Get geometry type string from geometry instance."""
+    geometry_type_map = {
+        Box: "BOX",
+        Cylinder: "CYLINDER",
+        Sphere: "SPHERE",
+        Mesh: "MESH",
+    }
+    for geom_class, type_str in geometry_type_map.items():
+        if isinstance(geometry, geom_class):
+            return type_str
+    return "MESH"  # Default fallback
 
     # Set geometry types on link properties (use first element if multiple)
     if hasattr(link_obj, "linkforge"):
@@ -587,13 +585,7 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
 
     # Add to collection
     if collection:
-        # Link to target collection if not already there
-        if empty not in collection.objects[:]:
-            collection.objects.link(empty)
-        # Remove from all other collections
-        for coll in empty.users_collection[:]:
-            if coll != collection:
-                coll.objects.unlink(empty)
+        move_to_collection(empty, collection)
 
     # Joint visibility is controlled by RGB axes (GPU overlay) and empty display size
     # Empties are always visible in viewport, hide from render only
@@ -733,11 +725,7 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
 
     # Add to collection
     if collection:
-        for coll in list(empty.users_collection):
-            if coll != collection:
-                coll.objects.unlink(empty)
-        if empty not in collection.objects[:]:
-            collection.objects.link(empty)
+        move_to_collection(empty, collection)
 
     # Hide from render
     empty.hide_render = True
@@ -874,13 +862,7 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
             joint_objects[joint.name] = joint_obj
 
     # Second pass: Resolve mimic joint pointers
-    # This is necessary because URDF doesn't mandate mimic order relative to kinematic tree
-    for joint in robot.joints:
-        if joint.mimic and joint.name in joint_objects:
-            joint_obj = joint_objects[joint.name]
-            mimic_joint_obj = joint_objects.get(joint.mimic.joint)
-            if mimic_joint_obj:
-                joint_obj.linkforge_joint.mimic_joint = mimic_joint_obj
+    resolve_mimic_joints(robot.joints, joint_objects)
 
     # Create sensor objects
     sensors_created = 0
