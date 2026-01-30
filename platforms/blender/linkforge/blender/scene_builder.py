@@ -137,15 +137,23 @@ def import_mesh_file(mesh_path: Path, name: str):
 
     try:
         if ext == ".obj":
-            if hasattr(bpy.ops.wm, "obj_import"):
+            try:
                 bpy.ops.wm.obj_import(filepath=str(mesh_path))
-            else:
-                bpy.ops.import_scene.obj(filepath=str(mesh_path))
+            except (AttributeError, RuntimeError):
+                try:
+                    bpy.ops.import_scene.obj(filepath=str(mesh_path))
+                except (AttributeError, RuntimeError) as e:
+                    logger.error(f"Failed to import OBJ with all known operators: {e}")
+                    return None
         elif ext == ".stl":
-            if hasattr(bpy.ops.wm, "stl_import"):
+            try:
                 bpy.ops.wm.stl_import(filepath=str(mesh_path))
-            else:
-                bpy.ops.import_mesh.stl(filepath=str(mesh_path))
+            except (AttributeError, RuntimeError):
+                try:
+                    bpy.ops.import_mesh.stl(filepath=str(mesh_path))
+                except (AttributeError, RuntimeError) as e:
+                    logger.error(f"Failed to import STL with all known operators: {e}")
+                    return None
         elif ext == ".dae":
             # DAE is deprecated and unsupported in modern workflows.
             logger.warning(
@@ -154,15 +162,17 @@ def import_mesh_file(mesh_path: Path, name: str):
             )
             return None
         elif ext in (".glb", ".gltf"):
-            if hasattr(bpy.ops.wm, "gltf_import"):
+            # glTF Resolution Strategy: Try modern WM, then legacy Scene Import
+            try:
                 bpy.ops.wm.gltf_import(filepath=str(mesh_path))
-            elif hasattr(bpy.ops.import_scene, "gltf"):
-                bpy.ops.import_scene.gltf(filepath=str(mesh_path))
-            else:
-                logger.error(
-                    f"No glTF importer found in this Blender version ({bpy.app.version_string})."
-                )
-                return None
+            except (AttributeError, RuntimeError):
+                try:
+                    bpy.ops.import_scene.gltf(filepath=str(mesh_path))
+                except (AttributeError, RuntimeError) as e:
+                    logger.error(
+                        f"No functional glTF importer found ({e}). Blender version: {bpy.app.version_string}"
+                    )
+                    return None
         else:
             logger.warning(f"Unsupported mesh file extension: {ext} for '{mesh_path.name}'")
             return None
