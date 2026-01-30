@@ -86,13 +86,10 @@ def test_cylinder_no_origin_roundtrip():
         temp_path.unlink()
 
 
-def test_arm_base_specific_case():
+def test_arm_base_specific_case(examples_dir: Path):
     """Test the exact arm_base case from roundtrip_test_robot.urdf."""
     # Load the actual file
-    urdf_path = Path("examples/roundtrip_test_robot.urdf")
-    if not urdf_path.exists():
-        pytest.skip("roundtrip_test_robot.urdf not found")
-
+    urdf_path = examples_dir / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(urdf_path)
 
     # Find arm_base link

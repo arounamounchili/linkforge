@@ -5,14 +5,9 @@ from pathlib import Path
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def get_examples_dir() -> Path:
-    """Get path to examples directory."""
-    return Path(__file__).parent.parent.parent / "examples"
-
-
-def test_mobile_robot_structure():
+def test_mobile_robot_structure(examples_dir: Path):
     """Test mobile_robot.urdf has correct structure."""
-    robot = URDFParser().parse(get_examples_dir() / "mobile_robot.urdf")
+    robot = URDFParser().parse(examples_dir / "mobile_robot.urdf")
 
     assert robot.name == "mobile_robot"
     assert len(robot.links) == 6
@@ -30,9 +25,9 @@ def test_mobile_robot_structure():
         assert joint.parent == "base_link"
 
 
-def test_diff_drive_robot_structure():
+def test_diff_drive_robot_structure(examples_dir: Path):
     """Test diff_drive_robot.urdf has correct structure and advanced features."""
-    robot = URDFParser().parse(get_examples_dir() / "diff_drive_robot.urdf")
+    robot = URDFParser().parse(examples_dir / "diff_drive_robot.urdf")
 
     assert robot.name == "diff_drive_robot"
     assert len(robot.links) == 4
@@ -54,9 +49,9 @@ def test_diff_drive_robot_structure():
     assert "right_wheel_joint" in rc_joints
 
 
-def test_roundtrip_test_robot_structure():
+def test_roundtrip_test_robot_structure(examples_dir: Path):
     """Test roundtrip_test_robot.urdf has correct structure and all features."""
-    robot = URDFParser().parse(get_examples_dir() / "roundtrip_test_robot.urdf")
+    robot = URDFParser().parse(examples_dir / "roundtrip_test_robot.urdf")
 
     assert robot.name == "comprehensive_test_robot"
     assert len(robot.links) == 15  # Added planar_platform and floating_sensor
@@ -134,9 +129,9 @@ def test_roundtrip_test_robot_structure():
     assert visual.origin.xyz.z == 0.2  # Visual offset from link frame
 
 
-def test_roundtrip_robot_has_all_joint_types():
+def test_roundtrip_robot_has_all_joint_types(examples_dir: Path):
     """Verify roundtrip_test_robot.urdf includes ALL 6 URDF joint types."""
-    robot = URDFParser().parse(get_examples_dir() / "roundtrip_test_robot.urdf")
+    robot = URDFParser().parse(examples_dir / "roundtrip_test_robot.urdf")
 
     from linkforge_core.models.joint import JointType
 
@@ -151,7 +146,7 @@ def test_roundtrip_robot_has_all_joint_types():
     assert JointType.FLOATING in joint_types, "Missing FLOATING joint"
 
 
-def test_all_examples_have_inertia():
+def test_all_examples_have_inertia(examples_dir: Path):
     """Verify all links in all examples have inertial properties."""
     examples = [
         "mobile_robot.urdf",
@@ -161,13 +156,13 @@ def test_all_examples_have_inertia():
     ]
 
     for example_file in examples:
-        robot = URDFParser().parse(get_examples_dir() / example_file)
+        robot = URDFParser().parse(examples_dir / example_file)
         for link in robot.links:
             assert link.inertial is not None, f"Link {link.name} in {example_file} missing inertial"
             assert link.inertial.mass > 0, f"Link {link.name} has zero or negative mass"
 
 
-def test_all_examples_parse_without_errors():
+def test_all_examples_parse_without_errors(examples_dir: Path):
     """Ensure all example files can be parsed without exceptions."""
     examples = [
         "mobile_robot.urdf",
@@ -177,7 +172,7 @@ def test_all_examples_parse_without_errors():
     ]
 
     for example_file in examples:
-        robot = URDFParser().parse(get_examples_dir() / example_file)
+        robot = URDFParser().parse(examples_dir / example_file)
         assert robot is not None
         assert robot.name
         assert len(robot.links) > 0

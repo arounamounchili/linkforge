@@ -16,15 +16,9 @@ from linkforge_core import URDFGenerator
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def get_examples_dir() -> Path:
-    """Get path to examples directory."""
-    return Path(__file__).parent.parent.parent / "examples"
-
-
-def test_simple_arm_roundtrip():
+def test_simple_arm_roundtrip(examples_dir: Path):
     """Test importing and re-exporting roundtrip_test_robot.urdf preserves structure."""
     # Get path to example URDF
-    examples_dir = get_examples_dir()
     urdf_path = examples_dir / "roundtrip_test_robot.urdf"
 
     assert urdf_path.exists(), f"Example URDF not found at {urdf_path}"
@@ -79,9 +73,8 @@ def test_simple_arm_roundtrip():
         assert joint_names2 == joint_names
 
 
-def test_materials_preserved():
+def test_materials_preserved(examples_dir: Path):
     """Test that material colors are preserved in round-trip."""
-    examples_dir = get_examples_dir()
     urdf_path = examples_dir / "roundtrip_test_robot.urdf"
 
     robot = URDFParser().parse(urdf_path)
@@ -98,9 +91,8 @@ def test_materials_preserved():
     assert "arm_material" in material_names or "base_material" in material_names
 
 
-def test_inertial_preserved():
+def test_inertial_preserved(examples_dir: Path):
     """Test that inertial properties are preserved in round-trip."""
-    examples_dir = get_examples_dir()
     urdf_path = examples_dir / "roundtrip_test_robot.urdf"
 
     robot = URDFParser().parse(urdf_path)
@@ -112,9 +104,8 @@ def test_inertial_preserved():
         assert link.inertial.inertia is not None, f"Link {link.name} missing inertia tensor"
 
 
-def test_quadruped_roundtrip():
+def test_quadruped_roundtrip(examples_dir: Path):
     """Test roundtrip for the complex quadruped robot example."""
-    examples_dir = get_examples_dir()
     urdf_path = examples_dir / "quadruped_robot.urdf"
     if not urdf_path.exists():
         pytest.skip("quadruped_robot.urdf not found")
@@ -148,9 +139,8 @@ def test_quadruped_roundtrip():
     assert rc.joints[0].command_interfaces[0] == "effort"
 
 
-def test_joint_limits_preserved():
+def test_joint_limits_preserved(examples_dir: Path):
     """Test that joint limits are preserved in round-trip."""
-    examples_dir = get_examples_dir()
     urdf_path = examples_dir / "roundtrip_test_robot.urdf"
 
     robot = URDFParser().parse(urdf_path)
