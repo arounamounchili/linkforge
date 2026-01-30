@@ -124,7 +124,10 @@ def import_mesh_file(mesh_path: Path, name: str):
 
     """
     if not mesh_path.exists():
+        logger.error(f"Mesh file not found: {mesh_path}")
         return None
+
+    logger.info(f"Importing mesh: {mesh_path} as '{name}'")
 
     # Deselect all
     bpy.ops.object.select_all(action="DESELECT")
@@ -134,9 +137,15 @@ def import_mesh_file(mesh_path: Path, name: str):
 
     try:
         if ext == ".obj":
-            bpy.ops.wm.obj_import(filepath=str(mesh_path))
+            if hasattr(bpy.ops.wm, "obj_import"):
+                bpy.ops.wm.obj_import(filepath=str(mesh_path))
+            else:
+                bpy.ops.import_scene.obj(filepath=str(mesh_path))
         elif ext == ".stl":
-            bpy.ops.wm.stl_import(filepath=str(mesh_path))
+            if hasattr(bpy.ops.wm, "stl_import"):
+                bpy.ops.wm.stl_import(filepath=str(mesh_path))
+            else:
+                bpy.ops.import_mesh.stl(filepath=str(mesh_path))
         elif ext == ".dae":
             # DAE is deprecated and unsupported in modern workflows.
             logger.warning(
@@ -145,19 +154,17 @@ def import_mesh_file(mesh_path: Path, name: str):
             )
             return None
         elif ext in (".glb", ".gltf"):
-            # glTF support: Only use modern importer
-            try:
+            if hasattr(bpy.ops.wm, "gltf_import"):
                 bpy.ops.wm.gltf_import(filepath=str(mesh_path))
-                # Get imported object (should be selected)
-                imported_objects = list(bpy.context.selected_objects)
-                if imported_objects:
-                    obj = imported_objects[0]
-                    obj.name = name
-                    return obj
-            except (AttributeError, NameError):
-                logger.error("Modern glTF importer not found (requires Blender 3.6+).")
+            elif hasattr(bpy.ops.import_scene, "gltf"):
+                bpy.ops.import_scene.gltf(filepath=str(mesh_path))
+            else:
+                logger.error(
+                    f"No glTF importer found in this Blender version ({bpy.app.version_string})."
+                )
                 return None
         else:
+            logger.warning(f"Unsupported mesh file extension: {ext} for '{mesh_path.name}'")
             return None
 
         # Get imported object (should be selected)
@@ -165,7 +172,11 @@ def import_mesh_file(mesh_path: Path, name: str):
         if imported_objects:
             obj = imported_objects[0]
             obj.name = name
+            logger.debug(f"Successfully imported mesh: {obj.name}")
             return obj
+
+        logger.warning(f"Importer ran but no objects were found for '{mesh_path.name}'")
+        return None
 
     except (RuntimeError, OSError) as e:
         logger.error(f"Failed to import mesh '{mesh_path.name}': {e}")
