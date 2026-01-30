@@ -18,6 +18,7 @@ from ..linkforge_core.models import (
     Sphere,
 )
 from .preferences import get_addon_prefs
+from .utils.kinematics import sort_joints_topological
 
 logger = get_logger(__name__)
 
@@ -135,48 +136,52 @@ def import_mesh_file(mesh_path: Path, name: str):
     # Import based on file extension
     ext = mesh_path.suffix.lower()
 
-    try:
-        if ext == ".obj":
-            try:
-                bpy.ops.wm.obj_import(filepath=str(mesh_path))
-            except (AttributeError, RuntimeError):
-                try:
-                    bpy.ops.import_scene.obj(filepath=str(mesh_path))
-                except (AttributeError, RuntimeError) as e:
-                    logger.error(f"Failed to import OBJ with all known operators: {e}")
-                    return None
-        elif ext == ".stl":
-            try:
-                bpy.ops.wm.stl_import(filepath=str(mesh_path))
-            except (AttributeError, RuntimeError):
-                try:
-                    bpy.ops.import_mesh.stl(filepath=str(mesh_path))
-                except (AttributeError, RuntimeError) as e:
-                    logger.error(f"Failed to import STL with all known operators: {e}")
-                    return None
-        elif ext == ".dae":
-            # DAE is deprecated and unsupported in modern workflows.
+    # Define operator candidates for each file extension
+    # We try them in order of preference (modern WM ops first, then legacy scene/mesh ops)
+    operators = {
+        ".obj": ["wm.obj_import", "import_scene.obj"],
+        ".stl": ["wm.stl_import", "import_mesh.stl"],
+        ".glb": ["wm.gltf_import", "import_scene.gltf"],
+        ".gltf": ["wm.gltf_import", "import_scene.gltf"],
+    }
+
+    if ext not in operators:
+        if ext == ".dae":
             logger.warning(
                 f"Skipping DAE import for '{mesh_path.name}'. "
                 "DAE is a legacy format. Please convert to glTF (.glb) or OBJ."
             )
-            return None
-        elif ext in (".glb", ".gltf"):
-            # glTF Resolution Strategy: Try modern WM, then legacy Scene Import
-            try:
-                bpy.ops.wm.gltf_import(filepath=str(mesh_path))
-            except (AttributeError, RuntimeError):
-                try:
-                    bpy.ops.import_scene.gltf(filepath=str(mesh_path))
-                except (AttributeError, RuntimeError) as e:
-                    logger.error(
-                        f"No functional glTF importer found ({e}). Blender version: {bpy.app.version_string}"
-                    )
-                    return None
         else:
             logger.warning(f"Unsupported mesh file extension: {ext} for '{mesh_path.name}'")
-            return None
+        return None
 
+    # Dispatcher: Try each operator until one succeeds
+    success = False
+    for op_name in operators[ext]:
+        try:
+            # Dynamically look up operator
+            op_parts = op_name.split(".")
+            op = bpy.ops
+            for part in op_parts:
+                op = getattr(op, part)
+
+            # Call the operator
+            op(filepath=str(mesh_path))
+            success = True
+            logger.debug(f"Successfully used importer: {op_name}")
+            break
+        except (AttributeError, RuntimeError) as e:
+            logger.debug(f"Importer '{op_name}' failed or not found: {e}")
+            continue
+
+    if not success:
+        logger.error(
+            f"No functional {ext.upper()} importer found for '{mesh_path.name}'. "
+            f"Blender version: {bpy.app.version_string}"
+        )
+        return None
+
+    try:
         # Get imported object (should be selected)
         imported_objects = list(bpy.context.selected_objects)
         if imported_objects:
@@ -189,10 +194,10 @@ def import_mesh_file(mesh_path: Path, name: str):
         return None
 
     except (RuntimeError, OSError) as e:
-        logger.error(f"Failed to import mesh '{mesh_path.name}': {e}")
+        logger.error(f"Failed to process imported mesh '{mesh_path.name}': {e}")
         return None
     except Exception as e:
-        logger.critical(f"Unexpected error importing mesh '{mesh_path.name}': {e}", exc_info=True)
+        logger.critical(f"Unexpected error processing mesh '{mesh_path.name}': {e}", exc_info=True)
         raise
 
     return None
@@ -858,40 +863,6 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
         obj = create_link_object(link, urdf_dir, collection)
         if obj:
             link_objects[link.name] = obj
-
-    # Sort joints in topological order (parents before children)
-    # This ensures nested hierarchies are built correctly
-    def sort_joints_topological(joints, links):
-        """Sort joints so parents are processed before children."""
-        # Build a map of which links are children
-        child_links = {j.child for j in joints}
-        # Find root links (not children of any joint)
-        root_links = {link.name for link in links if link.name not in child_links}
-
-        # Build adjacency list: parent_link -> [(joint, child_link), ...]
-        children_of = {}
-        for joint in joints:
-            if joint.parent not in children_of:
-                children_of[joint.parent] = []
-            children_of[joint.parent].append(joint)
-
-        # Traverse tree from roots, collecting joints in order
-        sorted_joints = []
-        visited = set()
-
-        def visit(link_name):
-            if link_name in visited:
-                return
-            visited.add(link_name)
-            if link_name in children_of:
-                for joint in children_of[link_name]:
-                    sorted_joints.append(joint)
-                    visit(joint.child)
-
-        for root in root_links:
-            visit(root)
-
-        return sorted_joints
 
     sorted_joints = sort_joints_topological(robot.joints, robot.links)
 

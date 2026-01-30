@@ -14,11 +14,9 @@ import bpy
 from ..linkforge_core.logging_config import get_logger
 from ..linkforge_core.models import Robot
 from .scene_builder import (
-    create_joint_object,
-    create_link_object,
-    create_sensor_object,
     setup_scene_for_robot,
 )
+from .utils.kinematics import sort_joints_topological
 
 logger = get_logger(__name__)
 
@@ -65,33 +63,6 @@ class AsynchronousRobotBuilder:
             self.tasks.append(("create_link", link))
 
         # 4. Create sorted joint tasks
-        # We need to sort joints topologically exactly like in scene_builder
-        # We reuse the internal sort function logic
-        def sort_joints_topological(joints, links):
-            child_links = {j.child for j in joints}
-            root_links = {link.name for link in links if link.name not in child_links}
-            children_of = {}
-            for joint in joints:
-                if joint.parent not in children_of:
-                    children_of[joint.parent] = []
-                children_of[joint.parent].append(joint)
-
-            sorted_joints = []
-            visited = set()
-
-            def visit(link_name):
-                if link_name in visited:
-                    return
-                visited.add(link_name)
-                if link_name in children_of:
-                    for joint in children_of[link_name]:
-                        sorted_joints.append(joint)
-                        visit(joint.child)
-
-            for root in root_links:
-                visit(root)
-            return sorted_joints
-
         sorted_joints = sort_joints_topological(self.robot.joints, self.robot.links)
         for joint in sorted_joints:
             self.tasks.append(("create_joint", joint))
