@@ -17,9 +17,10 @@ from ..linkforge_core.models import (
     Robot,
     Sphere,
 )
+from ..linkforge_core.utils.kinematics import sort_joints_topological
 from .preferences import get_addon_prefs
-from .utils.blender_utils import move_to_collection
-from .utils.kinematics import resolve_mimic_joints, sort_joints_topological
+from .utils.joint_utils import resolve_mimic_joints
+from .utils.scene_utils import move_to_collection
 
 logger = get_logger(__name__)
 
@@ -221,6 +222,20 @@ def import_mesh_file(mesh_path: Path, name: str):
     return None
 
 
+def _get_geometry_type_str(geometry):
+    """Get geometry type string from geometry instance."""
+    geometry_type_map = {
+        Box: "BOX",
+        Cylinder: "CYLINDER",
+        Sphere: "SPHERE",
+        Mesh: "MESH",
+    }
+    for geom_class, type_str in geometry_type_map.items():
+        if isinstance(geometry, geom_class):
+            return type_str
+    return "MESH"  # Default fallback
+
+
 def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | None:
     """Create Blender object from Link model with support for multiple visual/collision elements.
 
@@ -234,10 +249,10 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
     """
     # Create an Empty object to represent the link (always)
-    # Use PLAIN_AXES type with sizing from preferences
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
-    link_obj = bpy.context.active_object
-    link_obj.name = link.name
+    # Using bpy.data.objects.new is safer than bpy.ops in asynchronous/timer environments
+    link_obj = bpy.data.objects.new(link.name, None)
+    link_obj.empty_display_type = "PLAIN_AXES"
+    link_obj.location = (0, 0, 0)
 
     # Set display size from preferences
     prefs = get_addon_prefs()
@@ -421,20 +436,6 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
         props.mass = 0.0
         props.use_auto_inertia = False
 
-
-def _get_geometry_type_str(geometry):
-    """Get geometry type string from geometry instance."""
-    geometry_type_map = {
-        Box: "BOX",
-        Cylinder: "CYLINDER",
-        Sphere: "SPHERE",
-        Mesh: "MESH",
-    }
-    for geom_class, type_str in geometry_type_map.items():
-        if isinstance(geometry, geom_class):
-            return type_str
-    return "MESH"  # Default fallback
-
     # Set geometry types on link properties (use first element if multiple)
     if hasattr(link_obj, "linkforge"):
         props = link_obj.linkforge
@@ -480,12 +481,17 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
         empty_size = getattr(prefs, "joint_empty_size", empty_size)
 
     # Create Empty object (ARROWS shows RGB colored axes)
-    bpy.ops.object.empty_add(type="ARROWS", location=(0, 0, 0))
-    empty = bpy.context.active_object
-    empty.name = joint.name
-
-    # Set display size from preferences
+    # Using bpy.data.objects.new for context safety
+    empty = bpy.data.objects.new(joint.name, None)
+    empty.empty_display_type = "ARROWS"
     empty.empty_display_size = empty_size
+    empty.location = (0, 0, 0)
+
+    # Add to collection
+    if collection:
+        collection.objects.link(empty)
+    else:
+        bpy.context.scene.collection.objects.link(empty)
 
     # Set joint properties
     if hasattr(empty, "linkforge_joint"):
@@ -549,16 +555,14 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
             props.mimic_offset = joint.mimic.offset
 
     # Set up parent-child relationship in Blender
-    if joint.parent in link_objects and joint.child in link_objects:
-        parent_obj = link_objects[joint.parent]
-        child_obj = link_objects[joint.child]
+    parent_obj = link_objects.get(joint.parent)
+    child_obj = link_objects.get(joint.child)
 
+    if parent_obj and child_obj:
         # Parent the joint Empty to the parent link
         empty.parent = parent_obj
 
         # Reset matrix_parent_inverse to ensure clean local transform
-        # This is critical for nested hierarchies - without it, the joint Empty's
-        # visual position won't match its local coordinates
         empty.matrix_parent_inverse.identity()
 
         # Apply joint origin transform (offset from parent link frame)
@@ -568,20 +572,21 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
             empty.rotation_euler = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
         # Parent the child link to the joint Empty
-        # This creates a cleaner hierarchy: Parent Link -> Joint -> Child Link
         child_obj.parent = empty
-
-        # Reset matrix_parent_inverse to ensure clean local transform
         child_obj.matrix_parent_inverse.identity()
 
-        # Force update of parent's world matrix before setting child position
-        _ = empty.matrix_world  # Access to force recalculation
+        # Force update of parent's world matrix
+        _ = empty.matrix_world
 
         # Set child link's local position to origin (0,0,0)
-        # Since child is parented to joint, and joint is at the child frame origin,
-        # the child link should be at local (0,0,0) relative to the joint.
         child_obj.location = (0, 0, 0)
         child_obj.rotation_euler = (0, 0, 0)
+    else:
+        logger.error(
+            f"Failed to parent joint '{joint.name}': "
+            f"Parent link '{joint.parent}' or child link '{joint.child}' not found in internal map. "
+            f"Existing links: {list(link_objects.keys())}"
+        )
 
     # Add to collection
     if collection:
@@ -612,9 +617,9 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
         return None
 
     # Create Empty object for sensor (SPHERE for sensors)
-    bpy.ops.object.empty_add(type="SPHERE", location=(0, 0, 0))
-    empty = bpy.context.active_object
-    empty.name = sensor.name
+    # Using bpy.data.objects.new for context safety
+    empty = bpy.data.objects.new(sensor.name, None)
+    empty.empty_display_type = "SPHERE"
 
     # Set display size from preferences
     prefs = get_addon_prefs()
@@ -708,14 +713,12 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
             if sensor.plugin.raw_xml:
                 props.plugin_raw_xml = sensor.plugin.raw_xml
 
+    # Set up parenting
     link_obj = link_objects[sensor.link_name]
     empty.parent = link_obj
 
-    from mathutils import Matrix
-
-    link_scale = link_obj.matrix_world.to_scale()
-    scale_inv = Matrix.Diagonal((1.0 / link_scale.x, 1.0 / link_scale.y, 1.0 / link_scale.z, 1.0))
-    empty.matrix_parent_inverse = scale_inv
+    # Reset matrix_parent_inverse to ensure clean local transform
+    empty.matrix_parent_inverse.identity()
 
     # Display basic properties
     if sensor.origin:
