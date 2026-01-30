@@ -14,6 +14,9 @@ import bpy
 from ..linkforge_core.logging_config import get_logger
 from ..linkforge_core.models import Robot
 from .scene_builder import (
+    create_joint_object,
+    create_link_object,
+    create_sensor_object,
     setup_scene_for_robot,
 )
 from .utils.kinematics import sort_joints_topological
