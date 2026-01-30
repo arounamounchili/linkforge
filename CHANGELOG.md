@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **blender:** discontinue automatic transmission conversion in favor of explicit ROS 2 Control Dashboard configuration
 * **docs:** exhaustive documentation audit and synchronization with v1.2.0 UI terminology
 * **docs:** update all tutorials and how-to guides to reflect new "Create Link from Mesh" and "Create Sensor" labels
+* **tests:** reorganize integration tests into specialized `parsers/`, `blender/`, and `features/` subdirectories
+* **tests:** centralize path management via `examples_dir` fixture and create comprehensive `tests/README.md`
+* **docs:** synchronize `ARCHITECTURE.md`, `CONTRIBUTING.md`, and Sphinx reference index with new test organization
 
 
 ### 🐞 Bug Fixes
