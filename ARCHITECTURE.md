@@ -396,7 +396,10 @@ graph TB
 ### Test Categories
 - **Unit Tests (Core)**: Isolated tests for platform-independent data models and math.
 - **Unit Tests (Blender)**: Tests for Blender-specific logic running in a real headless Blender environment.
-- **Integration Tests**: Full workflow validation, multi-file parsing, and end-to-end round-trips.
+- **Integration Tests**: Full workflow validation organized into specialized subdirectories:
+  - `parsers/`: URDF/Xacro parsing logic and complex includes.
+  - `blender/`: End-to-end Roundtrip (Import → Scene Setup → Export).
+  - `features/`: Specific functionality like Inertia, Transmissions, and Sensors.
 
 ## Security Architecture
 
@@ -429,4 +432,4 @@ LinkForge distinguishes between user-created assets and imported "Source of Trut
 ---
 
 **Last Updated:** 2026-01-30
-**Version:** 1.2.0
+**Version:** 1.2.0 (Architectural Stability & Precision)

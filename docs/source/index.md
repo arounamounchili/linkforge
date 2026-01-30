@@ -124,7 +124,6 @@ explanation/index
 :caption: API Reference
 
 reference/index
-reference/testing/manual_qa
 ```
 
 ```{toctree}

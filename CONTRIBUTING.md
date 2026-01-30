@@ -176,6 +176,11 @@ uv run pytest tests/unit/core/test_robot.py
 # Run with coverage
 uv run pytest --cov=linkforge_core --cov=platforms/blender/linkforge --cov-report=html
 
+# Run specific test category
+uv run pytest tests/integration/blender/
+uv run pytest tests/integration/parsers/
+uv run pytest tests/integration/features/
+
 # Run only fast tests (skip integration)
 uv run pytest tests/unit/
 ```
@@ -229,7 +234,10 @@ def test_sensor_roundtrip():
 ```
 
 - **Unit Tests** (`tests/unit/`): Test individual functions/classes in isolation (Core or Blender).
-- **Integration Tests** (`tests/integration/`): Test full workflows and round-trips.
+- **Integration Tests** (`tests/integration/`): Test full workflows and round-trips organized into `parsers/`, `blender/`, and `features/`.
+
+> [!TIP]
+> **Use Central Fixtures**: Always use the `examples_dir` fixture from `tests/conftest.py` when accessing example URDFs. Avoid hardcoding relative paths like `../../examples`.
 
 ### Testing Philosophy ("Real Data over Mocks")
 

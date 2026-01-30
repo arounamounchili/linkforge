@@ -27,6 +27,13 @@ Technical mapping of joints, links, and sensor hierarchies.
 A quick reference for robotics and Blender terminology used in the project.
 :::
 
+:::{grid-item-card} 🧪 Testing
+:link: testing/automated_testing
+:link-type: doc
+
+Automated test protocols, integration subdirectories, and Manual QA requirements.
+:::
+
 ::::
 
 ```{toctree}
@@ -36,6 +43,8 @@ A quick reference for robotics and Blender terminology used in the project.
 api/index
 robot_structure
 glossary
+testing/automated_testing
+testing/manual_qa
 ```
 
 ## Related Specifications
