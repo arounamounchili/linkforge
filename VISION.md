@@ -5,6 +5,13 @@
 ## 🎯 Our Mission
 To bridge the fundamental gap between creative 3D design and high-fidelity robotics engineering. We empower roboticists to build, validate, and deploy their "Digital Twins" from a single source of truth.
 
+## 🎓 Who Uses LinkForge?
+
+*   **Students & Researchers**: Learning ROS 2 and publishing reproducible robot designs with free, open-source tools
+*   **Indie Robotics Startups**: Building prototypes and MVPs without expensive CAD licenses
+*   **Open-Source Community**: Creating and sharing robot designs for competitions, education, and collaboration
+*   **Academic Labs**: Developing novel robots with precise physics for simulation-based research
+
 ---
 
 ## 🌉 The Universal Robotics Bridge
@@ -43,7 +50,7 @@ Why LinkForge is the choice for the next generation of robotics:
 
 ## 🏗️ Technical Strategy: The Hexagonal Core
 LinkForge is engineered for the future. By utilizing a **Hexagonal Architecture (Ports & Adapters)**, we remain framework-independent:
-*   **Decoupled Intelligence**: Our "Robotics Brain" is isolated from the 3D host (Blender/Onshape).
+*   **Decoupled Intelligence**: Our "Robotics Brain" is isolated from the 3D host (Blender/FreeCAD/Fusion 360).
 *   **Model Once, Deploy Anywhere**: Swappable adapters allow a single robot model to target multiple simulators (MJCF, URDF, SDF) without losing precision.
 *   **Scalable Adaptation**: As new tools emerge, LinkForge is ready to bridge them without rewriting the fundamental physics core.
 
