@@ -94,9 +94,9 @@ graph LR
 |--------|---------|-----------|
 | **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `control_panel.py`, `forge_panel.py` |
 | **Operators** | User actions (import, export, etc.) | `import_ops.py`, `export_ops.py`, `link_ops.py`, `joint_ops.py`, `sensor_ops.py`, `control_ops.py`, `transmission_ops.py` (Legacy) |
-| **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `control_props.py`, `transmission_props.py` (Legacy) |
+| **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `control_props.py`, `validation_props.py`, `transmission_props.py` (Legacy) |
 | **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `scene_builder.py`, `mesh_export.py` |
-| **Utils** | Blender-specific helpers | `joint_gizmos.py`, `property_helpers.py`, `transform_utils.py` |
+| **Utils** | Blender-specific helpers | `joint_gizmos.py`, `inertia_gizmos.py`, `property_helpers.py`, `transform_utils.py`, `scene_utils.py`, `joint_utils.py`, `decorators.py` |
 
 ### 2. Core Logic Layer (`core/src/linkforge_core/`)
 
@@ -136,7 +136,7 @@ graph TB
 | **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` |
 | **Physics** | Mass & inertia calculations | `physics/inertia.py` |
 | **Validation** | Error checking & security | `validation/validator.py`, `validation/security.py` |
-| **Utils** | Unified internal logic | `utils/math_utils.py`, `utils/string_utils.py` |
+| **Utils** | Unified internal logic | `utils/math_utils.py`, `utils/string_utils.py`, `utils/xml_utils.py`, `utils/kinematics.py` |
 
 ## Data Flow
 
