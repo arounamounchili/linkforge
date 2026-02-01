@@ -314,9 +314,6 @@ class Robot:
 
                 # First visit to this node
                 if child_idx == 0:
-                    if node in rec_stack:
-                        # Cycle detected!
-                        return True
                     visited.add(node)
                     rec_stack.add(node)
                     # Push backtrack marker

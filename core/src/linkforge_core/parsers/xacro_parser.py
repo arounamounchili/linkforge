@@ -23,11 +23,13 @@ XACRO_NS = "http://www.ros.org/wiki/xacro"
 class XacroResolver:
     """Lightweight XACRO resolver with macro and math support."""
 
-    def __init__(self, search_paths: list[Path] | None = None) -> None:
+    def __init__(self, search_paths: list[Path] | None = None, max_depth: int = 50) -> None:
         self.search_paths = search_paths or []
         self.properties: dict[str, str] = {}
         self.macros: dict[str, tuple[list[str], ET.Element]] = {}
         self.args: dict[str, str] = {}
+        self.max_depth = max_depth
+        self._current_depth = 0
 
     def resolve_file(self, filepath: Path) -> str:
         """Resolve a XACRO file and return URDF string."""
@@ -55,7 +57,18 @@ class XacroResolver:
             raise RobotParserError(f"XACRO resolution failed for {filepath}: {e}") from e
 
     def resolve_element(self, element: ET.Element) -> ET.Element:
-        """Process XACRO elements, substitutions, and macro expansions."""
+        """Process a single element recursively."""
+        self._current_depth += 1
+        if self._current_depth > self.max_depth:
+            raise RobotParserError(f"Maximum XACRO recursion depth ({self.max_depth}) exceeded")
+
+        try:
+            return self._resolve_element_impl(element)
+        finally:
+            self._current_depth -= 1
+
+    def _resolve_element_impl(self, element: ET.Element) -> ET.Element:
+        """Core recursive resolution logic."""
         tag = element.tag.replace(f"{{{XACRO_NS}}}", "xacro:")
 
         # 1. Handle properties: <xacro:property name="..." value="..."/>
@@ -111,18 +124,12 @@ class XacroResolver:
 
         # 5. Handle conditionals: <xacro:if value="..."/> or <xacro:unless value="..."/>
         if tag in ("xacro:if", "xacro:unless"):
-            value = self._substitute(element.get("value") or "0")
-            # Convert value to boolean. Standard xacro truthy: 'true', '1', or non-zero
-            try:
-                # Safe eval: we allow basic math and truthiness
-                ev = eval(value, {"__builtins__": {}}, {})
-                is_true = bool(ev) if not isinstance(ev, str) else ev.lower() in ("true", "1")
-            except Exception:
-                is_true = value.lower() in ("true", "1")
+            condition = element.get("value") or "0"
+            is_true = self._eval_condition(condition)
+            if tag == "xacro:unless":
+                is_true = not is_true
 
-            should_process = is_true if tag == "xacro:if" else not is_true
-
-            if should_process:
+            if is_true:
                 container = ET.Element("container")
                 for child in element:
                     resolved_child = self.resolve_element(child)
@@ -138,40 +145,43 @@ class XacroResolver:
         if tag == "xacro:insert_block":
             name = element.get("name")
             if name and name in self.properties:
-                val = self.properties[name]
-                if isinstance(val, (ET.Element, list)):
+                block = self.properties[name]
+                if isinstance(block, (ET.Element, list)):
                     # It's an XML block
                     container = ET.Element("container")
-                    if isinstance(val, ET.Element):
-                        container.append(val)
+                    if isinstance(block, ET.Element):
+                        # Single element
+                        container.append(self.resolve_element(block))
                     else:
-                        for item in val:
-                            container.append(item)
+                        # List of elements (usual case for block params)
+                        for b_elem in block:
+                            container.append(self.resolve_element(b_elem))
                     return container
             return ET.Element("skip")
 
-        # 7. Handle macro calls: <xacro:MACRO_NAME ... />
+        # 7. Handle macro calls
         if tag.startswith("xacro:"):
-            macro_name = tag[6:]
-            if macro_name in self.macros:
-                params, macro_elem = self.macros[macro_name]
-                # Map arguments to properties for this expansion
-                local_props: dict[str, Any] = {}
+            if tag[6:] in self.macros:
+                params, macro_elem = self.macros[tag[6:]]
+                local_props = {}
 
-                # First, find block parameters (prefixed with *) in the call
-                # These are current element's children
+                # Parse parameters
                 block_params = [p[1:] for p in params if p.startswith("*")]
+                regular_params = [p for p in params if not p.startswith("*")]
+
+                # Map children to block parameters (simplified: all children to all block params)
                 for bp in block_params:
                     local_props[bp] = list(element)
 
-                for p in params:
-                    if p.startswith("*"):
-                        continue
+                # Map attributes to regular parameters
+                for p in regular_params:
                     # Handle default values in params (e.g. "mass:=1.0")
                     bits = p.split(":=")
                     p_name = bits[0]
-                    default = bits[1] if len(bits) > 1 else ""
-                    local_props[p_name] = element.get(p_name) or default
+                    # Substitute the default value from the parameter definition
+                    default = self._substitute(bits[1] if len(bits) > 1 else "")
+                    # Substitute the attribute value provided in the macro call
+                    local_props[p_name] = self._substitute(element.get(p_name) or default)
 
                 # Expand macro body
                 parent_props = self.properties.copy()
@@ -188,9 +198,11 @@ class XacroResolver:
 
                 self.properties = parent_props
                 return container
+
+            # Unknown xacro tag - skip it
             return ET.Element("skip")
 
-        # 6. Handle substitutions in regular elements
+        # 8. Handle substitutions in text and attributes for regular elements
         new_attrib = {}
         for key, val in element.attrib.items():
             new_attrib[key] = self._substitute(val)
@@ -199,7 +211,7 @@ class XacroResolver:
         new_element.text = self._substitute(element.text or "")
         new_element.tail = self._substitute(element.tail or "")
 
-        # 7. Recursively process children
+        # 9. Recursively process children
         for child in element:
             resolved_child = self.resolve_element(child)
             if resolved_child.tag == "container":
@@ -210,6 +222,22 @@ class XacroResolver:
 
         return new_element
 
+    def _eval_condition(self, condition: str) -> bool:
+        """Evaluate a XACRO condition string."""
+        condition = self._substitute(condition).lower().strip()
+
+        # Safe eval for boolean logic
+        if condition in ("true", "1"):
+            return True
+        elif condition in ("false", "0"):
+            return False
+        else:
+            try:
+                # Basic string/bool comparison
+                return bool(eval(condition, {"__builtins__": {}}, {}))
+            except Exception:
+                return condition not in ("", "0", "false")
+
     def _substitute(self, text: str) -> str:
         """Handle ${prop}, $(arg name), and $(find pkg) substitutions with math."""
         if not text:
@@ -219,32 +247,31 @@ class XacroResolver:
         text = re.sub(r"\$\(arg (.*?)\)", lambda m: self.args.get(m.group(1), ""), text)
 
         # 2. Handle ROS package find: $(find package)
-        # Placeholder: standard URDF meshes usually stay relative
+        # Note: We convert this to the package:// URI scheme commonly used in URDF.
         text = re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
 
         # 3. Handle properties and math: ${expression}
         def replace_expr(match: re.Match[str]) -> str:
             expr = match.group(1)
-            original_expr = expr
 
             # Replace property names with values
             for name, val in self.properties.items():
                 # Ensure we only replace whole words to avoid partial matches
-                expr = re.sub(rf"\b{name}\b", str(val), expr)
+                if name in expr:
+                    expr = re.sub(rf"\b{name}\b", str(val), expr)
 
-            # If the substituted expression contains spaces, it's likely a vector (e.g. RGBA)
-            # We return it as is without trying to evaluate it as math.
-            if " " in expr.strip():
-                return expr
-
+            # Attempt to evaluate as math. If it fails, or if it looks like a vector
+            # (non-math characters or multiple numbers), we return the substituted string as-is.
             try:
                 # Safe eval for basic math (+, -, *, /, parentheses)
                 # We restrict globals to empty and locals to basic math symbols
-                return str(eval(expr, {"__builtins__": {}}, {}))
+                res = eval(expr, {"__builtins__": {}}, {})
+                # If the result is a number, return it as string
+                if isinstance(res, (int, float)):
+                    return str(res)
+                return str(res)
             except Exception:
-                # If eval fails, return the substituted expr if it changed
-                # Otherwise return the original match (fallback)
-                return expr if expr != original_expr else match.group(0)
+                return expr
 
         text = re.sub(r"\${(.*?)}", replace_expr, text)
 
@@ -301,6 +328,12 @@ class XACROParser(RobotParser):
         from .urdf_parser import URDFParser
 
         resolver = XacroResolver(search_paths=kwargs.get("search_paths"))
+
+        # Pass additional kwargs as initial xacro arguments
+        for k, v in kwargs.items():
+            if k not in ["search_paths"]:
+                resolver.args[k] = str(v)
+
         urdf_string = resolver.resolve_file(filepath)
 
         return URDFParser().parse_string(urdf_string, urdf_directory=filepath.parent, **kwargs)

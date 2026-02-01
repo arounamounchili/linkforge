@@ -109,12 +109,14 @@ def test_unsupported_content_type(tmp_path):
 
 def test_parser_detects_xacro_in_urdf():
     parser = URDFParser()
-    xacro_content = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"></robot>'
+    xacro_content = (
+        '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:macro name="test"/></robot>'
+    )
 
     with pytest.raises(RobotParserError) as excinfo:
         parser.parse_string(xacro_content)
 
-    assert "XACRO file detected" in str(excinfo.value)
+    assert "XACRO features detected" in str(excinfo.value)
 
 
 def test_xacro_parser_basic(tmp_path):

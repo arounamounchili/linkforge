@@ -89,6 +89,20 @@ def validate_mesh_path(
             "This is not allowed for security reasons."
         )
 
+    # Sandbox validation: ensure resolved path is within urdf_directory (if provided)
+    if urdf_directory:
+        try:
+            resolved.relative_to(urdf_directory.resolve())
+        except ValueError:
+            logger.warning(
+                f"SECURITY: Path traversal attempt - '{mesh_filepath}' "
+                f"attempts to escape URDF directory: {urdf_directory}"
+            )
+            raise ValueError(
+                f"Mesh path '{mesh_filepath}' attempts to escape the URDF directory: {urdf_directory}. "
+                "This is not allowed for security reasons."
+            ) from None
+
     return resolved
 
 

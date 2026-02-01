@@ -22,7 +22,7 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path):
     """Test that export → re-import preserves robot structure perfectly."""
     # Step 1: Import original URDF
-    original_path = examples_dir / "roundtrip_test_robot.urdf"
+    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(original_path)
 
     # Step 2: Export to temporary file
@@ -274,7 +274,7 @@ def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path):
 
 def test_joint_origin_consistency(examples_dir: Path):
     """Test that joint origins are consistent across import-export-import."""
-    original_path = examples_dir / "roundtrip_test_robot.urdf"
+    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(original_path)
 
     # Export
@@ -318,7 +318,7 @@ def test_joint_origin_consistency(examples_dir: Path):
 
 def test_visual_geometry_origins_preserved(examples_dir: Path):
     """Test that visual geometry origins (offsets) are preserved."""
-    original_path = examples_dir / "roundtrip_test_robot.urdf"
+    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(original_path)
 
     # Export
@@ -365,7 +365,7 @@ def test_visual_geometry_origins_preserved(examples_dir: Path):
 
 def test_inertial_origins_preserved(examples_dir: Path):
     """Test that inertial origins (center of mass) are preserved in roundtrip."""
-    original_path = examples_dir / "roundtrip_test_robot.urdf"
+    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(original_path)
 
     # Export

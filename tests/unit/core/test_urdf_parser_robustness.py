@@ -1,0 +1,373 @@
+"""Tests for URDFParser robustness, error handling, and security."""
+
+from __future__ import annotations
+
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+import pytest
+from linkforge_core.base import RobotParserError
+from linkforge_core.models import SensorType
+from linkforge_core.parsers.urdf_parser import (
+    URDFParser,
+    parse_geometry,
+    parse_material,
+    parse_sensor_from_gazebo,
+    parse_transmission,
+)
+from linkforge_core.validation import validate_mesh_path
+from linkforge_core.validation.security import validate_package_uri
+
+
+def test_geometry_invalid_inputs():
+    """Test geometry parsing with various invalid inputs."""
+    # Box validation
+    assert parse_geometry(ET.fromstring("<geometry><box/></geometry>")) is None
+    assert parse_geometry(ET.fromstring('<geometry><box size="0 1 1"/></geometry>')) is None
+
+    # Cylinder validation
+    assert (
+        parse_geometry(ET.fromstring('<geometry><cylinder radius="0" length="1"/></geometry>'))
+        is None
+    )
+    assert (
+        parse_geometry(ET.fromstring('<geometry><cylinder radius="1" length="0"/></geometry>'))
+        is None
+    )
+
+    # Sphere validation
+    assert parse_geometry(ET.fromstring('<geometry><sphere radius="0"/></geometry>')) is None
+
+    # Mesh validation
+    assert parse_geometry(ET.fromstring("<geometry><mesh/></geometry>")) is None
+    assert (
+        parse_geometry(
+            ET.fromstring('<geometry><mesh filename="cube.stl" scale="0 1 1"/></geometry>')
+        )
+        is None
+    )
+
+    # Unknown geometry type
+    assert parse_geometry(ET.fromstring("<geometry><unknown/></geometry>")) is None
+
+
+def test_joint_axis_default_coverage():
+    """Test default axis assignment for different joint types."""
+    from linkforge_core.models import Vector3
+    from linkforge_core.parsers.urdf_parser import parse_joint
+
+    # Revolute defaults to 1 0 0
+    j_rev = parse_joint(
+        ET.fromstring(
+            '<joint name="j" type="revolute"><parent link="a"/><child link="b"/><limit effort="1" velocity="1" lower="-1" upper="1"/></joint>'
+        )
+    )
+    assert j_rev.axis == Vector3(1, 0, 0)
+
+    # Fixed has no axis
+    j_fixed = parse_joint(
+        ET.fromstring('<joint name="j" type="fixed"><parent link="a"/><child link="b"/></joint>')
+    )
+    assert j_fixed.axis is None
+
+
+def test_inertia_sanitization_coverage():
+    """Test sanitization of zero/negative inertia moments."""
+    from linkforge_core.parsers.urdf_parser import parse_link
+
+    # We use values that will be sanitized to 1e-6 but won't trigger
+    # the physical property validation error (triangle inequality: Ixx + Iyy >= Izz etc)
+    # 1e-6 + 1e-6 >= 1e-6 (holds)
+    # Mass must be positive too.
+    xml = """
+    <link name="l">
+        <inertial>
+            <mass value="1.0"/>
+            <inertia ixx="0" iyy="0" izz="0" ixy="0" ixz="0" iyz="0"/>
+        </inertial>
+    </link>
+    """
+    link = parse_link(ET.fromstring(xml), {})
+    assert link.inertial.inertia.ixx == 1e-6
+    assert link.inertial.inertia.iyy == 1e-6
+    assert link.inertial.inertia.izz == 1e-6
+
+
+def test_geometry_security_hardening(tmp_path):
+    """Test security constraints in geometry parsing."""
+    urdf_dir = tmp_path / "urdf"
+    urdf_dir.mkdir()
+
+    # Path traversal
+    assert (
+        parse_geometry(
+            ET.fromstring('<geometry><mesh filename="../evil.stl"/></geometry>'), urdf_dir
+        )
+        is None
+    )
+    assert (
+        parse_geometry(
+            ET.fromstring('<geometry><mesh filename="file:///etc/passwd"/></geometry>'), urdf_dir
+        )
+        is None
+    )
+
+    # Package URI traversal
+    assert (
+        parse_geometry(
+            ET.fromstring('<geometry><mesh filename="package://pkg/../../etc/passwd"/></geometry>'),
+            urdf_dir,
+        )
+        is None
+    )
+
+
+def test_material_parsing_robustness():
+    """Test material color and texture robustness."""
+    mats = {}
+
+    # Invalid RGBA text formats
+    assert parse_material(ET.fromstring('<material><color rgba="1 1 "/></material>'), mats) is None
+    assert (
+        parse_material(ET.fromstring('<material><color rgba="not a color"/></material>'), mats)
+        is None
+    )
+    assert (
+        parse_material(ET.fromstring('<material><color rgba="1 1 1 1 1"/></material>'), mats)
+        is None
+    )
+
+    # Color out of bounds (Color validates 0.0-1.0)
+    assert (
+        parse_material(ET.fromstring('<material><color rgba="2.0 0 0 1"/></material>'), mats)
+        is None
+    )
+
+    # Texture path support
+    mat = parse_material(
+        ET.fromstring('<material name="m"><texture filename="texture.jpg"/></material>'), mats
+    )
+    assert mat.texture == "texture.jpg"
+
+
+def test_transmission_parsing_comprehensive():
+    """Test transmission parsing with optional mechanical reduction and offsets."""
+    urdf = """
+    <transmission name="t1">
+        <type>Simple</type>
+        <joint name="j1">
+            <mechanicalReduction>100.0</mechanicalReduction>
+            <offset>3.14</offset>
+        </joint>
+        <actuator name="a1">
+            <mechanicalReduction>50.0</mechanicalReduction>
+        </actuator>
+    </transmission>
+    """
+    trans = parse_transmission(ET.fromstring(urdf))
+    assert trans.joints[0].mechanical_reduction == 100.0
+    assert trans.joints[0].offset == 3.14
+    assert trans.actuators[0].mechanical_reduction == 50.0
+    assert "position" in trans.joints[0].hardware_interfaces
+
+
+def test_gazebo_sensor_parsing_robustness():
+    """Test Gazebo sensor parsing edge cases and variety."""
+    # Missing reference link
+    assert (
+        parse_sensor_from_gazebo(ET.fromstring('<gazebo><sensor name="s" type="camera"/></gazebo>'))
+        is None
+    )
+
+    # GPS variety (navsat)
+    gps_xml = """
+    <gazebo reference="gps_link">
+        <sensor name="my_gps" type="navsat"/>
+    </gazebo>
+    """
+    sensor = parse_sensor_from_gazebo(ET.fromstring(gps_xml))
+    assert sensor.type == SensorType.GPS
+
+    # Contact sensor requirement
+    contact_xml = """
+    <gazebo reference="foot">
+        <sensor name="foot_contact" type="contact"/>
+    </gazebo>
+    """
+    with pytest.raises(ValueError, match="missing required <contact> element"):
+        parse_sensor_from_gazebo(ET.fromstring(contact_xml))
+
+
+def test_sensor_parsing_coverage():
+    """Test various sensor types and missing attributes for coverage."""
+    # IMU with noise
+    imu_xml = """
+    <gazebo reference="imu_link">
+        <sensor name="my_imu" type="imu">
+            <imu>
+                <angular_velocity><x><noise type="gaussian"><mean>0</mean><stddev>0.1</stddev></noise></x></angular_velocity>
+            </imu>
+        </sensor>
+    </gazebo>
+    """
+    sensor = parse_sensor_from_gazebo(ET.fromstring(imu_xml))
+    assert sensor.type == SensorType.IMU
+
+    # Ray/Lidar variety
+    lidar_xml = '<gazebo reference="l"><sensor name="lidar" type="ray"/></gazebo>'
+    assert parse_sensor_from_gazebo(ET.fromstring(lidar_xml)).type == SensorType.LIDAR
+
+    # Missing reference again (line 684)
+    assert (
+        parse_sensor_from_gazebo(ET.fromstring('<gazebo><sensor name="s" type="camera"/></gazebo>'))
+        is None
+    )
+
+
+def test_gazebo_element_parsing_coverage():
+    """Test Gazebo element parsing edge cases."""
+    from linkforge_core.parsers.urdf_parser import parse_gazebo_element
+
+    # Simple element (line 651)
+    xml = '<gazebo reference="base_link"><mu1>0.2</mu1></gazebo>'
+    elem = parse_gazebo_element(ET.fromstring(xml))
+    assert elem.reference == "base_link"
+
+    # Missing reference is fine for robot-level (line 651)
+    xml_robot = "<gazebo><static>true</static></gazebo>"
+    elem_robot = parse_gazebo_element(ET.fromstring(xml_robot))
+    assert elem_robot.reference is None
+
+
+def test_transmission_malformed_xml():
+    """Test transmission parsing with malformed XML."""
+    # Transmission missing name (line 543 in urdf_parser.py)
+    # The parser should log a warning and return None
+    assert (
+        parse_transmission(ET.fromstring("<transmission><type>Simple</type></transmission>"))
+        is None
+    )
+
+    # Joint missing name (line 546) - will result in empty joints list,
+    # causing Transmission model to raise ValueError, caught and returned None.
+    xml = '<transmission name="t1"><joint><reduction>10</reduction></joint></transmission>'
+    assert parse_transmission(ET.fromstring(xml)) is None
+
+    # Actuator missing name (line 562) - should skip actuator
+    xml_act = """
+    <transmission name="t1">
+        <type>Simple</type>
+        <joint name="j1"><hardwareInterface>position</hardwareInterface></joint>
+        <actuator><reduction>10</reduction></actuator>
+    </transmission>
+    """
+    trans_act = parse_transmission(ET.fromstring(xml_act))
+    assert trans_act.name == "t1"
+    assert len(trans_act.actuators) == 0
+
+
+def test_validate_package_uri_errors():
+    """Test various validation errors in package URIs."""
+    import pytest
+    from linkforge_core.validation.security import validate_package_uri
+
+    # Missing package name (line 200)
+    with pytest.raises(ValueError, match="missing package name"):
+        validate_package_uri("package://")
+
+    # Suspicious segments (line 205)
+    with pytest.raises(ValueError, match="contains suspicious path components"):
+        validate_package_uri("package://robot/./meshes/arm.stl")
+    with pytest.raises(ValueError, match="contains suspicious path components"):
+        validate_package_uri("package://robot//meshes/arm.stl")  # Empty segment
+
+
+def test_validate_mesh_path_complex(tmp_path):
+    """Test validate_mesh_path with complex scenarios."""
+    from linkforge_core.validation.security import validate_mesh_path
+
+    urdf_dir = tmp_path / "robot"
+    urdf_dir.mkdir()
+
+    # Absolute path disallowed (line 69-74)
+    with pytest.raises(ValueError, match="Absolute path .* not allowed"):
+        validate_mesh_path(Path("/tmp/mesh.stl"), urdf_dir)
+
+    # Path escapes directory (line 101-104)
+    with pytest.raises(ValueError, match="attempts to escape the URDF directory"):
+        validate_mesh_path(Path("../other/mesh.stl"), urdf_dir)
+
+    # URL encoding decoding coverage (line 64-65)
+    with pytest.raises(ValueError, match="attempts to escape the URDF directory"):
+        validate_mesh_path(Path("meshes/%2e%2e/%2e%2e/evil.stl"), urdf_dir)
+
+    # Safe path with explicit urdf_directory (hits line 106)
+    mesh_path = Path("mesh.stl")
+    (urdf_dir / mesh_path).touch()
+    resolved = validate_mesh_path(mesh_path, urdf_dir)
+    assert resolved.name == "mesh.stl"
+
+
+def test_mesh_scale_coverage():
+    """Test mesh scale parsing with 0 or negative values."""
+    # Scale 0 (line 206)
+    assert (
+        parse_geometry(ET.fromstring('<geometry><mesh filename="m.stl" scale="0 0 0"/></geometry>'))
+        is None
+    )
+    # Invalid scale format (line 206)
+    assert (
+        parse_geometry(ET.fromstring('<geometry><mesh filename="m.stl" scale="1 1 "/></geometry>'))
+        is None
+    )
+
+
+def test_parsing_exception_wrapping(tmp_path, monkeypatch):
+    """Verify that unexpected exceptions are wrapped in RobotParserError."""
+    parser = URDFParser()
+
+    # RuntimeError wrapping in parse()
+    def mock_fail(*args, **kwargs):
+        raise RuntimeError("Underlying cause")
+
+    monkeypatch.setattr(ET, "iterparse", mock_fail)
+    f = tmp_path / "test.urdf"
+    f.write_text('<robot name="t"/>')
+
+    # We match only the start to be robust against message variations
+    with pytest.raises(RobotParserError, match="Unexpected error parsing URDF"):
+        parser.parse(f)
+
+
+def test_security_utilities_exhaustive():
+    """Directly verify security validation utilities."""
+    with pytest.raises(ValueError, match="must start with 'package://'"):
+        validate_package_uri("not-package://test")
+
+    with pytest.raises(ValueError, match="Path traversal detected"):
+        validate_package_uri("package://pkg/%2e%2e/%2e%2e/etc/passwd")
+
+    with pytest.raises(ValueError, match="restricted system location"):
+        validate_mesh_path(Path("/etc/passwd"), Path("/tmp"), allow_absolute=True)
+
+
+def test_parser_root_validation():
+    """Test strict root element validation."""
+    parser = URDFParser()
+    with pytest.raises(ValueError, match="Root element must be <robot>"):
+        parser._parse_robot(ET.fromstring("<not_robot/>"))
+
+
+def test_joint_parsing_uncovered_paths():
+    """Test invalid joint configurations (for line coverage)."""
+    parser = URDFParser()
+    # Missing child link
+    urdf = """
+    <robot name="r">
+        <link name="l1"/>
+        <joint name="j1" type="fixed"><parent link="l1"/><child link="MISSING"/></joint>
+    </robot>
+    """
+    # This should trigger robot.add_joint(joint) -> ValueError -> logger.warning
+    robot = parser.parse_string(urdf)
+    assert len(robot.joints) == 0

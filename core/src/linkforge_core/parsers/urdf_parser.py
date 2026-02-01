@@ -179,10 +179,9 @@ def parse_geometry(
                 filename = filename[7:]
                 mesh_path = Path(filename)
 
-                # If path is absolute, it might be outside URDF directory
-                # If relative, it will be resolved relative to URDF directory
-                if urdf_directory is not None and not mesh_path.is_absolute():
+                if urdf_directory is not None:
                     # Validate that mesh path doesn't escape URDF directory
+                    # Note: We now also validate absolute paths if urdf_directory is provided
                     try:
                         mesh_path = validate_mesh_path(mesh_path, urdf_directory)
                     except ValueError as e:
@@ -229,23 +228,27 @@ def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) 
         rgba_text = color_elem.get("rgba", "0.8 0.8 0.8 1.0")
         parts = rgba_text.strip().split()
 
-        # Validate RGBA array bounds
-        if len(parts) < 3:
-            raise ValueError(
-                f"Invalid RGBA color format: expected at least 3 components (R G B), got {len(parts)}"
-            )
-        if len(parts) > 4:
-            raise ValueError(
-                f"Invalid RGBA color format: expected at most 4 components (R G B A), got {len(parts)}"
-            )
+        try:
+            # Validate RGBA array bounds
+            if len(parts) < 3:
+                raise ValueError(
+                    f"Invalid RGBA color format: expected at least 3 components (R G B), got {len(parts)}"
+                )
+            if len(parts) > 4:
+                raise ValueError(
+                    f"Invalid RGBA color format: expected at most 4 components (R G B A), got {len(parts)}"
+                )
 
-        # Parse with bounds checking (Color validates 0-1 range)
-        color = Color(
-            r=float(parts[0]),
-            g=float(parts[1]),
-            b=float(parts[2]),
-            a=float(parts[3]) if len(parts) > 3 else 1.0,
-        )
+            # Parse with bounds checking (Color validates 0-1 range)
+            color = Color(
+                r=float(parts[0]),
+                g=float(parts[1]),
+                b=float(parts[2]),
+                a=float(parts[3]) if len(parts) > 3 else 1.0,
+            )
+        except (ValueError, TypeError, IndexError) as e:
+            logger.warning(f"Invalid material color ignored: {e}")
+            return None
 
     # Parse texture
     texture = None
@@ -475,81 +478,76 @@ def parse_transmission(trans_elem: ET.Element) -> Transmission:
     trans_type = trans_elem.findtext("type", "")
 
     # Parse joints
-    joints: list[TransmissionJoint] = []
-    for joint_elem in trans_elem.findall("joint"):
-        joint_name = joint_elem.get("name", "")
-
-        # Parse hardware interfaces
-        interfaces = []
-        for iface_elem in joint_elem.findall("hardwareInterface"):
-            raw_interface = iface_elem.text or "position"
-            interfaces.append(_normalize_hardware_interface(raw_interface))
-
-        if not interfaces:
-            interfaces = ["position"]  # Default
-
-        # Parse mechanical reduction (optional)
-        reduction = 1.0
-        reduction_elem = joint_elem.find("mechanicalReduction")
-        if reduction_elem is not None and reduction_elem.text:
-            reduction = float(reduction_elem.text)
-
-        # Parse offset (optional)
-        offset = 0.0
-        offset_elem = joint_elem.find("offset")
-        if offset_elem is not None and offset_elem.text:
-            offset = float(offset_elem.text)
-
-        joints.append(
-            TransmissionJoint(
-                name=joint_name,
-                hardware_interfaces=interfaces,
-                mechanical_reduction=reduction,
-                offset=offset,
-            )
+    joints = [
+        j
+        for j in (
+            _parse_transmission_component(joint_elem, TransmissionJoint)
+            for joint_elem in trans_elem.findall("joint")
         )
+        if j is not None
+    ]
 
     # Parse actuators
-    actuators: list[TransmissionActuator] = []
-    for actuator_elem in trans_elem.findall("actuator"):
-        actuator_name = actuator_elem.get("name", "")
+    actuators = [
+        a
+        for a in (
+            _parse_transmission_component(actuator_elem, TransmissionActuator)
+            for actuator_elem in trans_elem.findall("actuator")
+        )
+        if a is not None
+    ]
 
-        # Parse hardware interfaces
-        interfaces = []
-        for iface_elem in actuator_elem.findall("hardwareInterface"):
-            raw_interface = iface_elem.text or "position"
-            interfaces.append(_normalize_hardware_interface(raw_interface))
+    try:
+        return Transmission(
+            name=name,
+            type=trans_type,
+            joints=joints,
+            actuators=actuators,
+        )
+    except ValueError as e:
+        logger.warning(f"Invalid transmission '{name}' ignored: {e}")
+        return None
 
-        if not interfaces:
-            interfaces = ["position"]  # Default
 
-        # Parse mechanical reduction (optional)
-        reduction = 1.0
-        reduction_elem = actuator_elem.find("mechanicalReduction")
-        if reduction_elem is not None and reduction_elem.text:
+def _parse_transmission_component(
+    elem: ET.Element, cls: type[TransmissionJoint] | type[TransmissionActuator]
+) -> TransmissionJoint | TransmissionActuator:
+    """Helper to parse common transmission components (joints/actuators)."""
+    name = elem.get("name", "")
+
+    # Parse hardware interfaces
+    interfaces = []
+    for iface_elem in elem.findall("hardwareInterface"):
+        raw_interface = iface_elem.text or "position"
+        interfaces.append(_normalize_hardware_interface(raw_interface))
+
+    if not interfaces:
+        interfaces = ["position"]  # Default
+
+    # Parse mechanical reduction (optional)
+    reduction = 1.0
+    reduction_elem = elem.find("mechanicalReduction")
+    if reduction_elem is not None and reduction_elem.text:
+        with suppress(ValueError):
             reduction = float(reduction_elem.text)
 
-        # Parse offset (optional)
-        offset = 0.0
-        offset_elem = actuator_elem.find("offset")
-        if offset_elem is not None and offset_elem.text:
+    # Parse offset (optional)
+    offset = 0.0
+    offset_elem = elem.find("offset")
+    if offset_elem is not None and offset_elem.text:
+        with suppress(ValueError):
             offset = float(offset_elem.text)
 
-        actuators.append(
-            TransmissionActuator(
-                name=actuator_name,
-                hardware_interfaces=interfaces,
-                mechanical_reduction=reduction,
-                offset=offset,
-            )
+    try:
+        return cls(
+            name=name,
+            hardware_interfaces=interfaces,
+            mechanical_reduction=reduction,
+            offset=offset,
         )
-
-    return Transmission(
-        name=name,
-        type=trans_type,
-        joints=joints,
-        actuators=actuators,
-    )
+    except ValueError as e:
+        logger.warning(f"Invalid transmission component '{name}' ignored: {e}")
+        return None
 
 
 def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
@@ -1230,13 +1228,13 @@ class URDFParser(RobotParser):
                 f"(maximum {self.max_file_size / (1024 * 1024):.1f} MB)."
             )
 
-        try:
-            # Verify it's not a XACRO file with Xacro tags
-            if "xmlns:xacro" in urdf_string or "<xacro:" in urdf_string:
-                raise RobotParserError(
-                    "XACRO file detected in URDF string. Use the Blender XACRO resolver."
-                )
+        # Verify it's not a XACRO file with Xacro tags.
+        if "<xacro:" in urdf_string:
+            raise RobotParserError(
+                "XACRO features detected in URDF string. Use the Blender XACRO resolver."
+            )
 
+        try:
             root = ET.fromstring(urdf_string)
             return self._parse_robot(root, filepath=urdf_directory)
         except ET.ParseError as e:

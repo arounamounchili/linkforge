@@ -312,7 +312,7 @@ def compare_robots(robot1: Robot, robot2: Robot, context: str = "") -> list[str]
 def test_perfect_roundtrip_comprehensive_robot(examples_dir: Path):
     """Test that comprehensive test robot survives perfect roundtrip."""
     # Load original
-    original_path = examples_dir / "roundtrip_test_robot.urdf"
+    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(original_path)
 
     # Export

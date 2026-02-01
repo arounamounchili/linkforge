@@ -19,7 +19,7 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 def test_simple_arm_roundtrip(examples_dir: Path):
     """Test importing and re-exporting roundtrip_test_robot.urdf preserves structure."""
     # Get path to example URDF
-    urdf_path = examples_dir / "roundtrip_test_robot.urdf"
+    urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
 
     assert urdf_path.exists(), f"Example URDF not found at {urdf_path}"
 
@@ -75,7 +75,7 @@ def test_simple_arm_roundtrip(examples_dir: Path):
 
 def test_materials_preserved(examples_dir: Path):
     """Test that material colors are preserved in round-trip."""
-    urdf_path = examples_dir / "roundtrip_test_robot.urdf"
+    urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
 
     robot = URDFParser().parse(urdf_path)
 
@@ -93,7 +93,7 @@ def test_materials_preserved(examples_dir: Path):
 
 def test_inertial_preserved(examples_dir: Path):
     """Test that inertial properties are preserved in round-trip."""
-    urdf_path = examples_dir / "roundtrip_test_robot.urdf"
+    urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
 
     robot = URDFParser().parse(urdf_path)
 
@@ -141,7 +141,7 @@ def test_quadruped_roundtrip(examples_dir: Path):
 
 def test_joint_limits_preserved(examples_dir: Path):
     """Test that joint limits are preserved in round-trip."""
-    urdf_path = examples_dir / "roundtrip_test_robot.urdf"
+    urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
 
     robot = URDFParser().parse(urdf_path)
 

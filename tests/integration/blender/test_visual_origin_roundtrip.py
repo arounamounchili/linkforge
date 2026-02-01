@@ -89,7 +89,7 @@ def test_cylinder_no_origin_roundtrip():
 def test_arm_base_specific_case(examples_dir: Path):
     """Test the exact arm_base case from roundtrip_test_robot.urdf."""
     # Load the actual file
-    urdf_path = examples_dir / "roundtrip_test_robot.urdf"
+    urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(urdf_path)
 
     # Find arm_base link

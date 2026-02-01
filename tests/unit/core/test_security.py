@@ -19,8 +19,8 @@ class TestValidateMeshPath:
         expected = (urdf_dir / mesh_path).resolve()
         assert resolved == expected
 
-    def test_allow_parent_traversal(self, tmp_path):
-        """Test allowing '..' to go to sibling directory."""
+    def test_allow_parent_traversal_blocked(self, tmp_path):
+        """Test blocking '..' traversal that escapes URDF directory."""
         # Structure:
         # /root/urdf/robot.urdf
         # /root/meshes/test.stl
@@ -32,9 +32,8 @@ class TestValidateMeshPath:
 
         mesh_path = Path("../meshes/test.stl")
 
-        resolved = validate_mesh_path(mesh_path, urdf_dir)
-        expected = (meshes_dir / "test.stl").resolve()
-        assert resolved == expected
+        with pytest.raises(ValueError, match="attempts to escape the URDF directory"):
+            validate_mesh_path(mesh_path, urdf_dir)
 
     def test_block_system_paths(self, tmp_path):
         """Test that paths resolving to system directories are blocked."""

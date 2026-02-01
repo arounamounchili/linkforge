@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<robot name="xacro_roundtrip_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    LinkForge XACRO Roundtrip Example
+    This file demonstrates all supported XACRO features:
+    - Properties & Arguments
+    - Math Expressions with spaces
+    - Conditional Logic (if/unless)
+    - Macro Definitions & Calls (with block parameters)
+    - File Includes
+  -->
+
+  <!-- 1. Includes -->
+  <xacro:include filename="imports/materials.xacro" />
+  <xacro:include filename="macros/inertials.xacro" />
+
+  <!-- 2. Arguments -->
+  <xacro:arg name="robot_name" default="forge_bot"/>
+  <xacro:arg name="use_arm" default="true"/>
+
+  <!-- 3. Properties -->
+  <xacro:property name="PI" value="3.1415926535897931"/>
+  <xacro:property name="base_width" value="0.5"/>
+  <xacro:property name="base_length" value="0.5"/>
+  <xacro:property name="base_height" value="0.2"/>
+  <xacro:property name="base_mass" value="5.0"/>
+
+  <!-- 4. Macros with Block Parameters -->
+  <xacro:macro name="standard_link" params="name color mass width height depth *origin">
+    <link name="${name}">
+      <visual>
+        <xacro:insert_block name="origin" />
+        <geometry>
+          <box size="${width} ${depth} ${height}"/>
+        </geometry>
+        <material name="${color}"/>
+      </visual>
+      <collision>
+        <xacro:insert_block name="origin" />
+        <geometry>
+          <box size="${width} ${depth} ${height}"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertia m="${mass}" w="${width}" h="${height}" d="${depth}" />
+    </link>
+  </xacro:macro>
+
+  <!-- 5. Main Content -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${base_width} ${base_length} ${base_height}"/>
+      </geometry>
+      <material name="silver"/>
+    </visual>
+    <xacro:box_inertia m="${base_mass}" w="${base_width}" h="${base_height}" d="${base_length}" />
+  </link>
+
+  <!-- 6. Conditional Logic & Math -->
+  <xacro:if value="$(arg use_arm)">
+    <xacro:property name="arm_mass" value="1.0" />
+    <xacro:property name="arm_length" value="0.4" />
+
+    <!-- Macro Call with block -->
+    <xacro:standard_link name="arm_link" color="black"
+                       mass="${arm_mass}"
+                       width="0.05" depth="0.05"
+                       height="${arm_length}">
+      <origin xyz="0 0 ${arm_length / 2}" rpy="0 0 0"/>
+    </xacro:standard_link>
+
+    <joint name="arm_joint" type="revolute">
+      <parent link="base_link"/>
+      <child link="arm_link"/>
+      <origin xyz="0 0 ${base_height / 2}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-${PI/2}" upper="${PI/2}" effort="10" velocity="1.0"/>
+    </joint>
+  </xacro:if>
+
+  <xacro:unless value="$(arg use_arm)">
+    <link name="no_arm_payload">
+      <visual>
+        <geometry>
+          <sphere radius="0.1"/>
+        </geometry>
+      </visual>
+    </link>
+    <joint name="payload_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="no_arm_payload"/>
+      <origin xyz="0 0 ${base_height}" rpy="0 0 0"/>
+    </joint>
+  </xacro:unless>
+
+</robot>

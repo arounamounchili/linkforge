@@ -893,3 +893,87 @@ class TestRobotReprEdgeCases:
         # Just check that ros2_controls is in the repr, don't check exact format
         assert "ros2_controls" in repr_str
         assert "system1" in repr_str
+
+
+class TestRobotCoverage:
+    """Tests specifically for 100% coverage of robot.py."""
+
+    def test_validation_disconnected_link_error(self):
+        """Trigger disconnected link error in validate_tree_structure."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="root"))
+        robot.add_link(Link(name="link1"))
+        robot.add_link(Link(name="orphan"))
+        robot.add_joint(Joint(name="j1", type=JointType.FIXED, parent="root", child="link1"))
+
+        # We need to mock get_root_link to return 'root' even though 'orphan' exists
+        # to trigger the 'is not connected' check at line 271.
+        # Otherwise get_root_link raises "Multiple root links found".
+        from unittest.mock import patch
+
+        with patch.object(Robot, "get_root_link", return_value=robot.get_link("root")):
+            errors = robot.validate_tree_structure()
+            assert any("is not connected to the tree" in err for err in errors)
+
+    def test_validation_no_root_link_fallback(self):
+        """Trigger 'No root link found' fallback at line 261."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+        # Force robot.links to be empty after initial check but before get_root_link
+        from unittest.mock import patch
+
+        with patch.object(Robot, "get_root_link", return_value=None):
+            errors = robot.validate_tree_structure()
+            assert any("No root link found" in err for err in errors)
+
+    def test_dfs_cycle_detection_redundant_edge(self):
+        """Test cycle detection with redundant edges."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="a"))
+        robot.add_link(Link(name="b"))
+        robot._joints.append(Joint(name="j1", type=JointType.FIXED, parent="a", child="b"))
+        robot._joints.append(Joint(name="j2", type=JointType.FIXED, parent="a", child="b"))
+        # This no longer triggers line 319 (as it's gone), but exercises the 'node in visited' skip
+        assert robot._has_cycle() is False  # No cycle, just two paths to same node
+
+    def test_mimic_chain_end_coverage(self):
+        """Trigger line 386 break in mimic chain validation."""
+        from linkforge_core.models import JointMimic
+
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="a"))
+        robot.add_link(Link(name="b"))
+        robot.add_link(Link(name="c"))
+        robot.add_joint(Joint(name="j1", type=JointType.CONTINUOUS, parent="a", child="b"))
+        robot.add_joint(
+            Joint(
+                name="j2",
+                type=JointType.CONTINUOUS,
+                parent="b",
+                child="c",
+                mimic=JointMimic(joint="j1"),
+            )
+        )
+
+        # Validates without circular dependency, hits 'mimic is None' break
+        errors = robot._validate_mimic_chains()
+        assert len(errors) == 0
+
+    def test_full_str_representation(self):
+        """Test __str__ with all optional components for full coverage."""
+        from linkforge_core.models import GazeboElement, Ros2Control, Ros2ControlJoint
+
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="link1"))
+        robot.add_ros2_control(
+            Ros2Control(
+                name="rc", hardware_plugin="h", joints=[Ros2ControlJoint("j", ["p"], ["p"])]
+            )
+        )
+        robot.add_link(Link(name="link2"))
+        robot.add_joint(Joint(name="j1", type=JointType.FIXED, parent="link1", child="link2"))
+        robot.add_gazebo_element(GazeboElement(reference="link1", static=True))
+
+        robot_str = str(robot)
+        assert "ros2_controls=1" in robot_str
+        assert "gazebo_elements=1" in robot_str
