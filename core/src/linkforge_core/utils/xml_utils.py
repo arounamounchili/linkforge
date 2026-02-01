@@ -56,8 +56,7 @@ def indent_xml(element: ET.Element, space: str = "  ", level: int = 0) -> None:
         space: Indentation string
         level: Starting level
     """
-    if hasattr(ET, "indent"):
-        ET.indent(element, space=space, level=level)
+    ET.indent(element, space=space, level=level)
 
 
 def serialize_xml(
