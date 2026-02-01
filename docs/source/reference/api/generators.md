@@ -5,7 +5,7 @@ URDF and XACRO generators for converting Python objects to files.
 ## URDF Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.urdf_generator.URDFGenerator
+.. autoclass:: linkforge_core.generators.urdf_generator.URDFGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,7 +14,7 @@ URDF and XACRO generators for converting Python objects to files.
 ## XACRO Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.xacro_generator.XACROGenerator
+.. autoclass:: linkforge_core.generators.xacro_generator.XACROGenerator
    :members:
    :undoc-members:
    :show-inheritance:
