@@ -411,9 +411,10 @@ graph TB
    - String sanitization (prevent injection)
 
 2. **Path Security**
-   - Mesh path validation (prevent traversal)
+   - Mesh path validation (prevent traversal outside Sandbox Root)
+   - Sandbox Root Auto-Detection (allows sibling folders)
    - Package URI validation
-   - Whitelist-based approach
+   - Strict Whitelist-based approach
 
 3. **Resource Limits**
    - Max file size: 100 MB
