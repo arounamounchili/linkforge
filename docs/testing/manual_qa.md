@@ -125,6 +125,32 @@ This protocol defines the mandatory manual testing steps required before every r
 
 ---
 
+
+---
+
+## 🔐 Phase 7: Security & XACRO Advanced Features
+**Goal:** Verify sandbox security and XACRO property substitution.
+
+### 7.1 Sandbox Root & Sibling Folder Access
+1.  [ ] **Standard URDF Structure**: Create a test URDF in `/my_robot/urdf/robot.urdf` with mesh paths like `../meshes/part.stl`.
+    - *Expected:* Import succeeds. LinkForge auto-detects `/my_robot` as the sandbox root.
+    - *Expected:* Meshes from the sibling `meshes/` folder load correctly.
+2.  [ ] **Package.xml Detection**: Create a `package.xml` file in `/my_robot/` and a URDF in `/my_robot/config/deep/robot.urdf`.
+    - *Expected:* LinkForge finds the package root by detecting `package.xml` up to 5 levels up.
+    - *Expected:* Sibling folder access works from the package root.
+3.  [ ] **Path Traversal Prevention**: Manually edit a URDF to include a mesh path like `../../../../etc/passwd`.
+    - *Expected:* Import fails with a security error: "attempts to escape the sandbox root".
+
+### 7.2 XACRO Property Substitution & Math
+1.  [ ] **Property Substitution**: Create a XACRO file with `<xacro:property name="arm_length" value="2.0"/>` and use `${arm_length}` in an origin tag.
+    - *Expected:* Import succeeds. The link origin uses the exact value `2.0`.
+2.  [ ] **Math Expressions**: Use `${arm_length * 2}` in a XACRO origin tag.
+    - *Expected:* Import succeeds. The value is correctly evaluated to `4.0`.
+3.  [ ] **Nested Properties**: Define `<xacro:property name="base" value="1.0"/>` and `<xacro:property name="derived" value="${base * 3}"/>`.
+    - *Expected:* Both properties are correctly substituted and evaluated.
+
+---
+
 ## 🏁 Final Verification
 - [ ] Robot survives a **File Save & Reload**.
 - [ ] No errors in the **System Console** (`Window > Toggle System Console` on Windows/Linux or Terminal on Mac).
