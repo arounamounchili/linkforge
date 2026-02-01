@@ -125,9 +125,6 @@ This protocol defines the mandatory manual testing steps required before every r
 
 ---
 
-
----
-
 ## 🔐 Phase 7: Security & XACRO Advanced Features
 **Goal:** Verify sandbox security and XACRO property substitution.
 
