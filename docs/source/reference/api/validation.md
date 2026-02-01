@@ -54,20 +54,23 @@ else:
 ### Security Checks
 
 ```python
-from linkforge_core.validation.security import validate_mesh_path, validate_package_uri
+from linkforge_core.validation.security import validate_mesh_path, find_sandbox_root
+from pathlib import Path
 
 # Validate mesh path (prevents path traversal)
 try:
-    validate_mesh_path("../../etc/passwd")  # Raises ValueError
+    validate_mesh_path(Path("../../etc/passwd"), Path("/tmp"))  # Raises ValueError
 except ValueError as e:
     print(f"Security error: {e}")
 
-# Valid paths
-validate_mesh_path("meshes/robot.stl")  # OK
-validate_mesh_path("/absolute/path/to/mesh.obj")  # OK
+# Valid paths within sandbox
+urdf_dir = Path("/my_robot/urdf")
+validate_mesh_path(Path("meshes/robot.stl"), urdf_dir)  # OK
 
-# Validate package URI
-validate_package_uri("package://my_robot/meshes/part.stl")  # OK
+# Auto-detect sandbox root for sibling folder access
+urdf_file = Path("/my_robot/urdf/robot.urdf")
+sandbox = find_sandbox_root(urdf_file)  # Returns /my_robot
+validate_mesh_path(Path("../meshes/part.stl"), urdf_dir, sandbox_root=sandbox)  # OK
 ```
 
 ## Validation Checks
@@ -98,7 +101,7 @@ The validator performs the following checks:
 - Update rates are positive
 
 ### Security Validation
-- Mesh paths don't contain path traversal
-- Package URIs are well-formed
+- Mesh paths don't escape the sandbox root
+- Sandbox root auto-detection for sibling folders
 - Numeric values are within safe ranges
 - XML depth is limited (prevents XML bombs)

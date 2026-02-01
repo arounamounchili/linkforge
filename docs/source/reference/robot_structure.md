@@ -8,7 +8,7 @@ This document provides a technical specification of how LinkForge maps Blender o
 | :--- | :--- | :--- | :--- |
 | **Link** | `Empty` | Plain Axes | The coordinate frame of the link. |
 | **Visual** | `Mesh` | Textured/Solid | Must be a child of a Link Empty. |
-| **Collision** | `Mesh` | Wireframe | Must be a child of a Link Empty. LinkForge merges multiple visual children into a single convex hull by default. |
+| **Collision** | `Mesh` | Wireframe | Child of Link Empty. Merged into single convex hull. |
 | **Joint** | `Empty` | Arrows | Colored axes (RGB for XYZ). |
 | **Sensor** | `Empty` | Sphere | Wireframe sphere. Must be a child of a Link Empty. |
 
@@ -62,9 +62,10 @@ When working with imported robots, LinkForge displays status labels on the Link 
 ## Property Storage
 LinkForge stores all metadata as **Custom Properties** on the Blender objects. These can be inspected in the "Custom Properties" panel of the Object Data tab, though it is recommended to use the LinkForge Sidebar for editing.
 
-| Component | Property Prefix |
+| Component | Property Location |
 | :--- | :--- |
-| **Link** | `linkforge.*` |
-| **Joint** | `linkforge_joint.*` |
-| **Control** | `linkforge_control.*` |
-| **Sensor** | `linkforge_sensor.*` |
+| **Link** | `Object.linkforge.*` |
+| **Joint** | `Object.linkforge_joint.*` |
+| **Sensor** | `Object.linkforge_sensor.*` |
+| **Robot** | `Scene.linkforge.*` |
+| **ROS2 Control** | `Scene.linkforge.ros2_control_joints` |
