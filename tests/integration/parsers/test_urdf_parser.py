@@ -949,8 +949,8 @@ class TestURDFParserErrorHandling:
         with pytest.raises(RobotParserError):
             URDFParser().parse(urdf_file)
 
-    def test_missing_joint_parent(self, tmp_path: Path):
-        """Test that joint without parent link raises error."""
+    def test_missing_joint_parent(self, tmp_path: Path, caplog):
+        """Test that joint without parent link is skipped gracefully."""
         urdf_content = """<?xml version="1.0"?>
 <robot name="test">
     <link name="link1"/>
@@ -965,12 +965,14 @@ class TestURDFParserErrorHandling:
         urdf_file = tmp_path / "no_parent.urdf"
         urdf_file.write_text(urdf_content)
 
-        # Joint validation catches missing parent
-        with pytest.raises(RobotParserError, match="Parent link name cannot be empty"):
-            URDFParser().parse(urdf_file)
+        # Joint validation skips with warning
+        robot = URDFParser().parse(urdf_file)
+        assert len(robot.joints) == 0
+        assert "Skipping invalid joint 'joint1'" in caplog.text
+        assert "Parent link name cannot be empty" in caplog.text
 
-    def test_missing_joint_child(self, tmp_path: Path):
-        """Test that joint without child link raises error."""
+    def test_missing_joint_child(self, tmp_path: Path, caplog):
+        """Test that joint without child link is skipped gracefully."""
         urdf_content = """<?xml version="1.0"?>
 <robot name="test">
     <link name="link1"/>
@@ -985,9 +987,11 @@ class TestURDFParserErrorHandling:
         urdf_file = tmp_path / "no_child.urdf"
         urdf_file.write_text(urdf_content)
 
-        # Joint validation catches missing child
-        with pytest.raises(RobotParserError, match="Child link name cannot be empty"):
-            URDFParser().parse(urdf_file)
+        # Joint validation skips with warning
+        robot = URDFParser().parse(urdf_file)
+        assert len(robot.joints) == 0
+        assert "Skipping invalid joint 'joint1'" in caplog.text
+        assert "Child link name cannot be empty" in caplog.text
 
     def test_invalid_geometry_values(self, tmp_path: Path):
         """Test that invalid geometry dimensions are handled gracefully."""

@@ -28,6 +28,12 @@ During export, all object names are sanitized to remain compliant with the URDF 
 2.  **Special characters** (except underscores and hyphens) are removed.
 3.  **Leading numbers** are prefixed with `_` or `link_`.
 
+### Duplicate Name Resolution (Import)
+When importing URDFs, LinkForge enforces unique names for all links and joints. If duplicates are found in the source file:
+-   **Links**: Automatically renamed with a numeric suffix (e.g., `base_link_duplicate_1`).
+-   **Joints**: Automatically renamed with a numeric suffix (e.g., `joint_duplicate_1`).
+-   **Warnings**: All renames are logged to the console, allowing you to identify and fix the source URDF if needed.
+
 ## Hierarchy Rules
 
 ### 1. Link Container

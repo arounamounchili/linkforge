@@ -26,15 +26,15 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from .models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
-from .models.joint import Joint
-from .models.link import Link, Visual
-from .models.material import Material
-from .models.robot import Robot
+from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
+from ..models.joint import Joint
+from ..models.link import Link, Visual
+from ..models.material import Material
+from ..models.robot import Robot
+from ..utils.math_utils import format_float, format_vector
+from ..utils.string_utils import sanitize_name
+from ..utils.xml_utils import serialize_xml
 from .urdf_generator import URDFGenerator
-from .utils.math_utils import format_float, format_vector
-from .utils.string_utils import sanitize_name
-from .utils.xml_utils import serialize_xml
 
 # XACRO Namespace URI
 XACRO_URI = "http://www.ros.org/wiki/xacro"
@@ -97,7 +97,7 @@ class XACROGenerator(URDFGenerator):
 
     def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
         """Generate XACRO XML string from robot."""
-        from . import __version__
+        from .. import __version__
 
         root = self.generate_robot_element(robot, validate=validate)
         return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)
@@ -824,7 +824,7 @@ class XACROGenerator(URDFGenerator):
         for child in list(root):
             main_root.append(child)
 
-        from . import __version__
+        from .. import __version__
 
         ns = {"xacro": XACRO_URI}
 

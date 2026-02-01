@@ -7,16 +7,17 @@ Modules:
     models: Data structures for robots, links, joints, geometry
     physics: Inertia and mass calculations
     parsers: URDF and XACRO file parsing
+    generators: URDF and XACRO file generation
 """
 
 from __future__ import annotations
 
 __version__ = "1.2.0"
 
-from . import models, parsers, physics
+from . import generators, models, parsers, physics
 from .base import LinkForgeError, RobotGeneratorError, RobotParserError
-from .urdf_generator import URDFGenerator, format_float, format_vector
-from .xacro_generator import XACROGenerator
+from .generators import URDFGenerator, XACROGenerator
+from .generators.urdf_generator import format_float, format_vector
 
 __all__ = [
     "models",

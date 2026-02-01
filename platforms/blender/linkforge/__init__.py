@@ -15,8 +15,13 @@ from __future__ import annotations
 try:
     import bpy
 
-    from . import blender
+    IS_BLENDER = True
 except ImportError:
+    IS_BLENDER = False
+
+if IS_BLENDER:
+    from . import blender
+else:
     # Handle environment where bpy is not available (e.g., CI, non-Blender python)
     import typing
 

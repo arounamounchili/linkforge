@@ -371,3 +371,417 @@ def test_joint_parsing_uncovered_paths():
     # This should trigger robot.add_joint(joint) -> ValueError -> logger.warning
     robot = parser.parse_string(urdf)
     assert len(robot.joints) == 0
+
+
+def test_xacro_detection_full(tmp_path):
+    """Test full XACRO detection logic including namespace and substitutions."""
+    from linkforge_core.base import RobotParserError
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+
+    # 1. Detect by namespace in content (even if filename is .urdf)
+    f_ns = tmp_path / "detect_ns.urdf"
+    f_ns.write_text('<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"/>')
+    with pytest.raises(
+        RobotParserError, match="Unexpected error parsing URDF: XACRO file detected"
+    ):
+        parser.parse(f_ns)
+
+    # 2. Detect by xacro elements in parse_string (quick check)
+    xml_elem = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"><xacro:macro name="m"/></robot>'
+    with pytest.raises(RobotParserError, match="XACRO features detected in URDF string"):
+        parser.parse_string(xml_elem)
+
+    # 3. Detect by ${} substitutions (triggers _detect_xacro_file via parse_string)
+    xml_sub = '<robot name="t"><link name="${link_name}"/></robot>'
+    with pytest.raises(
+        RobotParserError, match="Unexpected error parsing URDF: XACRO file detected"
+    ):
+        parser.parse_string(xml_sub)
+
+    # 4. Detect by xacro extension (triggers proactive check in parse)
+    f_ext = tmp_path / "test.xacro"
+    f_ext.write_text('<robot name="t"/>')
+    with pytest.raises(RobotParserError, match="XACRO file detected"):
+        parser.parse(f_ext)
+
+    # 5. Detect by {namespace} tags during iterative parsing (line 1089)
+    # We use a path to trigger iterative parsing instead of fromstring check
+    f_ns_tag = tmp_path / "detect_ns_tag.urdf"
+    f_ns_tag.write_text(
+        '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"><xacro:macro name="m"/></robot>'
+    )
+    with pytest.raises(RobotParserError, match="Detected XACRO features: macro"):
+        parser.parse(f_ns_tag)
+
+    # 6. Simulate file read error in XACRO detection (lines 1079-1082)
+    def mock_read_fail(*args, **kwargs):
+        raise OSError("Permission denied")
+
+    import unittest.mock as mock
+
+    with mock.patch("pathlib.Path.read_text", mock_read_fail):
+        # Should not raise error on read failure, proceed to element check
+        parser.parse_string('<robot name="t"/>')
+
+
+def test_sensor_parsing_detailed_coverage():
+    """Test detailed sensor parsing branches for coverage."""
+    # 1. Camera without <camera> element (default info)
+    xml_cam = '<gazebo reference="l"><sensor name="s" type="camera"/></gazebo>'
+    sensor_cam = parse_sensor_from_gazebo(ET.fromstring(xml_cam))
+    assert sensor_cam.camera_info is not None
+    assert sensor_cam.camera_info.width == 640
+
+    # 2. LIDAR without <ray> element
+    xml_lidar = '<gazebo reference="l"><sensor name="s" type="lidar"/></gazebo>'
+    sensor_lidar = parse_sensor_from_gazebo(ET.fromstring(xml_lidar))
+    assert sensor_lidar.lidar_info is not None
+    assert sensor_lidar.lidar_info.horizontal_samples == 640
+
+    # 3. GPS with detailed noise
+    xml_gps = """
+    <gazebo reference="l">
+        <sensor name="s" type="gps">
+            <gps>
+                <position_sensing>
+                    <horizontal><noise type="gaussian"><stddev>0.1</stddev></noise></horizontal>
+                </position_sensing>
+            </gps>
+        </sensor>
+    </gazebo>
+    """
+    sensor_gps = parse_sensor_from_gazebo(ET.fromstring(xml_gps))
+    assert sensor_gps.gps_info.position_sensing_horizontal_noise.stddev == 0.1
+
+    # 4. Sensor with <pose> element (Transform parsing)
+    xml_pose = """
+    <gazebo reference="l">
+        <sensor name="s" type="imu">
+            <pose>1 2 3 0 0 0</pose>
+        </sensor>
+    </gazebo>
+    """
+    sensor_pose = parse_sensor_from_gazebo(ET.fromstring(xml_pose))
+    assert sensor_pose.origin.xyz.x == 1.0
+
+    # 5. Contact sensor success path
+    xml_contact = """
+    <gazebo reference="foot">
+        <sensor name="foot_contact" type="contact">
+            <contact><collision>foot_collision</collision></contact>
+        </sensor>
+    </gazebo>
+    """
+    sensor_contact = parse_sensor_from_gazebo(ET.fromstring(xml_contact))
+    assert sensor_contact.contact_info.collision == "foot_collision"
+
+    # 6. Contact sensor failure path (missing collision)
+    xml_no_coll = """
+    <gazebo reference="foot">
+        <sensor name="foot_contact" type="contact">
+            <contact></contact>
+        </sensor>
+    </gazebo>
+    """
+    with pytest.raises(ValueError, match="missing required <collision> element"):
+        parse_sensor_from_gazebo(ET.fromstring(xml_no_coll))
+
+    # 7. Sensor with plugin (line 920)
+    xml_plugin = """
+    <gazebo reference="l">
+        <sensor name="s" type="imu">
+            <plugin name="p" filename="f.so"/>
+        </sensor>
+    </gazebo>
+    """
+    sensor_plugin = parse_sensor_from_gazebo(ET.fromstring(xml_plugin))
+    assert sensor_plugin.plugin.name == "p"
+
+
+def test_ros2_control_detailed_coverage():
+    """Test ros2_control hardware parameters and other details."""
+    from linkforge_core.parsers.urdf_parser import parse_ros2_control
+
+    xml = """
+    <ros2_control name="S" type="system">
+        <hardware>
+            <plugin>H</plugin>
+            <param name="p1">v1</param>
+        </hardware>
+        <top_param>v2</top_param>
+    </ros2_control>
+    """
+    rc = parse_ros2_control(ET.fromstring(xml))
+    assert rc.parameters["hardware.p1"] == "v1"
+    assert rc.parameters["top_param"] == "v2"
+
+
+def test_iterative_parse_skip_invalid_joint(tmp_path):
+    """Test skipping invalid joints during iterative parsing (line 1202)."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    f = tmp_path / "invalid_joint.urdf"
+    # Joint missing child link is invalid
+    f.write_text(
+        '<robot name="r"><link name="l1"/><joint name="j" type="fixed"><parent link="l1"/></joint></robot>'
+    )
+
+    robot = parser.parse(f)
+    assert len(robot.joints) == 0
+
+
+def test_gazebo_element_unknown_properties():
+    """Test storing unknown gazebo elements as properties."""
+    from linkforge_core.parsers.urdf_parser import parse_gazebo_element
+
+    xml = '<gazebo reference="l"><unknown_tag>some_value</unknown_tag></gazebo>'
+    elem = parse_gazebo_element(ET.fromstring(xml))
+    assert elem.properties["unknown_tag"] == "some_value"
+
+
+def test_ros2_control_parameters_coverage():
+    """Test ros2_control top-level parameters (line 629)."""
+    from linkforge_core.parsers.urdf_parser import parse_ros2_control
+
+    xml = """
+    <ros2_control name="S" type="system">
+        <hardware><plugin>H</plugin></hardware>
+        <some_param>123</some_param>
+    </ros2_control>
+    """
+    rc = parse_ros2_control(ET.fromstring(xml))
+    assert rc.parameters["some_param"] == "123"
+
+
+def test_sensor_noise_parsing_handles_none():
+    """Test that sensor noise parsing returns None when input is empty."""
+    from linkforge_core.parsers.urdf_parser import parse_sensor_noise
+
+    assert parse_sensor_noise(None) is None
+
+
+def test_geometry_parsing_resolves_package_uris():
+    """Test that geometry elements correctly preserve package:// URIs."""
+    xml = '<geometry><mesh filename="package://my_pkg/meshes/base.stl"/></geometry>'
+    geom = parse_geometry(ET.fromstring(xml))
+    assert geom.filepath == Path("package://my_pkg/meshes/base.stl")
+
+
+def test_iterative_parsing_detects_xacro_namespace(tmp_path):
+    """Test that iterative parsing detects XACRO files via namespace attributes."""
+    from linkforge_core.base import RobotParserError
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    f_ns_tag = tmp_path / "detect_ns_tag.urdf"
+    f_ns_tag.write_text(
+        '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"><xacro:macro name="m"/></robot>'
+    )
+    with pytest.raises(
+        RobotParserError, match="Unexpected error parsing URDF: XACRO file detected"
+    ):
+        parser.parse(f_ns_tag)
+
+
+def test_joint_renaming_handles_malformed_references():
+    """Test that renaming duplicate joints works even if they have broken link references."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    urdf = """
+    <robot name="r">
+        <link name="l1"/><link name="l2"/>
+        <joint name="j1" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+        <joint name="j1" type="fixed"><parent link="l1"/><child link="MISSING"/></joint>
+    </robot>
+    """
+    robot = parser.parse_string(urdf)
+    # First joint added, second duplicate tried rename, but rename add_joint failed -> skipped
+    assert len(robot.joints) == 1
+    assert robot.joints[0].name == "j1"
+
+
+def test_xacro_detection_resilient_to_read_failures(tmp_path):
+    """Test that XACRO detection falls back gracefully if file reading fails."""
+    from unittest.mock import patch
+
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    f = tmp_path / "test.urdf"
+    f.write_text("<robot/>")
+
+    with patch("pathlib.Path.read_text", side_effect=OSError("Read failed")):
+        # Should catch OSError and proceed
+        robot = parser.parse(f)
+        assert robot is not None
+
+
+def test_iterative_parsing_handles_transmissions(tmp_path):
+    """Test that transmission elements are correctly captured during iterative parsing."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    urdf = """
+    <robot name="r">
+        <link name="l1"/>
+        <transmission name="t1">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="j1"><hardwareInterface>PositionJointInterface</hardwareInterface></joint>
+            <actuator name="a1"><hardwareInterface>PositionJointInterface</hardwareInterface></actuator>
+        </transmission>
+    </robot>
+    """
+    f = tmp_path / "trans_iter.urdf"
+    f.write_text(urdf)
+    robot = parser.parse(f)
+    assert len(robot.transmissions) == 1
+    assert robot.transmissions[0].name == "t1"
+
+
+def test_parser_renames_duplicate_elements_programmatically():
+    """Test automatic renaming of duplicate links and joints during string parsing."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    # Duplicate links
+    urdf_links = '<robot name="r"><link name="l1"/><link name="l1"/></robot>'
+    robot = parser.parse_string(urdf_links)
+    assert len(robot.links) == 2
+    assert robot.links[1].name == "l1_duplicate_1"
+
+    # Duplicate joints
+    urdf_joints = """
+    <robot name="r">
+        <link name="l1"/><link name="l2"/>
+        <joint name="j1" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+        <joint name="j1" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+    </robot>
+    """
+    robot = parser.parse_string(urdf_joints)
+    assert len(robot.joints) == 2
+    assert robot.joints[1].name == "j1_duplicate_1"
+
+
+def test_iterative_parsing_handles_ros2_control(tmp_path):
+    """Test that ros2_control blocks are correctly captured during iterative parsing."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    urdf = """
+    <robot name="r">
+        <link name="l1"/>
+        <ros2_control name="rc" type="system">
+            <hardware><plugin>p</plugin></hardware>
+        </ros2_control>
+    </robot>
+    """
+    f = tmp_path / "rc_iter.urdf"
+    f.write_text(urdf)
+    robot = parser.parse(f)
+    assert len(robot.ros2_controls) == 1
+    assert robot.ros2_controls[0].name == "rc"
+
+
+def test_iterative_parsing_renames_duplicate_links(tmp_path):
+    """Test that the iterative parsing path handles duplicate link names via renaming."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    f = tmp_path / "dup_link.urdf"
+    f.write_text('<robot name="r"><link name="l"/><link name="l"/></robot>')
+    robot = parser.parse(f)
+    assert len(robot.links) == 2
+    assert robot.links[1].name == "l_duplicate_1"
+
+
+def test_iterative_parsing_renames_duplicate_joints(tmp_path):
+    """Test that the iterative parsing path handles duplicate joint names via renaming."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    f = tmp_path / "dup_joint.urdf"
+    f.write_text("""
+    <robot name="r">
+        <link name="l1"/><link name="l2"/>
+        <joint name="j" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+        <joint name="j" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+    </robot>
+    """)
+    robot = parser.parse(f)
+    assert len(robot.joints) == 2
+    assert robot.joints[1].name == "j_duplicate_1"
+
+
+def test_parser_handles_sequential_duplicate_renames():
+    """Test that the parser can handle multiple sequential renames (l_duplicate_1, l_duplicate_2)."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    # Need 3 links with same name to trigger counter > 1
+    urdf = '<robot name="r"><link name="l"/><link name="l"/><link name="l"/></robot>'
+    robot = parser.parse_string(urdf)
+    assert robot.links[1].name == "l_duplicate_1"
+    assert robot.links[2].name == "l_duplicate_2"
+
+    # Same for joints
+    urdf_j = """
+    <robot name="r">
+        <link name="l1"/><link name="l2"/>
+        <joint name="j" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+        <joint name="j" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+        <joint name="j" type="fixed"><parent link="l1"/><child link="l2"/></joint>
+    </robot>
+    """
+    robot = parser.parse_string(urdf_j)
+    assert robot.joints[1].name == "j_duplicate_1"
+    assert robot.joints[2].name == "j_duplicate_2"
+
+
+def test_string_parsing_supports_custom_sandbox_root():
+    """Test that parse_string correctly respects an override sandbox_root."""
+    from pathlib import Path
+
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    robot = parser.parse_string('<robot name="r"/>', sandbox_root=Path("/tmp/sandbox"))
+    assert robot.name == "r"
+
+
+def test_parsing_handles_unknown_gazebo_tags_gracefully():
+    """Test that generic gazebo elements are safely captured without specialized parsers."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    urdf = (
+        '<robot name="r"><gazebo reference="l1"><self_collide>true</self_collide></gazebo></robot>'
+    )
+    robot = parser.parse_string(urdf)
+    assert len(robot.gazebo_elements) == 1
+    assert robot.gazebo_elements[0].reference == "l1"
+    assert robot.gazebo_elements[0].properties["self_collide"] == "true"
+
+
+def test_parse_string_raises_error_on_truncated_xml():
+    """Test that malformed/truncated XML raises a RobotParserError."""
+    from linkforge_core.base import RobotParserError
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    with pytest.raises(RobotParserError, match="Failed to parse URDF XML"):
+        parser.parse_string("<robot><link")
+
+
+def test_parse_string_rejects_excessive_content_size():
+    """Test that strings exceeding max_file_size are rejected for security."""
+    from linkforge_core.base import RobotParserError
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    parser.max_file_size = 10  # 10 bytes
+    with pytest.raises(RobotParserError, match="URDF string too large"):
+        parser.parse_string("<robot name='too_large'/>")

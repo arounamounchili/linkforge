@@ -120,7 +120,7 @@ class Joint:
 
         if axis_forbidden and self.axis is not None:
             # Enforce strictness: FIXED joints should not have axis, but we relax this for imports
-            from linkforge_core.logging_config import get_logger
+            from ..logging_config import get_logger
 
             logger = get_logger(__name__)
             logger.warning(
@@ -136,7 +136,7 @@ class Joint:
 
         # Fixed joints should not have limits - auto-fix legacy URDFs
         if self.type == JointType.FIXED and self.limits is not None:
-            from linkforge_core.logging_config import get_logger
+            from ..logging_config import get_logger
 
             logger = get_logger(__name__)
             logger.warning(

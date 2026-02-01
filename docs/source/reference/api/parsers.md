@@ -48,26 +48,11 @@ urdf_content = """<?xml version="1.0"?>
 robot = URDFParser().parse_string(urdf_content)
 ```
 
-### Error Handling
+### Robustness & Security
 
-The parser is resilient and logs warnings instead of crashing:
+The parser includes professional-grade protections for production robotics:
 
-```python
-# Invalid geometry is skipped with warning
-urdf_with_errors = """
-<robot name="test">
-  <link name="link1">
-    <visual>
-      <geometry>
-        <box size="-1 2 3"/>  <!-- Invalid: negative dimension -->
-      </geometry>
-    </visual>
-  </link>
-</robot>
-"""
-
-robot = URDFParser().parse_string(urdf_with_errors)
-# Warning logged: "Invalid box geometry ignored"
-# Robot still created, but visual is skipped
-assert len(robot.links[0].visuals) == 0
-```
+*   **Duplicate Name Resolution**: Re-names conflicting link/joint names (e.g., `link_duplicate_1`) to preserve kinematic tree integrity while alerting the user.
+*   **DoS Protection**: Enforces a maximum XML depth (100 levels) and file size (100 MB) to prevent "XML Bomb" attacks.
+*   **Path Sandboxing**: Validates all mesh paths to prevent directory traversal and ensure assets remain within authorized project folders.
+*   **Resilient Skip**: Malformed geometry or broken joint references are logged as warnings, allowing the rest of the robot to load successfully.

@@ -25,15 +25,15 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from .base import RobotGenerator, RobotGeneratorError
-from .models.gazebo import GazeboElement, GazeboPlugin
-from .models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform
-from .models.joint import Joint, JointType
-from .models.link import Collision, Inertial, Link, Visual
-from .models.material import Material
-from .models.robot import Robot
-from .models.ros2_control import Ros2Control
-from .models.sensor import (
+from ..base import RobotGenerator, RobotGeneratorError
+from ..models.gazebo import GazeboElement, GazeboPlugin
+from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform
+from ..models.joint import Joint, JointType
+from ..models.link import Collision, Inertial, Link, Visual
+from ..models.material import Material
+from ..models.robot import Robot
+from ..models.ros2_control import Ros2Control
+from ..models.sensor import (
     CameraInfo,
     ContactInfo,
     ForceTorqueInfo,
@@ -44,9 +44,9 @@ from .models.sensor import (
     SensorNoise,
     SensorType,
 )
-from .models.transmission import Transmission
-from .utils.math_utils import format_float, format_vector
-from .utils.xml_utils import serialize_xml
+from ..models.transmission import Transmission
+from ..utils.math_utils import format_float, format_vector
+from ..utils.xml_utils import serialize_xml
 
 
 class URDFGenerator(RobotGenerator[str]):
@@ -94,7 +94,7 @@ class URDFGenerator(RobotGenerator[str]):
         Raises:
             RobotGeneratorError: If robot validation fails (checks for cycles, missing links, etc.)
         """
-        from . import __version__
+        from .. import __version__
 
         root = self.generate_robot_element(robot, validate=validate)
         return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)

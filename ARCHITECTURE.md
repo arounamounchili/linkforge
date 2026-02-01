@@ -41,6 +41,7 @@ graph TB
     Models --> CoreUtils
     Parsers --> CoreUtils
     Generators --> CoreUtils
+    Parsers --> Validation
     Physics --> Models
     Validation --> Models
 
@@ -155,7 +156,8 @@ sequenceDiagram
     User->>UI: Select URDF file
     UI->>Op: Invoke Import
     Op->>Parser: parse_urdf(file)
-    Parser->>Parser: Validate XML
+    Parser->>Parser: Validate XML & Depth
+    Parser->>Parser: Resolve Duplicates (Robustness)
     Parser->>Models: Create Robot model
     Models->>Models: Validate structure
     Models-->>Parser: Robot object
@@ -319,16 +321,11 @@ def __post_init__(self) -> None:
         raise ValueError("Mass must be positive")
 ```
 
-### 3. **Resilient Parsing**
-Parser logs warnings and continues instead of crashing on minor issues.
-
-```python
-try:
-    geometry = parse_box(elem)
-except ValueError as e:
-    logger.warning(f"Invalid geometry: {e}")
-    return None  # Skip invalid element
-```
+### 3. **Resilient Parsing & Duplicate Resolution**
+Parser logic is designed to be highly resilient to malformed or non-compliant URDFs.
+- **Graceful Failure**: Individual invalid elements (e.g., malformed joints) are skipped with warnings rather than halting the process.
+- **Duplicate Resolution**: If duplicate link or joint names are detected, LinkForge automatically renames them (e.g., `link_duplicate_1`) to preserve kinematic integrity while maintaining compliance with Blender/Core unique naming requirements.
+- **Broken Reference Handling**: Joints with missing parent/child links are skipped with warnings to prevent broken data structures.
 
 ### 4. **O(1) Lookups**
 Robot model maintains internal indices for fast access.
