@@ -32,8 +32,38 @@ class TestValidateMeshPath:
 
         mesh_path = Path("../meshes/test.stl")
 
-        with pytest.raises(ValueError, match="attempts to escape the URDF directory"):
+        with pytest.raises(ValueError, match="attempts to escape the sandbox root"):
             validate_mesh_path(mesh_path, urdf_dir)
+
+    def test_allow_parent_traversal_with_sandbox_root(self, tmp_path):
+        """Test allowing '..' traversal when it stays within sandbox_root."""
+        # /root/urdf/ (urdf_dir)
+        # /root/meshes/ (target)
+        root = tmp_path.resolve()
+        urdf_dir = root / "urdf"
+        urdf_dir.mkdir()
+        meshes_dir = root / "meshes"
+        meshes_dir.mkdir()
+
+        mesh_path = Path("../meshes/test.stl")
+
+        # PASS: providing the top-level root as sandbox
+        resolved = validate_mesh_path(mesh_path, urdf_dir, sandbox_root=root)
+        assert resolved == (meshes_dir / "test.stl").resolve()
+
+    def test_escape_sandbox_root_blocked(self, tmp_path):
+        """Test blocking traversal even with sandbox_root if it escapes the root."""
+        root = tmp_path.resolve()
+        package = root / "package"
+        package.mkdir()
+        urdf_dir = package / "urdf"
+        urdf_dir.mkdir()
+
+        # Attempt to escape 'package' folder into 'root'
+        mesh_path = Path("../../outside.stl")
+
+        with pytest.raises(ValueError, match="attempts to escape the sandbox root"):
+            validate_mesh_path(mesh_path, urdf_dir, sandbox_root=package)
 
     def test_block_system_paths(self, tmp_path):
         """Test that paths resolving to system directories are blocked."""
