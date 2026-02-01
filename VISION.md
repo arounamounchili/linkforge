@@ -17,7 +17,7 @@ There is a fundamental "impedance mismatch" in the modern robotics workflow. Lin
 ### The Solution: LinkForge
 LinkForge is not just an exporter; it is a **Universal Interoperability Platform**. It acts as the high-fidelity translator that ensures your design intent is mathematically preserved across the entire development lifecycle:
 
-**Design Systems** (Blender, Onshape, CAD) ➜ **LinkForge Core** ➜ **Simulation & Production** (ROS 2, MuJoCo, Isaac Sim, Real Hardware)
+**Design Systems** (Blender, FreeCAD, Fusion 360) ➜ **LinkForge Core** ➜ **Simulation & Production** (ROS 2, MuJoCo, Isaac Sim, Real Hardware)
 
 ---
 
