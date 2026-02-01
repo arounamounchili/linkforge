@@ -294,11 +294,11 @@ def test_validate_mesh_path_complex(tmp_path):
         validate_mesh_path(Path("/tmp/mesh.stl"), urdf_dir)
 
     # Path escapes directory (line 101-104)
-    with pytest.raises(ValueError, match="attempts to escape the URDF directory"):
+    with pytest.raises(ValueError, match="attempts to escape the sandbox root"):
         validate_mesh_path(Path("../other/mesh.stl"), urdf_dir)
 
     # URL encoding decoding coverage (line 64-65)
-    with pytest.raises(ValueError, match="attempts to escape the URDF directory"):
+    with pytest.raises(ValueError, match="attempts to escape the sandbox root"):
         validate_mesh_path(Path("meshes/%2e%2e/%2e%2e/evil.stl"), urdf_dir)
 
     # Safe path with explicit urdf_directory (hits line 106)
