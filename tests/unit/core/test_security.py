@@ -119,6 +119,13 @@ def test_find_sandbox_root(tmp_path):
 
     assert find_sandbox_root(robot_file) == package_root
 
+    # 1.5. XACRO folder parent detection
+    # If the parent folder is literally named 'xacro', it should go up one level
+    xacro_dir = package_root / "xacro"
+    xacro_dir.mkdir()
+    xacro_file = xacro_dir / "robot.xacro"
+    assert find_sandbox_root(xacro_file) == package_root
+
     # 2. Package.xml detection
     other_root = tmp_path / "other_pkg"
     sub_dir = other_root / "subdir" / "deep"
@@ -129,7 +136,12 @@ def test_find_sandbox_root(tmp_path):
     # It should find the package.xml root from the grandparent
     assert find_sandbox_root(robot_file_2) == other_root
 
-    # 3. Fallback to parent
+    # 3. Test loop termination (root reached)
+    # If we are at the root, it should just return the parent
+    root_file = tmp_path / "root.urdf"
+    assert find_sandbox_root(root_file) == tmp_path
+
+    # 4. Fallback to parent
     random_dir = tmp_path / "random"
     random_dir.mkdir()
     random_file = random_dir / "test.urdf"
