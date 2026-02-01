@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from linkforge_core.validation.security import validate_mesh_path
+from linkforge_core.validation.security import find_sandbox_root, validate_mesh_path
 
 
 class TestValidateMeshPath:
@@ -107,3 +107,30 @@ class TestValidateMeshPath:
 
         # Should decode to normal path
         assert "my file.stl" in str(result)
+
+
+def test_find_sandbox_root(tmp_path):
+    """Test the sandbox root detection logic."""
+    # 1. Standard URDF folder structure
+    package_root = tmp_path / "my_robot"
+    urdf_dir = package_root / "urdf"
+    urdf_dir.mkdir(parents=True)
+    robot_file = urdf_dir / "robot.urdf"
+
+    assert find_sandbox_root(robot_file) == package_root
+
+    # 2. Package.xml detection
+    other_root = tmp_path / "other_pkg"
+    sub_dir = other_root / "subdir" / "deep"
+    sub_dir.mkdir(parents=True)
+    (other_root / "package.xml").touch()
+    robot_file_2 = sub_dir / "robot.urdf"
+
+    # It should find the package.xml root from the grandparent
+    assert find_sandbox_root(robot_file_2) == other_root
+
+    # 3. Fallback to parent
+    random_dir = tmp_path / "random"
+    random_dir.mkdir()
+    random_file = random_dir / "test.urdf"
+    assert find_sandbox_root(random_file) == random_dir

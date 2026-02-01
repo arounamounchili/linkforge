@@ -62,8 +62,12 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
                 self.report({"ERROR"}, f"File not found: {urdf_path}")
             return {"CANCELLED"}
 
-        # Detect if this is explicitly a XACRO file by extension
         is_xacro = urdf_path.suffix == ".xacro" or urdf_path.name.endswith(".urdf.xacro")
+
+        # Detect Sandbox Root for security (allows sibling folders like meshes/)
+        from ...linkforge_core.validation.security import find_sandbox_root
+
+        sandbox_root = find_sandbox_root(urdf_path)
 
         # Smart Import Logic:
         # 1. If it looks like URDF, try parsing as URDF.
@@ -71,7 +75,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
         if not is_xacro:
             try:
                 # Attempt standard URDF import
-                robot = URDFParser().parse(urdf_path)
+                robot = URDFParser(sandbox_root=sandbox_root).parse(urdf_path)
             except ValueError as e:
                 # Check if our parser detected hidden Xacro content
                 if "XACRO file detected" in str(e):
@@ -110,7 +114,9 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
 
             # Parse URDF string with directory for mesh path validation
             self.report({"INFO"}, "Parsing URDF...")
-            robot = URDFParser().parse_string(urdf_string, urdf_directory=urdf_path.parent)
+            robot = URDFParser(sandbox_root=sandbox_root).parse_string(
+                urdf_string, urdf_directory=urdf_path.parent
+            )
 
         # Import to scene (Asynchronous)
         from ..asynchronous_builder import AsynchronousRobotBuilder

@@ -218,3 +218,35 @@ def validate_package_uri(uri: str) -> str:
         )
 
     return uri
+
+
+def find_sandbox_root(filepath: Path) -> Path:
+    """Find a sensible sandbox root for a given file.
+
+    For robotics projects, this frequently means going up one level if the file
+    is inside a folder named 'urdf' or 'xacro', or searching for a package.xml.
+
+    Args:
+        filepath: Path to the URDF or XACRO file
+
+    Returns:
+        The detected sandbox root Path
+    """
+    path = filepath.resolve()
+    current = path.parent
+
+    # 1. If direct parent is 'urdf' or 'xacro', the package root is likely one level up
+    if current.name.lower() in ("urdf", "xacro"):
+        return current.parent
+
+    # 2. Search upwards for a ROS package.xml (up to 5 levels)
+    check_path = current
+    for _ in range(5):
+        if (check_path / "package.xml").exists():
+            return check_path
+        if check_path.parent == check_path:  # Reached root
+            break
+        check_path = check_path.parent
+
+    # 3. Default to the directory containing the file
+    return current
