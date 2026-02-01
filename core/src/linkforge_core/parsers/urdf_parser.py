@@ -93,13 +93,14 @@ def parse_origin(elem: ET.Element | None) -> Transform:
 
 
 def parse_geometry(
-    geom_elem: ET.Element, urdf_directory: Path | None = None
+    geom_elem: ET.Element, urdf_directory: Path | None = None, sandbox_root: Path | None = None
 ) -> Box | Cylinder | Sphere | Mesh | None:
     """Parse geometry element with security validation for mesh paths.
 
     Args:
         geom_elem: XML element containing geometry definition
         urdf_directory: Directory containing the URDF file (required for mesh path validation)
+        sandbox_root: Root directory for the sandbox (optional)
 
     Returns:
         Geometry object (Box, Cylinder, Sphere, or Mesh) or None if no valid geometry
@@ -183,7 +184,9 @@ def parse_geometry(
                     # Validate that mesh path doesn't escape URDF directory
                     # Note: We now also validate absolute paths if urdf_directory is provided
                     try:
-                        mesh_path = validate_mesh_path(mesh_path, urdf_directory)
+                        mesh_path = validate_mesh_path(
+                            mesh_path, urdf_directory, sandbox_root=sandbox_root
+                        )
                     except ValueError as e:
                         # Re-raise with more context
                         raise ValueError(f"Mesh path validation failed: {e}") from e
@@ -193,7 +196,9 @@ def parse_geometry(
                 if urdf_directory is not None:
                     # Validate that mesh path doesn't escape URDF directory
                     try:
-                        mesh_path = validate_mesh_path(mesh_path, urdf_directory)
+                        mesh_path = validate_mesh_path(
+                            mesh_path, urdf_directory, sandbox_root=sandbox_root
+                        )
                     except ValueError as e:
                         # Re-raise with more context
                         raise ValueError(f"Mesh path validation failed: {e}") from e
@@ -263,7 +268,10 @@ def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) 
 
 
 def parse_link(
-    link_elem: ET.Element, materials: dict[str, Material], urdf_directory: Path | None = None
+    link_elem: ET.Element,
+    materials: dict[str, Material],
+    urdf_directory: Path | None = None,
+    sandbox_root: Path | None = None,
 ) -> Link:
     """Parse link element with support for multiple visual/collision elements.
 
@@ -271,6 +279,7 @@ def parse_link(
         link_elem: XML element containing link definition
         materials: Dictionary of global materials
         urdf_directory: Directory containing the URDF file (for mesh path validation)
+        sandbox_root: Root directory for the sandbox (optional)
 
     Returns:
         Link object with visuals, collisions, and inertial properties
@@ -282,7 +291,11 @@ def parse_link(
     for visual_elem in link_elem.findall("visual"):
         origin = parse_origin(visual_elem.find("origin"))
         geom_elem = visual_elem.find("geometry")
-        geometry = parse_geometry(geom_elem, urdf_directory) if geom_elem is not None else None
+        geometry = (
+            parse_geometry(geom_elem, urdf_directory, sandbox_root=sandbox_root)
+            if geom_elem is not None
+            else None
+        )
         material = parse_material(visual_elem.find("material"), materials)
         visual_name = visual_elem.get("name")  # Optional name attribute
 
@@ -296,7 +309,11 @@ def parse_link(
     for collision_elem in link_elem.findall("collision"):
         origin = parse_origin(collision_elem.find("origin"))
         geom_elem = collision_elem.find("geometry")
-        geometry = parse_geometry(geom_elem, urdf_directory) if geom_elem is not None else None
+        geometry = (
+            parse_geometry(geom_elem, urdf_directory, sandbox_root=sandbox_root)
+            if geom_elem is not None
+            else None
+        )
         collision_name = collision_elem.get("name")  # Optional name attribute
 
         if geometry:
@@ -1104,13 +1121,17 @@ def _detect_xacro_file(root: ET.Element, filepath: Path) -> None:
 class URDFParser(RobotParser):
     """Refined URDF Parser using a class-based interface."""
 
-    def __init__(self, max_file_size: int = MAX_FILE_SIZE) -> None:
+    def __init__(
+        self, max_file_size: int = MAX_FILE_SIZE, sandbox_root: Path | None = None
+    ) -> None:
         """Initialize parser.
 
         Args:
             max_file_size: Maximum allowed file size in bytes (default: 100MB)
+            sandbox_root: Optional root directory for security sandbox
         """
         self.max_file_size = max_file_size
+        self.sandbox_root = sandbox_root
 
     def parse(self, filepath: Path, **kwargs: Any) -> Robot:
         """Parse URDF file into a Robot model using iterative parsing.
@@ -1166,7 +1187,11 @@ class URDFParser(RobotParser):
                                 materials[mat.name] = mat
 
                         elif elem.tag == "link":
-                            link = parse_link(elem, materials, filepath.parent)
+                            # Use provided sandbox_root or default to filepath.parent
+                            parser_sandbox = kwargs.get("sandbox_root", self.sandbox_root)
+                            link = parse_link(
+                                elem, materials, filepath.parent, sandbox_root=parser_sandbox
+                            )
                             with suppress(ValueError):
                                 robot.add_link(link)
 
@@ -1236,7 +1261,8 @@ class URDFParser(RobotParser):
 
         try:
             root = ET.fromstring(urdf_string)
-            return self._parse_robot(root, filepath=urdf_directory)
+            parser_sandbox = kwargs.get("sandbox_root", self.sandbox_root)
+            return self._parse_robot(root, filepath=urdf_directory, sandbox_root=parser_sandbox)
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
@@ -1244,7 +1270,9 @@ class URDFParser(RobotParser):
                 raise
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
-    def _parse_robot(self, root: ET.Element, filepath: Path | None = None) -> Robot:
+    def _parse_robot(
+        self, root: ET.Element, filepath: Path | None = None, sandbox_root: Path | None = None
+    ) -> Robot:
         """Internal recursive parser for the robot element.
 
         This method handles the complex internal logic of parsing robot elements,
@@ -1267,7 +1295,7 @@ class URDFParser(RobotParser):
 
         # Parse all links first (joints need links to exist)
         for link_elem in root.findall("link"):
-            link = parse_link(link_elem, materials, filepath)
+            link = parse_link(link_elem, materials, filepath, sandbox_root=sandbox_root)
             try:
                 robot.add_link(link)
             except ValueError:
