@@ -207,7 +207,7 @@ classDiagram
         +list~Joint~ joints
         +list~Sensor~ sensors
         +list~Transmission~ transmissions
-        +Ros2Control ros2_control
+        +list~Ros2Control~ ros2_controls
         +validate_tree_structure()
         +add_link()
         +add_joint()
@@ -347,7 +347,7 @@ class Robot:
 1. Add enum to `SensorType` in `models/sensor.py`
 2. Create info dataclass (e.g., `MyNewSensorInfo`)
 3. Add parsing logic in `parsers/urdf_parser.py`
-4. Add generation logic in `generators/urdf.py`
+4. Add generation logic in `urdf_generator.py`
 5. Add Blender UI in `panels/sensor_panel.py`
 
 ### Adding New Joint Types
@@ -355,7 +355,7 @@ class Robot:
 1. Add enum to `JointType` in `models/joint.py`
 2. Update validation in `Joint.__post_init__()`
 3. Update parser in `parsers/urdf_parser.py`
-4. Update generator in `generators/urdf.py`
+4. Update generator in `urdf_generator.py`
 5. Add gizmo visualization in `utils/joint_gizmos.py`
 
 ## Performance Considerations
