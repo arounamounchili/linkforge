@@ -6,6 +6,7 @@ properties, and includes, removing the need for external dependencies like xacro
 
 from __future__ import annotations
 
+import math
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -21,6 +22,11 @@ XACRO_URIS = [
     "http://www.ros.org/wiki/xacro",
     "http://wiki.ros.org/xacro",
 ]
+
+
+# Safe math context for evaluations
+MATH_CONTEXT = {name: getattr(math, name) for name in dir(math) if not name.startswith("__")}
+MATH_CONTEXT["__builtins__"] = {}  # Security: No builtins access
 
 
 class XacroResolver:
@@ -242,8 +248,8 @@ class XacroResolver:
             return False
         else:
             try:
-                # Basic string/bool comparison
-                return bool(eval(condition, {"__builtins__": {}}, {}))
+                # Basic string/bool comparison with math support
+                return bool(eval(condition, MATH_CONTEXT, {}))
             except Exception:
                 return condition not in ("", "0", "false")
 
@@ -272,9 +278,8 @@ class XacroResolver:
             # Attempt to evaluate as math. If it fails, or if it looks like a vector
             # (non-math characters or multiple numbers), we return the substituted string as-is.
             try:
-                # Safe eval for basic math (+, -, *, /, parentheses)
-                # We restrict globals to empty and locals to basic math symbols
-                res = eval(expr, {"__builtins__": {}}, {})
+                # Safe eval with trigonometry and common math functions
+                res = eval(expr, MATH_CONTEXT, {})
                 # If the result is a number, return it as string
                 if isinstance(res, (int, float)):
                     return str(res)

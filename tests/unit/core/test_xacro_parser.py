@@ -429,3 +429,21 @@ def test_resolver_supports_legacy_xacro_namespace():
     resolved = resolver.resolve_element(legacy_xml)
     link = next(c for c in resolved if c.tag == "link")
     assert link.get("mass") == "42"
+
+
+def test_xacro_substitute_trig_math():
+    """Verify that trigonometric functions are supported in substitutions."""
+    resolver = XacroResolver()
+    import math
+
+    # Test PI constant
+    assert float(resolver._substitute("${pi}")) == pytest.approx(math.pi)
+
+    # Test SIN function
+    assert float(resolver._substitute("${sin(pi/2)}")) == pytest.approx(1.0)
+
+    # Test COS function
+    assert float(resolver._substitute("${cos(pi)}")) == pytest.approx(-1.0)
+
+    # Test compound expression
+    assert float(resolver._substitute("${sqrt(pow(3, 2) + pow(4, 2))}")) == pytest.approx(5.0)
