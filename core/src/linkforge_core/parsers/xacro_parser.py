@@ -17,7 +17,10 @@ from ..models.robot import Robot
 
 logger = get_logger(__name__)
 
-XACRO_NS = "http://www.ros.org/wiki/xacro"
+XACRO_URIS = [
+    "http://www.ros.org/wiki/xacro",
+    "http://wiki.ros.org/xacro",
+]
 
 
 class XacroResolver:
@@ -25,7 +28,7 @@ class XacroResolver:
 
     def __init__(self, search_paths: list[Path] | None = None, max_depth: int = 50) -> None:
         self.search_paths = search_paths or []
-        self.properties: dict[str, str] = {}
+        self.properties: dict[str, Any] = {}
         self.macros: dict[str, tuple[list[str], ET.Element]] = {}
         self.args: dict[str, str] = {}
         self.max_depth = max_depth
@@ -69,7 +72,13 @@ class XacroResolver:
 
     def _resolve_element_impl(self, element: ET.Element) -> ET.Element:
         """Core recursive resolution logic."""
-        tag = element.tag.replace(f"{{{XACRO_NS}}}", "xacro:")
+        # Convert any recognized XACRO namespace URI to 'xacro:' prefix
+        tag = element.tag
+        for uri in XACRO_URIS:
+            prefix = f"{{{uri}}}"
+            if tag.startswith(prefix):
+                tag = tag.replace(prefix, "xacro:")
+                break
 
         # 1. Handle properties: <xacro:property name="..." value="..."/>
         if tag == "xacro:property":
@@ -163,7 +172,7 @@ class XacroResolver:
         if tag.startswith("xacro:"):
             if tag[6:] in self.macros:
                 params, macro_elem = self.macros[tag[6:]]
-                local_props = {}
+                local_props: dict[str, Any] = {}
 
                 # Parse parameters
                 block_params = [p[1:] for p in params if p.startswith("*")]

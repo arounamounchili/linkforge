@@ -412,3 +412,20 @@ def test_resolve_file_re_raises_robot_parser_error(tmp_path):
     resolver = XacroResolver()
     with pytest.raises(RobotParserError, match="Maximum XACRO recursion depth"):
         resolver.resolve_file(bad_xacro)
+
+
+def test_resolver_supports_legacy_xacro_namespace():
+    """Verify that legacy http://wiki.ros.org/xacro namespace is recognized."""
+    resolver = XacroResolver()
+
+    # Legacy namespace XML
+    legacy_xml = ET.fromstring("""
+        <root xmlns:xacro="http://wiki.ros.org/xacro">
+            <xacro:property name="val" value="42"/>
+            <link name="l" mass="${val}"/>
+        </root>
+    """)
+
+    resolved = resolver.resolve_element(legacy_xml)
+    link = next(c for c in resolved if c.tag == "link")
+    assert link.get("mass") == "42"
