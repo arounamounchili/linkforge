@@ -95,3 +95,11 @@ temp/
 docs/_build/
 docs/.buildinfo
 site/
+
+# Bundled Dependencies (managed by build script)
+**/wheels/
+*.whl
+
+# Distribution cleanup
+dist/*.zip
+!dist/.gitkeep
