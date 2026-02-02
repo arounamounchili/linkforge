@@ -9,23 +9,23 @@ from linkforge_core.parsers.xacro_parser import XacroResolver
 def test_xacro_substitute_basic_math():
     resolver = XacroResolver()
     # Simple math
-    assert resolver._substitute("${1 + 1}") == "2"
+    assert resolver._substitute("${1 + 1}") == 2
     # Division
-    assert resolver._substitute("${10 / 2}") == "5.0"
+    assert resolver._substitute("${10 / 2}") == 5.0
     # Parentheses and order of ops
-    assert resolver._substitute("${(1 + 2) * 3}") == "9"
+    assert resolver._substitute("${(1 + 2) * 3}") == 9
 
 
 def test_substitute_resolves_properties_in_math():
     resolver = XacroResolver()
-    resolver.properties["base_mass"] = "10.0"
-    resolver.properties["x"] = "0.4"
-    resolver.properties["y"] = "0.2"
+    resolver.properties["base_mass"] = 10.0
+    resolver.properties["x"] = 0.4
+    resolver.properties["y"] = 0.2
 
     # Simple property substitution
-    assert resolver._substitute("${base_mass}") == "10.0"
+    assert resolver._substitute("${base_mass}") == 10.0
     # Math with properties
-    assert resolver._substitute("${base_mass * 2}") == "20.0"
+    assert resolver._substitute("${base_mass * 2}") == 20.0
     # Math with properties and spaces
     assert float(resolver._substitute("${(1/12) * base_mass * (x*x + y*y)}")) == pytest.approx(
         0.16666666666666666
@@ -162,7 +162,7 @@ def test_substitute_handles_non_numeric_eval_results():
     # eval returning a string (not a number)
     assert resolver._substitute("${'hello'}") == "hello"
     # eval returning a boolean
-    assert resolver._substitute("${True}") == "True"
+    assert resolver._substitute("${True}") is True
 
 
 def test_resolve_elements_flattens_nested_containers():
@@ -447,3 +447,74 @@ def test_xacro_substitute_trig_math():
 
     # Test compound expression
     assert float(resolver._substitute("${sqrt(pow(3, 2) + pow(4, 2))}")) == pytest.approx(5.0)
+
+
+def test_xacro_namespaced_include(tmp_path):
+    """Verify that macros and properties in namespaced includes are prefixed."""
+    inc_path = tmp_path / "arm.xacro"
+    inc_path.write_text("""
+        <root xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:property name="mass" value="5.0"/>
+            <xacro:macro name="link_macro">
+                <link name="arm_link"/>
+            </xacro:macro>
+        </root>
+    """)
+
+    main_xml = ET.fromstring(f"""
+        <root xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:include filename="{str(inc_path)}" ns="arm"/>
+            <link name="main_link" weight="${{arm.mass}}"/>
+            <xacro:arm.link_macro/>
+        </root>
+    """)
+
+    resolver = XacroResolver()
+    resolved = resolver.resolve_element(main_xml)
+
+    # Check property resolution
+    main_link = next(c for c in resolved if c.get("name") == "main_link")
+    assert main_link.get("weight") == "5.0"
+
+    # Check macro expansion
+    assert any(c.tag == "link" and c.get("name") == "arm_link" for c in resolved)
+
+
+def test_xacro_load_yaml(tmp_path):
+    """Verify that YAML data can be loaded and accessed in expressions."""
+    yaml_path = tmp_path / "config.yaml"
+    yaml_path.write_text("mass: 10.5\nname: bot")
+
+    main_xml = ET.fromstring(f"""
+        <root xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:property name="data" value="${{load_yaml('{str(yaml_path)}')}}"/>
+            <link name="${{data['name']}}" mass="${{data['mass']}}"/>
+        </root>
+    """)
+
+    resolver = XacroResolver()
+    resolved = resolver.resolve_element(main_xml)
+
+    link = next(c for c in resolved if c.tag == "link")
+    assert link.get("name") == "bot"
+    assert link.get("mass") == "10.5"
+
+
+def test_xacro_load_json(tmp_path):
+    """Verify that JSON data can be loaded and accessed in expressions."""
+    json_path = tmp_path / "config.json"
+    json_path.write_text('{"mass": 10.5, "name": "bot"}')
+
+    main_xml = ET.fromstring(f"""
+        <root xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:property name="data" value="${{load_json('{str(json_path)}')}}"/>
+            <link name="${{data['name']}}" mass="${{data['mass']}}"/>
+        </root>
+    """)
+
+    resolver = XacroResolver()
+    resolved = resolver.resolve_element(main_xml)
+
+    link = next(c for c in resolved if c.tag == "link")
+    assert link.get("name") == "bot"
+    assert link.get("mass") == "10.5"
