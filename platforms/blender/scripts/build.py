@@ -34,7 +34,19 @@ WHEELS_DIR = PLATFORM_DIR / "wheels"
 DIST_DIR = REPO_ROOT / "dist"  # Keep dist in root for easy access
 
 # Packages to bundle as wheels for cross-platform/cross-version compatibility
-DEP_CONFIG = {}
+DEP_CONFIG = {
+    "PyYAML": {
+        "version": "6.0.3",
+        "universal": False,
+        "platforms": [
+            "win_amd64",
+            "macosx_11_0_arm64",
+            "macosx_10_13_x86_64",
+            "manylinux2014_x86_64",
+        ],
+        "py_versions": ["311"],  # Blender 4.2+
+    }
+}
 
 
 def read_manifest_value(key: str) -> str:

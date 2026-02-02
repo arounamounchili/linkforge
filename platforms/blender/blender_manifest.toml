@@ -58,3 +58,12 @@ platforms = [
 # https://docs.blender.org/manual/en/latest/advanced/extensions/addons.html#permissions
 [permissions]
 files = "Import/Export URDF/XACRO files"  # File system access for export
+
+# BEGIN AUTOMATED WHEELS
+wheels = [
+    "./wheels/pyyaml-6.0.3-cp311-cp311-macosx_10_13_x86_64.whl",
+    "./wheels/pyyaml-6.0.3-cp311-cp311-macosx_11_0_arm64.whl",
+    "./wheels/pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "./wheels/pyyaml-6.0.3-cp311-cp311-win_amd64.whl",
+]
+# END AUTOMATED WHEELS

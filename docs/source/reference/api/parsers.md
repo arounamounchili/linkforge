@@ -23,7 +23,41 @@ URDF and XACRO parsers for converting files to Python objects.
 .. autofunction:: linkforge_core.parsers.urdf_parser.parse_sensor_from_gazebo
 ```
 
+## XACRO Parser
+
+### XACROParser Class
+
+The `XACROParser` provides native, pure-Python resolution of XACRO files. It handles macros, properties, math expressions, and conditional blocks without external ROS dependencies.
+
+```{eval-rst}
+.. autoclass:: linkforge_core.parsers.xacro_parser.XACROParser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+### XacroResolver Class (Internal)
+
+The internal engine used by `XACROParser` for hierarchical property resolution and macro substitution.
+
+```{eval-rst}
+.. autoclass:: linkforge_core.parsers.xacro_parser.XacroResolver
+   :members:
+   :undoc-members:
+```
+
 ## Usage Examples
+
+### Parse XACRO File
+
+```python
+from linkforge_core.parsers import XACROParser
+from pathlib import Path
+
+# Natively resolves properties, macros, and includes
+robot = XACROParser().parse(Path("robot.urdf.xacro"))
+print(f"Resolved robot: {robot.name}")
+```
 
 ### Parse URDF File
 

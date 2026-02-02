@@ -6,8 +6,8 @@ high-fidelity round-tripping and includes:
 
 - **Comprehensive Parsing**: Full support for all URDF joint types, multiple
   visual/collision elements, and complex nested structures.
-- **XACRO Documentation Support**: Built-in support for resolving XACRO macros,
-  properties, and includes without external dependencies.
+- **Native XACRO Support**: Integrated resolution of XACRO macros, properties,
+  and includes using the built-in `XACROParser`.
 - **Security & Validation**: Built-in protection against XML attacks (depth
   limits) and strict validation of mesh paths and numeric values.
 - **Error Resilience**: Informative error messages and fallback mechanisms
@@ -481,7 +481,7 @@ def _normalize_hardware_interface(interface: str) -> str:
     return interface
 
 
-def parse_transmission(trans_elem: ET.Element) -> Transmission:
+def parse_transmission(trans_elem: ET.Element) -> Transmission | None:
     """Parse transmission element.
 
     Args:
@@ -528,7 +528,7 @@ def parse_transmission(trans_elem: ET.Element) -> Transmission:
 
 def _parse_transmission_component(
     elem: ET.Element, cls: type[TransmissionJoint] | type[TransmissionActuator]
-) -> TransmissionJoint | TransmissionActuator:
+) -> TransmissionJoint | TransmissionActuator | None:
     """Helper to parse common transmission components (joints/actuators)."""
     name = elem.get("name", "")
 
@@ -1108,11 +1108,11 @@ def _detect_xacro_file(root: ET.Element, filepath: Path | None = None) -> None:
         error_msg = (
             f"XACRO file detected: {filename}\n\n"
             "This parser handles URDF files only. For XACRO files, use the 'Import Robot' "
-            "operator in Blender which automatically converts XACRO to URDF.\n\n"
-            "If using this parser programmatically, convert XACRO to URDF first:\n"
-            "   from linkforge_core.parsers import XacroResolver\n"
-            f"   resolver = XacroResolver()\n"
-            "   robot = parse_urdf_string(resolver.resolve_file(filepath if filepath else '...'))\n"
+            "operator in Blender which automatically resolves XACRO natively.\n\n"
+            "If using the core library programmatically, use the XACROParser instead:\n"
+            "   from linkforge_core.parsers import XACROParser\n"
+            "   parser = XACROParser()\n"
+            "   robot = parser.parse(filepath)\n"
         )
 
         if xacro_elements:

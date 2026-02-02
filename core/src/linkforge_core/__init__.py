@@ -1,7 +1,7 @@
 """LinkForge Core Library.
 
-This is the Blender-independent core library for robot URDF/XACRO generation.
-It can be used standalone without Blender for testing and CLI tools.
+This is a multi-platform core library for robot URDF/XACRO generation.
+It can be used standalone or integrated into various platforms (Blender, Unity, Web, etc.).
 
 Modules:
     models: Data structures for robots, links, joints, geometry

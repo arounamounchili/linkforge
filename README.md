@@ -196,6 +196,7 @@ We welcome contributions! LinkForge is an community-driven project.
 ## 📄 License
 
 This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+For third-party component licenses, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## ✨ Our Contributors
 

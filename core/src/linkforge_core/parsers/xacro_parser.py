@@ -1,7 +1,7 @@
 """Native XACRO resolver for LinkForge.
 
 This module provides a pure-Python implementation for resolving XACRO macros,
-properties, and includes, removing the need for external dependencies like xacrodoc.
+properties, and includes.
 """
 
 from __future__ import annotations
@@ -14,9 +14,9 @@ from types import SimpleNamespace
 from typing import Any
 
 try:
-    import yaml
+    import yaml  # type: ignore
 except ImportError:
-    yaml = None  # type: ignore
+    yaml = None
 
 try:
     import json
