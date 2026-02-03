@@ -5,6 +5,9 @@ from datetime import datetime
 
 from ..models import Vector3
 
+# Register XACRO namespace to ensure standard 'xacro:' prefix in exports
+ET.register_namespace("xacro", "http://www.ros.org/wiki/xacro")
+
 MAX_XML_DEPTH = 100
 
 
