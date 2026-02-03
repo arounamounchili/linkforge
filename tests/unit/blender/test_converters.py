@@ -7,7 +7,6 @@ from linkforge.blender.converters import (
     blender_joint_to_core,
     blender_link_to_core_with_origin,
     blender_sensor_to_core,
-    blender_transmission_to_core,
     detect_primitive_type,
     extract_mesh_triangles,
     get_object_geometry,
@@ -205,14 +204,11 @@ def test_categorize_scene_objects_logic():
     # 2. Call internal categorizer
     from linkforge.blender.converters import _categorize_scene_objects
 
-    links, joints, sensors, transmissions, joints_map, root = _categorize_scene_objects(
-        bpy.context.scene
-    )
+    links, joints, sensors, joints_map, root = _categorize_scene_objects(bpy.context.scene)
 
     # 3. Verify
     assert "l_link" in links
     assert j_obj in joints
-    assert any(o.name == "t_trans" for o in transmissions)
     assert root[0] == "l_link"
 
 
@@ -382,9 +378,7 @@ def test_categorize_scene_objects_complex_hierarchy():
     # Manually run the protected function (we are testing unit logic)
     from linkforge.blender.converters import _categorize_scene_objects
 
-    links, joints, sensors, transmissions, joints_map, root_link = _categorize_scene_objects(
-        bpy.context.scene
-    )
+    links, joints, sensors, joints_map, root_link = _categorize_scene_objects(bpy.context.scene)
 
     assert "base_link" in links
     assert "child_link" in links
@@ -746,121 +740,6 @@ def test_robust_origin_extraction_logic():
     assert pytest.approx(transform.xyz.x) == 1.0
     assert pytest.approx(transform.xyz.y) == 1.0
     assert pytest.approx(transform.xyz.z) == 1.0
-
-
-# ============================================================================
-# Transmission Conversion Tests
-# ============================================================================
-
-
-def test_blender_transmission_to_core_simple():
-    """Test conversion of a simple transmission from Blender to Core."""
-    # Create joint
-    bpy.ops.object.empty_add()
-    joint_obj = bpy.context.active_object
-    joint_obj.name = "joint1"
-    joint_obj.linkforge_joint.is_robot_joint = True
-    joint_obj.linkforge_joint.joint_name = "joint1"
-    joint_obj.linkforge_joint.joint_type = "REVOLUTE"
-
-    # Create transmission
-    bpy.ops.object.empty_add()
-    trans_obj = bpy.context.active_object
-    trans_obj.name = "trans1"
-    trans_obj.linkforge_transmission.is_robot_transmission = True
-    trans_obj.linkforge_transmission.transmission_name = "trans1"
-    trans_obj.linkforge_transmission.transmission_type = "SIMPLE"
-    trans_obj.linkforge_transmission.joint_name = joint_obj
-    trans_obj.linkforge_transmission.hardware_interface = "POSITION"
-
-    # Convert
-    transmission = blender_transmission_to_core(trans_obj)
-
-    # Verify
-    assert transmission is not None
-    assert transmission.name == "trans1"
-    assert len(transmission.joints) == 1
-    assert transmission.joints[0].name == "joint1"
-    assert len(transmission.actuators) == 1
-    assert "position" in transmission.actuators[0].hardware_interfaces[0].lower()
-
-
-def test_blender_transmission_custom_actuator_name():
-    """Test transmission with custom actuator name."""
-    # Create joint
-    bpy.ops.object.empty_add()
-    joint_obj = bpy.context.active_object
-    joint_obj.name = "j1"
-    joint_obj.linkforge_joint.is_robot_joint = True
-    joint_obj.linkforge_joint.joint_name = "j1"
-
-    # Create transmission with custom actuator name
-    bpy.ops.object.empty_add()
-    trans_obj = bpy.context.active_object
-    trans_obj.linkforge_transmission.is_robot_transmission = True
-    trans_obj.linkforge_transmission.transmission_type = "SIMPLE"
-    trans_obj.linkforge_transmission.joint_name = joint_obj
-    trans_obj.linkforge_transmission.use_custom_actuator_name = True
-    trans_obj.linkforge_transmission.actuator_name = "custom_motor"
-
-    transmission = blender_transmission_to_core(trans_obj)
-
-    assert transmission.actuators[0].name == "custom_motor"
-
-
-def test_blender_transmission_differential():
-    """Test conversion of differential transmission."""
-    # Create two joints
-    bpy.ops.object.empty_add()
-    j1 = bpy.context.active_object
-    j1.name = "j1"
-    j1.linkforge_joint.is_robot_joint = True
-    j1.linkforge_joint.joint_name = "j1"
-
-    bpy.ops.object.empty_add()
-    j2 = bpy.context.active_object
-    j2.name = "j2"
-    j2.linkforge_joint.is_robot_joint = True
-    j2.linkforge_joint.joint_name = "j2"
-
-    # Create differential transmission
-    bpy.ops.object.empty_add()
-    trans_obj = bpy.context.active_object
-    trans_obj.linkforge_transmission.is_robot_transmission = True
-    trans_obj.linkforge_transmission.transmission_type = "DIFFERENTIAL"
-    trans_obj.linkforge_transmission.joint1_name = j1
-    trans_obj.linkforge_transmission.joint2_name = j2
-    trans_obj.linkforge_transmission.hardware_interface = "VELOCITY"
-
-    transmission = blender_transmission_to_core(trans_obj)
-
-    assert transmission is not None
-    assert len(transmission.joints) == 2
-    assert transmission.joints[0].name == "j1"
-    assert transmission.joints[1].name == "j2"
-    assert len(transmission.actuators) == 2
-
-
-def test_blender_transmission_no_joint_error():
-    """Test that transmission without joint raises error."""
-    bpy.ops.object.empty_add()
-    trans_obj = bpy.context.active_object
-    trans_obj.linkforge_transmission.is_robot_transmission = True
-    trans_obj.linkforge_transmission.transmission_type = "SIMPLE"
-
-    with pytest.raises(ValueError, match="has no joint selected"):
-        blender_transmission_to_core(trans_obj)
-
-
-def test_blender_transmission_not_robot_transmission():
-    """Test that non-robot transmission objects return None."""
-    bpy.ops.object.empty_add()
-    trans_obj = bpy.context.active_object
-    trans_obj.linkforge_transmission.is_robot_transmission = False
-
-    transmission = blender_transmission_to_core(trans_obj)
-
-    assert transmission is None
 
 
 # ============================================================================

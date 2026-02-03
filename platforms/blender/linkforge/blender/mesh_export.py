@@ -11,6 +11,7 @@ from typing import Any
 import bpy
 
 from ..linkforge_core.logging_config import get_logger
+from ..linkforge_core.utils.string_utils import sanitize_name
 
 logger = get_logger(__name__)
 
@@ -142,20 +143,26 @@ def create_simplified_mesh(obj: Any, decimation_ratio: float) -> Any | None:
     return simplified_obj
 
 
-def get_mesh_filename(link_name: str, geometry_type: str, mesh_format: str) -> str:
+def get_mesh_filename(
+    link_name: str, geometry_type: str, mesh_format: str, suffix: str = ""
+) -> str:
     """Generate mesh filename based on link and geometry type.
 
     Args:
         link_name: Name of the robot link
         geometry_type: "visual" or "collision"
         mesh_format: "STL", "OBJ", or "GLB"
+        suffix: Optional unique suffix (e.g., index or name)
 
     Returns:
-        Filename string (e.g., "base_link_visual.stl").
+        Filename string (e.g., "base_link_visual_0.stl").
 
     """
     ext = mesh_format.lower()
-    return f"{link_name}_{geometry_type}.{ext}"
+    # Sanitize both link_name and suffix for URDF/filesystem compatibility
+    clean_link = sanitize_name(link_name)
+    clean_suffix = sanitize_name(suffix) if suffix else ""
+    return f"{clean_link}_{geometry_type}{clean_suffix}.{ext}"
 
 
 def export_mesh_glb(obj: Any, filepath: Path) -> bool:
@@ -211,6 +218,7 @@ def export_link_mesh(
     simplify: bool = False,
     decimation_ratio: float = 0.5,
     dry_run: bool = False,
+    suffix: str = "",
 ) -> Path | None:
     """Export mesh for a robot link.
 
@@ -235,8 +243,8 @@ def export_link_mesh(
     if obj is None or obj.type != "MESH":
         return None
 
-    # Generate filename
-    filename = get_mesh_filename(link_name, geometry_type, mesh_format)
+    # Generate filename with suffix
+    filename = get_mesh_filename(link_name, geometry_type, mesh_format, suffix=suffix)
     filepath = meshes_dir / filename
 
     if dry_run:

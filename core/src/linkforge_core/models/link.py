@@ -34,10 +34,12 @@ class InertiaTensor:
 
         # Triangle inequality for principal moments
         # https://en.wikipedia.org/wiki/Moment_of_inertia#Principal_axes
+        # Add a small epsilon tolerance for float precision issues (e.g. from CAD or Blender)
+        epsilon = 1e-9
         if not (
-            self.ixx + self.iyy >= self.izz
-            and self.iyy + self.izz >= self.ixx
-            and self.izz + self.ixx >= self.iyy
+            self.ixx + self.iyy >= self.izz - epsilon
+            and self.iyy + self.izz >= self.ixx - epsilon
+            and self.izz + self.ixx >= self.iyy - epsilon
         ):
             raise ValueError("Inertia tensor violates triangle inequality")
 

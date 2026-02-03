@@ -33,7 +33,6 @@ from ..linkforge_core.models import (
     GazeboPlugin,
     Geometry,
     GPSInfo,
-    HardwareInterface,
     IMUInfo,
     Inertial,
     InertiaTensor,
@@ -54,10 +53,6 @@ from ..linkforge_core.models import (
     SensorType,
     Sphere,
     Transform,
-    Transmission,
-    TransmissionActuator,
-    TransmissionJoint,
-    TransmissionType,
     Vector3,
     Visual,
 )
@@ -256,6 +251,7 @@ def get_object_geometry(
     simplify: bool = False,
     decimation_ratio: float = 0.5,
     dry_run: bool = False,
+    suffix: str = "",
 ) -> Geometry | None:
     """Extract geometry from Blender object.
 
@@ -271,6 +267,8 @@ def get_object_geometry(
         mesh_format: "STL", "OBJ", or "GLB"
         simplify: Whether to simplify mesh (for collision)
         decimation_ratio: Simplification ratio if simplify=True
+        dry_run: If True, generate mesh paths but don't write files
+        suffix: Optional unique suffix (e.g., index or name)
 
     Returns:
         Core Geometry or None
@@ -300,6 +298,7 @@ def get_object_geometry(
                 simplify=simplify,
                 decimation_ratio=decimation_ratio,
                 dry_run=dry_run,
+                suffix=suffix,
             )
 
             if mesh_path:
@@ -465,6 +464,9 @@ def blender_link_to_core_with_origin(
     visuals: list[Visual] = []
     collisions: list[Collision] = []
 
+    visual_count = 0
+    collision_count = 0
+
     for child in obj.children:
         child_name = child.name
 
@@ -475,6 +477,11 @@ def blender_link_to_core_with_origin(
 
             # Extract material
             material = get_object_material(child, props)
+
+            # Determine unique suffix (use urdf_name if present, otherwise counter)
+            urdf_name = child.get("urdf_name", None)
+            suffix = f"_{sanitize_name(urdf_name)}" if urdf_name else f"_{visual_count}"
+            visual_count += 1
 
             # Get geometry (auto-detect: primitives for simple shapes, mesh for complex)
             visual_geom = get_object_geometry(
@@ -487,9 +494,9 @@ def blender_link_to_core_with_origin(
                 simplify=False,
                 decimation_ratio=1.0,
                 dry_run=dry_run,
+                suffix=suffix,
             )
             if visual_geom:
-                urdf_name = child.get("urdf_name", None)
                 visuals.append(
                     Visual(geometry=visual_geom, origin=origin, material=material, name=urdf_name)
                 )
@@ -504,35 +511,34 @@ def blender_link_to_core_with_origin(
             is_imported = child.get("imported_from_urdf", False)
 
             # Determine simplification ratio based on collision quality setting
-            # - Imported collision: Preserve at 100% unless user explicitly reduced quality
-            # - User-created collision: Use quality setting (default 50%)
-            # Convert from percentage (0-100) to ratio (0-1) for decimation
             quality_percent = props.collision_quality
             quality_ratio = quality_percent / 100.0  # Convert 0-100 to 0.0-1.0
 
-            # Only simplify if quality < 100% AND not imported (or if user explicitly wants to simplify imported)
-            # For now, we strictly protect imported meshes from auto-simplification
+            # Only simplify if quality < 100% AND not imported
             should_simplify = (quality_ratio < 1.0) and not is_imported
 
-            # Check if collision has stored geometry type (from generation)
-            # This prevents auto-detection failures for primitives like cylinders
+            # Check if collision has stored geometry type
             stored_geom_type = child.get("collision_geometry_type", "AUTO")
 
-            # Get geometry (use stored type if available, otherwise auto-detect)
+            # Determine unique suffix
+            urdf_name = child.get("urdf_name", None)
+            suffix = f"_{sanitize_name(urdf_name)}" if urdf_name else f"_{collision_count}"
+            collision_count += 1
+
+            # Get geometry
             collision_geom = get_object_geometry(
                 obj=child,
-                geometry_type=stored_geom_type,  # Use stored type or auto-detect
+                geometry_type=stored_geom_type,
                 link_name=link_name,
                 geom_purpose="collision",
                 meshes_dir=meshes_dir,
-                mesh_format="STL",  # Collision always STL (industry standard)
-                # Use collision_quality to control simplification
+                mesh_format="STL",  # Collision always STL
                 simplify=should_simplify,
                 decimation_ratio=quality_ratio,
                 dry_run=dry_run,
+                suffix=suffix,
             )
             if collision_geom:
-                urdf_name = child.get("urdf_name", None)
                 collisions.append(Collision(geometry=collision_geom, origin=origin, name=urdf_name))
 
     # Inertial properties
@@ -738,7 +744,6 @@ def _categorize_scene_objects(
     dict[str, Any],
     list[Any],
     list[Any],
-    list[Any],
     dict[str, tuple[str, Any]],
     tuple[str, Any] | None,
 ]:
@@ -748,13 +753,12 @@ def _categorize_scene_objects(
         scene: Blender scene object
 
     Returns:
-        Tuple of (link_objects, joint_objects, sensor_objects, transmission_objects,
+        Tuple of (link_objects, joint_objects, sensor_objects,
                  joints_map, root_link)
     """
     link_objects = {}  # link_name -> link Empty object
     joint_objects = []
     sensor_objects = []
-    transmission_objects = []
     joints_map = {}  # child_link_name -> (parent_link_name, joint_empty_obj)
     root_link = None
 
@@ -782,20 +786,13 @@ def _categorize_scene_objects(
             elif hasattr(obj, "linkforge_sensor") and obj.linkforge_sensor.is_robot_sensor:
                 sensor_objects.append(obj)
 
-            # Check for Transmission
-            elif (
-                hasattr(obj, "linkforge_transmission")
-                and obj.linkforge_transmission.is_robot_transmission
-            ):
-                transmission_objects.append(obj)
-
     # Find root link (link with no parent joint)
     for link_name, obj in link_objects.items():
         if link_name not in joints_map:
             root_link = (link_name, obj)
             break
 
-    return link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link
+    return link_objects, joint_objects, sensor_objects, joints_map, root_link
 
 
 def _calculate_link_frames(
@@ -884,8 +881,8 @@ def scene_to_robot(
     conversion_errors: list[str] = []
 
     # Step 1: Categorize scene objects
-    link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link = (
-        _categorize_scene_objects(scene)
+    link_objects, joint_objects, sensor_objects, joints_map, root_link = _categorize_scene_objects(
+        scene
     )
 
     # Step 2: Calculate link coordinate frames
@@ -1120,157 +1117,6 @@ def blender_sensor_to_core(obj: Any) -> Sensor | None:
         force_torque_info=force_torque_info,
         plugin=plugin,
         topic=topic,
-    )
-
-
-def blender_transmission_to_core(obj: Any) -> Transmission | None:
-    """Convert Blender Empty with TransmissionPropertyGroup to Core Transmission.
-
-    Args:
-        obj: Blender Empty object with linkforge_transmission property group
-
-    Returns:
-        Core Transmission model or None
-
-    """
-    if obj is None:
-        return None
-
-    props = obj.linkforge_transmission
-    if not props.is_robot_transmission:
-        return None
-
-    transmission_name = props.transmission_name if props.transmission_name else obj.name
-
-    # Transmission type mapping
-    transmission_type_map = {
-        "SIMPLE": TransmissionType.SIMPLE.value,
-        "DIFFERENTIAL": TransmissionType.DIFFERENTIAL.value,
-        "FOUR_BAR_LINKAGE": TransmissionType.FOUR_BAR_LINKAGE.value,
-    }
-
-    # Determine transmission type
-    trans_type_str = props.transmission_type
-    if trans_type_str == "CUSTOM":
-        trans_type = props.custom_type if props.custom_type else "custom"
-    else:
-        trans_type = transmission_type_map.get(trans_type_str, TransmissionType.SIMPLE.value)
-
-    # Hardware interface mapping (ROS2 style - modern standard)
-    hardware_interface_map = {
-        "POSITION": HardwareInterface.COMMAND_POSITION.value,
-        "VELOCITY": HardwareInterface.COMMAND_VELOCITY.value,
-        "EFFORT": HardwareInterface.COMMAND_EFFORT.value,
-    }
-
-    # Determine hardware interface
-    hardware_interface = hardware_interface_map.get(
-        props.hardware_interface, HardwareInterface.COMMAND_POSITION.value
-    )
-
-    # Build joints and actuators based on type
-    joints: list[TransmissionJoint] = []
-    actuators: list[TransmissionActuator] = []
-
-    # Check if CUSTOM type has 2 joints set (from import)
-    is_custom_dual = False
-    if trans_type_str == "CUSTOM" and props.joint1_name:
-        is_custom_dual = True
-
-    if trans_type_str == "SIMPLE" or (trans_type_str == "CUSTOM" and not is_custom_dual):
-        joint_obj = props.joint_name
-        joint_name = joint_obj.linkforge_joint.joint_name if joint_obj else ""
-        if not joint_name:
-            raise ValueError(
-                f"Transmission '{transmission_name}' has no joint selected. Please select a joint in the Transmission settings."
-            )
-
-        # Actuator name
-        if props.use_custom_actuator_name and props.actuator_name:
-            actuator_name = props.actuator_name
-        else:
-            actuator_name = f"{joint_name}_motor"
-
-        joints.append(
-            TransmissionJoint(
-                name=joint_name,
-                hardware_interfaces=[hardware_interface],
-                # Don't duplicate mechanical reduction on joint if it's on actuator
-                mechanical_reduction=1.0,
-                offset=0.0,
-            )
-        )
-        actuators.append(
-            TransmissionActuator(
-                name=actuator_name,
-                hardware_interfaces=[hardware_interface],
-                mechanical_reduction=props.mechanical_reduction,
-                offset=props.offset,
-            )
-        )
-
-    elif trans_type_str in ["DIFFERENTIAL", "FOUR_BAR_LINKAGE"] or is_custom_dual:
-        joint1_obj = props.joint1_name
-        joint2_obj = props.joint2_name
-
-        joint1_name = joint1_obj.linkforge_joint.joint_name if joint1_obj else ""
-        joint2_name = joint2_obj.linkforge_joint.joint_name if joint2_obj else ""
-
-        if not joint1_name or not joint2_name:
-            raise ValueError(
-                f"Differential transmission '{transmission_name}' requires 2 joints. Please select both Joint 1 and Joint 2."
-            )
-
-        # Actuator names
-        if props.use_custom_actuator_name:
-            actuator1_name = (
-                props.actuator1_name if props.actuator1_name else f"{joint1_name}_motor"
-            )
-            actuator2_name = (
-                props.actuator2_name if props.actuator2_name else f"{joint2_name}_motor"
-            )
-        else:
-            actuator1_name = f"{joint1_name}_motor"
-            actuator2_name = f"{joint2_name}_motor"
-
-        joints.append(
-            TransmissionJoint(
-                name=joint1_name,
-                hardware_interfaces=[hardware_interface],
-                mechanical_reduction=props.mechanical_reduction,
-                offset=props.offset,
-            )
-        )
-        joints.append(
-            TransmissionJoint(
-                name=joint2_name,
-                hardware_interfaces=[hardware_interface],
-                mechanical_reduction=props.mechanical_reduction,
-                offset=props.offset,
-            )
-        )
-        actuators.append(
-            TransmissionActuator(
-                name=actuator1_name,
-                hardware_interfaces=[hardware_interface],
-                mechanical_reduction=props.mechanical_reduction,
-                offset=props.offset,
-            )
-        )
-        actuators.append(
-            TransmissionActuator(
-                name=actuator2_name,
-                hardware_interfaces=[hardware_interface],
-                mechanical_reduction=props.mechanical_reduction,
-                offset=props.offset,
-            )
-        )
-
-    return Transmission(
-        name=transmission_name,
-        type=trans_type,
-        joints=joints,
-        actuators=actuators,
     )
 
 
