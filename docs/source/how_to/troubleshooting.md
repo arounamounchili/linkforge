@@ -55,6 +55,6 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 ## 💡 Pro Tips for Experts
 
 - **Selection via Outliner**: When your robot gets complex, clicking small joint empties in the 3D Viewport can be difficult. Use the **Blender Outliner** to select components by name; the LinkForge panels will update instantly.
-- **Naming Discipline**: Use only alphanumeric characters and underscores for Link and Joint names. ROS 2 and Gazebo can be sensitive to spaces or special characters in URDF tags.
+- **Naming Discipline**: While **LinkForge automatically sanitizes** names during export (e.g., "My Arm!" -> `my_arm`), it is best practice to use alphanumeric characters and underscores in Blender. This ensures your Blender Outliner matches your generated ROS 2 topics 1:1.
 - **Apply Location**: Besides Scale and Rotation, ensure your "Root Link" (usually `base_link`) is at `(0, 0, 0)` in Blender's world space before starting your build. This ensures the robot spawns correctly at the world origin in simulation.
 - **Save Often**: LinkForge stores its data inside the `.blend` file. Save your work frequently to preserve your kinematic tree and sensor configurations.
