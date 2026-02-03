@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 import bpy
@@ -206,6 +207,12 @@ def import_mesh_file(mesh_path: Path, name: str):
         if imported_objects:
             obj = imported_objects[0]
             obj.name = name
+
+            # Normalize to bake importer-specific transforms into geometry.
+            # This ensures the object has an identity matrix before URDF origins are applied,
+            # preventing double-offset/misalignment issues.
+            normalize_imported_object(obj)
+
             logger.debug(f"Successfully imported mesh: {obj.name}")
             return obj
 
@@ -220,6 +227,39 @@ def import_mesh_file(mesh_path: Path, name: str):
         raise
 
     return None
+
+
+def normalize_imported_object(obj):
+    """Bake importer transforms into mesh data and reset object to identity.
+
+    This ensures that any correction transforms applied by the importer (e.g.
+    Y-up to Z-up rotation in glTF) are baked into the vertex data, so the
+    object itself starts with an identity matrix. This prevents double-offset
+    issues when URDF origins are applied.
+    """
+    if not obj or obj.type != "MESH":
+        return
+
+    # Store current context to restore it later
+    old_active = bpy.context.view_layer.objects.active
+    old_selected = list(bpy.context.selected_objects)
+
+    # Select only this object
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+
+    # Bake all transforms (Location, Rotation, Scale)
+    # This centers the object transform at (0,0,0) and identity rotation/scale
+    # while keeping vertices at their world-space positions.
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    # Restore context
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in old_selected:
+        with contextlib.suppress(RuntimeError, ReferenceError):
+            o.select_set(True)
+    bpy.context.view_layer.objects.active = old_active
 
 
 def _get_geometry_type_str(geometry):
