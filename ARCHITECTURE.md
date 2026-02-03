@@ -164,6 +164,7 @@ sequenceDiagram
     Parser-->>Op: Robot object
     Op->>Importer: import_robot(robot)
     Importer->>Blender: Create objects
+    Importer->>Blender: Normalize & Bake Transforms
     Importer->>Blender: Set properties
     Importer->>Blender: Create hierarchy
     Blender-->>User: Robot in viewport
@@ -184,6 +185,7 @@ sequenceDiagram
     User->>UI: Click Export
     UI->>Converter: scene_to_robot(context)
     Converter->>Converter: Extract links
+    Converter->>Converter: Sanitize & Export Meshes
     Converter->>Converter: Extract joints
     Converter->>Models: Create Robot model
     Models->>Models: Validate structure
@@ -208,7 +210,6 @@ classDiagram
         +list~Link~ links
         +list~Joint~ joints
         +list~Sensor~ sensors
-        +list~Transmission~ transmissions
         +list~Ros2Control~ ros2_controls
         +validate_tree_structure()
         +add_link()
@@ -241,18 +242,9 @@ classDiagram
         +LidarInfo lidar_info
     }
 
-    class Transmission {
-        <<Legacy>>
-        +str name
-        +str type
-        +list~TransmissionJoint~ joints
-        +list~TransmissionActuator~ actuators
-    }
-
     Robot "1" *-- "many" Link
     Robot "1" *-- "many" Joint
     Robot "1" *-- "many" Sensor
-    Robot "1" o-- "many" Transmission : legacy (manual only)
     Link "1" *-- "many" Visual
     Link "1" *-- "many" Collision
     Link "1" *-- "1" Inertial
@@ -325,17 +317,15 @@ def __post_init__(self) -> None:
 Parser logic is designed to be highly resilient to malformed or non-compliant URDFs.
 - **Graceful Failure**: Individual invalid elements (e.g., malformed joints) are skipped with warnings rather than halting the process.
 - **Duplicate Resolution**: If duplicate link or joint names are detected, LinkForge automatically renames them (e.g., `link_duplicate_1`) to preserve kinematic integrity while maintaining compliance with Blender/Core unique naming requirements.
-- **Broken Reference Handling**: Joints with missing parent/child links are skipped with warnings to prevent broken data structures.
 
-### 4. **O(1) Lookups**
-Robot model maintains internal indices for fast access.
+### 4. **Recursive Normalization (v1.2.0)**
+To handle "dirty" mesh hierarchies (common in CAD imports), the Builder employs a recursive normalization strategy:
+- **Unparenting**: Detaches objects while preserving world transforms.
+- **Baking**: Applies rotation and scale to the mesh data.
+- **Resetting**: Snaps the object origin to `(0,0,0)` to prevent "Double Offset" drift during round-trips.
 
-```python
-class Robot:
-    _links_map: dict[str, Link]  # O(1) lookup by name
-    _joints_map: dict[str, Joint]
-    _adjacency_list: dict[str, list[str]]  # For tree traversal
-```
+### 5. **Atomic Sanitization (v1.2.0)**
+All user input (names, file paths) is sanitized at the edge of the system (during Export) to ensure OS and URDF compatibility without restricting the user's Blender naming conventions.
 
 ## Extension Points
 
@@ -396,7 +386,7 @@ graph TB
 - **Integration Tests**: Full workflow validation organized into specialized subdirectories:
   - `parsers/`: URDF/Xacro parsing logic and complex includes.
   - `blender/`: End-to-end Roundtrip (Import → Scene Setup → Export).
-  - `features/`: Specific functionality like Inertia, Transmissions, and Sensors.
+  - `features/`: Specific functionality like Inertia, **Sanitization**, and **Normalization**.
 
 ## Security Architecture
 
@@ -429,5 +419,5 @@ LinkForge distinguishes between user-created assets and imported "Source of Trut
 
 ---
 
-**Last Updated:** 2026-01-30
+**Last Updated:** 2026-02-03
 **Version:** 1.2.0 (Architectural Stability & Precision)
