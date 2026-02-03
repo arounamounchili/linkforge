@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 
 import bpy
@@ -202,21 +201,21 @@ def import_mesh_file(mesh_path: Path, name: str):
         return None
 
     try:
-        # Get imported object (should be selected)
+        # Get all imported objects (should be selected)
         imported_objects = list(bpy.context.selected_objects)
-        if imported_objects:
-            obj = imported_objects[0]
-            obj.name = name
+        if not imported_objects:
+            logger.warning(f"Importer ran but no objects were found for '{mesh_path.name}'")
+            return None
 
-            # Normalize to bake importer-specific transforms into geometry.
-            # This ensures the object has an identity matrix before URDF origins are applied,
-            # preventing double-offset/misalignment issues.
-            normalize_imported_object(obj)
+        # Robust normalization and consolidation
+        # This returns a single object representing all imported parts,
+        # perfectly centered and reset to identity.
+        res_obj = normalize_and_consolidate_imported_objects(imported_objects, name)
 
-            logger.debug(f"Successfully imported mesh: {obj.name}")
-            return obj
+        if res_obj:
+            logger.debug(f"Successfully processed imported mesh: {res_obj.name}")
+            return res_obj
 
-        logger.warning(f"Importer ran but no objects were found for '{mesh_path.name}'")
         return None
 
     except (RuntimeError, OSError) as e:
@@ -229,37 +228,72 @@ def import_mesh_file(mesh_path: Path, name: str):
     return None
 
 
-def normalize_imported_object(obj):
-    """Bake importer transforms into mesh data and reset object to identity.
+def normalize_and_consolidate_imported_objects(objects, name):
+    """Normalize transforms and consolidate multiple imported objects into one.
 
-    This ensures that any correction transforms applied by the importer (e.g.
-    Y-up to Z-up rotation in glTF) are baked into the vertex data, so the
-    object itself starts with an identity matrix. This prevents double-offset
-    issues when URDF origins are applied.
+    This handles complex hierarchies (like glTF) by:
+    1. Unparenting everything while keeping world transforms.
+    2. Finding all mesh objects.
+    3. Baking all transforms into geometry.
+    4. Joining all meshes into a single object named 'name'.
+    5. Resetting the final object to identity at (0,0,0).
     """
-    if not obj or obj.type != "MESH":
-        return
+    if not objects:
+        return None
 
-    # Store current context to restore it later
-    old_active = bpy.context.view_layer.objects.active
-    old_selected = list(bpy.context.selected_objects)
+    # Filter for meshes and Empties with mesh children
+    mesh_objs = []
+    to_delete = []
 
-    # Select only this object
+    # First pass: Unparent and identify meshes
+    for obj in objects:
+        # Clear parent while keeping world transform
+        world_mat = obj.matrix_world.copy()
+        obj.parent = None
+        obj.matrix_world = world_mat
+
+        if obj.type == "MESH":
+            mesh_objs.append(obj)
+        else:
+            to_delete.append(obj)
+
+    if not mesh_objs:
+        # Clean up empty containers if no mesh was found
+        for obj in to_delete:
+            bpy.data.objects.remove(obj, do_unlink=True)
+        return None
+
+    # Step 2: Bake transforms for all meshes
     bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    for obj in mesh_objs:
+        obj.select_set(True)
 
-    # Bake all transforms (Location, Rotation, Scale)
-    # This centers the object transform at (0,0,0) and identity rotation/scale
-    # while keeping vertices at their world-space positions.
+    bpy.context.view_layer.objects.active = mesh_objs[0]
+    # Bake Location, Rotation, Scale into vertex data
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
-    # Restore context
-    bpy.ops.object.select_all(action="DESELECT")
-    for o in old_selected:
+    # Step 3: Join meshes if there are multiple
+    final_obj = mesh_objs[0]
+    if len(mesh_objs) > 1:
+        bpy.ops.object.join()
+    else:
+        # Single object already selected and active
+        pass
+
+    # Step 4: Final cleanup
+    final_obj.name = name
+    final_obj.location = (0, 0, 0)
+    final_obj.rotation_euler = (0, 0, 0)
+    final_obj.scale = (1, 1, 1)
+
+    # Remove the Empties/containers that were part of the import
+    for obj in to_delete:
         with contextlib.suppress(RuntimeError, ReferenceError):
-            o.select_set(True)
-    bpy.context.view_layer.objects.active = old_active
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+    # Restore context
+    bpy.context.view_layer.objects.active = final_obj
+    return final_obj
 
 
 def _get_geometry_type_str(geometry):
