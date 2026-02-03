@@ -4,7 +4,9 @@
             "release-type": "python",
             "extra-files": [
                 "platforms/blender/blender_manifest.toml",
-                "CITATION.cff"
+                "CITATION.cff",
+                "core/pyproject.toml",
+                "core/src/linkforge_core/__init__.py"
             ],
             "changelog-sections": [
                 {
