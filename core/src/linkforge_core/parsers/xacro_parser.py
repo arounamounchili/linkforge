@@ -6,6 +6,7 @@ properties, and includes.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 import xml.etree.ElementTree as ET
@@ -13,15 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-try:
-    import yaml  # type: ignore
-except ImportError:
-    yaml = None
-
-try:
-    import json
-except ImportError:
-    json = None  # type: ignore
+import yaml  # type: ignore
 
 from ..base import RobotParser, RobotParserError
 from ..logging_config import get_logger
@@ -310,32 +303,14 @@ class XacroResolver:
         if not isinstance(value, str):
             return value
 
-        # 1. Try YAML if available (most robust and standard compliant)
-        if yaml:
-            try:
-                # safe_load handles ints, floats, bools (true/false), nulls
-                parsed = yaml.safe_load(value)
-                # If it's a primitive type, use it. If it's a collection, we might keep it.
-                if isinstance(parsed, (int, float, bool)) or parsed is None:
-                    return parsed
-            except Exception:
-                pass
-
-        # 2. Manual Fallback
-        stripped = value.strip().lower()
-        if stripped == "true":
-            return True
-        if stripped == "false":
-            return False
-
+        # Try YAML (most robust and standard compliant)
         try:
-            return int(value)
-        except ValueError:
-            pass
-
-        try:
-            return float(value)
-        except ValueError:
+            # safe_load handles ints, floats, bools (true/false), nulls
+            parsed = yaml.safe_load(value)
+            # If it's a primitive type, use it. If it's a collection, we might keep it.
+            if isinstance(parsed, (int, float, bool)) or parsed is None:
+                return parsed
+        except Exception:
             pass
 
         return value
