@@ -28,7 +28,9 @@ def setup_environment():
     # Ensure pytest is available in Blender's Python
     if importlib.util.find_spec("pytest") is None:
         print("pytest not found in Blender's Python. Attempting to install...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pytest", "pytest-cov"])
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "pytest", "pytest-cov", "PyYAML"]
+        )
 
         # Refresh site-packages
         from importlib import reload
