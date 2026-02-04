@@ -241,10 +241,12 @@ class XacroResolver:
                     default = self._try_parse_typed_value(
                         self._substitute(bits[1] if len(bits) > 1 else "")
                     )
+
                     # Substitute the attribute value provided in the macro call
-                    local_props[p_name] = self._try_parse_typed_value(
-                        self._substitute(element.get(p_name) or default)
-                    )
+                    raw_val = element.get(p_name)
+                    val = self._substitute(raw_val) if raw_val is not None else default
+
+                    local_props[p_name] = self._try_parse_typed_value(val)
 
                 # Expand macro body
                 parent_props = self.properties.copy()

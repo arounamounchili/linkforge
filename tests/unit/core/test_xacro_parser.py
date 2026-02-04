@@ -197,14 +197,14 @@ def test_resolve_element_handles_arguments_tag():
         "<xacro:arg xmlns:xacro='http://www.ros.org/wiki/xacro' name='my_arg' default='10'/>"
     )
     resolver.resolve_element(arg_xml)
-    assert resolver.args["my_arg"] == "10"
+    assert resolver.args["my_arg"] == 10
 
     # Should not overwrite existing arg
     arg_xml_2 = ET.fromstring(
         "<xacro:arg xmlns:xacro='http://www.ros.org/wiki/xacro' name='my_arg' default='20'/>"
     )
     resolver.resolve_element(arg_xml_2)
-    assert resolver.args["my_arg"] == "10"
+    assert resolver.args["my_arg"] == 10
 
 
 def test_macro_expansion_with_parameter_defaults():
