@@ -1,6 +1,6 @@
 [project]
 name = "linkforge-workspace"
-version = "1.2.0" # x-release-please-version
+version = "1.2.1" # x-release-please-version
 description = "Universal Robotics Interoperability Workspace"
 readme = "README.md"
 requires-python = ">=3.11"

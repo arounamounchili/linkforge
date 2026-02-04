@@ -5,6 +5,32 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1](https://github.com/arounamounchili/linkforge/compare/v1.2.0...v1.2.1) (2026-02-04)
+
+
+### 🐞 Bug Fixes
+
+* implement native high-fidelity XACRO parser ([#97](https://github.com/arounamounchili/linkforge/issues/97)) ([55bff31](https://github.com/arounamounchili/linkforge/commit/55bff318ab7ebec066da9b3af2de62e1cc1d9fc7))
+* resolve round-trip regressions and harden numerical stability ([#98](https://github.com/arounamounchili/linkforge/issues/98)) ([0afba33](https://github.com/arounamounchili/linkforge/commit/0afba33e94555c8c794dcce6a39d3c63f860c38a))
+* **xacro:** autodetect numeric types in properties/args for math eval… ([#99](https://github.com/arounamounchili/linkforge/issues/99)) ([d62c023](https://github.com/arounamounchili/linkforge/commit/d62c023436baf681ed12583d7fe4453e28b846f7))
+
+
+### 📚 Documentation
+
+* add arounamounchili as a contributor for code, design, and 2 more ([#87](https://github.com/arounamounchili/linkforge/issues/87)) ([ae6a1ef](https://github.com/arounamounchili/linkforge/commit/ae6a1ef3411ad1ad2509a3a9d4a80d2639d7b293))
+* Configure all-contributors to use smaller images and remove the usage link. ([8e5558b](https://github.com/arounamounchili/linkforge/commit/8e5558b04c5fef70a677cfd82a3985109e7a1cd4))
+* finalize professional branding and vision ([#81](https://github.com/arounamounchili/linkforge/issues/81)) ([7409999](https://github.com/arounamounchili/linkforge/commit/7409999f2e8a011368479b08bbb4c3b7613c859d))
+* generalize transform descriptions in URDF generator and add contributor acknowledgment to README. ([40b31da](https://github.com/arounamounchili/linkforge/commit/40b31dab3ceb0a4dbee635f1ddefa6c7a3a59352))
+* Remove pip installation of the current project from Read the Docs build configuration. ([10b2f31](https://github.com/arounamounchili/linkforge/commit/10b2f319cb179975d209cf9671d67c8c0ffc5d21))
+* Update README to detail new features like Mimic Joints and advanced sensors, clarify existing capabilities, and refine usage instructions. ([c9dcf9b](https://github.com/arounamounchili/linkforge/commit/c9dcf9bfb14b5a505fa0d4cd8fd976d682bbcab5))
+
+
+### 🛠️ Refactors
+
+* core data safety and test coverage ([#86](https://github.com/arounamounchili/linkforge/issues/86)) ([7776f9b](https://github.com/arounamounchili/linkforge/commit/7776f9b2aff04770f9e2c2e4581b88151a25b8da))
+* finalize v1.2.0 universal architecture and zero-dependency core ([#83](https://github.com/arounamounchili/linkforge/issues/83)) ([1f0bc83](https://github.com/arounamounchili/linkforge/commit/1f0bc83084fbaf8f3d6d3b5c741ad9de6538c451))
+* modernize Parser API & enhance architectural stability ([#84](https://github.com/arounamounchili/linkforge/issues/84)) ([1fdf000](https://github.com/arounamounchili/linkforge/commit/1fdf000b41505e1d884f135bfe388c158863f631))
+
 ## [1.2.0](https://github.com/arounamounchili/linkforge/compare/v1.1.0...v1.2.0) (2026-01-24)
 
 

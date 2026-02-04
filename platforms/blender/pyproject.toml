@@ -1,6 +1,6 @@
 [project]
 name = "linkforge-blender"
-version = "1.2.0" # x-release-please-version
+version = "1.2.1" # x-release-please-version
 description = "LinkForge Blender Extension"
 readme = "README.md"
 requires-python = ">=3.11"
