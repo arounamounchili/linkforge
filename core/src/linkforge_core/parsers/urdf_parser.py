@@ -22,7 +22,7 @@ import xml.etree.ElementTree as ET
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ..base import RobotParser, RobotParserError
 from ..logging_config import get_logger
@@ -495,8 +495,9 @@ def parse_transmission(trans_elem: ET.Element) -> Transmission | None:
     trans_type = trans_elem.findtext("type", "")
 
     # Parse joints
+    # Cast to ensure mypy knows these are specifically TransmissionJoints, not Unions
     joints = [
-        j
+        cast(TransmissionJoint, j)
         for j in (
             _parse_transmission_component(joint_elem, TransmissionJoint)
             for joint_elem in trans_elem.findall("joint")
@@ -505,8 +506,9 @@ def parse_transmission(trans_elem: ET.Element) -> Transmission | None:
     ]
 
     # Parse actuators
+    # Cast to ensure mypy knows these are specifically TransmissionActuators, not Unions
     actuators = [
-        a
+        cast(TransmissionActuator, a)
         for a in (
             _parse_transmission_component(actuator_elem, TransmissionActuator)
             for actuator_elem in trans_elem.findall("actuator")
@@ -1207,7 +1209,8 @@ class URDFParser(RobotParser):
 
                         elif elem.tag == "transmission":
                             transmission = parse_transmission(elem)
-                            robot.transmissions.append(transmission)
+                            if transmission is not None:
+                                robot.transmissions.append(transmission)
 
                         elif elem.tag == "ros2_control":
                             ros2_control = parse_ros2_control(elem)
@@ -1383,7 +1386,8 @@ class URDFParser(RobotParser):
         # Parse all transmissions
         for trans_elem in root.findall("transmission"):
             transmission = parse_transmission(trans_elem)
-            robot.transmissions.append(transmission)
+            if transmission is not None:
+                robot.transmissions.append(transmission)
 
         # Parse ros2_control blocks
         for rc_elem in root.findall("ros2_control"):
