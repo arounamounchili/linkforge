@@ -388,6 +388,11 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
             # Parent to link object
             visual_obj.parent = link_obj
 
+            # Defensive Sanitization: Ensure parent type is 'OBJECT' and clear bone references.
+            # This is critical for visual meshes that might have been Cad-imported.
+            visual_obj.parent_type = "OBJECT"
+            visual_obj.parent_bone = ""
+
             # Reset matrix_parent_inverse to ensure clean local transform
             # Critical: Without this, visual geometry won't be centered at link frame
             visual_obj.matrix_parent_inverse.identity()
@@ -400,6 +405,7 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
             else:
                 visual_obj.location = (0, 0, 0)
+                visual_obj.rotation_mode = "XYZ"
                 visual_obj.rotation_euler = (0, 0, 0)
 
             # Store URDF name attribute for round-trip
@@ -446,6 +452,10 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
         if collision_obj:
             # Parent to link object
             collision_obj.parent = link_obj
+
+            # Defensive Sanitization
+            collision_obj.parent_type = "OBJECT"
+            collision_obj.parent_bone = ""
 
             # Reset matrix_parent_inverse to ensure clean local transform
             # Critical: Without this, collision geometry won't be centered at link frame
@@ -652,6 +662,10 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
         # Parent the joint Empty to the parent link
         empty.parent = parent_obj
 
+        # Defensive Sanitization
+        empty.parent_type = "OBJECT"
+        empty.parent_bone = ""
+
         # Reset matrix_parent_inverse to ensure clean local transform
         empty.matrix_parent_inverse.identity()
 
@@ -663,6 +677,11 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
 
         # Parent the child link to the joint Empty
         child_obj.parent = empty
+
+        # Defensive Sanitization
+        child_obj.parent_type = "OBJECT"
+        child_obj.parent_bone = ""
+
         child_obj.matrix_parent_inverse.identity()
 
         # Force update of parent's world matrix

@@ -24,6 +24,11 @@ def set_parent_keep_transform(child_obj: Any, parent_obj: Any) -> None:
     # Apply parenting
     child_obj.parent = parent_obj
 
+    # Defensive Sanitization: Ensure parent type is 'OBJECT' and clear bone references.
+    # This prevents 'ghost' bone parent errors when objects were previously CAD-imported.
+    child_obj.parent_type = "OBJECT"
+    child_obj.parent_bone = ""
+
     # Set the inverse matrix to cancel out the parent's current world transform.
     # This effectively isolates the child from the parent's scale.
     child_obj.matrix_parent_inverse = parent_obj.matrix_world.inverted()

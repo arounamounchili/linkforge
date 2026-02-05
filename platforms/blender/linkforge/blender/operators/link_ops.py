@@ -241,6 +241,8 @@ def create_collision_for_link(link_obj, collision_type, context):
         )
     else:
         # CONVEX HULL: Already baked link-local, just reset transforms
+        collision_obj.parent_type = "OBJECT"
+        collision_obj.parent_bone = ""
         collision_obj.matrix_parent_inverse.identity()
         collision_obj.matrix_local.identity()
 
@@ -653,8 +655,9 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         context.collection.objects.link(empty)
 
         # Position Empty at mesh origin
-        empty.location = mesh_obj.location.copy()
-        empty.rotation_euler = mesh_obj.rotation_euler.copy()
+        # Use matrix_world to extract true orientation, supporting Quaternions/Euler modes
+        empty.location = mesh_obj.matrix_world.translation.copy()
+        empty.rotation_euler = mesh_obj.matrix_world.to_euler()
         # Ensure Link is Scale (1,1,1)
         empty.scale = (1, 1, 1)
 
@@ -664,9 +667,13 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         # 3. Local Scale = Original Mesh Scale (Preserves visual size)
 
         mesh_obj.parent = empty
+        # Defensive Sanitization: clear CAD/Bone metadata
+        mesh_obj.parent_type = "OBJECT"
+        mesh_obj.parent_bone = ""
         mesh_obj.matrix_parent_inverse.identity()
 
         mesh_obj.location = (0, 0, 0)
+        mesh_obj.rotation_mode = "XYZ"
         mesh_obj.rotation_euler = (0, 0, 0)
         # mesh_obj.scale is already correct (it was S, parent is 1, so S stays S)
 
