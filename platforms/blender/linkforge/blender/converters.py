@@ -824,13 +824,8 @@ def _calculate_link_frames(
 
     if root_link and Matrix:
         root_name, root_obj = root_link
+        # Root frame is always identity in URDF
         link_frames[root_name] = Matrix.Identity(4)
-
-        root_world = root_obj.matrix_world.copy()
-        root_translation = root_world.to_translation()
-        root_rotation = root_world.to_quaternion()
-        root_transform = Matrix.Translation(root_translation) @ root_rotation.to_matrix().to_4x4()
-        root_world_transform_inv = root_transform.inverted()
 
         def calc_child_frames(parent_name: str) -> None:
             """Recursively calculate child link coordinate frames."""
@@ -838,15 +833,9 @@ def _calculate_link_frames(
                 if parent == parent_name and child_name not in link_frames:
                     child_obj = link_objects.get(child_name)
                     if child_obj:
-                        child_world = child_obj.matrix_world.copy()
-                        child_translation = child_world.to_translation()
-                        child_rotation = child_world.to_quaternion()
-                        child_transform = (
-                            Matrix.Translation(child_translation)
-                            @ child_rotation.to_matrix().to_4x4()
-                        )
-                        child_frame = root_world_transform_inv @ child_transform
-                        link_frames[child_name] = child_frame
+                        # Use world transform directly to preserve global orientation in URDF
+                        # This ensures robot stands as it does in Blender relative to World Origin
+                        link_frames[child_name] = child_obj.matrix_world.copy()
                         calc_child_frames(child_name)
 
         calc_child_frames(root_name)
