@@ -68,5 +68,50 @@ def test_link_creation_sanitization_all_modes():
         bpy.data.objects.remove(mesh_obj, do_unlink=True)
 
 
+def test_root_link_orientation_preservation():
+    """Test that the root link's world orientation is preserved in URDF origins."""
+    from math import radians
+
+    from linkforge.blender.converters import blender_link_to_core_with_origin
+
+    # 1. Setup a rotated root link Empty
+    bpy.ops.object.empty_add(type="PLAIN_AXES")
+    root_link_obj = bpy.context.active_object
+    root_link_obj.name = "root_link"
+    root_link_obj.linkforge.is_robot_link = True
+    # Rotate 90 degrees around Y (stands up from lying down)
+    root_link_obj.rotation_euler = (0, radians(90), 0)
+
+    # 2. Add a visual child (already aligned with root in Blender)
+    bpy.ops.mesh.primitive_cube_add()
+    visual_obj = bpy.context.active_object
+    visual_obj.name = "root_link_visual"
+    visual_obj.parent = root_link_obj
+    visual_obj.location = (1, 0, 0)  # Offset relative to root
+    visual_obj.rotation_euler = (0, 0, 0)  # No additional rotation
+
+    # CRITICAL: Force update view layer to calculate world matrices
+    bpy.context.view_layer.update()
+
+    # 3. Process as root link
+    link_model = blender_link_to_core_with_origin(root_link_obj, is_root=True)
+
+    # 4. Verify visual origin
+    assert len(link_model.visuals) == 1
+    origin = link_model.visuals[0].origin
+
+    # The origin should now reflect the WORLD transform of the visual_obj
+    # because the root link frame is exported as Identity.
+    # Root(RotY 90) * Visual(LocX 1) = World(LocZ -1, RotY 90)
+    assert origin.xyz.z == pytest.approx(-1.0, abs=1e-6)
+    assert origin.xyz.x == pytest.approx(0.0, abs=1e-6)
+    assert origin.rpy.y == pytest.approx(radians(90), abs=1e-6)
+
+    # Cleanup
+    bpy.data.objects.remove(root_link_obj, do_unlink=True)
+    bpy.data.objects.remove(visual_obj, do_unlink=True)
+
+
 if __name__ == "__main__":
     test_link_creation_sanitization_all_modes()
+    test_root_link_orientation_preservation()

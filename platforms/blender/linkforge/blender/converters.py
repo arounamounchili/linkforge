@@ -433,14 +433,16 @@ def blender_link_to_core_with_origin(
     meshes_dir: Path | None = None,
     robot_props: Any = None,
     dry_run: bool = False,
+    is_root: bool = False,
 ) -> Link | None:
-    """Convert Blender link (Empty with children) to Core Link with multiple visual/collision support.
+    """Convert Blender link (Empty with children) to Core Link.
 
     Args:
         obj: Blender Empty object with linkforge property group and visual/collision children
         meshes_dir: Optional directory for exporting mesh files
         robot_props: Robot property group with export settings
         dry_run: If True, generate mesh paths but don't write files
+        is_root: If True, this is the root link (world transform baked into children)
 
     Returns:
         Core Link model or None
@@ -472,7 +474,11 @@ def blender_link_to_core_with_origin(
 
         if "_visual" in child_name:
             # Extract relative origin using matrix math (robust against 'Keep Transform')
-            relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
+            # For root link, we use world matrix directly as reference is World Identity
+            if is_root:
+                relative_matrix = child.matrix_world
+            else:
+                relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
             origin = matrix_to_transform(relative_matrix)
 
             # Extract material
@@ -503,7 +509,11 @@ def blender_link_to_core_with_origin(
 
         elif "_collision" in child_name:
             # Extract relative origin using matrix math (robust against 'Keep Transform')
-            relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
+            # For root link, we use world matrix directly as reference is World Identity
+            if is_root:
+                relative_matrix = child.matrix_world
+            else:
+                relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
             origin = matrix_to_transform(relative_matrix)
 
             # CRITICAL FIX: Check if this collision was imported from URDF
@@ -889,10 +899,15 @@ def scene_to_robot(
     link_frames = _calculate_link_frames(link_objects, joints_map, root_link)
 
     # Step 3: Process Links
-    for _link_name, obj in link_objects.items():
+    for link_name, obj in link_objects.items():
         try:
+            # Check if this is the root link
+            is_root_link = root_link and (link_name == root_link[0])
+
             # Create link
-            link = blender_link_to_core_with_origin(obj, meshes_dir, robot_props, dry_run=dry_run)
+            link = blender_link_to_core_with_origin(
+                obj, meshes_dir, robot_props, dry_run=dry_run, is_root=is_root_link
+            )
             if link:
                 robot.add_link(link)
         except Exception as e:

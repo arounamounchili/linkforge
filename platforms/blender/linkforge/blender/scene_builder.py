@@ -469,6 +469,7 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
 
             else:
                 collision_obj.location = (0, 0, 0)
+                collision_obj.rotation_mode = "XYZ"
                 collision_obj.rotation_euler = (0, 0, 0)
 
             # Store URDF name attribute for round-trip
