@@ -18,6 +18,10 @@ In the settings below the button, you can choose the generation strategy:
 - **Box/Sphere/Cylinder**: Force LinkForge to use a specific primitive shape based on the visual's bounding box.
 - **Convex Hull**: Shrink-wraps the visual mesh. Best for complex, non-primitive parts.
 
+:::{tip}
+**Wheels and Discs**: Always use **Cylinder** for wheels. While a squashed **Sphere** might look right in Blender, the URDF standard only supports uniform spheres (one radius). Exporting a flat wheel as a sphere will result in a giant ball in simulation.
+:::
+
 ## 3. Compound Collisions
 If a Link has multiple visual meshes (e.g., a chassis made of several separate parts), LinkForge follows a **"Merged Hull"** strategy:
 
