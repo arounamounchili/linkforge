@@ -8,7 +8,7 @@ def test_high_fidelity_multi_geometry_export_suffixes(tmp_path):
     obj = bpy.context.active_object
 
     # Export 1
-    p1 = export_link_mesh(
+    p1, _ = export_link_mesh(
         obj=obj,
         link_name="base_link",
         geometry_type="visual",
@@ -19,7 +19,7 @@ def test_high_fidelity_multi_geometry_export_suffixes(tmp_path):
     assert p1.name == "base_link_visual_0.stl"
 
     # Export 2 (mimicking second visual)
-    p2 = export_link_mesh(
+    p2, _ = export_link_mesh(
         obj=obj,
         link_name="base_link",
         geometry_type="visual",
@@ -36,7 +36,7 @@ def test_filename_sanitization_conformity(tmp_path):
     obj = bpy.context.active_object
 
     # link_name with spaces and dots
-    p = export_link_mesh(
+    p, _ = export_link_mesh(
         obj=obj,
         link_name="my link.001",
         geometry_type="visual",
@@ -54,7 +54,7 @@ def test_mesh_export_suffix_hardening(tmp_path):
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
 
-    p = export_link_mesh(
+    p, _ = export_link_mesh(
         obj=obj,
         link_name="base_link",
         geometry_type="visual",

@@ -28,7 +28,7 @@ from mathutils import Euler, Matrix
 
 def test_matrix_to_transform_precision():
     """Verify that matrix_to_transform correctly extracts XYZ/RPY from a real Matrix."""
-    # Create a matrix with specific translation and rotation
+    # Create a matrix with specific translation and rotation in XYZ order (URDF Standard)
     m = Matrix.Translation((1.0, 2.0, 3.0)) @ Euler((0.4, 0.5, 0.6), "XYZ").to_matrix().to_4x4()
 
     transform = matrix_to_transform(m)
@@ -46,17 +46,19 @@ def test_get_object_geometry_sphere_cylinder():
     # 1. Sphere
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5)
     s_obj = bpy.context.active_object
-    geom_s = get_object_geometry(s_obj, geometry_type="AUTO")
+    geom_s, world_matrix = get_object_geometry(s_obj, geometry_type="AUTO")
     assert isinstance(geom_s, Sphere)
     assert pytest.approx(geom_s.radius) == 0.5
+    assert world_matrix == s_obj.matrix_world
 
     # 2. Cylinder
     bpy.ops.mesh.primitive_cylinder_add(radius=0.3, depth=1.0)
     c_obj = bpy.context.active_object
-    geom_c = get_object_geometry(c_obj, geometry_type="AUTO")
+    geom_c, world_matrix = get_object_geometry(c_obj, geometry_type="AUTO")
     assert isinstance(geom_c, Cylinder)
     assert pytest.approx(geom_c.radius) == 0.3
     assert pytest.approx(geom_c.length) == 1.0
+    assert world_matrix == c_obj.matrix_world
 
 
 def test_detect_primitive_type_box():
@@ -292,13 +294,15 @@ def test_get_object_geometry_forced_primitives():
     obj = bpy.context.active_object
 
     # 1. Force Sphere (radius should be max dim / 2 = 1.0)
-    geom_s = get_object_geometry(obj, geometry_type="SPHERE")
+    geom_s, wm_s = get_object_geometry(obj, geometry_type="SPHERE")
     assert isinstance(geom_s, Sphere)
+    assert wm_s == obj.matrix_world
     assert pytest.approx(geom_s.radius) == 1.0
 
     # 2. Force Cylinder (z depth is 2.0, max x/y is 2.0 -> radius 1.0)
-    geom_c = get_object_geometry(obj, geometry_type="CYLINDER")
+    geom_c, wm_c = get_object_geometry(obj, geometry_type="CYLINDER")
     assert isinstance(geom_c, Cylinder)
+    assert wm_c == obj.matrix_world
     assert pytest.approx(geom_c.radius) == 1.0
     assert pytest.approx(geom_c.length) == 2.0
 
@@ -309,7 +313,7 @@ def test_get_object_geometry_convex_hull(tmp_path):
     obj = bpy.context.active_object
 
     # CONVEX_HULL currently falls back to BOX if not implemented with real hull
-    geom = get_object_geometry(
+    geom, wm = get_object_geometry(
         obj, geometry_type="CONVEX_HULL", meshes_dir=tmp_path, link_name="hull"
     )
     assert isinstance(geom, (Box, Mesh))
@@ -536,13 +540,21 @@ def test_matrix_to_transform_conversion():
     tf = matrix_to_transform(mat)
     assert tf.xyz.x == 1 and tf.xyz.y == 2 and tf.xyz.z == 3
 
-    # Rotation (90 deg around X)
+    # Rotation (90 deg around X, XYZ order)
     mat = mathutils.Matrix.Rotation(math.radians(90), 4, "X")
     tf = matrix_to_transform(mat)
-    # Eulers can be tricky, check approx
+    # Eulers match exactly for single-axis X rotation
     assert pytest.approx(tf.rpy.x) == 1.570796
     assert pytest.approx(tf.rpy.y) == 0
     assert pytest.approx(tf.rpy.z) == 0
+
+    # Complex Rotation (mixed axes)
+    # Using 'XYZ' to match URDF extrinsic standard
+    mat = mathutils.Euler((0.1, 0.2, 0.3), "XYZ").to_matrix().to_4x4()
+    tf = matrix_to_transform(mat)
+    assert pytest.approx(tf.rpy.x) == 0.1
+    assert pytest.approx(tf.rpy.y) == 0.2
+    assert pytest.approx(tf.rpy.z) == 0.3
 
 
 def test_get_object_geometry_decimation(tmp_path):
@@ -552,12 +564,12 @@ def test_get_object_geometry_decimation(tmp_path):
     obj = bpy.context.active_object
 
     # 1. Without simplify
-    g1 = get_object_geometry(
+    g1, wm1 = get_object_geometry(
         obj, geometry_type="MESH", simplify=False, meshes_dir=tmp_path, link_name="l1"
     )
 
     # 2. With simplify (decimate to 10%)
-    g2 = get_object_geometry(
+    g2, wm2 = get_object_geometry(
         obj,
         geometry_type="MESH",
         simplify=True,
@@ -576,10 +588,11 @@ def test_get_object_geometry_dry_run(tmp_path):
     obj = bpy.context.active_object
 
     # Should not crash and should return geometry even with invalid dir
-    geom = get_object_geometry(
+    geom, wm = get_object_geometry(
         obj, geometry_type="MESH", dry_run=True, meshes_dir=Path("/invalid/path"), link_name="dry"
     )
     assert isinstance(geom, Mesh)
+    assert wm == obj.matrix_world
 
 
 def test_scene_to_robot_conversion():
@@ -619,9 +632,10 @@ def test_get_object_geometry_auto_primitive():
     bpy.ops.mesh.primitive_cube_add(size=2.0)
     obj = bpy.context.active_object
 
-    geom = get_object_geometry(obj, geometry_type="AUTO")
+    geom, wm = get_object_geometry(obj, geometry_type="AUTO")
 
     assert isinstance(geom, Box)
+    assert wm == obj.matrix_world
     assert pytest.approx(geom.size.x) == 2.0
 
 

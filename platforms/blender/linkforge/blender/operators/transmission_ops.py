@@ -90,7 +90,7 @@ class LINKFORGE_OT_create_transmission(Operator):
                 if vec.length > 0:
                     # 'TRACK' aligns Z axis (Arrow default) to vector
                     rot_quat = Vector((0, 0, 1)).rotation_difference(vec)
-                    transmission_empty.rotation_euler = rot_quat.to_euler()
+                    transmission_empty.rotation_euler = rot_quat.to_euler("XYZ")
             else:
                 transmission_empty.rotation_euler = (0, 0, 0)
         else:

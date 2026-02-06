@@ -218,7 +218,7 @@ class LinkPropertyGroup(PropertyGroup):
 
     inertia_origin_rpy: FloatVectorProperty(  # type: ignore
         name="Inertia Rotation",
-        description="Rotation of the principal axes of inertia relative to the link frame (radians)",
+        description="Rotation of the principal axes of inertia relative to the link frame (radians, XYZ order)",
         default=(0.0, 0.0, 0.0),
         size=3,
         precision=3,

@@ -86,6 +86,8 @@ def matrix_to_transform(matrix: Any) -> Transform:
     )
 
     # Extract rotation (Euler angles in radians)
+    # URDF uses extrinsic XYZ order (R = Rz * Ry * Rx)
+    # Blender's 'XYZ' intrinsic mode is mathematically equivalent to URDF extrinsic XYZ.
     rotation = matrix.to_euler("XYZ")
     rpy = Vector3(
         clean_float(rotation.x),
@@ -252,7 +254,7 @@ def get_object_geometry(
     decimation_ratio: float = 0.5,
     dry_run: bool = False,
     suffix: str = "",
-) -> Geometry | None:
+) -> tuple[Geometry | None, Matrix]:
     """Extract geometry from Blender object.
 
     Args:
@@ -271,11 +273,11 @@ def get_object_geometry(
         suffix: Optional unique suffix (e.g., index or name)
 
     Returns:
-        Core Geometry or None
+        tuple of (Core Geometry or None, geometry_world_matrix)
 
     """
     if obj is None:
-        return None
+        return None, Matrix.Identity(4)
 
     # Determine actual geometry type to use (AUTO requires detection)
     actual_geometry_type = geometry_type
@@ -289,7 +291,7 @@ def get_object_geometry(
         if meshes_dir and link_name and obj.type == "MESH":
             from .mesh_export import export_link_mesh
 
-            mesh_path = export_link_mesh(
+            mesh_path, geom_world_matrix = export_link_mesh(
                 obj=obj,
                 link_name=link_name,
                 geometry_type=geom_purpose,
@@ -303,29 +305,37 @@ def get_object_geometry(
 
             if mesh_path:
                 # Return Mesh geometry with file path
-                return Mesh(filepath=mesh_path, scale=Vector3(1.0, 1.0, 1.0))
+                return Mesh(filepath=mesh_path, scale=Vector3(1.0, 1.0, 1.0)), geom_world_matrix
 
         # Fallback: approximate with bounding box if export failed or not requested
         actual_geometry_type = "BOX"
 
+    # For primitives, the pose is just the current object matrix
+    geom_world_matrix = obj.matrix_world
+
     if actual_geometry_type == "BOX":
         # Use bounding box dimensions
         dimensions = obj.dimensions
-        return Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z))
+        # Robustness Check: Skip zero-size objects (e.g. empties from failed imports)
+        if dimensions.length < 1e-6:
+            logger.warning(f"Skipping geometry for '{obj.name}': Dimensions are zero.")
+            return None, Matrix.Identity(4)
+
+        return Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z)), geom_world_matrix
 
     elif actual_geometry_type == "CYLINDER":
         # Approximate with bounding cylinder
         dimensions = obj.dimensions
         radius = max(dimensions.x, dimensions.y) / 2.0
         length = dimensions.z
-        return Cylinder(radius=radius, length=length)
+        return Cylinder(radius=radius, length=length), geom_world_matrix
 
     elif actual_geometry_type == "SPHERE":
         # Approximate with bounding sphere
         radius = max(obj.dimensions) / 2.0
-        return Sphere(radius=radius)
+        return Sphere(radius=radius), geom_world_matrix
 
-    return None
+    return None, Matrix.Identity(4)
 
 
 def extract_mesh_triangles(
@@ -471,10 +481,6 @@ def blender_link_to_core_with_origin(
         child_name = child.name
 
         if "_visual" in child_name:
-            # Extract relative origin using matrix math (robust against 'Keep Transform')
-            relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
-            origin = matrix_to_transform(relative_matrix)
-
             # Extract material
             material = get_object_material(child, props)
 
@@ -484,7 +490,7 @@ def blender_link_to_core_with_origin(
             visual_count += 1
 
             # Get geometry (auto-detect: primitives for simple shapes, mesh for complex)
-            visual_geom = get_object_geometry(
+            visual_geom, geom_world_matrix = get_object_geometry(
                 obj=child,
                 geometry_type="AUTO",  # Auto-detect primitive vs mesh
                 link_name=link_name,
@@ -496,18 +502,19 @@ def blender_link_to_core_with_origin(
                 dry_run=dry_run,
                 suffix=suffix,
             )
+
+            # EXTRACT RELATIVE ORIGIN
+            # Matrix math: Relative_Pose = Link_Inv @ Geometry_World_Pose
+            relative_matrix = obj.matrix_world.inverted() @ geom_world_matrix
+            origin = matrix_to_transform(relative_matrix)
+
             if visual_geom:
                 visuals.append(
                     Visual(geometry=visual_geom, origin=origin, material=material, name=urdf_name)
                 )
 
         elif "_collision" in child_name:
-            # Extract relative origin using matrix math (robust against 'Keep Transform')
-            relative_matrix = obj.matrix_world.inverted() @ child.matrix_world
-            origin = matrix_to_transform(relative_matrix)
-
             # CRITICAL FIX: Check if this collision was imported from URDF
-            # Imported meshes should NOT be re-simplified to prevent degradation
             is_imported = child.get("imported_from_urdf", False)
 
             # Determine simplification ratio based on collision quality setting
@@ -526,7 +533,7 @@ def blender_link_to_core_with_origin(
             collision_count += 1
 
             # Get geometry
-            collision_geom = get_object_geometry(
+            collision_geom, geom_world_matrix = get_object_geometry(
                 obj=child,
                 geometry_type=stored_geom_type,
                 link_name=link_name,
@@ -538,6 +545,11 @@ def blender_link_to_core_with_origin(
                 dry_run=dry_run,
                 suffix=suffix,
             )
+
+            # EXTRACT RELATIVE ORIGIN
+            relative_matrix = obj.matrix_world.inverted() @ geom_world_matrix
+            origin = matrix_to_transform(relative_matrix)
+
             if collision_geom:
                 collisions.append(Collision(geometry=collision_geom, origin=origin, name=urdf_name))
 

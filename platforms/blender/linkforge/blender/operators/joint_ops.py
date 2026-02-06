@@ -54,14 +54,15 @@ class LINKFORGE_OT_create_joint(Operator):
         if addon_prefs:
             empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
 
-        # Get link object's world location and rotation
+        # Get link object's world location and rotation (Standard XYZ for URDF)
         location = link_obj.matrix_world.translation.copy()
-        rotation = link_obj.matrix_world.to_euler()
+        rotation = link_obj.matrix_world.to_euler("XYZ")
 
         # Create Empty at link's location (ARROWS shows RGB colored axes)
         bpy.ops.object.empty_add(type="ARROWS", location=location)
         joint_empty = context.active_object
         joint_empty.name = f"{link_obj.linkforge.link_name}_joint"
+        joint_empty.rotation_mode = "XYZ"
         joint_empty.rotation_euler = rotation
 
         # Move joint to same collection as link (for clean organization)

@@ -188,24 +188,36 @@ class LINKFORGE_OT_validate_robot(Operator):
             validation_props.error_count = 1
             validation_props.warning_count = 0
 
-            # Create error entry
-            error_prop = validation_props.errors.add()
-            error_prop.title = "Configuration Error"
-
-            # Clean up the error message
+            # Parse existing error message to split into multiple errors
             msg = str(e)
             prefix = "Unable to build robot model."
+            error_lines = []
+
             if prefix in msg:
-                # Extract the part after the first line (which is the header)
+                # Remove the header line
                 parts = msg.split("\n", 1)
                 if len(parts) > 1:
-                    msg = parts[1].strip()
+                    # Split the remaining block by lines (each line is likely an error)
+                    raw_errors = parts[1].strip().split("\n")
+                    error_lines = [line.strip() for line in raw_errors if line.strip()]
+            else:
+                error_lines = [msg]
 
-            error_prop.message = msg
-            error_prop.suggestion = "Review the errors above and check the object properties."
+            validation_props.has_results = True
+            validation_props.is_valid = False
+            validation_props.error_count = len(error_lines)
+            validation_props.warning_count = 0
+
+            # Add each parsed line as a separate error
+            for err_text in error_lines:
+                error_prop = validation_props.errors.add()
+                error_prop.title = "Configuration Error"
+                error_prop.message = err_text
+                error_prop.suggestion = "Check the object properties and geometry."
 
             self.report(
-                {"ERROR"}, "Validation failed. Detailed errors are listed in the Validation Panel."
+                {"ERROR"},
+                f"Validation failed with {len(error_lines)} error(s). Check Validation Panel.",
             )
             return {"FINISHED"}
 

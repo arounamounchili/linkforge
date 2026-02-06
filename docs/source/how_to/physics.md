@@ -28,7 +28,7 @@ Sometimes, the geometric center is not the physical center of mass (e.g., a batt
 1. **Uncheck** "Auto-Calculate Inertia".
 2. You will see new fields for **Inertial Origin**:
    - **Pos**: XYZ offset from the link origin.
-   - **Rot**: RPY rotation of the inertia frame.
+   - **Rot**: RPY rotation of the inertia frame (radians, **XYZ order**).
 
 ### 🎯 Visualizing the Center of Mass
 When you modify the Inertial Origin:

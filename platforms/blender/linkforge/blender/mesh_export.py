@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import bpy
+from mathutils import Matrix, Vector
 
 from ..linkforge_core.logging_config import get_logger
 from ..linkforge_core.utils.string_utils import sanitize_name
@@ -34,12 +35,16 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
     filepath.parent.mkdir(parents=True, exist_ok=True)
 
     # Deselect all and select only target object
+    # CRITICAL: Must unhide BEFORE selection for some operators/context to work
+    was_hidden = obj.hide_viewport
+    obj.hide_viewport = False
+
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
-    # Export to STL
     try:
+        # Export to STL
         bpy.ops.wm.stl_export(
             filepath=str(filepath),
             export_selected_objects=True,
@@ -47,9 +52,10 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
             forward_axis="Y",
             up_axis="Z",
         )
-        return True
     except (RuntimeError, OSError) as e:
         logger.warning(f"STL export failed: {e}")
+        # Restore visibility if failed
+        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during STL export: {e}", exc_info=True)
@@ -57,6 +63,11 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
     except Exception as e:
         logger.critical(f"Critical unexpected error during STL export: {e}", exc_info=True)
         raise
+    finally:
+        # Restore visibility state
+        obj.hide_viewport = was_hidden
+
+    return True
 
 
 def export_mesh_obj(obj: Any, filepath: Path) -> bool:
@@ -77,12 +88,16 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
     filepath.parent.mkdir(parents=True, exist_ok=True)
 
     # Deselect all and select only target object
+    # CRITICAL: Must unhide BEFORE selection
+    was_hidden = obj.hide_viewport
+    obj.hide_viewport = False
+
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
-    # Export to OBJ
     try:
+        # Export to OBJ
         bpy.ops.wm.obj_export(
             filepath=str(filepath),
             export_selected_objects=True,
@@ -91,9 +106,9 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
             forward_axis="Y",
             up_axis="Z",
         )
-        return True
     except (RuntimeError, OSError) as e:
         logger.warning(f"OBJ export failed: {e}")
+        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during OBJ export: {e}", exc_info=True)
@@ -101,6 +116,11 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
     except Exception as e:
         logger.critical(f"Critical unexpected error during OBJ export: {e}", exc_info=True)
         raise
+    finally:
+        # Restore visibility state
+        obj.hide_viewport = was_hidden
+
+    return True
 
 
 def create_simplified_mesh(obj: Any, decimation_ratio: float) -> Any | None:
@@ -183,11 +203,16 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
     filepath.parent.mkdir(parents=True, exist_ok=True)
 
     # Deselect all and select only target object
+    # CRITICAL: Must unhide BEFORE selection
+    was_hidden = obj.hide_viewport
+    obj.hide_viewport = False
+
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
     # Export to GLB
+
     try:
         bpy.ops.export_scene.gltf(
             filepath=str(filepath),
@@ -197,7 +222,6 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
             # We want Y-up for standard conventions, usually handled by glTF exporter automatically
             # but Blender Z-up to glTF Y-up conversion is standard.
         )
-        return True
     except (RuntimeError, OSError) as e:
         logger.warning(f"GLB export failed: {e}")
         return False
@@ -207,6 +231,11 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
     except Exception as e:
         logger.critical(f"Critical unexpected error during GLB export: {e}", exc_info=True)
         raise
+    finally:
+        # Restore visibility state
+        obj.hide_viewport = was_hidden
+
+    return True
 
 
 def export_link_mesh(
@@ -219,7 +248,7 @@ def export_link_mesh(
     decimation_ratio: float = 0.5,
     dry_run: bool = False,
     suffix: str = "",
-) -> Path | None:
+) -> tuple[Path | None, Matrix]:
     """Export mesh for a robot link.
 
     CRITICAL: Exports mesh geometry centered at origin (0,0,0) with no transforms.
@@ -237,88 +266,119 @@ def export_link_mesh(
         dry_run: If True, return expected path without exporting
 
     Returns:
-        Path to exported mesh file, or None if export failed
+        tuple of (Path to exported mesh file or None, geometric_offset)
 
     """
     if obj is None or obj.type != "MESH":
-        return None
+        return None, Matrix.Identity(4)
 
     # Generate filename with suffix
     filename = get_mesh_filename(link_name, geometry_type, mesh_format, suffix=suffix)
     filepath = meshes_dir / filename
 
     if dry_run:
-        return filepath
+        return filepath, obj.matrix_world.copy()
 
-    # Create a temporary clone with transforms applied for mesh export.
-    # Data-level copying is used to avoid dependencies on Blender's operator context
-    # and viewport visibility states.
+    # Create a temporary clone for mesh export.
     temp_export_obj = obj.copy()
     temp_export_obj.data = obj.data.copy()
-
-    # Temporarily unhide the duplication (not the original) for transform application
-    temp_export_obj.hide_viewport = False
 
     # Link to the same collections as the original
     for col in obj.users_collection:
         col.objects.link(temp_export_obj)
 
-    # Select and make active for transform application
-    bpy.ops.object.select_all(action="DESELECT")
-    temp_export_obj.select_set(True)
-    bpy.context.view_layer.objects.active = temp_export_obj
+    # CRITICAL FIX: Local Fidelity Centering
+    # 1. Bake SCALE into the mesh data (ensures 1.0 scale in URDF)
+    # 2. DO NOT bake rotation (keeps mesh orientations relative to links)
+    scale_matrix = Matrix.Diagonal((*obj.scale, 1.0))
+    temp_export_obj.data.transform(scale_matrix)
+    temp_export_obj.scale = (1, 1, 1)
 
-    # CRITICAL FIX: Clear parent to ensure world-space positioning
-    # Without this, setting location=(0,0,0) moves to parent's local origin,
-    # which causes the parent's world transform to be baked into the mesh
-    if temp_export_obj.parent:
-        # Store the world matrix before unparenting
-        world_matrix = temp_export_obj.matrix_world.copy()
-        # Clear parent (keep transform)
-        temp_export_obj.parent = None
-        # Restore world matrix to maintain current world position
-        temp_export_obj.matrix_world = world_matrix
+    # Calculate local geometric center of the EVALUATED mesh
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    obj_eval = obj.evaluated_get(depsgraph)
 
-    # Apply scale transform to bake dimensions into mesh
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    # Corners are in local space
+    local_corners = [Vector(corner) for corner in obj_eval.bound_box]
 
-    # Reset location and rotation to world origin
-    # Now that parent is cleared, this truly centers at (0,0,0) in world space
-    temp_export_obj.location = (0, 0, 0)
-    temp_export_obj.rotation_euler = (0, 0, 0)
+    min_v = Vector(min(v[i] for v in local_corners) for i in range(3))
+    max_v = Vector(max(v[i] for v in local_corners) for i in range(3))
+    local_center = (min_v + max_v) / 2
 
-    # Force update
-    if hasattr(bpy.context, "view_layer"):
-        bpy.context.view_layer.update()
+    # Create the final mesh data (evaluated with modifiers applied)
+    final_mesh_data = bpy.data.meshes.new_from_object(
+        obj_eval, preserve_all_data_layers=True, depsgraph=depsgraph
+    )
 
-    # Simplify if requested for collision
+    # Apply Scale to final data
+    final_mesh_data.transform(scale_matrix)
+
+    # Local Centering: Shift vertices to origin
+    if local_center.length > 1e-6:
+        logger.info(f"Localizing mesh data for '{obj.name}' (center: {local_center})")
+        final_mesh_data.transform(Matrix.Translation(-local_center))
+
+    # Update temporary object to use this centered data
+    temp_export_obj.data = final_mesh_data
+
+    # CRITICAL: Reset object transform to Identity
+    # This prevents the file exporter (STL/OBJ) from applying the world transform
+    # a second time. The mesh data is already scaled and centered locally.
+    # The world pose will be handled entirely by the URDF <origin>.
+    temp_export_obj.matrix_world.identity()
+
+    # The World Pose of this centered geometry is: Obj_World @ Translation(local_center)
+    # This correctly accounts for the object's rotation while incorporating the centering shift.
+    geom_world_matrix = obj.matrix_world @ Matrix.Translation(local_center)
+
+    # Simplify if requested for collision (Note: Simplify now works on the base centered data)
     simplified_obj = None
     export_obj = temp_export_obj
 
     if simplify and geometry_type == "collision":
+        # Simplified object will inherit centered data
         simplified_obj = create_simplified_mesh(temp_export_obj, decimation_ratio)
         if simplified_obj:
             export_obj = simplified_obj
 
     # Export based on format
-    success = False
-    if mesh_format.upper() == "STL":
-        success = export_mesh_stl(export_obj, filepath)
-    elif mesh_format.upper() == "OBJ":
-        success = export_mesh_obj(export_obj, filepath)
+    try:
+        success = False
+        if mesh_format.upper() == "STL":
+            success = export_mesh_stl(export_obj, filepath)
+        elif mesh_format.upper() == "OBJ":
+            success = export_mesh_obj(export_obj, filepath)
+        elif mesh_format.upper() == "GLB":
+            success = export_mesh_glb(export_obj, filepath)
+        else:
+            # Unknown format, default to OBJ
+            logger.warning(f"Unknown mesh format '{mesh_format}', defaulting to OBJ")
+            filepath = filepath.with_suffix(".obj")
+            success = export_mesh_obj(export_obj, filepath)
 
-    elif mesh_format.upper() == "GLB":
-        success = export_mesh_glb(export_obj, filepath)
-    else:
-        # Unknown format, default to OBJ
-        logger.warning(f"Unknown mesh format '{mesh_format}', defaulting to OBJ")
-        filepath = filepath.with_suffix(".obj")
-        success = export_mesh_obj(export_obj, filepath)
+        if success:
+            logger.info(f"Successfully exported mesh: {filepath}")
+            # Return the world matrix of the centered geometry
+            return filepath, geom_world_matrix
+        else:
+            logger.error(f"Failed to export mesh: {filepath}")
+            return None, Matrix.Identity(4)
 
-    # Clean up temporary objects
-    if simplified_obj:
-        bpy.data.objects.remove(simplified_obj, do_unlink=True)
-    if temp_export_obj:
-        bpy.data.objects.remove(temp_export_obj, do_unlink=True)
-
-    return filepath if success else None
+    except Exception as e:
+        logger.error(f"Error during mesh export: {e}")
+        return None, Matrix.Identity(4)
+    finally:
+        # Cleanup temporary objects
+        if simplified_obj:
+            data = simplified_obj.data
+            bpy.data.objects.remove(simplified_obj, do_unlink=True)
+            if data:
+                bpy.data.meshes.remove(data, do_unlink=True)
+        if temp_export_obj:
+            data = temp_export_obj.data
+            bpy.data.objects.remove(temp_export_obj, do_unlink=True)
+            # Remove both the cloned data and the final mesh data if they exist
+            if data:
+                bpy.data.meshes.remove(data, do_unlink=True)
+            if final_mesh_data and final_mesh_data != data:
+                bpy.data.meshes.remove(final_mesh_data, do_unlink=True)

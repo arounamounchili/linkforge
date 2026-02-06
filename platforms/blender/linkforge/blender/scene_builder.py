@@ -180,6 +180,9 @@ def import_mesh_file(mesh_path: Path, name: str):
             logger.warning(f"Unsupported mesh file extension: {ext} for '{mesh_path.name}'")
         return None
 
+    # Track collections before import to identify new ones
+    pre_import_collections = set(bpy.data.collections)
+
     # Dispatcher: Try each operator until one succeeds
     success = False
     for op_name in operators[ext]:
@@ -198,6 +201,9 @@ def import_mesh_file(mesh_path: Path, name: str):
         except (AttributeError, RuntimeError) as e:
             logger.debug(f"Importer '{op_name}' failed or not found: {e}")
             continue
+        except Exception as e:
+            logger.warning(f"Importer '{op_name}' raised unexpected error: {e}")
+            continue
 
     if not success:
         logger.error(
@@ -214,12 +220,32 @@ def import_mesh_file(mesh_path: Path, name: str):
             return None
 
         # Robust normalization and consolidation
-        # This returns a single object representing all imported parts,
-        # perfectly centered and reset to identity.
         res_obj = normalize_and_consolidate_imported_objects(imported_objects, name)
 
         if res_obj:
             logger.debug(f"Successfully processed imported mesh: {res_obj.name}")
+
+            # CLEANUP: Handle unwanted collections created by importers (e.g. GLTFs "Scene", "resources")
+            post_import_collections = set(bpy.data.collections)
+            new_collections = post_import_collections - pre_import_collections
+
+            if new_collections:
+                # Ensure result object is in current active collection (not the importer's new one)
+                current_col = bpy.context.collection
+                if current_col and res_obj.name not in current_col.objects:
+                    current_col.objects.link(res_obj)
+
+                # Unlink from new collections and delete them
+                for new_col in new_collections:
+                    # Unlink object if it's there
+                    if res_obj.name in new_col.objects:
+                        new_col.objects.unlink(res_obj)
+
+                    # Remove the collection itself
+                    bpy.data.collections.remove(new_col, do_unlink=True)
+
+                logger.debug(f"Cleaned up {len(new_collections)} import collections.")
+
             return res_obj
 
         return None
@@ -230,8 +256,6 @@ def import_mesh_file(mesh_path: Path, name: str):
     except Exception as e:
         logger.critical(f"Unexpected error processing mesh '{mesh_path.name}': {e}", exc_info=True)
         raise
-
-    return None
 
 
 def normalize_and_consolidate_imported_objects(objects, name):
@@ -298,6 +322,7 @@ def normalize_and_consolidate_imported_objects(objects, name):
 
     # Step 4: Final cleanup
     final_obj.name = name
+    final_obj.rotation_mode = "XYZ"
     final_obj.location = (0, 0, 0)
     final_obj.rotation_euler = (0, 0, 0)
     final_obj.scale = (1, 1, 1)
@@ -342,6 +367,7 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
     # Using bpy.data.objects.new is safer than bpy.ops in asynchronous/timer environments
     link_obj = bpy.data.objects.new(link.name, None)
     link_obj.empty_display_type = "PLAIN_AXES"
+    link_obj.rotation_mode = "XYZ"
     link_obj.location = (0, 0, 0)
 
     # Set display size from preferences
@@ -395,10 +421,11 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
             # Apply visual origin transform (URDF visual offset)
             if visual.origin:
                 origin = visual.origin
+                visual_obj.rotation_mode = "XYZ"
                 visual_obj.location = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
                 visual_obj.rotation_euler = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
-
             else:
+                visual_obj.rotation_mode = "XYZ"
                 visual_obj.location = (0, 0, 0)
                 visual_obj.rotation_euler = (0, 0, 0)
 
@@ -454,10 +481,11 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
             # Apply collision origin transform
             if collision.origin:
                 origin = collision.origin
+                collision_obj.rotation_mode = "XYZ"
                 collision_obj.location = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
                 collision_obj.rotation_euler = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
-
             else:
+                collision_obj.rotation_mode = "XYZ"
                 collision_obj.location = (0, 0, 0)
                 collision_obj.rotation_euler = (0, 0, 0)
 
@@ -575,6 +603,7 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
     empty = bpy.data.objects.new(joint.name, None)
     empty.empty_display_type = "ARROWS"
     empty.empty_display_size = empty_size
+    empty.rotation_mode = "XYZ"
     empty.location = (0, 0, 0)
 
     # Add to collection
@@ -658,6 +687,7 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
         # Apply joint origin transform (offset from parent link frame)
         if joint.origin:
             origin = joint.origin
+            empty.rotation_mode = "XYZ"
             empty.location = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
             empty.rotation_euler = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
@@ -669,6 +699,7 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
         _ = empty.matrix_world
 
         # Set child link's local position to origin (0,0,0)
+        child_obj.rotation_mode = "XYZ"
         child_obj.location = (0, 0, 0)
         child_obj.rotation_euler = (0, 0, 0)
     else:
@@ -813,6 +844,7 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
     # Display basic properties
     if sensor.origin:
         origin = sensor.origin
+        empty.rotation_mode = "XYZ"
         empty.location = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
         empty.rotation_euler = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 

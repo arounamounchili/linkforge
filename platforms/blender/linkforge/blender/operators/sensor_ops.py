@@ -69,6 +69,7 @@ class LINKFORGE_OT_create_sensor(Operator):
         # to be at the exact origin of the parent link (0,0,0 relative).
         sensor_empty.parent = link_obj
         sensor_empty.matrix_parent_inverse.identity()  # Remove hidden Blender offset
+        sensor_empty.rotation_mode = "XYZ"
         sensor_empty.location = (0, 0, 0)
         sensor_empty.rotation_euler = (0, 0, 0)
         sensor_empty.scale = (1, 1, 1)
