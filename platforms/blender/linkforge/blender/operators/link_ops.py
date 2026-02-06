@@ -286,50 +286,35 @@ def _create_primitive_collision(visual_obj, prim_type, link_name, context):
     local_bbox = [mathutils.Vector(v) for v in visual_obj.bound_box]
     local_center = sum(local_bbox, mathutils.Vector((0, 0, 0))) / 8.0
 
-    # Get visual's dimensions and parent scale
-    local_dims = visual_obj.dimensions.copy()
-
-    # Get parent scale to convert world dims to local dims
-    if visual_obj.parent:
-        parent_scale = visual_obj.parent.scale
-        local_dims.x /= parent_scale.x
-        local_dims.y /= parent_scale.y
-        local_dims.z /= parent_scale.z
-
+    # Create primitive at world origin initially
+    # We create them at unit size for predictable scaling via dimensions
     if prim_type == "BOX":
-        # Create cube at local size
+        # Create cube (1x1x1)
         bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
-        collision_obj = context.active_object
-        collision_obj.dimensions = local_dims
-
     elif prim_type == "SPHERE":
-        # Create sphere at local size
-        radius = max(local_dims) / 2.0
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=(0, 0, 0))
-        collision_obj = context.active_object
-
+        # Create sphere (radius 0.5 = 1m diameter)
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(0, 0, 0))
     elif prim_type == "CYLINDER":
-        # Create cylinder at local size
-        radius = max(local_dims.x, local_dims.y) / 2.0
-        depth = local_dims.z
-        bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, location=(0, 0, 0))
-        collision_obj = context.active_object
-
+        # Create cylinder (radius 0.5, depth 1.0 = 1x1x1 volume)
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=1.0, location=(0, 0, 0))
     else:
         return None, mathutils.Vector((0, 0, 0))
 
-    # CRITICAL: Align collision object with visual world frame immediately
-    # This prevents parenting math issues if the Visual/Link is rotated
-    collision_obj.matrix_world = visual_obj.matrix_world.copy()
+    collision_obj = context.active_object
 
-    # Apply scale to bake dimensions into geometry
-    # This ensures collision has scale=1.0 with geometry at local size
-    # When parented to link, it will inherit parent's scale to reach correct world size
+    # CRITICAL: Match World Pose (Location/Rotation) first
+    # We include local_center offset to align primitive with specific geometry volume
+    collision_obj.matrix_world = visual_obj.matrix_world @ mathutils.Matrix.Translation(
+        local_center
+    )
+
+    # CRITICAL: Match World Dimensions exactly
+    # Setting dimensions AFTER matrix_world ensures it overrides any scale inherited from visual
+    collision_obj.dimensions = visual_obj.dimensions.copy()
+
+    # Apply scale to bake dimensions into geometry (Scale 1.0 standard)
     bpy.context.view_layer.objects.active = collision_obj
-
-    # Ensure object is visible for transform_apply operator
     collision_obj.hide_viewport = False
-
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
     # Name it
