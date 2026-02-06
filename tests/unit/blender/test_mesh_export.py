@@ -31,36 +31,50 @@ def test_export_mesh_internal_dispatch_logic():
     assert export_mesh_glb(None, Path("/tmp/none.glb")) is False
 
 
+def test_export_mesh_operator_success(mocker):
+    """Test success paths for OBJ and GLB using module-level mocks."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+    path = Path("/tmp/test.obj")
+
+    # Mock the operators in the module namespace to avoid real C calls
+    mocker.patch("linkforge.blender.mesh_export.bpy.ops.wm.obj_export")
+    mocker.patch("linkforge.blender.mesh_export.bpy.ops.export_scene.gltf")
+
+    assert export_mesh_obj(obj, path) is True
+    assert export_mesh_glb(obj, path.with_suffix(".glb")) is True
+
+    bpy.data.objects.remove(obj, do_unlink=True)
+
+
 def test_export_link_mesh_logic(mocker):
     """Test that export_link_mesh correctly calculates the geometric offset."""
     bpy.ops.mesh.primitive_cube_add(size=2.0, location=(5.0, 5.0, 5.0))
     obj = bpy.context.active_object
 
-    # Shift vertices by (1, 0, 0)
+    # Shift vertices
     for vert in obj.data.vertices:
         vert.co += Vector((1, 0, 0))
 
     bpy.context.view_layer.update()
 
-    # Mock high-level functions to verify the complex centering and dispatch math
     mocker.patch("linkforge.blender.mesh_export.export_mesh_stl", return_value=True)
     mocker.patch("linkforge.blender.mesh_export.export_mesh_obj", return_value=True)
     mocker.patch("linkforge.blender.mesh_export.export_mesh_glb", return_value=True)
 
     meshes_dir = Path("/tmp")
 
-    # 1. STL path
+    # STL
     path, mat = export_link_mesh(obj, "link", "visual", "STL", meshes_dir)
     assert path.suffix == ".stl"
     assert tuple(mat.translation) == pytest.approx((6.0, 5.0, 5.0))
 
-    # 2. OBJ path
-    path, _ = export_link_mesh(obj, "link", "collision", "OBJ", meshes_dir)
-    assert path.suffix == ".obj"
+    # Fallback and Simplification
+    path, _ = export_link_mesh(obj, "link", "visual", "FOO", meshes_dir)
+    assert path.suffix == ".obj"  # Default
 
-    # 3. GLB path
-    path, _ = export_link_mesh(obj, "link", "visual", "GLB", meshes_dir)
-    assert path.suffix == ".glb"
+    path, _ = export_link_mesh(obj, "link", "collision", "STL", meshes_dir, simplify=True)
+    assert path is not None
 
     bpy.data.objects.remove(obj, do_unlink=True)
 
@@ -70,10 +84,7 @@ def test_create_simplified_mesh():
     bpy.ops.mesh.primitive_uv_sphere_add()
     obj = bpy.context.active_object
 
-    # Test None
     assert create_simplified_mesh(None, 0.5) is None
-
-    # Test non-mesh
     bpy.ops.object.empty_add()
     empty = bpy.context.active_object
     assert create_simplified_mesh(empty, 0.5) is None
@@ -84,3 +95,15 @@ def test_create_simplified_mesh():
     bpy.data.objects.remove(simplified, do_unlink=True)
     bpy.data.objects.remove(obj, do_unlink=True)
     bpy.data.objects.remove(empty, do_unlink=True)
+
+
+def test_export_link_mesh_error_dispatch(mocker):
+    """Test that export_link_mesh returns None on sub-function failure."""
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    mocker.patch("linkforge.blender.mesh_export.export_mesh_stl", return_value=False)
+    path, mat = export_link_mesh(obj, "l", "v", "STL", Path("/tmp"))
+    assert path is None
+
+    bpy.data.objects.remove(obj, do_unlink=True)

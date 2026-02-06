@@ -809,3 +809,85 @@ def test_import_robot_topological_sort():
 
     assert mid.parent.parent == root
     assert leaf.parent.parent == mid
+
+
+def test_normalize_and_consolidate_imported_objects():
+    """Test the robust mesh normalization and consolidation logic."""
+    from linkforge.blender.scene_builder import normalize_and_consolidate_imported_objects
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    # Create a hierarchy: Empty -> Mesh -> Mesh
+    bpy.ops.object.empty_add(location=(1, 1, 1))
+    root = bpy.context.active_object
+    root.name = "root_empty"
+
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(2, 2, 2))
+    m1 = bpy.context.active_object
+    m1.name = "mesh1"
+    m1.parent = root
+
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(3, 3, 3))
+    m2 = bpy.context.active_object
+    m2.name = "mesh2"
+    m2.parent = m1
+
+    bpy.context.view_layer.update()
+
+    # Store names before they are potentially deleted
+    root_name = root.name
+    m1_name = m1.name
+    m2_name = m2.name
+
+    # Consolidate
+    res = normalize_and_consolidate_imported_objects([root], "consolidated")
+
+    assert res is not None
+    assert res.name == "consolidated"
+    assert res.type == "MESH"
+    assert len(res.data.vertices) > 0
+    # Check that root empty and original meshes are queued for deletion (implicitly cleaned by the function)
+    assert root_name not in bpy.data.objects
+    assert m1_name not in bpy.data.objects
+    assert m2_name not in bpy.data.objects
+
+
+def test_create_joint_object_mimic_logic():
+    """Test that mimics are correctly resolved even if created out of order."""
+    from linkforge.blender.scene_builder import create_joint_object
+    from linkforge.linkforge_core.models import Joint, JointMimic, JointType
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    # Parent/Child link shells
+    bpy.ops.object.empty_add()
+    p = bpy.context.active_object
+    p.name = "p"
+    bpy.ops.object.empty_add()
+    c = bpy.context.active_object
+    c.name = "c"
+
+    # Target joint object
+    bpy.ops.object.empty_add()
+    driver_obj = bpy.context.active_object
+    driver_obj.name = "driver_joint"
+
+    link_objects = {"p": p, "c": c}
+    # Mocking the discovery of the driver joint in scene
+    # The actual implementation looks for objects by name
+
+    from linkforge.linkforge_core.models import JointLimits
+
+    joint = Joint(
+        name="follower",
+        type=JointType.REVOLUTE,
+        parent="p",
+        child="c",
+        limits=JointLimits(lower=-1.0, upper=1.0, effort=10.0, velocity=1.0),
+        mimic=JointMimic(joint="driver_joint", multiplier=0.5),
+    )
+
+    res = create_joint_object(joint, link_objects)
+    assert res.linkforge_joint.use_mimic is True
+
+    assert res.linkforge_joint.mimic_multiplier == 0.5
