@@ -477,6 +477,10 @@ def blender_link_to_core_with_origin(
     visual_count = 0
     collision_count = 0
 
+    # Pre-calculate totals for clean naming logic
+    total_visuals = sum(1 for c in obj.children if "_visual" in c.name)
+    total_collisions = sum(1 for c in obj.children if "_collision" in c.name)
+
     for child in obj.children:
         child_name = child.name
 
@@ -486,7 +490,13 @@ def blender_link_to_core_with_origin(
 
             # Determine unique suffix (use urdf_name if present, otherwise counter)
             urdf_name = child.get("urdf_name", None)
-            suffix = f"_{sanitize_name(urdf_name)}" if urdf_name else f"_{visual_count}"
+            if urdf_name:
+                suffix = f"_{sanitize_name(urdf_name)}"
+            elif total_visuals > 1:
+                suffix = f"_{visual_count}"
+            else:
+                suffix = ""
+
             visual_count += 1
 
             # Get geometry (auto-detect: primitives for simple shapes, mesh for complex)
@@ -529,7 +539,13 @@ def blender_link_to_core_with_origin(
 
             # Determine unique suffix
             urdf_name = child.get("urdf_name", None)
-            suffix = f"_{sanitize_name(urdf_name)}" if urdf_name else f"_{collision_count}"
+            if urdf_name:
+                suffix = f"_{sanitize_name(urdf_name)}"
+            elif total_collisions > 1:
+                suffix = f"_{collision_count}"
+            else:
+                suffix = ""
+
             collision_count += 1
 
             # Get geometry

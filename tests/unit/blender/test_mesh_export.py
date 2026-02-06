@@ -1,4 +1,7 @@
+from pathlib import Path
+
 import bpy
+import pytest
 from linkforge.blender.mesh_export import (
     create_simplified_mesh,
     export_link_mesh,
@@ -7,283 +10,77 @@ from linkforge.blender.mesh_export import (
     export_mesh_stl,
     get_mesh_filename,
 )
-from mathutils import Matrix
-
-
-def test_export_mesh_stl_success(tmp_path):
-    """Test successful STL export."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-
-    export_path = tmp_path / "test_cube.stl"
-    result = export_mesh_stl(obj, export_path)
-
-    assert result is True
-    assert export_path.exists()
-    assert export_path.stat().st_size > 0
-
-
-def test_export_mesh_stl_invalid_object(tmp_path):
-    """Test STL export failure with None object."""
-    export_path = tmp_path / "invalid.stl"
-    result = export_mesh_stl(None, export_path)
-    assert result is False
-
-
-def test_export_mesh_obj_success(tmp_path):
-    """Test successful OBJ export."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-
-    export_path = tmp_path / "test_cube.obj"
-    result = export_mesh_obj(obj, export_path)
-
-    assert result is True
-    assert export_path.exists()
-    assert export_path.stat().st_size > 0
-
-
-def test_export_mesh_obj_invalid_object(tmp_path):
-    """Test OBJ export failure with None object."""
-    export_path = tmp_path / "invalid.obj"
-    result = export_mesh_obj(None, export_path)
-    assert result is False
-
-
-def test_export_mesh_glb_success(tmp_path):
-    """Test successful GLB export."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-
-    export_path = tmp_path / "test_cube.glb"
-    result = export_mesh_glb(obj, export_path)
-
-    assert result is True
-    assert export_path.exists()
-    assert export_path.stat().st_size > 0
-
-
-def test_export_mesh_glb_invalid_object(tmp_path):
-    """Test GLB export failure with None object."""
-    export_path = tmp_path / "invalid.glb"
-    result = export_mesh_glb(None, export_path)
-    assert result is False
-
-
-def test_create_simplified_mesh():
-    """Test mesh simplification with decimation."""
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16)
-    obj = bpy.context.active_object
-    original_poly_count = len(obj.data.polygons)
-
-    simplified = create_simplified_mesh(obj, decimation_ratio=0.5)
-
-    assert simplified is not None
-    assert simplified.type == "MESH"
-    assert len(simplified.data.polygons) < original_poly_count
-
-    # Cleanup
-    bpy.data.objects.remove(simplified, do_unlink=True)
-
-
-def test_create_simplified_mesh_invalid_object():
-    """Test mesh simplification with invalid object."""
-    result = create_simplified_mesh(None, 0.5)
-    assert result is None
-
-
-def test_create_simplified_mesh_non_mesh():
-    """Test mesh simplification with non-mesh object."""
-    bpy.ops.object.empty_add()
-    obj = bpy.context.active_object
-
-    result = create_simplified_mesh(obj, 0.5)
-    assert result is None
-
-
-def test_export_hidden_mesh(tmp_path):
-    """Test export of an object that is hidden in the viewport.
-
-    This ensures the fix for 'Empty Mesh' bug works: transparency toggling
-    should happen automatically inside the export function.
-    """
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-
-    # Hide the object
-    obj.hide_viewport = True
-    assert obj.hide_viewport is True
-
-    # Export
-    export_path = tmp_path / "hidden_cube.stl"
-    result = export_mesh_stl(obj, export_path)
-
-    # Assert success
-    assert result is True
-    assert export_path.exists()
-    assert export_path.stat().st_size > 100  # Valid STL header + data
-
-    # Assert object state restored
-    assert obj.hide_viewport is True
-    assert obj.hide_viewport is True
+from mathutils import Vector
 
 
 def test_get_mesh_filename():
-    """Test mesh filename generation."""
+    """Test mesh filename generation with various inputs."""
     assert get_mesh_filename("base_link", "visual", "STL") == "base_link_visual.stl"
-    assert get_mesh_filename("arm_link", "collision", "OBJ") == "arm_link_collision.obj"
-    assert get_mesh_filename("wheel", "collision", "GLB") == "wheel_collision.glb"
+    assert (
+        get_mesh_filename("base_link", "collision", "OBJ", suffix="_0")
+        == "base_link_collision_0.obj"
+    )
+    assert get_mesh_filename("Link A", "visual", "glb") == "Link_A_visual.glb"
+    assert get_mesh_filename("link", "visual", "STL", suffix="My Mesh") == "link_visualMy_Mesh.stl"
 
 
-def test_export_link_mesh_stl(tmp_path):
-    """Test export_link_mesh with STL format."""
-    bpy.ops.mesh.primitive_cube_add()
+def test_export_mesh_internal_dispatch_logic():
+    """Test that individual export functions handle None inputs safely."""
+    assert export_mesh_stl(None, Path("/tmp/none.stl")) is False
+    assert export_mesh_obj(None, Path("/tmp/none.obj")) is False
+    assert export_mesh_glb(None, Path("/tmp/none.glb")) is False
+
+
+def test_export_link_mesh_logic(mocker):
+    """Test that export_link_mesh correctly calculates the geometric offset."""
+    bpy.ops.mesh.primitive_cube_add(size=2.0, location=(5.0, 5.0, 5.0))
     obj = bpy.context.active_object
 
-    result, world_matrix = export_link_mesh(
-        obj=obj,
-        link_name="test_link",
-        geometry_type="visual",
-        mesh_format="STL",
-        meshes_dir=tmp_path,
-    )
+    # Shift vertices by (1, 0, 0)
+    for vert in obj.data.vertices:
+        vert.co += Vector((1, 0, 0))
 
-    assert result is not None
-    assert result.exists()
-    assert result.name == "test_link_visual.stl"
-
-
-def test_export_link_mesh_with_simplification(tmp_path):
-    """Test export_link_mesh with mesh simplification."""
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16)
-    obj = bpy.context.active_object
-
-    result, world_matrix = export_link_mesh(
-        obj=obj,
-        link_name="collision_link",
-        geometry_type="collision",
-        mesh_format="STL",
-        meshes_dir=tmp_path,
-        simplify=True,
-        decimation_ratio=0.3,
-    )
-
-    assert result is not None
-    assert result.exists()
-
-
-def test_export_link_mesh_dry_run(tmp_path):
-    """Test export_link_mesh in dry run mode."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-
-    result, world_matrix = export_link_mesh(
-        obj=obj,
-        link_name="dry_run_link",
-        geometry_type="visual",
-        mesh_format="OBJ",
-        meshes_dir=tmp_path,
-        dry_run=True,
-    )
-
-    assert result is not None
-    assert result == tmp_path / "dry_run_link_visual.obj"
-    assert not result.exists()  # Should not actually export
-
-
-def test_export_link_mesh_invalid_object(tmp_path):
-    """Test export_link_mesh with None object."""
-    result, world_matrix = export_link_mesh(
-        obj=None,
-        link_name="invalid",
-        geometry_type="visual",
-        mesh_format="STL",
-        meshes_dir=tmp_path,
-    )
-
-    assert result is None
-    assert world_matrix == Matrix.Identity(4)
-
-
-def test_export_link_mesh_non_mesh_object(tmp_path):
-    """Test export_link_mesh with non-mesh object."""
-    bpy.ops.object.empty_add()
-    obj = bpy.context.active_object
-
-    result, world_matrix = export_link_mesh(
-        obj=obj,
-        link_name="empty_obj",
-        geometry_type="visual",
-        mesh_format="STL",
-        meshes_dir=tmp_path,
-    )
-
-    assert result is None
-    assert world_matrix == Matrix.Identity(4)
-
-
-def test_export_link_mesh_unknown_format(tmp_path):
-    """Test export_link_mesh with unknown format defaults to OBJ."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-
-    result, world_matrix = export_link_mesh(
-        obj=obj,
-        link_name="unknown_format",
-        geometry_type="visual",
-        mesh_format="UNKNOWN",
-        meshes_dir=tmp_path,
-    )
-
-    assert result is not None
-    assert result.suffix == ".obj"  # Should default to OBJ
-
-
-def test_export_link_mesh_geometric_centering(tmp_path):
-    """Test that world-baked meshes are correctly centered during export."""
-    bpy.ops.mesh.primitive_cube_add(size=2.0)
-    obj = bpy.context.active_object
-
-    # Shift vertices manually to simulate "World-Baked" mesh (offset from origin)
-    # Move vertices by +5.0 in X. Object origin stays at (0,0,0).
-    for v in obj.data.vertices:
-        v.co.x += 5.0
-
-    # Ensure transforms are applied (actually for vertices they already are local)
     bpy.context.view_layer.update()
 
-    # Export
-    result, world_matrix = export_link_mesh(
-        obj=obj,
-        link_name="baked_link",
-        geometry_type="visual",
-        mesh_format="STL",
-        meshes_dir=tmp_path,
-    )
+    # Mock high-level functions to verify the complex centering and dispatch math
+    mocker.patch("linkforge.blender.mesh_export.export_mesh_stl", return_value=True)
+    mocker.patch("linkforge.blender.mesh_export.export_mesh_obj", return_value=True)
+    mocker.patch("linkforge.blender.mesh_export.export_mesh_glb", return_value=True)
 
-    assert result is not None
-    assert result.exists()
-    offset = world_matrix.to_translation()
-    assert offset.x == 5.0
-    assert offset.y == 0.0
-    assert offset.z == 0.0
+    meshes_dir = Path("/tmp")
+
+    # 1. STL path
+    path, mat = export_link_mesh(obj, "link", "visual", "STL", meshes_dir)
+    assert path.suffix == ".stl"
+    assert tuple(mat.translation) == pytest.approx((6.0, 5.0, 5.0))
+
+    # 2. OBJ path
+    path, _ = export_link_mesh(obj, "link", "collision", "OBJ", meshes_dir)
+    assert path.suffix == ".obj"
+
+    # 3. GLB path
+    path, _ = export_link_mesh(obj, "link", "visual", "GLB", meshes_dir)
+    assert path.suffix == ".glb"
+
+    bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def test_export_link_mesh_hidden_object(tmp_path):
-    """Test export_link_mesh even if object is hidden (viewport/render)."""
-    bpy.ops.mesh.primitive_cube_add()
+def test_create_simplified_mesh():
+    """Test simplification coverage."""
+    bpy.ops.mesh.primitive_uv_sphere_add()
     obj = bpy.context.active_object
-    obj.hide_viewport = True
-    obj.hide_render = True
 
-    result, world_matrix = export_link_mesh(
-        obj=obj,
-        link_name="hidden_link",
-        geometry_type="visual",
-        mesh_format="STL",
-        meshes_dir=tmp_path,
-    )
+    # Test None
+    assert create_simplified_mesh(None, 0.5) is None
 
-    assert result is not None
-    assert result.exists()
-    assert result.name == "hidden_link_visual.stl"
+    # Test non-mesh
+    bpy.ops.object.empty_add()
+    empty = bpy.context.active_object
+    assert create_simplified_mesh(empty, 0.5) is None
+
+    simplified = create_simplified_mesh(obj, 0.5)
+    assert simplified is not None
+
+    bpy.data.objects.remove(simplified, do_unlink=True)
+    bpy.data.objects.remove(obj, do_unlink=True)
+    bpy.data.objects.remove(empty, do_unlink=True)

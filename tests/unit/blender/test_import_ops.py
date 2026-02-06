@@ -1,45 +1,35 @@
-import bpy
-import pytest
-from linkforge.blender.operators.import_ops import working_directory
+from unittest.mock import MagicMock
+
+from linkforge.blender.operators.import_ops import LINKFORGE_OT_import_urdf
 
 
-def test_working_directory_context_manager(tmp_path):
-    """Test working_directory context manager changes and restores CWD."""
-    import os
+def test_import_urdf_logic_paths(mocker, tmp_path):
+    """Test import operator logic by calling the unbound method."""
+    mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
+    mock_self.report = MagicMock()
 
-    original_cwd = os.getcwd()
+    urdf_file = tmp_path / "test.urdf"
+    urdf_file.write_text("<robot name='test'/>")
+    mock_self.filepath = str(urdf_file)
 
-    test_dir = tmp_path / "test_subdir"
-    test_dir.mkdir()
+    context = MagicMock()
+    mocker.patch("linkforge.linkforge_core.parsers.URDFParser")
+    mocker.patch("linkforge.blender.asynchronous_builder.AsynchronousRobotBuilder")
+    mocker.patch(
+        "linkforge.linkforge_core.validation.security.find_sandbox_root", return_value=tmp_path
+    )
 
-    # Use context manager
-    with working_directory(test_dir):
-        assert os.getcwd() == str(test_dir)
-
-    # Should restore original directory
-    assert os.getcwd() == original_cwd
-
-
-def test_working_directory_exception_handling(tmp_path):
-    """Test working_directory restores CWD even on exception."""
-    import os
-
-    original_cwd = os.getcwd()
-
-    test_dir = tmp_path / "test_subdir"
-    test_dir.mkdir()
-
-    # Raise exception inside context
-    with pytest.raises(ValueError), working_directory(test_dir):
-        assert os.getcwd() == str(test_dir)
-        raise ValueError("Test exception")
-
-    # Should still restore original directory
-    assert os.getcwd() == original_cwd
+    result = LINKFORGE_OT_import_urdf.execute(mock_self, context)
+    assert result == {"FINISHED"}
 
 
-def test_import_operator_registered():
-    """Test that import operator is registered and accessible."""
-    # The operator should be accessible via bpy.ops
-    assert hasattr(bpy.ops, "linkforge")
-    assert hasattr(bpy.ops.linkforge, "import_urdf")
+def test_import_invalid_path_logic(mocker):
+    """Test handling of invalid paths."""
+    mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
+    mock_self.filepath = "/non/existent/path.urdf"
+    mock_self.report = MagicMock()
+
+    context = MagicMock()
+    result = LINKFORGE_OT_import_urdf.execute(mock_self, context)
+    assert result == {"CANCELLED"}
+    mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)

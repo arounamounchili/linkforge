@@ -81,7 +81,7 @@ def update_transmission_hierarchy(self, context):
 
 def poll_robot_joint(self, obj):
     """Filter to only allow robot joint objects in pointer selection."""
-    return obj and hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint
+    return bool(obj and hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint)
 
 
 class TransmissionPropertyGroup(PropertyGroup):
