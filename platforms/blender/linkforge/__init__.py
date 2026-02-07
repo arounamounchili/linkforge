@@ -19,16 +19,6 @@ try:
 except ImportError:
     IS_BLENDER = False
 
-import os
-import sys
-
-# Ensure bundled modules (like linkforge_core) are importable
-# This is necessary because Blender Extensions (4.2+) are namespaced,
-# so the extension root is not automatically in sys.path for top-level imports.
-_ext_root = os.path.dirname(__file__)
-if _ext_root not in sys.path:
-    sys.path.append(_ext_root)
-
 if IS_BLENDER:
     from . import blender
 else:
