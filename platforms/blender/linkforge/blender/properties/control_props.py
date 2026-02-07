@@ -68,7 +68,7 @@ class Ros2ControlJointProperty(PropertyGroup):
     parameters: CollectionProperty(type=Ros2ControlParameterProperty)  # type: ignore
 
 
-def register():
+def register() -> None:
     """Register property groups."""
     for cls in [
         Ros2ControlParameterProperty,
@@ -82,7 +82,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister property groups."""
     bpy.utils.unregister_class(Ros2ControlJointProperty)
     bpy.utils.unregister_class(Ros2ControlInterfaceProperty)

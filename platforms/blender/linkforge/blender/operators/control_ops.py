@@ -130,7 +130,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register operators."""
     for cls in classes:
         try:
@@ -140,7 +140,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister operators."""
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

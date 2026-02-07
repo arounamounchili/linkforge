@@ -5,19 +5,21 @@ try:
 except ImportError:
     HAS_BPY = False
 
+import typing
+
 import pytest
 
 if HAS_BPY:
 
     @pytest.fixture(scope="session", autouse=True)
-    def register_addon():
+    def register_addon() -> None:
         """Ensure the addon is registered at the start of the session."""
         import linkforge.blender
 
         linkforge.blender.register()
 
     @pytest.fixture(autouse=True)
-    def ensure_registered():
+    def ensure_registered() -> None:
         """Check and re-register properties if they were lost (e.g. by factory reset)."""
         # Check for both standard Object properties and Scene properties
         # Sometimes read_factory_settings wipes Scene but not Object types OR vice versa
@@ -31,7 +33,7 @@ if HAS_BPY:
             linkforge.blender.register()
 
     @pytest.fixture(autouse=True)
-    def clean_scene():
+    def clean_scene() -> typing.Generator[None, None, None]:
         """Clear all objects and data from the scene before each test."""
         # Delete all objects in all collections
         for obj in bpy.data.objects:
