@@ -12,6 +12,9 @@ from linkforge_core.models import CameraInfo, Link, Sensor, SensorType
 def test_scene_to_robot_strict_mode(mocker):
     """Test that strict mode correctly raises vs collects errors."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    import linkforge.blender
+
+    linkforge.blender.register()
     scene = bpy.context.scene
     scene.linkforge.robot_name = "test_robot"
 
@@ -41,6 +44,9 @@ def test_scene_to_robot_strict_mode(mocker):
 def test_sensor_origin_correction(mocker):
     """Test that sensors correctly calculate world offset relative to links."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    import linkforge.blender
+
+    linkforge.blender.register()
 
     # Parent Link at (1, 1, 1)
     bpy.ops.object.empty_add(location=(1, 1, 1))
@@ -80,6 +86,9 @@ def test_sensor_origin_correction(mocker):
 def test_ros2_control_conversion():
     """Test conversion of global ROS2 control properties."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    import linkforge.blender
+
+    linkforge.blender.register()
     props = bpy.context.scene.linkforge
     props.use_ros2_control = True
     props.ros2_control_name = "RealRobot"
@@ -101,6 +110,9 @@ def test_ros2_control_conversion():
 def test_gazebo_plugin_extraction(mocker):
     """Test extraction of Gazebo ros2_control plugin when configured."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    import linkforge.blender
+
+    linkforge.blender.register()
     props = bpy.context.scene.linkforge
     props.use_ros2_control = True
     props.gazebo_plugin_name = "gazebo_ros2_control"

@@ -816,6 +816,9 @@ def test_normalize_and_consolidate_imported_objects():
     from linkforge.blender.scene_builder import normalize_and_consolidate_imported_objects
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    import linkforge.blender
+
+    linkforge.blender.register()
 
     # Create a hierarchy: Empty -> Mesh -> Mesh
     bpy.ops.object.empty_add(location=(1, 1, 1))
@@ -858,6 +861,9 @@ def test_create_joint_object_mimic_logic():
     from linkforge.linkforge_core.models import Joint, JointMimic, JointType
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    import linkforge.blender
+
+    linkforge.blender.register()
 
     # Parent/Child link shells
     bpy.ops.object.empty_add()

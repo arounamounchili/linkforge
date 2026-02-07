@@ -70,9 +70,16 @@ class Ros2ControlJointProperty(PropertyGroup):
 
 def register():
     """Register property groups."""
-    bpy.utils.register_class(Ros2ControlParameterProperty)
-    bpy.utils.register_class(Ros2ControlInterfaceProperty)
-    bpy.utils.register_class(Ros2ControlJointProperty)
+    for cls in [
+        Ros2ControlParameterProperty,
+        Ros2ControlInterfaceProperty,
+        Ros2ControlJointProperty,
+    ]:
+        try:
+            bpy.utils.register_class(cls)
+        except ValueError:
+            bpy.utils.unregister_class(cls)
+            bpy.utils.register_class(cls)
 
 
 def unregister():
