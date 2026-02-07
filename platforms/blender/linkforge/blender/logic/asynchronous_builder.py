@@ -139,6 +139,10 @@ class AsynchronousRobotBuilder:
 
             self.context.window_manager.progress_update(self.completed_tasks)
 
+            if not self.tasks:
+                self.finish()
+                return None
+
             return 0.001
 
         except Exception as e:

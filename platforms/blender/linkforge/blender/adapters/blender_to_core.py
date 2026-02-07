@@ -182,12 +182,14 @@ def detect_primitive_type(obj: Any) -> str | None:
     if mesh is None:
         return None
 
-    # Check for explicit URDF geometry type tag (set by importer or user)
-    # This guarantees round-trip stability for primitives
-    if "urdf_geometry_type" in obj:
-        geom_type = obj["urdf_geometry_type"]
-        if geom_type in ("BOX", "CYLINDER", "SPHERE"):
-            return geom_type
+    # Check for explicit geometry type tags
+    # This guarantees round-trip stability and prevents auto-detection failures
+    tags = ["urdf_geometry_type", "collision_geometry_type"]
+    for tag in tags:
+        if tag in obj:
+            geom_type = obj[tag]
+            if geom_type in ("BOX", "CYLINDER", "SPHERE"):
+                return geom_type
 
     # Count vertices and faces
     vert_count = len(mesh.vertices)

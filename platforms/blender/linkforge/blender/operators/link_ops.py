@@ -448,6 +448,7 @@ def calculate_inertia_for_link(link_obj):
     props = link_obj.linkforge
 
     # Import here to avoid circular dependency
+    from ...linkforge_core.models.geometry import Box, Cylinder, Sphere
     from ...linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
     from ..adapters.blender_to_core import extract_mesh_triangles
 
@@ -497,14 +498,18 @@ def calculate_inertia_for_link(link_obj):
 
             # Primitive calculation expects dimensions
             if prim_type == "BOX":
-                tensor = calculate_inertia("box", mass, size=dims)
+                # Convert mathutils.Vector to core Vector3
+                from ...linkforge_core.models.geometry import Vector3
+
+                size = Vector3(dims.x, dims.y, dims.z)
+                tensor = calculate_inertia(Box(size=size), mass)
             elif prim_type == "SPHERE":
                 radius = max(dims) / 2.0
-                tensor = calculate_inertia("sphere", mass, radius=radius)
+                tensor = calculate_inertia(Sphere(radius=radius), mass)
             elif prim_type == "CYLINDER":
                 radius = max(dims.x, dims.y) / 2.0
                 length = dims.z
-                tensor = calculate_inertia("cylinder", mass, radius=radius, length=length)
+                tensor = calculate_inertia(Cylinder(radius=radius, length=length), mass)
             else:
                 # Fallback to mesh
                 triangles = extract_mesh_triangles(target_obj)
