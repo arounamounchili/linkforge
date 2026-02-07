@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import bpy
-from linkforge.blender.converters import blender_link_to_core_with_origin
+from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
 
 
 def test_single_visual_no_suffix():

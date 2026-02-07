@@ -1,5 +1,5 @@
 import bpy
-from linkforge.blender.mesh_export import export_link_mesh
+from linkforge.blender.adapters.mesh_io import export_link_mesh
 
 
 def test_high_fidelity_multi_geometry_export_suffixes(tmp_path):

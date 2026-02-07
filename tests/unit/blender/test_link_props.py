@@ -112,7 +112,9 @@ def test_collision_quality_skip_imported():
 
 def test_auto_inertia_toggle(mocker):
     """Test that disabling auto-inertia ensures the inertia handler is running."""
-    mock_ensure = mocker.patch("linkforge.blender.utils.inertia_gizmos.ensure_inertia_handler")
+    mock_ensure = mocker.patch(
+        "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
+    )
 
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()

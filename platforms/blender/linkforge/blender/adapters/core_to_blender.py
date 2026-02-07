@@ -8,8 +8,8 @@ from pathlib import Path
 import bpy
 from mathutils import Matrix
 
-from ..linkforge_core.logging_config import get_logger
-from ..linkforge_core.models import (
+from ...linkforge_core.logging_config import get_logger
+from ...linkforge_core.models import (
     Box,
     Color,
     Cylinder,
@@ -19,10 +19,10 @@ from ..linkforge_core.models import (
     Robot,
     Sphere,
 )
-from ..linkforge_core.utils.kinematics import sort_joints_topological
-from .preferences import get_addon_prefs
-from .utils.joint_utils import resolve_mimic_joints
-from .utils.scene_utils import move_to_collection
+from ...linkforge_core.utils.kinematics import sort_joints_topological
+from ..preferences import get_addon_prefs
+from ..utils.joint_utils import resolve_mimic_joints
+from ..utils.scene_utils import move_to_collection
 
 logger = get_logger(__name__)
 

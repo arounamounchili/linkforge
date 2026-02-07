@@ -2,7 +2,7 @@ from pathlib import Path
 
 import bpy
 import pytest
-from linkforge.blender.converters import (
+from linkforge.blender.adapters.blender_to_core import (
     _calculate_link_frames,
     blender_joint_to_core,
     blender_link_to_core_with_origin,
@@ -204,7 +204,7 @@ def test_categorize_scene_objects_logic():
         t_obj.linkforge_transmission.is_robot_transmission = True
 
     # 2. Call internal categorizer
-    from linkforge.blender.converters import _categorize_scene_objects
+    from linkforge.blender.adapters.blender_to_core import _categorize_scene_objects
 
     links, joints, sensors, joints_map, root = _categorize_scene_objects(bpy.context.scene)
 
@@ -380,7 +380,7 @@ def test_categorize_scene_objects_complex_hierarchy():
     sensor.linkforge_sensor.attached_link = child
 
     # Manually run the protected function (we are testing unit logic)
-    from linkforge.blender.converters import _categorize_scene_objects
+    from linkforge.blender.adapters.blender_to_core import _categorize_scene_objects
 
     links, joints, sensors, joints_map, root_link = _categorize_scene_objects(bpy.context.scene)
 
@@ -436,7 +436,7 @@ def test_blender_joint_to_core_types():
 
 def test_blender_sensor_to_core_all_types():
     """Verify conversion of various sensor types and their properties."""
-    from linkforge.blender.converters import blender_sensor_to_core
+    from linkforge.blender.adapters.blender_to_core import blender_sensor_to_core
 
     # Setup Parent Link
     bpy.ops.object.empty_add()
@@ -496,7 +496,7 @@ def test_blender_sensor_to_core_all_types():
 
 def test_detect_primitive_type_logic():
     """Verify primitive detection heuristics."""
-    from linkforge.blender.converters import detect_primitive_type
+    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
     # 1. Cube
     bpy.ops.mesh.primitive_cube_add()
@@ -527,7 +527,7 @@ def test_matrix_to_transform_conversion():
     import math
 
     import mathutils
-    from linkforge.blender.converters import matrix_to_transform
+    from linkforge.blender.adapters.blender_to_core import matrix_to_transform
 
     # Identity
     mat = mathutils.Matrix.Identity(4)
@@ -683,7 +683,7 @@ def test_blender_link_to_core_complex():
 
 def test_blender_link_to_core_geometry_and_material():
     """Verify detailed geometry and material conversion."""
-    from linkforge.blender.converters import blender_link_to_core_with_origin
+    from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
     from linkforge.linkforge_core.models import GeometryType
 
     # 1. Link Setup

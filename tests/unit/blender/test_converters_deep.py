@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import bpy
 import pytest
-from linkforge.blender.converters import (
+from linkforge.blender.adapters.blender_to_core import (
     blender_ros2_control_to_core,
     scene_to_robot,
 )
@@ -26,7 +26,7 @@ def test_scene_to_robot_strict_mode(mocker):
 
     # Mock blender_link_to_core to throw
     mocker.patch(
-        "linkforge.blender.converters.blender_link_to_core_with_origin",
+        "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
         side_effect=ValueError("Link error"),
     )
 
@@ -66,11 +66,11 @@ def test_sensor_origin_correction(mocker):
 
     # Scenario: Deep correction in scene_to_robot
     mocker.patch(
-        "linkforge.blender.converters.blender_link_to_core_with_origin",
+        "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
         return_value=Link(name="base_link"),
     )
     mocker.patch(
-        "linkforge.blender.converters.blender_sensor_to_core",
+        "linkforge.blender.adapters.blender_to_core.blender_sensor_to_core",
         return_value=Sensor(
             name="cam", type=SensorType.CAMERA, link_name="base_link", camera_info=CameraInfo()
         ),
@@ -119,11 +119,12 @@ def test_gazebo_plugin_extraction(mocker):
     props.controllers_yaml_path = "/config/ctrl.yaml"
 
     mocker.patch(
-        "linkforge.blender.converters._categorize_scene_objects",
+        "linkforge.blender.adapters.blender_to_core._categorize_scene_objects",
         return_value=({}, [], [], {}, None),
     )
     mocker.patch(
-        "linkforge.blender.converters.blender_ros2_control_to_core", return_value=MagicMock()
+        "linkforge.blender.adapters.blender_to_core.blender_ros2_control_to_core",
+        return_value=MagicMock(),
     )
 
     robot, _ = scene_to_robot(bpy.context)

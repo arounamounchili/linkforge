@@ -104,7 +104,7 @@ def update_collision_quality(self, context):
 
     # IMPORTANT: Skip update if collision was imported from URDF
     # We want to preserve imported custom collision geometry and origins.
-    # The 'imported_from_urdf' flag is set in scene_builder.py during import.
+    # The 'imported_from_urdf' flag is set in core_to_blender.py during import.
     for col in collision_children:
         if col.get("imported_from_urdf"):
             return
@@ -119,7 +119,7 @@ def update_auto_inertia_toggle(self, context):
     """Enable visualization when switching to manual inertia."""
     if not self.use_auto_inertia:
         # User switched to Manual Mode -> Enable visualization
-        from ..utils.inertia_gizmos import ensure_inertia_handler
+        from ..visualization.inertia_gizmos import ensure_inertia_handler
 
         ensure_inertia_handler()
 

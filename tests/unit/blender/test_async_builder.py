@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import bpy
-from linkforge.blender.asynchronous_builder import AsynchronousRobotBuilder
+from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
 from linkforge_core.models import Joint, JointType, Link, Robot
 
 
@@ -40,9 +40,9 @@ def test_builder_execution_flow(mocker):
     robot = Robot(name="test_robot", initial_links=[l1])
 
     # Mock scenebuilder functions
-    mocker.patch("linkforge.blender.asynchronous_builder.setup_scene_for_robot")
+    mocker.patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot")
     mocker.patch(
-        "linkforge.blender.asynchronous_builder.create_link_object", return_value=MagicMock()
+        "linkforge.blender.logic.asynchronous_builder.create_link_object", return_value=MagicMock()
     )
 
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=1)

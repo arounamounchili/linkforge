@@ -1,6 +1,6 @@
 import bpy
 import pytest
-from linkforge.blender.utils.joint_gizmos import (
+from linkforge.blender.visualization.joint_gizmos import (
     fix_existing_joints,
     generate_arrow_cone_vertices,
     generate_axis_geometry,
@@ -84,7 +84,7 @@ def test_update_viz_handle_switching(mocker):
     mock_remove = mocker.patch("bpy.types.SpaceView3D.draw_handler_remove")
 
     # Mock preferences
-    mock_prefs = mocker.patch("linkforge.blender.utils.joint_gizmos.get_addon_prefs")
+    mock_prefs = mocker.patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs")
 
     # 1. Test ENABLE
     mock_prefs.return_value = type("Prefs", (), {"show_joint_axes": True})()

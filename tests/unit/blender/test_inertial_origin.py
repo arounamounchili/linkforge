@@ -1,6 +1,6 @@
 import bpy
 import pytest
-from linkforge.blender.converters import blender_link_to_core_with_origin
+from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
 
 
 def test_inertial_origin_extraction():

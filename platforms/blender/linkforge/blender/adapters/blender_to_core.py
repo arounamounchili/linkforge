@@ -21,8 +21,8 @@ else:
 
 from dataclasses import dataclass
 
-from ..linkforge_core.logging_config import get_logger
-from ..linkforge_core.models import (
+from ...linkforge_core.logging_config import get_logger
+from ...linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -56,9 +56,9 @@ from ..linkforge_core.models import (
     Vector3,
     Visual,
 )
-from ..linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
-from ..linkforge_core.utils.math_utils import clean_float, normalize_vector
-from ..linkforge_core.utils.string_utils import sanitize_name
+from ...linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
+from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
+from ...linkforge_core.utils.string_utils import sanitize_name
 
 # Constants
 logger = get_logger(__name__)
@@ -289,7 +289,7 @@ def get_object_geometry(
     if actual_geometry_type in ("MESH", "CONVEX_HULL"):
         # Export actual mesh file if meshes_dir is provided
         if meshes_dir and link_name and obj.type == "MESH":
-            from .mesh_export import export_link_mesh
+            from .mesh_io import export_link_mesh
 
             mesh_path, geom_world_matrix = export_link_mesh(
                 obj=obj,
@@ -696,7 +696,7 @@ def blender_joint_to_core(obj: Any, scene: Any) -> Joint | None:
         else:
             axis = Vector3(nx, ny, nz)
 
-    # Joint origin is already calculated relative to parent in converters.scene_to_robot
+    # Joint origin is already calculated relative to parent in blender_to_core.scene_to_robot
     # Just use the joint's world transform here, will be made relative in scene_to_robot
     origin = matrix_to_transform(obj.matrix_world)
 
@@ -1001,7 +1001,7 @@ def scene_to_robot(
                         parameters=params,
                     )
                     # Note: We wrap the plugin in a GazeboElement without a reference (global)
-                    from ..linkforge_core.models.gazebo import GazeboElement
+                    from ...linkforge_core.models.gazebo import GazeboElement
 
                     robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
         except Exception as e:

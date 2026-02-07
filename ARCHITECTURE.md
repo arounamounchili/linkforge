@@ -93,11 +93,20 @@ graph LR
 
 | Module | Purpose | Key Files |
 |--------|---------|-----------|
-| **Panels** | UI layout and display | `robot_panel.py`, `joint_panel.py`, `link_panel.py`, `sensor_panel.py`, `control_panel.py`, `forge_panel.py` |
-| **Operators** | User actions (import, export, etc.) | `import_ops.py`, `export_ops.py`, `link_ops.py`, `joint_ops.py`, `sensor_ops.py`, `control_ops.py`, `transmission_ops.py` (Legacy) |
-| **Properties** | Blender scene data storage | `robot_props.py`, `joint_props.py`, `link_props.py`, `sensor_props.py`, `control_props.py`, `validation_props.py`, `transmission_props.py` (Legacy) |
-| **Adapters** | Conversion between Blender ↔ Core | `converters.py`, `scene_builder.py`, `mesh_export.py` |
-| **Utils** | Blender-specific helpers | `joint_gizmos.py`, `inertia_gizmos.py`, `property_helpers.py`, `transform_utils.py`, `scene_utils.py`, `joint_utils.py`, `decorators.py` |
+| **Adapters** | Conversion between Blender ↔ Core (Directional) | `blender_to_core.py`, `core_to_blender.py`, `mesh_io.py` |
+| **Logic** | Domain-specific integration logic | `asynchronous_builder.py`, `validation.py` |
+| **UI** | Panels and Operators | `panels/`, `operators/` |
+| **Storage** | Blender-side property definitions | `properties/` |
+
+### Adapters Layer
+
+Located in `linkforge/blender/adapters/`, these files follow a **directional naming pattern** to make data flow explicit:
+
+1.  **`blender_to_core.py`**: Handles the "Export" flow (converting Blender objects to Core models).
+2.  **`core_to_blender.py`**: Handles the "Import" flow (converting Core models into Blender objects).
+3.  **`mesh_io.py`**: Manages mesh file reading/writing and sanitization.
+
+This structure allows LinkForge to remain "Orthogonal"—new 3D hosts (like FreeCAD) can be added by creating a corresponding `adapters/` package without touching the Core.
 
 ### 2. Core Logic Layer (`core/src/linkforge_core/`)
 
@@ -176,21 +185,21 @@ sequenceDiagram
 sequenceDiagram
     participant User
     participant UI as Blender UI
-    participant Converter as Converters
+    participant Adapter as Adapters (blender_to_core)
     participant Models as Core Models
     participant Validator as Validator
     participant Generator as URDF/XACRO Generator
     participant File as Output File
 
     User->>UI: Click Export
-    UI->>Converter: scene_to_robot(context)
-    Converter->>Converter: Extract links
-    Converter->>Converter: Sanitize & Export Meshes
-    Converter->>Converter: Extract joints
-    Converter->>Models: Create Robot model
+    UI->>Adapter: scene_to_robot(context)
+    Adapter->>Adapter: Extract links
+    Adapter->>Adapter: Sanitize & Export Meshes
+    Adapter->>Adapter: Extract joints
+    Adapter->>Models: Create Robot model
     Models->>Models: Validate structure
-    Models-->>Converter: Robot object
-    Converter-->>UI: Robot object
+    Models-->>Adapter: Robot object
+    Adapter-->>UI: Robot object
     UI->>Validator: validate(robot)
     Validator-->>UI: Validation result
     UI->>Generator: generate(robot)
@@ -419,5 +428,5 @@ LinkForge distinguishes between user-created assets and imported "Source of Trut
 
 ---
 
-**Last Updated:** 2026-02-03
+**Last Updated:** 2026-02-07
 **Version:** 1.2.0 (Architectural Stability & Precision)

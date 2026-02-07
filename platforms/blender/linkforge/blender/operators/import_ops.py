@@ -119,7 +119,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
             )
 
         # Import to scene (Asynchronous)
-        from ..asynchronous_builder import AsynchronousRobotBuilder
+        from ..logic.asynchronous_builder import AsynchronousRobotBuilder
 
         builder = AsynchronousRobotBuilder(robot, urdf_path, context)
         builder.start()

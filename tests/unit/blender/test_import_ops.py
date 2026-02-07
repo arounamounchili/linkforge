@@ -14,7 +14,7 @@ def test_import_urdf_logic_paths(mocker, tmp_path):
 
     context = MagicMock()
     mocker.patch("linkforge.linkforge_core.parsers.URDFParser")
-    mocker.patch("linkforge.blender.asynchronous_builder.AsynchronousRobotBuilder")
+    mocker.patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder")
     mocker.patch(
         "linkforge.linkforge_core.validation.security.find_sandbox_root", return_value=tmp_path
     )

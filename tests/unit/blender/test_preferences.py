@@ -65,8 +65,10 @@ def test_update_sizing_callbacks():
 
 def test_inertia_viz_toggle_callback(mocker):
     """Test that inertia visualization toggle callback triggers the right utilities."""
-    mock_ensure = mocker.patch("linkforge.blender.utils.inertia_gizmos.ensure_inertia_handler")
-    mock_tag = mocker.patch("linkforge.blender.utils.inertia_gizmos.tag_redraw")
+    mock_ensure = mocker.patch(
+        "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
+    )
+    mock_tag = mocker.patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw")
 
     fake_prefs = MagicMock()
     fake_prefs.show_inertia_gizmos = True

@@ -45,7 +45,9 @@ def test_export_urdf_execute_xacro_and_dry_run(mocker):
         "linkforge.linkforge_core.validation.RobotValidator.validate", return_value=val_res
     )
 
-    mocker.patch("linkforge.blender.converters.scene_to_robot", return_value=(MagicMock(), {}))
+    mocker.patch(
+        "linkforge.blender.adapters.blender_to_core.scene_to_robot", return_value=(MagicMock(), {})
+    )
     mock_gen = mocker.patch("linkforge.linkforge_core.XACROGenerator")
 
     result = LINKFORGE_OT_export_urdf.execute(mock_self, context)
@@ -64,7 +66,9 @@ def test_export_validation_failure(mocker):
     context = MagicMock()
     context.scene.linkforge.validate_before_export = True
 
-    mocker.patch("linkforge.blender.converters.scene_to_robot", return_value=(MagicMock(), {}))
+    mocker.patch(
+        "linkforge.blender.adapters.blender_to_core.scene_to_robot", return_value=(MagicMock(), {})
+    )
 
     val_res = MagicMock()
     val_res.is_valid = False
@@ -92,7 +96,9 @@ def test_validate_robot_error_parsing(mocker):
 
     # Simulate multi-line build error
     msg = "Unable to build robot model.\nLine 1\nLine 2"
-    mocker.patch("linkforge.blender.converters.scene_to_robot", side_effect=ValueError(msg))
+    mocker.patch(
+        "linkforge.blender.adapters.blender_to_core.scene_to_robot", side_effect=ValueError(msg)
+    )
 
     LINKFORGE_OT_validate_robot.execute(mock_self, context)
 

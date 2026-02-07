@@ -2,7 +2,7 @@ from pathlib import Path
 
 import bpy
 import pytest
-from linkforge.blender.mesh_export import (
+from linkforge.blender.adapters.mesh_io import (
     create_simplified_mesh,
     export_link_mesh,
     export_mesh_glb,
@@ -38,8 +38,8 @@ def test_export_mesh_operator_success(mocker):
     path = Path("/tmp/test.obj")
 
     # Mock the operators in the module namespace to avoid real C calls
-    mocker.patch("linkforge.blender.mesh_export.bpy.ops.wm.obj_export")
-    mocker.patch("linkforge.blender.mesh_export.bpy.ops.export_scene.gltf")
+    mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.obj_export")
+    mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf")
 
     assert export_mesh_obj(obj, path) is True
     assert export_mesh_glb(obj, path.with_suffix(".glb")) is True
@@ -58,9 +58,9 @@ def test_export_link_mesh_logic(mocker):
 
     bpy.context.view_layer.update()
 
-    mocker.patch("linkforge.blender.mesh_export.export_mesh_stl", return_value=True)
-    mocker.patch("linkforge.blender.mesh_export.export_mesh_obj", return_value=True)
-    mocker.patch("linkforge.blender.mesh_export.export_mesh_glb", return_value=True)
+    mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=True)
+    mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_obj", return_value=True)
+    mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_glb", return_value=True)
 
     meshes_dir = Path("/tmp")
 
@@ -102,7 +102,7 @@ def test_export_link_mesh_error_dispatch(mocker):
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
 
-    mocker.patch("linkforge.blender.mesh_export.export_mesh_stl", return_value=False)
+    mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=False)
     path, mat = export_link_mesh(obj, "l", "v", "STL", Path("/tmp"))
     assert path is None
 

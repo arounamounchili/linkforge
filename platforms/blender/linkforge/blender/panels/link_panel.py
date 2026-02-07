@@ -7,7 +7,7 @@ import contextlib
 import bpy
 from bpy.types import Context, Panel
 
-from ..converters import detect_primitive_type
+from ..adapters.blender_to_core import detect_primitive_type
 
 
 class LINKFORGE_PT_links(Panel):

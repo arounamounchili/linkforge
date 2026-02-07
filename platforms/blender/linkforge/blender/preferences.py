@@ -14,7 +14,7 @@ from bpy.types import AddonPreferences, Context
 
 def update_joint_axes_visibility(self: LinkForgePreferences, context: Context) -> None:
     """Callback when show_joint_axes changes - manage draw handler and force viewport redraw."""
-    from .utils import joint_gizmos
+    from .visualization import joint_gizmos
 
     joint_gizmos.update_viz_handle(context)
 
@@ -23,7 +23,7 @@ def update_joint_empty_size(self: LinkForgePreferences, context: Context) -> Non
     """Callback when joint_empty_size changes - update all joint empties and viewport."""
     # From here, we also need to trigger the draw handler update check
     # so the GPU overlay picks up the new size immediately
-    from .utils import joint_gizmos
+    from .visualization import joint_gizmos
 
     joint_gizmos.update_viz_handle(context)
 
@@ -85,7 +85,7 @@ def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None
 
 def update_inertia_visibility(self: LinkForgePreferences, context: Context) -> None:
     """Callback when show_inertia_gizmos changes."""
-    from .utils import inertia_gizmos
+    from .visualization import inertia_gizmos
 
     inertia_gizmos.tag_redraw()
     # If the user just enabled it, make sure the handler is registered
@@ -95,7 +95,7 @@ def update_inertia_visibility(self: LinkForgePreferences, context: Context) -> N
 
 def update_inertia_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when inertia_gizmo_size changes."""
-    from .utils import inertia_gizmos
+    from .visualization import inertia_gizmos
 
     inertia_gizmos.tag_redraw()
 

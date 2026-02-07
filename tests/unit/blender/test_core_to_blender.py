@@ -2,7 +2,7 @@ from pathlib import Path
 
 import bpy
 import pytest
-from linkforge.blender.scene_builder import (
+from linkforge.blender.adapters.core_to_blender import (
     create_joint_object,
     create_link_object,
     create_material_from_color,
@@ -813,7 +813,9 @@ def test_import_robot_topological_sort():
 
 def test_normalize_and_consolidate_imported_objects():
     """Test the robust mesh normalization and consolidation logic."""
-    from linkforge.blender.scene_builder import normalize_and_consolidate_imported_objects
+    from linkforge.blender.adapters.core_to_blender import (
+        normalize_and_consolidate_imported_objects,
+    )
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     import linkforge.blender
@@ -857,7 +859,7 @@ def test_normalize_and_consolidate_imported_objects():
 
 def test_create_joint_object_mimic_logic():
     """Test that mimics are correctly resolved even if created out of order."""
-    from linkforge.blender.scene_builder import create_joint_object
+    from linkforge.blender.adapters.core_to_blender import create_joint_object
     from linkforge.linkforge_core.models import Joint, JointMimic, JointType
 
     bpy.ops.wm.read_factory_settings(use_empty=True)

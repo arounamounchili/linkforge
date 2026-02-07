@@ -1,5 +1,5 @@
 import bpy
-from linkforge.blender.utils.inertia_gizmos import (
+from linkforge.blender.visualization.inertia_gizmos import (
     check_manual_inertia_on_load,
     draw_inertia_gizmos,
     ensure_inertia_handler,
@@ -49,7 +49,7 @@ def test_draw_inertia_gizmos_execution():
 def test_ensure_inertia_handler_logic():
     """Test handler registration logic directly."""
     # Clear any existing handle
-    import linkforge.blender.utils.inertia_gizmos as ig
+    import linkforge.blender.visualization.inertia_gizmos as ig
 
     old_handle = ig._draw_handle
     ig._draw_handle = None
