@@ -129,11 +129,11 @@ uv sync
 
 ### Testing
 ```bash
-# Run all tests
+# Run core tests
 uv run pytest
 
-# Run with coverage
-uv run pytest --cov=linkforge_core --cov=platforms/blender/linkforge --cov-report=html
+# Run Blender integration tests (Requires Blender)
+./run_blender_tests.py
 ```
 
 ### Code Quality

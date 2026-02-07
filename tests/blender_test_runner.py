@@ -61,12 +61,22 @@ def run_tests():
 
     # We use a custom configuration to avoid conflicts with global pytest settings
     # and to ensure we only run the Blender-specific tests.
-    args = [
-        test_dir,
-        "-v",
-        "--tb=short",
-        # We allow conftest.py in the blender test directory
-    ]
+    # Parse pass-through arguments (after --)
+    extra_args = []
+    if "--" in sys.argv:
+        idx = sys.argv.index("--")
+        extra_args = sys.argv[idx + 1 :]
+
+    # If the user provided a target (file/dir), use it. Otherwise use default test_dir.
+    # Targets are arguments that don't start with '-'
+    has_target = any(not a.startswith("-") for a in extra_args)
+
+    args = []
+    if not has_target:
+        args.append(test_dir)
+
+    args.extend(["-v", "--tb=short"])
+    args.extend(extra_args)
 
     import pytest
 

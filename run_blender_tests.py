@@ -64,6 +64,11 @@ def main():
         runner_script,
     ]
 
+    # Pass remaining arguments to the internal runner
+    if len(sys.argv) > 1:
+        command.append("--")
+        command.extend(sys.argv[1:])
+
     # Run the process and propagate output
     try:
         process = subprocess.run(command, check=False)

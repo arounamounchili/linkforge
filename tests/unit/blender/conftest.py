@@ -10,12 +10,11 @@ import typing
 import pytest
 
 if HAS_BPY:
+    import linkforge.blender
 
     @pytest.fixture(scope="session", autouse=True)
     def register_addon() -> None:
         """Ensure the addon is registered at the start of the session."""
-        import linkforge.blender
-
         linkforge.blender.register()
 
     @pytest.fixture(autouse=True)
@@ -28,8 +27,6 @@ if HAS_BPY:
         )
 
         if needs_re_reg:
-            import linkforge.blender
-
             linkforge.blender.register()
 
     @pytest.fixture(autouse=True)

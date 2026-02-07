@@ -166,21 +166,34 @@ git commit -m "feat: add your feature description"
 
 ### Running Tests
 
+LinkForge uses a **split-testing architecture** to maintain CI stability:
+
 ```bash
-# Run all tests
+# 1. Run core tests (Standard Python)
 uv run pytest
 
-# Run specific test file
+# 2. Run Blender integration tests (Requires Blender)
+./run_blender_tests.py
+```
+
+To run specific tests or categories:
+
+```bash
+# Run specific core test file
 uv run pytest tests/unit/core/test_robot.py
 
-# Run with coverage
-uv run pytest --cov=linkforge_core --cov=platforms/blender/linkforge --cov-report=html
+# Run specific Blender integration test file
+./run_blender_tests.py tests/integration/blender/test_blender_export.py
 
-# Run specific test category
-uv run pytest tests/integration/blender/
+# Run with coverage (Core only by default)
+uv run pytest --cov=linkforge_core --cov-report=html
+
+# Run specific test category (e.g., only unit tests)
+uv run pytest tests/unit/
+
+# Run specific integration test categories
 uv run pytest tests/integration/parsers/
 uv run pytest tests/integration/features/
-
 # Run only fast tests (skip integration)
 uv run pytest tests/unit/
 ```
