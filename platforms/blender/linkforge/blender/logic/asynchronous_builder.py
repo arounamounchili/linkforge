@@ -10,10 +10,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import bpy
-
-from linkforge.linkforge_core.logging_config import get_logger
-from linkforge.linkforge_core.models import Robot
-from linkforge.linkforge_core.utils.kinematics import sort_joints_topological
+from linkforge_core.logging_config import get_logger
+from linkforge_core.models import Robot
+from linkforge_core.utils.kinematics import sort_joints_topological
 
 from ..adapters.core_to_blender import (
     create_joint_object,
