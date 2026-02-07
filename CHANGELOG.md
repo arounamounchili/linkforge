@@ -5,6 +5,25 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2](https://github.com/arounamounchili/linkforge/compare/v1.2.1...v1.2.2) (2026-02-07)
+
+
+### 🐞 Bug Fixes
+
+* clean mesh export naming and reach add more test coverage ([#107](https://github.com/arounamounchili/linkforge/issues/107)) ([384c708](https://github.com/arounamounchili/linkforge/commit/384c708c750787b30200d7680e7abcb91f267f71))
+* preserve root link world transform and robust rotation mode handling ([#106](https://github.com/arounamounchili/linkforge/issues/106)) ([d7c1185](https://github.com/arounamounchili/linkforge/commit/d7c1185bd8df55ccc6e5b50628f4bb51505d0806))
+* stabilize test registration infrastructure and resolve CI collection errors ([#108](https://github.com/arounamounchili/linkforge/issues/108)) ([4d7c2fa](https://github.com/arounamounchili/linkforge/commit/4d7c2fa483d91243aa1b0e6014e7e626119631d3))
+
+
+### 📚 Documentation
+
+* add MagnusHanses as a contributor for bug ([#102](https://github.com/arounamounchili/linkforge/issues/102)) ([c44d589](https://github.com/arounamounchili/linkforge/commit/c44d5898b59d23072092c5ca2be22c15bb1abdf2))
+
+
+### 🛠️ Refactors
+
+* orthogonal adapter architecture with comprehensive test coverage ([#109](https://github.com/arounamounchili/linkforge/issues/109)) ([64c5b82](https://github.com/arounamounchili/linkforge/commit/64c5b82892b815cf135591bd09caaeb62e774d05))
+
 ## [1.2.1](https://github.com/arounamounchili/linkforge/compare/v1.2.0...v1.2.1) (2026-02-04)
 
 
