@@ -300,7 +300,7 @@ wheels = [
 
 [[package]]
 name = "linkforge-blender"
-version = "1.2.1"
+version = "1.2.2"
 source = { editable = "platforms/blender" }
 dependencies = [
     { name = "linkforge-core" },
@@ -311,7 +311,7 @@ requires-dist = [{ name = "linkforge-core", editable = "core" }]
 
 [[package]]
 name = "linkforge-core"
-version = "1.2.1"
+version = "1.2.2"
 source = { editable = "core" }
 dependencies = [
     { name = "pyyaml" },
@@ -322,7 +322,7 @@ requires-dist = [{ name = "pyyaml", specifier = ">=6.0.3" }]
 
 [[package]]
 name = "linkforge-workspace"
-version = "1.2.1"
+version = "1.2.2"
 source = { virtual = "." }
 dependencies = [
     { name = "pyyaml" },

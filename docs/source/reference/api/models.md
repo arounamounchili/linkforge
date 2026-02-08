@@ -137,9 +137,11 @@ Core data structures for representing robots.
    :show-inheritance:
 ```
 
-## Transmission (Legacy)
+## Transmission
 
-Legacy support for standard URDF transmissions. Modern workflows use `Ros2Control`.
+Standard URDF transmission model for ros_control/ros2_control integration.
+
+While `Ros2Control` provides a modern dashboard-based workflow, `Transmission` remains fully supported for compatibility and standard URDF workflows.
 
 ```{eval-rst}
 .. autoclass:: linkforge_core.models.transmission.Transmission

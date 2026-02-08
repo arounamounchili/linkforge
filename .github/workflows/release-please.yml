@@ -10,6 +10,10 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # Never cancel releases
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
@@ -37,20 +41,11 @@ jobs:
         run: |
           uv sync
 
-      - name: Setup Blender (Manual)
+      - name: Setup Blender
         if: ${{ steps.release.outputs.release_created }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libxxf86vm-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev libglew-dev
-          echo "Downloading Blender 4.2.0..."
-          wget -q https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz
-          mkdir -p blender
-          tar -xf blender-4.2.0-linux-x64.tar.xz -C blender --strip-components=1
-          echo "$(pwd)/blender" >> $GITHUB_PATH
-
-      - name: Verify Blender
-        if: ${{ steps.release.outputs.release_created }}
-        run: blender --version
+        uses: ./.github/actions/setup-blender
+        with:
+          version: '4.2.0'
 
       - name: Build extension
         if: ${{ steps.release.outputs.release_created }}

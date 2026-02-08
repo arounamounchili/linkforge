@@ -4,61 +4,7 @@ This document provides a comprehensive overview of LinkForge's architecture, mod
 
 ## System Overview
 
-LinkForge is a Blender extension that bridges the gap between 3D modeling and robotics simulation. Its internal architecture is organized into **two primary layers**, which together interface with the broader robotics ecosystem:
-
-```mermaid
-graph TB
-    subgraph "Blender Integration Layer"
-        UI[UI Panels & Operators]
-        Props[Properties & State]
-        Utils[Blender Utilities]
-    end
-
-    subgraph "Core Logic Layer"
-        Models[Data Models]
-        Parsers[URDF/XACRO Parsers]
-        Generators[URDF/XACRO Generators]
-        Physics[Physics Calculations]
-        Validation[Validation & Security]
-        CoreUtils[Shared Core Utilities]
-    end
-
-    subgraph "External Systems"
-        Blender[Blender API]
-        Files[URDF/XACRO Files]
-        Simulators[ROS/Gazebo/etc]
-    end
-
-    UI --> Props
-    UI --> Utils
-    Props --> Models
-    Utils --> Models
-    Utils --> Parsers
-    Utils --> Generators
-
-    Parsers --> Models
-    Generators --> Models
-    Models --> CoreUtils
-    Parsers --> CoreUtils
-    Generators --> CoreUtils
-    Parsers --> Validation
-    Physics --> Models
-    Validation --> Models
-
-    Blender <--> UI
-    Files <--> Parsers
-    Generators --> Files
-    Files --> Simulators
-
-    style UI fill:#e1f5ff
-    style Props fill:#e1f5ff
-    style Utils fill:#e1f5ff
-    style Models fill:#fff4e1
-    style Parsers fill:#fff4e1
-    style Generators fill:#fff4e1
-    style Physics fill:#fff4e1
-    style Validation fill:#fff4e1
-```
+LinkForge is a Blender extension that bridges the gap between 3D modeling and robotics simulation. Its internal architecture is organized into **two primary layers**, which together interface with the broader robotics ecosystem.
 
 ## Module Structure
 
@@ -73,19 +19,26 @@ graph LR
         Operators[Operators<br/>User Actions]
         Properties[Properties<br/>Data Storage]
         Adapters[Adapters<br/>Bridge & Mesh Export]
+        Logic[Logic<br/>Domain Integration]
+        Visualization[Visualization<br/>Gizmos & Overlays]
         Utils[Utils<br/>Low-level Helpers]
     end
 
     Panels --> Operators
     Operators --> Properties
     Operators --> Adapters
+    Operators --> Logic
     Properties --> Adapters
     Adapters --> Utils
+    Logic --> Adapters
+    Visualization --> Utils
 
     style Panels fill:#4fc3f7
     style Operators fill:#4fc3f7
     style Properties fill:#81c784
     style Adapters fill:#ce93d8
+    style Logic fill:#ffb74d
+    style Visualization fill:#a1887f
     style Utils fill:#ba68c8
 ```
 
@@ -94,7 +47,8 @@ graph LR
 | Module | Purpose | Key Files |
 |--------|---------|-----------|
 | **Adapters** | Conversion between Blender ↔ Core (Directional) | `blender_to_core.py`, `core_to_blender.py`, `mesh_io.py` |
-| **Logic** | Domain-specific integration logic | `asynchronous_builder.py`, `validation.py` |
+| **Logic** | Domain-specific integration logic | `asynchronous_builder.py` |
+| **Visualization** | Viewport overlays and gizmos | `joint_gizmos.py`, `inertia_gizmos.py` |
 | **UI** | Panels and Operators | `panels/`, `operators/` |
 | **Storage** | Blender-side property definitions | `properties/` |
 
@@ -141,7 +95,7 @@ graph TB
 
 | Module | Purpose | Key Files/Classes |
 |--------|---------|-------------|
-| **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission` (Legacy) |
+| **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`, `GazeboPlugin` |
 | **Parsers** | URDF/XACRO → Python objects | `parsers/urdf_parser.py`, `parsers/xacro_parser.py` |
 | **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` |
 | **Physics** | Mass & inertia calculations | `physics/inertia.py` |
@@ -327,13 +281,13 @@ Parser logic is designed to be highly resilient to malformed or non-compliant UR
 - **Graceful Failure**: Individual invalid elements (e.g., malformed joints) are skipped with warnings rather than halting the process.
 - **Duplicate Resolution**: If duplicate link or joint names are detected, LinkForge automatically renames them (e.g., `link_duplicate_1`) to preserve kinematic integrity while maintaining compliance with Blender/Core unique naming requirements.
 
-### 4. **Recursive Normalization (v1.2.0)**
+### 4. **Recursive Normalization**
 To handle "dirty" mesh hierarchies (common in CAD imports), the Builder employs a recursive normalization strategy:
 - **Unparenting**: Detaches objects while preserving world transforms.
 - **Baking**: Applies rotation and scale to the mesh data.
 - **Resetting**: Snaps the object origin to `(0,0,0)` to prevent "Double Offset" drift during round-trips.
 
-### 5. **Atomic Sanitization (v1.2.0)**
+### 5. **Atomic Sanitization**
 All user input (names, file paths) is sanitized at the edge of the system (during Export) to ensure OS and URDF compatibility without restricting the user's Blender naming conventions.
 
 ## Extension Points
@@ -428,5 +382,5 @@ LinkForge distinguishes between user-created assets and imported "Source of Trut
 
 ---
 
-**Last Updated:** 2026-02-07
-**Version:** 1.2.0 (Architectural Stability & Precision)
+**Last Updated:** 2026-02-08
+**Version:** 1.2.2
