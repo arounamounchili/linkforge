@@ -210,6 +210,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/arounamounchili"><img src="https://avatars.githubusercontent.com/u/55673269?v=4?s=64" width="64px;" alt="arounamounchili"/><br /><sub><b>arounamounchili</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/commits?author=arounamounchili" title="Code">💻</a> <a href="#design-arounamounchili" title="Design">🎨</a> <a href="#ideas-arounamounchili" title="Ideas, Planning, & Feedback">🤔</a> <a href="#maintenance-arounamounchili" title="Maintenance">🚧</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/MagnusHanses"><img src="https://avatars.githubusercontent.com/u/115026407?v=4?s=64" width="64px;" alt="MagnusHanses"/><br /><sub><b>MagnusHanses</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/issues?q=author%3AMagnusHanses" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/GeorgeKugler"><img src="https://avatars.githubusercontent.com/u/35666712?v=4?s=64" width="64px;" alt="GeKo-8"/><br /><sub><b>GeKo-8</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/issues?q=author%3AGeorgeKugler" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>
