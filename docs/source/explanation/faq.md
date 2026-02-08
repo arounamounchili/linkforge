@@ -21,4 +21,6 @@ Physics engines are extremely sensitive to incorrect inertia tensors. A common c
 LinkForge is designed for **Blender 4.2+**, utilizing the new Extension Platform system.
 
 ## Where did the "Transmissions" panel go?
-In v1.2.0, we replaced the manual "Transmission" workflow with a modern **Control Dashboard**. Enable **Use ROS2 Control** in the Control panel to access it. This new system is faster, less error-prone, and fully supports ROS 2 standards. Note: Transmissions in imported URDFs are no longer automatically converted to the Dashboard; they must be configured manually via the Control Dashboard.
+In v1.2.0, we replaced the manual "Transmissions" UI panel with the modern **Control Dashboard**. Enable **Use ROS2 Control** in the Control panel to access it. This new system is faster, less error-prone, and fully supports ROS 2 standards.
+
+**Important:** The `Transmission` data model is still fully supported for import/export. URDFs with `<transmission>` tags will import correctly. However, the Control Dashboard provides a more intuitive workflow for configuring ros2_control hardware interfaces.
