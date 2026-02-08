@@ -141,7 +141,7 @@ graph TB
 
 | Module | Purpose | Key Files/Classes |
 |--------|---------|-------------|
-| **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission` (Legacy) |
+| **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`, `GazeboPlugin` |
 | **Parsers** | URDF/XACRO → Python objects | `parsers/urdf_parser.py`, `parsers/xacro_parser.py` |
 | **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` |
 | **Physics** | Mass & inertia calculations | `physics/inertia.py` |
@@ -428,5 +428,5 @@ LinkForge distinguishes between user-created assets and imported "Source of Trut
 
 ---
 
-**Last Updated:** 2026-02-07
-**Version:** 1.2.0 (Architectural Stability & Precision)
+**Last Updated:** 2026-02-08
+**Version:** 1.2.2
