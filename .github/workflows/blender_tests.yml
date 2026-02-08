@@ -2,6 +2,11 @@ name: Blender Tests
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   push:
     branches: [main]
@@ -29,14 +34,10 @@ jobs:
           uv sync --all-groups --all-extras
 
       - name: Setup Blender
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libxxf86vm-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev libglew-dev xvfb
-          echo "Downloading Blender 4.2.0..."
-          wget -q https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz
-          mkdir -p blender
-          tar -xf blender-4.2.0-linux-x64.tar.xz -C blender --strip-components=1
-          echo "$(pwd)/blender" >> $GITHUB_PATH
+        uses: ./.github/actions/setup-blender
+        with:
+          version: '4.2.0'
+          headless: 'true'
 
       - name: Run Blender Tests
         run: |

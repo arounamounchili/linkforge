@@ -1,0 +1,62 @@
+name: 'Setup Blender'
+description: 'Install Blender for CI testing with caching support'
+inputs:
+  version:
+    description: 'Blender version to install'
+    required: false
+    default: '4.2.0'
+  headless:
+    description: 'Install X virtual framebuffer for headless testing'
+    required: false
+    default: 'false'
+outputs:
+  blender-path:
+    description: 'Path to Blender executable'
+    value: ${{ steps.install.outputs.path }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache Blender
+      uses: actions/cache@v4
+      id: cache-blender
+      with:
+        path: ${{ github.workspace }}/blender
+        key: blender-${{ inputs.version }}-linux-x64
+
+    - name: Install system dependencies
+      if: steps.cache-blender.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libx11-dev \
+          libxxf86vm-dev \
+          libxcursor-dev \
+          libxi-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libglew-dev \
+          ${{ inputs.headless == 'true' && 'xvfb' || '' }}
+
+    - name: Download and extract Blender
+      if: steps.cache-blender.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        MAJOR_MINOR=$(echo $VERSION | cut -d. -f1-2)
+        echo "Downloading Blender $VERSION..."
+        wget -q https://download.blender.org/release/Blender${MAJOR_MINOR}/blender-${VERSION}-linux-x64.tar.xz
+        mkdir -p blender
+        tar -xf blender-${VERSION}-linux-x64.tar.xz -C blender --strip-components=1
+        rm blender-${VERSION}-linux-x64.tar.xz
+
+    - name: Add Blender to PATH
+      id: install
+      shell: bash
+      run: |
+        echo "${{ github.workspace }}/blender" >> $GITHUB_PATH
+        echo "path=${{ github.workspace }}/blender/blender" >> $GITHUB_OUTPUT
+
+    - name: Verify Blender installation
+      shell: bash
+      run: blender --version
