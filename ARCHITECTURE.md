@@ -281,13 +281,13 @@ Parser logic is designed to be highly resilient to malformed or non-compliant UR
 - **Graceful Failure**: Individual invalid elements (e.g., malformed joints) are skipped with warnings rather than halting the process.
 - **Duplicate Resolution**: If duplicate link or joint names are detected, LinkForge automatically renames them (e.g., `link_duplicate_1`) to preserve kinematic integrity while maintaining compliance with Blender/Core unique naming requirements.
 
-### 4. **Recursive Normalization (v1.2.0)**
+### 4. **Recursive Normalization**
 To handle "dirty" mesh hierarchies (common in CAD imports), the Builder employs a recursive normalization strategy:
 - **Unparenting**: Detaches objects while preserving world transforms.
 - **Baking**: Applies rotation and scale to the mesh data.
 - **Resetting**: Snaps the object origin to `(0,0,0)` to prevent "Double Offset" drift during round-trips.
 
-### 5. **Atomic Sanitization (v1.2.0)**
+### 5. **Atomic Sanitization**
 All user input (names, file paths) is sanitized at the edge of the system (during Export) to ensure OS and URDF compatibility without restricting the user's Blender naming conventions.
 
 ## Extension Points
