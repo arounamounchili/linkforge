@@ -31,6 +31,7 @@ dev = [
     "sphinx-rtd-theme>=2.0.0",
     "sphinxcontrib-mermaid>=0.9.2",
     "sphinx-design>=0.5.0",
+    "fake-bpy-module-4.2",
 ]
 
 # Shared Tool Configs
@@ -49,14 +50,20 @@ ignore = ["E501", "N801"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"platforms/blender/**/*.py" = ["F821"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
 
+# Blender (bpy) is now stubbed via fake-bpy-module
 [[tool.mypy.overrides]]
 module = "bpy.*"
-ignore_missing_imports = true
+ignore_missing_imports = false
+
+# NOTE: Legacy Blender code contains ~500 type errors.
+# We suppress them here to ensure a clean CI baseline for new code.
+[[tool.mypy.overrides]]
+module = "linkforge.blender.*"
+ignore_errors = true

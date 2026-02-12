@@ -25,6 +25,11 @@ Be respectful, inclusive, and professional. We're all here to build great roboti
 - **Python 3.11+**
 - **Blender 4.2+**
 - **Git**
+- **just** (Command Runner)
+  - **macOS**: `brew install just`
+  - **Linux**: `sudo apt install just` (or via `snap` / `cargo`)
+  - **Windows**: `choco install just` or `scoop install just`
+  - **Universal**: `cargo install just` (requires Rust)
 - **uv** (Python package manager) - Install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
 ### Fork and Clone
@@ -40,28 +45,21 @@ cd linkforge
 ### 1. Install Dependencies
 
 ```bash
-# Install all development dependencies
-uv sync
+# Install everything (deps + pre-commit hooks)
+just install
 ```
 
-### 2. Install Pre-commit Hooks
-
-```bash
-# Install all hooks (code quality and conventional commit messages)
-uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
-```
-
-### 3. Verify Setup
+### 2. Verify Setup
 
 ```bash
 # Run tests to verify everything works
-uv run pytest
+just test
 
 # Run linter
-uv run ruff check .
+just lint
 
 # Build extension
-uv run python platforms/blender/scripts/build.py
+just build
 ```
 
 ## Project Structure
@@ -121,23 +119,23 @@ git checkout -b feature/your-feature-name
 
 ```bash
 # Run all tests
-uv run pytest
+just test
 
-# Run linter and auto-fix issues
-uv run ruff check . --fix
+# Run linter and type checker
+just check
 
-# Format code
-uv run ruff format .
-
-# Type checking (optional but recommended)
-uv run mypy core/src/linkforge_core platforms/blender/linkforge
+# Fix linting issues automatically
+just fix
 ```
+
+### 4. Test in Blender
 
 ### 4. Test in Blender
 
 ```bash
 # Build extension
-python3 platforms/blender/scripts/build.py
+just build
+```
 
 # Install in Blender:
 # 1. Open Blender
@@ -170,32 +168,23 @@ LinkForge uses a **split-testing architecture** to maintain CI stability:
 
 ```bash
 # 1. Run core tests (Standard Python)
-uv run pytest
+just test-core
 
 # 2. Run Blender integration tests (Requires Blender)
-./run_blender_tests.py
+just test-blender
 ```
 
 To run specific tests or categories:
 
 ```bash
-# Run specific core test file
+# Run with coverage (Combined report)
+just coverage
+
+# Run specific core test file (manual)
 uv run pytest tests/unit/core/test_robot.py
 
-# Run specific Blender integration test file
-./run_blender_tests.py tests/integration/blender/test_blender_export.py
-
-# Run with coverage (Core only by default)
-uv run pytest --cov=linkforge_core --cov-report=html
-
-# Run specific test category (e.g., only unit tests)
-uv run pytest tests/unit/
-
-# Run specific integration test categories
-uv run pytest tests/integration/parsers/
-uv run pytest tests/integration/features/
-# Run only fast tests (skip integration)
-uv run pytest tests/unit/
+# Run specific Blender integration test file (manual)
+uv run python run_blender_tests.py tests/integration/blender/test_blender_export.py
 ```
 
 ### Manual QA (Mandatory)
@@ -465,11 +454,11 @@ Since standard `pytest` cannot access Blender's internal API (`bpy`), we use a c
 
 ```bash
 # Run all Blender unit tests
-./run_blender_tests.py
+just test-blender
 
 # If Blender is not in your standard Applications folder (MacOS) or PATH (Linux),
 # specify the path explicitly:
-BLENDER_PATH=/path/to/blender ./run_blender_tests.py
+BLENDER_PATH=/path/to/blender just test-blender
 ```
 
 These tests cover critical UI logic, operators, and LinkForge -> Blender data conversions.

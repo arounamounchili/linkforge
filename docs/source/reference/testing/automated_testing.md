@@ -29,14 +29,15 @@ Verifies end-to-end workflows and complex system interactions.
 ### Core & Parser Tests
 These can be run using any standard `pytest` environment:
 ```bash
-pytest tests/unit/core tests/integration/parsers
+just test-core
+# Or manually: pytest tests/unit/core
 ```
 
 ### Blender Headless Tests
 To verify Blender-specific behavior (viewports, mesh exports, properties):
 ```bash
 # MacOS / Linux
-./run_blender_tests.py
+just test-blender
 ```
 
 ## Continuous Integration (CI)

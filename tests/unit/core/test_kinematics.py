@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from linkforge.linkforge_core.models import Joint, JointType, Link
-from linkforge.linkforge_core.utils.kinematics import sort_joints_topological
+from linkforge_core.models import Joint, JointType, Link
+from linkforge_core.utils.kinematics import sort_joints_topological
 
 
 def test_sort_joints_topological():

@@ -119,43 +119,43 @@ Complete examples in `examples/` directory:
 
 ### Setup
 ```bash
-# Clone repository
+# 1. Install 'just' (Command Runner)
+brew install just
+
+# 2. Clone repository
 git clone https://github.com/arounamounchili/linkforge.git
 cd linkforge
 
-# Install dependencies
-uv sync
+# 3. Install dependencies
+just install
 ```
 
 ### Testing
 ```bash
-# Run core tests
-uv run pytest
+# Run all tests (Core + Blender)
+just test
 
-# Run Blender integration tests (Requires Blender)
-./run_blender_tests.py
+# Run only core tests
+just test-core
+
+# Run with coverage
+just coverage
 ```
 
 ### Code Quality
 ```bash
-# Format code
-uv run ruff format .
+# Run all checks (Lint + Types)
+just check
 
-# Lint code
-uv run ruff check .
-
-# Type check
-uv run mypy core/src/linkforge_core platforms/blender/linkforge
-
-# Install all hooks (code quality and conventional commit messages)
-uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Fix linting issues
+just fix
 ```
 
 ### Building & Distribution
 To package LinkForge as a Blender extension:
 ```bash
 # Build the production-ready .zip
-python3 platforms/blender/scripts/build.py
+just build
 ```
 The package will be created in the `dist/` directory.
 

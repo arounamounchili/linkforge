@@ -242,6 +242,15 @@ wheels = [
 ]
 
 [[package]]
+name = "fake-bpy-module-4-2"
+version = "20260128"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/9c/64fabe1a6c19a17f2870ac51ea55e0e8a0f080f483d929abe3012c238791/fake_bpy_module_4_2-20260128.tar.gz", hash = "sha256:0e2e09fda48ffbad5712ec313c581f1f2b96a9ce1b52bd4a6021c07b213a1753", size = 844236, upload-time = "2026-01-28T15:38:24.354Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2b/26/1ced42e2a26acf0505257817535a9e139a147d7cb8c8104729109ccb8fb5/fake_bpy_module_4_2-20260128-py3-none-any.whl", hash = "sha256:d5dd5bbf6b692a4b90c52d4816f61c6668c8b75c45bbb626b444cf4031853971", size = 962735, upload-time = "2026-01-28T15:38:19.748Z" },
+]
+
+[[package]]
 name = "filelock"
 version = "3.20.3"
 source = { registry = "https://pypi.org/simple" }
@@ -330,6 +339,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "fake-bpy-module-4-2" },
     { name = "mypy" },
     { name = "myst-parser" },
     { name = "pre-commit" },
@@ -346,6 +356,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fake-bpy-module-4-2", marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
     { name = "myst-parser", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.6.0" },

@@ -18,12 +18,13 @@ def setup_environment():
 
     # Add platforms/blender to sys.path
     blender_path = os.path.join(project_root, "platforms", "blender")
-
     if blender_path not in sys.path:
         sys.path.insert(0, blender_path)
 
-    print(f"Project root: {project_root}")
-    print(f"Added to sys.path: {blender_path}")
+    # Add core/src to sys.path (required for linkforge_core dependency)
+    core_path = os.path.join(project_root, "core", "src")
+    if core_path not in sys.path:
+        sys.path.insert(0, core_path)
 
     # Ensure pytest is available in Blender's Python
     if importlib.util.find_spec("pytest") is None:
@@ -72,11 +73,13 @@ def run_tests():
     has_target = any(not a.startswith("-") for a in extra_args)
 
     args = []
+    args.extend(["-v", "--tb=short"])
+
+    # options first
+    args.extend(extra_args)
+
     if not has_target:
         args.append(test_dir)
-
-    args.extend(["-v", "--tb=short"])
-    args.extend(extra_args)
 
     import pytest
 

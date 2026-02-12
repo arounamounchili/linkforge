@@ -7,6 +7,7 @@ the robot structure in chunks, allowing for a responsive UI and progress updates
 
 from __future__ import annotations
 
+import typing
 from pathlib import Path
 
 import bpy
@@ -150,14 +151,16 @@ class AsynchronousRobotBuilder:
             self.finish()
             return None
 
-    def _execute_task(self, task_type, data):
+    def _execute_task(self, task_type: str, data: typing.Any) -> None:
         """Execute a single unit of work."""
         if task_type == "setup_scene":
-            setup_scene_for_robot(self.context.scene, self.robot)
+            if self.context.scene:
+                setup_scene_for_robot(self.context.scene, self.robot)
 
         elif task_type == "create_collection":
             self.collection = bpy.data.collections.new(self.robot.name)
-            self.context.scene.collection.children.link(self.collection)
+            if self.context.scene:
+                self.context.scene.collection.children.link(self.collection)
 
         elif task_type == "create_link":
             obj = create_link_object(data, self.urdf_path.parent, self.collection)
@@ -185,14 +188,15 @@ class AsynchronousRobotBuilder:
                 # Force update collision visibility if the property exist
                 scene.linkforge.show_collisions = scene.linkforge.show_collisions
 
-    def finish(self):
+    def finish(self) -> None:
         """Clean up and finalize."""
-        self.context.window_manager.progress_end()
+        if self.context.window_manager:
+            self.context.window_manager.progress_end()
         self.is_finished = True
 
         # Clear background state
         scene = self.context.scene
-        if hasattr(scene, "linkforge"):
+        if scene and hasattr(scene, "linkforge"):
             scene.linkforge.is_importing = False
             scene.linkforge.import_status = ""
             scene.linkforge.abort_import = False

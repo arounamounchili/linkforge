@@ -23,10 +23,12 @@ if IS_BLENDER:
     from . import blender
 else:
     # Handle environment where bpy is not available (e.g., CI, non-Blender python)
+    # But for Mypy (with fake-bpy-module), we don't want to see this redefinition
     import typing
 
-    bpy: typing.Any = None
-    blender: typing.Any = None
+    if not typing.TYPE_CHECKING:
+        bpy = None
+        blender = None
 
 
 def register() -> None:

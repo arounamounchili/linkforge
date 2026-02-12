@@ -4,15 +4,23 @@ This guide covers how to set up LinkForge for development, running tests, and bu
 
 ## 💻 Setup
 
-LinkForge uses `uv` for dependency management.
+LinkForge uses `uv` for dependency management and `just` as a command runner.
 
 ```bash
-# Clone repository
+# 1. Install 'just' (Command Runner)
+# macOS
+brew install just
+# Linux
+sudo apt install just
+# Windows
+choco install just
+
+# 2. Clone repository
 git clone https://github.com/arounamounchili/linkforge.git
 cd linkforge
 
-# Install dependencies
-uv sync
+# 3. Install dependencies
+just install
 ```
 
 ## 🧪 Testing
@@ -20,29 +28,29 @@ uv sync
 We use `pytest` for unit and integration testing.
 
 ```bash
-# Run all tests
-uv run pytest
+# Run all tests (Core + Blender)
+just test
 
-# Run with coverage
-uv run pytest --cov=linkforge_core --cov=platforms/blender/linkforge --cov-report=html
+# Run only core tests
+just test-core
+
+# Run only Blender tests
+just test-blender
+
+# Run with coverage (Combined report)
+just coverage
 ```
 
 ## ✨ Code Quality
 
-To maintain high standards, we use `ruff` for linting and formatting, and `mypy` for type checking.
+To maintain high standards, we use `ruff` for linting and `mypy` for strict type checking.
 
 ```bash
-# Format code
-uv run ruff format .
+# Check everything (Lint + Types)
+just check
 
-# Lint code
-uv run ruff check .
-
-# Type check
-uv run mypy core/src/linkforge_core platforms/blender/linkforge
-
-# Install all hooks (code quality and conventional commit messages)
-uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Fix linting issues automatically
+just fix
 ```
 
 ## 📦 Building & Distribution
@@ -51,7 +59,7 @@ To package LinkForge as a Blender extension:
 
 ```bash
 # Build the production-ready .zip
-uv run python platforms/blender/scripts/build.py
+just build
 ```
 
 The package will be created in the `dist/` directory.

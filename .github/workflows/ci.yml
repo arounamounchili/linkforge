@@ -33,15 +33,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Install dependencies
-        run: |
-          uv sync --all-groups --all-extras
+        run: just install
 
-      - name: Check formatting
-        run: uv run ruff format --check .
-
-      - name: Lint code
-        run: uv run ruff check .
+      - name: Code Quality
+        run: just check
 
       - name: Build documentation
         run: |
@@ -55,13 +54,13 @@ jobs:
           version: '4.2.0'
 
       - name: Run tests
-        run: uv run pytest -q
+        run: just test
 
       - name: Build package
         # Only build the artifact on a single matrix job and only on main push
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && matrix.python-version == '3.12'
         run: |
-          uv run python platforms/blender/scripts/build.py
+          just build
           ls -lh dist/
 
       - name: Upload artifact

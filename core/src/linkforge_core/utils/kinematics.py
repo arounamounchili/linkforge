@@ -27,17 +27,17 @@ def sort_joints_topological(joints: list[Joint], links: list[Link]) -> list[Join
     root_links = {link.name for link in links if link.name not in child_links}
 
     # Build adjacency list: parent_link -> [joint, ...]
-    children_of = {}
+    children_of: dict[str, list[Joint]] = {}
     for joint in joints:
         if joint.parent not in children_of:
             children_of[joint.parent] = []
         children_of[joint.parent].append(joint)
 
     # Traverse tree from roots, collecting joints in order
-    sorted_joints = []
-    visited = set()
+    sorted_joints: list[Joint] = []
+    visited: set[str] = set()
 
-    def visit(link_name):
+    def visit(link_name: str) -> None:
         if link_name in visited:
             return
         visited.add(link_name)
