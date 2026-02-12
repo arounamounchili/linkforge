@@ -70,5 +70,5 @@ clean:
 
 # Install/Sync dependencies
 install:
-    uv sync
+    uv sync --all-extras
     uv run pre-commit install
