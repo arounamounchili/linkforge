@@ -64,8 +64,7 @@ module = "bpy.*"
 ignore_errors = true
 ignore_missing_imports = true
 
-# NOTE: Legacy Blender code contains ~500 type errors.
-# We suppress them here to ensure a clean CI baseline for new code.
+# Enable full type checking for all LinkForge Blender modules
 [[tool.mypy.overrides]]
 module = "linkforge.blender.*"
-ignore_errors = true
+ignore_errors = false

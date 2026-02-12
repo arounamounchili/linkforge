@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
 from bpy.types import Context, Panel
@@ -21,9 +22,12 @@ class LINKFORGE_PT_links(Panel):
     bl_parent_id = "LINKFORGE_PT_forge"
     bl_order = 1
 
-    def draw(self, context: Context):
+    def draw(self, context: Context) -> None:
         """Draw the panel."""
         layout = self.layout
+        if not layout:
+            return
+
         obj = context.active_object
 
         # Early exit if nothing selected
@@ -41,23 +45,25 @@ class LINKFORGE_PT_links(Panel):
             )
             return
 
-        props = obj.linkforge
+        props = typing.cast(typing.Any, obj).linkforge
 
         # Check if selected object is a visual/collision child of a link
         # If so, show parent link properties instead
         if (
-            obj.parent
+            obj
+            and obj.parent
             and hasattr(obj.parent, "linkforge")
-            and obj.parent.linkforge.is_robot_link
-            and not obj.linkforge.is_robot_link
+            and typing.cast(typing.Any, obj.parent).linkforge.is_robot_link
+            and props
+            and not props.is_robot_link
             and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
         ):
             # Switch to parent for property display (visual/collision elements only)
             obj = obj.parent
-            props = obj.linkforge
+            props = typing.cast(typing.Any, obj).linkforge
 
         # Check if selected object is already a link (edit mode vs create mode)
-        is_link = props.is_robot_link
+        is_link = props.is_robot_link if props else False
 
         # Only show Create button when NOT editing a link
         if not is_link:
@@ -81,7 +87,7 @@ class LINKFORGE_PT_links(Panel):
 
         title = f"Link: {obj.name}"
         icon = "EMPTY_DATA" if is_virtual else "LINKED"
-        box.label(text=title, icon=icon)
+        box.label(text=title, icon=icon)  # type: ignore[arg-type]
 
         if is_virtual:
             status_box = box.box()
@@ -111,20 +117,20 @@ class LINKFORGE_PT_links(Panel):
 
         if collision_obj:
             # 1. Check explicit URDF tag (Strongest guarantee)
-            if "urdf_geometry_type" in collision_obj:
+            if collision_obj.get("urdf_geometry_type"):  # type: ignore[func-returns-value]
                 detected_type = collision_obj["urdf_geometry_type"]
                 is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
 
             # 2. Check generator tag (from generate_collision operator)
-            stored_type = collision_obj.get("collision_geometry_type", "AUTO")
-            if stored_type in ("BOX", "CYLINDER", "SPHERE"):
+            stored_type = typing.cast(str, collision_obj.get("collision_geometry_type", "AUTO"))
+            if stored_type and stored_type in ("BOX", "CYLINDER", "SPHERE"):
                 detected_type = stored_type
                 is_primitive = True
             elif stored_type == "CONVEX_HULL":
                 detected_type = "CONVEX_HULL"
                 is_primitive = False
             # 3. Fallback to heuristic detection
-            elif detect_primitive_type:
+            elif detect_primitive_type:  # type: ignore[truthy-function]
                 try:
                     heuristic_type = detect_primitive_type(collision_obj)
                     detected_type = heuristic_type if heuristic_type else "MESH"
@@ -143,10 +149,10 @@ class LINKFORGE_PT_links(Panel):
         if collision_obj:
             row = box.row()
             icon = "INFO"
-            icon = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
-            row.label(text=f"Detected Collision: {detected_type}", icon=icon)
+            icon_name = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
+            row.label(text=f"Detected Collision: {detected_type}", icon=icon_name)  # type: ignore[arg-type]
 
-            is_imported = collision_obj.get("imported_from_urdf")
+            is_imported = typing.cast(bool, collision_obj.get("imported_from_urdf"))
 
             # Show slider for meshes (only relevant for non-primitives)
             if detected_type == "CONVEX_HULL":
@@ -177,9 +183,11 @@ class LINKFORGE_PT_links(Panel):
             collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
             if collision_obj:
                 is_hidden = collision_obj.hide_viewport
-                icon = "HIDE_OFF" if is_hidden else "HIDE_ON"
+            if collision_obj:
+                is_hidden = collision_obj.hide_viewport
+                icon_name = "HIDE_OFF" if is_hidden else "HIDE_ON"
                 text = "Show Collision" if is_hidden else "Hide Collision"
-                col.operator("linkforge.toggle_collision_visibility", icon=icon, text=text)
+                col.operator("linkforge.toggle_collision_visibility", icon=icon_name, text=text)  # type: ignore
 
         # Physics properties
         box.separator()
@@ -255,7 +263,7 @@ class LINKFORGE_PT_links(Panel):
                         blender_mat = visual_obj.material_slots[0].material
                         if blender_mat.use_nodes and blender_mat.node_tree:
                             for node in blender_mat.node_tree.nodes:
-                                if node.type == "BSDF_PRINCIPLED":
+                                if getattr(node, "type", "") == "BSDF_PRINCIPLED":
                                     row = box.row()
                                     row.label(text="Color:")
                                     row.prop(node.inputs["Base Color"], "default_value", text="")
@@ -286,7 +294,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register panel."""
     for cls in classes:
         try:
@@ -296,7 +304,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister panel."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):

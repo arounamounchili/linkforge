@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
 from bpy.types import Context, Operator
@@ -20,7 +21,7 @@ class LINKFORGE_OT_create_transmission(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context: Context):
+    def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
         obj = context.active_object
         if obj is None:
@@ -29,12 +30,18 @@ class LINKFORGE_OT_create_transmission(Operator):
         if not obj.select_get():
             return False
         # Require a joint to be selected
-        return obj.type == "EMPTY" and obj.linkforge_joint.is_robot_joint
+        return bool(
+            obj.type == "EMPTY"
+            and hasattr(obj, "linkforge_joint")
+            and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
+        )
 
     @safe_execute
-    def execute(self, context: Context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the operator."""
         obj = context.active_object
+        if not obj:
+            return {"CANCELLED"}
 
         # Get preferred empty size from addon preferences
         empty_size = 0.05  # Default fallback (matches TRANSMISSION_EMPTY_DISPLAY_SIZE)
@@ -46,13 +53,17 @@ class LINKFORGE_OT_create_transmission(Operator):
 
         # Get selected joint (guaranteed by poll())
         joint_obj = obj
-        joint_name = obj.linkforge_joint.joint_name
+        joint_props = typing.cast(typing.Any, obj).linkforge_joint
+        joint_name = joint_props.joint_name
         location = obj.matrix_world.translation.copy()
 
         # Create Empty at joint's location
         # Use SINGLE_ARROW to represent actuation vector (matches importer)
         bpy.ops.object.empty_add(type="SINGLE_ARROW", location=location)
         transmission_empty = context.active_object
+        if not transmission_empty:
+            self.report({"ERROR"}, "Failed to create transmission empty.")
+            return {"CANCELLED"}
         transmission_empty.name = f"{joint_name}_trans"
 
         # Parent transmission to joint (matches import behavior)
@@ -66,11 +77,13 @@ class LINKFORGE_OT_create_transmission(Operator):
         transmission_empty.location = (0, 0, 0)
 
         # Ensure matrices are up to date before applying rotation logic
-        context.view_layer.update()
+        view_layer = context.view_layer
+        if view_layer:
+            view_layer.update()
 
         # ALIGNMENT: Point arrow along Joint Axis
         if hasattr(joint_obj, "linkforge_joint"):
-            jp = joint_obj.linkforge_joint
+            jp = typing.cast(typing.Any, joint_obj).linkforge_joint
             axis_vec = None
             if jp.axis == "X":
                 axis_vec = (1, 0, 0)
@@ -109,16 +122,15 @@ class LINKFORGE_OT_create_transmission(Operator):
         transmission_empty.empty_display_size = empty_size
 
         # Enable transmission properties
-        transmission_empty.linkforge_transmission.is_robot_transmission = True
-        transmission_empty.linkforge_transmission.transmission_name = sanitize_urdf_name(
-            transmission_empty.name
-        )
+        trans_props = typing.cast(typing.Any, transmission_empty).linkforge_transmission
+        trans_props.is_robot_transmission = True
+        trans_props.transmission_name = sanitize_urdf_name(transmission_empty.name)
 
         # Set default transmission type
-        transmission_empty.linkforge_transmission.transmission_type = "SIMPLE"
+        trans_props.transmission_type = "SIMPLE"
 
         # Auto-set joint (guaranteed by poll())
-        transmission_empty.linkforge_transmission.joint_name = joint_obj
+        trans_props.joint_name = joint_obj
 
         self.report(
             {"INFO"}, f"Created transmission '{transmission_empty.name}' for joint '{joint_name}'"
@@ -135,20 +147,28 @@ class LINKFORGE_OT_delete_transmission(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context: Context):
+    def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
         obj = context.active_object
         if obj is None:
             return False
         if not obj.select_get():
             return False
-        return obj.type == "EMPTY" and obj.linkforge_transmission.is_robot_transmission
+        return bool(
+            obj.type == "EMPTY"
+            and hasattr(obj, "linkforge_transmission")
+            and typing.cast(typing.Any, obj).linkforge_transmission.is_robot_transmission
+        )
 
     @safe_execute
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the operator."""
         obj = context.active_object
-        transmission_name = obj.linkforge_transmission.transmission_name or obj.name
+        if not obj:
+            return {"CANCELLED"}
+
+        trans_props = typing.cast(typing.Any, obj).linkforge_transmission
+        transmission_name = trans_props.transmission_name or obj.name
 
         # Delete the object
         bpy.data.objects.remove(obj, do_unlink=True)
@@ -164,7 +184,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register operators."""
     for cls in classes:
         try:
@@ -174,7 +194,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister operators."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):

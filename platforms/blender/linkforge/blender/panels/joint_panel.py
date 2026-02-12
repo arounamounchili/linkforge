@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
 from bpy.types import Context, Panel
@@ -19,14 +20,21 @@ class LINKFORGE_PT_joints(Panel):
     bl_parent_id = "LINKFORGE_PT_forge"
     bl_order = 2
 
-    def draw(self, context: Context):
+    def draw(self, context: Context) -> None:
         """Draw the panel."""
         layout = self.layout
+        if not layout:
+            return
+
         obj = context.active_object
 
         # Check if selected object is a joint (edit mode vs create mode)
         is_joint = (
-            obj and obj.select_get() and obj.type == "EMPTY" and obj.linkforge_joint.is_robot_joint
+            obj
+            and obj.select_get()
+            and obj.type == "EMPTY"
+            and hasattr(obj, "linkforge_joint")
+            and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
         )
 
         # Only show Create button when NOT editing a joint
@@ -34,12 +42,15 @@ class LINKFORGE_PT_joints(Panel):
             # Detect target link (either selected link or parent of selected visual)
             target_link = None
             if obj and obj.select_get():
-                if obj.linkforge.is_robot_link:
+                if (
+                    hasattr(obj, "linkforge")
+                    and typing.cast(typing.Any, obj).linkforge.is_robot_link
+                ):
                     target_link = obj
                 elif (
                     obj.parent
                     and hasattr(obj.parent, "linkforge")
-                    and obj.parent.linkforge.is_robot_link
+                    and typing.cast(typing.Any, obj.parent).linkforge.is_robot_link
                 ):
                     # Selected object is a visual/collision child of a link
                     target_link = obj.parent
@@ -51,10 +62,10 @@ class LINKFORGE_PT_joints(Panel):
             row.operator("linkforge.create_joint", icon="ADD", text="Create Joint")
 
         # Show joint properties only if a joint is selected (edit mode)
-        if not is_joint:
+        if not is_joint or not obj:
             return
 
-        props = obj.linkforge_joint
+        props = typing.cast(typing.Any, obj).linkforge_joint
 
         # Joint properties
         box = layout.box()
@@ -137,7 +148,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register panel."""
     for cls in classes:
         try:
@@ -147,7 +158,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister panel."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):

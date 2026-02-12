@@ -7,6 +7,7 @@ It must be registered BEFORE any child panels.
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
 from bpy.types import Context, Panel
@@ -23,31 +24,45 @@ class LINKFORGE_PT_forge(Panel):
     bl_category = "LinkForge"
     bl_order = 0
 
-    def draw(self, context: Context):
+    def draw(self, context: Context) -> None:
         """Draw the panel."""
         layout = self.layout
+        if not layout:
+            return
 
-        # Import URDF/XACRO (Conditional UX)
-        scene_props = context.scene.linkforge
+        if not context.scene:
+            return
+        scene_props = typing.cast(typing.Any, context.scene).linkforge
 
         if scene_props.is_importing:
             # Active Import Status
             box = layout.box()
-            box.alert = True
-            row = box.row()
-            row.label(text=scene_props.import_status, icon="URL")
+            if box:
+                # Active Import Status
+                box.alert = True
+                row = box.row()
+                if row:
+                    row.label(text=scene_props.import_status, icon="URL")
 
-            row = box.row()
-            row.scale_y = 1.2
-            row.prop(scene_props, "abort_import", text="Stop Import", toggle=True, icon="CANCEL")
+                    row = box.row()
+                    if row:
+                        row.scale_y = 1.2
+                        row.prop(
+                            scene_props,
+                            "abort_import",
+                            text="Stop Import",
+                            toggle=True,
+                            icon="CANCEL",
+                        )
 
             # Prevent clicking import again
             layout.separator()
         else:
             # Regular Import Button
             row = layout.row()
-            row.scale_y = 1.5
-            row.operator("linkforge.import_urdf", text="Import URDF/XACRO", icon="IMPORT")
+            if row:
+                row.scale_y = 1.5
+                row.operator("linkforge.import_urdf", text="Import URDF/XACRO", icon="IMPORT")
 
         layout.separator()
         layout.label(text="Create robot structure:", icon="TOOL_SETTINGS")
@@ -59,7 +74,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register panel."""
     for cls in classes:
         try:
@@ -69,7 +84,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister panel."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):

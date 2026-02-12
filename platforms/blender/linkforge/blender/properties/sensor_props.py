@@ -5,6 +5,8 @@ These properties are stored on Empty objects and define sensor characteristics.
 
 from __future__ import annotations
 
+import typing
+
 import bpy
 from bpy.props import (
     BoolProperty,
@@ -14,12 +16,12 @@ from bpy.props import (
     PointerProperty,
     StringProperty,
 )
-from bpy.types import PropertyGroup
+from bpy.types import Context, PropertyGroup
 
 from ..utils.property_helpers import find_property_owner
 
 
-def get_sensor_name(self):
+def get_sensor_name(self: typing.Any) -> str:
     """Getter for sensor_name - mirrors and sanitizes the Blender object name."""
     if not self.id_data:
         return ""
@@ -30,7 +32,7 @@ def get_sensor_name(self):
     return sanitize_urdf_name(self.id_data.name)
 
 
-def set_sensor_name(self, value):
+def set_sensor_name(self: typing.Any, value: str) -> None:
     """Setter for sensor_name - updates object name."""
     if not value or not self.id_data:
         return
@@ -46,7 +48,7 @@ def set_sensor_name(self, value):
         self.id_data.name = sanitized_name
 
 
-def update_sensor_hierarchy(self, context):
+def update_sensor_hierarchy(self: typing.Any, context: Context) -> None:
     """Update Blender object hierarchy when attached link changes.
 
     Automatically reparents sensor to new link and moves to link's collection.
@@ -79,9 +81,11 @@ def update_sensor_hierarchy(self, context):
         clear_parent_keep_transform(sensor_obj)
 
 
-def poll_robot_link(self, obj):
+def poll_robot_link(self: typing.Any, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
-    return obj and hasattr(obj, "linkforge") and obj.linkforge.is_robot_link
+    return bool(
+        obj and hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link
+    )
 
 
 class SensorPropertyGroup(PropertyGroup):
@@ -335,7 +339,7 @@ class SensorPropertyGroup(PropertyGroup):
 
 
 # Registration
-def register():
+def register() -> None:
     """Register property group."""
     try:
         bpy.utils.register_class(SensorPropertyGroup)
@@ -344,15 +348,15 @@ def register():
         bpy.utils.unregister_class(SensorPropertyGroup)
         bpy.utils.register_class(SensorPropertyGroup)
 
-    bpy.types.Object.linkforge_sensor = bpy.props.PointerProperty(type=SensorPropertyGroup)
+    bpy.types.Object.linkforge_sensor = PointerProperty(type=SensorPropertyGroup)  # type: ignore
 
 
-def unregister():
+def unregister() -> None:
     """Unregister property group."""
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge_sensor
+        del bpy.types.Object.linkforge_sensor  # type: ignore
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(SensorPropertyGroup)

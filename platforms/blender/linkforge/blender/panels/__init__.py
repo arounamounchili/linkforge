@@ -27,13 +27,13 @@ modules = [
 ]
 
 
-def register():
+def register() -> None:
     """Register all panels."""
     for module in modules:
         module.register()
 
 
-def unregister():
+def unregister() -> None:
     """Unregister all panels."""
     for module in reversed(modules):
         module.unregister()

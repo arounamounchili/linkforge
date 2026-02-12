@@ -28,19 +28,21 @@ def update_joint_empty_size(self: LinkForgePreferences, context: Context) -> Non
     joint_gizmos.update_viz_handle(context)
 
     # Update all existing joint empties in the scene
-    for obj in context.scene.objects:
-        if (
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and obj.linkforge_joint.is_robot_joint
-        ):
-            obj.empty_display_size = self.joint_empty_size
+    if context.scene:
+        for obj in context.scene.objects:
+            if (
+                obj.type == "EMPTY"
+                and hasattr(obj, "linkforge_joint")
+                and obj.linkforge_joint.is_robot_joint
+            ):
+                obj.empty_display_size = self.joint_empty_size
 
     # Force viewport redraw
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == "VIEW_3D":
-                area.tag_redraw()
+    if context.window_manager:
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.tag_redraw()
 
 
 def update_sensor_empty_size(self: LinkForgePreferences, context: Context) -> None:
@@ -50,19 +52,21 @@ def update_sensor_empty_size(self: LinkForgePreferences, context: Context) -> No
     new_size = self.sensor_empty_size
 
     # Update all existing sensor empties in the scene
-    for obj in context.scene.objects:
-        if (
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_sensor")
-            and obj.linkforge_sensor.is_robot_sensor
-        ):
-            obj.empty_display_size = new_size
+    if context.scene:
+        for obj in context.scene.objects:
+            if (
+                obj.type == "EMPTY"
+                and hasattr(obj, "linkforge_sensor")
+                and obj.linkforge_sensor.is_robot_sensor
+            ):
+                obj.empty_display_size = new_size
 
     # Force viewport redraw
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == "VIEW_3D":
-                area.tag_redraw()
+    if context.window_manager:
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.tag_redraw()
 
 
 def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None:
@@ -72,15 +76,17 @@ def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None
     new_size = self.link_empty_size
 
     # Update all existing link empties in the scene
-    for obj in context.scene.objects:
-        if obj.type == "EMPTY" and hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
-            obj.empty_display_size = new_size
+    if context.scene:
+        for obj in context.scene.objects:
+            if obj.type == "EMPTY" and hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
+                obj.empty_display_size = new_size
 
     # Force viewport redraw
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == "VIEW_3D":
-                area.tag_redraw()
+    if context.window_manager:
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.tag_redraw()
 
 
 def update_inertia_visibility(self: LinkForgePreferences, context: Context) -> None:
@@ -118,9 +124,12 @@ def get_addon_prefs(context: Context | None = None) -> LinkForgePreferences | No
     if context is None:
         context = bpy.context
     addon_id = get_addon_id()
-    addon = context.preferences.addons.get(addon_id)
-    if addon:
-        return addon.preferences
+    if context.preferences:
+        addon = context.preferences.addons.get(addon_id)
+        if addon:
+            import typing
+
+            return typing.cast("LinkForgePreferences", addon.preferences)
     return None
 
 

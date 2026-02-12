@@ -7,12 +7,12 @@ robot descriptions into the Blender environment.
 from __future__ import annotations
 
 import os
+import typing
 from contextlib import contextmanager, suppress
 from pathlib import Path
 
 import bpy
-from bpy.props import StringProperty
-from bpy.types import Context, Operator
+from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ImportHelper
 
 from ...linkforge_core.logging_config import get_logger
@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 
 @contextmanager
-def working_directory(path: Path):
+def working_directory(path: Path) -> typing.Iterator[Path]:
     """Context manager for temporarily changing the working directory."""
     old_cwd = os.getcwd()
     try:
@@ -39,15 +39,14 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     bl_label = "Import Robot"
     bl_description = "Import robot from URDF or XACRO file (auto-detects format)"
 
-    # ImportHelper properties
-    filename_ext = ".urdf"
-    filter_glob: StringProperty(  # type: ignore
-        default="*.urdf;*.xacro;*.urdf.xacro",
-        options={"HIDDEN"},
-    )
+    # Operator properties for ExportHelper/ImportHelper
+    filepath: bpy.props.StringProperty  # type: ignore
 
-    @safe_execute
-    def execute(self, context: Context):
+    # Type ignore to resolve 'misc' definition collision with Operator.check
+    def check(self, context: Context) -> bool:  # type: ignore
+        return True
+
+    def invoke(self, context: Context, event: Event) -> typing.Any:
         """Execute the import."""
         from ...linkforge_core.parsers import URDFParser
 
@@ -133,6 +132,11 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
         )
         return {"FINISHED"}
 
+    @safe_execute
+    def execute(self, context: Context) -> set[str]:
+        """Execute the import (Headless/Scripting entry point)."""
+        return typing.cast(set[str], self.invoke(context, typing.cast(typing.Any, None)))
+
 
 # Registration
 classes = [
@@ -140,7 +144,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register operators."""
     for cls in classes:
         try:
@@ -150,7 +154,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister operators."""
     for cls in reversed(classes):
         with suppress(RuntimeError):

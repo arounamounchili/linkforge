@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
 from bpy.types import Context, Operator
@@ -20,7 +21,7 @@ class LINKFORGE_OT_create_joint(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context: Context):
+    def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
         obj = context.active_object
         if obj is None:
@@ -31,17 +32,33 @@ class LINKFORGE_OT_create_joint(Operator):
             return False
 
         # Allow if object is a link or a child of a link (visual mesh)
-        return obj.linkforge.is_robot_link or (
-            obj.parent and hasattr(obj.parent, "linkforge") and obj.parent.linkforge.is_robot_link
+        return bool(
+            hasattr(obj, "linkforge")
+            and typing.cast(typing.Any, obj).linkforge.is_robot_link
+            or (
+                obj.parent
+                and hasattr(obj.parent, "linkforge")
+                and typing.cast(typing.Any, obj.parent).linkforge.is_robot_link
+            )
         )
 
     @safe_execute
-    def execute(self, context: Context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the operator."""
         obj = context.active_object
 
         # Get the link object (either selected directly or parent of selected visual)
-        link_obj = obj if obj.linkforge.is_robot_link else obj.parent
+        link_obj = None
+        if obj:
+            if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
+                link_obj = obj
+            elif obj.parent:
+                link_obj = obj.parent
+        if not link_obj or not hasattr(link_obj, "linkforge"):
+            self.report({"ERROR"}, "No valid robot link found")
+            return {"CANCELLED"}
+
+        link_props = typing.cast(typing.Any, link_obj).linkforge
 
         # Get preferred empty size from addon preferences
         from ..preferences import get_addon_prefs
@@ -61,7 +78,9 @@ class LINKFORGE_OT_create_joint(Operator):
         # Create Empty at link's location (ARROWS shows RGB colored axes)
         bpy.ops.object.empty_add(type="ARROWS", location=location)
         joint_empty = context.active_object
-        joint_empty.name = f"{link_obj.linkforge.link_name}_joint"
+        if not joint_empty:
+            return {"CANCELLED"}
+        joint_empty.name = f"{typing.cast(typing.Any, link_obj).linkforge.link_name}_joint"
         joint_empty.rotation_mode = "XYZ"
         joint_empty.rotation_euler = rotation
 
@@ -78,26 +97,31 @@ class LINKFORGE_OT_create_joint(Operator):
         joint_empty.empty_display_size = empty_size
 
         # Enable joint properties
-        joint_empty.linkforge_joint.is_robot_joint = True
-        joint_empty.linkforge_joint.joint_name = sanitize_urdf_name(joint_empty.name)
+        typing.cast(typing.Any, joint_empty).linkforge_joint.is_robot_joint = True
+        typing.cast(typing.Any, joint_empty).linkforge_joint.joint_name = sanitize_urdf_name(
+            joint_empty.name
+        )
 
-        # Set default joint type
-        joint_empty.linkforge_joint.joint_type = "REVOLUTE"
+        # Set default joint joint_type
+        joint_props = typing.cast(typing.Any, joint_empty).linkforge_joint
+        joint_props.joint_type = "REVOLUTE"
 
         # Enable limits by default for REVOLUTE joints (they typically need them)
         # User can disable if not needed
-        joint_empty.linkforge_joint.use_limits = True
+        joint_props.use_limits = True
 
         # Ensure matrices are up to date before triggering property callbacks
         # This prevents transform jumps when setting child_link (which sets parent)
-        context.view_layer.update()
+        view_layer = context.view_layer
+        if view_layer:
+            view_layer.update()
 
         # Auto-set child link to the selected link (parent must be set manually)
-        joint_empty.linkforge_joint.child_link = link_obj
+        joint_props.child_link = link_obj
 
         self.report(
             {"INFO"},
-            f"Created joint '{joint_empty.name}' for child '{link_obj.linkforge.link_name}' (set parent manually)",
+            f"Created joint '{joint_empty.name}' for child '{link_props.link_name}' (set parent manually)",
         )
         return {"FINISHED"}
 
@@ -111,25 +135,33 @@ class LINKFORGE_OT_delete_joint(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context: Context):
+    def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
         obj = context.active_object
-        if obj is None:
-            return False
-        if not obj.select_get():
-            return False
-        return obj.type == "EMPTY" and obj.linkforge_joint.is_robot_joint
+        return bool(
+            obj
+            and obj.type == "EMPTY"
+            and hasattr(obj, "linkforge_joint")
+            and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
+        )
 
     @safe_execute
-    def execute(self, context: Context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the operator."""
         obj = context.active_object
+        if not obj:
+            return {"CANCELLED"}
+
         joint_name = obj.name
 
         # Remove from ROS2 Control list if present (Maintain Consistency)
         scene = context.scene
-        if hasattr(scene, "linkforge") and hasattr(scene.linkforge, "ros2_control_joints"):
-            rc_joints = scene.linkforge.ros2_control_joints
+        if (
+            scene
+            and hasattr(scene, "linkforge")
+            and hasattr(scene.linkforge, "ros2_control_joints")
+        ):
+            rc_joints = typing.cast(typing.Any, scene).linkforge.ros2_control_joints
             # Find index by name
             idx_to_remove = -1
             for i, item in enumerate(rc_joints):
@@ -157,28 +189,37 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
         obj = context.active_object
         if obj is None:
             return False
         if not obj.select_get():
             return False
-        return obj.type == "EMPTY" and obj.linkforge_joint.is_robot_joint
+        return bool(
+            obj.type == "EMPTY"
+            and hasattr(obj, "linkforge_joint")
+            and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
+        )
 
     @safe_execute
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the operator."""
         joint_empty = context.active_object
-        props = joint_empty.linkforge_joint
+        if not joint_empty:
+            return {"CANCELLED"}
+        props = typing.cast(typing.Any, joint_empty).linkforge_joint
 
         # Find nearest links based on distance
+        scene = context.scene
+        if not scene:
+            return {"CANCELLED"}
+
         joint_loc = joint_empty.location
-        links = [
-            (obj, (obj.location - joint_loc).length)
-            for obj in context.scene.objects
-            if obj.linkforge.is_robot_link
-        ]
+        links = []
+        for obj in scene.objects:
+            if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
+                links.append((obj, (obj.location - joint_loc).length))
 
         if not links:
             self.report({"WARNING"}, "No robot links found in scene")
@@ -188,7 +229,9 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
         links.sort(key=lambda x: x[1])
 
         # Force property update to refresh enum items
-        bpy.context.view_layer.update()
+        view_layer = context.view_layer
+        if view_layer:
+            view_layer.update()
 
         # Try to set parent and child links with "Smart Choice" logic
         # Pro Rule: Joint Origin is usually coincident with Child Origin.
@@ -229,7 +272,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register operators."""
     for cls in classes:
         try:
@@ -239,7 +282,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister operators."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):

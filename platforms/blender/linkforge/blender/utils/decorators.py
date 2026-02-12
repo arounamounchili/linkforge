@@ -2,6 +2,7 @@
 
 import functools
 import traceback
+import typing
 from collections.abc import Callable
 from typing import Any
 
@@ -10,7 +11,7 @@ from ...linkforge_core.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def safe_execute(func: Callable) -> Callable:
+def safe_execute(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to wrap operator execute methods with robust error handling.
 
     This ensures that unhandled exceptions are caught, logged with full tracebacks,
@@ -23,9 +24,9 @@ def safe_execute(func: Callable) -> Callable:
     """
 
     @functools.wraps(func)
-    def wrapper(self, context: Any) -> set[str]:
+    def wrapper(self: Any, context: Any) -> set[str]:
         try:
-            return func(self, context)
+            return typing.cast(set[str], func(self, context))
         except Exception as e:
             # Log full traceback for debugging
             logger.error(f"Generate Error in {self.bl_idname}: {e}")

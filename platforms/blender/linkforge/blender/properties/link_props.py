@@ -5,27 +5,42 @@ These properties are stored on Blender objects and define link characteristics.
 
 from __future__ import annotations
 
+import typing
+
 import bpy
 from bpy.props import (
     BoolProperty,
     EnumProperty,
     FloatProperty,
-    FloatVectorProperty,
+    FloatVectorProperty,  # This was removed in the instruction, but is used later. Re-adding to maintain syntactical correctness.
+    PointerProperty,
     StringProperty,
 )
-from bpy.types import PropertyGroup
+from bpy.types import Context, PropertyGroup
 
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 
 
-def get_link_name(self):
+def on_material_type_update(self: PropertyGroup, context: Context) -> None:
+    """Handle material type updates."""
+    if not self.id_data:
+        return
+
+
+def on_collision_type_update(self: PropertyGroup, context: Context) -> None:
+    """Handle collision type updates."""
+    if not self.id_data:
+        return
+
+
+def get_link_name(self: bpy.types.PropertyGroup) -> str:
     """Getter for link_name - mirrors and sanitizes the Blender object name."""
     if not self.id_data:
         return ""
     return sanitize_urdf_name(self.id_data.name)
 
 
-def set_link_name(self, value):
+def set_link_name(self: bpy.types.PropertyGroup, value: str) -> None:
     """Setter for link_name - updates object name and children."""
     if not value or not self.id_data:
         return
@@ -68,46 +83,28 @@ def set_link_name(self, value):
                     child.name = new_name
 
 
-def update_collision_quality(self, context):
+def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context) -> None:
     """Update collision mesh preview when quality changes.
 
     This provides live feedback to the user as they adjust the quality slider,
     showing them exactly how the exported collision mesh will look.
     """
-    # Only update if this object is a link with collision
-    if not self.is_robot_link:
+    if not self.id_data:
         return
 
-    # Get the object - try multiple ways since context might vary
-    obj = None
-    if hasattr(context, "object") and context.object:
-        obj = context.object
-    elif hasattr(context, "active_object") and context.active_object:
-        obj = context.active_object
-
-    if obj is None:
+    obj = typing.cast(bpy.types.Object, self.id_data)
+    lf = typing.cast(typing.Any, obj).linkforge
+    if not lf.is_robot_link:
         return
 
-    # IMPORTANT: If the selected object is a collision child, get its parent link
-    # This happens after regeneration when Blender selects the new collision object
-    if (
-        obj.parent
-        and hasattr(obj.parent, "linkforge")
-        and obj.parent.linkforge.is_robot_link
-        and "_collision" in obj.name.lower()
-    ):
-        obj = obj.parent
-    # Check if there's a collision child
-    collision_children = [c for c in obj.children if "_collision" in c.name.lower()]
-    if not collision_children:
+    # Find collision object
+    collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
+    if collision_obj is None:
         return
 
-    # IMPORTANT: Skip update if collision was imported from URDF
-    # We want to preserve imported custom collision geometry and origins.
-    # The 'imported_from_urdf' flag is set in core_to_blender.py during import.
-    for col in collision_children:
-        if col.get("imported_from_urdf"):
-            return
+    # Check if it's imported from URDF (don't regenerate imported collisions)
+    if typing.cast(typing.Any, collision_obj).get("imported_from_urdf"):
+        return
 
     # Schedule regeneration (debounced via timer to prevent lag)
     from ..operators.link_ops import schedule_collision_preview_update
@@ -115,9 +112,11 @@ def update_collision_quality(self, context):
     schedule_collision_preview_update(obj)
 
 
-def update_auto_inertia_toggle(self, context):
+def update_auto_inertia_toggle(self: PropertyGroup, context: Context) -> None:
     """Enable visualization when switching to manual inertia."""
-    if not self.use_auto_inertia:
+    if not hasattr(self, "use_auto_inertia"):
+        return
+    if not getattr(self, "use_auto_inertia", True):
         # User switched to Manual Mode -> Enable visualization
         from ..visualization.inertia_gizmos import ensure_inertia_handler
 
@@ -249,7 +248,7 @@ class LinkPropertyGroup(PropertyGroup):
         max=100.0,  # 100% = no simplification
         precision=0,  # Show as integer (no decimals)
         subtype="PERCENTAGE",  # Display with % symbol
-        update=update_collision_quality,  # Live preview callback
+        update=on_collision_quality_update,  # Live preview callback
     )
 
     # Material properties
@@ -261,7 +260,15 @@ class LinkPropertyGroup(PropertyGroup):
 
 
 # Registration
-def register():
+__all__ = [
+    "LinkPropertyGroup",
+    "register",
+    "unregister",
+    "sanitize_urdf_name",
+]
+
+
+def register() -> None:
     """Register property group."""
     try:
         bpy.utils.register_class(LinkPropertyGroup)
@@ -270,15 +277,15 @@ def register():
         bpy.utils.unregister_class(LinkPropertyGroup)
         bpy.utils.register_class(LinkPropertyGroup)
 
-    bpy.types.Object.linkforge = bpy.props.PointerProperty(type=LinkPropertyGroup)
+    bpy.types.Object.linkforge = PointerProperty(type=LinkPropertyGroup)  # type: ignore
 
 
-def unregister():
+def unregister() -> None:
     """Unregister property group."""
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge
+        del bpy.types.Object.linkforge  # type: ignore
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(LinkPropertyGroup)

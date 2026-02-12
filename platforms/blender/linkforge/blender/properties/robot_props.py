@@ -207,7 +207,7 @@ class RobotPropertyGroup(PropertyGroup):
     )
 
 
-def update_collision_visibility(self, context):
+def update_collision_visibility(self: RobotPropertyGroup, context: bpy.types.Context) -> None:
     """Update visibility of all collision meshes in the scene."""
     if not context or not context.scene:
         return
@@ -228,7 +228,7 @@ def update_collision_visibility(self, context):
 
 
 # Registration
-def register():
+def register() -> None:
     """Register property group."""
     try:
         bpy.utils.register_class(RobotPropertyGroup)
@@ -237,13 +237,19 @@ def register():
         bpy.utils.unregister_class(RobotPropertyGroup)
         bpy.utils.register_class(RobotPropertyGroup)
 
-    bpy.types.Scene.linkforge = bpy.props.PointerProperty(type=RobotPropertyGroup)
+    import typing
+
+    typing.cast(typing.Any, bpy.types.Scene).linkforge = bpy.props.PointerProperty(
+        type=RobotPropertyGroup
+    )  # type: ignore[func-returns-value]
 
 
-def unregister():
+def unregister() -> None:
     """Unregister property group."""
+    import typing
+
     with contextlib.suppress(AttributeError):
-        del bpy.types.Scene.linkforge
+        del typing.cast(typing.Any, bpy.types.Scene).linkforge
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(RobotPropertyGroup)

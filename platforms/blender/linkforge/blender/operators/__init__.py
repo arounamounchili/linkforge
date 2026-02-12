@@ -19,13 +19,13 @@ modules = [
 ]
 
 
-def register():
+def register() -> None:
     """Register all operators."""
     for module in modules:
         module.register()
 
 
-def unregister():
+def unregister() -> None:
     """Unregister all operators."""
     for module in reversed(modules):
         module.unregister()

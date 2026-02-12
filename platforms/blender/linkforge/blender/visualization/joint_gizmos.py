@@ -12,6 +12,7 @@ matching the professional appearance of RViz.
 from __future__ import annotations
 
 import math
+import typing
 
 import bpy
 import gpu
@@ -24,7 +25,7 @@ from ..preferences import get_addon_prefs
 _builtin_shader_name = None
 
 
-def get_shader():
+def get_shader() -> gpu.types.GPUShader:
     """Get the appropriate builtin shader name for the current Blender version."""
     global _builtin_shader_name
     if _builtin_shader_name is None:
@@ -35,12 +36,12 @@ def get_shader():
         except Exception:
             # Older versions
             _builtin_shader_name = "3D_FLAT_COLOR"
-    return gpu.shader.from_builtin(_builtin_shader_name)
+    return typing.cast(gpu.types.GPUShader, gpu.shader.from_builtin(_builtin_shader_name))
 
 
 def generate_arrow_cone_vertices(
     origin: Vector, direction: Vector, length: float, cone_ratio: float = 0.2
-) -> tuple[list, list]:
+) -> tuple[list[tuple[float, ...]], list[int]]:
     """Generate vertices for an arrow cone at the tip of an axis.
 
     Args:
@@ -98,7 +99,9 @@ def generate_arrow_cone_vertices(
     return positions, indices
 
 
-def generate_axis_geometry(obj, axis_length: float = 0.2) -> dict:
+def generate_axis_geometry(
+    obj: bpy.types.Object, axis_length: float = 0.2
+) -> dict[str, typing.Any]:
     """Generate geometry data for RGB axes with arrow heads (RViz style).
 
     Args:
@@ -169,7 +172,7 @@ def generate_axis_geometry(obj, axis_length: float = 0.2) -> dict:
     }
 
 
-def draw_joint_axes():
+def draw_joint_axes() -> None:
     """Draw RGB axes for all joint objects in the scene.
 
     Draws RViz-style arrows with colored shafts and arrow heads.
@@ -177,7 +180,7 @@ def draw_joint_axes():
     _draw_internal()
 
 
-def _draw_internal():
+def _draw_internal() -> None:
     context = bpy.context
     scene = context.scene
 
@@ -202,6 +205,9 @@ def _draw_internal():
     all_line_colors = []
     all_tri_positions = []
     all_tri_colors = []
+
+    if not scene:
+        return
 
     for obj in scene.objects:
         if (
@@ -260,7 +266,7 @@ def _draw_internal():
     gpu.state.depth_test_set("NONE")
 
 
-def fix_existing_joints(dummy=None):
+def fix_existing_joints(dummy: typing.Any = None) -> None:
     """Fix display type for existing joints.
 
     Args:
@@ -279,6 +285,9 @@ def fix_existing_joints(dummy=None):
     if addon_prefs:
         empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
 
+    if not scene:
+        return
+
     for obj in scene.objects:
         if (
             obj.type == "EMPTY"
@@ -293,7 +302,7 @@ def fix_existing_joints(dummy=None):
             obj.empty_display_size = empty_size
 
 
-def fix_current_scene():
+def fix_current_scene() -> float | None:
     """Timer callback to fix joints in the current scene after registration.
 
     This runs once after the addon registers to fix any existing joints
@@ -304,7 +313,7 @@ def fix_current_scene():
     return None  # Don't repeat
 
 
-def register():
+def register() -> None:
     """Register the joint axes visualization components."""
     # Fix joints and restore draw handler state when file is loaded
     if fix_existing_joints not in bpy.app.handlers.load_post:
@@ -314,7 +323,7 @@ def register():
     bpy.app.timers.register(fix_current_scene, first_interval=0.1)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister the joint axes visualization components."""
     # Remove load handler
     if fix_existing_joints in bpy.app.handlers.load_post:
@@ -333,7 +342,7 @@ def unregister():
             del bpy.app.driver_namespace["linkforge_joint_gizmo_handler"]
 
 
-def update_viz_handle(context: Context):
+def update_viz_handle(context: Context) -> None:
     """Enable or disable the draw handler based on user preferences.
 
     This is called by the preference update function.
@@ -363,10 +372,11 @@ def update_viz_handle(context: Context):
             del bpy.app.driver_namespace["linkforge_joint_gizmo_handler"]
 
     # Force redraw
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == "VIEW_3D":
-                area.tag_redraw()
+    if context.window_manager:
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.tag_redraw()
 
 
 if __name__ == "__main__":

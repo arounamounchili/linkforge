@@ -139,7 +139,7 @@ class PrimitiveDetectionConfig:
 DEFAULT_PRIMITIVE_CONFIG = PrimitiveDetectionConfig()
 
 
-def detect_primitive_type(obj: Any) -> str | None:
+def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     """Detect if a Blender mesh object is a standard primitive shape.
 
     Analyzes mesh topology (vertex/face counts) and dimensions to determine
@@ -187,7 +187,7 @@ def detect_primitive_type(obj: Any) -> str | None:
     tags = ["urdf_geometry_type", "collision_geometry_type"]
     for tag in tags:
         if tag in obj:
-            geom_type = obj[tag]
+            geom_type = str(obj[tag])
             if geom_type in ("BOX", "CYLINDER", "SPHERE"):
                 return geom_type
 

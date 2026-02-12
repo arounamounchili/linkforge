@@ -41,21 +41,21 @@ class AsynchronousRobotBuilder:
         self.context = context
         self.chunk_size = chunk_size
 
-        self.collection = None
-        self.link_objects = {}
-        self.joint_objects = {}
+        self.collection: bpy.types.Collection | None = None
+        self.link_objects: dict[str, bpy.types.Object] = {}
+        self.joint_objects: dict[str, bpy.types.Object] = {}
 
         # Task queue
-        self.tasks = []
+        self.tasks: list[tuple[str, typing.Any]] = []
         self._prepare_tasks()
 
         self.total_tasks = len(self.tasks)
         self.completed_tasks = 0
 
         self.is_finished = False
-        self.error = None
+        self.error: str | None = None
 
-    def _prepare_tasks(self):
+    def _prepare_tasks(self) -> None:
         """Build the list of tasks to be performed."""
         # 1. Setup Scene (ROS 2 Control, Gazebo, etc.)
         self.tasks.append(("setup_scene", None))
@@ -68,7 +68,10 @@ class AsynchronousRobotBuilder:
             self.tasks.append(("create_link", link))
 
         # 4. Create sorted joint tasks
-        sorted_joints = sort_joints_topological(self.robot.joints, self.robot.links)
+        # Convert tuples to lists for MyPy compatibility with topological sort
+        joints_list = list(self.robot.joints)
+        links_list = list(self.robot.links)
+        sorted_joints = sort_joints_topological(joints_list, links_list)
         for joint in sorted_joints:
             self.tasks.append(("create_joint", joint))
 
@@ -84,19 +87,20 @@ class AsynchronousRobotBuilder:
         # 7. Finalization
         self.tasks.append(("finalize", None))
 
-    def start(self):
+    def start(self) -> None:
         """Register the timer and start processing."""
         logger.info(f"Starting asynchronous import of '{self.robot.name}'...")
 
         # Setup background state
         scene = self.context.scene
-        if hasattr(scene, "linkforge"):
+        if scene and hasattr(scene, "linkforge"):
             scene.linkforge.is_importing = True
             scene.linkforge.abort_import = False
             scene.linkforge.import_status = "Starting..."
 
         # Setup progress bar
-        self.context.window_manager.progress_begin(0, self.total_tasks)
+        if self.context.window_manager:
+            self.context.window_manager.progress_begin(0, self.total_tasks)
 
         # Register timer
         bpy.app.timers.register(self.process_next_chunk)
@@ -106,7 +110,7 @@ class AsynchronousRobotBuilder:
         scene = self.context.scene
 
         # Check for cancellation
-        if hasattr(scene, "linkforge") and scene.linkforge.abort_import:
+        if scene and hasattr(scene, "linkforge") and scene.linkforge.abort_import:
             logger.warning("Import aborted by user.")
             self.error = "Import cancelled by user."
             self.finish()
@@ -134,10 +138,11 @@ class AsynchronousRobotBuilder:
                 self.completed_tasks += 1
 
             # Update UI
-            if current_status and hasattr(scene, "linkforge"):
+            if current_status and scene and hasattr(scene, "linkforge"):
                 scene.linkforge.import_status = current_status
 
-            self.context.window_manager.progress_update(self.completed_tasks)
+            if self.context.window_manager:
+                self.context.window_manager.progress_update(self.completed_tasks)
 
             if not self.tasks:
                 self.finish()
@@ -173,7 +178,9 @@ class AsynchronousRobotBuilder:
                 self.joint_objects[data.name] = obj
 
         elif task_type == "resolve_mimics":
-            resolve_mimic_joints(self.robot.joints, self.joint_objects)
+            # Convert tuple to list for MyPy compatibility
+            joints_list = list(self.robot.joints)
+            resolve_mimic_joints(joints_list, self.joint_objects)
 
         elif task_type == "create_sensor":
             create_sensor_object(data, self.link_objects, self.collection)
@@ -184,7 +191,7 @@ class AsynchronousRobotBuilder:
 
             # Sync collision visibility
             scene = self.context.scene
-            if hasattr(scene, "linkforge"):
+            if scene and hasattr(scene, "linkforge"):
                 # Force update collision visibility if the property exist
                 scene.linkforge.show_collisions = scene.linkforge.show_collisions
 

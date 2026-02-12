@@ -5,16 +5,16 @@ These properties are stored on Empty objects and define joint characteristics.
 
 from __future__ import annotations
 
-from typing import Any
+import typing
 
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
-from bpy.types import PropertyGroup
+from bpy.types import Context, PropertyGroup
 
 from ..utils.property_helpers import find_property_owner
 
 
-def get_joint_name(self: Any) -> str:
+def get_joint_name(self: typing.Any) -> str:
     """Getter for joint_name - mirrors and sanitizes the Blender object name."""
     if not self.id_data:
         return ""
@@ -24,7 +24,7 @@ def get_joint_name(self: Any) -> str:
     return sanitize_urdf_name(str(self.id_data.name))
 
 
-def set_joint_name(self, value):
+def set_joint_name(self: typing.Any, value: str) -> None:
     """Setter for joint_name - updates object name."""
     if not value or not self.id_data:
         return
@@ -37,7 +37,7 @@ def set_joint_name(self, value):
         self.id_data.name = sanitized_name
 
 
-def update_joint_hierarchy(self, context):
+def update_joint_hierarchy(self: typing.Any, context: Context) -> None:
     """Update Blender object hierarchy when parent/child links change.
 
     Establishes hierarchy: parent_link → joint → child_link
@@ -71,19 +71,27 @@ def update_joint_hierarchy(self, context):
         set_parent_keep_transform(child_obj, joint_obj)
     else:
         # Find and unparent any child link that was parented to this joint
-        for obj in context.scene.objects:
-            if obj.parent == joint_obj and obj.linkforge.is_robot_link:
-                # Clear parent while preserving world position
-                clear_parent_keep_transform(obj)
-                break  # Only unparent one child
+        scene = context.scene
+        if scene:
+            for obj in scene.objects:
+                if (
+                    obj.parent == joint_obj
+                    and hasattr(obj, "linkforge")
+                    and typing.cast(typing.Any, obj).linkforge.is_robot_link
+                ):
+                    # Clear parent while preserving world position
+                    clear_parent_keep_transform(obj)
+                    break  # Only unparent one child
 
 
-def poll_robot_link(self, obj):
+def poll_robot_link(self: typing.Any, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
-    return obj and hasattr(obj, "linkforge") and obj.linkforge.is_robot_link
+    return bool(
+        obj and hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link
+    )
 
 
-def poll_robot_joint(self, obj):
+def poll_robot_joint(self: typing.Any, obj: bpy.types.Object) -> bool:
     """Filter to only allow other robot joint objects in pointer selection."""
     if not obj or obj.type != "EMPTY":
         return False
@@ -278,7 +286,7 @@ class JointPropertyGroup(PropertyGroup):
 
 
 # Registration
-def register():
+def register() -> None:
     """Register property group."""
     try:
         bpy.utils.register_class(JointPropertyGroup)
@@ -287,15 +295,15 @@ def register():
         bpy.utils.unregister_class(JointPropertyGroup)
         bpy.utils.register_class(JointPropertyGroup)
 
-    bpy.types.Object.linkforge_joint = bpy.props.PointerProperty(type=JointPropertyGroup)
+    bpy.types.Object.linkforge_joint = PointerProperty(type=JointPropertyGroup)  # type: ignore
 
 
-def unregister():
+def unregister() -> None:
     """Unregister property group."""
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge_joint
+        del bpy.types.Object.linkforge_joint  # type: ignore
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(JointPropertyGroup)

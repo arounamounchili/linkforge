@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
-from bpy.types import Context, Panel, UIList
+from bpy.types import Context, Menu, Panel, UIList
 
 from .robot_panel import build_tree_structure
 
@@ -13,7 +14,18 @@ from .robot_panel import build_tree_structure
 class LINKFORGE_UL_ros2_control_joints(UIList):
     """UI List for ros2_control joints."""
 
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+    def draw_item(
+        self,
+        context: Context,
+        layout: bpy.types.UILayout,
+        data: typing.Any,
+        item: typing.Any,
+        icon: int | None,
+        active_data: typing.Any,
+        active_propname: str | None,
+        index: int | None = 0,
+        flt_flag: int | None = 0,
+    ) -> None:
         """Draw an item in the list."""
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
@@ -48,11 +60,34 @@ class LINKFORGE_PT_control(Panel):
     bl_order = 2
     bl_options = {"DEFAULT_CLOSED"}
 
-    def draw(self, context: Context):
+    def draw_joint_details(self, layout: bpy.types.UILayout, joint_item: typing.Any) -> None:
+        """Draw the detailed interface settings for a single joint."""
+        inner = layout.box()
+        inner.label(text=f"Config: {joint_item.name}", icon="SETTINGS")
+
+        # Command Interfaces
+        row = inner.row()
+        col = row.column(align=True)
+        col.label(text="Command Interfaces:")
+        col.prop(joint_item, "cmd_position")
+        col.prop(joint_item, "cmd_velocity")
+        col.prop(joint_item, "cmd_effort")
+
+        # State Interfaces
+        col = row.column(align=True)
+        col.label(text="State Interfaces:")
+        col.prop(joint_item, "state_position")
+        col.prop(joint_item, "state_velocity")
+        col.prop(joint_item, "state_effort")
+
+    def draw(self, context: Context) -> None:
         """Draw the panel."""
         layout = self.layout
         scene = context.scene
-        props = scene.linkforge
+        if not (layout and scene):
+            return
+
+        props = typing.cast(typing.Any, scene).linkforge
 
         # Master Toggle
         layout.prop(props, "use_ros2_control", text="Use ROS2 Control", icon="CHECKMARK")
@@ -99,26 +134,28 @@ class LINKFORGE_PT_control(Panel):
         ).direction = "DOWN"
 
         # Settings for the selected joint
-        if 0 <= props.ros2_control_active_joint_index < len(props.ros2_control_joints):
-            joint_item = props.ros2_control_joints[props.ros2_control_active_joint_index]
+        if len(props.ros2_control_joints) > 0:
+            box = layout.box()
+            if box:
+                # List of interfaces for each joint
+                for i, joint_item in enumerate(props.ros2_control_joints):
+                    row = box.row()
+                    if row:
+                        row.label(text=joint_item.name, icon="JOINT")  # type: ignore[arg-type]
+                        # Add remove button
+                        row.operator("linkforge.remove_ros2_control_joint", text="", icon="X")
+                        # (Note: index management is handled by operator)
 
-            inner = box.box()
-            inner.label(text=f"Config: {joint_item.name}", icon="SETTINGS")
+                    if i == props.ros2_control_active_joint_index:
+                        # Draw details for active joint
+                        self.draw_joint_details(box, joint_item)
 
-            # Command Interfaces
-            row = inner.row()
-            col = row.column(align=True)
-            col.label(text="Command Interfaces:")
-            col.prop(joint_item, "cmd_position")
-            col.prop(joint_item, "cmd_velocity")
-            col.prop(joint_item, "cmd_effort")
-
-            # State Interfaces
-            col = row.column(align=True)
-            col.label(text="State Interfaces:")
-            col.prop(joint_item, "state_position")
-            col.prop(joint_item, "state_velocity")
-            col.prop(joint_item, "state_effort")
+                # Global control settings
+                layout.separator()
+                settings_box = layout.box()
+                if settings_box:
+                    settings_box.label(text="Control Environment", icon="WORLD")
+                    settings_box.prop(props, "control_is_gazebo")
 
         # === 3. SIMULATION & GAZEBO ===
         layout.separator()
@@ -129,15 +166,18 @@ class LINKFORGE_PT_control(Panel):
         box.prop(props, "controllers_yaml_path")
 
 
-class LINKFORGE_MT_add_control_joint(bpy.types.Menu):
+class LINKFORGE_MT_add_control_joint(Menu):
     """Menu to add joints from the scene to ros2_control."""
 
     bl_label = "Add Joint"
 
-    def draw(self, context):
+    def draw(self, context: Context) -> None:
         layout = self.layout
         scene = context.scene
-        props = scene.linkforge
+        if not (layout and scene):
+            return
+
+        props = typing.cast(typing.Any, scene).linkforge
 
         # Get all joints from tree
         tree, root_link, joints_dict, links_dict = build_tree_structure(scene)
@@ -147,8 +187,12 @@ class LINKFORGE_MT_add_control_joint(bpy.types.Menu):
 
         joint_objs = []
         for obj in scene.objects:
-            if obj.type == "EMPTY" and obj.linkforge_joint.is_robot_joint:
-                name = obj.linkforge_joint.joint_name
+            if (
+                obj.type == "EMPTY"
+                and hasattr(obj, "linkforge_joint")
+                and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
+            ):
+                name = typing.cast(typing.Any, obj).linkforge_joint.joint_name
                 if name not in added_joints:
                     joint_objs.append((name, obj))
 
@@ -169,7 +213,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register panel."""
     for cls in classes:
         try:
@@ -179,7 +223,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister panel."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):

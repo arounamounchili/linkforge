@@ -52,15 +52,17 @@ class ValidationIssueProperty(PropertyGroup):
     @property
     def objects_str(self) -> str:
         """Get affected objects as a formatted string."""
-        return self.affected_objects
+        import typing
+
+        return typing.cast(str, self.affected_objects)
 
     @property
     def message_lines(self) -> list[str]:
         """Split message into lines for display (max 60 chars per line)."""
         max_width = 60
         words = self.message.split()
-        lines = []
-        current_line = []
+        lines: list[str] = []
+        current_line: list[str] = []
         current_length = 0
 
         for word in words:
@@ -86,8 +88,8 @@ class ValidationIssueProperty(PropertyGroup):
 
         max_width = 58  # Account for "  " prefix
         words = self.suggestion.split()
-        lines = []
-        current_line = []
+        lines: list[str] = []
+        current_line: list[str] = []
         current_length = 0
 
         for word in words:
@@ -189,15 +191,19 @@ class ValidationResultProperty(PropertyGroup):
 
     def get_error(self, index: int) -> ValidationIssueProperty:
         """Get error by index."""
-        return self.errors[index]
+        import typing
+
+        return typing.cast(ValidationIssueProperty, self.errors[index])
 
     def get_warning(self, index: int) -> ValidationIssueProperty:
         """Get warning by index."""
-        return self.warnings[index]
+        import typing
+
+        return typing.cast(ValidationIssueProperty, self.warnings[index])
 
 
 # Registration
-def register():
+def register() -> None:
     """Register property groups."""
     # Register ValidationIssueProperty
     try:
@@ -213,15 +219,21 @@ def register():
         bpy.utils.unregister_class(ValidationResultProperty)
         bpy.utils.register_class(ValidationResultProperty)
 
-    bpy.types.WindowManager.linkforge_validation = bpy.props.PointerProperty(
+    import typing
+
+    typing.cast(
+        typing.Any, bpy.types.WindowManager
+    ).linkforge_validation = bpy.props.PointerProperty(  # type: ignore[func-returns-value]
         type=ValidationResultProperty
     )
 
 
-def unregister():
+def unregister() -> None:
     """Unregister property groups."""
+    import typing
+
     with contextlib.suppress(AttributeError):
-        del bpy.types.WindowManager.linkforge_validation
+        del typing.cast(typing.Any, bpy.types.WindowManager).linkforge_validation
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(ValidationResultProperty)

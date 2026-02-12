@@ -7,11 +7,11 @@ robot models from Blender to URDF or XACRO formats.
 from __future__ import annotations
 
 import os
+import typing
 from contextlib import contextmanager, suppress
 from pathlib import Path
 
 import bpy
-from bpy.props import StringProperty
 from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
 
@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 
 @contextmanager
-def working_directory(path: Path):
+def working_directory(path: Path) -> typing.Iterator[Path]:
     """Context manager for temporarily changing the working directory."""
     old_cwd = os.getcwd()
     try:
@@ -40,33 +40,40 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
     bl_description = "Export robot to URDF/XACRO file"
 
     # ExportHelper properties
-    filename_ext = ".urdf"
-    filter_glob: StringProperty(  # type: ignore
-        default="*.urdf;*.xacro",
-        options={"HIDDEN"},
-    )
+    # Operator properties for ExportHelper/ImportHelper
+    filepath: bpy.props.StringProperty  # type: ignore
 
-    def invoke(self, context: Context, event: Event):
+    # Type ignore to resolve 'misc' definition collision with Operator.check
+    def check(self, context: Context) -> bool:  # type: ignore
+        return True
+
+    def invoke(self, context: Context, event: Event) -> typing.Any:
         """Invoked before the file browser opens."""
         # Update file extension based on export format
-        robot_props = context.scene.linkforge
+        if not context.scene or not hasattr(context.scene, "linkforge"):
+            return {"CANCELLED"}
+
+        robot_props = typing.cast(typing.Any, context.scene).linkforge
         if robot_props.export_format == "XACRO":
             self.filename_ext = ".xacro"
         else:
             self.filename_ext = ".urdf"
 
         # Call parent invoke to open file browser
+        # ExportHelper.invoke returns a set of strings
         return ExportHelper.invoke(self, context, event)
 
     @safe_execute
-    def execute(self, context: Context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the export."""
         # Import here to avoid circular dependencies
         from ...linkforge_core import URDFGenerator, XACROGenerator
         from ..adapters.blender_to_core import scene_to_robot
 
+        if not context.scene or not hasattr(context.scene, "linkforge"):
+            return {"CANCELLED"}
         scene = context.scene
-        robot_props = scene.linkforge
+        robot_props = typing.cast(typing.Any, scene).linkforge
 
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)
@@ -169,13 +176,19 @@ class LINKFORGE_OT_validate_robot(Operator):
     bl_description = "Validate the robot structure for errors"
 
     @safe_execute
-    def execute(self, context: Context):
+    def execute(self, context: Context) -> set[str]:
         """Execute validation."""
         from ...linkforge_core.validation import RobotValidator
         from ..adapters.blender_to_core import scene_to_robot
 
         # Clear previous results
-        validation_props = context.window_manager.linkforge_validation
+        if not context.window_manager or not hasattr(
+            context.window_manager, "linkforge_validation"
+        ):
+            self.report({"ERROR"}, "Validation system not initialized")
+            return {"CANCELLED"}
+
+        validation_props = typing.cast(typing.Any, context.window_manager).linkforge_validation
         validation_props.clear()
 
         # Convert scene to robot
@@ -280,7 +293,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register operators."""
     for cls in classes:
         try:
@@ -290,7 +303,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister operators."""
     for cls in reversed(classes):
         with suppress(RuntimeError):

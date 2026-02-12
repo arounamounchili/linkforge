@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 import bpy
 
 
@@ -24,5 +26,7 @@ def move_to_collection(obj: bpy.types.Object, collection: bpy.types.Collection) 
             coll.objects.unlink(obj)
 
     # Link to target if not already there
-    if obj not in collection.objects[:]:
-        collection.objects.link(obj)
+    if obj.name not in collection.objects:
+        # Object might be already linked but not showing in collection.objects lookup yet
+        with contextlib.suppress(RuntimeError):
+            collection.objects.link(obj)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import typing
 from pathlib import Path
 
 import bpy
@@ -44,7 +45,7 @@ def resolve_mesh_path(filepath: Path, urdf_dir: Path) -> Path:
     return mesh_path
 
 
-def create_material_from_color(color: Color, name: str):
+def create_material_from_color(color: Color, name: str) -> bpy.types.Material | None:
     """Create Blender material from Color model.
 
     Args:
@@ -64,20 +65,28 @@ def create_material_from_color(color: Color, name: str):
     mat.use_nodes = True
 
     # Get Principled BSDF node
-    nodes = mat.node_tree.nodes
-    bsdf = None
-    for node in nodes:
-        if node.type == "BSDF_PRINCIPLED":
-            bsdf = node
-            break
+    if mat.node_tree:
+        nodes = mat.node_tree.nodes
+        links = mat.node_tree.links
 
-    if bsdf:
-        bsdf.inputs["Base Color"].default_value = (color.r, color.g, color.b, color.a)
+        # Clear existing nodes
+        nodes.clear()
+
+        # Create basic PBR nodes
+        node_principled = nodes.new(type="ShaderNodeBsdfPrincipled")
+        node_output = nodes.new(type="ShaderNodeOutputMaterial")
+
+        # Set color
+        if hasattr(node_principled.inputs[0], "default_value"):
+            node_principled.inputs[0].default_value = (color.r, color.g, color.b, color.a)
+
+        # Link nodes
+        links.new(node_principled.outputs[0], node_output.inputs[0])
 
     return mat
 
 
-def create_primitive_mesh(geometry, name: str):
+def create_primitive_mesh(geometry: typing.Any, name: str) -> bpy.types.Object | None:
     """Create Blender mesh object from primitive geometry.
 
     Args:
@@ -101,7 +110,7 @@ def create_primitive_mesh(geometry, name: str):
                 obj.name = name
                 obj.dimensions = (geometry.size.x, geometry.size.y, geometry.size.z)
                 # Force update to ensure dimensions are applied correctly before return
-                if hasattr(bpy.context, "view_layer"):
+                if bpy.context.view_layer:
                     bpy.context.view_layer.update()
                 obj["urdf_geometry_type"] = "BOX"
 
@@ -111,7 +120,7 @@ def create_primitive_mesh(geometry, name: str):
             if obj:
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.length)
-                if hasattr(bpy.context, "view_layer"):
+                if bpy.context.view_layer:
                     bpy.context.view_layer.update()
                 obj["urdf_geometry_type"] = "CYLINDER"
 
@@ -121,7 +130,7 @@ def create_primitive_mesh(geometry, name: str):
             if obj:
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
-                if hasattr(bpy.context, "view_layer"):
+                if bpy.context.view_layer:
                     bpy.context.view_layer.update()
                 obj["urdf_geometry_type"] = "SPHERE"
 
@@ -138,7 +147,7 @@ def create_primitive_mesh(geometry, name: str):
     return obj
 
 
-def import_mesh_file(mesh_path: Path, name: str):
+def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
     """Import mesh file into Blender.
 
     Args:
@@ -162,22 +171,16 @@ def import_mesh_file(mesh_path: Path, name: str):
     ext = mesh_path.suffix.lower()
 
     # Define operator candidates for each file extension
-    # We try them in order of preference (modern WM ops first, then legacy scene/mesh ops)
+    # We use modern WM operators (C++ based) for performance and stability
     operators = {
-        ".obj": ["wm.obj_import", "import_scene.obj"],
-        ".stl": ["wm.stl_import", "import_mesh.stl"],
-        ".glb": ["wm.gltf_import", "import_scene.gltf"],
-        ".gltf": ["wm.gltf_import", "import_scene.gltf"],
+        ".obj": ["wm.obj_import"],
+        ".stl": ["wm.stl_import"],
+        ".glb": ["wm.gltf_import"],
+        ".gltf": ["wm.gltf_import"],
     }
 
     if ext not in operators:
-        if ext == ".dae":
-            logger.warning(
-                f"Skipping DAE import for '{mesh_path.name}'. "
-                "DAE is a legacy format. Please convert to glTF (.glb) or OBJ."
-            )
-        else:
-            logger.warning(f"Unsupported mesh file extension: {ext} for '{mesh_path.name}'")
+        logger.warning(f"Unsupported mesh file extension: {ext} for '{mesh_path.name}'")
         return None
 
     # Track collections before import to identify new ones
@@ -194,7 +197,8 @@ def import_mesh_file(mesh_path: Path, name: str):
                 op = getattr(op, part)
 
             # Call the operator
-            op(filepath=str(mesh_path))
+            callable_op = typing.cast(typing.Callable[..., typing.Any], op)
+            callable_op(filepath=str(mesh_path))
             success = True
             logger.debug(f"Successfully used importer: {op_name}")
             break
@@ -206,10 +210,7 @@ def import_mesh_file(mesh_path: Path, name: str):
             continue
 
     if not success:
-        logger.error(
-            f"No functional {ext.upper()} importer found for '{mesh_path.name}'. "
-            f"Blender version: {bpy.app.version_string}"
-        )
+        logger.error(f"No functional {ext.upper()} importer found for '{mesh_path.name}'.")
         return None
 
     try:
@@ -258,7 +259,9 @@ def import_mesh_file(mesh_path: Path, name: str):
         raise
 
 
-def normalize_and_consolidate_imported_objects(objects, name):
+def normalize_and_consolidate_imported_objects(
+    objects: list[bpy.types.Object], name: str
+) -> bpy.types.Object | None:
     """Normalize transforms and consolidate multiple imported objects into one.
 
     This handles complex hierarchies (like glTF) by:
@@ -275,7 +278,7 @@ def normalize_and_consolidate_imported_objects(objects, name):
     mesh_objs = []
     to_delete = []
 
-    def process_recursive(o):
+    def process_recursive(o: bpy.types.Object) -> None:
         # Clear parent while keeping world transform
         world_mat = o.matrix_world.copy()
         o.parent = None
@@ -309,7 +312,8 @@ def normalize_and_consolidate_imported_objects(objects, name):
         obj.matrix_world = Matrix.Identity(4)
         obj.select_set(True)
 
-    bpy.context.view_layer.objects.active = mesh_objs[0]
+    if bpy.context.view_layer:
+        bpy.context.view_layer.objects.active = mesh_objs[0]
 
     # Bake Rotation and Scale into vertex data for consistency (axis normalization)
     # CRITICAL: location=False prevents the "Double-Offset" trap
@@ -333,11 +337,12 @@ def normalize_and_consolidate_imported_objects(objects, name):
             bpy.data.objects.remove(obj, do_unlink=True)
 
     # Restore context
-    bpy.context.view_layer.objects.active = final_obj
+    if bpy.context.view_layer:
+        bpy.context.view_layer.objects.active = final_obj
     return final_obj
 
 
-def _get_geometry_type_str(geometry):
+def _get_geometry_type_str(geometry: typing.Any) -> str:
     """Get geometry type string from geometry instance."""
     geometry_type_map = {
         Box: "BOX",
@@ -351,7 +356,9 @@ def _get_geometry_type_str(geometry):
     return "MESH"  # Default fallback
 
 
-def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | None:
+def create_link_object(
+    link: Link, urdf_dir: Path, collection: bpy.types.Collection | None = None
+) -> bpy.types.Object | None:
     """Create Blender object from Link model with support for multiple visual/collision elements.
 
     Args:
@@ -440,9 +447,11 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
             # Apply material to visual mesh
             if visual.material and visual.material.color:
                 mat = create_material_from_color(visual.material.color, visual.material.name)
-                if mat and visual_obj.data:
-                    visual_obj.data.materials.clear()
-                    visual_obj.data.materials.append(mat)
+                if mat and visual_obj.data and hasattr(visual_obj.data, "materials"):
+                    # Use a localized ignore or cast if hasattr is not enough for MyPy's Mesh union
+                    mesh_data = typing.cast(bpy.types.Mesh, visual_obj.data)
+                    mesh_data.materials.clear()
+                    mesh_data.materials.append(mat)
 
     # Create all collision geometries (URDF allows multiple <collision> per link)
     for idx, collision in enumerate(link.collisions):
@@ -505,7 +514,8 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
             # Clear materials from collision mesh (collision doesn't need materials)
             # Materials may come from imported mesh files (OBJ, DAE, etc.)
             if collision_obj.data and hasattr(collision_obj.data, "materials"):
-                collision_obj.data.materials.clear()
+                mesh_data = typing.cast(bpy.types.Mesh, collision_obj.data)
+                mesh_data.materials.clear()
 
             # Set display properties for collision (wireframe, non-rendering)
             collision_obj.display_type = "WIRE"
@@ -581,7 +591,11 @@ def create_link_object(link: Link, urdf_dir: Path, collection=None) -> object | 
     return link_obj
 
 
-def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> object | None:
+def create_joint_object(
+    joint: Joint,
+    link_objects: dict[str, bpy.types.Object],
+    collection: bpy.types.Collection | None = None,
+) -> bpy.types.Object | None:
     """Create Empty object from Joint model.
 
     Args:
@@ -609,7 +623,7 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
     # Add to collection
     if collection:
         collection.objects.link(empty)
-    else:
+    elif bpy.context.scene and bpy.context.scene.collection:
         bpy.context.scene.collection.objects.link(empty)
 
     # Set joint properties
@@ -720,7 +734,11 @@ def create_joint_object(joint: Joint, link_objects: dict, collection=None) -> ob
     return empty
 
 
-def create_sensor_object(sensor, link_objects: dict, collection=None) -> object | None:
+def create_sensor_object(
+    sensor: typing.Any,
+    link_objects: dict[str, bpy.types.Object],
+    collection: bpy.types.Collection | None = None,
+) -> bpy.types.Object | None:
     """Create Empty object from Sensor model.
 
     Args:
@@ -858,7 +876,7 @@ def create_sensor_object(sensor, link_objects: dict, collection=None) -> object 
     return empty
 
 
-def setup_scene_for_robot(scene, robot: Robot):
+def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
     """Initialize scene properties for a robot model.
 
     This populates the Centralized Control Dashboard, Gazebo settings,
@@ -869,16 +887,18 @@ def setup_scene_for_robot(scene, robot: Robot):
         robot: Robot model to extract settings from
     """
     # Set robot name in scene properties
-    scene.linkforge.robot_name = robot.name
+    if hasattr(scene, "linkforge"):
+        scene.linkforge.robot_name = robot.name
 
     # Reset Global LinkForge State
     # Since LinkForge manages a single centralized configuration per scene,
     # we must clear old data to prevent stale conflicts or merging issues.
-    scene.linkforge.use_ros2_control = False
-    scene.linkforge.ros2_control_joints.clear()
+    if hasattr(scene, "linkforge"):
+        scene.linkforge.use_ros2_control = False
+        scene.linkforge.ros2_control_joints.clear()
 
     # Populate centralized ROS2 Control
-    if hasattr(robot, "ros2_controls") and robot.ros2_controls:
+    if hasattr(robot, "ros2_controls") and robot.ros2_controls and hasattr(scene, "linkforge"):
         scene.linkforge.use_ros2_control = True
         # Take the first system (most URDFs have only one system-level ros2_control)
         rc = robot.ros2_controls[0]
@@ -900,27 +920,29 @@ def setup_scene_for_robot(scene, robot: Robot):
             item.state_position = "position" in rc_joint.state_interfaces
             item.state_velocity = "velocity" in rc_joint.state_interfaces
             item.state_effort = "effort" in rc_joint.state_interfaces
-    else:
+    elif hasattr(scene, "linkforge"):
         scene.linkforge.use_ros2_control = False
 
     # Check for legacy Gazebo ros2_control plugin settings
-    if hasattr(robot, "gazebo_elements"):
+    if hasattr(robot, "gazebo_elements") and robot.gazebo_elements:
         for element in robot.gazebo_elements:
             for plugin in element.plugins:
                 if "ros2_control" in plugin.name.lower():
-                    scene.linkforge.gazebo_plugin_name = plugin.name
-                    if "parameters" in plugin.parameters:
-                        scene.linkforge.controllers_yaml_path = plugin.parameters["parameters"]
+                    if hasattr(scene, "linkforge"):
+                        scene.linkforge.gazebo_plugin_name = plugin.name
+                        if "parameters" in plugin.parameters:
+                            scene.linkforge.controllers_yaml_path = plugin.parameters["parameters"]
                     break
             else:
                 continue
             break
 
     else:
-        scene.linkforge.use_ros2_control = False
+        if hasattr(scene, "linkforge"):
+            scene.linkforge.use_ros2_control = False
 
 
-def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
+def import_robot_to_scene(robot: Robot, urdf_path: Path, context: bpy.types.Context) -> bool:
     """Import Robot model to Blender scene.
 
     Args:
@@ -933,11 +955,13 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
 
     """
     # Setup global scene properties (ros2_control, metadata, etc.)
-    setup_scene_for_robot(context.scene, robot)
+    if context.scene:
+        setup_scene_for_robot(context.scene, robot)
 
     # Create collection for this robot
     collection = bpy.data.collections.new(robot.name)
-    context.scene.collection.children.link(collection)
+    if context.scene:
+        context.scene.collection.children.link(collection)
 
     # Get URDF directory for resolving mesh paths
     urdf_dir = urdf_path.parent
@@ -958,7 +982,10 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
         if obj:
             link_objects[link.name] = obj
 
-    sorted_joints = sort_joints_topological(robot.joints, robot.links)
+    # Convert tuples to lists for MyPy compatibility with topological sort
+    joints_list = list(robot.joints)
+    links_list = list(robot.links)
+    sorted_joints = sort_joints_topological(joints_list, links_list)
 
     # Create joint objects in topological order
     joint_objects = {}
@@ -968,7 +995,9 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
             joint_objects[joint.name] = joint_obj
 
     # Second pass: Resolve mimic joint pointers
-    resolve_mimic_joints(robot.joints, joint_objects)
+    # Convert tuple to list for MyPy compatibility
+    all_joints_list = list(robot.joints)
+    resolve_mimic_joints(all_joints_list, joint_objects)
 
     # Create sensor objects
     sensors_created = 0
@@ -993,8 +1022,10 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context) -> bool:
     logger.info(f"Import complete - {', '.join(completion_parts)} created")
     # Sync collision visibility with scene property
     # This ensures that if 'Show Collisions' is off (default), the newly imported collision meshes are hidden
-    if hasattr(context.scene, "linkforge") and hasattr(
-        context.scene.linkforge, "update_collision_visibility"
+    if (
+        context.scene
+        and hasattr(context.scene, "linkforge")
+        and hasattr(context.scene.linkforge, "update_collision_visibility")
     ):
         # We need to pass the context or property group self. Since update method expects self,
         # we can call the function directly or trigger property update.

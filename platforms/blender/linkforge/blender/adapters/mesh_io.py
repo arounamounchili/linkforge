@@ -41,7 +41,8 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
 
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    if bpy.context.view_layer:
+        bpy.context.view_layer.objects.active = obj
 
     try:
         # Export to STL
@@ -94,7 +95,8 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
 
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    if bpy.context.view_layer:
+        bpy.context.view_layer.objects.active = obj
 
     try:
         # Export to OBJ
@@ -157,7 +159,8 @@ def create_simplified_mesh(obj: Any, decimation_ratio: float) -> Any | None:
     # Apply the modifier
     bpy.ops.object.select_all(action="DESELECT")
     simplified_obj.select_set(True)
-    bpy.context.view_layer.objects.active = simplified_obj
+    if bpy.context.view_layer:
+        bpy.context.view_layer.objects.active = simplified_obj
     bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
 
     return simplified_obj
@@ -209,7 +212,8 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
 
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    if bpy.context.view_layer:
+        bpy.context.view_layer.objects.active = obj
 
     # Export to GLB
 
@@ -301,8 +305,8 @@ def export_link_mesh(
     # Corners are in local space
     local_corners = [Vector(corner) for corner in obj_eval.bound_box]
 
-    min_v = Vector(min(v[i] for v in local_corners) for i in range(3))
-    max_v = Vector(max(v[i] for v in local_corners) for i in range(3))
+    min_v = Vector(tuple(min(v[i] for v in local_corners) for i in range(3)))
+    max_v = Vector(tuple(max(v[i] for v in local_corners) for i in range(3)))
     local_center = (min_v + max_v) / 2
 
     # Create the final mesh data (evaluated with modifiers applied)

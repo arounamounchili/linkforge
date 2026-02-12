@@ -6,14 +6,16 @@ for ros2_control integration.
 
 from __future__ import annotations
 
+import typing
+
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
-from bpy.types import PropertyGroup
+from bpy.types import Context, PropertyGroup
 
 from ..utils.property_helpers import find_property_owner
 
 
-def get_transmission_name(self):
+def get_transmission_name(self: typing.Any) -> str:
     """Getter for transmission_name - mirrors and sanitizes the Blender object name."""
     if not self.id_data:
         return ""
@@ -23,7 +25,7 @@ def get_transmission_name(self):
     return sanitize_urdf_name(self.id_data.name)
 
 
-def set_transmission_name(self, value):
+def set_transmission_name(self: typing.Any, value: str) -> None:
     """Setter for transmission_name - updates object name."""
     if not value or not self.id_data:
         return
@@ -36,7 +38,7 @@ def set_transmission_name(self, value):
         self.id_data.name = sanitized_name
 
 
-def update_transmission_hierarchy(self, context):
+def update_transmission_hierarchy(self: typing.Any, context: Context) -> None:
     """Update Blender object hierarchy when joint changes.
 
     Automatically reparents transmission to new joint and moves to joint's collection.
@@ -79,7 +81,7 @@ def update_transmission_hierarchy(self, context):
         clear_parent_keep_transform(transmission_obj)
 
 
-def poll_robot_joint(self, obj):
+def poll_robot_joint(self: typing.Any, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot joint objects in pointer selection."""
     return bool(obj and hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint)
 
@@ -208,7 +210,7 @@ class TransmissionPropertyGroup(PropertyGroup):
 
 
 # Registration
-def register():
+def register() -> None:
     """Register property group."""
     try:
         bpy.utils.register_class(TransmissionPropertyGroup)
@@ -217,17 +219,15 @@ def register():
         bpy.utils.unregister_class(TransmissionPropertyGroup)
         bpy.utils.register_class(TransmissionPropertyGroup)
 
-    bpy.types.Object.linkforge_transmission = bpy.props.PointerProperty(
-        type=TransmissionPropertyGroup
-    )
+    bpy.types.Object.linkforge_transmission = PointerProperty(type=TransmissionPropertyGroup)  # type: ignore
 
 
-def unregister():
+def unregister() -> None:
     """Unregister property group."""
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge_transmission
+        del bpy.types.Object.linkforge_transmission  # type: ignore
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(TransmissionPropertyGroup)

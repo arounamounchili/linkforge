@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
 from bpy.types import Context, Operator
@@ -20,7 +21,7 @@ class LINKFORGE_OT_create_sensor(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context: Context):
+    def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
         obj = context.active_object
         if obj is None:
@@ -31,23 +32,34 @@ class LINKFORGE_OT_create_sensor(Operator):
             return False
 
         # Allow if object is a link (not a joint!)
-        if hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
+        if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
             return True
 
-        # Allow if object is a child of a link (visual/collision mesh)
-        if obj.parent and hasattr(obj.parent, "linkforge"):
-            # Make sure parent is a LINK, not a joint
-            return obj.parent.linkforge.is_robot_link
-
-        return False
+        return bool(
+            obj.parent
+            and hasattr(obj.parent, "linkforge")
+            and typing.cast(typing.Any, obj.parent).linkforge.is_robot_link
+        )
 
     @safe_execute
-    def execute(self, context: Context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the operator."""
         obj = context.active_object
+        if not obj or not (
+            hasattr(obj, "linkforge") or (obj.parent and hasattr(obj.parent, "linkforge"))
+        ):
+            return {"CANCELLED"}
 
         # Get the link object (either selected directly or parent of selected visual)
-        link_obj = obj if obj.linkforge.is_robot_link else obj.parent
+        link_obj = (
+            obj
+            if obj
+            and hasattr(obj, "linkforge")
+            and typing.cast(typing.Any, obj).linkforge.is_robot_link
+            else (obj.parent if obj else None)
+        )
+        if not link_obj:
+            return {"CANCELLED"}
 
         # Get preferred empty size from addon preferences
         empty_size = 0.1  # Default fallback
@@ -62,38 +74,45 @@ class LINKFORGE_OT_create_sensor(Operator):
         sensor_empty = context.active_object
 
         # Ensure unique name
-        sensor_empty.name = f"{link_obj.linkforge.link_name}_sensor"
+        link_name = typing.cast(typing.Any, link_obj).linkforge.link_name if link_obj else "unknown"
+        if sensor_empty:
+            sensor_empty.name = f"{link_name}_sensor"
 
-        # STRICT ALIGNMENT PARENTING
-        # Instead of calculating world transforms, we explicitly want the sensor
-        # to be at the exact origin of the parent link (0,0,0 relative).
-        sensor_empty.parent = link_obj
-        sensor_empty.matrix_parent_inverse.identity()  # Remove hidden Blender offset
-        sensor_empty.rotation_mode = "XYZ"
-        sensor_empty.location = (0, 0, 0)
-        sensor_empty.rotation_euler = (0, 0, 0)
-        sensor_empty.scale = (1, 1, 1)
+        if sensor_empty:
+            # STRICT ALIGNMENT PARENTING
+            # Instead of calculating world transforms, we explicitly want the sensor
+            # to be at the exact origin of the parent link (0,0,0 relative).
+            sensor_empty.parent = link_obj
+            sensor_empty.matrix_parent_inverse.identity()  # Remove hidden Blender offset
+            sensor_empty.rotation_mode = "XYZ"
+            sensor_empty.location = (0, 0, 0)
+            sensor_empty.rotation_euler = (0, 0, 0)
+            sensor_empty.scale = (1, 1, 1)
 
-        # Move to parent's collection
-        for coll in list(sensor_empty.users_collection):
-            coll.objects.unlink(sensor_empty)
-        if link_obj.users_collection:
-            link_obj.users_collection[0].objects.link(sensor_empty)
+            # Move to parent's collection
+            for coll in list(sensor_empty.users_collection):
+                coll.objects.unlink(sensor_empty)
+            if link_obj and link_obj.users_collection:
+                link_obj.users_collection[0].objects.link(sensor_empty)
 
-        # Set display size from preferences
-        sensor_empty.empty_display_size = empty_size
+            # Set display size from preferences
+            sensor_empty.empty_display_size = empty_size
 
         # Enable sensor properties
-        sensor_empty.linkforge_sensor.is_robot_sensor = True
-        sensor_empty.linkforge_sensor.sensor_name = sanitize_urdf_name(sensor_empty.name)
+        if sensor_empty:
+            sensor_props = typing.cast(typing.Any, sensor_empty).linkforge_sensor
+            sensor_props.is_robot_sensor = True
+            sensor_props.sensor_name = sanitize_urdf_name(sensor_empty.name)
 
-        # Set default sensor type
-        sensor_empty.linkforge_sensor.sensor_type = "CAMERA"
+            # Set default sensor type
+            sensor_props.sensor_type = "CAMERA"
 
-        # Auto-set attached link to the link object
-        sensor_empty.linkforge_sensor.attached_link = link_obj
+            # Auto-set attached link to the link object
+            sensor_props.attached_link = link_obj
 
-        self.report({"INFO"}, f"Created sensor '{sensor_empty.name}' attached to '{link_obj.name}'")
+        name = sensor_empty.name if sensor_empty else "sensor"
+        parent_name = link_obj.name if link_obj else "unknown"
+        self.report({"INFO"}, f"Created sensor '{name}' attached to '{parent_name}'")
         return {"FINISHED"}
 
 
@@ -106,20 +125,27 @@ class LINKFORGE_OT_delete_sensor(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
         obj = context.active_object
         if obj is None:
             return False
         if not obj.select_get():
             return False
-        return obj.type == "EMPTY" and obj.linkforge_sensor.is_robot_sensor
+        return bool(
+            obj.type == "EMPTY"
+            and hasattr(obj, "linkforge_sensor")
+            and typing.cast(typing.Any, obj).linkforge_sensor.is_robot_sensor
+        )
 
     @safe_execute
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Execute the operator."""
         obj = context.active_object
-        sensor_name = obj.linkforge_sensor.sensor_name or obj.name
+        if not obj:
+            return {"CANCELLED"}
+
+        sensor_name = typing.cast(typing.Any, obj).linkforge_sensor.sensor_name or obj.name
 
         # Delete the object
         bpy.data.objects.remove(obj, do_unlink=True)
@@ -135,7 +161,7 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Register operators."""
     for cls in classes:
         try:
@@ -145,7 +171,7 @@ def register():
             bpy.utils.register_class(cls)
 
 
-def unregister():
+def unregister() -> None:
     """Unregister operators."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):
