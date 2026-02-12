@@ -52,15 +52,16 @@ ignore = ["E501", "N801"]
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
 
-# Blender (bpy) is now stubbed via fake-bpy-module
+# Blender (bpy) stubs use Python 3.12 syntax.
+# We set the parser to 3.12 above and skip deep inspection here.
 [[tool.mypy.overrides]]
 module = "bpy.*"
-follow_imports = "skip"
+ignore_errors = true
 ignore_missing_imports = true
 
 # NOTE: Legacy Blender code contains ~500 type errors.
