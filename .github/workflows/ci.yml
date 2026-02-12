@@ -80,8 +80,8 @@ jobs:
     if: always()
     steps:
       - name: Pass if all tests succeeded
-        if: ${{ needs.tests.result == 'success' }}
+        if: needs.tests.result == 'success'
         run: exit 0
       - name: Fail if tests failed
-        if: ${{ needs.tests.result != 'success' }}
+        if: needs.tests.result != 'success'
         run: exit 1
