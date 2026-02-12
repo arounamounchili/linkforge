@@ -48,7 +48,6 @@ jobs:
           uv run sphinx-build -b html -W source build/html
 
       - name: Setup Blender
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && matrix.python-version == '3.12'
         id: setup-blender
         uses: ./.github/actions/setup-blender
         with:
