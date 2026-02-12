@@ -49,11 +49,14 @@ jobs:
 
       - name: Setup Blender
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && matrix.python-version == '3.12'
+        id: setup-blender
         uses: ./.github/actions/setup-blender
         with:
           version: '4.2.0'
 
       - name: Run tests
+        env:
+          BLENDER_PATH: ${{ steps.setup-blender.outputs.blender-path }}
         run: just test
 
       - name: Build package
