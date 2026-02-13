@@ -23,10 +23,21 @@ from mathutils import Matrix, Vector
 
 from ..preferences import get_addon_prefs
 
+_builtin_shader_name = None
 
-def get_shader() -> Any:
-    """Get the builtin shader."""
-    return gpu.shader.from_builtin("FLAT_COLOR")
+
+def get_shader() -> gpu.types.GPUShader:
+    """Get the appropriate builtin shader name for the current Blender version."""
+    global _builtin_shader_name
+    if _builtin_shader_name is None:
+        try:
+            # 4.3+ name
+            gpu.shader.from_builtin("FLAT_COLOR")
+            _builtin_shader_name = "FLAT_COLOR"
+        except Exception:
+            # Older versions
+            _builtin_shader_name = "3D_FLAT_COLOR"
+    return typing.cast(gpu.types.GPUShader, gpu.shader.from_builtin(_builtin_shader_name))
 
 
 # Global drawing handle

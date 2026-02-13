@@ -109,114 +109,80 @@ class LINKFORGE_PT_export_panel(Panel):
                         flow.label(text="DOF:")
                         flow.label(text=str(total_dof))
 
-        # === VALIDATION (combined button + results) ===
-        # Validation Summary
-        status_box = layout.box()
-        if status_box:
-            status_box.label(text="Validation Summary", icon="CHECKMARK")
-            row = status_box.row()
-            if row:
-                wm = context.window_manager
-                validation = None
-                if hasattr(wm, "linkforge_validation"):
-                    validation = typing.cast(typing.Any, wm).linkforge_validation
+        # === VALIDATION (Combined status and results) ===
+        box = layout.box()
+        if box:
+            box.label(text="Robot Validation", icon="FILE_TICK")
 
-                if not validation or not validation.has_results:
-                    row.label(text="Validation not run yet", icon="INFO")
-                elif validation and validation.is_valid and validation.error_count == 0:
-                    row.label(text="Robot is ready for export", icon="CHECKMARK")
-                else:
-                    row.label(text="Issues found - please check below", icon="ERROR")
-
-            row = status_box.row()
-            if row:
-                row.operator("linkforge.validate_robot", text="Run Validation", icon="FILE_TICK")
-
-        layout.separator()
-
-        # Validation Details
-        details_box = layout.box()
-        if details_box:
-            details_box.label(text="Validation Details", icon="SORT_DESC")
+            row = box.row(align=True)
+            row.operator("linkforge.validate_robot", text="Run Validation", icon="PLAY")
 
             wm = context.window_manager
             validation = None
             if hasattr(wm, "linkforge_validation"):
                 validation = typing.cast(typing.Any, wm).linkforge_validation
 
-            if validation and validation.has_results:
-                details_box.separator()
-
-                if validation.is_valid and validation.warning_count == 0:
-                    pass  # Redundant, already shown in summary
-                elif validation.is_valid:
-                    details_box.label(
-                        text=f"Valid with {validation.warning_count} warning(s)", icon="ERROR"
-                    )
-                    # Show warnings inline
+            if not validation or not validation.has_results:
+                box.label(text="Not run yet", icon="INFO")
+            else:
+                # Status summary row
+                if validation.is_valid and validation.error_count == 0:
+                    summary_text = "Robot is valid"
                     if validation.warning_count > 0:
-                        details_box.prop(
-                            validation,
-                            "show_warnings",
-                            toggle=True,
-                            text=f"Show {validation.warning_count} Warning(s)",
-                            icon="TRIA_DOWN" if validation.show_warnings else "TRIA_RIGHT",
-                        )
-                        if validation.show_warnings:
-                            for i in range(validation.warning_count):
-                                warning = validation.get_warning(i)
-                                warn_row = details_box.row()
-                                if warn_row:
-                                    warn_row.label(text=f"  • {warning.title}", icon="ERROR")
-                                    # Show all message lines (not just first)
-                                    if warning.message_lines:
-                                        for msg_line in warning.message_lines:
-                                            if msg_line.strip():  # Skip empty lines
-                                                msg_row = details_box.row()
-                                                if msg_row:
-                                                    msg_row.label(
-                                                        text=f"    {msg_line}", icon="BLANK1"
-                                                    )
+                        summary_text += f" (with {validation.warning_count} warnings)"
+                    box.label(text=summary_text, icon="CHECKMARK")
                 else:
-                    details_box.label(
-                        text=f"{validation.error_count} error(s), {validation.warning_count} warning(s)",
-                        icon="CANCEL",
+                    box.label(
+                        text=f"Issues: {validation.error_count} error(s), {validation.warning_count} warning(s)",
+                        icon="ERROR",
                     )
-                    # Show errors inline
-                    if validation.error_count > 0:
-                        details_box.prop(
-                            validation,
-                            "show_errors",
-                            toggle=True,
-                            text=f"Show {validation.error_count} Error(s)",
-                            icon="TRIA_DOWN" if validation.show_errors else "TRIA_RIGHT",
-                        )
-                        if validation.show_errors:
-                            for i in range(validation.error_count):
-                                error = validation.get_error(i)
-                                err_row = details_box.row()
-                                err_row.label(text=f"  • {error.title}", icon="CANCEL")
-                                # Show all message lines (not just first)
-                                if error.message_lines:
-                                    for msg_line in error.message_lines:
-                                        if msg_line.strip():  # Skip empty lines
-                                            msg_row = details_box.row()
-                                            msg_row.label(text=f"    {msg_line}", icon="BLANK1")
-                                if error.has_objects:
-                                    obj_row = details_box.row()
-                                    obj_row.label(
-                                        text=f"    Affected: {error.objects_str}",
-                                        icon="OBJECT_DATA",
-                                    )
-                                # Show all suggestion lines (not just first)
-                                if error.has_suggestion:
-                                    for sug_line in error.suggestion_lines:
-                                        if sug_line.strip():  # Skip empty lines
-                                            sug_row = details_box.row()
-                                            if sug_row:
-                                                sug_row.label(
-                                                    text=f"    → Fix: {sug_line}", icon="INFO"
-                                                )
+
+                # Results section
+                if validation.error_count > 0:
+                    box.separator()
+                    box.prop(
+                        validation,
+                        "show_errors",
+                        toggle=True,
+                        text=f"Show {validation.error_count} Error(s)",
+                        icon="TRIA_DOWN" if validation.show_errors else "TRIA_RIGHT",
+                    )
+                    if validation.show_errors:
+                        error_box = box.box()
+                        for i in range(validation.error_count):
+                            error = validation.get_error(i)
+                            error_box.label(text=error.title, icon="CANCEL")
+                            if error.message_lines:
+                                for msg_line in error.message_lines:
+                                    if msg_line.strip():
+                                        error_box.label(text=f"  {msg_line}", icon="BLANK1")
+                            if error.has_objects:
+                                error_box.label(
+                                    text=f"  Affected: {error.objects_str}", icon="OBJECT_DATA"
+                                )
+                            if error.has_suggestion:
+                                for sug_line in error.suggestion_lines:
+                                    if sug_line.strip():
+                                        error_box.label(text=f"  → {sug_line}", icon="INFO")
+
+                if validation.warning_count > 0:
+                    box.separator()
+                    box.prop(
+                        validation,
+                        "show_warnings",
+                        toggle=True,
+                        text=f"Show {validation.warning_count} Warning(s)",
+                        icon="TRIA_DOWN" if validation.show_warnings else "TRIA_RIGHT",
+                    )
+                    if validation.show_warnings:
+                        warn_box = box.box()
+                        for i in range(validation.warning_count):
+                            warning = validation.get_warning(i)
+                            warn_box.label(text=warning.title, icon="ERROR")
+                            if warning.message_lines:
+                                for msg_line in warning.message_lines:
+                                    if msg_line.strip():
+                                        warn_box.label(text=f"  {msg_line}", icon="BLANK1")
 
         # === EXPORT CONFIGURATION ===
         if layout:
@@ -329,7 +295,7 @@ class LINKFORGE_PT_export_panel(Panel):
         select_box.separator()
         joint_header = select_box.row()
         if joint_header:
-            joint_header.label(text=f"Joints ({len(joints)}):", icon="JOINT")  # type: ignore[arg-type]
+            joint_header.label(text=f"Joints ({len(joints)}):", icon="EMPTY_AXIS")  # type: ignore[arg-type]
 
         for joint_obj in sorted(joints, key=lambda x: x.name):
             row = select_box.row(align=True)
@@ -352,7 +318,7 @@ class LINKFORGE_PT_export_panel(Panel):
         select_box.separator()
         sensor_header = select_box.row()
         if sensor_header:
-            sensor_header.label(text=f"Sensors ({len(sensors)}):", icon="SENSOR")  # type: ignore[arg-type]
+            sensor_header.label(text=f"Sensors ({len(sensors)}):", icon="TRACKER")  # type: ignore[arg-type]
 
         for sensor_obj in sorted(sensors, key=lambda x: x.name):
             row = select_box.row(align=True)

@@ -60,6 +60,14 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 - **Global Scale**: Adjust the **Empty Display > Size** slider in **Blender Preferences > Add-ons > LinkForge**.
 - **Hide Helpers**: Toggle the **Show Collisions** checkbox in the **Validate & Export** panel or use the standard Blender **Hide Extras** viewport overlay to see only the robot geometry.
 
+## 🛡️ Context & Mode Reliability
+
+### "Context is Incorrect" or Operator failed
+**Status**: Resolved
+**Explanation**: LinkForge uses a robust **Context Guard** and **Mode Switcher**.
+- **Edit Mode Support**: You can run any LinkForge command (like generating collisions or adding sensors) while in **Edit Mode**. LinkForge will safely switch to Object Mode internally and then automatically **restore your Edit Mode** so your flow is never interrupted.
+- **Background Execution**: Background processes like imports or timers now use explicit context overrides, preventing the common "Context is Incorrect" crashes that plague many standard Blender add-ons.
+
 ## 💡 Pro Tips for Experts
 
 - **Selection via Outliner**: When your robot gets complex, clicking small joint empties in the 3D Viewport can be difficult. Use the **Blender Outliner** to select components by name; the LinkForge panels will update instantly.

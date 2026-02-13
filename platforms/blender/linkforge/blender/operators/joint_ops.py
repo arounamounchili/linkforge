@@ -9,6 +9,7 @@ import bpy
 from bpy.types import Context, Operator
 
 from ..properties.link_props import sanitize_urdf_name
+from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
 
 
@@ -76,13 +77,14 @@ class LINKFORGE_OT_create_joint(Operator):
         rotation = link_obj.matrix_world.to_euler("XYZ")
 
         # Create Empty at link's location (ARROWS shows RGB colored axes)
-        bpy.ops.object.empty_add(type="ARROWS", location=location)
-        joint_empty = context.active_object
-        if not joint_empty:
-            return {"CANCELLED"}
-        joint_empty.name = f"{typing.cast(typing.Any, link_obj).linkforge.link_name}_joint"
-        joint_empty.rotation_mode = "XYZ"
-        joint_empty.rotation_euler = rotation
+        with context_and_mode_guard(context):
+            bpy.ops.object.empty_add(type="ARROWS", location=location)
+            joint_empty = context.active_object
+            if not joint_empty:
+                return {"CANCELLED"}
+            joint_empty.name = f"{typing.cast(typing.Any, link_obj).linkforge.link_name}_joint"
+            joint_empty.rotation_mode = "XYZ"
+            joint_empty.rotation_euler = rotation
 
         # Move joint to same collection as link (for clean organization)
         # Remove from all current collections
@@ -174,7 +176,8 @@ class LINKFORGE_OT_delete_joint(Operator):
                 self.report({"INFO"}, f"Removed '{joint_name}' from ROS2 Control")
 
         # Delete the Empty entirely
-        bpy.data.objects.remove(obj, do_unlink=True)
+        with context_and_mode_guard(context):
+            bpy.data.objects.remove(obj, do_unlink=True)
 
         self.report({"INFO"}, f"Deleted joint '{joint_name}'")
         return {"FINISHED"}

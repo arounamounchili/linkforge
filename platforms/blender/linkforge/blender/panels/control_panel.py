@@ -141,7 +141,7 @@ class LINKFORGE_PT_control(Panel):
                 for i, joint_item in enumerate(props.ros2_control_joints):
                     row = box.row()
                     if row:
-                        row.label(text=joint_item.name, icon="JOINT")  # type: ignore[arg-type]
+                        row.label(text=joint_item.name, icon="EMPTY_AXIS")  # type: ignore[arg-type]
                         # Add remove button
                         row.operator("linkforge.remove_ros2_control_joint", text="", icon="X")
                         # (Note: index management is handled by operator)

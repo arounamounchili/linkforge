@@ -5,6 +5,11 @@ Collision geometry defines the physical shape of your robot used by physics engi
 ## 1. Why Collision Matters
 While your **Visual** meshes can be high-poly and complex for aesthetics, **Collision** meshes should be as simple as possible (primitives or convex hulls) to ensure simulation performance and stability.
 
+### The "Source of Truth"
+LinkForge follows a **"What You See Is What You Export"** philosophy:
+*   **Object Mode State**: The exported visual and collision geometry is always based on the current state of your meshes in Blender's Object Mode.
+*   **Edit Mode Support**: You can make complex modifications in Edit Mode (moving vertices, deleting faces). LinkForge analyzes the underlying mesh data at the moment of export or collision generation. There is no need to manually "bake" or "apply" every minor mesh change; LinkForge reads the current mesh buffer directly.
+
 ## 2. Generating Collisions
 LinkForge makes it easy to generate optimized collision geometry from your visuals:
 
@@ -55,3 +60,10 @@ If you decide to discard the imported collision and generate a new one:
 1. Click **Regenerate Collision**.
 2. This clears the "Imported" flag and creates a new convex hull based on current visuals.
 3. The **Auto-Calculate Inertia** and **Collision Quality** tools will then be available for this link.
+
+## 7. Understanding Triangulation
+When you export a robot and then import it back into Blender, you may notice that the collision meshes look more "triangulated" (showing messier internal edges) than your original mesh.
+
+*   **Technical Reason**: Robot simulators and URDF standards require collision geometry to be stored in the **STL format**. STLs only support **Triangles**.
+*   **The Process**: During export, LinkForge automatically triangulates your geometry to meet this standard.
+*   **Simulation Fidelity**: This has **zero impact** on physics performance. A flat quad made of two triangles is mathematically identical to a single quad in a physics solver.

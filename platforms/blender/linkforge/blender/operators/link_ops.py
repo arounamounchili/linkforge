@@ -11,6 +11,7 @@ from bpy.types import Context, Operator
 
 from ...linkforge_core.logging_config import get_logger
 from ..properties.link_props import sanitize_urdf_name
+from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
 
 logger = get_logger(__name__)
@@ -140,87 +141,79 @@ def create_collision_for_link(
     lf = typing.cast(typing.Any, link_obj).linkforge
     link_name = lf.link_name or link_obj.name
 
-    # Remove existing collision objects to prevent duplicates
-    existing_collisions = [c for c in link_obj.children if "_collision" in c.name.lower()]
-    for col in existing_collisions:
-        bpy.data.objects.remove(col, do_unlink=True)
+    # PRO FIX: Wrap all collision operators in a context and mode guard
+    with context_and_mode_guard(context):
+        # Remove existing collision objects to prevent duplicates
+        existing_collisions = [c for c in link_obj.children if "_collision" in c.name.lower()]
+        for col in existing_collisions:
+            bpy.data.objects.remove(col, do_unlink=True)
 
-    # Import here to avoid circular dependency
-    from ..adapters.blender_to_core import detect_primitive_type
+        # Import here to avoid circular dependency
+        from ..adapters.blender_to_core import detect_primitive_type
 
-    # Determine collision type
-    if collision_type == "AUTO":
-        # For multiple visuals, always use convex hull (compound collision)
-        if len(visual_children) > 1:
-            collision_type = "CONVEX_HULL"
-        else:
-            # Single visual - try to detect primitive
-            detected = detect_primitive_type(visual_children[0])
-            collision_type = detected if detected else "CONVEX_HULL"
+        # Determine collision type
+        if collision_type == "AUTO":
+            # For multiple visuals, always use convex hull (compound collision)
+            if len(visual_children) > 1:
+                collision_type = "CONVEX_HULL"
+            else:
+                # Single visual - try to detect primitive
+                detected = detect_primitive_type(visual_children[0])
+                collision_type = detected if detected else "CONVEX_HULL"
 
-    # Determine collision type and generate geometry
-    local_offset = mathutils.Vector((0, 0, 0))
-    if collision_type in ("BOX", "SPHERE", "CYLINDER"):
-        # Primitives only make sense for single visuals
-        collision_obj, local_offset = _create_primitive_collision(
-            visual_children[0], collision_type, link_name, context
-        )
-        reference_visual = visual_children[0]
-    else:  # CONVEX_HULL
-        # Merge ALL visuals into compound collision (geometry is baked link-local)
-        collision_obj = _create_convex_hull_collision_compound(visual_children, link_obj, context)
-        # For compound hull, we use the link itself as the local reference frame
-        # Since merged geometry is already in link-local coordinates, the local matrix must be Identity
-        reference_visual = None
+        # Determine collision type and generate geometry
         local_offset = mathutils.Vector((0, 0, 0))
+        if collision_type in ("BOX", "SPHERE", "CYLINDER"):
+            # Primitives only make sense for single visuals
+            collision_obj, local_offset = _create_primitive_collision(
+                visual_children[0], collision_type, link_name, context
+            )
+            reference_visual = visual_children[0]
+        else:  # CONVEX_HULL
+            # Merge ALL visuals into compound collision (geometry is baked link-local)
+            collision_obj = _create_convex_hull_collision_compound(
+                visual_children, link_obj, context
+            )
+            # For compound hull, we use the link itself as the local reference frame
+            # Since merged geometry is already in link-local coordinates, the local matrix must be Identity
+            reference_visual = None
+            local_offset = mathutils.Vector((0, 0, 0))
 
-    if collision_obj is None:
-        return None
+        if collision_obj is None:
+            return None
 
-    # Parent to link using Strict Alignment
-    collision_obj.parent = link_obj
+        # Parent to link using Strict Alignment
+        collision_obj.parent = link_obj
 
-    # Align with strict precision
-    if reference_visual:
-        # PRIMITIVE: Align with visual x local offset
-        collision_obj.matrix_parent_inverse = reference_visual.matrix_parent_inverse.copy()
-        collision_obj.matrix_local = reference_visual.matrix_local @ mathutils.Matrix.Translation(
-            local_offset
-        )
-    else:
-        # CONVEX HULL: Already baked link-local, just reset transforms
-        collision_obj.matrix_parent_inverse.identity()
-        collision_obj.matrix_local.identity()
+        # Align with strict precision
+        if reference_visual:
+            # PRIMITIVE: Align with visual x local offset
+            collision_obj.matrix_parent_inverse = reference_visual.matrix_parent_inverse.copy()
+            collision_obj.matrix_local = (
+                reference_visual.matrix_local @ mathutils.Matrix.Translation(local_offset)
+            )
+        else:
+            # CONVEX HULL: Already baked link-local, just reset transforms
+            collision_obj.matrix_parent_inverse.identity()
+            collision_obj.matrix_local.identity()
 
-    collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
+        collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
 
-    # IMPORTANT: Ensure collision is actually a child in the collection hierarchy
-    # If collision was created in a different collection, it won't show as child in outliner
-    # Make sure collision is in the same collection as the link
-    # link
-    if context.collection and collision_obj.name not in context.collection.objects:
-        context.collection.objects.link(collision_obj)
-    elif bpy.context.collection and collision_obj.name not in bpy.context.collection.objects:
-        bpy.context.collection.objects.link(collision_obj)
+        # IMPORTANT: Ensure collision is actually a child in the collection hierarchy
+        if context.collection and collision_obj.name not in context.collection.objects:
+            context.collection.objects.link(collision_obj)
 
-    # Clear materials from collision mesh (collision doesn't need materials)
-    # Materials may be inherited from duplicated visual mesh
-    if collision_obj.data and hasattr(collision_obj.data, "materials"):
-        collision_obj.data.materials.clear()
+        if collision_obj.data and hasattr(collision_obj.data, "materials"):
+            collision_obj.data.materials.clear()
 
-    # Make collision visually distinct (wireframe + semi-transparent)
-    collision_obj.display_type = "WIRE"
-    collision_obj.show_in_front = True  # X-ray mode
-    collision_obj.rotation_mode = "XYZ"
+        collision_obj.display_type = "WIRE"
+        collision_obj.show_in_front = True
+        collision_obj.rotation_mode = "XYZ"
+        collision_obj["collision_geometry_type"] = collision_type
+        collision_obj.hide_viewport = True
+        collision_obj.hide_render = True
 
-    # Store the collision type for accurate export (prevents auto-detection failures)
-    collision_obj["collision_geometry_type"] = collision_type
-
-    # Hide by default (clean viewport)
-    collision_obj.hide_viewport = True
-    collision_obj.hide_render = True
-
-    return collision_obj
+        return collision_obj
 
 
 def _create_primitive_collision(
@@ -299,8 +292,6 @@ def _merge_visual_meshes(
     logger.debug(
         f"Compound collision: merging {len(visual_objects)} visual mesh(es) for {link_obj.name}"
     )
-    for i, vis in enumerate(visual_objects):
-        logger.debug(f"  [{i + 1}] {vis.name}")
 
     # Create clones of visual objects using data-level duplication to ensure
     # robustness against object visibility states in the viewport.
@@ -329,10 +320,7 @@ def _merge_visual_meshes(
         # Select and make active for transform application
         bpy.ops.object.select_all(action="DESELECT")
         dup.select_set(True)
-        if context.view_layer:
-            context.view_layer.objects.active = dup
-        elif bpy.context.view_layer:
-            bpy.context.view_layer.objects.active = dup
+        context.view_layer.objects.active = dup
 
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
@@ -346,11 +334,7 @@ def _merge_visual_meshes(
     bpy.ops.object.select_all(action="DESELECT")
     for dup in duplicates:
         dup.select_set(True)
-    vl = context.view_layer
-    if vl:
-        vl.objects.active = duplicates[0]
-    elif bpy.context.view_layer:
-        bpy.context.view_layer.objects.active = duplicates[0]
+    context.view_layer.objects.active = duplicates[0]
 
     # Join into single mesh
     bpy.ops.object.join()
@@ -400,11 +384,7 @@ def _create_convex_hull_collision_compound(
     merged_obj.hide_render = False
 
     # Apply convex hull to the merged mesh
-    vl = context.view_layer
-    if vl:
-        vl.objects.active = merged_obj
-    elif bpy.context.view_layer:
-        bpy.context.view_layer.objects.active = merged_obj
+    context.view_layer.objects.active = merged_obj
 
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
@@ -443,18 +423,9 @@ def _create_convex_hull_collision_compound(
             if merged_obj.name not in collection.objects:
                 collection.objects.link(merged_obj)
 
-    # IMPORTANT: Restore selection to the parent link
-    # This ensures subsequent slider changes work correctly
     bpy.ops.object.select_all(action="DESELECT")
     link_obj.select_set(True)
-    vl = context.view_layer
-    if vl:
-        vl.objects.active = merged_obj
-    elif bpy.context.view_layer:
-        bpy.context.view_layer.objects.active = merged_obj
-    else:
-        # Fallback for headless or background execution
-        pass
+    context.view_layer.objects.active = merged_obj
 
     return merged_obj
 
@@ -697,59 +668,59 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         empty = bpy.data.objects.new(link_name, None)
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = empty_size
-
         # Add to scene
         if context.collection and empty.name not in context.collection.objects:
             context.collection.objects.link(empty)
 
         # Position Empty at mesh world pose precisely
-        empty.matrix_world = mesh_obj.matrix_world.copy()
-        # Ensure Link is Scale (1,1,1)
-        empty.scale = (1, 1, 1)
-        empty.rotation_mode = "XYZ"
+        with context_and_mode_guard(context):
+            empty.matrix_world = mesh_obj.matrix_world.copy()
+            # Ensure Link is Scale (1,1,1)
+            empty.scale = (1, 1, 1)
+            empty.rotation_mode = "XYZ"
 
-        # Parent mesh to Empty with STRICT properties for URDF compatibility:
-        # 1. Clear existing parent relationships (e.g. from previous imports) to prevent dependency cycles
-        mesh_obj.parent_type = "OBJECT"
-        mesh_obj.parent_bone = ""
+            # Parent mesh to Empty with STRICT properties for URDF compatibility:
+            # 1. Clear existing parent relationships (e.g. from previous imports) to prevent dependency cycles
+            mesh_obj.parent_type = "OBJECT"
+            mesh_obj.parent_bone = ""
 
-        # Remove Armature modifiers if present (LinkForge links are rigid bodies)
-        for mod in mesh_obj.modifiers:
-            if mod.type == "ARMATURE":
-                mesh_obj.modifiers.remove(mod)
+            # Remove Armature modifiers if present (LinkForge links are rigid bodies)
+            for mod in mesh_obj.modifiers:
+                if mod.type == "ARMATURE":
+                    mesh_obj.modifiers.remove(mod)
 
-        # 2. Parent Inverse = Identity (No hidden transforms)
-        # 3. Local Location/Rotation = 0 (Visual matches Link frame)
-        # 4. Local Scale = Original Mesh Scale (Preserves visual size)
+            # 2. Parent Inverse = Identity (No hidden transforms)
+            # 3. Local Location/Rotation = 0 (Visual matches Link frame)
+            # 4. Local Scale = Original Mesh Scale (Preserves visual size)
 
-        mesh_obj.parent = empty
-        mesh_obj.matrix_parent_inverse.identity()
+            mesh_obj.parent = empty
+            mesh_obj.matrix_parent_inverse.identity()
 
-        # CRITICAL: Force XYZ mode BEFORE zeroing rotations to ensure absolute precision
-        mesh_obj.rotation_mode = "XYZ"
-        mesh_obj.location = (0, 0, 0)
-        mesh_obj.rotation_euler = (0, 0, 0)
-        # mesh_obj.scale is already correct (it was S, parent is 1, so S stays S)
+            # CRITICAL: Force XYZ mode BEFORE zeroing rotations to ensure absolute precision
+            mesh_obj.rotation_mode = "XYZ"
+            mesh_obj.location = (0, 0, 0)
+            mesh_obj.rotation_euler = (0, 0, 0)
+            # mesh_obj.scale is already correct (it was S, parent is 1, so S stays S)
 
-        # NOTE: We do NOT use set_parent_keep_transform here because we WANT
-        # to effectively "zero out" the local transform relative to the frame we just matched.
+            # NOTE: We do NOT use set_parent_keep_transform here because we WANT
+            # to effectively "zero out" the local transform relative to the frame we just matched.
 
-        # Mark Empty as robot link
-        link_props = typing.cast(typing.Any, empty).linkforge
-        link_props.is_robot_link = True
-        link_props.link_name = link_name
+            # Mark Empty as robot link
+            link_props = typing.cast(typing.Any, empty).linkforge
+            link_props.is_robot_link = True
+            link_props.link_name = link_name
 
-        # Set default mass
-        link_props.mass = 1.0
+            # Set default mass
+            link_props.mass = 1.0
 
-        # Auto-calculate inertia enabled by default
-        link_props.use_auto_inertia = True
+            # Auto-calculate inertia enabled by default
+            link_props.use_auto_inertia = True
 
-        # Select the new link Empty
-        bpy.ops.object.select_all(action="DESELECT")
-        empty.select_set(True)
-        if context.view_layer:
-            context.view_layer.objects.active = empty
+            # Select the new link Empty
+            bpy.ops.object.select_all(action="DESELECT")
+            empty.select_set(True)
+            if context.view_layer:
+                context.view_layer.objects.active = empty
 
         self.report(
             {"INFO"},
@@ -791,14 +762,11 @@ class LINKFORGE_OT_generate_collision(Operator):
         if not obj.select_get():
             return False
 
-        # Allow if object is a link with visual children
-        if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
-            visual_children = [c for c in obj.children if "_visual" in c.name.lower()]
-            return len(visual_children) > 0
-
         # Allow if object is a link
         if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
             return True
+
+        # Allow if object is visual/collision child
         return bool(
             obj.parent
             and hasattr(obj.parent, "linkforge")
@@ -853,10 +821,9 @@ class LINKFORGE_OT_generate_collision(Operator):
             return {"CANCELLED"}
 
         # Select the link (not collision)
-        if context.view_layer:
-            bpy.ops.object.select_all(action="DESELECT")
-            link_obj.select_set(True)
-            context.view_layer.objects.active = link_obj
+        bpy.ops.object.select_all(action="DESELECT")
+        link_obj.select_set(True)
+        context.view_layer.objects.active = link_obj
 
         lp = typing.cast(typing.Any, link_obj).linkforge
         self.report({"INFO"}, f"Generated '{collision_type}' collision for '{lp.link_name}'")
@@ -1132,36 +1099,38 @@ class LINKFORGE_OT_remove_link(Operator):
             self.report({"INFO"}, f"Removed virtual link frame '{link_name}'")
             return {"FINISHED"}
 
-        # Restore ALL visual objects
-        # We unparent them and keep their world transforms
-        for visual_obj in visual_children:
-            original_world_matrix = visual_obj.matrix_world.copy()
-            visual_obj.parent = None
-            visual_obj.matrix_world = original_world_matrix
+        # Resolution logic
+        with context_and_mode_guard(context):
+            # Restore ALL visual objects
+            # We unparent them and keep their world transforms
+            for visual_obj in visual_children:
+                original_world_matrix = visual_obj.matrix_world.copy()
+                visual_obj.parent = None
+                visual_obj.matrix_world = original_world_matrix
 
-            # Restore name (remove _visual suffix / link prefix)
-            if visual_obj.name.endswith("_visual"):
-                visual_obj.name = visual_obj.name[:-7]
-            elif visual_obj.name.startswith(f"{link_name}_visual"):
-                visual_obj.name = link_name
+                # Restore name (remove _visual suffix / link prefix)
+                if visual_obj.name.endswith("_visual"):
+                    visual_obj.name = visual_obj.name[:-7]
+                elif visual_obj.name.startswith(f"{link_name}_visual"):
+                    visual_obj.name = link_name
 
-        # Delete collision objects
-        collision_children = [c for c in link_obj.children if "_collision" in c.name.lower()]
-        for col in collision_children:
-            bpy.data.objects.remove(col, do_unlink=True)
+            # Delete collision objects
+            collision_children = [c for c in link_obj.children if "_collision" in c.name.lower()]
+            for col in collision_children:
+                bpy.data.objects.remove(col, do_unlink=True)
 
-        # Delete the link empty
-        bpy.data.objects.remove(link_obj, do_unlink=True)
+            # Delete the link empty
+            bpy.data.objects.remove(link_obj, do_unlink=True)
 
-        # Force update to ensure name namespace is freed in Blender
-        if context.view_layer:
-            context.view_layer.update()
+            # Force update to ensure name namespace is freed in Blender
+            if context.view_layer:
+                context.view_layer.update()
 
-        # Select the (first) restored visual object for consistency
-        if visual_children and context.view_layer:
-            bpy.ops.object.select_all(action="DESELECT")
-            visual_children[0].select_set(True)
-            context.view_layer.objects.active = visual_children[0]
+            # Select the (first) restored visual object for consistency
+            if visual_children and context.view_layer:
+                bpy.ops.object.select_all(action="DESELECT")
+                visual_children[0].select_set(True)
+                context.view_layer.objects.active = visual_children[0]
 
         msg = f"Removed link '{link_name}'. Restored {len(visual_children)} mesh(es)."
         self.report({"INFO"}, msg)

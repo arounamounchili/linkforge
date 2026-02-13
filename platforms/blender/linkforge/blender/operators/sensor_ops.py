@@ -9,6 +9,7 @@ import bpy
 from bpy.types import Context, Operator
 
 from ..properties.link_props import sanitize_urdf_name
+from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
 
 
@@ -70,8 +71,9 @@ class LINKFORGE_OT_create_sensor(Operator):
             empty_size = getattr(addon_prefs, "sensor_empty_size", empty_size)
 
         # Create Empty at 0,0,0 initially (we will snap it)
-        bpy.ops.object.empty_add(type="SPHERE", location=(0, 0, 0))
-        sensor_empty = context.active_object
+        with context_and_mode_guard(context):
+            bpy.ops.object.empty_add(type="SPHERE", location=(0, 0, 0))
+            sensor_empty = context.active_object
 
         # Ensure unique name
         link_name = typing.cast(typing.Any, link_obj).linkforge.link_name if link_obj else "unknown"
@@ -148,7 +150,8 @@ class LINKFORGE_OT_delete_sensor(Operator):
         sensor_name = typing.cast(typing.Any, obj).linkforge_sensor.sensor_name or obj.name
 
         # Delete the object
-        bpy.data.objects.remove(obj, do_unlink=True)
+        with context_and_mode_guard(context):
+            bpy.data.objects.remove(obj, do_unlink=True)
 
         self.report({"INFO"}, f"Deleted sensor '{sensor_name}'")
         return {"FINISHED"}
