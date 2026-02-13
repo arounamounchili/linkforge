@@ -1027,9 +1027,6 @@ def parse_gazebo_element(gazebo_elem: ET.Element) -> GazeboElement:
                 "kd",
                 "stopCfm",
                 "stopErp",
-                "minDepth",
-                "maxVel",
-                "fdir1",
             ]
             and child.text
         ):

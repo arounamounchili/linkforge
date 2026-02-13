@@ -684,7 +684,7 @@ class URDFGenerator(RobotGenerator[str]):
 
     def _add_gps_sensor_info(self, parent: ET.Element, gps_info: GPSInfo) -> None:
         """Add GPS sensor information."""
-        gps_elem = ET.SubElement(parent, "gps")
+        gps_elem = ET.SubElement(parent, "navsat")
 
         # Position noise
         if gps_info.position_sensing_horizontal_noise:

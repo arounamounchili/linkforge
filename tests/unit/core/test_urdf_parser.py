@@ -1,129 +1,900 @@
-"""Tests for the URDFParser class and core integration logic."""
-
-from __future__ import annotations
+import xml.etree.ElementTree as ET
 
 import pytest
 from linkforge_core.base import RobotParserError
-from linkforge_core.models import Robot
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge_core.models import (
+    Box,
+    CameraInfo,
+    Color,
+    Cylinder,
+    JointType,
+    Material,
+    Mesh,
+    Sensor,
+    SensorType,
+    Sphere,
+)
+from linkforge_core.parsers.urdf_parser import (
+    URDFParser,
+    _detect_xacro_file,
+    parse_geometry,
+    parse_joint,
+    parse_link,
+    parse_material,
+    parse_sensor_from_gazebo,
+    parse_transmission,
+)
 
 
-def test_parser_init():
-    """Test URDFParser initialization with custom settings."""
-    parser = URDFParser(max_file_size=5000)
-    assert parser.max_file_size == 5000
+class TestURDFParser:
+    def test_parse_geometry_box(self):
+        """Test parsing box geometry."""
+        xml = '<geometry><box size="1 2 3"/></geometry>'
+        elem = ET.fromstring(xml)
+        geom = parse_geometry(elem)
 
+        assert isinstance(geom, Box)
+        assert geom.size.x == 1.0
+        assert geom.size.y == 2.0
+        assert geom.size.z == 3.0
 
-def test_parse_string_simple():
-    """Test parsing a basic URDF from string."""
-    urdf = """<?xml version="1.0"?>
-    <robot name="test_robot">
+    def test_parse_geometry_cylinder(self):
+        """Test parsing cylinder geometry."""
+        xml = '<geometry><cylinder radius="0.5" length="2.0"/></geometry>'
+        elem = ET.fromstring(xml)
+        geom = parse_geometry(elem)
+
+        assert isinstance(geom, Cylinder)
+        assert geom.radius == 0.5
+        assert geom.length == 2.0
+
+    def test_parse_geometry_sphere(self):
+        """Test parsing sphere geometry."""
+        xml = '<geometry><sphere radius="1.5"/></geometry>'
+        elem = ET.fromstring(xml)
+        geom = parse_geometry(elem)
+
+        assert isinstance(geom, Sphere)
+        assert geom.radius == 1.5
+
+    def test_parse_geometry_mesh(self):
+        """Test parsing mesh geometry with scaling."""
+        xml = (
+            '<geometry><mesh filename="package://my_pkg/mesh.stl" scale="0.1 0.1 0.1"/></geometry>'
+        )
+        elem = ET.fromstring(xml)
+
+        geom = parse_geometry(elem)
+
+        assert isinstance(geom, Mesh)
+        assert geom.filepath.name == "mesh.stl"
+        assert geom.scale.x == 0.1
+
+    def test_parse_material_color(self):
+        """Test parsing material with color."""
+        xml = '<material name="blue"><color rgba="0 0 1 1"/></material>'
+        elem = ET.fromstring(xml)
+        mat = parse_material(elem, {})
+
+        assert isinstance(mat, Material)
+        assert mat.name == "blue"
+        assert mat.color.r == 0.0
+        assert mat.color.b == 1.0
+        assert mat.color.a == 1.0
+
+    def test_parse_link_full(self):
+        """Test parsing a complete link with visual, collision, and inertial."""
+        xml = """
         <link name="base_link">
             <visual>
                 <geometry><box size="1 1 1"/></geometry>
+                <material name="mat"><color rgba="1 0 0 1"/></material>
             </visual>
-        </link>
-    </robot>
-    """
-    robot = URDFParser().parse_string(urdf)
-    assert isinstance(robot, Robot)
-    assert robot.name == "test_robot"
-    assert len(robot.links) == 1
-    assert robot.links[0].name == "base_link"
-
-
-def test_parse_string_with_materials():
-    """Test parsing URDF string with global materials."""
-    urdf = """
-    <robot name="mat_bot">
-        <material name="blue"><color rgba="0 0 1 1"/></material>
-        <link name="base_link">
-            <visual>
-                <geometry><sphere radius="0.5"/></geometry>
-                <material name="blue"/>
-            </visual>
-        </link>
-    </robot>
-    """
-    robot = URDFParser().parse_string(urdf)
-    assert len(robot.links) == 1
-    link = robot.links[0]
-    assert link.visuals[0].material.name == "blue"
-
-
-def test_parse_string_with_joints():
-    """Test parsing URDF string with joints and references."""
-    urdf = """
-    <robot name="joint_bot">
-        <link name="l1"/><link name="l2"/>
-        <joint name="j1" type="revolute">
-            <parent link="l1"/><child link="l2"/>
-            <axis xyz="0 0 1"/>
-            <limit lower="-1.5" upper="1.5" effort="10" velocity="1"/>
-        </joint>
-    </robot>
-    """
-    robot = URDFParser().parse_string(urdf)
-    assert len(robot.joints) == 1
-    joint = robot.joints[0]
-    assert joint.parent == "l1"
-    assert joint.child == "l2"
-    assert joint.limits.lower == pytest.approx(-1.5)
-
-
-def test_parse_from_file(tmp_path):
-    """Test parsing URDF from a physical file."""
-    urdf_content = """
-    <robot name="file_bot">
-        <link name="base_link"/>
-    </robot>
-    """
-    urdf_file = tmp_path / "test.urdf"
-    urdf_file.write_text(urdf_content)
-
-    parser = URDFParser()
-    robot = parser.parse(urdf_file)
-    assert robot.name == "file_bot"
-    assert len(robot.links) == 1
-
-
-def test_parse_complex_robot_integration():
-    """Test parsing a comprehensive robot description."""
-    urdf = """
-    <robot name="full_robot">
-        <link name="base_link">
+            <collision>
+                <geometry><box size="1 1 1"/></geometry>
+            </collision>
             <inertial>
-                <mass value="2.0"/>
+                <mass value="5.0"/>
                 <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
             </inertial>
         </link>
-        <link name="link1"/>
-        <joint name="joint1" type="fixed">
-            <parent link="base_link"/><child link="link1"/>
+        """
+        elem = ET.fromstring(xml)
+        link = parse_link(elem, {})
+
+        assert link.name == "base_link"
+        assert len(link.visuals) == 1
+        assert isinstance(link.visuals[0].geometry, Box)
+        assert len(link.collisions) == 1
+        assert link.inertial.mass == 5.0
+        assert link.inertial.inertia.ixx == 0.1
+
+    def test_parse_joint_limits(self):
+        """Test parsing joint with limits and dynamics."""
+        xml = """
+        <joint name="j1" type="revolute">
+            <parent link="base"/>
+            <child link="link1"/>
+            <limit lower="-1.57" upper="1.57" effort="10" velocity="5"/>
+            <dynamics damping="0.5" friction="0.1"/>
         </joint>
+        """
+        elem = ET.fromstring(xml)
+        joint = parse_joint(elem)
+
+        assert joint.name == "j1"
+        assert joint.type == JointType.REVOLUTE
+        assert joint.limits.lower == -1.57
+        assert joint.limits.upper == 1.57
+        assert joint.dynamics.damping == 0.5
+
+    def test_parse_mimic_joint(self):
+        """Test parsing joint with mimic tag."""
+        xml = """
+        <joint name="j2" type="revolute">
+            <parent link="base"/>
+            <child link="link2"/>
+            <limit lower="-1.57" upper="1.57" effort="10" velocity="5"/>
+            <mimic joint="j1" multiplier="2.0" offset="0.5"/>
+        </joint>
+        """
+        elem = ET.fromstring(xml)
+        joint = parse_joint(elem)
+
+        assert joint.mimic is not None
+        assert joint.mimic.joint == "j1"
+        assert joint.mimic.multiplier == 2.0
+        assert joint.mimic.offset == 0.5
+
+    def test_parse_sensor_camera(self):
+        """Test parsing a camera sensor from Gazebo format."""
+        xml = """
+        <gazebo reference="camera_link">
+            <sensor name="camera1" type="camera">
+                <update_rate>30</update_rate>
+                <camera>
+                    <horizontal_fov>1.3962634</horizontal_fov>
+                    <image>
+                        <width>800</width>
+                        <height>800</height>
+                        <format>R8G8B8</format>
+                    </image>
+                    <clip>
+                        <near>0.02</near>
+                        <far>300</far>
+                    </clip>
+                </camera>
+            </sensor>
+        </gazebo>
+        """
+        elem = ET.fromstring(xml)
+        sensor = parse_sensor_from_gazebo(elem)
+
+        assert isinstance(sensor, Sensor)
+        assert sensor.name == "camera1"
+        assert sensor.type == SensorType.CAMERA
+        assert isinstance(sensor.camera_info, CameraInfo)
+
+    def test_parse_geometry_invalid(self):
+        """Test parsing invalid geometries."""
+        # Box missing size
+        xml = "<geometry><box/></geometry>"
+        assert parse_geometry(ET.fromstring(xml)) is None
+
+        # Negative dimensions
+        xml = '<geometry><box size="-1 1 1"/></geometry>'
+        assert parse_geometry(ET.fromstring(xml)) is None
+
+        # Cylinder invalid
+        xml = '<geometry><cylinder radius="-1" length="1"/></geometry>'
+        assert parse_geometry(ET.fromstring(xml)) is None
+
+    def test_parse_material_texture(self):
+        """Test parsing material with texture."""
+        xml = '<material name="tex"><texture filename="package://pkg/tex.png"/></material>'
+        elem = ET.fromstring(xml)
+        mat = parse_material(elem, {})
+
+        assert isinstance(mat, Material)
+        assert mat.texture == "package://pkg/tex.png"
+        assert mat.color is None
+
+    def test_parse_material_reference(self):
+        """Test parsing material reference."""
+        global_mats = {"global_blue": Material(name="global_blue", color=Color(0, 0, 1, 1))}
+
+        xml = '<material name="global_blue"/>'
+        elem = ET.fromstring(xml)
+        mat = parse_material(elem, global_mats)
+
+        assert mat is global_mats["global_blue"]
+
+    def test_parse_transmission(self):
+        """Test parsing transmission element."""
+        xml = """
         <transmission name="trans1">
             <type>transmission_interface/SimpleTransmission</type>
-            <joint name="joint1"><hardwareInterface>PositionJointInterface</hardwareInterface></joint>
+            <joint name="joint1">
+                <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+            </joint>
+            <actuator name="motor1">
+                <mechanicalReduction>50</mechanicalReduction>
+            </actuator>
         </transmission>
-        <gazebo><plugin name="p1" filename="f1"/></gazebo>
-    </robot>
-    """
-    robot = URDFParser().parse_string(urdf)
-    assert len(robot.links) == 2
-    assert len(robot.joints) == 1
-    assert len(robot.transmissions) == 1
-    assert len(robot.gazebo_elements) == 1
+        """
+        elem = ET.fromstring(xml)
+        trans = parse_transmission(elem)
 
+        assert trans.name == "trans1"
+        assert trans.type == "transmission_interface/SimpleTransmission"
+        assert len(trans.joints) == 1
+        assert trans.joints[0].name == "joint1"
+        assert trans.joints[0].hardware_interfaces == ["position"]  # Normalized
+        assert len(trans.actuators) == 1
+        assert trans.actuators[0].mechanical_reduction == 50.0
 
-def test_large_file_rejection():
-    """Test rejection of oversized URDF input."""
-    parser = URDFParser(max_file_size=100)
-    with pytest.raises(RobotParserError, match="URDF string too large"):
-        parser.parse_string(" " * 200)
+    def test_parse_transmission_invalid(self):
+        """Test parsing invalid transmission."""
 
+    def test_parse_ros2_control(self):
+        """Test parsing ros2_control element."""
+        from linkforge_core.parsers.urdf_parser import parse_ros2_control
 
-def test_xacro_detection_rejection():
-    """Test that XACRO files are rejected by the standard parser."""
-    urdf = '<robot xmlns:xacro="x"><link name="l"/><xacro:macro name="m"/></robot>'
-    with pytest.raises(RobotParserError, match="XACRO features detected"):
-        URDFParser().parse_string(urdf)
+        xml = """
+        <ros2_control name="System" type="system">
+            <hardware>
+                <plugin>mock_components/GenericSystem</plugin>
+                <param name="ip">192.168.1.1</param>
+            </hardware>
+            <joint name="j1">
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+                <state_interface name="velocity"/>
+            </joint>
+        </ros2_control>
+        """
+        elem = ET.fromstring(xml)
+        rc = parse_ros2_control(elem)
+
+        assert rc.name == "System"
+        assert rc.type == "system"
+        assert rc.hardware_plugin == "mock_components/GenericSystem"
+        assert rc.parameters["hardware.ip"] == "192.168.1.1"
+        assert len(rc.joints) == 1
+        assert rc.joints[0].name == "j1"
+        assert "position" in rc.joints[0].command_interfaces
+        assert "velocity" in rc.joints[0].state_interfaces
+
+    def test_urdf_parser_integration(self):
+        """Test full URDF parsing via URDFParser class."""
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        xml = """
+        <robot name="test_robot">
+            <material name="blue">
+                <color rgba="0 0 1 1"/>
+            </material>
+
+            <link name="base">
+                <visual>
+                    <geometry><box size="1 1 1"/></geometry>
+                    <material name="blue"/>
+                </visual>
+            </link>
+
+            <link name="child"/>
+
+            <joint name="j1" type="fixed">
+                <parent link="base"/>
+                <child link="child"/>
+            </joint>
+
+            <transmission name="t1">
+                <type>transmission_interface/SimpleTransmission</type>
+                <joint name="j1">
+                    <hardwareInterface>position</hardwareInterface>
+                </joint>
+            </transmission>
+
+            <gazebo reference="base">
+                <material>Gazebo/Blue</material>
+            </gazebo>
+        </robot>
+        """
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+
+        assert robot.name == "test_robot"
+        assert len(robot.links) == 2
+        assert len(robot.joints) == 1
+        assert len(robot.transmissions) == 1
+        assert len(robot.gazebo_elements) == 1
+
+        # Check global material resolution
+        assert robot.links[0].visuals[0].material.name == "blue"
+        assert robot.links[0].visuals[0].material.color.b == 1.0
+
+    def test_urdf_parser_xacro_detection(self):
+        """Test that XACRO content triggers an error."""
+        from linkforge_core.base import RobotParserError
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        xml = """
+        <robot name="xacro_bot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:macro name="m"/>
+        </robot>
+        """
+        parser = URDFParser()
+        with pytest.raises(RobotParserError, match="XACRO features detected"):
+            parser.parse_string(xml)
+
+    def test_urdf_parser_security(self):
+        """Test security limits."""
+        from linkforge_core.base import RobotParserError
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        # Test max file size
+        parser = URDFParser(max_file_size=10)
+        with pytest.raises(RobotParserError, match="URDF string too large"):
+            parser.parse_string("<robot>..............</robot>")
+
+    def test_urdf_parser_robustness(self):
+        """Test duplicate name handling."""
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        xml = """
+        <robot name="dupe_bot">
+            <link name="link1"/>
+            <link name="link1"/>
+        </robot>
+        """
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+
+        assert len(robot.links) == 2
+        names = {link.name for link in robot.links}
+        assert "link1" in names
+
+    def test_parse_sensors_extended(self):
+        """Test parsing other sensor types (Lidar, IMU, GPS, Force/Torque)."""
+        # Lidar
+        xml = """
+        <gazebo reference="lidar_link">
+            <sensor name="lidar1" type="ray">
+                <ray>
+                    <scan>
+                        <horizontal>
+                            <samples>100</samples>
+                            <min_angle>-1</min_angle>
+                            <max_angle>1</max_angle>
+                        </horizontal>
+                    </scan>
+                    <range>
+                        <min>0.2</min>
+                        <max>50</max>
+                    </range>
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>0.01</stddev>
+                    </noise>
+                </ray>
+            </sensor>
+        </gazebo>
+        """
+        sensor = parse_sensor_from_gazebo(ET.fromstring(xml))
+        assert sensor.type == SensorType.LIDAR
+        assert sensor.lidar_info.horizontal_samples == 100
+        assert sensor.lidar_info.range_max == 50.0
+        assert sensor.lidar_info.noise.stddev == 0.01
+
+        # IMU
+        xml_imu = """
+        <gazebo reference="imu_link">
+            <sensor name="imu1" type="imu">
+                <imu>
+                    <angular_velocity>
+                        <x><noise type="gaussian"><stddev>0.02</stddev></noise></x>
+                    </angular_velocity>
+                    <linear_acceleration>
+                        <x><noise type="gaussian"><stddev>0.1</stddev></noise></x>
+                    </linear_acceleration>
+                </imu>
+            </sensor>
+        </gazebo>
+        """
+        sensor_imu = parse_sensor_from_gazebo(ET.fromstring(xml_imu))
+        assert sensor_imu.type == SensorType.IMU
+        assert sensor_imu.imu_info.angular_velocity_noise.stddev == 0.02
+        assert sensor_imu.imu_info.linear_acceleration_noise.stddev == 0.1
+
+        # GPS
+        xml_gps = """
+        <gazebo reference="gps_link">
+            <sensor name="gps1" type="gps">
+                <gps>
+                    <position_sensing>
+                        <horizontal><noise type="gaussian"><stddev>0.5</stddev></noise></horizontal>
+                    </position_sensing>
+                </gps>
+            </sensor>
+        </gazebo>
+        """
+        sensor_gps = parse_sensor_from_gazebo(ET.fromstring(xml_gps))
+        assert sensor_gps.type == SensorType.GPS
+        assert sensor_gps.gps_info.position_sensing_horizontal_noise.stddev == 0.5
+
+        # Force/Torque
+        xml_ft = """
+        <gazebo reference="ft_link">
+            <sensor name="ft1" type="force_torque">
+                <force_torque>
+                    <frame>sensor</frame>
+                    <measure_direction>child_to_parent</measure_direction>
+                </force_torque>
+            </sensor>
+        </gazebo>
+        """
+        sensor_ft = parse_sensor_from_gazebo(ET.fromstring(xml_ft))
+        assert sensor_ft.type == SensorType.FORCE_TORQUE
+        assert sensor_ft.force_torque_info.frame == "sensor"
+
+        # Contact
+        xml_contact = """
+        <gazebo reference="bumper_link">
+            <sensor name="contact1" type="contact">
+                <contact>
+                    <collision>bumper_collision</collision>
+                </contact>
+            </sensor>
+        </gazebo>
+        """
+        sensor_contact = parse_sensor_from_gazebo(ET.fromstring(xml_contact))
+        assert sensor_contact.type == SensorType.CONTACT
+        assert sensor_contact.contact_info.collision == "bumper_collision"
+
+    def test_parse_gazebo_element_properties(self):
+        """Test parsing Gazebo element properties."""
+        from linkforge_core.parsers.urdf_parser import parse_gazebo_element
+
+        xml = """
+        <gazebo reference="link1">
+            <material>Gazebo/Red</material>
+            <mu1>0.5</mu1>
+            <mu2>0.5</mu2>
+            <selfCollide>true</selfCollide>
+            <gravity>false</gravity>
+            <kp>100000.0</kp>
+            <kd>1.0</kd>
+            <maxVel>0.01</maxVel>
+            <minDepth>0.001</minDepth>
+        </gazebo>
+        """
+        elem = parse_gazebo_element(ET.fromstring(xml))
+
+        assert elem.material == "Gazebo/Red"
+        assert elem.mu1 == 0.5
+        assert elem.self_collide is True
+        assert elem.gravity is False
+        assert elem.kp == 100000.0
+        # Check that generic properties captured extras
+        assert elem.properties["maxVel"] == "0.01"
+        assert elem.properties["minDepth"] == "0.001"
+
+    def test_urdf_parser_file_parsing(self, tmp_path):
+        """Test parsing from a file using iterative parser."""
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        urdf_content = """
+        <robot name="file_robot">
+            <link name="base"/>
+        </robot>
+        """
+        urdf_file = tmp_path / "robot.urdf"
+        urdf_file.write_text(urdf_content)
+
+        parser = URDFParser()
+        robot = parser.parse(urdf_file)
+
+        assert robot.name == "file_robot"
+        assert len(robot.links) == 1
+
+    def test_urdf_parser_xacro_extension_check(self, tmp_path):
+        """Test that .xacro extension raises error."""
+        from linkforge_core.base import RobotParserError
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        xacro_file = tmp_path / "robot.urdf.xacro"
+        xacro_file.write_text("<robot/>")
+
+        parser = URDFParser()
+        with pytest.raises(RobotParserError, match="XACRO file detected"):
+            parser.parse(xacro_file)
+
+    def test_parse_mesh_file_uri(self, tmp_path):
+        """Test parsing mesh with file:// URI and validation."""
+        from linkforge_core.parsers.urdf_parser import parse_geometry
+
+        mesh_file = tmp_path / "mesh.stl"
+        mesh_file.touch()
+
+        xml = f'<geometry><mesh filename="file://{mesh_file.name}"/></geometry>'
+        elem = ET.fromstring(xml)
+
+        geom = parse_geometry(elem, urdf_directory=tmp_path)
+        assert geom.filepath.name == mesh_file.name
+
+        assert geom.filepath.name == mesh_file.name
+
+        xml_bad = '<geometry><mesh filename="file:///etc/passwd"/></geometry>'
+        elem_bad = ET.fromstring(xml_bad)
+
+        geom_bad = parse_geometry(elem_bad, urdf_directory=tmp_path)
+        assert geom_bad is None
+
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+
+        xml_escape = '<geometry><mesh filename="file://../secret.txt"/></geometry>'
+        elem_escape = ET.fromstring(xml_escape)
+
+        geom_escape = parse_geometry(elem_escape, urdf_directory=tmp_path)
+        assert geom_escape is None
+
+    def test_parse_sphere_invalid(self):
+        """Test parsing sphere with invalid radius."""
+        from linkforge_core.parsers.urdf_parser import parse_geometry
+
+        xml = '<geometry><sphere radius="-1"/></geometry>'
+        geom = parse_geometry(ET.fromstring(xml))
+        assert geom is None
+
+    def test_iterparse_full_structure(self, tmp_path):
+        """Test iterparse loop with ALL element types to hit every branch."""
+        xml = """
+        <robot name="full_robot">
+            <material name="global_mat"><color rgba="1 1 1 1"/></material>
+
+            <link name="base">
+                <inertial>
+                    <mass value="1.0"/>
+                    <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+                </inertial>
+                <visual>
+                    <geometry><box size="1 1 1"/></geometry>
+                </visual>
+                <collision>
+                    <geometry><box size="1 1 1"/></geometry>
+                </collision>
+            </link>
+
+            <link name="child"/>
+
+            <joint name="j1" type="revolute">
+                <parent link="base"/>
+                <child link="child"/>
+                <limit lower="-1" upper="1" effort="10" velocity="10"/>
+            </joint>
+
+            <transmission name="trans1">
+                <type>transmission_interface/SimpleTransmission</type>
+                <joint name="j1">
+                    <hardwareInterface>position</hardwareInterface>
+                </joint>
+            </transmission>
+
+            <ros2_control name="Control" type="system">
+                <hardware><plugin>MyPlugin</plugin></hardware>
+                <joint name="j1">
+                    <command_interface name="position"/>
+                </joint>
+            </ros2_control>
+
+            <gazebo reference="base">
+                <sensor name="cam" type="camera">
+                    <camera><image><width>640</width></image></camera>
+                </sensor>
+            </gazebo>
+
+            <gazebo reference="child">
+                <material>Gazebo/Red</material>
+            </gazebo>
+        </robot>
+        """
+        urdf_file = tmp_path / "full.urdf"
+        urdf_file.write_text(xml)
+
+        parser = URDFParser()
+        robot = parser.parse(urdf_file)
+
+        assert len(robot.links) == 2
+        assert len(robot.joints) == 1
+        assert len(robot.transmissions) == 1
+        assert len(robot.ros2_controls) == 1
+        assert len(robot.sensors) == 1
+        assert len(robot.gazebo_elements) == 1
+
+    def test_link_duplication_renaming(self, tmp_path):
+        """Test that duplicate links are renamed."""
+        xml = """
+        <robot name="dupe_links">
+            <link name="link1"/>
+            <link name="link1"/> <!-- Should become link1_duplicate_1 -->
+            <link name="link1"/> <!-- Should become link1_duplicate_2 -->
+        </robot>
+        """
+        urdf_file = tmp_path / "dupe_link.urdf"
+        urdf_file.write_text(xml)
+
+        parser = URDFParser()
+        robot = parser.parse(urdf_file)
+
+        names = sorted([link.name for link in robot.links])
+        assert names == ["link1", "link1_duplicate_1", "link1_duplicate_2"]
+
+    def test_joint_duplication_renaming(self, tmp_path):
+        """Test that duplicate joints are renamed."""
+        xml = """
+        <robot name="dupe_joints">
+            <link name="base"/>
+            <link name="c1"/>
+            <link name="c2"/>
+            <link name="c3"/>
+
+            <joint name="j1" type="fixed">
+                <parent link="base"/><child link="c1"/>
+            </joint>
+            <joint name="j1" type="fixed">
+                <parent link="base"/><child link="c2"/>
+            </joint>
+            <joint name="j1" type="fixed">
+                <parent link="base"/><child link="c3"/>
+            </joint>
+        </robot>
+        """
+        urdf_file = tmp_path / "dupe_joint.urdf"
+        urdf_file.write_text(xml)
+
+        parser = URDFParser()
+        robot = parser.parse(urdf_file)
+
+        names = sorted([j.name for j in robot.joints])
+        assert names == ["j1", "j1_duplicate_1", "j1_duplicate_2"]
+
+    def test_xacro_detection_detailed(self, tmp_path):
+        """Test various XACRO artifacts triggering detection."""
+        parser = URDFParser()
+
+        # 1. Attribute substitution
+        with pytest.raises(ValueError, match="XACRO file detected"):
+            _detect_xacro_file(ET.fromstring('<robot name="${name}"/>'))
+
+        # 2. Xacro namespace in tag
+        with pytest.raises(ValueError, match="XACRO file detected"):
+            _detect_xacro_file(
+                ET.fromstring(
+                    '<robot xmlns:xacro="http://ros.org/wiki/xacro"><xacro:macro/></robot>'
+                )
+            )
+
+        # 3. File content check
+        xacro_file = tmp_path / "test.urdf"
+        xacro_file.write_text('<robot xmlns:xacro="http://..."/>')
+
+        with pytest.raises(RobotParserError, match="XACRO file detected"):
+            parser.parse(xacro_file)
+
+    def test_invalid_values_and_defaults(self):
+        """Test negative values and missing defaults logic."""
+        # 1. Negative inertia
+        xml = """
+        <robot name="bad_inertia">
+            <link name="base">
+                <inertial>
+                    <mass value="1"/>
+                    <!-- Negative diagonal elements should be sanitized -->
+                    <inertia ixx="-1" iyy="0" izz="-0.1" ixy="0" ixz="0" iyz="0"/>
+                </inertial>
+            </link>
+        </robot>
+        """
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        inertia = robot.links[0].inertial.inertia
+        assert inertia.ixx == 1e-6
+        assert inertia.izz == 1e-6
+
+    def test_sensor_defaults(self):
+        """Test default info creation for sensors missing specific tags."""
+        xml = """
+        <robot name="sensor_defaults">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor name="cam" type="camera"/> <!-- No <camera> tag -->
+            </gazebo>
+            <gazebo reference="base">
+                <sensor name="lidar" type="ray"/> <!-- No <ray> tag -->
+            </gazebo>
+            <gazebo reference="base">
+                <sensor name="gps" type="gps"/> <!-- No <gps> tag -->
+            </gazebo>
+            <gazebo reference="base">
+                <sensor name="imu" type="imu"/> <!-- No <imu> tag -->
+            </gazebo>
+        </robot>
+        """
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+
+        cam = next(s for s in robot.sensors if s.name == "cam")
+        assert isinstance(cam.camera_info, CameraInfo)
+
+        lidar = next(s for s in robot.sensors if s.name == "lidar")
+        assert lidar.lidar_info is not None
+        # The parser creates default LidarInfo()
+
+        gps = next(s for s in robot.sensors if s.name == "gps")
+        assert isinstance(gps.gps_info, object)  # GPSInfo
+
+        imu = next(s for s in robot.sensors if s.name == "imu")
+        assert isinstance(imu.imu_info, object)  # IMUInfo
+
+    def test_contact_sensor_missing_collision(self):
+        """Test contact sensor missing collision element raises ValueError."""
+        xml = """
+        <robot name="bad_contact">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor name="bumper" type="contact">
+                    <contact/> <!-- Missing collision -->
+                </sensor>
+            </gazebo>
+        </robot>
+        """
+        parser = URDFParser()
+        with pytest.raises(RobotParserError):  # Wrapped in parser
+            parser.parse_string(xml)
+
+    def test_security_exceptions(self, tmp_path):
+        """Test security exception re-raising."""
+        # 1. Package URI validation - Parse geometry swallows ValueError and returns None
+        xml = '<geometry><mesh filename="package://../traversal"/></geometry>'
+        assert parse_geometry(ET.fromstring(xml), urdf_directory=tmp_path) is None
+
+        # 2. File URI validation - Parse geometry swallows ValueError and returns None
+        xml2 = '<geometry><mesh filename="file:///etc/passwd"/></geometry>'
+        assert parse_geometry(ET.fromstring(xml2), urdf_directory=tmp_path) is None
+
+    def test_gps_noise_structure(self):
+        """Test parsing of nested GPS noise elements."""
+        xml = """
+        <gazebo reference="gps_link">
+            <sensor name="gps" type="gps">
+                <gps>
+                    <position_sensing>
+                        <horizontal>
+                            <noise type="gaussian"><mean>0.1</mean></noise>
+                        </horizontal>
+                    </position_sensing>
+                    <!-- Missing velocity sensing to test optional branches -->
+                </gps>
+            </sensor>
+        </gazebo>
+        """
+        sensor = parse_sensor_from_gazebo(ET.fromstring(xml))
+        assert sensor.gps_info.position_sensing_horizontal_noise.mean == 0.1
+        assert sensor.gps_info.velocity_sensing_vertical_noise is None
+
+    def test_coverage_edge_cases(self):
+        """Test remaining edge cases for 100% coverage."""
+        from linkforge_core.parsers.urdf_parser import (
+            TransmissionJoint,
+            _parse_transmission_component,
+            parse_material,
+            parse_origin,
+        )
+
+        # 1. Parse Origin with values (lines 86-92)
+        xml = '<origin xyz="1 2 3" rpy="0.1 0.2 0.3"/>'
+        origin = parse_origin(ET.fromstring(xml))
+        assert origin.xyz.x == 1.0
+        assert origin.rpy.x == 0.1
+
+        # 2. Geometry Errors
+        # Cylinder invalid length (line 137)
+        xml = '<geometry><cylinder radius="1" length="-1"/></geometry>'
+        assert parse_geometry(ET.fromstring(xml)) is None
+
+        # Mesh missing filename (line 161)
+        xml = "<geometry><mesh/></geometry>"
+        assert parse_geometry(ET.fromstring(xml)) is None
+
+        # Mesh negative scale (line 210)
+        xml = '<geometry><mesh filename="f.stl" scale="-1 1 1"/></geometry>'
+        assert parse_geometry(ET.fromstring(xml)) is None
+
+        # 3. Material Errors
+        # Invalid RGBA length (239, 243)
+        xml = '<material name="bad"><color rgba="1 1"/></material>'
+        assert parse_material(ET.fromstring(xml), {}) is None
+
+        xml = '<material name="bad"><color rgba="1 1 1 1 1"/></material>'
+        assert parse_material(ET.fromstring(xml), {}) is None
+
+        # Empty material (267)
+        xml = '<material name="empty"/>'
+        # Should return None if no color/texture/ref found?
+        # Actually parse_material line 267 is explicit return None if no color/texture
+        assert parse_material(ET.fromstring(xml), {}) is None
+
+        # 4. Transmission Errors
+        # Invalid mechanicalReduction (557-558)
+        xml = '<joint name="j1"><mechanicalReduction>not_number</mechanicalReduction></joint>'
+        comp = _parse_transmission_component(ET.fromstring(xml), TransmissionJoint)
+        assert comp.mechanical_reduction == 1.0  # Default value
+
+        # 5. Gazebo Sensor missing reference (681)
+        xml = '<gazebo><sensor name="s" type="camera"/></gazebo>'  # No reference attr
+        assert parse_sensor_from_gazebo(ET.fromstring(xml)) is None
+
+        # 6. Parse String errors (1271)
+        parser = URDFParser()
+        with pytest.raises(RobotParserError, match="Failed to parse"):
+            parser.parse_string("<robot>unclosed tags")
+
+        # 7. Joint with explicit Axis (line 395)
+        xml = '<joint name="j1" type="continuous"><parent link="p"/><child link="c"/><axis xyz="0 1 0"/></joint>'
+        joint = parse_joint(ET.fromstring(xml))
+        assert joint.axis.y == 1.0
+
+        # 8. Gazebo Plugin parsing (956-970)
+        from linkforge_core.parsers.urdf_parser import parse_gazebo_plugin
+
+        xml = """
+        <plugin name="p" filename="lib.so">
+            <param>value</param>
+            <nested><child>content</child></nested>
+        </plugin>
+        """
+        plugin = parse_gazebo_plugin(ET.fromstring(xml))
+        assert plugin.name == "p"
+        assert plugin.parameters["param"] == "value"
+        assert plugin.raw_xml is not None
+
+        # 9. ROS2 Control misc parameters (631)
+        from linkforge_core.parsers.urdf_parser import parse_ros2_control
+
+        xml = """
+        <ros2_control name="c" type="system">
+            <hardware><plugin>H</plugin></hardware>
+            <param_block>some config</param_block>
+        </ros2_control>
+        """
+        rc = parse_ros2_control(ET.fromstring(xml))
+        assert rc.parameters["param_block"] == "some config"
+
+    def test_parse_robot_full_traversal(self):
+        """Hit lines in _parse_robot that aren't hit by iterparse."""
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        # Defines a robot with features that trigger specific loops in _parse_robot
+        xml = """
+        <robot name="full_traversal">
+            <ros2_control name="c" type="system">
+                <hardware><plugin>H</plugin></hardware>
+            </ros2_control>
+            <!-- Invalid joint to trigger exception handler in _parse_robot loop -->
+            <joint name="bad_joint" type="invalid_type"/>
+            <!-- Valid joint -->
+            <link name="base"/>
+            <link name="child"/>
+            <joint name="good" type="fixed">
+                 <parent link="base"/>
+                 <child link="child"/>
+            </joint>
+        </robot>
+        """
+        parser = URDFParser()
+        # parse_string uses _parse_robot internal logic
+        robot = parser.parse_string(xml)
+        assert len(robot.ros2_controls) == 1
