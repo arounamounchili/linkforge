@@ -83,8 +83,8 @@ class XacroResolver:
 
         # Add 'xacro' namespace for ROS-standard compliance (e.g. xacro.load_yaml)
         xacro_ns = SimpleNamespace()
-        xacro_ns.load_yaml = self._handle_load_yaml  # type: ignore
-        xacro_ns.load_json = self._handle_load_json  # type: ignore
+        xacro_ns.load_yaml = self._handle_load_yaml
+        xacro_ns.load_json = self._handle_load_json
         self.eval_context["xacro"] = xacro_ns
 
     def resolve_file(self, filepath: Path) -> str:
@@ -347,7 +347,7 @@ class XacroResolver:
                 # CRITICAL: We must resolve the block content in the CALLER'S scope before passing it
                 # to the macro. Otherwise, if we pass a "lazy" insert_block instruction,
                 # and the macro uses the same parameter name, we create an infinite loop.
-                resolved_block_content = []
+                resolved_block_content: list[ET.Element] = []
                 for child in element:
                     # Resolve child in current scope
                     # We use deepcopy to ensure we don't modify the original definition
