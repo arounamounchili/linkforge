@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import os
 import typing
 from pathlib import Path
 
@@ -22,59 +21,12 @@ from ...linkforge_core.models import (
     Sphere,
 )
 from ...linkforge_core.utils.kinematics import sort_joints_topological
+from ...linkforge_core.utils.path_utils import resolve_package_path
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.scene_utils import move_to_collection
 
 logger = get_logger(__name__)
-
-
-def resolve_package_path(uri: str, start_dir: Path) -> Path | None:
-    """Resolve package:// URI by searching ROS_PACKAGE_PATH or upward in the tree.
-
-    Args:
-        uri: URI starting with package:// or package:/
-        start_dir: Starting directory for upward search (usually URDF directory)
-
-    Returns:
-        Path to the package root or None
-    """
-    # Normalize URI to package name
-    if "package://" in uri:
-        path_remainder = uri.replace("package://", "")
-    elif "package:/" in uri:
-        path_remainder = uri.replace("package:/", "")
-    else:
-        path_remainder = uri.replace("package:", "")
-
-    package_name = path_remainder.split("/")[0]
-    relative_path = "/".join(path_remainder.split("/")[1:])
-
-    # Step 1: Check ROS_PACKAGE_PATH (Hybrid approach)
-    ros_path = os.environ.get("ROS_PACKAGE_PATH")
-    if ros_path:
-        for path in ros_path.split(os.pathsep):
-            pkg_path = Path(path) / package_name
-            if pkg_path.exists():
-                return pkg_path / relative_path
-
-    # Step 2: Fallback to upward search (ROS-agnostic)
-    curr = start_dir.resolve()
-    # Search up to 10 levels or root
-    for _ in range(10):
-        # Look for the package directory by name in the parent
-        if curr.name == package_name:
-            return curr / relative_path
-
-        # Also look for package.xml to identify package root
-        if (curr / "package.xml").exists() and curr.name == package_name:
-            return curr / relative_path
-
-        if curr.parent == curr:
-            break
-        curr = curr.parent
-
-    return None
 
 
 def resolve_mesh_path(filepath: Path, urdf_dir: Path) -> Path:

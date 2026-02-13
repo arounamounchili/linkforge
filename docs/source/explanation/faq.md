@@ -5,6 +5,9 @@ Frequently asked questions about LinkForge, its compatibility, and future develo
 ## Does LinkForge support ROS 1?
 While LinkForge exports standard URDF files that are technically compatible with ROS 1, our primary focus is **ROS 2** and **Gazebo Sim (Ignition)**. We use ROS 2 Gazebo plugins and naming conventions by default.
 
+## Does LinkForge require a ROS installation?
+**No.** For core robotic asset management (Import/Export, Mesh Resolution, XACRO Parsing), LinkForge is **completely ROS-agnostic**. It uses a sophisticated "Hybrid Resolver" that can find your packages by searching your directory structure, even on standalone Windows or macOS systems without ROS 2 installed.
+
 ## Can I use exported models in Unreal Engine or Unity?
 Yes! Since LinkForge exports standard URDFs, you can use any URDF importer for these engines. However, the specialized Gazebo/ROS 2 control tags will likely be ignored by those engines.
 

@@ -44,8 +44,8 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 ### Invisible Robot or Broken Meshes in Gazebo
 **Cause**: Incorrect mesh export paths or missing package metadata.
 **Solutions**:
-- **Check Package Name**: LinkForge uses `package://[robot_name]/meshes/` paths by default. Ensure your `package.xml` matches your **Robot Name** in the **Validate & Export** panel.
-- **Global Path Sync**: Verify the **Mesh Directory** name matches your actual folder on disk.
+- **Check Package Name**: LinkForge uses a **Hybrid Path Resolver**. It automatically searches your directory tree to find the package root for `package://` and `$(find ...)` paths. Ensure your robot files are stored within a folder structure that includes a `package.xml` or matches the package name.
+- **Standalone Support**: Since v1.2.3, you **no longer need a ROS installation** on Windows or macOS for asset resolution; LinkForge performs its own heuristic search to find your meshes.
 
 ### Properties changing across "Duplicate" Links
 **Cause**: Blender's Linked Data (instancing).

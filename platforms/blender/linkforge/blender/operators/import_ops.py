@@ -6,9 +6,7 @@ robot descriptions into the Blender environment.
 
 from __future__ import annotations
 
-import os
-import typing
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 from pathlib import Path
 
 import bpy
@@ -19,17 +17,6 @@ from ...linkforge_core.logging_config import get_logger
 from ..utils.decorators import safe_execute
 
 logger = get_logger(__name__)
-
-
-@contextmanager
-def working_directory(path: Path) -> typing.Iterator[Path]:
-    """Context manager for temporarily changing the working directory."""
-    old_cwd = os.getcwd()
-    try:
-        os.chdir(path)
-        yield path
-    finally:
-        os.chdir(old_cwd)
 
 
 class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
@@ -59,12 +46,39 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         # Parse URDF/XACRO file
         urdf_path = Path(self.filepath)
 
-        # Validate that the path is a file, not a directory
-        if not urdf_path.is_file():
-            if urdf_path.is_dir():
-                self.report({"ERROR"}, f"Selected path is a directory, not a file: {urdf_path}")
+        # Smart Directory Handling
+        # If user selects a folder, try to find the main robot file automatically.
+        if urdf_path.is_dir():
+            candidates = [
+                urdf_path / f"{urdf_path.name}.urdf",
+                urdf_path / f"{urdf_path.name}.xacro",
+                urdf_path / f"{urdf_path.name}.urdf.xacro",
+                urdf_path / "robot.urdf",
+                urdf_path / "robot.xacro",
+                urdf_path / "robot.urdf.xacro",
+            ]
+
+            found = [f for f in candidates if f.is_file()]
+            valid_files = list(urdf_path.glob("*.urdf")) + list(urdf_path.glob("*.xacro"))
+
+            if found:
+                # Pick the first "best guess" match
+                urdf_path = found[0]
+                self.report({"INFO"}, f"Auto-detected robot description: {urdf_path.name}")
+            elif len(valid_files) == 1:
+                # If there's only one valid file in the folder, use it
+                urdf_path = valid_files[0]
+                self.report({"INFO"}, f"Auto-detected single robot file: {urdf_path.name}")
             else:
-                self.report({"ERROR"}, f"File not found: {urdf_path}")
+                self.report(
+                    {"ERROR"},
+                    "Directory selected but no obvious robot file found. Please select a .urdf or .xacro file directly.",
+                )
+                return {"CANCELLED"}
+
+        # Validate that the path is now a file
+        if not urdf_path.is_file():
+            self.report({"ERROR"}, f"File not found: {urdf_path}")
             return {"CANCELLED"}
 
         is_xacro = urdf_path.suffix == ".xacro" or urdf_path.name.endswith(".urdf.xacro")
