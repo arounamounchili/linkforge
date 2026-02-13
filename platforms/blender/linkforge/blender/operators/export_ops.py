@@ -42,6 +42,11 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
     # ExportHelper properties
     # Operator properties for ExportHelper/ImportHelper
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
+    filter_glob: bpy.props.StringProperty(  # type: ignore
+        default="*.urdf;*.xacro;*.xml",
+        options={"HIDDEN"},
+        maxlen=255,
+    )
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
     def check(self, context: Context) -> bool:  # type: ignore
