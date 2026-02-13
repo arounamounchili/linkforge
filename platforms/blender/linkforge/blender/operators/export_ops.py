@@ -41,7 +41,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
 
     # ExportHelper properties
     # Operator properties for ExportHelper/ImportHelper
-    filepath: bpy.props.StringProperty = bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
     def check(self, context: Context) -> bool:  # type: ignore
