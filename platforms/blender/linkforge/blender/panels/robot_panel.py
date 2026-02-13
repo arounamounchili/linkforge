@@ -86,8 +86,11 @@ class LINKFORGE_OT_select_tree_object(Operator):
     bl_description = "Select this object in the 3D viewport"
     bl_options = {"REGISTER", "UNDO"}
 
-    object_name = bpy.props.StringProperty(  # type: ignore[func-returns-value]
+    object_name: bpy.props.StringProperty(  # type: ignore
         name="Object Name", description="Name of the object to select"
+    )
+    object_type: bpy.props.StringProperty(  # type: ignore
+        name="Object Type", description="Type of object (link/joint)", default="link"
     )
     joint_name = StringProperty(name="Joint Name")  # type: ignore[func-returns-value]
     parent_link = StringProperty(name="Parent Link")  # type: ignore[func-returns-value]
@@ -167,6 +170,7 @@ class LINKFORGE_OT_select_root_link(Operator):
 # Registration
 classes = [
     LINKFORGE_OT_select_tree_object,
+    LINKFORGE_OT_select_root_link,
 ]
 
 

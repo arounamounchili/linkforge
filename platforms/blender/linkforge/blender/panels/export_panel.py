@@ -88,7 +88,7 @@ class LINKFORGE_PT_export_panel(Panel):
             box.prop(props, "robot_name")
 
             # Show stats in a compact grid layout
-            if root_link or total_mass > 0 or total_dof > 0:
+            if scene:
                 box.separator()
 
                 # Use grid flow for compact 2-column layout
@@ -105,9 +105,8 @@ class LINKFORGE_PT_export_panel(Panel):
                         flow.label(text=f"{total_mass:.1f} kg")
 
                     # DOF
-                    if total_dof > 0:
-                        flow.label(text="DOF:")
-                        flow.label(text=str(total_dof))
+                    flow.label(text="DOF:")
+                    flow.label(text=str(total_dof))
 
         # === VALIDATION (Combined status and results) ===
         box = layout.box()
@@ -328,12 +327,6 @@ class LINKFORGE_PT_export_panel(Panel):
                 )
                 op.object_name = sensor_obj.name
                 op.object_type = "sensor"
-
-        # Degree of Freedom Summary
-        select_box.separator()
-        dof_row = select_box.row()
-        if dof_row:
-            dof_row.label(text=f"Total DOF: {num_dof}", icon="CON_KINEMATIC")
 
 
 # Registration
