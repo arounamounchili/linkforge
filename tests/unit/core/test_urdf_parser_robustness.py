@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from linkforge_core.base import RobotParserError
+from linkforge_core.base import RobotParserError, XacroDetectedError
 from linkforge_core.models import SensorType
 from linkforge_core.parsers.urdf_parser import (
     URDFParser,
@@ -375,7 +375,6 @@ def test_joint_parsing_uncovered_paths():
 
 def test_xacro_detection_full(tmp_path):
     """Test full XACRO detection logic including namespace and substitutions."""
-    from linkforge_core.base import RobotParserError
     from linkforge_core.parsers.urdf_parser import URDFParser
 
     parser = URDFParser()
@@ -383,27 +382,23 @@ def test_xacro_detection_full(tmp_path):
     # 1. Detect by namespace in content (even if filename is .urdf)
     f_ns = tmp_path / "detect_ns.urdf"
     f_ns.write_text('<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"/>')
-    with pytest.raises(
-        RobotParserError, match="Unexpected error parsing URDF: XACRO file detected"
-    ):
+    with pytest.raises(XacroDetectedError, match="XACRO file detected"):
         parser.parse(f_ns)
 
     # 2. Detect by xacro elements in parse_string (quick check)
     xml_elem = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"><xacro:macro name="m"/></robot>'
-    with pytest.raises(RobotParserError, match="XACRO features detected in URDF string"):
+    with pytest.raises(XacroDetectedError, match="XACRO file detected"):
         parser.parse_string(xml_elem)
 
     # 3. Detect by ${} substitutions (triggers _detect_xacro_file via parse_string)
     xml_sub = '<robot name="t"><link name="${link_name}"/></robot>'
-    with pytest.raises(
-        RobotParserError, match="Unexpected error parsing URDF: XACRO file detected"
-    ):
+    with pytest.raises(XacroDetectedError, match="XACRO file detected"):
         parser.parse_string(xml_sub)
 
     # 4. Detect by xacro extension (triggers proactive check in parse)
     f_ext = tmp_path / "test.xacro"
     f_ext.write_text('<robot name="t"/>')
-    with pytest.raises(RobotParserError, match="XACRO file detected"):
+    with pytest.raises(XacroDetectedError, match="XACRO file detected"):
         parser.parse(f_ext)
 
     # 5. Detect by {namespace} tags during iterative parsing (line 1089)
@@ -412,7 +407,7 @@ def test_xacro_detection_full(tmp_path):
     f_ns_tag.write_text(
         '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"><xacro:macro name="m"/></robot>'
     )
-    with pytest.raises(RobotParserError, match="Detected XACRO features: macro"):
+    with pytest.raises(XacroDetectedError, match="Detected XACRO features: macro"):
         parser.parse(f_ns_tag)
 
     # 6. Simulate file read error in XACRO detection (lines 1079-1082)
@@ -572,7 +567,6 @@ def test_geometry_parsing_resolves_package_uris():
 
 def test_iterative_parsing_detects_xacro_namespace(tmp_path):
     """Test that iterative parsing detects XACRO files via namespace attributes."""
-    from linkforge_core.base import RobotParserError
     from linkforge_core.parsers.urdf_parser import URDFParser
 
     parser = URDFParser()
@@ -580,9 +574,7 @@ def test_iterative_parsing_detects_xacro_namespace(tmp_path):
     f_ns_tag.write_text(
         '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"><xacro:macro name="m"/></robot>'
     )
-    with pytest.raises(
-        RobotParserError, match="Unexpected error parsing URDF: XACRO file detected"
-    ):
+    with pytest.raises(XacroDetectedError, match="XACRO file detected"):
         parser.parse(f_ns_tag)
 
 

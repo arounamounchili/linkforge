@@ -1156,7 +1156,7 @@ class URDFParser(RobotParser):
 
         # Check if this is a XACRO file by extension (proactive check)
         if filepath.suffix == ".xacro" or filepath.name.endswith(".urdf.xacro"):
-            raise RobotParserError(
+            raise XacroDetectedError(
                 f"XACRO file detected: {filepath}. Please convert to URDF "
                 f"(e.g., 'xacro {filepath.name} > {filepath.with_suffix('')}') "
                 "or use the Blender XACRO resolver."
@@ -1258,8 +1258,8 @@ class URDFParser(RobotParser):
 
         # Verify it's not a XACRO file with Xacro tags.
         if "<xacro:" in urdf_string:
-            raise RobotParserError(
-                "XACRO features detected in URDF string. Use the Blender XACRO resolver."
+            raise XacroDetectedError(
+                "XACRO file detected: XACRO features found in URDF string. Use the Blender XACRO resolver."
             )
 
         try:

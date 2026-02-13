@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core.base import RobotParserError
+from linkforge_core.base import RobotParserError, XacroDetectedError
 from linkforge_core.models import (
     Box,
     CameraInfo,
@@ -316,7 +316,6 @@ class TestURDFParser:
 
     def test_urdf_parser_xacro_detection(self):
         """Test that XACRO content triggers an error."""
-        from linkforge_core.base import RobotParserError
         from linkforge_core.parsers.urdf_parser import URDFParser
 
         xml = """
@@ -325,7 +324,7 @@ class TestURDFParser:
         </robot>
         """
         parser = URDFParser()
-        with pytest.raises(RobotParserError, match="XACRO features detected"):
+        with pytest.raises(XacroDetectedError, match="XACRO file detected"):
             parser.parse_string(xml)
 
     def test_urdf_parser_security(self):
@@ -666,11 +665,11 @@ class TestURDFParser:
         parser = URDFParser()
 
         # 1. Attribute substitution
-        with pytest.raises(ValueError, match="XACRO file detected"):
+        with pytest.raises(XacroDetectedError, match="XACRO file detected"):
             _detect_xacro_file(ET.fromstring('<robot name="${name}"/>'))
 
         # 2. Xacro namespace in tag
-        with pytest.raises(ValueError, match="XACRO file detected"):
+        with pytest.raises(XacroDetectedError, match="XACRO file detected"):
             _detect_xacro_file(
                 ET.fromstring(
                     '<robot xmlns:xacro="http://ros.org/wiki/xacro"><xacro:macro/></robot>'
@@ -752,7 +751,7 @@ class TestURDFParser:
         </robot>
         """
         parser = URDFParser()
-        with pytest.raises(RobotParserError):  # Wrapped in parser
+        with pytest.raises(ValueError, match="missing required <collision> element"):
             parser.parse_string(xml)
 
     def test_security_exceptions(self, tmp_path):
