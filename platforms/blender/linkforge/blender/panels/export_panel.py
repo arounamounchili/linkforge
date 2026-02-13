@@ -121,12 +121,9 @@ class LINKFORGE_PT_export_panel(Panel):
                 if hasattr(wm, "linkforge_validation"):
                     validation = typing.cast(typing.Any, wm).linkforge_validation
 
-                if (
-                    validation
-                    and validation.has_results
-                    and validation.is_valid
-                    and validation.error_count == 0
-                ):
+                if not validation or not validation.has_results:
+                    row.label(text="Validation not run yet", icon="INFO")
+                elif validation and validation.is_valid and validation.error_count == 0:
                     row.label(text="Robot is ready for export", icon="CHECKMARK")
                 else:
                     row.label(text="Issues found - please check below", icon="ERROR")
