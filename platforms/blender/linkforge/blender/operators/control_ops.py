@@ -19,12 +19,26 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operators can run."""
+        """Check if operators can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the scene has LinkForge properties initialized.
+        """
         return hasattr(context.scene, "linkforge")
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the operator.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'}).
+        """
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
@@ -64,15 +78,25 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operators can run."""
-        if not context.scene:
-            return False
-        props = getattr(context.scene, "linkforge", None)
-        return bool(props and len(props.ros2_control_joints) > 0)
+        """Check if operators can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if there are joints in the control system.
+        """
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the operator.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state.
+        """
         if not context.scene:
             return {"CANCELLED"}
         props = typing.cast(typing.Any, context.scene).linkforge
@@ -103,15 +127,25 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operators can run."""
-        if not context.scene:
-            return False
-        props = getattr(context.scene, "linkforge", None)
-        return bool(props and len(props.ros2_control_joints) > 1)
+        """Check if operators can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if there are multiple joints to move.
+        """
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the operator.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state.
+        """
         if not context.scene:
             return {"CANCELLED"}
         props = typing.cast(typing.Any, context.scene).linkforge

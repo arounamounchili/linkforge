@@ -22,7 +22,14 @@ class LINKFORGE_OT_create_transmission(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if a joint object is selected.
+        """
         obj = context.active_object
         if obj is None:
             return False
@@ -38,7 +45,14 @@ class LINKFORGE_OT_create_transmission(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the operator.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state.
+        """
         obj = context.active_object
         if not obj:
             return {"CANCELLED"}
@@ -148,7 +162,14 @@ class LINKFORGE_OT_delete_transmission(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if a transmission object is selected.
+        """
         obj = context.active_object
         if obj is None:
             return False
@@ -162,7 +183,14 @@ class LINKFORGE_OT_delete_transmission(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the operator.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state.
+        """
         obj = context.active_object
         if not obj:
             return {"CANCELLED"}

@@ -25,7 +25,11 @@ class LINKFORGE_PT_forge(Panel):
     bl_order = 0
 
     def draw(self, context: Context) -> None:
-        """Draw the panel."""
+        """Draw the panel.
+
+        Args:
+            context: The current Blender context.
+        """
         layout = self.layout
         if not layout:
             return

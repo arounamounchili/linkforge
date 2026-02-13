@@ -16,7 +16,14 @@ from ..utils.property_helpers import find_property_owner
 
 
 def get_transmission_name(self: typing.Any) -> str:
-    """Getter for transmission_name - mirrors and sanitizes the Blender object name."""
+    """Getter for transmission_name.
+
+    Args:
+        self: The property group instance.
+
+    Returns:
+        The sanitized Blender object name.
+    """
     if not self.id_data:
         return ""
 
@@ -26,7 +33,12 @@ def get_transmission_name(self: typing.Any) -> str:
 
 
 def set_transmission_name(self: typing.Any, value: str) -> None:
-    """Setter for transmission_name - updates object name."""
+    """Setter for transmission_name.
+
+    Args:
+        self: The property group instance.
+        value: The new name to set.
+    """
     if not value or not self.id_data:
         return
 
@@ -44,8 +56,9 @@ def update_transmission_hierarchy(self: typing.Any, context: Context) -> None:
     Automatically reparents transmission to new joint and moves to joint's collection.
     This ensures visual hierarchy matches logical structure.
 
-    For simple transmissions: uses joint_obj
-    For differential transmissions: uses joint1_obj (first joint)
+    Args:
+        self: The property group instance.
+        context: The current Blender context.
     """
     # Find the transmission object that owns this property
     transmission_obj = find_property_owner(context, self, "linkforge_transmission")
@@ -82,7 +95,15 @@ def update_transmission_hierarchy(self: typing.Any, context: Context) -> None:
 
 
 def poll_robot_joint(self: typing.Any, obj: bpy.types.Object) -> bool:
-    """Filter to only allow robot joint objects in pointer selection."""
+    """Filter to only allow robot joint objects in pointer selection.
+
+    Args:
+        self: The property group instance.
+        obj: The object to check.
+
+    Returns:
+        True if the object is a valid robot joint.
+    """
     return bool(obj and hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint)
 
 
