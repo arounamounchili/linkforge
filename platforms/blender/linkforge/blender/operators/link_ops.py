@@ -828,9 +828,7 @@ class LINKFORGE_OT_generate_collision(Operator):
             self.report({"ERROR"}, "Failed to generate collision geometry")
             return {"CANCELLED"}
 
-        # Restore selection to the original object (User Friendly)
-        # If the original object was an old collision mesh, it might have been removed.
-        # In that case, we fall back to selecting the link itself.
+        # Restore selection (fall back to link if original object was deleted)
         vl = context.view_layer
         try:
             obj.select_set(True)
