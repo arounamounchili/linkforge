@@ -829,12 +829,18 @@ class LINKFORGE_OT_generate_collision(Operator):
             return {"CANCELLED"}
 
         # Restore selection to the original object (User Friendly)
-        # We keep the collision selected too so the user sees what happened,
-        # but we make the original link active again so they can continue working.
-        obj.select_set(True)
+        # If the original object was an old collision mesh, it might have been removed.
+        # In that case, we fall back to selecting the link itself.
         vl = context.view_layer
-        if vl:
-            vl.objects.active = obj
+        try:
+            obj.select_set(True)
+            if vl:
+                vl.objects.active = obj
+        except ReferenceError:
+            if link_obj:
+                link_obj.select_set(True)
+                if vl:
+                    vl.objects.active = link_obj
 
         lp = typing.cast(typing.Any, link_obj).linkforge
         self.report({"INFO"}, f"Generated '{collision_type}' collision for '{lp.link_name}'")
