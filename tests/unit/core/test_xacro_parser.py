@@ -34,18 +34,17 @@ def test_substitute_resolves_properties_in_math():
 
 def test_substitute_ignores_literal_vectors():
     resolver = XacroResolver()
-    # Space-separated vector (should NOT be evaluated as math)
-    assert resolver._substitute("${0 0 0.5}") == "0 0 0.5"
+    # Space-separated vector in ${} is invalid syntax -> should raise error
+    with pytest.raises(RobotParserError, match="invalid syntax"):
+        resolver._substitute("${0 0 0.5}")
 
     # Vector from property
     resolver.properties["origin"] = "0 1 2"
     assert resolver._substitute("${origin}") == "0 1 2"
 
-
-def test_substitute_returns_raw_expr_on_malformed_math():
-    resolver = XacroResolver()
-    # Malformed math should return the expression as-is (or substituted but not evaluated)
-    assert resolver._substitute("${1 + / 2}") == "1 + / 2"
+    # Malformed math should raise RobotParserError (Fail Loud)
+    with pytest.raises(RobotParserError, match="invalid syntax"):
+        resolver._substitute("${1 + / 2}")
 
 
 def test_substitute_resolves_arguments():
@@ -153,7 +152,7 @@ def test_macro_expansion_with_block_parameters():
 def test_resolve_file_raises_error_on_missing_file():
     resolver = XacroResolver()
     # Test non-existent file
-    with pytest.raises(RobotParserError, match="Failed to read XACRO file"):
+    with pytest.raises(RobotParserError, match="Failed to process XACRO file"):
         resolver.resolve_file(Path("/non/existent/path.xacro"))
 
 
@@ -226,9 +225,11 @@ def test_macro_expansion_with_parameter_defaults():
 
 def test_finalize_urdf_returns_empty_on_empty_container():
     resolver = XacroResolver()
-    # Empty container should yield empty string
+    # Empty container should yield valid XML with empty container, not empty string
     empty_root = ET.Element("container")
-    assert resolver._finalize_urdf(empty_root) == ""
+    res = resolver._finalize_urdf(empty_root)
+    assert "<container />" in res
+    assert "<?xml" in res
 
 
 def test_find_file_and_search_paths(tmp_path):
@@ -289,7 +290,7 @@ def test_resolve_file_raises_generic_error(monkeypatch):
     monkeypatch.setattr(ET, "parse", mock_parse)
 
     resolver = XacroResolver()
-    with pytest.raises(RobotParserError, match="Failed to read XACRO file"):
+    with pytest.raises(RobotParserError, match="Failed to process XACRO file"):
         resolver.resolve_file(Path("any.xacro"))
 
 
@@ -362,9 +363,10 @@ def test_finalize_urdf_cleans_namespaced_attributes():
 
 def test_finalize_urdf_with_no_root_children():
     resolver = XacroResolver()
-    # Container with NO children
+    # Container with NO children -> valid XML
     root = ET.Element("container")
-    assert resolver._finalize_urdf(root) == ""
+    res = resolver._finalize_urdf(root)
+    assert "<container />" in res
 
 
 def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch):
@@ -378,10 +380,11 @@ def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch):
     monkeypatch.setattr(XacroResolver, "resolve_element", mock_resolve_element)
 
     robot_xml = tmp_path / "valid.xacro"
-    robot_xml.write_text("<robot/>")
+    robot_xml.write_text("<robot><child/></robot>")
 
     resolver = XacroResolver()
-    with pytest.raises(RobotParserError, match="XACRO resolution failed"):
+    # _process_include_file wrapping catches it first, so message changes
+    with pytest.raises(RobotParserError, match="Failed to process XACRO file"):
         resolver.resolve_file(robot_xml)
 
 
