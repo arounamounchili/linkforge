@@ -320,7 +320,9 @@ def _merge_visual_meshes(
         # Select and make active for transform application
         bpy.ops.object.select_all(action="DESELECT")
         dup.select_set(True)
-        context.view_layer.objects.active = dup
+        vl = context.view_layer
+        if vl:
+            vl.objects.active = dup
 
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
@@ -334,7 +336,9 @@ def _merge_visual_meshes(
     bpy.ops.object.select_all(action="DESELECT")
     for dup in duplicates:
         dup.select_set(True)
-    context.view_layer.objects.active = duplicates[0]
+    vl = context.view_layer
+    if vl:
+        vl.objects.active = duplicates[0]
 
     # Join into single mesh
     bpy.ops.object.join()
@@ -384,7 +388,9 @@ def _create_convex_hull_collision_compound(
     merged_obj.hide_render = False
 
     # Apply convex hull to the merged mesh
-    context.view_layer.objects.active = merged_obj
+    vl = context.view_layer
+    if vl:
+        vl.objects.active = merged_obj
 
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
@@ -425,7 +431,9 @@ def _create_convex_hull_collision_compound(
 
     bpy.ops.object.select_all(action="DESELECT")
     link_obj.select_set(True)
-    context.view_layer.objects.active = merged_obj
+    vl = context.view_layer
+    if vl:
+        vl.objects.active = merged_obj
 
     return merged_obj
 
@@ -820,10 +828,12 @@ class LINKFORGE_OT_generate_collision(Operator):
             self.report({"ERROR"}, "Failed to generate collision geometry")
             return {"CANCELLED"}
 
-        # Select the link (not collision)
+        # Select the new collision
         bpy.ops.object.select_all(action="DESELECT")
-        link_obj.select_set(True)
-        context.view_layer.objects.active = link_obj
+        collision_obj.select_set(True)
+        vl = context.view_layer
+        if vl:
+            vl.objects.active = collision_obj
 
         lp = typing.cast(typing.Any, link_obj).linkforge
         self.report({"INFO"}, f"Generated '{collision_type}' collision for '{lp.link_name}'")

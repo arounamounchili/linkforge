@@ -24,10 +24,11 @@ def context_and_mode_guard(context: Context) -> typing.Iterator[dict[str, typing
         bpy.ops.object.mode_set(mode="OBJECT")
 
     # Determine a valid context for operators
-    override_kwargs = {}
+    override_kwargs: dict[str, typing.Any] = {}
+    wm = bpy.context.window_manager
     with contextlib.suppress(Exception):
-        if not hasattr(context, "area") or not context.area or not context.window:
-            for window in bpy.context.window_manager.windows:
+        if (not hasattr(context, "area") or not context.area or not context.window) and wm:
+            for window in wm.windows:
                 for area in window.screen.areas:
                     if area.type == "VIEW_3D":
                         override_kwargs["window"] = window
@@ -50,4 +51,4 @@ def context_and_mode_guard(context: Context) -> typing.Iterator[dict[str, typing
         # Restore original mode if we switched
         if "EDIT" in original_mode:
             with contextlib.suppress(Exception):
-                bpy.ops.object.mode_set(mode=original_mode)
+                bpy.ops.object.mode_set(mode=typing.cast(typing.Any, original_mode))

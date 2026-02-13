@@ -295,7 +295,7 @@ class LINKFORGE_PT_export_panel(Panel):
         select_box.separator()
         joint_header = select_box.row()
         if joint_header:
-            joint_header.label(text=f"Joints ({len(joints)}):", icon="EMPTY_AXIS")  # type: ignore[arg-type]
+            joint_header.label(text=f"Joints ({len(joints)}):", icon="EMPTY_AXIS")
 
         for joint_obj in sorted(joints, key=lambda x: x.name):
             row = select_box.row(align=True)
@@ -318,7 +318,7 @@ class LINKFORGE_PT_export_panel(Panel):
         select_box.separator()
         sensor_header = select_box.row()
         if sensor_header:
-            sensor_header.label(text=f"Sensors ({len(sensors)}):", icon="TRACKER")  # type: ignore[arg-type]
+            sensor_header.label(text=f"Sensors ({len(sensors)}):", icon="TRACKER")
 
         for sensor_obj in sorted(sensors, key=lambda x: x.name):
             row = select_box.row(align=True)
