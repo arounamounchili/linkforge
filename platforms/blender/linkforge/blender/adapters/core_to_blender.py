@@ -270,6 +270,13 @@ def normalize_and_consolidate_imported_objects(
     3. Baking all transforms into geometry.
     4. Joining all meshes into a single object named 'name'.
     5. Resetting the final object to identity at (0,0,0).
+
+    Args:
+        objects: List of Blender objects to process.
+        name: Name to assign to the final consolidated object.
+
+    Returns:
+        The consolidated Blender Object, or None if no valid mesh data was found.
     """
     if not objects:
         return None

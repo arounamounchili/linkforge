@@ -20,7 +20,21 @@ def build_tree_structure(
     dict[tuple[str, str], Object],
     dict[str, Object],
 ]:
-    """Build a kinematic tree from the scene objects."""
+    """Build a kinematic tree from the scene objects.
+
+    Iterates through all objects in the scene to reconstruct the parent-child relationships
+    defined by LinkForge joints.
+
+    Args:
+        scene: The Blender scene to analyze.
+
+    Returns:
+        A tuple containing:
+        - tree: Dictionary mapping parent link names to lists of (child_name, joint_name, joint_type).
+        - root_link: The name of the root link (link with no parent), or None if not found.
+        - joints: Dictionary mapping (parent_name, child_name) tuples to the joint Object.
+        - links: Dictionary mapping link names to their Blender Objects.
+    """
     if not scene:
         return {}, None, {}, {}
     # Collect all links
@@ -81,7 +95,14 @@ class LINKFORGE_OT_select_tree_object(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the operator.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         # Find the object
         scene = context.scene
         if not scene:
@@ -114,7 +135,14 @@ class LINKFORGE_OT_select_root_link(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the operator.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene:
             return {"CANCELLED"}

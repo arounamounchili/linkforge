@@ -22,7 +22,11 @@ class LINKFORGE_PT_perceive(Panel):
     bl_options = {"DEFAULT_CLOSED"}
 
     def draw(self, context: Context) -> None:
-        """Draw the panel."""
+        """Draw the panel.
+
+        Args:
+            context: The current Blender context.
+        """
         layout = self.layout
         if not layout:
             return
@@ -131,7 +135,13 @@ class LINKFORGE_PT_perceive(Panel):
     def _draw_camera_settings(
         self, box: UILayout, props: typing.Any, is_depth: bool = False
     ) -> None:
-        """Draw camera-specific settings."""
+        """Draw camera-specific settings.
+
+        Args:
+            box: The UILayout box to draw into.
+            props: The property group containing sensor settings.
+            is_depth: Whether to draw depth-specific settings.
+        """
         box.separator()
         if is_depth:
             box.label(text="Depth Camera Settings", icon="CAMERA_DATA")
@@ -155,7 +165,12 @@ class LINKFORGE_PT_perceive(Panel):
         row.prop(props, "camera_far_clip")
 
     def _draw_lidar_settings(self, box: UILayout, props: typing.Any) -> None:
-        """Draw LIDAR-specific settings."""
+        """Draw LIDAR-specific settings.
+
+        Args:
+            box: The UILayout box to draw into.
+            props: The property group containing sensor settings.
+        """
         box.separator()
         box.label(text="LIDAR Settings", icon="LIGHT_SPOT")
 
@@ -179,7 +194,12 @@ class LINKFORGE_PT_perceive(Panel):
         row.prop(props, "lidar_range_max")
 
     def _draw_contact_settings(self, box: UILayout, props: typing.Any) -> None:
-        """Draw Contact-specific settings."""
+        """Draw Contact-specific settings.
+
+        Args:
+            box: The UILayout box to draw into.
+            props: The property group containing sensor settings.
+        """
         box.separator()
         box.label(text="Contact Settings", icon="PHYSICS")
 
