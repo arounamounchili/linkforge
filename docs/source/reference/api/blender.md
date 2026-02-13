@@ -40,6 +40,42 @@ User actions and commands.
    :show-inheritance:
 ```
 
+## Panels
+
+UI Panels for managing robot data.
+
+```{eval-rst}
+.. automodule:: linkforge.blender.panels.robot_panel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.panels.link_panel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.panels.joint_panel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.panels.sensor_panel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.panels.control_panel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.panels.export_panel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
 ## Properties
 
 Blender scene properties for storing robot data.
