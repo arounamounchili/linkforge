@@ -24,7 +24,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
-from ..base import RobotParser, RobotParserError
+from ..base import RobotParser, RobotParserError, XacroDetectedError
 from ..logging_config import get_logger
 from ..models import (
     Box,
@@ -1117,7 +1117,7 @@ def _detect_xacro_file(root: ET.Element, filepath: Path | None = None) -> None:
         if xacro_elements:
             error_msg += f"\n\nDetected XACRO features: {', '.join(set(xacro_elements))}"
 
-        raise ValueError(error_msg)
+        raise XacroDetectedError(error_msg)
 
 
 class URDFParser(RobotParser):
@@ -1231,7 +1231,7 @@ class URDFParser(RobotParser):
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
-            if isinstance(e, RobotParserError):
+            if isinstance(e, (RobotParserError, ValueError)):
                 raise
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
@@ -1270,7 +1270,7 @@ class URDFParser(RobotParser):
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
-            if isinstance(e, RobotParserError):
+            if isinstance(e, (RobotParserError, ValueError)):
                 raise
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 

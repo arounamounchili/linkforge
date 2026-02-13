@@ -78,14 +78,14 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         # 1. If it looks like URDF, try parsing as URDF.
         # 2. If parsing fails because of Xacro tags, catch the error and switch to Xacro mode.
         if not is_xacro:
-            from ...linkforge_core import RobotParserError
+            from ...linkforge_core import RobotParserError, XacroDetectedError
 
             try:
                 # Attempt standard URDF import
                 robot = URDFParser(sandbox_root=sandbox_root).parse(urdf_path)
             except (ValueError, RobotParserError) as e:
                 # Check if our parser detected hidden Xacro content
-                if "XACRO file detected" in str(e):
+                if isinstance(e, XacroDetectedError) or "XACRO file detected" in str(e):
                     self.report(
                         {"WARNING"},
                         "Detected XACRO content in .urdf file. Switching to XACRO parser...",

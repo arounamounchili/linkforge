@@ -33,6 +33,16 @@ class RobotParserError(LinkForgeError):
     pass
 
 
+class XacroDetectedError(RobotParserError):
+    """Raised when XACRO content is detected in a URDF parser.
+
+    This allows the platform layer to catch a specific exception and
+    automatically switch to the XACRO parser.
+    """
+
+    pass
+
+
 class RobotGenerator(ABC, Generic[T]):  # noqa: UP046
     """Abstract base class for all Robot Generators."""
 
