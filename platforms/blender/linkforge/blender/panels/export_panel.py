@@ -148,7 +148,7 @@ class LINKFORGE_PT_export_panel(Panel):
                 details_box.separator()
 
                 if validation.is_valid and validation.warning_count == 0:
-                    details_box.label(text="Robot is valid!", icon="CHECKMARK")
+                    pass  # Redundant, already shown in summary
                 elif validation.is_valid:
                     details_box.label(
                         text=f"Valid with {validation.warning_count} warning(s)", icon="ERROR"

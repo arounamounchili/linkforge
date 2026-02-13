@@ -175,8 +175,8 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
     operators = {
         ".obj": ["wm.obj_import"],
         ".stl": ["wm.stl_import"],
-        ".glb": ["wm.gltf_import"],
-        ".gltf": ["wm.gltf_import"],
+        ".glb": ["wm.gltf_import", "import_scene.gltf"],
+        ".gltf": ["wm.gltf_import", "import_scene.gltf"],
     }
 
     if ext not in operators:
