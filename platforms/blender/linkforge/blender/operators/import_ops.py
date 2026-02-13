@@ -12,7 +12,7 @@ from contextlib import contextmanager, suppress
 from pathlib import Path
 
 import bpy
-from bpy.types import Context, Event, Operator
+from bpy.types import Context, Operator
 from bpy_extras.io_utils import ImportHelper
 
 from ...linkforge_core.logging_config import get_logger
@@ -46,7 +46,8 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     def check(self, context: Context) -> bool:  # type: ignore
         return True
 
-    def invoke(self, context: Context, event: Event) -> typing.Any:
+    @safe_execute
+    def execute(self, context: Context) -> set[str]:
         """Execute the import."""
         from ...linkforge_core.parsers import URDFParser
 
@@ -131,11 +132,6 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
             f"Started background import of {file_type}: '{robot.name}'...",
         )
         return {"FINISHED"}
-
-    @safe_execute
-    def execute(self, context: Context) -> set[str]:
-        """Execute the import (Headless/Scripting entry point)."""
-        return typing.cast(set[str], self.invoke(context, typing.cast(typing.Any, None)))
 
 
 # Registration
