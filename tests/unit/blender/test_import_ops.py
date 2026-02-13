@@ -19,8 +19,8 @@ def test_import_urdf_logic_paths(mocker, tmp_path):
         "linkforge.linkforge_core.validation.security.find_sandbox_root", return_value=tmp_path
     )
 
-    # Call invoke directly to test the logic (execute calls self.invoke which is mocked on the instance)
-    result = LINKFORGE_OT_import_urdf.invoke(mock_self, context, None)
+    # Call execute directly to test the logic
+    result = LINKFORGE_OT_import_urdf.execute(mock_self, context)
     assert result == {"FINISHED"}
 
 
@@ -31,7 +31,7 @@ def test_import_invalid_path_logic(mocker):
     mock_self.report = MagicMock()
 
     context = MagicMock()
-    # Call invoke directly to test the logic
-    result = LINKFORGE_OT_import_urdf.invoke(mock_self, context, None)
+    # Call execute directly to test the logic
+    result = LINKFORGE_OT_import_urdf.execute(mock_self, context)
     assert result == {"CANCELLED"}
     mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)

@@ -32,7 +32,7 @@ def working_directory(path: Path) -> typing.Iterator[Path]:
         os.chdir(old_cwd)
 
 
-class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
+class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
     """Import robot from URDF or XACRO file"""
 
     bl_idname = "linkforge.import_urdf"

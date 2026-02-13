@@ -86,6 +86,10 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
         Returns:
             True if there are joints in the control system.
         """
+        if not context.scene:
+            return False
+        props = getattr(context.scene, "linkforge", None)
+        return bool(props and len(props.ros2_control_joints) > 0)
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
@@ -135,6 +139,10 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         Returns:
             True if there are multiple joints to move.
         """
+        if not context.scene:
+            return False
+        props = getattr(context.scene, "linkforge", None)
+        return bool(props and len(props.ros2_control_joints) > 1)
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
