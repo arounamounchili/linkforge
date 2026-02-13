@@ -40,7 +40,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     bl_description = "Import robot from URDF or XACRO file (auto-detects format)"
 
     # Operator properties for ExportHelper/ImportHelper
-    filepath: bpy.props.StringProperty  # type: ignore
+    filepath: bpy.props.StringProperty = bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
     def check(self, context: Context) -> bool:  # type: ignore
