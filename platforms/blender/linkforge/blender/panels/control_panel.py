@@ -138,17 +138,11 @@ class LINKFORGE_PT_control(Panel):
             box = layout.box()
             if box:
                 # List of interfaces for each joint
-                for i, joint_item in enumerate(props.ros2_control_joints):
-                    row = box.row()
-                    if row:
-                        row.label(text=joint_item.name, icon="EMPTY_AXIS")
-                        # Add remove button
-                        row.operator("linkforge.remove_ros2_control_joint", text="", icon="X")
-                        # (Note: index management is handled by operator)
-
-                    if i == props.ros2_control_active_joint_index:
-                        # Draw details for active joint
-                        self.draw_joint_details(box, joint_item)
+                # Only draw details for the active joint
+                active_idx = props.ros2_control_active_joint_index
+                if 0 <= active_idx < len(props.ros2_control_joints):
+                    joint_item = props.ros2_control_joints[active_idx]
+                    self.draw_joint_details(box, joint_item)
 
                 # Global control settings
                 layout.separator()
