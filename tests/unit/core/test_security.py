@@ -146,3 +146,64 @@ def test_find_sandbox_root(tmp_path):
     random_dir.mkdir()
     random_file = random_dir / "test.urdf"
     assert find_sandbox_root(random_file) == random_dir
+
+
+def test_security_sandbox_root_loop(tmp_path):
+    """Test find_sandbox_root loop termination (depth limit)."""
+    # Create a structure deep enough to hit the 5-level limit
+    # root/a/b/c/d/e/f/file.urdf
+    deep_path = tmp_path / "a/b/c/d/e/f"
+    deep_path.mkdir(parents=True)
+    urdf = deep_path / "file.urdf"
+    urdf.touch()
+
+    # This should traverse up 5 times and stop, returning the current parent if no package.xml found
+    # Current parent of file.urdf is 'f'
+    # It checks f/package.xml, e/package.xml, d/package.xml, c/package.xml, b/package.xml (5 times)
+    # Returns 'f' (deep_path) as fallback
+    root = find_sandbox_root(urdf)
+    assert root == deep_path
+
+
+def test_find_sandbox_root_recursion_break():
+    """Test recursion break at root (check_path.parent == check_path)."""
+
+    class FakePath:
+        def __init__(self, name="root"):
+            self.name = name
+
+        @property
+        def parent(self):
+            return self  # Root behavior
+
+        def __truediv__(self, other):
+            return FakePath(f"{self.name}/{other}")
+
+        def exists(self):
+            return False  # package.xml never exists
+
+    # Actually, find_sandbox_root takes filepath.
+    # It does `current = filepath.parent`.
+    # So simulate filepath
+    class FakeFile:
+        def __init__(self, parent_obj):
+            self.p = parent_obj
+
+        @property
+        def parent(self):
+            return self.p
+
+        def resolve(self):
+            return self
+
+    fake_root = FakePath()
+    fake_filepath = FakeFile(fake_root)
+
+    # Pass fake_filepath to find_sandbox_root
+    # It sets current = fake_filepath.parent (fake_root)
+    # Loop 1: check package.xml (False), check parent==self (True) -> break.
+    # Returns current (fake_root).
+
+    # We need to type ignore or ensure it quacks like Path
+    res = find_sandbox_root(fake_filepath)
+    assert res == fake_root

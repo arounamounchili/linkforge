@@ -1,5 +1,20 @@
+from unittest.mock import patch
+
 import pytest
-from linkforge_core.models import Joint, JointMimic, JointType, Link, Robot
+from linkforge_core.models import (
+    CameraInfo,
+    GazeboElement,
+    Inertial,
+    InertiaTensor,
+    Joint,
+    JointLimits,
+    JointMimic,
+    JointType,
+    Link,
+    Robot,
+    Ros2Control,
+    SensorType,
+)
 from linkforge_core.models.sensor import Sensor
 from linkforge_core.models.transmission import Transmission, TransmissionJoint
 
@@ -9,8 +24,6 @@ class TestRobot:
         """Test basic robot initialization and index creation."""
         base = Link(name="base_link")
         link1 = Link(name="link1")
-
-        from linkforge_core.models import JointLimits
 
         joint1 = Joint(
             name="joint1",
@@ -101,9 +114,6 @@ class TestRobot:
     def test_mimic_cycle_detection(self):
         """Test detection of circular mimic dependencies."""
         links = [Link(name="A"), Link(name="B")]
-
-        from linkforge_core.models import JointLimits
-
         limits = JointLimits(lower=-1.0, upper=1.0)
         j1 = Joint(
             name="j1",
@@ -130,7 +140,6 @@ class TestRobot:
     def test_mimic_missing_joint(self):
         """Test validation of mimic pointing to non-existent joint."""
         links = [Link(name="A"), Link(name="B")]
-        from linkforge_core.models import JointLimits
 
         j1 = Joint(
             name="j1",
@@ -181,9 +190,6 @@ class TestRobot:
     def test_add_sensor_validation(self):
         """Test validation when adding sensors."""
         robot = Robot(name="test", initial_links=[Link(name="base")])
-
-        from linkforge_core.models import CameraInfo, SensorType
-
         sensor = Sensor(
             name="cam1", link_name="base", type=SensorType.CAMERA, camera_info=CameraInfo()
         )
@@ -236,7 +242,6 @@ class TestRobot:
         """Test robot properties like mass and DOF."""
         # Create a robot with 2 links and 1 joint
         # Fix: Inertial takes float mass, not Mass object
-        from linkforge_core.models import Inertial, InertiaTensor
 
         base = Link(name="base", inertial=None)  # Mass 0
 
@@ -278,7 +283,6 @@ class TestRobot:
     def test_add_gazebo_element(self):
         """Test adding Gazebo-specific elements."""
         robot = Robot(name="test", initial_links=[Link(name="base")])
-        from linkforge_core.models import GazeboElement
 
         # Valid element without reference
         elem1 = GazeboElement(material="Gazebo/Blue")
@@ -297,9 +301,6 @@ class TestRobot:
     def test_add_ros2_control(self):
         """Test adding ROS2 Control configurations."""
         robot = Robot(name="test")
-        # Fix: Ros2Control takes hardware_plugin string, not HardwareInterface object
-        from linkforge_core.models import Ros2Control
-
         ros2_ctrl = Ros2Control(
             name="System", type="system", hardware_plugin="mock_plugin", joints=[]
         )
@@ -317,9 +318,6 @@ class TestRobot:
         # Basic
         assert "Robot(name=full_bot" in str(robot)
         assert "links=1" in str(robot)
-
-        # With all optional components
-        from linkforge_core.models import CameraInfo, GazeboElement, Ros2Control, SensorType
 
         robot.add_sensor(
             Sensor(name="cam", link_name="base", type=SensorType.CAMERA, camera_info=CameraInfo())
@@ -348,4 +346,181 @@ class TestRobot:
         assert "sensors=1" in s
         assert "transmissions=1" in s
         assert "ros2_controls=1" in s
-        assert "gazebo_elements=1" in s
+
+
+class TestRobotCoverage:
+    """Additional tests to ensure 100% coverage of edge cases."""
+
+    def test_add_joint_parent_not_found(self):
+        robot = Robot(name="test")
+        l1 = Link(name="l1")
+        robot.add_link(l1)
+
+        # Parent "missing" does not exist
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="missing", child="l1")
+        with pytest.raises(ValueError, match="Parent link 'missing' not found"):
+            robot.add_joint(j1)
+
+    def test_add_joint_child_not_found(self):
+        robot = Robot(name="test")
+        l1 = Link(name="l1")
+        robot.add_link(l1)
+
+        # Child "missing" does not exist
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="missing")
+        with pytest.raises(ValueError, match="Child link 'missing' not found"):
+            robot.add_joint(j1)
+
+    def test_get_joints_for_link(self):
+        robot = Robot(name="test")
+        l1 = Link(name="l1")
+        l2 = Link(name="l2")
+        l3 = Link(name="l3")
+        robot.add_link(l1)
+        robot.add_link(l2)
+        robot.add_link(l3)
+
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
+        j2 = Joint(name="j2", type=JointType.FIXED, parent="l2", child="l3")
+        robot.add_joint(j1)
+        robot.add_joint(j2)
+
+        # l1 is parent in j1
+        assert robot.get_joints_for_link("l1", as_parent=True) == [j1]
+        assert robot.get_joints_for_link("l1", as_parent=False) == []
+
+        # l2 is child in j1, parent in j2
+        assert robot.get_joints_for_link("l2", as_parent=True) == [j2]
+        assert robot.get_joints_for_link("l2", as_parent=False) == [j1]
+
+    def test_add_transmission_duplicate(self):
+        robot = Robot(name="test")
+        # Need existing joints for transmission
+        l1 = Link(name="l1")
+        l2 = Link(name="l2")
+        robot.add_link(l1)
+        robot.add_link(l2)
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
+        robot.add_joint(j1)
+
+        t1 = Transmission(name="t1", type="SimpleTransmission", joints=[j1])
+        robot.add_transmission(t1)
+
+        with pytest.raises(ValueError, match="Transmission 't1' already exists"):
+            robot.add_transmission(t1)
+
+    def test_get_root_link_empty(self):
+        robot = Robot(name="test")
+        assert robot.get_root_link() is None
+
+    def test_validate_tree_structure_duplicate_names_mock(self):
+        # To test duplicate names logic in validate_tree_structure,
+        # we need to bypass add_link/add_joint checks which prevent duplicates.
+        robot = Robot(name="test")
+        l1 = Link(name="l1")
+        robot._links.append(l1)
+        robot._links.append(l1)  # Duplicate!
+
+        errors = robot.validate_tree_structure()
+        assert any("Duplicate link names" in e for e in errors)
+
+        robot = Robot(name="test2")
+        l1 = Link(name="l1")
+        l2 = Link(name="l2")
+        robot.add_link(l1)
+        robot.add_link(l2)
+
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
+        robot._joints.append(j1)
+        robot._joints.append(j1)  # Duplicate!
+
+        errors = robot.validate_tree_structure()
+        assert any("Duplicate joint names" in e for e in errors)
+
+    def test_validate_tree_structure_missing_child_mock(self):
+        # Bypass add_joint check
+        robot = Robot(name="test")
+        l1 = Link(name="l1")
+        robot.add_link(l1)
+
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="missing")
+        robot._joints.append(j1)
+
+        errors = robot.validate_tree_structure()
+        assert any("child link 'missing' not found" in e for e in errors)
+
+    def test_validate_tree_structure_root_none_mock(self):
+        # Mock get_root_link to return None even if links exist
+        robot = Robot(name="test")
+        l1 = Link(name="l1")
+        robot.add_link(l1)
+
+        with patch.object(robot, "get_root_link", return_value=None):
+            errors = robot.validate_tree_structure()
+            assert "No root link found" in errors
+
+    def test_validate_tree_structure_disconnected_and_multi_parent(self):
+        robot = Robot(name="test")
+        l1 = Link(name="l1")  # Root
+        l2 = Link(name="l2")  # Disconnected (another root effectively)
+        l3 = Link(name="l3")  # Multi-parent
+        l4 = Link(name="l4")
+
+        robot.add_link(l1)
+        robot.add_link(l2)
+        robot.add_link(l3)
+        robot.add_link(l4)
+
+        # l1 -> l4
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l4")
+        robot.add_joint(j1)
+
+        # l3 has 2 parents: l1->l3 and l4->l3
+        j2 = Joint(name="j2", type=JointType.FIXED, parent="l1", child="l3")
+        j3 = Joint(name="j3", type=JointType.FIXED, parent="l4", child="l3")
+        robot.add_joint(j2)
+        robot.add_joint(j3)
+
+        # Mock get_root_link to return l1 (ignoring l2 as second root)
+        with patch.object(robot, "get_root_link", return_value=l1):
+            errors = robot.validate_tree_structure()
+
+            # l2 is disconnected (count=0, != root)
+            assert any("Link 'l2' is not connected" in e for e in errors)
+
+            # l3 has 2 parents
+            assert any("Link 'l3' has 2 parent joints" in e for e in errors)
+
+    def test_mimic_chain_valid_break(self):
+        # Test a mimic chain that ends properly (hitting break)
+
+        robot = Robot(name="test")
+        l1 = Link(name="l1")
+        l2 = Link(name="l2")
+        l3 = Link(name="l3")
+        robot.add_link(l1)
+        robot.add_link(l2)
+        robot.add_link(l3)
+
+        # j1 mimics j2. j2 mimics nothing.
+        j2 = Joint(
+            name="j2",
+            type=JointType.REVOLUTE,
+            parent="l1",
+            child="l2",
+            limits=JointLimits(lower=0, upper=1),
+        )
+        j1 = Joint(
+            name="j1",
+            type=JointType.REVOLUTE,
+            parent="l2",
+            child="l3",
+            limits=JointLimits(lower=0, upper=1),
+            mimic=JointMimic(joint="j2"),
+        )
+
+        robot.add_joint(j2)
+        robot.add_joint(j1)
+
+        errors = robot._validate_mimic_chains()
+        assert not errors

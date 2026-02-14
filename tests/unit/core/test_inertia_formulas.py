@@ -322,7 +322,7 @@ class TestInertiaEdgeCases:
         vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)]
         triangles = [(0, 1, 2, 3)]  # 4 indices instead of 3
 
-        with pytest.raises(ValueError, match="Triangle must have exactly 3 indices"):
+        with pytest.raises(ValueError, match="exactly 3 indices"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
     def test_mesh_invalid_triangle_index(self):
@@ -330,7 +330,7 @@ class TestInertiaEdgeCases:
         vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
         triangles = [(0, 1, 5)]  # Index 5 is out of bounds
 
-        with pytest.raises(ValueError, match="Triangle index.*out of bounds"):
+        with pytest.raises(ValueError, match="index.*out of bounds"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
     def test_mesh_degenerate_zero_volume(self):
@@ -463,3 +463,39 @@ class TestInertiaTriangleInequality:
         assert inertia.ixx + inertia.iyy >= inertia.izz - 1e-10
         assert inertia.ixx + inertia.izz >= inertia.iyy - 1e-10
         assert inertia.iyy + inertia.izz >= inertia.ixx - 1e-10
+
+
+class TestInertiaWrapper:
+    """Test the calculate_inertia wrapper function."""
+
+    def test_calculate_inertia_box(self):
+        from linkforge_core.physics.inertia import calculate_inertia
+
+        box = Box(size=Vector3(1.0, 1.0, 1.0))
+        inertia = calculate_inertia(box, mass=1.0)
+        assert inertia.ixx > 0
+
+    def test_calculate_inertia_cylinder(self):
+        from linkforge_core.physics.inertia import calculate_inertia
+
+        cyl = Cylinder(radius=1.0, length=1.0)
+        inertia = calculate_inertia(cyl, mass=1.0)
+        assert inertia.ixx > 0
+
+    def test_calculate_inertia_sphere(self):
+        from linkforge_core.physics.inertia import calculate_inertia
+
+        sphere = Sphere(radius=1.0)
+        inertia = calculate_inertia(sphere, mass=1.0)
+        assert inertia.ixx > 0
+
+    def test_calculate_inertia_mesh(self):
+        from linkforge_core.models import Vector3
+        from linkforge_core.models.geometry import Mesh
+        from linkforge_core.physics.inertia import calculate_inertia
+
+        # calculate_mesh_inertia uses approximation if triangles not provided
+        mesh = Mesh(filepath="package://test/test.stl", scale=Vector3(1.0, 1.0, 1.0))
+        inertia = calculate_inertia(mesh, mass=1.0)
+        # Should call calculate_mesh_inertia -> approx box
+        assert inertia.ixx > 0

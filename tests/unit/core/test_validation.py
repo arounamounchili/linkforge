@@ -424,3 +424,67 @@ def test_validator_no_root_link():
     assert not result.is_valid
     # Should detect either cycle or no root
     assert len(result.issues) > 0
+
+
+def test_validator_missing_collision():
+    """Test validator warns on missing collision geometry."""
+    from linkforge_core.models.geometry import Box, Vector3
+    from linkforge_core.models.link import Visual
+
+    robot = Robot(name="test_bot")
+    # Link with visual but no collision
+    l1 = Link(name="l1", visuals=[Visual(geometry=Box(Vector3(1, 1, 1)))])
+    robot.add_link(l1)
+
+    validator = RobotValidator(robot)
+    result = validator.validate()
+
+    assert result.is_valid
+    # Check for warning about missing collision
+    assert any("no collision geometry" in w.message for w in result.warnings)
+
+
+def test_validator_unreachable_code_mocks():
+    """Test unreachable code paths via mocking (for 100% coverage)."""
+    from unittest.mock import patch
+
+    from linkforge_core.models.link import Inertial, Link
+    from linkforge_core.models.robot import Robot
+    from linkforge_core.validation import RobotValidator
+
+    # Case 1: get_root_link returns None even with links (Line 171)
+    robot = Robot(name="mock_bot")
+    robot.add_link(Link(name="base", inertial=Inertial(mass=1.0)))
+
+    with patch.object(robot, "get_root_link", return_value=None):
+        validator = RobotValidator(robot)
+        result = validator.validate()
+        # Should trigger "No root link" error
+        # Note: logic says if root is None, add error "No root link found"
+        # The message is "No root link found. A robot must have exactly one link..."
+        assert any("No root link found" in e.message for e in result.errors)
+
+    # Case 2: Disconnected link check (Line 203)
+    # logic: if root and link != root and count == 0:
+    # Normally get_root_link would raise if there are multiple roots.
+    # We need to mock get_root_link to return one root, while another exists.
+
+    robot2 = Robot(name="disconnected_mock")
+    base = Link(name="base", inertial=Inertial(mass=1.0))
+    # Disconnected link
+    disc = Link(name="disconnected", inertial=Inertial(mass=1.0))
+
+    robot2.add_link(base)
+    robot2.add_link(disc)
+
+    # Mock get_root_link to return 'base' explicitly, ignoring the fact that 'disconnected' is also a root
+    with patch.object(robot2, "get_root_link", return_value=base):
+        validator2 = RobotValidator(robot2)
+        result2 = validator2.validate()
+
+        # Should detect 'disconnected' as a disconnected link
+        # Because count for 'disconnected' is 0, and it != base.
+        # Line 203: if root and link != root and count == 0:
+        # result.add_error(title="Disconnected link", ...)
+        assert any("Disconnected link" in e.title for e in result2.errors)
+        assert any("disconnected" in e.message for e in result2.errors)
