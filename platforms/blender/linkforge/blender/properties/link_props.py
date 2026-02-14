@@ -21,18 +21,6 @@ from bpy.types import Context, PropertyGroup
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 
 
-def on_material_type_update(self: PropertyGroup, context: Context) -> None:
-    """Handle material type updates."""
-    if not self.id_data:
-        return
-
-
-def on_collision_type_update(self: PropertyGroup, context: Context) -> None:
-    """Handle collision type updates."""
-    if not self.id_data:
-        return
-
-
 def get_link_name(self: bpy.types.PropertyGroup) -> str:
     """Getter for link_name - mirrors and sanitizes the Blender object name."""
     if not self.id_data:

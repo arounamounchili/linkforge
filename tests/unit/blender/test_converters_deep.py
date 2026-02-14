@@ -120,7 +120,7 @@ def test_gazebo_plugin_extraction(mocker):
 
     mocker.patch(
         "linkforge.blender.adapters.blender_to_core._categorize_scene_objects",
-        return_value=({}, [], [], {}, None),
+        return_value=({}, [], [], [], {}, None),
     )
     mocker.patch(
         "linkforge.blender.adapters.blender_to_core.blender_ros2_control_to_core",

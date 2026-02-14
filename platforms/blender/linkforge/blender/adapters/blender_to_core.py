@@ -887,6 +887,7 @@ def _categorize_scene_objects(
     dict[str, Any],
     list[Any],
     list[Any],
+    list[Any],
     dict[str, tuple[str, Any]],
     tuple[str, Any] | None,
 ]:
