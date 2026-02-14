@@ -12,7 +12,7 @@ Modules:
 
 from __future__ import annotations
 
-__version__ = "1.2.2"  # x-release-please-version
+__version__ = "1.2.3"  # x-release-please-version
 
 from . import generators, models, parsers, physics
 from .base import LinkForgeError, RobotGeneratorError, RobotParserError, XacroDetectedError

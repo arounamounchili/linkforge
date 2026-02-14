@@ -5,6 +5,20 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3](https://github.com/arounamounchili/linkforge/compare/v1.2.2...v1.2.3) (2026-02-14)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** achieve 100% type safety, fix regressions, and modernize imports ([570c84b](https://github.com/arounamounchili/linkforge/commit/570c84b250e38a589b785ea2a2b467d4267116b2))
+* **core:** parser hardening, hybrid package resolver, and DAE restoration ([0260082](https://github.com/arounamounchili/linkforge/commit/0260082b5aed46dba3bcdebdffb4f7cd3c89d5ba))
+
+
+### 📚 Documentation
+
+* add GeorgeKugler as a contributor for bug ([#112](https://github.com/arounamounchili/linkforge/issues/112)) ([80283a2](https://github.com/arounamounchili/linkforge/commit/80283a27f143cdcfc6c44cc8f87bea9206337a18))
+* synchronize documentation with v1.2.2 and refactor CI workflows ([#113](https://github.com/arounamounchili/linkforge/issues/113)) ([9c275c4](https://github.com/arounamounchili/linkforge/commit/9c275c41fb97d896c9ec1c945034d72be793a5bb))
+
 ## [1.2.2](https://github.com/arounamounchili/linkforge/compare/v1.2.1...v1.2.2) (2026-02-07)
 
 
