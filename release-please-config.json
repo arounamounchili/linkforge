@@ -36,6 +36,21 @@
                     "hidden": false
                 },
                 {
+                    "type": "revert",
+                    "section": "🗑️ Reverts",
+                    "hidden": false
+                },
+                {
+                    "type": "build",
+                    "section": "🏗️ Build System",
+                    "hidden": true
+                },
+                {
+                    "type": "ci",
+                    "section": "👷 CI",
+                    "hidden": true
+                },
+                {
                     "type": "chore",
                     "section": "🧹 Maintenance",
                     "hidden": true
