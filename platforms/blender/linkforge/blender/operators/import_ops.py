@@ -87,6 +87,8 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         from ...linkforge_core.validation.security import find_sandbox_root
 
         sandbox_root = find_sandbox_root(urdf_path)
+        logger.info(f"Importing robot from: {urdf_path}")
+        logger.debug(f"Detected sandbox root: {sandbox_root}")
 
         # Smart Import Logic:
         # 1. If it looks like URDF, try parsing as URDF.

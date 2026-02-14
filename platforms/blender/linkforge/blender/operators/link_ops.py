@@ -328,6 +328,10 @@ def _merge_visual_meshes(
 
         duplicates.append(dup)
 
+    # If no valid meshes found, return None
+    if not duplicates:
+        return None
+
     # If only one visual, return it directly
     if len(duplicates) == 1:
         return duplicates[0]
@@ -337,7 +341,7 @@ def _merge_visual_meshes(
     for dup in duplicates:
         dup.select_set(True)
     vl = context.view_layer
-    if vl:
+    if vl and duplicates:
         vl.objects.active = duplicates[0]
 
     # Join into single mesh
@@ -447,6 +451,13 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     Returns:
         True if successful, False otherwise
     """
+    if (
+        not link_obj
+        or not hasattr(link_obj, "linkforge")
+        or not typing.cast(typing.Any, link_obj).linkforge.is_robot_link
+    ):
+        return False
+
     lf = typing.cast(typing.Any, link_obj).linkforge
 
     # Import here to avoid circular dependency

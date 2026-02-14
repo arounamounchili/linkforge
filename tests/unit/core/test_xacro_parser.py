@@ -842,12 +842,18 @@ def test_xacro_unknown_tag(tmp_path, caplog):
     )
 
     resolver = XacroResolver()
-    # Use full logger path and check records directly
+    # Explicitly track the logger and ensure it doesn't block caplog
+
+    # Temporary patch to ensure propagate is True during this test
+    original_propagate = xacro_logger.propagate
     xacro_logger.propagate = True
-    with caplog.at_level(logging.DEBUG, logger=xacro_logger.name):
-        resolver.resolve_file(xacro_file)
-    print(f"DEBUG Unknown Tag Records: {caplog.text}")
-    assert any("Unknown macro" in r.message for r in caplog.records)
+
+    try:
+        with caplog.at_level(logging.WARNING, logger=xacro_logger.name):
+            resolver.resolve_file(xacro_file)
+        assert any("Unknown macro" in r.message for r in caplog.records)
+    finally:
+        xacro_logger.propagate = original_propagate
 
 
 def test_xacro_recursive_cleanup_comments():

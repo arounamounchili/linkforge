@@ -50,7 +50,8 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
     def check(self, context: Context) -> bool:  # type: ignore
-        return True
+        """Verify if export can proceed based on current scene state."""
+        return bool(context.scene and hasattr(context.scene, "linkforge"))
 
     def invoke(self, context: Context, event: Event) -> typing.Any:
         """Invoked before the file browser opens."""
@@ -93,7 +94,10 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         self.filepath = str(output_path)
 
         # Always define meshes_dir so URDF can reference it
-        meshes_dir = output_path.parent / robot_props.mesh_directory_name
+        meshes_dir = output_path.parent / (robot_props.mesh_directory_name or "meshes")
+
+        logger.info(f"Exporting robot to: {output_path}")
+        logger.debug(f"Mesh directory: {meshes_dir}")
 
         # Validate if requested
         if robot_props.validate_before_export:

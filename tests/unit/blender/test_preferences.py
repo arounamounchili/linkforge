@@ -118,3 +118,19 @@ def test_update_inertia_size():
     with patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw") as mock_redraw:
         update_inertia_size(MagicMock(), bpy.context)
         mock_redraw.assert_called_once()
+
+
+def test_preferences_draw():
+    """Test the draw method of LinkForgePreferences."""
+    from linkforge.blender.preferences import LinkForgePreferences
+
+    prefs = MagicMock(spec=LinkForgePreferences)
+    prefs.layout = MagicMock()
+    prefs.show_inertia_gizmos = True
+    prefs.show_joint_axes = True
+
+    LinkForgePreferences.draw(prefs, MagicMock())
+
+    # Verify draw calls were made to layout
+    assert prefs.layout.box.call_count >= 1
+    assert prefs.layout.separator.call_count >= 1
