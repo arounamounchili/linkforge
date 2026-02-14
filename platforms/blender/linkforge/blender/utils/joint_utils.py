@@ -22,5 +22,6 @@ def resolve_mimic_joints(joints: list[Joint], joint_objects: dict[str, bpy.types
                 if joint.mimic.joint in joint_objects:
                     mimic_target_obj = joint_objects[joint.mimic.joint]
                     joint_obj.linkforge_joint.mimic_joint = mimic_target_obj
+                    joint_obj.linkforge_joint.use_mimic = True
                 joint_obj.linkforge_joint.mimic_multiplier = joint.mimic.multiplier
                 joint_obj.linkforge_joint.mimic_offset = joint.mimic.offset

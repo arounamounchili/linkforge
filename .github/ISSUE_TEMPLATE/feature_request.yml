@@ -5,12 +5,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        Have an idea to make LinkForge better? We'd love to hear it!
+        **Have an idea to make LinkForge better? We'd love to hear it!**
+
+        Please check if your feature has already been requested in the [Issues](https://github.com/arounamounchili/linkforge/issues) before submitting.
   - type: textarea
     id: problem
     attributes:
       label: "Is your feature request related to a problem?"
-      description: "A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]"
+      description: "A clear and concise description of the problem. Ex. I'm always frustrated when [...]"
     validations:
       required: true
   - type: textarea

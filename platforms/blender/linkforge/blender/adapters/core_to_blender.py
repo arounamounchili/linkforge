@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import re
 import typing
 from pathlib import Path
 
@@ -40,6 +41,18 @@ def resolve_mesh_path(filepath: Path, urdf_dir: Path) -> Path:
         Resolved Path object
     """
     path_str = str(filepath)
+
+    # Handle file:// URIs
+    if path_str.startswith("file://") or path_str.startswith("file:/"):
+        # Handle file:/// (standard), file:// (non-standard but common),
+        # and file:/ (Blender's Path representation in some cases)
+        # Replace "file:" followed by any number of slashes with a single slash
+        path_str = re.sub(r"^file:/*", "/", path_str)
+
+        # On Windows, a path like "/C:/path" needs to become "C:/path"
+        if path_str.startswith("/") and len(path_str) > 2 and path_str[2] == ":":
+            path_str = path_str.lstrip("/")
+        return Path(path_str)
 
     # Handle package:// URIs
     if "package:" in path_str:
@@ -926,36 +939,36 @@ def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
 
     # Reset Global LinkForge State
     # Since LinkForge manages a single centralized configuration per scene,
-    # we must clear old data to prevent stale conflicts or merging issues.
-    if hasattr(scene, "linkforge"):
-        scene.linkforge.use_ros2_control = False
-        scene.linkforge.ros2_control_joints.clear()
-
     # Populate centralized ROS2 Control
-    if hasattr(robot, "ros2_controls") and robot.ros2_controls and hasattr(scene, "linkforge"):
-        scene.linkforge.use_ros2_control = True
-        # Take the first system (most URDFs have only one system-level ros2_control)
-        rc = robot.ros2_controls[0]
-        scene.linkforge.ros2_control_name = rc.name
-        scene.linkforge.ros2_control_type = rc.type
-        scene.linkforge.hardware_plugin = rc.hardware_plugin
+    if robot.ros2_controls:
+        lp = scene.linkforge  # type: ignore[attr-defined]
+        # Use direct scene access to ensure persistence in tests
+        lp.use_ros2_control = True
+        control = robot.ros2_controls[0]
+        lp.ros2_control_name = control.name
+        lp.ros2_control_type = control.type
+        lp.hardware_plugin = control.hardware_plugin
 
-        # Map joints to the centralized collection
-        scene.linkforge.ros2_control_joints.clear()
-        for rc_joint in rc.joints:
-            item = scene.linkforge.ros2_control_joints.add()
+        # Map joints
+        lp.ros2_control_joints.clear()
+        for rc_joint in control.joints:
+            item = lp.ros2_control_joints.add()
             item.name = rc_joint.name
-
-            # Map interfaces
             item.cmd_position = "position" in rc_joint.command_interfaces
             item.cmd_velocity = "velocity" in rc_joint.command_interfaces
             item.cmd_effort = "effort" in rc_joint.command_interfaces
-
             item.state_position = "position" in rc_joint.state_interfaces
             item.state_velocity = "velocity" in rc_joint.state_interfaces
             item.state_effort = "effort" in rc_joint.state_interfaces
-    elif hasattr(scene, "linkforge"):
-        scene.linkforge.use_ros2_control = False
+
+    # Gazebo Elements (Blender properties only support one main gazebo plugin name currently)
+    if robot.gazebo_elements and hasattr(scene, "linkforge"):
+        for elem in robot.gazebo_elements:
+            for plugin in elem.plugins:
+                # Map to the single gazebo_plugin_name field if it looks like the ros2_control one
+                if "ros2_control" in plugin.name.lower():
+                    scene.linkforge.gazebo_plugin_name = plugin.name
+                    break
 
     # Check for legacy Gazebo ros2_control plugin settings
     if hasattr(robot, "gazebo_elements") and robot.gazebo_elements:

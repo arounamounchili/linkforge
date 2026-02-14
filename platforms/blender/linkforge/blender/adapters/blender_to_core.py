@@ -56,6 +56,12 @@ from ...linkforge_core.models import (
     Vector3,
     Visual,
 )
+from ...linkforge_core.models.transmission import (
+    Transmission,
+    TransmissionActuator,
+    TransmissionJoint,
+    TransmissionType,
+)
 from ...linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
 from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
 from ...linkforge_core.utils.string_utils import sanitize_name
@@ -735,7 +741,13 @@ def blender_joint_to_core(obj: Any, scene: Any) -> Joint | None:
     mimic = None
     if props.use_mimic and props.mimic_joint:
         mimic_obj = props.mimic_joint
-        mimic_joint_name = mimic_obj.linkforge_joint.joint_name if mimic_obj else ""
+        mimic_joint_name = ""
+        if mimic_obj:
+            if hasattr(mimic_obj, "linkforge_joint") and mimic_obj.linkforge_joint.joint_name:
+                mimic_joint_name = mimic_obj.linkforge_joint.joint_name
+            else:
+                mimic_joint_name = sanitize_name(mimic_obj.name)
+
         if mimic_joint_name:
             mimic = JointMimic(
                 joint=mimic_joint_name,
@@ -768,10 +780,112 @@ def blender_joint_to_core(obj: Any, scene: Any) -> Joint | None:
     )
 
 
+def blender_transmission_to_core(obj: Any) -> Transmission | None:
+    """Convert Blender Empty with TransmissionPropertyGroup to Core Transmission.
+
+    Args:
+        obj: Blender Empty object with linkforge_transmission property group
+
+    Returns:
+        Core Transmission model or None
+
+    """
+    if obj is None:
+        return None
+
+    props = obj.linkforge_transmission
+    if not props.is_robot_transmission:
+        return None
+
+    trans_name = props.transmission_name if props.transmission_name else obj.name
+
+    # Transmission type mapping
+    trans_type_map = {
+        "SIMPLE": TransmissionType.SIMPLE.value,
+        "DIFFERENTIAL": TransmissionType.DIFFERENTIAL.value,
+        "FOUR_BAR_LINKAGE": TransmissionType.FOUR_BAR_LINKAGE.value,
+        "CUSTOM": props.custom_type if props.custom_type else TransmissionType.CUSTOM.value,
+    }
+    trans_type = trans_type_map.get(props.transmission_type, TransmissionType.SIMPLE.value)
+
+    # Hardware interface mapping
+    hw_if_map = {
+        "POSITION": "position",
+        "VELOCITY": "velocity",
+        "EFFORT": "effort",
+    }
+    hw_if = hw_if_map.get(props.hardware_interface, "position")
+
+    joints = []
+    actuators = []
+
+    if props.transmission_type in ("SIMPLE", "CUSTOM", "FOUR_BAR_LINKAGE"):
+        joint_obj = props.joint_name
+        if joint_obj:
+            joint_name = (
+                joint_obj.linkforge_joint.joint_name
+                if hasattr(joint_obj, "linkforge_joint") and joint_obj.linkforge_joint.joint_name
+                else ""
+            ) or joint_obj.name
+
+            joints.append(
+                TransmissionJoint(
+                    name=joint_name,
+                    hardware_interfaces=[hw_if],
+                    mechanical_reduction=props.mechanical_reduction,
+                    offset=props.offset,
+                )
+            )
+
+            act_name = (
+                props.actuator_name
+                if props.use_custom_actuator_name and props.actuator_name
+                else f"{joint_name}_motor"
+            )
+            actuators.append(TransmissionActuator(name=act_name, hardware_interfaces=[hw_if]))
+    elif props.transmission_type == "DIFFERENTIAL":
+        j1_obj = props.joint1_name
+        j2_obj = props.joint2_name
+        if j1_obj and j2_obj:
+            j1_name = (
+                j1_obj.linkforge_joint.joint_name if hasattr(j1_obj, "linkforge_joint") else ""
+            ) or j1_obj.name
+            j2_name = (
+                j2_obj.linkforge_joint.joint_name if hasattr(j2_obj, "linkforge_joint") else ""
+            ) or j2_obj.name
+
+            joints.append(
+                TransmissionJoint(
+                    name=j1_name,
+                    hardware_interfaces=[hw_if],
+                    mechanical_reduction=props.mechanical_reduction,
+                )
+            )
+            joints.append(
+                TransmissionJoint(
+                    name=j2_name,
+                    hardware_interfaces=[hw_if],
+                    mechanical_reduction=props.mechanical_reduction,
+                )
+            )
+
+            a1_name = props.actuator1_name if props.actuator1_name else f"{j1_name}_motor"
+            a2_name = props.actuator2_name if props.actuator2_name else f"{j2_name}_motor"
+
+            actuators.append(TransmissionActuator(name=a1_name, hardware_interfaces=[hw_if]))
+            actuators.append(TransmissionActuator(name=a2_name, hardware_interfaces=[hw_if]))
+
+    if not joints:
+        return None
+
+    return Transmission(name=trans_name, type=trans_type, joints=joints, actuators=actuators)
+
+
 def _categorize_scene_objects(
     scene: Any,
 ) -> tuple[
     dict[str, Any],
+    list[Any],
     list[Any],
     list[Any],
     dict[str, tuple[str, Any]],
@@ -789,6 +903,7 @@ def _categorize_scene_objects(
     link_objects = {}  # link_name -> link Empty object
     joint_objects = []
     sensor_objects = []
+    transmission_objects = []
     joints_map = {}  # child_link_name -> (parent_link_name, joint_empty_obj)
     root_link = None
 
@@ -806,8 +921,16 @@ def _categorize_scene_objects(
                 parent_obj = props.parent_link
                 child_obj = props.child_link
 
-                parent_name = parent_obj.linkforge.link_name if parent_obj else ""
-                child_name = child_obj.linkforge.link_name if child_obj else ""
+                parent_name = (
+                    parent_obj.linkforge.link_name
+                    if parent_obj and hasattr(parent_obj, "linkforge")
+                    else (parent_obj.name if parent_obj else "")
+                )
+                child_name = (
+                    child_obj.linkforge.link_name
+                    if child_obj and hasattr(child_obj, "linkforge")
+                    else (child_obj.name if child_obj else "")
+                )
 
                 if parent_name and child_name:
                     joints_map[child_name] = (parent_name, obj)
@@ -816,13 +939,20 @@ def _categorize_scene_objects(
             elif hasattr(obj, "linkforge_sensor") and obj.linkforge_sensor.is_robot_sensor:
                 sensor_objects.append(obj)
 
+            # Check for Transmission
+            elif (
+                hasattr(obj, "linkforge_transmission")
+                and obj.linkforge_transmission.is_robot_transmission
+            ):
+                transmission_objects.append(obj)
+
     # Find root link (link with no parent joint)
     for link_name, obj in link_objects.items():
         if link_name not in joints_map:
             root_link = (link_name, obj)
             break
 
-    return link_objects, joint_objects, sensor_objects, joints_map, root_link
+    return link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link
 
 
 def _calculate_link_frames(
@@ -911,8 +1041,8 @@ def scene_to_robot(
     conversion_errors: list[str] = []
 
     # Step 1: Categorize scene objects
-    link_objects, joint_objects, sensor_objects, joints_map, root_link = _categorize_scene_objects(
-        scene
+    link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link = (
+        _categorize_scene_objects(scene)
     )
 
     # Step 2: Calculate link coordinate frames
@@ -983,6 +1113,17 @@ def scene_to_robot(
             if strict_mode:
                 raise  # Fail immediately in strict mode
             conversion_errors.append(f"Sensor '{obj.name}': {e}")
+
+    # Process Transmissions
+    for obj in transmission_objects:
+        try:
+            transmission = blender_transmission_to_core(obj)
+            if transmission:
+                robot.add_transmission(transmission)
+        except Exception as e:
+            if strict_mode:
+                raise
+            conversion_errors.append(f"Transmission '{obj.name}': {e}")
 
     # Process centralized ROS2 Control
     if robot_props.use_ros2_control:

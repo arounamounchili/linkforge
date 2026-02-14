@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest import mock
 
 import bpy
 import pytest
@@ -10,6 +11,8 @@ from linkforge.blender.adapters.core_to_blender import (
     create_sensor_object,
     import_mesh_file,
     import_robot_to_scene,
+    normalize_and_consolidate_imported_objects,
+    resolve_mesh_path,
 )
 from linkforge.linkforge_core.models import (
     Box,
@@ -34,6 +37,7 @@ from linkforge.linkforge_core.models import (
     Ros2Control,
     Ros2ControlJoint,
     Sensor,
+    SensorNoise,
     SensorType,
     Sphere,
     Transform,
@@ -899,3 +903,128 @@ def test_create_joint_object_mimic_logic():
     assert res.linkforge_joint.use_mimic is True
 
     assert res.linkforge_joint.mimic_multiplier == 0.5
+
+
+def test_sensor_noise_properties(clean_scene):
+    """Verify sensor noise property mapping for LIDAR, IMU, and GPS."""
+    # 1. LIDAR with noise
+    lidar = Sensor(
+        name="Lidar",
+        type=SensorType.LIDAR,
+        link_name="base_link",
+        lidar_info=LidarInfo(
+            horizontal_samples=640, noise=SensorNoise(type="gaussian", mean=0.0, stddev=0.01)
+        ),
+    )
+
+    # 2. IMU with noise
+    imu = Sensor(
+        name="IMU",
+        type=SensorType.IMU,
+        link_name="base_link",
+        imu_info=IMUInfo(
+            angular_velocity_noise=SensorNoise(type="gaussian", mean=0.0, stddev=0.001)
+        ),
+    )
+
+    # 3. GPS with noise
+    gps = Sensor(
+        name="GPS",
+        type=SensorType.GPS,
+        link_name="base_link",
+        gps_info=GPSInfo(
+            position_sensing_horizontal_noise=SensorNoise(type="gaussian", mean=0.0, stddev=0.5)
+        ),
+    )
+
+    base_link = bpy.data.objects.new("base_link", None)
+    bpy.context.collection.objects.link(base_link)
+    link_map = {"base_link": base_link}
+
+    for s in [lidar, imu, gps]:
+        obj = create_sensor_object(s, link_map)
+        assert obj is not None
+        assert obj.linkforge_sensor.use_noise is True
+        assert obj.linkforge_sensor.noise_type == "gaussian"
+
+        if s.type == SensorType.LIDAR:
+            assert obj.linkforge_sensor.noise_stddev == pytest.approx(0.01)
+        elif s.type == SensorType.IMU:
+            assert obj.linkforge_sensor.noise_stddev == pytest.approx(0.001)
+        elif s.type == SensorType.GPS:
+            assert obj.linkforge_sensor.noise_stddev == pytest.approx(0.5)
+
+
+def test_multi_visual_collision_naming(clean_scene):
+    """Verify suffix naming for multiple unnamed visuals and collisions."""
+    box_geom = Box(size=Vector3(1, 1, 1))
+
+    link = Link(
+        name="multi_link",
+        visuals=[Visual(geometry=box_geom), Visual(geometry=box_geom)],
+        collisions=[Collision(geometry=box_geom), Collision(geometry=box_geom)],
+    )
+
+    obj = create_link_object(link, Path("/cwd"), collection=bpy.context.collection)
+    assert obj is not None
+
+    # Check visuals: naming should follow {link_name}_visual_{idx}
+    visuals = [c for c in obj.children if "_visual_" in c.name]
+    assert len(visuals) == 2, f"Expected 2 visuals, found {[c.name for c in obj.children]}"
+
+    # Check collisions: naming should follow {link_name}_collision_{idx}
+    collisions = [c for c in obj.children if "_collision_" in c.name]
+    assert len(collisions) == 2, f"Expected 2 collisions, found {[c.name for c in obj.children]}"
+
+
+def test_normalize_consolidate_empty_cleanup(clean_scene):
+    """Verify cleanup when no meshes are found in imported objects."""
+    empty = bpy.data.objects.new("EmptyContainer", None)
+    bpy.context.collection.objects.link(empty)
+
+    res = normalize_and_consolidate_imported_objects([empty], "Final")
+    assert res is None
+    assert "EmptyContainer" not in bpy.data.objects
+
+
+def test_resolve_mesh_path_package_fallback():
+    """Verify resolve_mesh_path fallback for package:// URIs."""
+    with mock.patch(
+        "linkforge.blender.adapters.core_to_blender.resolve_package_path", return_value=None
+    ):
+        res = resolve_mesh_path(Path("package://my_pkg/mesh.stl"), Path("/cwd"))
+        # Should fallback to stripping package:// and trying relative (which returns the relative path if not exists)
+        assert res == Path("my_pkg/mesh.stl")
+
+
+def test_resolve_mesh_path_errors():
+    """Verify resolve_mesh_path error handling branches."""
+    with mock.patch.object(Path, "resolve", side_effect=OSError("FS Error")):
+        # Should fallback to original path if resolution fails
+        assert resolve_mesh_path(Path("bad/path"), Path("/cwd")) == Path("bad/path")
+
+
+def test_import_robot_sensor_creation_failure(clean_scene):
+    """Verify import_robot_to_scene handles sensor creation failure."""
+    robot = Robot(
+        name="test_robot",
+        initial_links=[Link(name="base_link")],
+        sensors=[
+            Sensor(
+                name="BadSensor",
+                type=SensorType.CAMERA,
+                link_name="base_link",
+                camera_info=CameraInfo(),
+            )
+        ],
+    )
+
+    context = mock.MagicMock()
+    context.scene = bpy.context.scene
+    context.view_layer = bpy.context.view_layer
+
+    with mock.patch(
+        "linkforge.blender.adapters.core_to_blender.create_sensor_object", return_value=None
+    ):
+        import_robot_to_scene(robot, Path("test.urdf"), context)
+        assert "base_link" in bpy.data.objects

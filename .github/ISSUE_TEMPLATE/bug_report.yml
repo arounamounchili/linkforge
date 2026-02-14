@@ -5,7 +5,16 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a bug! Please fill out the form below to help us investigate.
+        **Thanks for taking the time to report a bug!**
+
+        Please fill out the form below to help us investigate. If you have any questions, feel free to ask in our [Discussions](https://github.com/arounamounchili/linkforge/discussions).
+  - type: input
+    id: linkforge_version
+    attributes:
+      label: "LinkForge Version"
+      placeholder: "e.g. 1.0.0, 1.1.0-rc1"
+    validations:
+      required: true
   - type: input
     id: blender_version
     attributes:
@@ -28,18 +37,19 @@ body:
     id: description
     attributes:
       label: "Description"
-      description: "A clear and concise description of what the bug is."
+      description: "A clear and concise description of the bug."
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: "Step to Reproduce"
+      label: "Steps to Reproduce"
       description: "Steps to reproduce the behavior."
       placeholder: |
         1. Open Blender
-        2. Create a Link
-        3. ...
+        2. Go to '...'
+        3. Click on '...'
+        4. See error
     validations:
       required: true
   - type: textarea

@@ -49,4 +49,9 @@ if HAS_BPY:
             if col.name != "Collection":  # Preserve default if needed, or just delete all
                 bpy.data.collections.remove(col, do_unlink=True)
 
+        # Reset Scene properties
+        if hasattr(bpy.context.scene, "linkforge"):
+            bpy.context.scene.linkforge.use_ros2_control = False
+            bpy.context.scene.linkforge.ros2_control_joints.clear()
+
         yield
