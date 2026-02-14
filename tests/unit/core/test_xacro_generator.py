@@ -436,3 +436,38 @@ class TestXACROGenerator:
         assert 'damping="0.5"' in xml_str
         assert 'friction="0.1"' in xml_str
         assert 'mesh filename="model://mesh.dae"' in xml_str
+
+    def test_find_common_prefix_edge_cases(self):
+        """Test common prefix finder with edge cases."""
+        gen = XACROGenerator()
+
+        # Empty list
+        assert gen._find_common_prefix([]) == ""
+
+        # Single item (should return empty string as per logic?)
+        # Logic says: if not names return "", else prefix = names[0]...
+        # Wait, if list has 1 item, loop [1:] doesn't run, returns item.
+        # But _generate_dimension_property_name passes only if len >= 2.
+        # So we test logic directly for safety.
+        assert gen._find_common_prefix(["single"]) == "single"
+
+        # No common prefix
+        assert gen._find_common_prefix(["a_b", "c_d"]) == ""
+
+        # Partial match
+        assert gen._find_common_prefix(["arm_left", "arm_right"]) == "arm"
+
+    def test_group_dimensions_tolerance(self):
+        """Test dimension grouping tolerance."""
+        gen = XACROGenerator()
+
+        # Values close enough to group
+        values = [("l1", 1.0001), ("l2", 1.0002)]
+        groups = gen._group_dimensions_by_value(values)
+        assert len(groups) == 1
+        assert 1.0 in groups  # grouped by rounded key
+
+        # Values too far apart
+        values = [("l1", 1.0), ("l2", 1.1)]
+        groups = gen._group_dimensions_by_value(values)
+        assert len(groups) == 2

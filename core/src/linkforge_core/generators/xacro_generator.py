@@ -398,9 +398,6 @@ class XACROGenerator(URDFGenerator):
                 return last_parts[0]
 
         # Fallback: find common prefix
-        if not names:
-            return ""
-
         prefix = names[0]
         for name in names[1:]:
             # Find common prefix between current prefix and this name

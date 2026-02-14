@@ -57,7 +57,7 @@ class RobotGenerator(ABC, Generic[T]):  # noqa: UP046
         Returns:
             The generated output (e.g. XML string, JSON dict)
         """
-        pass
+        pass  # pragma: no cover
 
     def write(self, robot: Robot, filepath: Path, **kwargs: Any) -> None:
         """Write the generated output to a file.
@@ -117,4 +117,4 @@ class RobotParser(ABC):
         Returns:
             The generic Robot model (Intermediate Representation)
         """
-        pass
+        pass  # pragma: no cover
