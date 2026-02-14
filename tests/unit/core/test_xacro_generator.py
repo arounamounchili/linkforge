@@ -471,3 +471,103 @@ class TestXACROGenerator:
         values = [("l1", 1.0), ("l2", 1.1)]
         groups = gen._group_dimensions_by_value(values)
         assert len(groups) == 2
+
+    def test_generator_generate_macro_definition_no_joint(self):
+        """Cover line 534 in xacro_generator.py."""
+        gen = XACROGenerator()
+        root = ET.Element("robot")
+        # Template list with link but None joint
+        link = Link(name="l")
+        group = [(link, None)]  # type: ignore
+        # Should return early and not crash
+        gen._generate_macro_definition(root, "sig", group)
+        assert len(root) == 0
+
+    def test_generator_generate_macro_call_no_joint(self):
+        """Cover line 611 in xacro_generator.py."""
+        gen = XACROGenerator()
+        root = ET.Element("robot")
+        link = Link(name="l")
+        # Should return early
+        gen._generate_macro_call(root, "sig", link, None)
+        assert len(root) == 0
+
+    def test_generator_visual_name(self):
+        """Cover line 635 in xacro_generator.py."""
+        gen = XACROGenerator()
+        robot = Robot(name="test")
+        link = Link(name="l")
+        vis = Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), name="my_visual")
+        link.visuals.append(vis)
+        robot.add_link(link)
+
+        xml = gen.generate(robot)
+        assert 'visual name="my_visual"' in xml
+
+    def test_generator_write_no_split(self, tmp_path):
+        """Cover line 759 in xacro_generator.py."""
+        gen = XACROGenerator(split_files=False)
+        robot = Robot(name="test")
+        robot.add_link(Link(name="base"))
+        out = tmp_path / "out.xacro"
+        gen.write(robot, out)
+        assert out.exists()
+
+    def test_generator_split_files_with_macros(self, tmp_path):
+        """Cover lines 790-841 in xacro_generator.py."""
+        gen = XACROGenerator(split_files=True, generate_macros=True)
+        # Create robot with repeated geometry to trigger macros
+        robot = Robot(name="test")
+
+        # Base link
+        base = Link(name="base")
+        robot.add_link(base)
+
+        # Link 1
+        l1 = Link(name="l1")
+        v1 = Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)))  # Identical box
+        l1.visuals.append(v1)
+        robot.add_link(l1)
+
+        # Link 2
+        l2 = Link(name="l2")
+        v2 = Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)))  # Identical box
+        l2.visuals.append(v2)
+        robot.add_link(l2)
+
+        # Joints needed for macro grouping
+        j1 = Joint(name="j1", type=JointType.FIXED, parent="base", child="l1")
+        robot.add_joint(j1)
+        j2 = Joint(name="j2", type=JointType.FIXED, parent="base", child="l2")
+        robot.add_joint(j2)
+
+        out = tmp_path / "main.xacro"
+        gen.write(robot, out)
+
+        assert out.exists()
+        macros_file = tmp_path / "test_macros.xacro"
+        macros_content = macros_file.read_text()
+        assert 'macro name="box_' in macros_content
+        assert '_macro"' in macros_content
+        assert 'include filename="test_macros.xacro"' in out.read_text()
+
+    def test_generator_extract_material_property_implementation(self):
+        """Cover lines 670-671 in xacro_generator.py - Implementation."""
+        gen = XACROGenerator(extract_materials=True, advanced_mode=True)
+        # Manually populate material_properties to simulate extraction having happened
+        gen.material_properties["blue"] = "color_blue"
+
+        root = ET.Element("link")
+        mat = Material(name="blue", color=Color(0.0, 0.0, 1.0, 1.0))
+
+        gen._add_material_element(root, mat)
+
+        xml = ET.tostring(root).decode()
+        assert 'rgba="${color_blue}"' in xml
+
+    def test_find_common_prefix_internal_logic(self):
+        """Ensure _find_common_prefix logic is fully covered."""
+        gen = XACROGenerator()
+        # Test basic cases
+        assert gen._find_common_prefix(["arm_link", "arm_joint"]) == "arm"
+        assert gen._find_common_prefix(["fl_wheel", "fr_wheel"]) == "wheel"

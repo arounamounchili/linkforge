@@ -976,10 +976,93 @@ class TestURDFParser:
             <joint name="good" type="fixed">
                  <parent link="base"/>
                  <child link="child"/>
-            </joint>
+             </joint>
         </robot>
         """
         parser = URDFParser()
         # parse_string uses _parse_robot internal logic
         robot = parser.parse_string(xml)
         assert len(robot.ros2_controls) == 1
+
+    def test_parse_gazebo_element_with_plugins(self):
+        """Cover line 991 in urdf_parser.py."""
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        parser = URDFParser()
+        xml = """
+        <robot name="r">
+            <gazebo>
+                <plugin name="p" filename="lib.so"/>
+            </gazebo>
+        </robot>
+        """
+        robot = parser.parse_string(xml)
+        assert len(robot.gazebo_elements) == 1
+        assert len(robot.gazebo_elements[0].plugins) == 1
+        assert robot.gazebo_elements[0].plugins[0].name == "p"
+
+    def test_parse_file_iterparse_error(self, tmp_path):
+        """Cover line 1232 in urdf_parser.py."""
+        from unittest import mock
+
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        path = tmp_path / "test.urdf"
+        path.touch()
+        parser = URDFParser()
+
+        # Mock ET.iterparse to raise ParseError
+        with (
+            mock.patch("xml.etree.ElementTree.iterparse", side_effect=ET.ParseError("Bad XML")),
+            pytest.raises(RobotParserError, match="Failed to parse URDF XML"),
+        ):
+            parser.parse(path)
+
+    def test_joint_renaming_collision_loop(self):
+        """Cover line 1336 in urdf_parser.py."""
+        from unittest import mock
+
+        from linkforge_core.models import Joint, JointType, Robot
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        # Need to simulate: add 'j' -> exists. try 'j_dup_1' -> exists. try 'j_dup_2' -> ok.
+        robot = Robot(name="test")
+        parser = URDFParser()
+        joint = Joint(name="j", type=JointType.FIXED, parent="p", child="c")
+        elem = ET.Element("joint", name="j")
+
+        with mock.patch.object(robot, "add_joint") as m:
+            m.side_effect = [
+                ValueError("already exists"),  # j exists
+                ValueError("already exists"),  # j_duplicate_1 exists
+                None,  # j_duplicate_2 ok
+            ]
+
+            parser._add_joint_robust(robot, joint, elem)
+
+            assert m.call_count == 3
+
+    def test_link_renaming_robustness(self):
+        """Cover lines 1302-1303 in urdf_parser.py."""
+        from unittest import mock
+
+        from linkforge_core.models import Link, Robot
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        robot = Robot(name="test")
+        parser = URDFParser()
+        link = Link(name="l")
+
+        # Mock robot.add_link to fail twice then succeed
+        with mock.patch.object(robot, "add_link") as m:
+            m.side_effect = [
+                ValueError("Link 'l' already exists"),
+                ValueError("Link 'l_duplicate_1' failed"),  # Trigger exception inside loop
+                None,  # Succeeds for l_duplicate_2
+            ]
+
+            with mock.patch("linkforge_core.parsers.urdf_parser.logger") as mock_logger:
+                parser._add_link_robust(robot, link)
+                assert m.call_count == 3
+                assert mock_logger.warning.called
+                assert "Renamed duplicate link" in mock_logger.warning.call_args[0][0]

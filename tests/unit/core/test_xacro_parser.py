@@ -862,3 +862,134 @@ def test_xacro_recursive_cleanup_comments():
     xml_str = resolver._finalize_urdf(root)
     assert "xacro:property" not in xml_str
     assert '<link name="l" />' in xml_str or '<link name="l"/>' in xml_str
+
+
+def test_resolve_file_flatten_container(tmp_path):
+    """Cover line 122 in xacro_parser.py via resolve_file."""
+    resolver = XacroResolver()
+    path = tmp_path / "test.xacro"
+    # Content that resolves to a container via a conditional
+    path.write_text("""
+    <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+        <xacro:if value="1">
+            <link name="l"/>
+        </xacro:if>
+    </robot>
+    """)
+
+    # resolve_file -> _finalize_urdf -> _append_filtered
+    # The container from if should be flattened.
+    xml = resolver.resolve_file(path)
+    assert '<link name="l"' in xml
+
+
+def test_handle_include_missing_file_warning():
+    """Cover line 257 in xacro_parser.py."""
+    resolver = XacroResolver()
+    xml = ET.fromstring(
+        '<xacro:include xmlns:xacro="http://www.ros.org/wiki/xacro" filename="missing.xacro"/>'
+    )
+
+    with mock.patch("linkforge_core.parsers.xacro_parser.logger") as m:
+        resolver.resolve_element(xml)
+        assert m.warning.called
+        assert "Could not find included file" in m.warning.call_args[0][0]
+
+
+def test_property_block_assignment():
+    """Cover line 236 in xacro_parser.py."""
+    resolver = XacroResolver()
+    xml = ET.fromstring("""
+    <xacro:property xmlns:xacro="http://www.ros.org/wiki/xacro" name="block">
+        <child/>
+    </xacro:property>
+    """)
+    resolver.resolve_element(xml)
+    assert "block" in resolver.properties
+    assert isinstance(resolver.properties["block"], list)
+
+
+def test_handle_load_json_module_missing(tmp_path):
+    """Cover line 547-548 in xacro_parser.py."""
+    resolver = XacroResolver(start_dir=tmp_path)
+    with mock.patch("linkforge_core.parsers.xacro_parser.json", None):
+        res = resolver._handle_load_json("foo.json")
+        assert res == {}
+
+
+def test_handle_load_yaml_error(tmp_path):
+    """Cover line 540-542 in xacro_parser.py."""
+    resolver = XacroResolver(start_dir=tmp_path)
+    path = tmp_path / "bad.yaml"
+    path.touch()
+
+    with (
+        mock.patch(
+            "linkforge_core.parsers.xacro_parser.yaml.safe_load",
+            side_effect=Exception("Read error"),
+        ),
+        mock.patch("linkforge_core.parsers.xacro_parser.logger") as mock_logger,
+    ):
+        res = resolver._handle_load_yaml("bad.yaml")
+        assert res == {}
+        assert mock_logger.error.called
+
+
+def test_handle_load_json_error(tmp_path):
+    """Cover line 557-559 in xacro_parser.py."""
+    resolver = XacroResolver(start_dir=tmp_path)
+    path = tmp_path / "bad.json"
+    path.touch()
+
+    with (
+        mock.patch(
+            "linkforge_core.parsers.xacro_parser.json.load", side_effect=Exception("Read error")
+        ),
+        mock.patch("linkforge_core.parsers.xacro_parser.logger") as mock_logger,
+    ):
+        res = resolver._handle_load_json("bad.json")
+        assert res == {}
+        assert mock_logger.error.called
+
+
+def test_substitute_mixed_text():
+    """Cover lines 491-493, 498 in xacro_parser.py."""
+    resolver = XacroResolver()
+    resolver.properties["p"] = 1.5
+    res = resolver._substitute("val=${p}m")
+    assert res == "val=1.5m"
+
+
+def test_cleanup_non_string_tag():
+    """Cover lines 578-579 in xacro_parser.py."""
+    resolver = XacroResolver()
+    # Create element with a Comment child (tag is a function/type, not string)
+    root = ET.Element("robot")
+    comment = ET.Comment("test")
+    root.append(comment)
+
+    # Mock serialize_xml to avoid crash if finalize tries to serialize it
+    with mock.patch("linkforge_core.utils.xml_utils.serialize_xml", return_value=""):
+        resolver._finalize_urdf(root)
+        # Should not crash.
+
+
+def test_try_parse_typed_value_yaml_error():
+    """Cover lines 455-456 in xacro_parser.py."""
+    resolver = XacroResolver()
+    # Mock yaml.safe_load to raise Exception
+    with mock.patch(
+        "linkforge_core.parsers.xacro_parser.yaml.safe_load", side_effect=Exception("fail")
+    ):
+        res = resolver._try_parse_typed_value("foo")
+        assert res == "foo"
+
+
+def test_find_file_package_uri(tmp_path):
+    """Cover line 601 in xacro_parser.py."""
+    resolver = XacroResolver(start_dir=tmp_path)
+    with mock.patch("linkforge_core.parsers.xacro_parser.resolve_package_path") as m:
+        m.return_value = tmp_path / "resolved.urdf"
+        res = resolver._find_file("package://my_pkg/test.urdf")
+        assert res == tmp_path / "resolved.urdf"
+        assert m.called
