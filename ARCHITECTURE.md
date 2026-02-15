@@ -86,6 +86,8 @@ graph TB
     Generators --> Models
     Generators --> Utils
     Physics --> Models
+    Validation --> Models
+    Models --> Utils
     Utils --> Models
 
     style Models fill:#4fc3f7
