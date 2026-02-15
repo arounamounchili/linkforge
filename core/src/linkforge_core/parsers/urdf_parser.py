@@ -64,6 +64,7 @@ from ..models import (
     Visual,
 )
 from ..utils.xml_utils import (
+    MAX_XML_DEPTH,
     parse_float,
     parse_int,
     parse_optional_bool,
@@ -1162,6 +1163,14 @@ class URDFParser(RobotParser):
                 "or use the Blender XACRO resolver."
             )
 
+        # Security check: File size
+        file_size = filepath.stat().st_size
+        if file_size > self.max_file_size:
+            raise RobotParserError(
+                f"URDF file too large: {file_size / (1024 * 1024):.1f} MB "
+                f"(maximum {self.max_file_size / (1024 * 1024):.1f} MB)."
+            )
+
         try:
             # We use iterparse to process elements as they are closed
             context = ET.iterparse(str(filepath), events=("start", "end"))
@@ -1180,6 +1189,11 @@ class URDFParser(RobotParser):
             for event, elem in context:
                 if event == "start":
                     depth += 1
+                    if depth > MAX_XML_DEPTH:
+                        raise RobotParserError(
+                            f"XML nesting too deep: {depth} levels (maximum {MAX_XML_DEPTH}). "
+                            "This may indicate a malicious or corrupted XML file."
+                        )
                 elif event == "end":
                     if depth == 1:
                         # Direct children of <robot>

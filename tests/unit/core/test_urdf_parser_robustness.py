@@ -777,3 +777,38 @@ def test_parse_string_rejects_excessive_content_size():
     parser.max_file_size = 10  # 10 bytes
     with pytest.raises(RobotParserError, match="URDF string too large"):
         parser.parse_string("<robot name='too_large'/>")
+
+
+def test_parse_rejects_excessive_file_size(tmp_path):
+    """Test that files exceeding max_file_size are rejected during iterative parsing."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    parser.max_file_size = 5  # 5 bytes
+    f = tmp_path / "large.urdf"
+    f.write_text('<robot name="too_large_file"/>')
+
+    with pytest.raises(RobotParserError, match="URDF file too large"):
+        parser.parse(f)
+
+
+def test_parse_rejects_excessive_xml_depth(tmp_path):
+    """Test that deeply nested XML is rejected during iterative parsing."""
+    from linkforge_core.parsers.urdf_parser import URDFParser
+    from linkforge_core.utils.xml_utils import MAX_XML_DEPTH
+
+    parser = URDFParser()
+    f = tmp_path / "deep.urdf"
+
+    # Build deeply nested XML string
+    xml_parts = ['<robot name="deep">']
+    for i in range(MAX_XML_DEPTH + 1):
+        xml_parts.append(f'<link name="l{i}">')
+    for _ in range(MAX_XML_DEPTH + 1):
+        xml_parts.append("</link>")
+    xml_parts.append("</robot>")
+
+    f.write_text("".join(xml_parts))
+
+    with pytest.raises(RobotParserError, match="XML nesting too deep"):
+        parser.parse(f)
