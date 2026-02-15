@@ -19,19 +19,19 @@ graph LR
         Operators[Operators<br/>User Actions]
         Properties[Properties<br/>Data Storage]
         Adapters[Adapters<br/>Bridge & Mesh Export]
-        Logic[Logic<br/>Domain Integration]
+        Logic[Logic<br/>Async Import]
         Visualization[Visualization<br/>Gizmos & Overlays]
+        Preferences[Preferences<br/>Addon Settings]
         Utils[Utils<br/>Low-level Helpers]
     end
 
-    Panels --> Operators
+    Panels --> Utils
+    Panels --> Adapters
     Operators --> Properties
-    Operators --> Adapters
-    Operators --> Logic
-    Properties --> Adapters
-    Adapters --> Utils
+    Operators --> Utils
     Logic --> Adapters
-    Visualization --> Utils
+    Logic --> Utils
+    Visualization --> Preferences
 
     style Panels fill:#4fc3f7
     style Operators fill:#4fc3f7
@@ -39,18 +39,21 @@ graph LR
     style Adapters fill:#ce93d8
     style Logic fill:#ffb74d
     style Visualization fill:#a1887f
+    style Preferences fill:#ef9a9a
     style Utils fill:#ba68c8
 ```
 
 #### Components
 
-| Module | Purpose | Key Files |
-|--------|---------|-----------|
-| **Adapters** | Conversion between Blender ↔ Core (Directional) | `blender_to_core.py`, `core_to_blender.py`, `mesh_io.py` |
-| **Logic** | Domain-specific integration logic | `asynchronous_builder.py` |
-| **Visualization** | Viewport overlays and gizmos | `joint_gizmos.py`, `inertia_gizmos.py` |
-| **UI** | Panels and Operators | `panels/`, `operators/` |
-| **Storage** | Blender-side property definitions | `properties/` |
+| Module | Purpose |
+|--------|----------|
+| **Adapters** | Conversion between Blender ↔ Core (Directional) |
+| **Logic** | Async robot import orchestration |
+| **Visualization** | Viewport overlays and gizmos |
+| **UI** | Panels and Operators |
+| **Preferences** | Addon settings and toggle callbacks |
+| **Properties** | Blender-side property definitions |
+| **Utils** | Shared helpers (decorators, context guards) |
 
 ### Adapters Layer
 
@@ -78,9 +81,11 @@ graph TB
     end
 
     Parsers --> Models
+    Parsers --> Utils
+    Parsers --> Validation
     Generators --> Models
+    Generators --> Utils
     Physics --> Models
-    Validation --> Models
     Utils --> Models
 
     style Models fill:#4fc3f7
@@ -93,14 +98,14 @@ graph TB
 
 #### Components
 
-| Module | Purpose | Key Files/Classes |
-|--------|---------|-------------|
-| **Models** | Core data structures | `Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`, `GazeboPlugin` |
-| **Parsers** | URDF/XACRO → Python objects | `parsers/urdf_parser.py`, `parsers/xacro_parser.py` |
-| **Generators** | Python objects → URDF/XACRO | `urdf_generator.py`, `xacro_generator.py` |
-| **Physics** | Mass & inertia calculations | `physics/inertia.py` |
-| **Validation** | Error checking & security | `validation/validator.py`, `validation/security.py` |
-| **Utils** | Unified internal logic | `utils/math_utils.py`, `utils/string_utils.py`, `utils/xml_utils.py`, `utils/kinematics.py` |
+| Module | Purpose |
+|--------|----------|
+| **Models** | Core data structures (`Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`) |
+| **Parsers** | URDF/XACRO → Python objects |
+| **Generators** | Python objects → URDF/XACRO |
+| **Physics** | Mass & inertia calculations |
+| **Validation** | Error checking & security |
+| **Utils** | Shared internal logic (math, strings, XML, kinematics) |
 
 ## Data Flow
 
@@ -170,13 +175,15 @@ sequenceDiagram
 classDiagram
     class Robot {
         +str name
-        +list~Link~ links
-        +list~Joint~ joints
         +list~Sensor~ sensors
+        +list~Transmission~ transmissions
         +list~Ros2Control~ ros2_controls
-        +validate_tree_structure()
-        +add_link()
-        +add_joint()
+        +list~GazeboElement~ gazebo_elements
+        +add_link(link)
+        +add_joint(joint)
+        +add_sensor(sensor)
+        +get_link(name)
+        +get_joint(name)
     }
 
     class Link {
@@ -203,6 +210,10 @@ classDiagram
         +Transform origin
         +CameraInfo camera_info
         +LidarInfo lidar_info
+        +IMUInfo imu_info
+        +GPSInfo gps_info
+        +ContactInfo contact_info
+        +ForceTorqueInfo force_torque_info
     }
 
     Robot "1" *-- "many" Link
@@ -210,7 +221,7 @@ classDiagram
     Robot "1" *-- "many" Sensor
     Link "1" *-- "many" Visual
     Link "1" *-- "many" Collision
-    Link "1" *-- "1" Inertial
+    Link "1" *-- "0..1" Inertial
 ```
 
 ### Geometry Models
@@ -290,6 +301,9 @@ To handle "dirty" mesh hierarchies (common in CAD imports), the Builder employs 
 ### 5. **Atomic Sanitization**
 All user input (names, file paths) is sanitized at the edge of the system (during Export) to ensure OS and URDF compatibility without restricting the user's Blender naming conventions.
 
+### 6. **Data Integrity & Preservation**
+LinkForge distinguishes between user-created assets and imported "Source of Truth" assets. Imported assets are locked to prevent accidental modification during the Blender iterative workflow.
+
 ## Extension Points
 
 ### Adding New Sensor Types
@@ -306,7 +320,7 @@ All user input (names, file paths) is sanitized at the edge of the system (durin
 2. Update validation in `Joint.__post_init__()`
 3. Update parser in `parsers/urdf_parser.py`
 4. Update generator in `urdf_generator.py`
-5. Add gizmo visualization in `utils/joint_gizmos.py`
+5. Add gizmo visualization in `visualization/joint_gizmos.py`
 
 ## Performance Considerations
 
@@ -377,10 +391,7 @@ graph TB
 - Parser handles files up to 100 MB
 - Blender integration tested with complex quadrupeds
 
-### 5. **Data Integrity & Preservation**
-LinkForge distinguishes between user-created assets and imported "Source of Truth" assets. Imported assets are locked to prevent accidental modification during the Blender iterative workflow.
-
 ---
 
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-15
 **Version:** 1.2.2
