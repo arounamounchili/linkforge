@@ -13,6 +13,11 @@ Thank you for your interest in contributing to LinkForge! This guide will help y
 - [Code Style](#code-style)
 - [Submitting Changes](#submitting-changes)
 - [Release Process](#release-process)
+- [Technical Considerations](#technical-considerations)
+- [Maintainer Expectations](#maintainer-expectations)
+- [Governance](#governance)
+- [Getting Help](#getting-help)
+- [Recognition](#recognition)
 
 ## Code of Conduct
 
@@ -66,24 +71,13 @@ just build
 
 ```
 linkforge/
-├── core/                  # Core Robotics Logic  (.pip package)
-│   └── src/
-│       └── linkforge_core/
-│           ├── models/    # Data structures
-│           ├── parsers/   # URDF/XACRO parsers
-│           └── ...
+├── core/                  # Core Robotics Logic (pip package)
+│   └── src/linkforge_core/
 ├── platforms/
-│   └── blender/          # Blender Add-on (.zip extension)
-│       └── linkforge/
-│           ├── __init__.py
-│           ├── converters.py
-│           └── ...
-│       ├── scripts/      # Build tools
-│       │   └── build.py
-│       └── blender_manifest.toml
-├── tests/                # Workspace Test Suite
-├── examples/             # Example URDF files
-└── pyproject.toml        # Workspace config
+│   └── blender/           # Blender Extension (.zip)
+├── tests/                 # Test Suite (unit + integration)
+├── examples/              # Example URDF/XACRO files
+└── pyproject.toml         # Workspace config
 ```
 
 See [ARCHITECTURE](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html) for detailed architecture diagrams.
@@ -130,12 +124,9 @@ just fix
 
 ### 4. Test in Blender
 
-### 4. Test in Blender
-
 ```bash
 # Build extension
 just build
-```
 
 # Install in Blender:
 # 1. Open Blender
@@ -184,7 +175,7 @@ just coverage
 uv run pytest tests/unit/core/test_robot.py
 
 # Run specific Blender integration test file (manual)
-uv run python run_blender_tests.py tests/integration/blender/test_blender_export.py
+uv run python run_blender_tests.py tests/integration/blender/test_roundtrip.py
 ```
 
 ### Manual QA (Mandatory)
@@ -192,7 +183,7 @@ uv run python run_blender_tests.py tests/integration/blender/test_blender_export
 For features involving UI, viewport transforms, or complex exports, automated tests are not enough. Contributors **must** follow and pass the [Manual QA Protocol](https://github.com/arounamounchili/linkforge/blob/main/docs/testing/manual_qa.md) before submitting a PR.
 
 - **Objective**: Ensure export validity (URDF/XACRO standards), correct physics calculations, and UI stability across macOS, Windows, and Linux.
-- **Protocol**: Follow the 5-Phase checklist in `docs/testing/manual_qa.md`.
+- **Protocol**: Follow the 7-Phase checklist in `docs/testing/manual_qa.md`.
 
 ### Writing Tests
 
@@ -245,20 +236,30 @@ def test_sensor_roundtrip():
 
 We prioritize testing with **real objects and environments** over mocking.
 
-1.  **Blender Tests**: Do **not** mock `bpy` or Blender data structures.
-    - Our test runner launches a real, headless Blender instance.
+1.  **Blender Tests**: Prefer real `bpy` objects and a headless Blender instance.
     - Use `bpy.ops.object.empty_add()` to create real objects in your test fixtures.
-    - **Avoid**: `MagicMock`, partial mocks of `bpy.types`, or "dummy" property classes.
+    - **Mock only when necessary**: GPU internals (`gpu.shader`, `gpu.matrix`), addon preferences in non-Blender pytest, and I/O error paths.
+    - **Avoid**: Mocking `bpy.types`, Blender data structures, or "dummy" property classes for happy-path tests.
 
 2.  **Core Tests**: Use real data models.
     - Instantiate real `Robot`, `Link`, or `Joint` objects.
-    - Do not mock internal helper functions unless strictly necessary (e.g., file system I/O for security tests).
+    - **Mock only for edge cases**: Missing optional dependencies, filesystem failures, or states that can't be constructed through normal validation.
+
+### Debugging in Blender
+
+```python
+import logging
+logger = logging.getLogger(__name__)
+logger.error(f"Debug: {variable}")
+
+# View in Blender Console (Window > Toggle System Console)
+```
 
 ## Code Style
 
 ### Python Style Guide
 
-We follow **PEP 8** with some modifications:
+We follow **PEP 8** with some modifications. Always use **type hints** and **Google-style docstrings** (required for ReadTheDocs API docs):
 
 ```python
 # Good: Clear, typed, documented
@@ -284,10 +285,6 @@ def calculate_inertia(geometry: Box, mass: float) -> InertiaTensor:
     return InertiaTensor(ixx=ixx, ...)
 ```
 
-### Type Hints
-
-Always use type hints:
-
 ```python
 # Good ✅
 def parse_float(text: str | None, default: float | None = None) -> float:
@@ -298,33 +295,6 @@ def parse_float(text, default=None):
     ...
 ```
 
-### Docstrings
-
-Always use **Google-style docstrings**. This is critical for generating high-quality API documentation on ReadTheDocs.
-
-```python
-def my_function(param1: str, param2: int) -> bool:
-    """Short one-line summary.
-
-    Longer description if needed. Explain what the function does,
-    any important details, and edge cases.
-
-    Args:
-        param1: Description of param1
-        param2: Description of param2
-
-    Returns:
-        Description of return value
-
-    Raises:
-        ValueError: When something goes wrong
-
-    Example:
-        >>> my_function("test", 42)
-        True
-    """
-```
-
 ### Linting Configuration
 
 Our `ruff` configuration (in `pyproject.toml`):
@@ -332,21 +302,22 @@ Our `ruff` configuration (in `pyproject.toml`):
 ```toml
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM"]
-ignore = ["E501"]  # Line too long (handled by formatter)
+ignore = ["E501", "N801"]  # Line length (formatter) & naming convention
 ```
 
 ### Pre-commit Hooks
 
 Pre-commit automatically runs on `git commit`:
 
-- `ruff check` - Linting
+- `ruff check` - Linting (with auto-fix)
 - `ruff format` - Code formatting
-- `trailing-whitespace` - Remove trailing spaces
-- `end-of-file-fixer` - Ensure newline at EOF
+- `conventional-pre-commit` - Enforces conventional commit messages
+- `codespell` - Catches common typos in code and docs
+- Standard file checks - trailing whitespace, EOF newline, YAML/TOML/JSON validation, large files, merge conflicts, etc.
 
 ## Submitting Changes
 
@@ -391,7 +362,7 @@ LinkForge uses **Release Please** to automate versioning and changelogs.
 1. **Automation**: When code is merged into `main`, Release Please will automatically create (or update) a "Release PR".
 2. **Versioning**: This PR will contain a version bump in `blender_manifest.toml`, `CITATION.cff`, and an updated `CHANGELOG.md` based on your commit messages.
 3. **Merging**: Once a maintainer merges this Release PR, a GitHub Tag and Release are automatically created.
-4. **Distribution**: The `release.yml` workflow will then build the extension `.zip` and attach it to the GitHub Release.
+4. **Distribution**: The `release-please.yml` workflow will then build the extension `.zip` and attach it to the GitHub Release.
 
 ### Release Standards
 
@@ -402,66 +373,6 @@ To maintain a professional and consistent appearance:
 
 > [!NOTE]
 > This is why **Conventional Commits** are required. Without them, the release automation cannot determine if a change should bump the MAJOR, MINOR, or PATCH version.
-
-## Common Development Tasks
-
-### Adding a New Sensor Type
-
-1. **Define sensor info dataclass** (`linkforge/core/models/sensor.py`)
-   ```python
-   @dataclass(frozen=True)
-   class MyNewSensorInfo:
-       param1: float
-       param2: str
-   ```
-
-2. **Add to SensorType enum**
-   ```python
-   class SensorType(str, Enum):
-       MY_NEW_SENSOR = "my_new_sensor"
-   ```
-
-3. **Add parsing** (`linkforge/core/parsers/urdf_parser.py`)
-   ```python
-   def parse_my_new_sensor(elem: ET.Element) -> MyNewSensorInfo:
-       ...
-   ```
-
-4. **Add generation** (`linkforge/core/urdf_generator.py`)
-   ```python
-   def _add_my_new_sensor_info(self, parent: ET.Element, info: MyNewSensorInfo):
-       ...
-   ```
-
-5. **Add UI** (`linkforge/blender/panels/sensor_panel.py`)
-
-6. **Add tests** (`tests/unit/core/test_sensor.py`)
-
-### Debugging in Blender
-
-```python
-# Add to your code
-import logging
-logger = logging.getLogger(__name__)
-logger.error(f"Debug: {variable}")
-
-# View in Blender Console (Window > Toggle System Console)
-```
-
-### Running Tests in Blender
-
-Since standard `pytest` cannot access Blender's internal API (`bpy`), we use a custom runner that launches a headless Blender process to execute your tests.
-
-```bash
-# Run all Blender unit tests
-just test-blender
-
-# If Blender is not in your standard Applications folder (MacOS) or PATH (Linux),
-# specify the path explicitly:
-BLENDER_PATH=/path/to/blender just test-blender
-```
-
-These tests cover critical UI logic, operators, and LinkForge -> Blender data conversions.
 
 ## Technical Considerations
 
@@ -514,7 +425,7 @@ We value every contribution! To keep things simple for maintainers, **contributo
 
 ### 🤖 All Contributors Bot
 
-We use the [@all-contributors](https://allcontributors.org/) bot to automatedly recognize all types of contributions.
+We use the [@all-contributors](https://allcontributors.org/) bot to automatically recognize all types of contributions.
 
 **How to get recognized:**
 If you've contributed (code, docs, ideas, etc.), you can ask the bot to add you by commenting on an issue or pull request:
