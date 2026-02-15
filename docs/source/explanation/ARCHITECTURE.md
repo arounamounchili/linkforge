@@ -1,2 +1,2 @@
-```{include} ../../ARCHITECTURE.md
+```{include} ../../../ARCHITECTURE.md
 ```
