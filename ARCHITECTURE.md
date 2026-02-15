@@ -175,6 +175,7 @@ sequenceDiagram
 classDiagram
     class Robot {
         +str name
+        +str version
         +list~Sensor~ sensors
         +list~Transmission~ transmissions
         +list~Ros2Control~ ros2_controls
@@ -182,8 +183,10 @@ classDiagram
         +add_link(link)
         +add_joint(joint)
         +add_sensor(sensor)
-        +get_link(name)
-        +get_joint(name)
+        +add_transmission(transmission)
+        +add_gazebo_element(element)
+        +add_ros2_control(ros2_control)
+        +validate_tree_structure()
     }
 
     class Link {
@@ -191,6 +194,21 @@ classDiagram
         +list~Visual~ visuals
         +list~Collision~ collisions
         +Inertial inertial
+    }
+
+    class Inertial {
+        +float mass
+        +Transform origin
+        +InertiaTensor inertia
+    }
+
+    class InertiaTensor {
+        +float ixx
+        +float ixy
+        +float ixz
+        +float iyy
+        +float iyz
+        +float izz
     }
 
     class Joint {
@@ -201,27 +219,82 @@ classDiagram
         +Transform origin
         +Vector3 axis
         +JointLimits limits
+        +JointDynamics dynamics
+        +JointMimic mimic
+    }
+
+    class JointLimits {
+        +float lower
+        +float upper
+        +float effort
+        +float velocity
+    }
+
+    class JointDynamics {
+        +float damping
+        +float friction
+    }
+
+    class JointMimic {
+        +str joint
+        +float multiplier
+        +float offset
     }
 
     class Sensor {
         +str name
         +SensorType type
         +str link_name
+        +float update_rate
+        +bool always_on
+        +bool visualize
+        +str topic
         +Transform origin
+        +GazeboPlugin plugin
         +CameraInfo camera_info
         +LidarInfo lidar_info
-        +IMUInfo imu_info
-        +GPSInfo gps_info
-        +ContactInfo contact_info
-        +ForceTorqueInfo force_torque_info
+    }
+
+    class GazeboElement {
+        +str reference
+        +str material
+        +bool self_collide
+        +bool static
+        +bool gravity
+        +float mu1
+        +float mu2
+        +list~GazeboPlugin~ plugins
+    }
+
+    class GazeboPlugin {
+        +str name
+        +str filename
+        +dict parameters
+    }
+
+    class Ros2Control {
+        +str name
+        +str type
+        +str hardware_plugin
+        +list~Ros2ControlJoint~ joints
+        +dict parameters
     }
 
     Robot "1" *-- "many" Link
     Robot "1" *-- "many" Joint
     Robot "1" *-- "many" Sensor
+    Robot "1" *-- "many" GazeboElement
+    Robot "1" *-- "many" Ros2Control
     Link "1" *-- "many" Visual
     Link "1" *-- "many" Collision
     Link "1" *-- "0..1" Inertial
+    Inertial "1" *-- "1" InertiaTensor
+    Joint "1" *-- "0..1" JointLimits
+    Joint "1" *-- "0..1" JointDynamics
+    Joint "1" *-- "0..1" JointMimic
+    GazeboElement "1" *-- "many" GazeboPlugin
+    Sensor "1" *-- "0..1" GazeboPlugin
+    Ros2Control "1" *-- "many" Ros2ControlJoint
 ```
 
 ### Geometry Models
