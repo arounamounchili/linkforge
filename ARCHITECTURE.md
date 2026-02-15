@@ -470,7 +470,7 @@ graph TB
     style Core fill:#81c784
 ```
 
-Comprehensive execution instructions and setup details for each layer are maintained in the **[CONTRIBUTING.md](./CONTRIBUTING.md#testing)** guide.
+Comprehensive execution instructions and setup details for each layer are maintained in the **[CONTRIBUTING.md](https://github.com/arounamounchili/linkforge/blob/main/CONTRIBUTING.md#testing)** guide.
 
 ## Security by Design
 
