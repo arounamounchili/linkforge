@@ -46,6 +46,12 @@ LinkForge removes the friction from robotics modeling:
 4.  **Configure Control**: Enable ROS 2 Control and configure interfaces in the Control Dashboard.
 5.  **Validate & Export**: Run the validator and export to URDF or XACRO.
 
+:::{tip}
+**💡 Pro-Tip: Joints vs. Mesh Origins**
+In LinkForge, a **Joint** connects two **Link Frames** (represented by Empties). If you move a mesh's origin in Blender, you are only offsetting the geometry relative to the link frame. To move the entire joint, you must move the **Joint Empty** itself. See [Hierarchy Rules](reference/robot_structure.md#hierarchy-rules) for more details.
+:::
+
+
 ---
 
 ::::{grid} 2
