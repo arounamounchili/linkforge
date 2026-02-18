@@ -48,8 +48,9 @@ LinkForge removes the friction from robotics modeling:
 
 :::{tip}
 **💡 Pro-Tip: Joints vs. Mesh Origins**
-In LinkForge, a **Joint** connects two **Link Frames** (represented by Empties). Moving a mesh's origin in Blender only offsets the geometry relative to the link frame; it does not move the joint itself. To adjust the pivot point of a joint, you must manipulate the **Joint Empty**. Refer to the [Hierarchy Rules](reference/robot_structure.md#hierarchy-rules) for a deep dive into container-based modeling.
+In LinkForge, a **Joint** connects two **Link Frames** (represented by Empties). While the joint is initially placed at the link's location during creation for convenience, it is not bound to the mesh origin. Moving a mesh origin later only offsets geometry; to adjust the pivot point, you must manipulate the **Joint Empty** directly. Refer to the [Hierarchy Rules](reference/robot_structure.md#hierarchy-rules) for more details.
 :::
+
 
 
 
