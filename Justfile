@@ -56,18 +56,21 @@ type-check:
 
 # --- Maintenance ---
 
-# Clean build artifacts
+# Clean build artifacts, caches, and OS junk
 clean:
-    rm -rf dist/
-    rm -rf build/
-    rm -rf *.egg-info
-    rm -rf **/__pycache__
-    rm -rf .pytest_cache
-    rm -rf .mypy_cache
-    rm -rf .ruff_cache
-    rm -rf htmlcov
-    rm -f .coverage
-    rm -f coverage.xml
+    @rm -rf dist/ build/ *.egg-info
+    @rm -rf .pytest_cache .mypy_cache .ruff_cache .codespell_cache
+    @rm -rf htmlcov .coverage coverage.xml
+    @find . -type d -name "__pycache__" -exec rm -rf {} +
+    @find . -type f -name "*.py[co]" -delete
+    @find . -name ".DS_Store" -delete
+    @echo "✨ Project is clean."
+
+# Deep clean: Includes virtual environment removal
+clean-all: clean
+    @echo "⚠️ Removing virtual environment..."
+    @rm -rf .venv/ venv/
+    @echo "💀 Everything has been removed. Run 'just install' to recover."
 
 # Install/Sync dependencies
 install:
