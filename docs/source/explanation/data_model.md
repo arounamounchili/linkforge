@@ -16,6 +16,10 @@ By using an **Empty** as the "Link Frame":
 - **Precision**: Empties have no geometry by themselves, ensuring they represent a mathematically pure coordinate frame.
 - **Visual Clarity**: Joints are represented by arrows, making it easy to see the axis of rotation at a glance.
 
+> [!TIP]
+> **Common Misconception**: Using Blender's `Set Origin to 3D Cursor` on a mesh child of a Link Empty only changes the visual offset of that mesh. It **does not** update the Joint origin. To change where a Link rotates or pivots, you must manipulate the **Joint Empty** or **Link Empty** themselves.
+
+
 ### 2. Composition over Parenting
 In a standard Blender hierarchy, you might parent a wheel mesh to a car body mesh. In LinkForge, we use a more structured approach:
 - **Link (Empty)**: The root container for a physical body.

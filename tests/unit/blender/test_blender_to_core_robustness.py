@@ -7,6 +7,9 @@ from linkforge.blender.adapters.blender_to_core import (
     blender_joint_to_core,
     blender_link_to_core_with_origin,
     detect_primitive_type,
+    extract_mesh_triangles,
+    get_object_geometry,
+    matrix_to_transform,
     scene_to_robot,
 )
 from linkforge.linkforge_core.models import (
@@ -226,3 +229,54 @@ def test_manual_inertia_origin(clean_scene):
     assert core.inertial.origin.xyz.x == pytest.approx(0.1)
     assert core.inertial.origin.xyz.y == pytest.approx(0.2)
     assert core.inertial.origin.xyz.z == pytest.approx(0.3)
+
+
+def test_matrix_to_transform_none():
+    """Hit line 84 in blender_to_core.py."""
+    assert matrix_to_transform(None).xyz.x == 0.0
+
+
+def test_detect_primitive_type_none():
+    """Hit lines 185, 189 in blender_to_core.py."""
+    assert detect_primitive_type(None) is None
+
+    # Object with no data
+    o = bpy.data.objects.new("NoData", None)
+    assert detect_primitive_type(o) is None
+
+
+def test_get_object_geometry_none_and_fallback():
+    """Hit lines 288, 330, 346 in blender_to_core.py."""
+    # Line 288
+    geom, mat = get_object_geometry(None)
+    assert geom is None
+
+    # Line 330 (Zero size fallback)
+    o = bpy.data.objects.new("ZeroBox", bpy.data.meshes.new("ZeroMesh"))
+    o.dimensions = (0, 0, 0)
+    geom, mat = get_object_geometry(o, geometry_type="BOX")
+    assert geom is None
+
+    # Line 346 (Unknown type)
+    o.dimensions = (1, 1, 1)
+    geom, mat = get_object_geometry(o, geometry_type="UNKNOWN")
+    assert geom is None
+
+
+def test_extract_mesh_triangles_null_mesh():
+    """Hit line 372 in blender_to_core.py."""
+    from unittest import mock
+
+    # We create a complete mock of the object.
+    o = mock.MagicMock()
+    # Mock return of evaluated_get
+    eval_mock = mock.MagicMock()
+    eval_mock.to_mesh.return_value = None
+    o.evaluated_get.return_value = eval_mock
+
+    # We need to mock the context where it's used
+    with mock.patch("linkforge.blender.adapters.blender_to_core.bpy") as mock_bpy:
+        # The code calls: depsgraph = bpy.context.evaluated_depsgraph_get()
+        # and then: eval_obj = obj.evaluated_get(depsgraph)
+        mock_bpy.context.evaluated_depsgraph_get.return_value = mock.MagicMock()
+        assert extract_mesh_triangles(o) is None

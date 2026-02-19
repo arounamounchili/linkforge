@@ -41,6 +41,10 @@ A Link is not just a mesh; it is a container.
 - All visual and collision meshes **must** be direct children of the Link Empty.
 - A Link Empty **must** have its `is_robot_link` property set to `True`.
 
+> [!IMPORTANT]
+> **Offsetting Mesh Origins**: In Blender, "Setting Origin" for a mesh only changes its offset relative to its parent Link Empty. It **does not** move the Link Frame or any associated Joints. If you want to move the "Pivot Point" of a link and its joints, you must move the **Link Empty** or **Joint Empty**.
+
+
 ### 2. Joint Connectivity
 Joints in LinkForge operate differently than standard Blender parent-child relationships:
 - A Joint Empty is **not** parented to its child link in Blender.

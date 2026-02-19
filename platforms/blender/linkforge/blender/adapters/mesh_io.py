@@ -283,6 +283,11 @@ def export_link_mesh(
     if obj is None or obj.type != "MESH":
         return None, Matrix.Identity(4)
 
+    # Initialize variables for cleanup in finally block
+    temp_export_obj = None
+    simplified_obj = None
+    final_mesh_data = None
+
     # Generate filename with suffix
     filename = get_mesh_filename(link_name, geometry_type, mesh_format, suffix=suffix)
     filepath = meshes_dir / filename
@@ -343,8 +348,7 @@ def export_link_mesh(
         # This correctly accounts for the object's rotation while incorporating the centering shift.
         geom_world_matrix = obj.matrix_world @ Matrix.Translation(local_center)
 
-        # Simplify if requested for collision (Note: Simplify now works on the base centered data)
-        simplified_obj = None
+        # Simplify if requested for collision
         export_obj = temp_export_obj
 
         if simplify and geometry_type == "collision":
