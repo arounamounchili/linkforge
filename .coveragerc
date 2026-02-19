@@ -1,0 +1,13 @@
+[run]
+source =
+    linkforge_core
+    linkforge
+branch = True
+relative_files = False
+
+[paths]
+source =
+    /Users/arounapatouossamounchili/Documents/MyProjects/OpenSource/linkforge/core/src/linkforge_core
+    /Users/arounapatouossamounchili/Documents/MyProjects/OpenSource/linkforge/platforms/blender/linkforge/linkforge
+    */linkforge_core
+    */linkforge
