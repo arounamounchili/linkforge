@@ -475,22 +475,19 @@ def test_link_ops_low_level_edge_cases(mocker):
     # 3. create_collision_for_link with failed primitive creation
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
-    with mocker.patch(
+    mocker.patch(
         "linkforge.blender.operators.link_ops._create_primitive_collision",
         return_value=(None, (0, 0, 0)),
-    ):
-        assert create_collision_for_link(link_obj, "BOX", bpy.context) is None
+    )
+    assert create_collision_for_link(link_obj, "BOX", bpy.context) is None
 
 
 def test_link_ops_convex_hull_compound_failure(mocker):
     """Test convex hull compound failure path."""
     from linkforge.blender.operators.link_ops import _create_convex_hull_collision_compound
 
-    # Mock _merge_visual_meshes to return None
-    with mocker.patch(
-        "linkforge.blender.operators.link_ops._merge_visual_meshes", return_value=None
-    ):
-        assert _create_convex_hull_collision_compound([], "test", bpy.context) is None
+    mocker.patch("linkforge.blender.operators.link_ops._merge_visual_meshes", return_value=None)
+    assert _create_convex_hull_collision_compound([], "test", bpy.context) is None
 
 
 def test_link_ops_operator_polls_and_cancellation(mocker):
@@ -514,10 +511,10 @@ def test_link_ops_operator_polls_and_cancellation(mocker):
     # 4. generate_collision_all cancellation (no scene context mocked)
     # We already tested this somewhat, but let's hit the link loop failure
     bpy.ops.linkforge.add_empty_link()
-    with mocker.patch(
+    mocker.patch(
         "linkforge.blender.operators.link_ops.create_collision_for_link", return_value=None
-    ):
-        bpy.ops.linkforge.generate_collision_all()
+    )
+    bpy.ops.linkforge.generate_collision_all()
 
 
 def test_regenerate_collision_logic(mocker):
