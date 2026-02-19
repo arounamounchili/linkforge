@@ -3,11 +3,12 @@ source =
     linkforge_core
     linkforge
 branch = True
-relative_files = False
+parallel = True
+relative_files = True
 
 [paths]
 source =
-    /Users/arounapatouossamounchili/Documents/MyProjects/OpenSource/linkforge/core/src/linkforge_core
-    /Users/arounapatouossamounchili/Documents/MyProjects/OpenSource/linkforge/platforms/blender/linkforge/linkforge
+    core/src/linkforge_core
+    platforms/blender/linkforge
     */linkforge_core
     */linkforge
