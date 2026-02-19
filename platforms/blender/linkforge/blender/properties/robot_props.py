@@ -178,6 +178,12 @@ class RobotPropertyGroup(PropertyGroup):
         description="Show list of all robot components in panel",
         default=False,
     )
+    component_browser_search: StringProperty(  # type: ignore
+        name="Component Browser Search",
+        description="Filter components by name",
+        default="",
+        options={"TEXTEDIT_UPDATE"},
+    )
 
     # Collision Visibility
     show_collisions: BoolProperty(  # type: ignore

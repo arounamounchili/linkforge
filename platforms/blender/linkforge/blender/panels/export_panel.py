@@ -262,18 +262,43 @@ class LINKFORGE_PT_export_panel(Panel):
         num_links: int,
         num_dof: int,
     ) -> None:
-        """Draw the component browser section."""
+        """Draw the component browser section with search filtering."""
         select_box = layout.box()
         if not select_box:
             return
 
+        props = typing.cast(typing.Any, scene).linkforge
+
+        # UI
+        search_row = select_box.row(align=True)
+        if search_row:
+            search_row.prop(props, "component_browser_search", text="", icon="VIEWZOOM")
+            search_row.operator("linkforge.clear_component_search", text="", icon="PANEL_CLOSE")
+
+        select_box.separator()
+
+        search_term = props.component_browser_search.lower()
+
+        if search_term:
+            filtered_links_dict = {
+                name: obj for name, obj in links_dict.items() if search_term in name.lower()
+            }
+        else:
+            filtered_links_dict = links_dict
+
         # Links list
         link_header = select_box.row()
         if link_header:
-            link_header.label(text=f"Links ({num_links}):", icon="MESH_CUBE")
+            if search_term:
+                link_header.label(
+                    text=f"Links ({len(filtered_links_dict)}/{len(links_dict)}):",
+                    icon="MESH_CUBE",
+                )
+            else:
+                link_header.label(text=f"Links ({num_links}):", icon="MESH_CUBE")
 
-        for link_name in sorted(links_dict.keys()):
-            link_obj = links_dict[link_name]
+        for link_name in sorted(filtered_links_dict.keys()):
+            link_obj = filtered_links_dict[link_name]
             row = select_box.row(align=True)
             if row:
                 op = row.operator(
@@ -291,12 +316,23 @@ class LINKFORGE_PT_export_panel(Panel):
             and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
         ]
 
+        if search_term:
+            filtered_joints = [obj for obj in joints if search_term in obj.name.lower()]
+        else:
+            filtered_joints = joints
+
         select_box.separator()
         joint_header = select_box.row()
         if joint_header:
-            joint_header.label(text=f"Joints ({len(joints)}):", icon="EMPTY_AXIS")
+            if search_term:
+                joint_header.label(
+                    text=f"Joints ({len(filtered_joints)}/{len(joints)}):",
+                    icon="EMPTY_AXIS",
+                )
+            else:
+                joint_header.label(text=f"Joints ({len(joints)}):", icon="EMPTY_AXIS")
 
-        for joint_obj in sorted(joints, key=lambda x: x.name):
+        for joint_obj in sorted(filtered_joints, key=lambda x: x.name):
             row = select_box.row(align=True)
             if row:
                 op = row.operator(
@@ -314,12 +350,23 @@ class LINKFORGE_PT_export_panel(Panel):
             and typing.cast(typing.Any, obj).linkforge_sensor.is_robot_sensor
         ]
 
+        if search_term:
+            filtered_sensors = [obj for obj in sensors if search_term in obj.name.lower()]
+        else:
+            filtered_sensors = sensors
+
         select_box.separator()
         sensor_header = select_box.row()
         if sensor_header:
-            sensor_header.label(text=f"Sensors ({len(sensors)}):", icon="TRACKER")
+            if search_term:
+                sensor_header.label(
+                    text=f"Sensors ({len(filtered_sensors)}/{len(sensors)}):",
+                    icon="TRACKER",
+                )
+            else:
+                sensor_header.label(text=f"Sensors ({len(sensors)}):", icon="TRACKER")
 
-        for sensor_obj in sorted(sensors, key=lambda x: x.name):
+        for sensor_obj in sorted(filtered_sensors, key=lambda x: x.name):
             row = select_box.row(align=True)
             if row:
                 op = row.operator(
@@ -327,6 +374,12 @@ class LINKFORGE_PT_export_panel(Panel):
                 )
                 op.object_name = sensor_obj.name
                 op.object_type = "sensor"
+
+        if search_term and not filtered_links_dict and not filtered_joints and not filtered_sensors:
+            select_box.separator()
+            empty_row = select_box.row()
+            if empty_row:
+                empty_row.label(text="No matches", icon="INFO")
 
 
 # Registration

@@ -167,10 +167,52 @@ class LINKFORGE_OT_select_root_link(Operator):
             return {"CANCELLED"}
 
 
+class LINKFORGE_OT_clear_component_search(Operator):
+    """Clear component browser search filter."""
+
+    bl_idname = "linkforge.clear_component_search"
+    bl_label = "Clear Search"
+    bl_description = "Clear component browser search filter"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Only enable operator when search text exists.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            True if the operator can be executed, False otherwise.
+        """
+        if not hasattr(context.scene, "linkforge"):
+            return False
+        props = typing.cast(typing.Any, context.scene).linkforge
+        return bool(props.component_browser_search)
+
+    @safe_execute
+    def execute(self, context: Context) -> set[str]:
+        """Clear the component browser search field.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
+        scene = context.scene
+        if not scene:
+            return {"CANCELLED"}
+        props = typing.cast(typing.Any, scene).linkforge
+        props.component_browser_search = ""
+        return {"FINISHED"}
+
+
 # Registration
 classes = [
     LINKFORGE_OT_select_tree_object,
     LINKFORGE_OT_select_root_link,
+    LINKFORGE_OT_clear_component_search,
 ]
 
 
