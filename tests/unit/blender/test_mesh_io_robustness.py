@@ -122,3 +122,38 @@ def test_export_link_mesh_success_and_centering(clean_scene, tmp_path):
     ):
         path, center_matrix = export_link_mesh(o, "Link", "visual", "GLB", tmp_path)
         assert path is None
+
+
+def test_mesh_io_unexpected_errors(clean_scene, tmp_path):
+    """Hit lines 64-69, 120-125, 239-244, 378-380 in mesh_io.py."""
+    bpy.ops.mesh.primitive_monkey_add()
+    o = bpy.context.active_object
+    filepath = tmp_path / "dummy.stl"
+
+    # Line 64 (TypeError in STL)
+    with patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm") as mock_wm:
+        mock_wm.stl_export.side_effect = TypeError("Unexpected")
+        with pytest.raises(TypeError):
+            export_mesh_stl(o, filepath)
+
+    # Line 120 (AttributeError in OBJ)
+    with patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm") as mock_wm:
+        mock_wm.obj_export.side_effect = AttributeError("Unexpected")
+        with pytest.raises(AttributeError):
+            export_mesh_obj(o, filepath)
+
+    # Line 239 (KeyError in GLB)
+    with patch("linkforge.blender.adapters.mesh_io.bpy.ops.export_scene") as mock_escene:
+        mock_escene.gltf.side_effect = KeyError("Unexpected")
+        with pytest.raises(KeyError):
+            export_mesh_glb(o, filepath)
+
+    # Line 378 (General Exception in export_link_mesh)
+    # We patch the call site's view of evaluated_depsgraph_get by patching the context object itself
+    with patch("linkforge.blender.adapters.mesh_io.bpy.context") as mock_ctx:
+        # Re-inject view_layer so earlier parts of export_link_mesh don't fail
+        mock_ctx.view_layer = bpy.context.view_layer
+        mock_ctx.evaluated_depsgraph_get.side_effect = Exception("Critical")
+
+        path, _ = export_link_mesh(o, "Link", "visual", "STL", tmp_path)
+        assert path is None

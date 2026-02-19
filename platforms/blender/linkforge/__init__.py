@@ -9,7 +9,6 @@ Metadata is defined in blender_manifest.toml at the root of the extension.
 from __future__ import annotations
 
 # Blender Extension Entry Point
-# Metadata is defined in blender_manifest.toml
 
 # Import blender module if bpy is available (inside Blender)
 try:

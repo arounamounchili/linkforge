@@ -4,6 +4,7 @@ from unittest.mock import patch
 import bpy
 import pytest
 from linkforge.blender.adapters.core_to_blender import (
+    _get_geometry_type_str,
     create_joint_object,
     create_material_from_color,
     create_primitive_mesh,
@@ -80,6 +81,17 @@ def test_resolve_mesh_path(tmp_path):
     # 4. file:// URI
     file_uri = Path("file:///tmp/mesh.stl")
     assert resolve_mesh_path(file_uri, urdf_dir) == Path("/tmp/mesh.stl")
+
+    # 5. Windows style with leading slash (Hit line 54)
+    win_path = "file:///C:/path/to/mesh.stl"
+    res = resolve_mesh_path(Path(win_path), urdf_dir)
+    assert str(res).startswith("C:")
+
+    # 6. Package resolution failure warning (Hit line 62)
+    with patch(
+        "linkforge.blender.adapters.core_to_blender.resolve_package_path", return_value=None
+    ):
+        resolve_mesh_path(Path("package://missing/mesh.stl"), urdf_dir)
 
 
 def test_create_material_from_color(clean_scene):
@@ -453,3 +465,51 @@ def test_full_robot_import_integration(clean_scene):
     # L2 object should have children or be joined depending on normalize_and_consolidate
     # Actually normalize_and_consolidate joins them if they are meshes.
     print(f"DEBUG: Objects in scene: {[o.name for o in bpy.data.objects]}")
+
+
+def test_import_mesh_file_robustness(tmp_path):
+    """Hit lines 216, 224, 254, 261 in core_to_blender.py."""
+    from unittest import mock
+
+    # Line 216 (DAE on Blender 5.0+ mock)
+    dae = tmp_path / "test.dae"
+    dae.touch()
+
+    # Use a side_effect to mock the version check
+    with mock.patch("linkforge.blender.adapters.core_to_blender.bpy") as mock_bpy:
+        # Mock app.version which is normally a tuple
+        mock_bpy.app = mock.MagicMock()
+        mock_bpy.app.version = (5, 0, 0)
+        assert import_mesh_file(dae, "test") is None
+
+    # Line 224 (Unsupported extension)
+    txt = tmp_path / "test.txt"
+    txt.touch()
+    assert import_mesh_file(txt, "test") is None
+
+    # Line 254 (No functional importer)
+    obj_file = tmp_path / "test.obj"
+    obj_file.touch()
+    with mock.patch("bpy.ops.wm.obj_import", side_effect=RuntimeError("Fail")):
+        assert import_mesh_file(obj_file, "test") is None
+
+    # Line 261 (Importer ran but no objects)
+    with (
+        mock.patch("bpy.ops.wm.obj_import", return_value={"FINISHED"}),
+        mock.patch("linkforge.blender.adapters.core_to_blender.bpy") as mock_bpy_at_use,
+    ):
+        mock_ctx = mock.MagicMock()
+        mock_ctx.selected_objects = []
+        mock_bpy_at_use.context = mock_ctx
+        assert import_mesh_file(obj_file, "test") is None
+
+
+def test_get_geometry_type_str_robustness():
+    """Hit line 403 in core_to_blender.py (Unknown type fallback and Cylinder)."""
+    from unittest import mock
+
+    cyl = Cylinder(radius=1.0, length=2.0)
+    assert _get_geometry_type_str(cyl) == "CYLINDER"
+
+    # Unknown type
+    assert _get_geometry_type_str(mock.MagicMock()) == "MESH"

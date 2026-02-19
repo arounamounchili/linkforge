@@ -29,11 +29,12 @@ test-blender:
 
 # Run tests with coverage
 coverage:
-    rm -f .coverage
-    uv run pytest tests/unit/core --cov=linkforge_core --cov-append
-    just test-blender
-    uv run coverage html
-    uv run coverage report
+	rm -f .coverage .coverage.*
+	COVERAGE_FILE=.coverage.core uv run pytest tests/unit/core --cov=linkforge_core
+	COVERAGE_FILE=.coverage.blender uv run python run_blender_tests.py -- --cov=linkforge --cov=linkforge_core
+	uv run coverage combine
+	uv run coverage html
+	uv run coverage report
 
 # --- Quality ---
 

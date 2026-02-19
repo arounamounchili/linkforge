@@ -165,6 +165,8 @@ just test-core
 just test-blender
 ```
 
+See [Automated Testing](https://linkforge.readthedocs.io/en/latest/reference/testing/automated_testing.html) for our full strategy and coverage metrics.
+
 To run specific tests or categories:
 
 ```bash
