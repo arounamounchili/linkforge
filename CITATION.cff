@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "LinkForge: Professional URDF & XACRO Bridge for Blender"
+title: "LinkForge: The Linter & Bridge for Robotics"
 message: "If you use this software, please cite it as below."
 type: software
 authors:
@@ -22,6 +22,5 @@ keywords:
   - importer
   - exporter
   - robot-modeling
-abstract: >-
-  LinkForge is a professional Blender extension for roboticists, providing a seamless bridge
-  between 3D modeling and robotics simulation by exporting production-ready URDF and XACRO files.
+  LinkForge is **The Linter & Bridge for Robotics**. It provides a professional,
+  validated workflow for robotics development in Blender by exporting hardened URDF and XACRO files.

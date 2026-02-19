@@ -64,8 +64,8 @@ html_context = {
     "github_version": "main",
     "conf_py_path": "/docs/source/",
     "metatags": """
-        <meta property="og:title" content="LinkForge - Professional URDF/XACRO Exporter for Blender" />
-        <meta property="og:description" content="A professional Blender extension for roboticists. Model in Blender, simulate in ROS2/Gazebo." />
+        <meta property="og:title" content="LinkForge - The Linter & Bridge for Robotics" />
+        <meta property="og:description" content="A professional Blender extension for roboticists. Industrial-grade validation for URDF, XACRO, and beyond." />
         <meta property="og:image" content="https://linkforge.readthedocs.io/en/latest/_static/social_preview.png" />
         <meta name="twitter:card" content="summary_large_image" />
     """,

@@ -3,7 +3,7 @@
 </div>
 
 # LinkForge
-**Professional URDF & XACRO Bridge for Blender**
+**The Linter & Bridge for Robotics**
 
 [![Latest Release](https://img.shields.io/github/v/release/arounamounchili/linkforge)](https://github.com/arounamounchili/linkforge/releases/latest)
 [![CI](https://github.com/arounamounchili/linkforge/actions/workflows/ci.yml/badge.svg)](https://github.com/arounamounchili/linkforge/actions)
@@ -12,18 +12,18 @@
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/download/)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
-LinkForge is a professional **URDF & XACRO Bridge** for Blender.
+LinkForge is **The Linter & Bridge for Robotics**.
 
 **In robotics, creativity starts in your head — but getting that idea into a simulator usually means hours of writing XML, fixing joint limits, and fighting coordinate systems.**
 
- LinkForge removes that friction. It acts as a **bridge between creativity and engineering**, allowing you to model your robot in Blender as naturally as sculpting a 3D scene, while guaranteeing the output is rigorous, simulation-ready code.
+ LinkForge removes that friction. It acts as both a **Linter** and a **Bridge**, allowing you to model your robot in Blender as naturally as sculpting a 3D scene, while guaranteeing the output is rigorous, simulation-ready code.
 
  1.  **Forge Structure**: Define links, joints, masses, and inertias visually.
- 2.  **Perceive Environment**: Attach sensors like LiDAR, IMU, and Depth Cameras.
- 3.  **Control Movement**: Configure transmissions and `ros2_control` interfaces.
- 4.  **Export Production Code**: Generate clean, validated URDF/XACRO files.
+ 2.  **Lint & Validate**: Catch structural and physics errors before they break your simulation.
+ 3.  **Perceive & Control**: Attach sensors and configure `ros2_control` interfaces.
+ 4.  **Export Production Code**: Generate clean, hardened URDF/XACRO files.
 
- **From idea → robot → ready for simulation.** All inside Blender.
+ **From idea → hardened robot model → ready for simulation.** All inside Blender.
 
 ### 🛠️ Technical Specifications
 
@@ -33,7 +33,7 @@ LinkForge is a professional **URDF & XACRO Bridge** for Blender.
 | **Joints** | ✅ Full | All 6 types (Fixed, Revolute, etc.) + **Mimic Joints** |
 | **Sensors** | ✅ Full | Camera, LiDAR, IMU, GPS, **Contact**, **Force/Torque** |
 | **Control** | ✅ Full | `ros2_control` Dashboard & Gazebo Plugin Integration |
-| **Validation** | ✅ Pro | **Smart Integrity Checker** catches errors before export |
+| **Validation** | ✅ Pro | **Linter for Robotics** catches structural errors before export |
 | **Fidelity** | ✅ Pro | **Round-Trip Precision** for lossless Import/Export |
 | **Formats** | ✅ Full | URDF 1.0, XACRO (Macros, Properties, Multi-file) |
 
@@ -41,7 +41,7 @@ LinkForge is a professional **URDF & XACRO Bridge** for Blender.
 
 - **Bidirectional Workflow**: Seamlessly import existing URDF/XACRO files for editing or build complex robot models from scratch using Blender's native tools.
 - **Production-Ready Export**: Generates strictly compliant URDF/XACRO files optimized for ROS, ROS 2, and Gazebo. Includes **ROS-Agnostic Asset Resolution**, allowing complex robots to be imported and edited on any platform without requiring a ROS installation.
-- **Smart Validation (The Safety Net)**: Built-in integrity checker inspects robot topology, physics data, and joint limits. It catches "exploding robot" errors (negative inertias, detached links) *before* you export.
+- **Linter for Robotics (The Safety Net)**: Built-in integrity checker inspects robot topology, physics data, and joint limits. It catches "exploding robot" errors (negative inertias, detached links, circular chains) *before* you export.
 - **ROS2 Control Support**: Automatically generates hardware interface configurations for `ros2_control` via a centralized dashboard, compatible with Gazebo and physical hardware.
 - **Complete Sensor Suite**: Integrated support for Camera, Depth Camera, LiDAR, IMU, GPS, **Force/Torque**, and **Contact** sensors with configurable noise models.
 - **Automatic Physics**: Scientifically accurate calculation of mass properties and inertia tensors for both primitive shapes and complex arbitrary meshes.

@@ -378,7 +378,7 @@ To maintain a professional and consistent appearance:
 
 ## Technical Considerations
 
-To maintain LinkForge's status as a professional-grade tool, we prioritize stability in three key areas:
+To maintain LinkForge's status as a professional-grade **Linter & Bridge**, we prioritize stability in three key areas:
 
 ### 1. The Blender Bridge (Foundation)
 LinkForge must remain compatible with the latest Blender LTS (Long Term Support) and the current stable release.

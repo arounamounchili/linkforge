@@ -4,7 +4,7 @@ To understand how LinkForge converts a Blender scene into a URDF, it's important
 
 ## The Semantic Bridge
 
-LinkForge acts as a **semantic bridge**. In Blender, you are manipulating geometry and lights; in a URDF, you are defining a kinematic tree of physical bodies and constraints.
+LinkForge acts as a **Linter & Semantic Bridge**. In Blender, you are manipulating geometry and lights; in a URDF, you are defining a kinematic tree of physical bodies and constraints.
 
 LinkForge decouples these two worlds by using **Empty Objects** as the primary "anchors" for robot components.
 
@@ -28,8 +28,8 @@ In a standard Blender hierarchy, you might parent a wheel mesh to a car body mes
 
 This structure allows for **non-destructive editing**. You can hide all collision meshes to work on aesthetics, or hide visuals to inspect the physics layout, all without breaking the kinematic tree.
 
-### 3. Automatic Physics
-LinkForge bridges the gap between Blender's visual bounding boxes and URDF's inertia tensors. Because it understands the Link Frame separately from the meshes, it can automatically calculate a physically consistent inertia tensor based on the link's geometry and total mass.
+### 3. Automatic Physics & Linting
+LinkForge bridges the gap between Blender's visual bounding boxes and URDF's inertia tensors. As a linter, it ensures the connection is physically consistent, automatically calculating a valid inertia tensor based on the link's geometry and total mass.
 
 Note: LinkForge calculates the inertia tensor based on the primary collision or visual geometry and scales it to match the total mass you define in the Link properties.
 
