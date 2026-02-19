@@ -485,5 +485,5 @@ LinkForge implements a multi-layered security architecture to protect against ma
 
 ---
 
-**Last Updated:** 2026-02-15
-**Version:** 1.2.2
+**Last Updated:** 2026-02-19
+**Version:** 1.2.3
