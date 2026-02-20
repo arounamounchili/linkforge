@@ -2,4 +2,6 @@
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from .filter_utils import filter_items_by_name
+
+__all__ = ["filter_items_by_name"]
