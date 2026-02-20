@@ -11,14 +11,17 @@ While LinkForge exports standard URDF files that are technically compatible with
 ## Can I use exported models in Unreal Engine or Unity?
 Yes! Since LinkForge exports standard URDFs, you can use any URDF importer for these engines. However, the specialized Gazebo/ROS 2 control tags will likely be ignored by those engines.
 
-## How do I contribute a new sensor type?
-We welcome contributions! Please check our **[Contributing Guide](../CONTRIBUTING.md)** for developer setup instructions. Adding a sensor involves:
-1. Defining the sensor model in `core/src/linkforge_core/models/sensor.py`.
-2. Adding a parser in `core/src/linkforge_core/parsers/urdf_parser.py`.
-3. Adding a generator in `core/src/linkforge_core/urdf_generator.py`.
-
 ## Why does LinkForge calculate inertia automatically?
-Physics engines are extremely sensitive to incorrect inertia tensors. A common cause of "exploding" simulations is a mass that is too large for its inertia. LinkForge uses proven geometric formulas to ensure your robot stays physically stable.
+Physics engines are extremely sensitive to incorrect inertia tensors. A common cause of "exploding" simulations is a mass that is too large for its inertia. As a **Linter for Robotics**, LinkForge uses proven geometric formulas to ensure your robot stays physically stable and catches invalid inertia data before it reaches your simulator.
+
+## What mesh formats should I use? (DAE vs. GLB)
+While LinkForge supports **DAE (Collada)** for legacy compatibility (supported in Blender 4.x), we strongly recommend **glTF/GLB** for modern workflows. GLB is the professional standard for PBR materials and is natively supported by Gazebo Sim (Garden+) and modern RViz2 configurations. LinkForge acts as a bridge to help you migrate your assets to these modern formats.
+
+## Why does LinkForge flag "Multiple Root Links"?
+This is a "Silent Error" that standard XML parsers often miss. A valid robot must have a single root link (the base). If links like hands or sensors are disconnected in the hierarchy, LinkForge's linter will flag them. This prevents detached physics and "ghost" joints in your simulation.
+
+## How do I contribute?
+LinkForge is a community-driven project. We welcome contributions for new sensor types, platform adapters, or bug fixes. Please check our **[Contributing Guide](../CONTRIBUTING.md)** for developer setup and technical standards.
 
 ## What version of Blender is required?
 LinkForge is designed for **Blender 4.2+**, utilizing the new Extension Platform system.

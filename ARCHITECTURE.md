@@ -4,7 +4,7 @@ This document provides a comprehensive overview of LinkForge's architecture, mod
 
 ## System Overview
 
-LinkForge is a Blender extension that bridges the gap between 3D modeling and robotics simulation. Its internal architecture is organized into **two primary layers**, which together interface with the broader robotics ecosystem.
+LinkForge is **The Linter & Bridge for Robotics**. Its internal architecture is organized into **two primary layers**, which together interface with the broader robotics ecosystem.
 
 ## Module Structure
 
@@ -485,5 +485,5 @@ LinkForge implements a multi-layered security architecture to protect against ma
 
 ---
 
-**Last Updated:** 2026-02-15
-**Version:** 1.2.2
+**Last Updated:** 2026-02-19
+**Version:** 1.2.3

@@ -3,7 +3,7 @@
 ![LinkForge: The Universal Robotics Bridge](docs/assets/linkforge_master_vision.png)
 
 ## 🎯 Our Mission
-To bridge the fundamental gap between creative 3D design and high-fidelity robotics engineering. We empower roboticists to build, validate, and deploy their "Digital Twins" from a single source of truth.
+To bridge the fundamental gap between creative 3D design and high-fidelity robotics engineering. We empower roboticists to **lint, validate, and deploy** their "Digital Twins" from a single source of truth.
 
 ## 🎓 Who Uses LinkForge?
 
@@ -22,7 +22,7 @@ There is a fundamental "impedance mismatch" in the modern robotics workflow. Lin
 *   **Robotics Ecosystems** require **Physics Primitives** (analytical links, joint topologies, exact inertia tensors) and **Integration Targets** (middleware like ROS 2/ros2_control or physics engines like MuJoCo/MJCF and Gazebo/SDF).
 
 ### The Solution: LinkForge
-LinkForge is not just an exporter; it is a **Universal Interoperability Platform**. It acts as the high-fidelity translator that ensures your design intent is mathematically preserved across the entire development lifecycle:
+LinkForge is more than just an exporter; it is the **Linter & Bridge for Robotics**. It acts as the high-fidelity translator that ensures your design intent is mathematically preserved and structurally sound across the entire development lifecycle:
 
 **Design Systems** (Blender, FreeCAD, Fusion 360) ➜ **LinkForge Core** ➜ **Simulation & Production** (ROS 2, MuJoCo, Isaac Sim, Real Hardware)
 
@@ -30,8 +30,8 @@ LinkForge is not just an exporter; it is a **Universal Interoperability Platform
 
 ## 🔭 The "Digital Twin" North Star
 We believe a simulator should never be "close enough." It should be identical. Our North Star is the perfect **Digital Twin**:
+*   **Automated Linting**: Catch mechanical conflicts and kinematic errors *during* the design phase—reducing simulation failures and hardware rework.
 *   **Numerical Integrity**: Every mass calculation and inertia tensor is scientifically grounded, guaranteed by a core that prioritizes physics over approximations.
-*   **Design-Time Validation**: Catch mechanical conflicts and kinematic errors *during* the design phase—reducing simulation failures and hardware rework.
 
 ---
 
@@ -41,7 +41,7 @@ Why LinkForge is the choice for the next generation of robotics:
 | Feature | Legacy Exporters | LinkForge Platform |
 | :--- | :--- | :--- |
 | **Architecture** | Monolithic / Tied to one CAD tool | **Hexagonal / Multi-Host & Multi-Target** |
-| **Validation** | Post-Export (Fail in Sim) | **Design-Time (Fail in Editor)** |
+| **Validation** | Post-Export (Fail in Sim) | **Automated Linting (Fail in Editor)** |
 | **Physics** | "Close Enough" Mesh Export | **Scientific Inertia & Mass Sanity** |
 | **Complexity** | Manual Axis/Joint Setup | **AI-Assisted Topology Inference** |
 | **MetaData** | Geometry only | **Sim-to-Real "Noise" & Expert Data** |

@@ -13,7 +13,8 @@ version = "1.2.3" # x-release-please-version
 name = "LinkForge"
 
 # Short description (tagline) - max ~100 characters
-tagline = "Build Simulation-Ready Robots in Blender"
+# Short description (tagline) - max ~100 characters
+tagline = "The Linter & Bridge for Robotics"
 
 # Extension type
 type = "add-on"

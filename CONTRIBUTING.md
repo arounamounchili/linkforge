@@ -165,6 +165,8 @@ just test-core
 just test-blender
 ```
 
+See [Automated Testing](https://linkforge.readthedocs.io/en/latest/reference/testing/automated_testing.html) for our full strategy and coverage metrics.
+
 To run specific tests or categories:
 
 ```bash
@@ -376,7 +378,7 @@ To maintain a professional and consistent appearance:
 
 ## Technical Considerations
 
-To maintain LinkForge's status as a professional-grade tool, we prioritize stability in three key areas:
+To maintain LinkForge's status as a professional-grade **Linter & Bridge**, we prioritize stability in three key areas:
 
 ### 1. The Blender Bridge (Foundation)
 LinkForge must remain compatible with the latest Blender LTS (Long Term Support) and the current stable release.
