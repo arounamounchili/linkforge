@@ -932,9 +932,9 @@ class TestURDFParserErrorHandling:
         urdf_file = tmp_path / "no_name.urdf"
         urdf_file.write_text(urdf_content)
 
-        # Parser uses default name "imported_robot" when name missing
+        # Parser uses filename "no_name" when name missing
         robot = URDFParser().parse(urdf_file)
-        assert robot.name == "unnamed_robot"
+        assert robot.name == "no_name"
 
     def test_malformed_xml(self, tmp_path: Path):
         """Test that malformed XML raises appropriate error."""

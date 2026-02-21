@@ -56,9 +56,12 @@ def setup_environment():
 def run_tests():
     """Execute pytest within the Blender environment."""
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    test_dir = os.path.join(project_root, "tests", "unit", "blender")
+    test_dirs = [
+        os.path.join(project_root, "tests", "unit", "platforms", "blender"),
+        os.path.join(project_root, "tests", "integration", "platforms", "blender"),
+    ]
 
-    print(f"\nRunning Blender tests in: {test_dir}")
+    print(f"\nRunning Blender tests in: {', '.join(test_dirs)}")
 
     # We use a custom configuration to avoid conflicts with global pytest settings
     # and to ensure we only run the Blender-specific tests.
@@ -79,7 +82,7 @@ def run_tests():
     args.extend(extra_args)
 
     if not has_target:
-        args.append(test_dir)
+        args.extend(test_dirs)
 
     import pytest
 

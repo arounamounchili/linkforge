@@ -138,7 +138,9 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
             # Parse URDF string with directory for mesh path validation
             self.report({"INFO"}, "Parsing URDF...")
             robot = URDFParser(sandbox_root=sandbox_root).parse_string(
-                urdf_string, urdf_directory=urdf_path.parent
+                urdf_string,
+                urdf_directory=urdf_path.parent,
+                default_name=urdf_path.stem,
             )
 
         # Validate robot structure

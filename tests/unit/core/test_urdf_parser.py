@@ -753,7 +753,8 @@ class TestURDFParser:
         </robot>
         """
         parser = URDFParser()
-        with pytest.raises(ValueError, match="missing required <collision> element"):
+        # Parser now wraps ValueError into RobotParserError
+        with pytest.raises(RobotParserError, match="missing required <collision> element"):
             parser.parse_string(xml)
 
     def test_security_exceptions(self, tmp_path):
@@ -814,7 +815,8 @@ class TestURDFParser:
         invalid_urdf.write_text("<not_robot></not_robot>")
 
         parser = URDFParser()
-        with pytest.raises(ValueError, match="Root element must be <robot>"):
+        # Parser now wraps ValueError into RobotParserError
+        with pytest.raises(RobotParserError, match="Root element must be <robot>"):
             parser.parse(invalid_urdf)
 
     def test_parse_string_unexpected_error(self):

@@ -1247,7 +1247,7 @@ class URDFParser(RobotParser):
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
-            if isinstance(e, (RobotParserError, ValueError)):
+            if isinstance(e, RobotParserError):
                 raise
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
@@ -1296,7 +1296,7 @@ class URDFParser(RobotParser):
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
-            if isinstance(e, (RobotParserError, ValueError)):
+            if isinstance(e, RobotParserError):
                 raise
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
