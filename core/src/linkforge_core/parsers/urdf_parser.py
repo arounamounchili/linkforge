@@ -1182,7 +1182,7 @@ class URDFParser(RobotParser):
             if filepath:
                 _detect_xacro_file(root, filepath)
 
-            # Industry Standard: Fallback to filename if robot name is missing
+            # Fallback to filename if robot name is missing
             default_name = filepath.stem if filepath else "unnamed_robot"
             robot = Robot(name=root.get("name", default_name))
             materials: dict[str, Material] = {}
