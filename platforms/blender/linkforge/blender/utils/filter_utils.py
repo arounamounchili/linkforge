@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, overload
+
+
+@overload
+def filter_items_by_name(
+    items: dict[str, Any],
+    search_term: str | None,
+) -> dict[str, Any]: ...
+
+
+@overload
+def filter_items_by_name(
+    items: list[Any],
+    search_term: str | None,
+) -> list[Any]: ...
 
 
 def filter_items_by_name(
