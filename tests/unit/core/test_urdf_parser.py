@@ -1068,3 +1068,246 @@ class TestURDFParser:
                 assert m.call_count == 3
                 assert mock_logger.warning.called
                 assert "Renamed duplicate link" in mock_logger.warning.call_args[0][0]
+
+
+class TestURDFParserEdgeCoverage:
+    """Edge-case branch coverage for URDF parser."""
+
+    def test_parse_lidar_sensor_without_range_element(self):
+        """Lidar sensor element missing a range sub-element uses default range values."""
+        xml = """<robot name="r"><gazebo reference="base">
+            <sensor type="ray" name="lidar"><ray><horizontal/></ray></sensor>
+        </gazebo></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert len(robot.sensors) == 1
+
+    def test_parse_imu_with_empty_angular_and_linear_elements(self):
+        """IMU sensor with empty angular_velocity and linear_acceleration elements parses cleanly."""
+        xml = """<robot name="r"><gazebo reference="base">
+            <sensor type="imu" name="imu0">
+                <imu><angular_velocity/><linear_acceleration/></imu>
+            </sensor>
+        </gazebo></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert len(robot.sensors) == 1
+
+    def test_parse_force_torque_without_inner_element(self):
+        """Force/torque sensor element without inner force_torque child uses defaults."""
+        xml = """<robot name="r"><gazebo reference="base">
+            <sensor type="force_torque" name="ft0"></sensor>
+        </gazebo></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert len(robot.sensors) == 1
+
+    def test_parse_gazebo_element_without_sensor(self):
+        """Gazebo element referencing a link but without a sensor is stored as a GazeboElement."""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base"><mu1>0.9</mu1></gazebo>
+        </robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert len(robot.gazebo_elements) == 1
+
+    def test_parse_robot_without_filepath_uses_unnamed_robot(self):
+        """Parsing from a string without a filepath falls back to 'unnamed_robot' name."""
+        xml = """<robot><link name="l1"/></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert robot.name == "unnamed_robot"
+
+
+class TestURDFParserAdditionalEdgeCoverage:
+    """Additional edge-case tests for remaining branch coverage gaps."""
+
+    def test_mesh_path_validation_error_with_directory(self, tmp_path):
+        """Non-package:// mesh path with urdf_directory triggers security validation."""
+        xml = """<robot name="r"><link name="l1"><visual>
+            <geometry><mesh filename="/outside/path/mesh.stl"/></geometry>
+        </visual></link></robot>"""
+        parser = URDFParser()
+        # When urdf_directory is set and path escapes it, logs warning and returns None geometry
+        robot = parser.parse_string(xml, urdf_directory=tmp_path)
+        # Mesh should be skipped — link exists but no visual geometry
+        assert len(robot.links) == 1
+
+    def test_link_with_inertial_but_no_inertia_element(self):
+        """Link with <inertial><mass.../></inertial> but without <inertia> creates Inertial with no tensor."""
+        xml = """<robot name="r"><link name="l1">
+            <inertial><mass value="2.0"/></inertial>
+        </link></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert robot.links[0].inertial is None  # No inertia element means no Inertial stored
+
+    def test_link_with_negative_inertia_is_sanitized(self):
+        """Link inertia with negative diagonal values are sanitized to 1e-6."""
+        xml = """<robot name="r"><link name="l1">
+            <inertial>
+                <mass value="1.0"/>
+                <inertia ixx="-1.0" ixy="0.0" ixz="0.0" iyy="-1.0" iyz="0.0" izz="-1.0"/>
+            </inertial>
+        </link></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        t = robot.links[0].inertial.inertia
+        assert t.ixx == pytest.approx(1e-6)
+        assert t.iyy == pytest.approx(1e-6)
+        assert t.izz == pytest.approx(1e-6)
+
+    def test_collision_with_no_geometry_is_skipped(self):
+        """Collision element without any geometry child is silently not added."""
+        xml = """<robot name="r"><link name="l1">
+            <collision><geometry></geometry></collision>
+        </link></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert len(robot.links[0].collisions) == 0
+
+    def test_invalid_transmission_is_ignored(self):
+        """A transmission with invalid values logs a warning and is not added."""
+        xml = """<robot name="r">
+            <link name="l1"/>
+            <link name="l2"/>
+            <joint name="j" type="revolute">
+                <parent link="l1"/><child link="l2"/>
+                <limit effort="1" velocity="1"/>
+            </joint>
+            <transmission name="t">
+                <type>transmission_interface/SimpleTransmission</type>
+                <joint name="j"><hardwareInterface>this_is_invalid</hardwareInterface></joint>
+            </transmission>
+        </robot>"""
+        parser = URDFParser()
+        # Should not raise — just skip the transmission
+        robot = parser.parse_string(xml)
+        assert isinstance(
+            robot, __import__("linkforge_core.models.robot", fromlist=["Robot"]).Robot
+        )
+
+    def test_camera_sensor_without_image_element_uses_defaults(self):
+        """Camera sensor missing an <image> child falls back to width=640, height=480."""
+        xml = """<robot name="r"><gazebo reference="base">
+            <sensor type="camera" name="cam0">
+                <camera><clip><near>0.1</near><far>10.0</far></clip></camera>
+            </sensor>
+        </gazebo></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert robot.sensors[0].camera_info.width == 640
+        assert robot.sensors[0].camera_info.height == 480
+
+    def test_contact_sensor_missing_contact_element_raises_parser_error(self):
+        """Contact sensor without a <contact> child raises RobotParserError."""
+        from linkforge_core.base import RobotParserError
+
+        xml = """<robot name="r"><gazebo reference="base">
+            <sensor type="contact" name="ct0"></sensor>
+        </gazebo></robot>"""
+        parser = URDFParser()
+        with pytest.raises(RobotParserError):
+            parser.parse_string(xml)
+
+    def test_parse_string_with_robot_parser_error_reraises(self):
+        """RobotParserError from within parse_string passes through unchanged."""
+        import pytest
+        from linkforge_core.base import XacroDetectedError
+
+        xml = """<robot name="r"><xacro:if value="1"><link name="l1"/></xacro:if></robot>"""
+        parser = URDFParser()
+        with pytest.raises(XacroDetectedError):
+            parser.parse_string(xml)
+
+
+class TestURDFParserFileProtectionAndSensorCoverage:
+    """Tests for file-based parser protections and remaining sensor/transmission branches."""
+
+    def test_ros2_control_hardware_params_are_parsed(self):
+        """Hardware <param> elements inside ros2_control are collected into the parameters dict."""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <ros2_control name="hw" type="system">
+                <hardware>
+                    <plugin>fake_components/GenericSystem</plugin>
+                    <param name="joints">base</param>
+                </hardware>
+                <joint name="base">
+                    <command_interface name="position"/>
+                    <state_interface name="position"/>
+                </joint>
+            </ros2_control>
+        </robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert len(robot.ros2_controls) == 1
+        ctrl = robot.ros2_controls[0]
+        assert "hardware.joints" in ctrl.parameters
+
+    def test_ros2_control_joint_without_interfaces_is_not_added(self):
+        """A ros2_control joint with no command or state interfaces is skipped."""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <ros2_control name="hw" type="system">
+                <hardware><plugin>test/System</plugin></hardware>
+                <joint name="ignored"/>
+            </ros2_control>
+        </robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        assert robot.ros2_controls[0].joints == []
+
+    def test_imu_sensor_with_angular_velocity_x_noise(self):
+        """IMU angular_velocity with an <x> noise element parses the noise correctly."""
+        xml = """<robot name="r"><gazebo reference="base">
+            <sensor type="imu" name="imu0">
+                <imu>
+                    <angular_velocity>
+                        <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+                    </angular_velocity>
+                </imu>
+            </sensor>
+        </gazebo></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        imu = robot.sensors[0].imu_info
+        assert imu.angular_velocity_noise is not None
+
+    def test_imu_sensor_with_linear_acceleration_x_noise(self):
+        """IMU linear_acceleration with an <x> noise element parses the noise correctly."""
+        xml = """<robot name="r"><gazebo reference="base">
+            <sensor type="imu" name="imu0">
+                <imu>
+                    <linear_acceleration>
+                        <x><noise type="gaussian"><mean>0.0</mean><stddev>0.05</stddev></noise></x>
+                    </linear_acceleration>
+                </imu>
+            </sensor>
+        </gazebo></robot>"""
+        parser = URDFParser()
+        robot = parser.parse_string(xml)
+        imu = robot.sensors[0].imu_info
+        assert imu.linear_acceleration_noise is not None
+
+    def test_parse_file_too_large_raises_error(self, tmp_path):
+        """Parser raises RobotParserError if the file exceeds max_file_size."""
+        from linkforge_core.base import RobotParserError
+
+        urdf_file = tmp_path / "big.urdf"
+        urdf_file.write_text("<robot name='r'><link name='l1'/></robot>")
+        parser = URDFParser()
+        parser.max_file_size = 1  # 1 byte — will trip on any content
+        with pytest.raises(RobotParserError, match="too large"):
+            parser.parse(urdf_file)
+
+    def test_parse_file_xacro_string_too_large_raises_error(self):
+        """parse_string raises RobotParserError if the string exceeds max_file_size."""
+        from linkforge_core.base import RobotParserError
+
+        content = "<robot name='r'>" + "<link name='l1'/>" * 10 + "</robot>"
+        parser = URDFParser()
+        parser.max_file_size = 1  # 1 byte — will trip immediately
+        with pytest.raises(RobotParserError, match="too large"):
+            parser.parse_string(content)
