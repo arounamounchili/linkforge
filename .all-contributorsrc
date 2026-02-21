@@ -38,6 +38,16 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "andreas-loeffler",
+      "name": "Andreas Loeffler",
+      "avatar_url": "https://avatars.githubusercontent.com/u/73336148?v=4",
+      "profile": "https://github.com/andreas-loeffler",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
