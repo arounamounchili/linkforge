@@ -1002,7 +1002,7 @@ def test_find_file_package_uri(tmp_path):
 
 
 class TestXACROParserEdgeCoverage:
-    """Edge-case branch coverage for XACRO parser."""
+    """Parser behavior for unknown tags, empty macros, and missing includes."""
 
     def _write_and_parse(self, xml: str, tmp_path: Path) -> None:
         p = tmp_path / "test.xacro"

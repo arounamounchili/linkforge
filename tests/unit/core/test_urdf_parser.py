@@ -987,7 +987,7 @@ class TestURDFParser:
         assert len(robot.ros2_controls) == 1
 
     def test_parse_gazebo_element_with_plugins(self):
-        """Cover line 991 in urdf_parser.py."""
+        """Gazebo element with only a plugin (no sensor) is stored as a GazeboElement."""
         from linkforge_core.parsers.urdf_parser import URDFParser
 
         parser = URDFParser()
@@ -1004,7 +1004,7 @@ class TestURDFParser:
         assert robot.gazebo_elements[0].plugins[0].name == "p"
 
     def test_parse_file_iterparse_error(self, tmp_path):
-        """Cover line 1232 in urdf_parser.py."""
+        """A malformed XML file raises RobotParserError with a clear message."""
         from unittest import mock
 
         from linkforge_core.parsers.urdf_parser import URDFParser
@@ -1021,7 +1021,7 @@ class TestURDFParser:
             parser.parse(path)
 
     def test_joint_renaming_collision_loop(self):
-        """Cover line 1336 in urdf_parser.py."""
+        """Duplicate joint names get a _duplicate_N suffix until a free name is found."""
         from unittest import mock
 
         from linkforge_core.models import Joint, JointType, Robot
@@ -1045,7 +1045,7 @@ class TestURDFParser:
             assert m.call_count == 3
 
     def test_link_renaming_robustness(self):
-        """Cover lines 1302-1303 in urdf_parser.py."""
+        """Duplicate link names get a _duplicate_N suffix until a free name is found."""
         from unittest import mock
 
         from linkforge_core.models import Link, Robot
@@ -1071,7 +1071,7 @@ class TestURDFParser:
 
 
 class TestURDFParserEdgeCoverage:
-    """Edge-case branch coverage for URDF parser."""
+    """Parser behavior for sensors missing optional sub-elements."""
 
     def test_parse_lidar_sensor_without_range_element(self):
         """Lidar sensor element missing a range sub-element uses default range values."""
@@ -1121,7 +1121,7 @@ class TestURDFParserEdgeCoverage:
 
 
 class TestURDFParserAdditionalEdgeCoverage:
-    """Additional edge-case tests for remaining branch coverage gaps."""
+    """Parser behavior for inertial properties, transmissions, and mesh validation."""
 
     def test_mesh_path_validation_error_with_directory(self, tmp_path):
         """Non-package:// mesh path with urdf_directory triggers security validation."""
@@ -1223,7 +1223,7 @@ class TestURDFParserAdditionalEdgeCoverage:
 
 
 class TestURDFParserFileProtectionAndSensorCoverage:
-    """Tests for file-based parser protections and remaining sensor/transmission branches."""
+    """File size limits, ros2_control parameters, and IMU noise parsing."""
 
     def test_ros2_control_hardware_params_are_parsed(self):
         """Hardware <param> elements inside ros2_control are collected into the parameters dict."""

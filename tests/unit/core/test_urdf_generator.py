@@ -957,7 +957,7 @@ class TestURDFGenerator:
 
 
 class TestURDFGeneratorEdgeCoverage:
-    """Edge-case branch coverage for URDF generator."""
+    """Generator behavior for sensors, mimic joints, and disabled features."""
 
     def test_generate_without_ros2_control(self):
         """Generator skips ros2_control when disabled."""

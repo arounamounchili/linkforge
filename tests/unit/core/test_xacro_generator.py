@@ -574,7 +574,7 @@ class TestXACROGenerator:
 
 
 class TestXACROGeneratorEdgeCoverage:
-    """Edge-case branch coverage for XACRO generator."""
+    """Generator behavior for macro groups, geometry types, joint limits, and file splitting."""
 
     def test_link_in_macro_with_no_matching_group_falls_through(self):
         """Link marked as in_macros but with no signature match adds it as standard link."""
