@@ -1,9 +1,37 @@
 #!/usr/bin/env python3
 """Blender test launcher.
 
-Finds the Blender executable and spawns it in background mode to run
-the internal test runner (tests/blender_test_runner.py) inside
-Blender's embedded Python interpreter.
+This is the EXTERNAL entry point for running Blender tests.
+It runs in your normal system Python (uv/virtualenv) and has a single
+responsibility: find the Blender executable and spawn it as a subprocess.
+
+Two-layer execution design
+--------------------------
+Platform apps like Blender and FreeCAD ship their own embedded Python
+interpreter that is completely separate from your project's virtualenv.
+You cannot import `bpy` from outside Blender, and you cannot use Blender's
+Python to run general CLI tooling. The boundary is a hard subprocess call.
+
+This means test execution requires two scripts:
+
+  1. blender_launcher.py  (this file)
+     Runs in: system/project Python (uv run python ...)
+     Role:    discover Blender, build the subprocess command, propagate exit code
+
+  2. tests/blender_test_runner.py
+     Runs in: Blender's embedded Python (blender -b --python ...)
+     Role:    inject project paths into sys.path, ensure pytest is available,
+              call pytest.main() against the Blender test directories
+
+Adding a new platform (e.g. FreeCAD) follows the same pattern:
+  - freecad_launcher.py        discovers FreeCADCmd, spawns subprocess
+  - tests/freecad_test_runner.py  runs inside FreeCAD's Python
+
+Usage
+-----
+    python blender_launcher.py                       # run all Blender tests
+    python blender_launcher.py -- --cov=linkforge    # pass args to pytest
+    BLENDER_PATH=/custom/blender python blender_launcher.py
 """
 
 import os
@@ -12,20 +40,17 @@ import subprocess
 import sys
 
 
-def find_blender():
+def find_blender() -> str | None:
     """Attempt to find the Blender executable path."""
-    # Check if BLENDER_PATH environment variable is set
     env_path = os.environ.get("BLENDER_PATH")
     if env_path and os.path.exists(env_path):
         return env_path
 
-    # Platform-specific defaults
-    if sys.platform == "darwin":  # macOS
+    if sys.platform == "darwin":
         standard_path = "/Applications/Blender.app/Contents/MacOS/Blender"
         if os.path.exists(standard_path):
             return standard_path
     elif sys.platform.startswith("linux"):
-        # Try 'blender' in PATH
         path = shutil.which("blender")
         if path:
             return path
@@ -37,20 +62,19 @@ def find_blender():
     return None
 
 
-def main():
-    """Main entry point."""
+def main() -> None:
+    """Find Blender and delegate test execution to tests/blender_test_runner.py."""
     blender_path = find_blender()
 
     if not blender_path:
         print("Error: Blender executable not found.")
         print(
-            "Please set the BLENDER_PATH environment variable or ensure Blender is in your /Applications folder."
+            "Set the BLENDER_PATH environment variable or install Blender at its default location."
         )
         sys.exit(1)
 
     print(f"Using Blender: {blender_path}")
 
-    # Determine project root
     project_root = os.path.abspath(os.path.dirname(__file__))
     runner_script = os.path.join(project_root, "tests", "blender_test_runner.py")
 
@@ -58,20 +82,13 @@ def main():
         print(f"Error: Internal runner script not found at {runner_script}")
         sys.exit(1)
 
-    # Construct the command
-    command = [
-        blender_path,
-        "-b",  # Background mode
-        "--python",
-        runner_script,
-    ]
-
-    # Pass remaining arguments to the internal runner
+    # Invoke Blender in background (-b) and pass the runner as its Python script.
+    # Everything after '--' is forwarded to the runner as extra pytest arguments.
+    command = [blender_path, "-b", "--python", runner_script]
     if len(sys.argv) > 1:
         command.append("--")
         command.extend(sys.argv[1:])
 
-    # Run the process and propagate output
     try:
         process = subprocess.run(command, check=False)
         sys.exit(process.returncode)
