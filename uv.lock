@@ -372,6 +372,9 @@ requires-dist = [
 ]
 provides-extras = ["dev"]
 
+[package.metadata.requires-dev]
+dev = []
+
 [[package]]
 name = "markdown-it-py"
 version = "4.0.0"

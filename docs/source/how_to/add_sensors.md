@@ -25,7 +25,7 @@ Once added, you can configure the sensor properties:
 - **IMU**: Provides orientation and acceleration data.
 
 ## 4. Gazebo Integration
-LinkForge automatically generates the necessary `<gazebo>` tags and plugins to make these sensors work instantly in **Gazebo Sim** or **Gazebo Classic**.
+LinkForge automatically generates the necessary `<gazebo>` tags and plugins to execute these sensors in **Gazebo Sim** or **Gazebo Classic**.
 
 ::: {admonition} Note
 :class: note

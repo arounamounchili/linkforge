@@ -46,20 +46,12 @@ start build/html/index.html
 docs/
 ├── source/
 │   ├── index.md              # Main page
-│   ├── getting_started.md    # User guide
-│   ├── architecture.md       # Architecture diagrams (symlink)
-│   ├── contributing.md       # Contributing guide (symlink)
-│   ├── api/                  # API reference
-│   │   ├── index.md
-│   │   ├── models.md
-│   │   ├── parsers.md
-│   │   ├── generators.md
-│   │   ├── physics.md
-│   │   ├── validation.md
-│   │   └── blender.md
+│   ├── tutorials/            # Step-by-step guides for beginners
+│   ├── how_to/               # Problem-oriented guides and recipes
+│   ├── reference/            # API reference and technical specifications
+│   ├── explanation/          # Background context and architectural overviews
 │   ├── conf.py               # Sphinx configuration
-│   ├── _static/              # Static files (CSS, images)
-│   └── _templates/           # Custom templates
+│   └── _static/              # Static files (CSS, images)
 ├── build/                    # Generated documentation (git-ignored)
 ├── Makefile                  # Build automation
 └── README.md                 # This file
@@ -118,20 +110,14 @@ graph TB
 
 ## Publishing
 
-### Read the Docs
-
-1. Connect repository to [Read the Docs](https://readthedocs.org/)
-2. Configure `.readthedocs.yaml` (already included)
-3. Docs auto-build on every commit
-
-### GitHub Pages
+### Local Build and Release
 
 ```bash
 # Build docs
 cd docs
 make html
 
-# Copy to gh-pages branch
+# Copy to gh-pages branch (if maintaining GitHub pages manually)
 git checkout gh-pages
 cp -r build/html/* .
 git add .

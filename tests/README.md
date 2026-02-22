@@ -1,21 +1,20 @@
 # LinkForge Test Suite
 
-LinkForge uses `pytest` for comprehensive testing of its core physics/kinematics engine and its Blender platform integration.
+LinkForge uses `pytest` to test both the core physics/kinematics engine and the Blender platform integration.
 
 ## Directory Structure
 
-The test suite is divided into two main categories to ensure clear separation between pure logic and platform-specific behavior:
+The test suite separates pure logic from platform-specific behavior:
 
 ### 1. `unit/`
-Isolated tests for individual components without external dependencies.
-- **`unit/core/`**: Tests for robot models, URDF/Xacro parsers, and physics utilities. These run in standard Python.
-- **`unit/blender/`**: Tests for Blender-specific utilities (scene helpers, gizmos, operators). These require a Blender environment.
+Isolated tests for individual components avoiding external dependencies.
+- **`unit/core/`**: Tests for robot models, parsers, and physics utilities. Runs in standard Python.
+- **`unit/platforms/blender/`**: Tests for Blender utilities (scene helpers, visualization, operators). Requires a Blender runtime.
 
 ### 2. `integration/`
-End-to-end tests that verify the interaction between multiple components.
-- **`integration/parsers/`**: Verifies complex URDF parsing and Xacro expansion scenarios.
-- **`integration/blender/`**: Verifies the full Roundtrip process (Import → Scene Setup → Export).
-- **`integration/features/`**: Validation of specific high-level features like Inertia calculations, Transmissions, and Sensor tags.
+End-to-end tests verifying the interaction between multiple components.
+- **`integration/core/`**: Verifies complex URDF parsing, Xacro expansion scenarios, and validation features like Inertia calculations.
+- **`integration/platforms/blender/`**: Verifies the complete roundtrip process (Import → Scene Setup → Export).
 
 ## How to Run Tests
 
@@ -36,5 +35,5 @@ python blender_launcher.py
 
 1. **Use Fixtures**: Place shared test resources (example URDFs, mock robots) in `tests/conftest.py`. Prefer the `examples_dir` fixture over local path strings.
 2. **Platform Isolation**: If a test doesn't explicitly need a 3D viewport or `bpy` data structures, place it in `core`.
-3. **Roundtrip Integrity**: When adding support for a new URDF tag, always add a corresponding roundtrip test in `integration/blender/` to ensure export parity.
+3. **Roundtrip Integrity**: When adding support for a new URDF tag, always add a corresponding roundtrip test in `integration/platforms/blender/` to ensure export parity.
 4. **Mocking**: Use `unittest.mock` to simulate Blender's asynchronous timers or IO operations where possible.
