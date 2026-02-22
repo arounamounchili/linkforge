@@ -445,10 +445,8 @@ class XacroResolver:
         if not isinstance(value, str):
             return value
 
-        # Guard: empty strings must stay as empty strings.
-        # yaml.safe_load("") returns None, which would corrupt xacro arg defaults like
-        # `default=""`, causing `${prefix}` to evaluate to None and stringify as "None".
-        # See issue #133.
+        # yaml.safe_load("") returns None, so empty strings must be returned as-is
+        # before YAML parsing to avoid corrupting args with empty defaults.
         if value == "":
             return value
 
@@ -482,11 +480,9 @@ class XacroResolver:
         # 1. Handle arguments: $(arg name)
         text = re.sub(r"\$\(arg (.*?)\)", lambda m: str(self.args.get(m.group(1), "")), text)
 
-        # 2. Handle ROS package find: $(find package)
-        # Note: We convert this to the package:// URI scheme commonly used in URDF.
-        # IMPORTANT: Handle `file://$(find pkg)/path` first. Without this, the regex
-        # below would produce `file://package://pkg/path` — a malformed double-prefix
-        # URI that fails in resolve_package_path. See issue #133.
+        # 2. Handle ROS package find: $(find package) → package:// URI.
+        # The file:// form must be matched first so that `file://$(find pkg)/path`
+        # does not produce the malformed double-prefix `file://package://pkg/path`.
         text = re.sub(r"file://\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
         text = re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
 
@@ -646,10 +642,8 @@ class XACROParser(RobotParser):
             start_dir=kwargs.get("start_dir", filepath.parent),
         )
 
-        # Pass additional kwargs as initial xacro arguments.
-        # Exclude internal resolver kwargs and skip None values — str(None) == "None"
-        # would override the xacro `default=""`, producing names like "Nonejoint_..."
-        # See issue #133.
+        # Forward caller-supplied args to the resolver, skipping internal keys
+        # and None values (str(None) would override xacro defaults like default="").
         for k, v in kwargs.items():
             if k not in ["search_paths", "start_dir"] and v is not None:
                 resolver.args[k] = resolver._try_parse_typed_value(str(v))
