@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""CLI script to run LinkForge Blender tests.
+"""Blender test launcher.
 
-This script detects the Blender executable and runs the internal test runner.
+Finds the Blender executable and spawns it in background mode to run
+the internal test runner (tests/blender_test_runner.py) inside
+Blender's embedded Python interpreter.
 """
 
 import os

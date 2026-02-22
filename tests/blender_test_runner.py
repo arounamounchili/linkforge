@@ -1,7 +1,7 @@
 """Internal test runner for Blender.
 
-This script is intended to be run by Blender's Python interpreter:
-blender -b --python tests/blender_test_runner.py
+This script is executed by Blender's embedded Python interpreter, launched via:
+    python blender_launcher.py
 """
 
 import importlib.util

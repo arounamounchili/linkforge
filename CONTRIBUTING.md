@@ -177,7 +177,7 @@ just coverage
 uv run pytest tests/unit/core/test_robot.py
 
 # Run specific Blender integration test file (manual)
-uv run python run_blender_tests.py tests/integration/platforms/blender/test_roundtrip.py
+uv run python blender_launcher.py tests/integration/platforms/blender/test_roundtrip.py
 ```
 
 ### Manual QA (Mandatory)
