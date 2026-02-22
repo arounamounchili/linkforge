@@ -1046,3 +1046,51 @@ class TestXACROParserEdgeCoverage:
             self._write_and_parse(xml, tmp_path)
         # The parser should log something about the missing file
         assert any("no/such" in r.message or "include" in r.message.lower() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for issue #133
+# ---------------------------------------------------------------------------
+
+
+def test_substitute_handles_file_uri_find_pattern():
+    """Verify that file://$(find pkg)/path is converted to package://pkg/path.
+
+    Regression test for issue #133: the previous implementation left the
+    `file://` prefix in place, producing the malformed URI
+    `file://package://pkg/path` which failed in resolve_package_path.
+    """
+    resolver = XacroResolver()
+
+    # Primary case: file:// prefix is stripped and replaced cleanly
+    result = resolver._substitute("file://$(find my_robot)/meshes/base.stl")
+    assert result == "package://my_robot/meshes/base.stl"
+
+    # Ensure the plain $(find ...) form still works as before
+    result2 = resolver._substitute("$(find my_robot)/meshes/base.stl")
+    assert result2 == "package://my_robot/meshes/base.stl"
+
+
+def test_xacro_parser_skips_none_kwargs(tmp_path):
+    """Verify that None-valued kwargs are not forwarded to resolver args.
+
+    Regression test for issue #133: str(None) == "None" was previously
+    injected into resolver.args, overriding the xacro `default=""` and
+    producing joint names like "Nonejoint_a7-tool0".
+    """
+    xacro_file = tmp_path / "robot.xacro"
+    xacro_file.write_text(
+        '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test_robot">'
+        '<xacro:arg name="prefix" default=""/>'
+        '<link name="${prefix}link_0"/>'
+        "</robot>"
+    )
+
+    parser = XACROParser()
+    # prefix=None should be ignored; the xacro default="" should win
+    robot = parser.parse(xacro_file, prefix=None)
+    link_names = [link.name for link in robot.links]
+    assert "link_0" in link_names, (
+        f"Expected 'link_0' but got {link_names}. "
+        "Likely 'None' was stringified and injected as the prefix arg."
+    )

@@ -445,6 +445,13 @@ class XacroResolver:
         if not isinstance(value, str):
             return value
 
+        # Guard: empty strings must stay as empty strings.
+        # yaml.safe_load("") returns None, which would corrupt xacro arg defaults like
+        # `default=""`, causing `${prefix}` to evaluate to None and stringify as "None".
+        # See issue #133.
+        if value == "":
+            return value
+
         # Try YAML (most robust and standard compliant)
         try:
             # safe_load handles ints, floats, bools (true/false), nulls, lists, dicts
@@ -477,6 +484,10 @@ class XacroResolver:
 
         # 2. Handle ROS package find: $(find package)
         # Note: We convert this to the package:// URI scheme commonly used in URDF.
+        # IMPORTANT: Handle `file://$(find pkg)/path` first. Without this, the regex
+        # below would produce `file://package://pkg/path` — a malformed double-prefix
+        # URI that fails in resolve_package_path. See issue #133.
+        text = re.sub(r"file://\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
         text = re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
 
         # 3. Handle properties and math: ${expression}
@@ -635,9 +646,12 @@ class XACROParser(RobotParser):
             start_dir=kwargs.get("start_dir", filepath.parent),
         )
 
-        # Pass additional kwargs as initial xacro arguments
+        # Pass additional kwargs as initial xacro arguments.
+        # Exclude internal resolver kwargs and skip None values — str(None) == "None"
+        # would override the xacro `default=""`, producing names like "Nonejoint_..."
+        # See issue #133.
         for k, v in kwargs.items():
-            if k not in ["search_paths"]:
+            if k not in ["search_paths", "start_dir"] and v is not None:
                 resolver.args[k] = resolver._try_parse_typed_value(str(v))
 
         urdf_string = resolver.resolve_file(filepath)
