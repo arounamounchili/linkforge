@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -480,7 +481,26 @@ class XacroResolver:
         # 1. Handle arguments: $(arg name)
         text = re.sub(r"\$\(arg (.*?)\)", lambda m: str(self.args.get(m.group(1), "")), text)
 
-        # 2. Handle ROS package find: $(find package) → package:// URI.
+        # 2. Handle environment variable substitution, matching roslaunch behaviour.
+        # $(env VAR) raises if unset; $(optenv VAR) returns ""; $(optenv VAR default) returns default.
+        def _resolve_env(m: re.Match) -> str:
+            parts = m.group(1).split(None, 1)
+            var = parts[0]
+            value = os.environ.get(var)
+            if value is None:
+                raise RobotParserError(f"Required environment variable '{var}' is not set")
+            return value
+
+        def _resolve_optenv(m: re.Match) -> str:
+            parts = m.group(1).split(None, 1)
+            var = parts[0]
+            default = parts[1] if len(parts) > 1 else ""
+            return os.environ.get(var, default)
+
+        text = re.sub(r"\$\(env (.*?)\)", _resolve_env, text)
+        text = re.sub(r"\$\(optenv (.*?)\)", _resolve_optenv, text)
+
+        # 3. Handle ROS package find: $(find package) → package:// URI.
         # The file:// form must be matched first so that `file://$(find pkg)/path`
         # does not produce the malformed double-prefix `file://package://pkg/path`.
         text = re.sub(r"file://\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
