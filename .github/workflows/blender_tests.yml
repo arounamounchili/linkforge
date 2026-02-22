@@ -42,4 +42,4 @@ jobs:
       - name: Run Blender Tests
         run: |
           export BLENDER_PATH=$(pwd)/blender/blender
-          xvfb-run ./run_blender_tests.py
+          xvfb-run python blender_launcher.py
