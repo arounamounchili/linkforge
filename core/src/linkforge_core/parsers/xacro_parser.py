@@ -483,7 +483,7 @@ class XacroResolver:
 
         # 2. Handle environment variable substitution, matching roslaunch behaviour.
         # $(env VAR) raises if unset; $(optenv VAR) returns ""; $(optenv VAR default) returns default.
-        def _resolve_env(m: re.Match) -> str:
+        def _resolve_env(m: re.Match[str]) -> str:
             parts = m.group(1).split(None, 1)
             var = parts[0]
             value = os.environ.get(var)
@@ -491,7 +491,7 @@ class XacroResolver:
                 raise RobotParserError(f"Required environment variable '{var}' is not set")
             return value
 
-        def _resolve_optenv(m: re.Match) -> str:
+        def _resolve_optenv(m: re.Match[str]) -> str:
             parts = m.group(1).split(None, 1)
             var = parts[0]
             default = parts[1] if len(parts) > 1 else ""
@@ -506,7 +506,7 @@ class XacroResolver:
         text = re.sub(r"file://\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
         text = re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
 
-        # 3. Handle properties and math: ${expression}
+        # 4. Handle properties and math: ${expression}
         # If the entire string is a single ${...} block, return the object directly.
         # This keeps dicts/lists as real objects for subsequent evaluations.
         stripped = text.strip()
