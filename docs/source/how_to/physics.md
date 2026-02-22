@@ -1,6 +1,6 @@
 # ⚖️ Configuring Physics & Inertia
 
-LinkForge provides powerful tools to ensure your robot's physics simulation is stable and accurate.
+LinkForge provides tools to configure stable and accurate physics simulations matching real-world counterparts.
 
 ## Automatic Inertia Calculation
 
@@ -14,11 +14,11 @@ By default, LinkForge calculates the mass properties (Inertia Tensor and Center 
 The inertia tensor will be computed using the bounding box (for primitives) or the mesh volume approximation.
 
 :::{important}
-For complex meshes, the automatic calculation approximates the shape as a solid primitives (Box/Cylinder/Sphere) based on the visual geometry dimensions. For higher precision, consider decomposing your mesh or providing custom inertia values.
+For complex meshes, the automatic calculation approximates the shape as a solid primitive (Box/Cylinder/Sphere) based on the visual geometry dimensions. For higher precision, consider decomposing your mesh or providing custom inertia values.
 :::
 
 :::{note}
-**Importing Robots**: When importing an existing URDF/XACRO, LinkForge disables **Auto-Calculate Inertia** by default. This ensures that the scientifically accurate inertia tensors from your original file are preserved and not overwritten by Blender's approximations.
+**Importing Robots**: When importing an existing URDF/XACRO, LinkForge disables **Auto-Calculate Inertia** by default. This ensures that the original inertia tensors from your existing file are preserved and not overwritten by Blender's approximations.
 :::
 
 ## Manual Center of Mass (Inertial Origin)

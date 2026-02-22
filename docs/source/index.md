@@ -17,11 +17,11 @@ graph LR
 
 ## 🚀 Key Features
 
-LinkForge removes the friction from robotics modeling:
+LinkForge streamlines robotics modeling with the following capabilities:
 
 - **Bidirectional Workflow**: Import existing URDF/XACRO files or build from scratch.
 - **Production-Ready Export**: Strictly compliant URDF/XACRO files optimized for ROS/Gazebo.
-- **Linter for Robotics (Smart Validation)**: Built-in integrity checker for robot topology and physics.
+- **Linter for Robotics**: Built-in integrity checker for robot topology and physics.
 - **ROS2 Control Support**: Automatic hardware interface configuration.
 - **Complete Sensor Suite**: Integrated support for LiDAR, IMU, Depth Cameras, and more.
 - **Automatic Physics**: Mass properties and inertia tensor calculation.
@@ -140,7 +140,7 @@ citation
 ---
 
 :::{note}
-**Scientific Accuracy**: LinkForge is built for precision. All inertia calculations use solid-body dynamics formulas to ensure simulation fidelity.
+**Physics Accuracy**: All inertia calculations use solid-body dynamics formulas to ensure simulation fidelity.
 :::
 
 ## 👥 Community & Support

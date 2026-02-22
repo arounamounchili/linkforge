@@ -12,18 +12,14 @@
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/download/)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
-LinkForge is **The Linter & Bridge for Robotics**.
+LinkForge is **The Linter & Bridge for Robotics**, integrating directly into Blender.
 
-**In robotics, creativity starts in your head — but getting that idea into a simulator usually means hours of writing XML, fixing joint limits, and fighting coordinate systems.**
-
- LinkForge removes that friction. It acts as both a **Linter** and a **Bridge**, allowing you to model your robot in Blender as naturally as sculpting a 3D scene, while guaranteeing the output is rigorous, simulation-ready code.
+It allows you to model your robot as naturally as sculpting a 3D scene, while acting as a strict safety net to guarantee the output is rigorous, simulation-ready code.
 
  1.  **Forge Structure**: Define links, joints, masses, and inertias visually.
- 2.  **Lint & Validate**: Catch structural and physics errors before they break your simulation.
+ 2.  **Lint & Validate**: Catch structural and physics errors before simulation export.
  3.  **Perceive & Control**: Attach sensors and configure `ros2_control` interfaces.
- 4.  **Export Production Code**: Generate clean, hardened URDF/XACRO files.
-
- **From idea → hardened robot model → ready for simulation.** All inside Blender.
+ 4.  **Export Production Code**: Generate hardened URDF/XACRO files.
 
 ### 🛠️ Technical Specifications
 
@@ -39,9 +35,9 @@ LinkForge is **The Linter & Bridge for Robotics**.
 
 ## 🚀 Key Features
 
-- **Bidirectional Workflow**: Seamlessly import existing URDF/XACRO files for editing or build complex robot models from scratch using Blender's native tools.
+- **Bidirectional Workflow**: Import existing URDF/XACRO files for editing or build complex robot models from scratch using Blender native tools.
 - **Production-Ready Export**: Generates strictly compliant URDF/XACRO files optimized for ROS, ROS 2, and Gazebo. Includes **ROS-Agnostic Asset Resolution**, allowing complex robots to be imported and edited on any platform without requiring a ROS installation.
-- **Linter for Robotics (The Safety Net)**: Built-in integrity checker inspects robot topology, physics data, and joint limits. It catches "exploding robot" errors (negative inertias, detached links, circular chains) *before* you export.
+- **Linter for Robotics**: Built-in integrity checker inspects robot topology, physics data, and joint limits. It catches simulation-breaking errors (negative inertias, detached links, circular chains) *before* you export.
 - **ROS2 Control Support**: Automatically generates hardware interface configurations for `ros2_control` via a centralized dashboard, compatible with Gazebo and physical hardware.
 - **Complete Sensor Suite**: Integrated support for Camera, Depth Camera, LiDAR, IMU, GPS, **Force/Torque**, and **Contact** sensors with configurable noise models.
 - **Automatic Physics**: Scientifically accurate calculation of mass properties and inertia tensors for both primitive shapes and complex arbitrary meshes.
@@ -176,15 +172,7 @@ The package will be created in the `dist/` directory.
 ## 🔭 Vision & Future
 For a deep dive into our long-term strategy, the **Digital Twin** philosophy, and our technical roadmap for AI and Kinematics, please read our [Project Vision](VISION.md).
 
----
 
-## 🔮 Our Transparency Commitment
-
-We believe in being upfront about what LinkForge does—and what it doesn't do.
-
-1.  **Standard Compliance**: We guarantee 100% compliance with the official URDF/XACRO specifications. Your robot will work in any standard parser.
-2.  **The "Wild URDF" Limit**: We aim for lossless Round-Trip (Import → Edit → Export). However, if you import a "Wild" URDF containing non-standard tags, custom XML comments, or parser-specific hacks, **we do not guarantee their preservation**. We clean the code to ensure validity.
-3.  **Beta Features**: Advanced features like `ros2_control` are evolving. We commit to vigilance in updating them, but syntax changes in ROS 2 may require extension updates.
 
 ## 🤝 Contributing
 

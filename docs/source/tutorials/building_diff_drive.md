@@ -1,6 +1,6 @@
 # Tutorial: Building a Differential Drive Robot
 
-In this tutorial, you will learn how to build a fully functional differential drive mobile robot from scratch in Blender and export it as a URDF for use in ROS 2 or Gazebo.
+In this tutorial, you will configure a differential drive mobile robot in Blender and export it as an actuable URDF for ROS 2 or Gazebo.
 
 ## What You Will Learn
 - How to create and configure **Links**.

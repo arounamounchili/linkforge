@@ -68,3 +68,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "linkforge.blender.*"
 ignore_errors = false
+
+[dependency-groups]
+dev = []

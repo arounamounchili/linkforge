@@ -60,7 +60,7 @@ This protocol defines the mandatory manual testing steps required before every r
 ### 3.1 Joint Creation & Setup
 1.  [ ] **Joint Creation**: Select a Link and click `Create Joint` in the **Forge** or **Joints** panel.
     - *Expected:* A `Joint Empty` (Arrows) is created at the link's location.
-2.  [ ] **Auto-Detect (The Intelligent Assist)**: Select a Joint and click the **Auto (Auto)** icon next to "Connection".
+2.  [ ] **Auto-Detect Parents**: Select a Joint and click the **Auto (Auto)** icon next to "Connection".
     - *Expected:* The nearest link becomes the **Child Link** (since joint origin = child origin).
     - *Expected:* The second-nearest link becomes the **Parent Link**.
     - *Note:* If you already manually set a Child, the tool is smart enough to keep it and only find the nearest **Parent**.
@@ -90,7 +90,7 @@ This protocol defines the mandatory manual testing steps required before every r
 ---
 
 ## 🚀 Phase 5: Export & Validation
-**Goal:** Ensure the final output is industry-ready.
+**Goal:** Ensure the exported output is valid and compliant.
 
 1.  [ ] **Validation Hub**: Go to `Validate & Export` and click `Validate Robot`.
     - *Expected:* The Component Browser lists all Links, Joints, Sensors. No "Generic Error" icons.
@@ -110,7 +110,7 @@ This protocol defines the mandatory manual testing steps required before every r
 
 ---
 
-## 🛟 Phase 6: Advanced Stability
+## 🛟 Phase 6: Data Resilience
 **Goal:** Verify round-trip integrity and data resilience.
 
 1.  [ ] **Round-Trip Import**: Export your robot, then use `File > Import > LinkForge URDF (.urdf/.xacro)` to import it back into a clean scene.
