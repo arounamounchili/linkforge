@@ -223,7 +223,8 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
         logger.warning(f"Unsupported mesh file extension: {ext} for '{mesh_path.name}'")
         return None
 
-    # Track collections before import to identify new ones
+    # Snapshot objects and collections to identify stragglers afterward.
+    pre_import_objects = set(bpy.data.objects)
     pre_import_collections = set(bpy.data.collections)
 
     # Dispatcher: Try each operator until one succeeds
@@ -260,13 +261,13 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
             logger.warning(f"Importer ran but no objects were found for '{mesh_path.name}'")
             return None
 
-        # Robust normalization and consolidation
-        res_obj = normalize_and_consolidate_imported_objects(imported_objects, name)
+        # Consolidate ALL new objects created by the importer.
+        # This catches stray nodes that CAD importers link but don't select.
+        new_objects = set(bpy.data.objects) - pre_import_objects
+        res_obj = normalize_and_consolidate_imported_objects(new_objects, name)
 
         if res_obj:
-            logger.debug(f"Successfully processed imported mesh: {res_obj.name}")
-
-            # CLEANUP: Handle unwanted collections created by importers (e.g. GLTFs "Scene", "resources")
+            # CLEANUP: Handle unwanted collections created by certain importers (e.g. GLTF).
             post_import_collections = set(bpy.data.collections)
             new_collections = post_import_collections - pre_import_collections
 
@@ -300,75 +301,60 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
 
 
 def normalize_and_consolidate_imported_objects(
-    objects: list[bpy.types.Object], name: str
+    objects: typing.Iterable[bpy.types.Object], name: str
 ) -> bpy.types.Object | None:
-    """Normalize transforms and consolidate multiple imported objects into one.
-
-    This handles complex hierarchies (like glTF) by:
-    1. Unparenting everything while keeping world transforms.
-    2. Finding all mesh objects.
-    3. Baking all transforms into geometry.
-    4. Joining all meshes into a single object named 'name'.
-    5. Resetting the final object to identity at (0,0,0).
-
-    Args:
-        objects: List of Blender objects to process.
-        name: Name to assign to the final consolidated object.
-
-    Returns:
-        The consolidated Blender Object, or None if no valid mesh data was found.
-    """
+    """Consolidation logic that processes all supplied objects (meshes → join, others → delete)."""
     if not objects:
         return None
 
-    # Filter for meshes and get all children recursively
-    mesh_objs = []
-    to_delete = []
+    mesh_objs = set()
+    to_delete = set()
+    seen = set()
 
     def process_recursive(o: bpy.types.Object) -> None:
-        # Clear parent while keeping world transform
+        if o in seen:
+            return
+        seen.add(o)
+
+        # Unparent while keeping world transform
         world_mat = o.matrix_world.copy()
         o.parent = None
         o.matrix_world = world_mat
 
         if o.type == "MESH":
-            mesh_objs.append(o)
+            mesh_objs.add(o)
         else:
-            to_delete.append(o)
+            to_delete.add(o)
 
-        # Collect children before unparenting them in the next recursion step
-        children = list(o.children)
-        for child in children:
+        for child in list(o.children):
             process_recursive(child)
 
     for obj in objects:
-        process_recursive(obj)
+        with contextlib.suppress(ReferenceError):
+            process_recursive(obj)
 
     if not mesh_objs:
-        # Clean up empty containers if no mesh was found
         for obj in to_delete:
             with contextlib.suppress(RuntimeError, ReferenceError):
                 bpy.data.objects.remove(obj, do_unlink=True)
         return None
 
-    # Step 2: Normalize and reset transforms
+    # Step 2: Prepare for join
+    mesh_list = list(mesh_objs)
     bpy.ops.object.select_all(action="DESELECT")
-    for obj in mesh_objs:
-        # Snap to world origin BEFORE baking anything
-        # This prevents the importer's world-position from being baked into vertices
+    for obj in mesh_list:
         obj.matrix_world = Matrix.Identity(4)
         obj.select_set(True)
 
     if bpy.context.view_layer:
-        bpy.context.view_layer.objects.active = mesh_objs[0]
+        bpy.context.view_layer.objects.active = mesh_list[0]
 
-    # Bake Rotation and Scale into vertex data for consistency (axis normalization)
-    # CRITICAL: location=False prevents the "Double-Offset" trap
+    # Bake axis/scale
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-    # Step 3: Join meshes if there are multiple
-    final_obj = mesh_objs[0]
-    if len(mesh_objs) > 1:
+    # Step 3: Join
+    final_obj = mesh_list[0]
+    if len(mesh_list) > 1:
         bpy.ops.object.join()
 
     # Step 4: Final cleanup
@@ -378,12 +364,11 @@ def normalize_and_consolidate_imported_objects(
     final_obj.rotation_euler = (0, 0, 0)
     final_obj.scale = (1, 1, 1)
 
-    # Remove the Empties/containers that were part of the import
+    # Remove all containers/stragglers identified in Step 1
     for obj in to_delete:
         with contextlib.suppress(RuntimeError, ReferenceError):
             bpy.data.objects.remove(obj, do_unlink=True)
 
-    # Restore context
     if bpy.context.view_layer:
         bpy.context.view_layer.objects.active = final_obj
     return final_obj
@@ -549,9 +534,8 @@ def create_link_object(
             if collision.name:
                 collision_obj["urdf_name"] = collision.name
 
-            # CRITICAL FIX: Mark as imported to prevent re-simplification on export
-            # Without this, collision meshes degrade with each import-export cycle
-            # (100% → 50% → 25% → 12.5% → ... exponential degradation)
+            # Mark as imported to prevent re-simplification on export.
+            # Without this, collision meshes degrade with each import-export cycle.
             collision_obj["imported_from_urdf"] = True
 
             # Add collision mesh to collection
@@ -603,10 +587,8 @@ def create_link_object(
             props.inertia_origin_rpy = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
     elif hasattr(link_obj, "linkforge"):
-        # IMPORTANT: If link has no inertial properties (e.g., dummy root link),
-        # explicitly set mass to 0.0 and disable auto-inertia.
-        # This prevents Blender from falling back to default 1.0kg, which would
-        # corrupt the physics model of lightweight robots.
+        # If link has no inertial data (e.g. a dummy root link), set mass to 0
+        # and disable auto-inertia to avoid falling back to the default 1.0 kg.
         props = link_obj.linkforge
         props.mass = 0.0
         props.use_auto_inertia = False

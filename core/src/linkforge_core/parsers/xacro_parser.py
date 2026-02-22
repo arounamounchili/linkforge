@@ -500,9 +500,7 @@ class XacroResolver:
         text = re.sub(r"\$\(env (.*?)\)", _resolve_env, text)
         text = re.sub(r"\$\(optenv (.*?)\)", _resolve_optenv, text)
 
-        # 3. Handle ROS package find: $(find package) → package:// URI.
-        # The file:// form must be matched first so that `file://$(find pkg)/path`
-        # does not produce the malformed double-prefix `file://package://pkg/path`.
+        # Strip file:// prefix from ROS package finds to prevent double-prefix.
         text = re.sub(r"file://\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
         text = re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
 

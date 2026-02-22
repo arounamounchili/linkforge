@@ -1028,3 +1028,39 @@ def test_import_robot_sensor_creation_failure(clean_scene):
     ):
         import_robot_to_scene(robot, Path("test.urdf"), context)
         assert "base_link" in bpy.data.objects
+
+
+def test_import_mesh_file_removes_non_mesh_stragglers(tmp_path):
+    """Verify that import side-effects (Camera, Lamp, Empties) are cleaned up."""
+    # Create a real STL file to import
+    bpy.ops.mesh.primitive_cube_add()
+    stl_path = tmp_path / "cube.stl"
+    if hasattr(bpy.ops.wm, "stl_export"):
+        bpy.ops.wm.stl_export(filepath=str(stl_path))
+    else:
+        bpy.ops.export_mesh.stl(filepath=str(stl_path))
+    bpy.ops.object.delete()
+
+    # Wrap the real importer so we can inject a Camera side-effect during the call,
+    # matching exactly what Blender's Collada importer does for embedded scene nodes.
+    real_import = bpy.ops.wm.stl_import
+    injected_cam_name = "DAE_Camera_SideEffect"
+
+    def import_with_sideeffect(**kwargs):
+        result = real_import(**kwargs)
+        cam_data = bpy.data.cameras.new("_tmp_cam")
+        cam_obj = bpy.data.objects.new(injected_cam_name, cam_data)
+        bpy.context.scene.collection.objects.link(cam_obj)
+        return result
+
+    with mock.patch(
+        "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
+        side_effect=import_with_sideeffect,
+    ):
+        result = import_mesh_file(stl_path, "mesh_only")
+
+    assert result is not None
+    assert result.type == "MESH"
+    assert injected_cam_name not in bpy.data.objects, (
+        "Camera straggler was not removed by import_mesh_file"
+    )
