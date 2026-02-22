@@ -7,7 +7,7 @@ LinkForge uses a multi-layered automated testing strategy to ensure reliability 
 We follow the principle of **"Real Data over Mocks"**.
 - **Blender Tests**: We run a real (headless) instance of Blender via the `bpy` API rather than mocking the graphics engine.
 - **Roundtrip Integrity**: Every supported URDF tag must survive an Import → Edit → Export cycle with 100% numerical precision.
-- **~98% Core Branch Coverage**: All fundamental robotics logic in `linkforge_core` targets ≥98% branch coverage. The remaining ~2% consists of defensive OS-level guards (e.g. file-read errors) that are impractical to trigger in unit tests.
+- **High Core Branch Coverage**: All fundamental robotics logic in `linkforge_core` is verified with comprehensive branch coverage. Defensive OS-level guards that cannot be triggered in normal unit tests are excluded.
 - **90%+ Platform Logic Coverage**: High-priority Blender integration logic (adapters, operators, and builders) is verified with 90%+ coverage.
 
 ## Test Organization
@@ -48,8 +48,6 @@ embedded Python interpreter, separate from your project virtualenv:
 |---|---|---|
 | `blender_launcher.py` (root) | System Python | Finds Blender, spawns subprocess |
 | `tests/blender_test_runner.py` | Blender's Python | Injects paths, runs `pytest.main()` |
-
-This same pattern applies to any future platform (e.g. FreeCAD) that ships its own interpreter.
 
 ## Continuous Integration (CI)
 
