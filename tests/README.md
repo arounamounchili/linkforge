@@ -26,11 +26,11 @@ pytest tests/unit/core tests/integration/parsers
 ```
 
 ### Blender-Dependent Tests
-To run tests that require the Blender Python API (`bpy`), use the included runner:
+To run tests that require the Blender Python API (`bpy`), use the launcher from the project root:
 ```bash
-python tests/blender_test_runner.py
+python blender_launcher.py
 ```
-*Note: Ensure your `BLENDER_PATH` environment variable is set or Blender is in your system PATH.*
+*Note: Ensure your `BLENDER_PATH` environment variable is set or Blender is installed at its default location.*
 
 ## Best Practices for Contributors
 

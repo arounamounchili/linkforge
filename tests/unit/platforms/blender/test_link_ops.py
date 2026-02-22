@@ -631,25 +631,19 @@ def test_inertia_extraction_failure(mocker):
 
 def test_link_ops_debounced_preview_logic(mocker):
     """Hit all error paths in execute_collision_preview_update."""
-    with patch(
-        "platforms.blender.linkforge.blender.operators.link_ops._preview_pending_object", None
-    ):
+    with patch("linkforge.blender.operators.link_ops._preview_pending_object", None):
         assert execute_collision_preview_update() is None
 
     link_obj = bpy.data.objects.new("TestLink_Preview", None)
     bpy.context.collection.objects.link(link_obj)
     link_obj.linkforge.is_robot_link = True
 
-    with patch(
-        "platforms.blender.linkforge.blender.operators.link_ops._preview_pending_object", link_obj
-    ):
+    with patch("linkforge.blender.operators.link_ops._preview_pending_object", link_obj):
         assert execute_collision_preview_update() is None
 
     mock_obj = MagicMock()
     mock_obj.name = "DeletedObject"
-    with patch(
-        "platforms.blender.linkforge.blender.operators.link_ops._preview_pending_object", mock_obj
-    ):
+    with patch("linkforge.blender.operators.link_ops._preview_pending_object", mock_obj):
         assert execute_collision_preview_update() is None
 
     mesh = bpy.data.meshes.new("sphere_mesh")
@@ -659,13 +653,13 @@ def test_link_ops_debounced_preview_logic(mocker):
     sphere_obj["collision_geometry_type"] = "BOX"
 
     with (
-        patch("platforms.blender.linkforge.blender.operators.link_ops.regenerate_collision_mesh"),
+        patch("linkforge.blender.operators.link_ops.regenerate_collision_mesh"),
         patch(
-            "platforms.blender.linkforge.blender.adapters.blender_to_core.detect_primitive_type",
+            "linkforge.blender.adapters.blender_to_core.detect_primitive_type",
             return_value=None,
         ),
         patch(
-            "platforms.blender.linkforge.blender.operators.link_ops._preview_pending_object",
+            "linkforge.blender.operators.link_ops._preview_pending_object",
             link_obj,
         ),
     ):
@@ -720,7 +714,7 @@ def test_link_ops_collision_all_logic():
     link1.linkforge.is_robot_link = True
 
     with patch(
-        "platforms.blender.linkforge.blender.operators.link_ops.create_collision_for_link",
+        "linkforge.blender.operators.link_ops.create_collision_for_link",
         return_value=MagicMock(),
     ):
         bpy.ops.linkforge.generate_collision_all()
@@ -733,7 +727,7 @@ def test_link_ops_inertia_all_logic_extended():
     link1.linkforge.is_robot_link = True
 
     with patch(
-        "platforms.blender.linkforge.blender.operators.link_ops.calculate_inertia_for_link",
+        "linkforge.blender.operators.link_ops.calculate_inertia_for_link",
         return_value=True,
     ):
         bpy.ops.linkforge.calculate_inertia_all()

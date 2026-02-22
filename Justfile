@@ -21,17 +21,17 @@ test: test-core test-blender
 
 # Run Core unit tests
 test-core:
-    uv run pytest tests/unit/core
+    uv run pytest tests/unit/core tests/integration/core
 
 # Run Blender integration tests
 test-blender:
-    uv run python run_blender_tests.py -- --cov=linkforge --cov-append
+    uv run python blender_launcher.py -- --cov=linkforge --cov-append
 
 # Run tests with coverage
 coverage:
 	rm -f .coverage .coverage.*
-	COVERAGE_FILE=.coverage.core uv run pytest tests/unit/core --cov=linkforge_core
-	COVERAGE_FILE=.coverage.blender uv run python run_blender_tests.py -- --cov=linkforge --cov=linkforge_core
+	COVERAGE_FILE=.coverage.core uv run pytest tests/unit/core tests/integration/core --cov=linkforge_core
+	COVERAGE_FILE=.coverage.blender uv run python blender_launcher.py -- --cov=linkforge --cov=linkforge_core
 	uv run coverage combine
 	uv run coverage html
 	uv run coverage report

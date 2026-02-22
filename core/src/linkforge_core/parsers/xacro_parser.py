@@ -642,4 +642,6 @@ class XACROParser(RobotParser):
 
         urdf_string = resolver.resolve_file(filepath)
 
-        return URDFParser().parse_string(urdf_string, urdf_directory=filepath.parent, **kwargs)
+        return URDFParser().parse_string(
+            urdf_string, urdf_directory=filepath.parent, default_name=filepath.stem, **kwargs
+        )

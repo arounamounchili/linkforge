@@ -954,3 +954,99 @@ class TestURDFGenerator:
         gen._add_sensor_element(root, sensor)
 
         assert root.find(".//plugin").get("name") == "p"
+
+
+class TestURDFGeneratorEdgeCoverage:
+    """Generator behavior for sensors, mimic joints, and disabled features."""
+
+    def test_generate_without_ros2_control(self):
+        """Generator skips ros2_control when disabled."""
+        robot = Robot(name="r")
+        robot.add_link(Link(name="base"))
+        gen = URDFGenerator(use_ros2_control=False)
+        result = gen.generate(robot)
+        assert "ros2_control" not in result
+
+    def test_mimic_joint_with_default_multiplier_and_offset(self):
+        """Mimic joint with multiplier=1.0 and offset=0.0 omits those attributes from XML."""
+        robot = Robot(name="r")
+        robot.add_link(Link(name="l1"))
+        robot.add_link(Link(name="l2"))
+        robot.add_link(Link(name="l3"))
+        # first joint is the one being mimicked
+        j_main = Joint(
+            name="main_j",
+            type=JointType.REVOLUTE,
+            parent="l1",
+            child="l2",
+            limits=JointLimits(effort=1.0, velocity=1.0),
+        )
+        # second joint mimics the first with defaults
+        j_mimic = Joint(
+            name="mimic_j",
+            type=JointType.REVOLUTE,
+            parent="l1",
+            child="l3",
+            limits=JointLimits(effort=1.0, velocity=1.0),
+            mimic=JointMimic(joint="main_j", multiplier=1.0, offset=0.0),
+        )
+        robot.add_joint(j_main)
+        robot.add_joint(j_mimic)
+        gen = URDFGenerator()
+        result = gen.generate(robot)
+        root = ET.fromstring(result)
+        mimic = root.find(".//mimic")
+        assert mimic is not None
+        assert mimic.get("multiplier") is None
+        assert mimic.get("offset") is None
+
+    def test_gps_with_only_vertical_position_noise(self):
+        """GPS sensor with vertical-only position noise creates the position_sensing element."""
+        robot = Robot(name="r")
+        robot.add_link(Link(name="base"))
+        noise = SensorNoise(mean=0.0, stddev=0.01)
+        sensor = Sensor(
+            name="gps",
+            type=SensorType.GPS,
+            link_name="base",
+            gps_info=GPSInfo(position_sensing_vertical_noise=noise),
+        )
+        robot.add_sensor(sensor)
+        gen = URDFGenerator()
+        result = gen.generate(robot)
+        assert "position_sensing" in result
+        assert "vertical" in result
+
+    def test_contact_sensor_with_empty_collision_skips_collision_element(self):
+        """Contact sensor with empty collision string omits the collision child."""
+        from linkforge_core.models.sensor import ContactInfo
+
+        robot = Robot(name="r")
+        robot.add_link(Link(name="base"))
+        sensor = Sensor(
+            name="ct",
+            type=SensorType.CONTACT,
+            link_name="base",
+            contact_info=ContactInfo(collision=""),
+        )
+        robot.add_sensor(sensor)
+        gen = URDFGenerator()
+        result = gen.generate(robot)
+        assert "ct" in result
+
+    def test_force_torque_sensor_generates_output(self):
+        """Force/torque sensor branch is exercised and produces XML output."""
+        from linkforge_core.models.sensor import ForceTorqueInfo
+
+        robot = Robot(name="r")
+        robot.add_link(Link(name="base"))
+        sensor = Sensor(
+            name="ft",
+            type=SensorType.FORCE_TORQUE,
+            link_name="base",
+            force_torque_info=ForceTorqueInfo(),
+        )
+        robot.add_sensor(sensor)
+        gen = URDFGenerator()
+        result = gen.generate(robot)
+        assert "ft" in result

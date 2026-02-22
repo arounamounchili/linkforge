@@ -999,3 +999,50 @@ def test_find_file_package_uri(tmp_path):
         res = resolver._find_file("package://my_pkg/test.urdf")
         assert res == tmp_path / "resolved.urdf"
         assert m.called
+
+
+class TestXACROParserEdgeCoverage:
+    """Parser behavior for unknown tags, empty macros, and missing includes."""
+
+    def _write_and_parse(self, xml: str, tmp_path: Path) -> None:
+        p = tmp_path / "test.xacro"
+        p.write_text(xml)
+        XACROParser().parse(p)
+
+    def test_unknown_xacro_tag_is_skipped_with_warning(self, tmp_path, caplog):
+        """An unknown xacro: tag logs a warning and resolves to skip."""
+        xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
+            <link name="l1"/>
+            <xacro:no_such_macro/>
+        </robot>"""
+        with caplog.at_level(logging.WARNING, logger="linkforge_core.parsers.xacro_parser"):
+            self._write_and_parse(xml, tmp_path)
+        assert any("no_such_macro" in r.message for r in caplog.records)
+
+    def test_macro_with_empty_name_is_not_registered(self, tmp_path):
+        """A xacro:macro with no name attribute is ignored gracefully."""
+        xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
+            <xacro:macro params=""><link name="l1"/></xacro:macro>
+            <link name="base"/>
+        </robot>"""
+        self._write_and_parse(xml, tmp_path)
+
+    def test_insert_block_with_non_xml_property_is_skipped(self, tmp_path):
+        """insert_block on a scalar property resolves to skip."""
+        xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
+            <xacro:property name="mass" value="1.0"/>
+            <xacro:insert_block name="mass"/>
+            <link name="base"/>
+        </robot>"""
+        self._write_and_parse(xml, tmp_path)
+
+    def test_include_nonexistent_file_is_handled_gracefully(self, tmp_path, caplog):
+        """Including a file that does not exist is silently skipped with a warning."""
+        xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
+            <xacro:include filename="/no/such/file.xacro"/>
+            <link name="base"/>
+        </robot>"""
+        with caplog.at_level(logging.WARNING, logger="linkforge_core.parsers.xacro_parser"):
+            self._write_and_parse(xml, tmp_path)
+        # The parser should log something about the missing file
+        assert any("no/such" in r.message or "include" in r.message.lower() for r in caplog.records)

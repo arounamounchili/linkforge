@@ -57,6 +57,11 @@ class AsynchronousRobotBuilder:
 
     def _prepare_tasks(self) -> None:
         """Build the list of tasks to be performed."""
+        if not self.robot.links:
+            logger.warning(
+                f"Robot '{self.robot.name}' has no links. The resulting Blender collection will be empty."
+            )
+
         # 1. Setup Scene (ROS 2 Control, Gazebo, etc.)
         self.tasks.append(("setup_scene", None))
 

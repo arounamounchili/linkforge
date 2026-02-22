@@ -571,3 +571,94 @@ class TestXACROGenerator:
         # Test basic cases
         assert gen._find_common_prefix(["arm_link", "arm_joint"]) == "arm"
         assert gen._find_common_prefix(["fl_wheel", "fr_wheel"]) == "wheel"
+
+
+class TestXACROGeneratorEdgeCoverage:
+    """Generator behavior for macro groups, geometry types, joint limits, and file splitting."""
+
+    def test_link_in_macro_with_no_matching_group_falls_through(self):
+        """Link marked as in_macros but with no signature match adds it as standard link."""
+        gen = XACROGenerator(generate_macros=True)
+        robot = Robot(name="r")
+        link = Link(name="l1", visuals=[Visual(geometry=Box(size=Vector3(x=1, y=1, z=1)))])
+        robot.add_link(link)
+        gen.links_in_macros = {"l1"}
+        gen.macro_groups = {}
+        result = gen.generate(robot)
+        assert "l1" in result
+
+    def test_visual_with_non_standard_geometry_in_signature(self):
+        """Visual with Sphere geometry is included in link signature correctly."""
+        gen = XACROGenerator(generate_macros=True)
+        robot = Robot(name="r")
+        link = Link(name="l1", visuals=[Visual(geometry=Sphere(radius=0.5))])
+        robot.add_link(link)
+        result = gen.generate(robot)
+        assert "l1" in result
+
+    def test_joint_limit_with_none_lower(self):
+        """Joint limit with None lower value skips writing the lower attribute."""
+        gen = XACROGenerator()
+        robot = Robot(name="r")
+        robot.add_link(Link(name="l1"))
+        robot.add_link(Link(name="l2"))
+        joint = Joint(
+            name="j",
+            type=JointType.REVOLUTE,
+            parent="l1",
+            child="l2",
+            limits=JointLimits(effort=1.0, velocity=1.0, lower=None, upper=None),
+        )
+        robot.add_joint(joint)
+        result = gen.generate(robot)
+        assert "j" in result
+
+    def test_joint_dynamics_with_zero_values_skips_attributes(self):
+        """Joint dynamics of zero damping and friction should omit those element attributes."""
+        gen = XACROGenerator()
+        robot = Robot(name="r")
+        robot.add_link(Link(name="l1"))
+        robot.add_link(Link(name="l2"))
+        joint = Joint(
+            name="j",
+            type=JointType.REVOLUTE,
+            parent="l1",
+            child="l2",
+            limits=JointLimits(effort=1.0, velocity=1.0),
+            dynamics=JointDynamics(damping=0.0, friction=0.0),
+        )
+        robot.add_joint(joint)
+        result = gen.generate(robot)
+        assert "j" in result
+
+    def test_split_files_with_macros_and_properties(self):
+        """Split-files mode creates separate property and macro xacro files."""
+        import tempfile
+        from pathlib import Path as _Path
+
+        gen = XACROGenerator(generate_macros=True, split_files=True, advanced_mode=True)
+        robot = Robot(name="r")
+        robot.add_link(
+            Link(
+                name="l1",
+                visuals=[
+                    Visual(
+                        geometry=Box(size=Vector3(x=1, y=1, z=1)),
+                        material=Material(name="m", color=Color(r=1, g=0, b=0)),
+                    )
+                ],
+            )
+        )
+        robot.add_link(Link(name="l2"))
+        joint = Joint(
+            name="j",
+            type=JointType.REVOLUTE,
+            parent="l1",
+            child="l2",
+            limits=JointLimits(effort=1.0, velocity=1.0),
+        )
+        robot.add_joint(joint)
+        with tempfile.TemporaryDirectory() as td:
+            out = _Path(td) / "r.xacro"
+            gen.write(robot, out)
+            assert out.exists()

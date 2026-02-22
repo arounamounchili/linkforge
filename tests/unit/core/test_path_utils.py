@@ -148,7 +148,7 @@ def test_resolve_package_path_edge_cases_extended(tmp_path, monkeypatch):
     (target_pkg / "mesh.stl").touch()
 
     # Set ROS_PACKAGE_PATH with empty segment and direct path to package
-    monkeypatch.setenv("ROS_PACKAGE_PATH", f":{str(target_pkg)}:")  # :path:
+    monkeypatch.setenv("ROS_PACKAGE_PATH", f":{str(target_pkg)}:")  # path:
 
     res = resolve_package_path("package://target_pkg/mesh.stl", tmp_path)
     assert res is not None

@@ -1182,7 +1182,9 @@ class URDFParser(RobotParser):
             if filepath:
                 _detect_xacro_file(root, filepath)
 
-            robot = Robot(name=root.get("name", "unnamed_robot"))
+            # Fallback to filename if robot name is missing
+            default_name = filepath.stem if filepath else "unnamed_robot"
+            robot = Robot(name=root.get("name", default_name))
             materials: dict[str, Material] = {}
             depth = 0
 
@@ -1245,18 +1247,23 @@ class URDFParser(RobotParser):
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
-            if isinstance(e, (RobotParserError, ValueError)):
+            if isinstance(e, RobotParserError):
                 raise
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
     def parse_string(
-        self, urdf_string: str, urdf_directory: Path | None = None, **kwargs: Any
+        self,
+        urdf_string: str,
+        urdf_directory: Path | None = None,
+        default_name: str = "unnamed_robot",
+        **kwargs: Any,
     ) -> Robot:
         """Parse URDF from XML string instead of file.
 
         Args:
             urdf_string: URDF XML content as string
             urdf_directory: Optional directory for mesh path validation.
+            default_name: Fallback name if <robot name="..."> is missing.
             **kwargs: Additional parsing options
 
         Returns:
@@ -1280,11 +1287,16 @@ class URDFParser(RobotParser):
             root = ET.fromstring(urdf_string)
             _detect_xacro_file(root)
             parser_sandbox = kwargs.get("sandbox_root", self.sandbox_root)
-            return self._parse_robot(root, filepath=urdf_directory, sandbox_root=parser_sandbox)
+            return self._parse_robot(
+                root,
+                filepath=urdf_directory,
+                sandbox_root=parser_sandbox,
+                default_name=default_name,
+            )
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
-            if isinstance(e, (RobotParserError, ValueError)):
+            if isinstance(e, RobotParserError):
                 raise
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
@@ -1355,7 +1367,11 @@ class URDFParser(RobotParser):
                 logger.warning(f"Skipping invalid joint '{joint_name}': {e}")
 
     def _parse_robot(
-        self, root: ET.Element, filepath: Path | None = None, sandbox_root: Path | None = None
+        self,
+        root: ET.Element,
+        filepath: Path | None = None,
+        sandbox_root: Path | None = None,
+        default_name: str = "unnamed_robot",
     ) -> Robot:
         """Parse robot elements into model.
 
@@ -1376,7 +1392,7 @@ class URDFParser(RobotParser):
         if root.tag != "robot":
             raise ValueError("Root element must be <robot>")
 
-        robot = Robot(name=root.get("name", "unnamed_robot"))
+        robot = Robot(name=root.get("name", default_name))
         materials = self._parse_global_materials(root)
 
         # Parse all links first (joints need links to exist)

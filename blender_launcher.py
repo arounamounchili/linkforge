@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
-"""CLI script to run LinkForge Blender tests.
+"""Entry point for running Blender tests from the command line.
 
-This script detects the Blender executable and runs the internal test runner.
+Finds the Blender executable and spawns it in headless mode, delegating
+actual test execution to tests/blender_test_runner.py which runs inside
+Blender's embedded Python interpreter.
+
+Usage:
+    python blender_launcher.py
+    python blender_launcher.py -- --cov=linkforge
+    BLENDER_PATH=/custom/blender python blender_launcher.py
 """
 
 import os
@@ -10,20 +17,17 @@ import subprocess
 import sys
 
 
-def find_blender():
+def find_blender() -> str | None:
     """Attempt to find the Blender executable path."""
-    # Check if BLENDER_PATH environment variable is set
     env_path = os.environ.get("BLENDER_PATH")
     if env_path and os.path.exists(env_path):
         return env_path
 
-    # Platform-specific defaults
-    if sys.platform == "darwin":  # macOS
+    if sys.platform == "darwin":
         standard_path = "/Applications/Blender.app/Contents/MacOS/Blender"
         if os.path.exists(standard_path):
             return standard_path
     elif sys.platform.startswith("linux"):
-        # Try 'blender' in PATH
         path = shutil.which("blender")
         if path:
             return path
@@ -35,20 +39,19 @@ def find_blender():
     return None
 
 
-def main():
-    """Main entry point."""
+def main() -> None:
+    """Find Blender and delegate test execution to tests/blender_test_runner.py."""
     blender_path = find_blender()
 
     if not blender_path:
         print("Error: Blender executable not found.")
         print(
-            "Please set the BLENDER_PATH environment variable or ensure Blender is in your /Applications folder."
+            "Set the BLENDER_PATH environment variable or install Blender at its default location."
         )
         sys.exit(1)
 
     print(f"Using Blender: {blender_path}")
 
-    # Determine project root
     project_root = os.path.abspath(os.path.dirname(__file__))
     runner_script = os.path.join(project_root, "tests", "blender_test_runner.py")
 
@@ -56,20 +59,13 @@ def main():
         print(f"Error: Internal runner script not found at {runner_script}")
         sys.exit(1)
 
-    # Construct the command
-    command = [
-        blender_path,
-        "-b",  # Background mode
-        "--python",
-        runner_script,
-    ]
-
-    # Pass remaining arguments to the internal runner
+    # Invoke Blender in background (-b) and pass the runner as its Python script.
+    # Everything after '--' is forwarded to the runner as extra pytest arguments.
+    command = [blender_path, "-b", "--python", runner_script]
     if len(sys.argv) > 1:
         command.append("--")
         command.extend(sys.argv[1:])
 
-    # Run the process and propagate output
     try:
         process = subprocess.run(command, check=False)
         sys.exit(process.returncode)

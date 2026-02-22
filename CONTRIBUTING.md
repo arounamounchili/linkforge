@@ -177,7 +177,7 @@ just coverage
 uv run pytest tests/unit/core/test_robot.py
 
 # Run specific Blender integration test file (manual)
-uv run python run_blender_tests.py tests/integration/blender/test_roundtrip.py
+uv run python blender_launcher.py tests/integration/platforms/blender/test_roundtrip.py
 ```
 
 ### Manual QA (Mandatory)
@@ -228,8 +228,8 @@ def test_sensor_roundtrip():
     assert robot2.sensors[0].origin == robot.sensors[0].origin
 ```
 
-- **Unit Tests** (`tests/unit/`): Test individual functions/classes in isolation (Core or Blender).
-- **Integration Tests** (`tests/integration/`): Test full workflows and round-trips organized into `parsers/`, `blender/`, and `features/`.
+- **Unit Tests** (`tests/unit/`): Test individual functions/classes in isolation, split into `core/` and `platforms/`.
+- **Integration Tests** (`tests/integration/`): Test full workflows and round-trips, split into `core/` (logic, parsers) and `platforms/` (Blender-specific).
 
 > [!TIP]
 > **Use Central Fixtures**: Always use the `examples_dir` fixture from `tests/conftest.py` when accessing example URDFs. Avoid hardcoding relative paths like `../../examples`.
