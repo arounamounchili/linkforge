@@ -7,7 +7,7 @@ LinkForge uses a multi-layered automated testing strategy to ensure reliability 
 We follow the principle of **"Real Data over Mocks"**.
 - **Blender Tests**: We run a real (headless) instance of Blender via the `bpy` API rather than mocking the graphics engine.
 - **Roundtrip Integrity**: Every supported URDF tag must survive an Import → Edit → Export cycle with 100% numerical precision.
-- **High Core Branch Coverage**: All fundamental robotics logic in `linkforge_core` is verified with comprehensive branch coverage. Defensive OS-level guards that cannot be triggered in normal unit tests are excluded.
+- **High Core Branch Coverage**: All fundamental robotics logic in `linkforge_core` is verified with comprehensive branch coverage. Untestable OS-level guards are excluded.
 - **90%+ Platform Logic Coverage**: High-priority Blender integration logic (adapters, operators, and builders) is verified with 90%+ coverage.
 
 ## Test Organization

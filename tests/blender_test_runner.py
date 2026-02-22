@@ -1,11 +1,6 @@
-"""Blender internal test runner.
+"""Blender test runner — executed inside Blender's embedded Python.
 
-This is the INTERNAL half of the two-layer Blender test execution design.
-It runs inside Blender's embedded Python interpreter (not your project
-virtualenv) and is invoked automatically by blender_launcher.py.
-
-Do not run this script directly. Use blender_launcher.py from the project root:
-    python blender_launcher.py
+Invoked automatically by blender_launcher.py. Do not run directly.
 """
 
 import importlib.util
