@@ -1,28 +1,13 @@
 #!/usr/bin/env python3
-"""Blender test launcher.
+"""Entry point for running Blender tests from the command line.
 
-This is the EXTERNAL entry point for running Blender tests.
-It runs in your normal system Python (uv/virtualenv) and has one job:
-find the Blender executable and spawn it as a subprocess.
+Finds the Blender executable and spawns it in headless mode, delegating
+actual test execution to tests/blender_test_runner.py which runs inside
+Blender's embedded Python interpreter.
 
-Two-layer execution design
---------------------------
-Blender ships its own embedded Python interpreter, completely separate
-from your project virtualenv. The boundary between them is a subprocess.
-
-  1. blender_launcher.py  (this file)
-     Runs in: system/project Python (uv run python ...)
-     Role:    discover Blender, build the subprocess command, propagate exit code
-
-  2. tests/blender_test_runner.py
-     Runs in: Blender's embedded Python (blender -b --python ...)
-     Role:    inject project paths into sys.path, ensure pytest is available,
-              call pytest.main() against the Blender-specific test directories
-
-Usage
------
-    python blender_launcher.py                       # run all Blender tests
-    python blender_launcher.py -- --cov=linkforge    # pass extra args to pytest
+Usage:
+    python blender_launcher.py
+    python blender_launcher.py -- --cov=linkforge
     BLENDER_PATH=/custom/blender python blender_launcher.py
 """
 
