@@ -476,9 +476,12 @@ def parse_joint(joint_elem: ET.Element) -> Joint:
     calibration = None
     calib_elem = joint_elem.find("calibration")
     if calib_elem is not None:
+        rising_str = calib_elem.get("rising")
+        falling_str = calib_elem.get("falling")
+
         calibration = JointCalibration(
-            rising=parse_float(calib_elem.get("rising"), "rising", default=None),
-            falling=parse_float(calib_elem.get("falling"), "falling", default=None),
+            rising=parse_float(rising_str, "rising") if rising_str is not None else None,
+            falling=parse_float(falling_str, "falling") if falling_str is not None else None,
         )
 
     return Joint(
