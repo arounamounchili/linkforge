@@ -284,6 +284,68 @@ class JointPropertyGroup(PropertyGroup):
         default=0.0,
     )
 
+    # Joint Safety Controller
+    use_safety_controller: BoolProperty(  # type: ignore
+        name="Use Safety Controller",
+        description="Add a safety controller to the joint (standard URDF feature)",
+        default=False,
+    )
+
+    safety_soft_lower_limit: FloatProperty(  # type: ignore
+        name="Soft Lower Limit",
+        description="Lower bound of the joint safety controller",
+        default=0.0,
+    )
+
+    safety_soft_upper_limit: FloatProperty(  # type: ignore
+        name="Soft Upper Limit",
+        description="Upper bound of the joint safety controller",
+        default=0.0,
+    )
+
+    safety_k_position: FloatProperty(  # type: ignore
+        name="K Position",
+        description="Position gain for safety controller",
+        default=0.0,
+    )
+
+    safety_k_velocity: FloatProperty(  # type: ignore
+        name="K Velocity",
+        description="Velocity gain for safety controller",
+        default=0.0,
+    )
+
+    # Joint Calibration
+    use_calibration: BoolProperty(  # type: ignore
+        name="Use Calibration",
+        description="Add calibration settings to the joint",
+        default=False,
+    )
+
+    calibration_rising: FloatProperty(  # type: ignore
+        name="Rising Edge",
+        description="Position of the rising edge (optional)",
+        default=0.0,
+    )
+
+    use_calibration_rising: BoolProperty(  # type: ignore
+        name="Specify Rising Edge",
+        description="Whether to include the rising edge in calibration",
+        default=False,
+    )
+
+    calibration_falling: FloatProperty(  # type: ignore
+        name="Falling Edge",
+        description="Position of the falling edge (optional)",
+        default=0.0,
+    )
+
+    use_calibration_falling: BoolProperty(  # type: ignore
+        name="Specify Falling Edge",
+        description="Whether to include the falling edge in calibration",
+        default=False,
+    )
+
 
 # Registration
 def register() -> None:

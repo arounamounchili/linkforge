@@ -17,9 +17,11 @@ from linkforge_core.models import (
     Inertial,
     InertiaTensor,
     Joint,
+    JointCalibration,
     JointDynamics,
     JointLimits,
     JointMimic,
+    JointSafetyController,
     JointType,
     LidarInfo,
     Link,
@@ -217,6 +219,49 @@ class TestURDFGenerator:
         assert mimic.get("joint") == "other_joint"
         assert mimic.get("multiplier") == "2"
         assert mimic.get("offset") == "0.5"
+
+    def test_generate_joint_with_safety_and_calibration(self):
+        """Test generating joint with safety controller and calibration."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="base"))
+        robot.add_link(Link(name="link1"))
+
+        safety = JointSafetyController(
+            soft_lower_limit=-1.0,
+            soft_upper_limit=1.0,
+            k_position=10.0,
+            k_velocity=5.0,
+        )
+        calib = JointCalibration(rising=0.1)
+
+        joint = Joint(
+            name="j1",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="link1",
+            axis=Vector3(1.0, 0.0, 0.0),
+            limits=JointLimits(lower=-1.57, upper=1.57, effort=10, velocity=5),
+            safety_controller=safety,
+            calibration=calib,
+        )
+        robot.add_joint(joint)
+
+        generator = URDFGenerator()
+        xml_str = generator.generate(robot)
+        root = ET.fromstring(xml_str)
+
+        joint_elem = root.find(".//joint[@name='j1']")
+        assert joint_elem is not None
+
+        safety_elem = joint_elem.find("safety_controller")
+        assert safety_elem is not None
+        assert safety_elem.get("soft_lower_limit") == "-1"
+        assert safety_elem.get("k_position") == "10"
+
+        calib_elem = joint_elem.find("calibration")
+        assert calib_elem is not None
+        assert calib_elem.get("rising") == "0.1"
+        assert calib_elem.get("falling") is None
 
     def test_generate_inertial(self):
         """Test generating inertial properties."""
@@ -829,7 +874,13 @@ class TestURDFGenerator:
             name="r",
             initial_links=[Link(name="base"), Link(name="child")],
             initial_joints=[
-                Joint(name="j", type=JointType.CONTINUOUS, parent="base", child="child")
+                Joint(
+                    name="j",
+                    type=JointType.CONTINUOUS,
+                    parent="base",
+                    child="child",
+                    axis=Vector3(1.0, 0.0, 0.0),
+                )
             ],
             gazebo_elements=[gz],
             transmissions=[trans],
@@ -979,6 +1030,7 @@ class TestURDFGeneratorEdgeCoverage:
             type=JointType.REVOLUTE,
             parent="l1",
             child="l2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(effort=1.0, velocity=1.0),
         )
         # second joint mimics the first with defaults
@@ -987,6 +1039,7 @@ class TestURDFGeneratorEdgeCoverage:
             type=JointType.REVOLUTE,
             parent="l1",
             child="l3",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(effort=1.0, velocity=1.0),
             mimic=JointMimic(joint="main_j", multiplier=1.0, offset=0.0),
         )

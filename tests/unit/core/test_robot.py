@@ -14,6 +14,7 @@ from linkforge_core.models import (
     Robot,
     Ros2Control,
     SensorType,
+    Vector3,
 )
 from linkforge_core.models.sensor import Sensor
 from linkforge_core.models.transmission import Transmission, TransmissionJoint
@@ -30,6 +31,7 @@ class TestRobot:
             parent="base_link",
             child="link1",
             type=JointType.REVOLUTE,
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1.0, upper=1.0, effort=10.0, velocity=1.0),
         )
 
@@ -120,6 +122,7 @@ class TestRobot:
             parent="A",
             child="B",
             type=JointType.REVOLUTE,
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=limits,
             mimic=JointMimic(joint="j2"),
         )
@@ -128,6 +131,7 @@ class TestRobot:
             parent="B",
             child="A",
             type=JointType.REVOLUTE,
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=limits,
             mimic=JointMimic(joint="j1"),
         )
@@ -146,6 +150,7 @@ class TestRobot:
             parent="A",
             child="B",
             type=JointType.REVOLUTE,
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1.0, upper=1.0),
             mimic=JointMimic(joint="missing_joint"),
         )
@@ -258,6 +263,7 @@ class TestRobot:
             parent="base",
             child="child",
             type=JointType.REVOLUTE,
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1, upper=1),
         )
 
@@ -508,6 +514,7 @@ class TestRobotCoverage:
             type=JointType.REVOLUTE,
             parent="l1",
             child="l2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=0, upper=1),
         )
         j1 = Joint(
@@ -515,6 +522,7 @@ class TestRobotCoverage:
             type=JointType.REVOLUTE,
             parent="l2",
             child="l3",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=0, upper=1),
             mimic=JointMimic(joint="j2"),
         )

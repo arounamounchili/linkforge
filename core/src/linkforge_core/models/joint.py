@@ -68,6 +68,36 @@ class JointMimic:
 
 
 @dataclass(frozen=True)
+class JointSafetyController:
+    """Safety controller settings for the joint.
+
+    Attributes:
+        soft_lower_limit: Lower bound of the joint safety controller.
+        soft_upper_limit: Upper bound of the joint safety controller.
+        k_position: Position gain.
+        k_velocity: Velocity gain.
+    """
+
+    soft_lower_limit: float = 0.0
+    soft_upper_limit: float = 0.0
+    k_position: float = 0.0
+    k_velocity: float = 0.0
+
+
+@dataclass(frozen=True)
+class JointCalibration:
+    """Calibration settings for the joint.
+
+    Attributes:
+        rising: Position of the rising edge.
+        falling: Position of the falling edge.
+    """
+
+    rising: float | None = None
+    falling: float | None = None
+
+
+@dataclass(frozen=True)
 class Joint:
     """Robot joint (connection between two links).
 
@@ -83,6 +113,8 @@ class Joint:
     limits: JointLimits | None = None
     dynamics: JointDynamics | None = None
     mimic: JointMimic | None = None
+    safety_controller: JointSafetyController | None = None
+    calibration: JointCalibration | None = None
 
     def __post_init__(self) -> None:
         """Validate joint configuration."""
@@ -115,35 +147,21 @@ class Joint:
         axis_forbidden = self.type in (JointType.FIXED, JointType.FLOATING)
 
         if axis_required and self.axis is None:
-            # Default to X axis (1, 0, 0) as per URDF specification convention
-            object.__setattr__(self, "axis", Vector3(1.0, 0.0, 0.0))
+            raise ValueError(f"{self.type.value} joints require an axis")
 
         if axis_forbidden and self.axis is not None:
-            # Enforce strictness: FIXED joints should not have axis, but we relax this for imports
-            from ..logging_config import get_logger
-
-            logger = get_logger(__name__)
-            logger.warning(
-                f"Joint '{self.name}' of type {self.type.value} has an axis (ignored). "
-                f"Fixed/Floating joints do not use axes."
-            )
-            object.__setattr__(self, "axis", None)
+            raise ValueError(f"{self.type.value} joints must not have an axis")
 
         # Validate Limits
         # Revolute and prismatic joints require limits
         if self.type in (JointType.REVOLUTE, JointType.PRISMATIC) and self.limits is None:
             raise ValueError(f"{self.type.value} joints require limits")
 
-        # Fixed joints should not have limits - auto-fix legacy URDFs
+        # Fixed and continuous joints should handle limits appropriately
+        # Continuous joints use effort/velocity but not lower/upper
+        # Fixed joints should not have limits element at all
         if self.type == JointType.FIXED and self.limits is not None:
-            from ..logging_config import get_logger
-
-            logger = get_logger(__name__)
-            logger.warning(
-                f"Fixed joint '{self.name}' has limits (ignored). "
-                "Fixed joints cannot move and should not have limits."
-            )
-            object.__setattr__(self, "limits", None)
+            raise ValueError("Fixed joints must not have limits")
 
         # Validate and normalize axis if present
         if self.axis is not None:
@@ -156,14 +174,12 @@ class Joint:
                     f"for axis=({self.axis.x}, {self.axis.y}, {self.axis.z})"
                 )
 
-            # Normalize axis to unit vector if not already normalized
+            # Enforce normalized axis in model
             if abs(axis_magnitude - 1.0) > 1e-6:
-                normalized_axis = Vector3(
-                    self.axis.x / axis_magnitude,
-                    self.axis.y / axis_magnitude,
-                    self.axis.z / axis_magnitude,
+                raise ValueError(
+                    f"Joint axis must be a unit vector (magnitude 1.0), got {axis_magnitude:.4f}. "
+                    "Normalize the axis vector before creating the Joint model."
                 )
-                object.__setattr__(self, "axis", normalized_axis)
 
     @property
     def degrees_of_freedom(self) -> int:

@@ -1,6 +1,6 @@
 """Tests for the enhanced validation system."""
 
-from linkforge_core.models.joint import Joint, JointLimits, JointType
+from linkforge_core.models.joint import Joint, JointLimits, JointType, Vector3
 from linkforge_core.models.link import Inertial, Link
 from linkforge_core.models.robot import Robot
 from linkforge_core.validation import RobotValidator, ValidationResult
@@ -79,6 +79,7 @@ def test_valid_robot():
             type=JointType.REVOLUTE,
             parent="base",
             child="link1",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1.57, upper=1.57, effort=10.0, velocity=1.0),
         )
     )
@@ -283,6 +284,7 @@ def test_multiple_parent_joints_complex():
             type=JointType.REVOLUTE,
             parent="link2",
             child="link3",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1.57, upper=1.57, effort=10.0, velocity=1.0),
         )
     )

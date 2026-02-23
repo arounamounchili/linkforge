@@ -716,6 +716,24 @@ def create_joint_object(
             props.mimic_multiplier = joint.mimic.multiplier
             props.mimic_offset = joint.mimic.offset
 
+        # Set safety controller
+        if joint.safety_controller:
+            props.use_safety_controller = True
+            props.safety_soft_lower_limit = joint.safety_controller.soft_lower_limit
+            props.safety_soft_upper_limit = joint.safety_controller.soft_upper_limit
+            props.safety_k_position = joint.safety_controller.k_position
+            props.safety_k_velocity = joint.safety_controller.k_velocity
+
+        # Set calibration
+        if joint.calibration:
+            props.use_calibration = True
+            if joint.calibration.rising is not None:
+                props.use_calibration_rising = True
+                props.calibration_rising = joint.calibration.rising
+            if joint.calibration.falling is not None:
+                props.use_calibration_falling = True
+                props.calibration_falling = joint.calibration.falling
+
     # Set up parent-child relationship in Blender
     parent_obj = link_objects.get(joint.parent)
     child_obj = link_objects.get(joint.child)

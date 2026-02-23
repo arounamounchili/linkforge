@@ -12,6 +12,7 @@ from linkforge_core.models import (
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
+    Vector3,
 )
 from linkforge_core.parsers.urdf_parser import URDFParser
 
@@ -27,6 +28,7 @@ def test_simple_transmission():
             type=JointType.REVOLUTE,
             parent="base_link",
             child="link1",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1.57, upper=1.57, effort=100, velocity=1.0),
         )
     )
@@ -81,6 +83,7 @@ def test_differential_transmission():
             type=JointType.CONTINUOUS,
             parent="base_link",
             child="left_wheel",
+            axis=Vector3(1.0, 0.0, 0.0),
         )
     )
     robot.add_joint(
@@ -89,6 +92,7 @@ def test_differential_transmission():
             type=JointType.CONTINUOUS,
             parent="base_link",
             child="right_wheel",
+            axis=Vector3(1.0, 0.0, 0.0),
         )
     )
 
@@ -140,6 +144,7 @@ def test_four_bar_linkage_transmission():
             type=JointType.REVOLUTE,
             parent="base_link",
             child="link1",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1.57, upper=1.57, effort=100, velocity=1.0),
         )
     )
@@ -199,6 +204,7 @@ def test_custom_transmission():
             type=JointType.REVOLUTE,
             parent="base_link",
             child="link1",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-1.57, upper=1.57, effort=100, velocity=1.0),
         )
     )
@@ -237,6 +243,7 @@ def test_all_hardware_interfaces():
                 type=JointType.REVOLUTE,
                 parent="base_link",
                 child=f"link{i}",
+                axis=Vector3(1.0, 0.0, 0.0),
                 limits=JointLimits(lower=-1.57, upper=1.57, effort=100, velocity=1.0),
             )
         )

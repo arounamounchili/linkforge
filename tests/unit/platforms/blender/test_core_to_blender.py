@@ -180,6 +180,49 @@ def test_create_joint_object_complex():
     assert pytest.approx(props.dynamics_damping) == 0.1
 
 
+def test_create_joint_object_advanced_props():
+    """Verify that safety controller and calibration are correctly synced to Blender properties."""
+    from linkforge.linkforge_core.models import JointCalibration, JointSafetyController
+
+    # 1. Setup Links
+    bpy.ops.object.empty_add()
+    p_obj = bpy.context.active_object
+    p_obj.name = "p_link_adv"
+    bpy.ops.object.empty_add()
+    c_obj = bpy.context.active_object
+    c_obj.name = "c_link_adv"
+    link_objects = {"p_link_adv": p_obj, "c_link_adv": c_obj}
+
+    # 2. Setup Core Joint
+    safety = JointSafetyController(
+        soft_lower_limit=-1.0, soft_upper_limit=1.0, k_position=100.0, k_velocity=10.0
+    )
+    calib = JointCalibration(rising=0.5)
+    joint = Joint(
+        name="adv_j",
+        type=JointType.REVOLUTE,
+        parent="p_link_adv",
+        child="c_link_adv",
+        limits=JointLimits(lower=-1.57, upper=1.57, effort=10.0, velocity=1.0),
+        safety_controller=safety,
+        calibration=calib,
+    )
+
+    # 3. Build in Blender
+    joint_obj = create_joint_object(joint, link_objects)
+
+    # 4. Verify properties
+    props = joint_obj.linkforge_joint
+    assert props.use_safety_controller is True
+    assert props.safety_soft_lower_limit == -1.0
+    assert props.safety_k_position == 100.0
+
+    assert props.use_calibration is True
+    assert props.use_calibration_rising is True
+    assert props.calibration_rising == 0.5
+    assert props.use_calibration_falling is False
+
+
 def test_import_robot_to_scene_full():
     """Test the full robot import entry point with a simple chain."""
     # 1. Create Robot Model

@@ -445,6 +445,57 @@ def test_blender_joint_to_core_types():
     # Continuous joints shouldn't have lower/upper limits in standard URDF but our model handles it.
 
 
+def test_blender_joint_to_core_advanced_props():
+    """Verify that safety controller and calibration are correctly synced to Core."""
+    # 1. Setup Links
+    bpy.ops.object.empty_add()
+    p = bpy.context.active_object
+    p.name = "p_link"
+    p.linkforge.is_robot_link = True
+
+    bpy.ops.object.empty_add()
+    c = bpy.context.active_object
+    c.name = "c_link"
+    c.linkforge.is_robot_link = True
+
+    # 2. Setup Joint
+    bpy.ops.object.empty_add()
+    joint_obj = bpy.context.active_object
+    joint_obj.name = "advanced_j"
+    props = joint_obj.linkforge_joint
+    props.is_robot_joint = True
+    props.parent_link = p
+    props.child_link = c
+    props.joint_type = "REVOLUTE"
+    props.limit_lower = -1.57
+    props.limit_upper = 1.57
+
+    # Set safety controller
+    props.use_safety_controller = True
+    props.safety_soft_lower_limit = -1.0
+    props.safety_soft_upper_limit = 1.0
+    props.safety_k_position = 100.0
+    props.safety_k_velocity = 10.0
+
+    # Set calibration
+    props.use_calibration = True
+    props.use_calibration_rising = True
+    props.calibration_rising = 0.5
+    props.use_calibration_falling = False
+
+    # 3. Convert
+    joint = blender_joint_to_core(joint_obj, bpy.context.scene)
+
+    # 4. Verify
+    assert joint.safety_controller is not None
+    assert joint.safety_controller.soft_lower_limit == -1.0
+    assert joint.safety_controller.k_position == 100.0
+
+    assert joint.calibration is not None
+    assert joint.calibration.rising == 0.5
+    assert joint.calibration.falling is None
+
+
 def test_blender_sensor_to_core_all_types():
     """Verify conversion of various sensor types and their properties."""
     from linkforge.blender.adapters.blender_to_core import blender_sensor_to_core

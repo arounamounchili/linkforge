@@ -446,6 +446,27 @@ class URDFGenerator(RobotGenerator[str]):
                 mimic_attrib["offset"] = format_float(joint.mimic.offset)
             ET.SubElement(joint_elem, "mimic", **mimic_attrib)  # type: ignore[arg-type]
 
+        # Safety Controller
+        if joint.safety_controller:
+            safety_attrib: dict[str, str] = {
+                "soft_lower_limit": format_float(joint.safety_controller.soft_lower_limit),
+                "soft_upper_limit": format_float(joint.safety_controller.soft_upper_limit),
+                "k_position": format_float(joint.safety_controller.k_position),
+                "k_velocity": format_float(joint.safety_controller.k_velocity),
+            }
+            ET.SubElement(joint_elem, "safety_controller", **safety_attrib)  # type: ignore[arg-type]
+
+        # Calibration
+        if joint.calibration:
+            calib_attrib: dict[str, str] = {}
+            if joint.calibration.rising is not None:
+                calib_attrib["rising"] = format_float(joint.calibration.rising)
+            if joint.calibration.falling is not None:
+                calib_attrib["falling"] = format_float(joint.calibration.falling)
+
+            if calib_attrib:
+                ET.SubElement(joint_elem, "calibration", **calib_attrib)  # type: ignore[arg-type]
+
     def _add_transmission_element(self, parent: ET.Element, transmission: Transmission) -> None:
         """Add transmission element to parent.
 

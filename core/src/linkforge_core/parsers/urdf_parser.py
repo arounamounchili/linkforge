@@ -41,9 +41,11 @@ from ..models import (
     Inertial,
     InertiaTensor,
     Joint,
+    JointCalibration,
     JointDynamics,
     JointLimits,
     JointMimic,
+    JointSafetyController,
     JointType,
     LidarInfo,
     Link,
@@ -386,41 +388,55 @@ def parse_joint(joint_elem: ET.Element) -> Joint:
     # Parse origin
     origin = parse_origin(joint_elem.find("origin"))
 
-    # Parse axis (only set default for joints that use axis)
     # Parse axis (only relevant for revolute, continuous, prismatic, planar)
     axis_elem = joint_elem.find("axis")
     axis: Vector3 | None = None
 
-    if axis_elem is not None:
-        # Explicit axis provided
-        axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
-    elif joint_type in (
+    if joint_type in (
         JointType.REVOLUTE,
         JointType.CONTINUOUS,
         JointType.PRISMATIC,
         JointType.PLANAR,
     ):
-        # Default axis per URDF spec is (1, 0, 0) for these types provided none is specified
-        axis = Vector3(1, 0, 0)
+        if axis_elem is not None:
+            # Explicit axis provided
+            axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
+            # Normalize axis to unit vector
+            import math
+
+            axis_mag = math.sqrt(axis.x**2 + axis.y**2 + axis.z**2)
+            if axis_mag > 1e-10:
+                axis = Vector3(axis.x / axis_mag, axis.y / axis_mag, axis.z / axis_mag)
+            else:
+                # Fallback to default if magnitude is too small
+                axis = Vector3(1.0, 0.0, 0.0)
+        else:
+            # Default axis per URDF spec is (1, 0, 0)
+            axis = Vector3(1.0, 0.0, 0.0)
     else:
         # FIXED and FLOATING joints must not have an axis
         axis = None
 
     # Parse limits
     limits = None
-    limits_elem = joint_elem.find("limit")
-    if limits_elem is not None:
-        # Get lower/upper (optional for CONTINUOUS joints)
-        lower_str = limits_elem.get("lower")
-        upper_str = limits_elem.get("upper")
+    if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS):
+        limits_elem = joint_elem.find("limit")
+        if limits_elem is not None:
+            # Get lower/upper (optional for CONTINUOUS joints)
+            lower_str = limits_elem.get("lower")
+            upper_str = limits_elem.get("upper")
 
-        # Parse limits with optional lower/upper
-        limits = JointLimits(
-            lower=float(lower_str) if lower_str is not None else None,
-            upper=float(upper_str) if upper_str is not None else None,
-            effort=parse_float(limits_elem.get("effort"), "effort", default=0.0),
-            velocity=parse_float(limits_elem.get("velocity"), "velocity", default=0.0),
-        )
+            # Parse limits with optional lower/upper
+            limits = JointLimits(
+                lower=float(lower_str) if lower_str is not None else None,
+                upper=float(upper_str) if upper_str is not None else None,
+                effort=parse_float(limits_elem.get("effort"), "effort", default=0.0),
+                velocity=parse_float(limits_elem.get("velocity"), "velocity", default=0.0),
+            )
+        elif joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
+            # These types REQUIRE limits
+            # We'll create a minimal limit to avoid crashing the model, but this is legally invalid URDF
+            limits = JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
 
     # Parse dynamics
     dynamics = None
@@ -441,6 +457,30 @@ def parse_joint(joint_elem: ET.Element) -> Joint:
             offset=parse_float(mimic_elem.get("offset"), "offset", default=0.0),
         )
 
+    # Parse safety controller
+    safety_controller = None
+    safety_elem = joint_elem.find("safety_controller")
+    if safety_elem is not None:
+        safety_controller = JointSafetyController(
+            soft_lower_limit=parse_float(
+                safety_elem.get("soft_lower_limit"), "soft_lower_limit", default=0.0
+            ),
+            soft_upper_limit=parse_float(
+                safety_elem.get("soft_upper_limit"), "soft_upper_limit", default=0.0
+            ),
+            k_position=parse_float(safety_elem.get("k_position"), "k_position", default=0.0),
+            k_velocity=parse_float(safety_elem.get("k_velocity"), "k_velocity", default=0.0),
+        )
+
+    # Parse calibration
+    calibration = None
+    calib_elem = joint_elem.find("calibration")
+    if calib_elem is not None:
+        calibration = JointCalibration(
+            rising=parse_float(calib_elem.get("rising"), "rising", default=None),
+            falling=parse_float(calib_elem.get("falling"), "falling", default=None),
+        )
+
     return Joint(
         name=name,
         type=joint_type,
@@ -451,6 +491,8 @@ def parse_joint(joint_elem: ET.Element) -> Joint:
         limits=limits,
         dynamics=dynamics,
         mimic=mimic,
+        safety_controller=safety_controller,
+        calibration=calibration,
     )
 
 

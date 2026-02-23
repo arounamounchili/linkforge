@@ -37,9 +37,11 @@ from ...linkforge_core.models import (
     Inertial,
     InertiaTensor,
     Joint,
+    JointCalibration,
     JointDynamics,
     JointLimits,
     JointMimic,
+    JointSafetyController,
     JointType,
     LidarInfo,
     Link,
@@ -777,6 +779,20 @@ def blender_joint_to_core(obj: Any, scene: Any) -> Joint | None:
         limits=limits,
         dynamics=dynamics,
         mimic=mimic,
+        safety_controller=JointSafetyController(
+            soft_lower_limit=props.safety_soft_lower_limit,
+            soft_upper_limit=props.safety_soft_upper_limit,
+            k_position=props.safety_k_position,
+            k_velocity=props.safety_k_velocity,
+        )
+        if props.use_safety_controller
+        else None,
+        calibration=JointCalibration(
+            rising=props.calibration_rising if props.use_calibration_rising else None,
+            falling=props.calibration_falling if props.use_calibration_falling else None,
+        )
+        if props.use_calibration
+        else None,
     )
 
 

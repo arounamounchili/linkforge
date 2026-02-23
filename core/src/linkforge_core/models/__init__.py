@@ -19,9 +19,11 @@ from .geometry import (
 )
 from .joint import (
     Joint,
+    JointCalibration,
     JointDynamics,
     JointLimits,
     JointMimic,
+    JointSafetyController,
     JointType,
 )
 from .link import Collision, Inertial, InertiaTensor, Link, Visual
@@ -71,6 +73,8 @@ __all__ = [
     "JointLimits",
     "JointDynamics",
     "JointMimic",
+    "JointSafetyController",
+    "JointCalibration",
     "Joint",
     # Robot
     "Robot",

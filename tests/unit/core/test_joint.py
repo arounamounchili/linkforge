@@ -7,9 +7,11 @@ import math
 import pytest
 from linkforge_core.models import (
     Joint,
+    JointCalibration,
     JointDynamics,
     JointLimits,
     JointMimic,
+    JointSafetyController,
     JointType,
     Transform,
     Vector3,
@@ -97,6 +99,47 @@ class TestJointMimic:
         assert mimic.offset == 0.0
 
 
+class TestJointSafetyController:
+    """Tests for JointSafetyController."""
+
+    def test_creation(self):
+        """Test creating safety controller configuration."""
+        safety = JointSafetyController(
+            soft_lower_limit=-1.0,
+            soft_upper_limit=1.0,
+            k_position=10.0,
+            k_velocity=5.0,
+        )
+        assert safety.soft_lower_limit == -1.0
+        assert safety.soft_upper_limit == 1.0
+        assert safety.k_position == 10.0
+        assert safety.k_velocity == 5.0
+
+    def test_default_values(self):
+        """Test default values for safety controller."""
+        safety = JointSafetyController()
+        assert safety.soft_lower_limit == 0.0
+        assert safety.soft_upper_limit == 0.0
+        assert safety.k_position == 0.0
+        assert safety.k_velocity == 0.0
+
+
+class TestJointCalibration:
+    """Tests for JointCalibration."""
+
+    def test_creation(self):
+        """Test creating calibration configuration."""
+        calib = JointCalibration(rising=0.1, falling=0.2)
+        assert calib.rising == 0.1
+        assert calib.falling == 0.2
+
+    def test_default_values(self):
+        """Test default values for calibration."""
+        calib = JointCalibration()
+        assert calib.rising is None
+        assert calib.falling is None
+
+
 class TestJoint:
     """Tests for Joint model."""
 
@@ -119,6 +162,7 @@ class TestJoint:
             type=JointType.REVOLUTE,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-math.pi, upper=math.pi),
         )
         assert joint.type == JointType.REVOLUTE
@@ -131,6 +175,7 @@ class TestJoint:
             type=JointType.CONTINUOUS,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.type == JointType.CONTINUOUS
         assert joint.degrees_of_freedom == 1
@@ -142,6 +187,7 @@ class TestJoint:
             type=JointType.PRISMATIC,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=0.0, upper=1.0),
         )
         assert joint.type == JointType.PRISMATIC
@@ -154,6 +200,7 @@ class TestJoint:
             type=JointType.PLANAR,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.type == JointType.PLANAR
         assert joint.degrees_of_freedom == 2
@@ -247,6 +294,7 @@ class TestJoint:
                 type=JointType.REVOLUTE,
                 parent="link1",
                 child="link2",
+                axis=Vector3(1.0, 0.0, 0.0),
             )
 
     def test_prismatic_without_limits(self):
@@ -257,29 +305,19 @@ class TestJoint:
                 type=JointType.PRISMATIC,
                 parent="link1",
                 child="link2",
+                axis=Vector3(1.0, 0.0, 0.0),
             )
 
-    def test_fixed_with_limits(self, caplog):
-        """Test that fixed joint with limits logs warning and auto-fixes."""
-        import logging
-
-        joint = Joint(
-            name="joint1",
-            type=JointType.FIXED,
-            parent="link1",
-            child="link2",
-            limits=JointLimits(lower=0.0, upper=1.0),
-        )
-
-        # Verify limits were removed
-        assert joint.limits is None
-
-        # Verify warning was logged
-        assert any(
-            "Fixed joint 'joint1' has limits (ignored)" in record.message
-            for record in caplog.records
-            if record.levelno == logging.WARNING
-        )
+    def test_fixed_with_limits(self):
+        """Test that fixed joint with limits raises error."""
+        with pytest.raises(ValueError, match="must not have limits"):
+            Joint(
+                name="joint1",
+                type=JointType.FIXED,
+                parent="link1",
+                child="link2",
+                limits=JointLimits(lower=0.0, upper=1.0),
+            )
 
     def test_zero_axis(self):
         """Test that zero axis vector raises error."""
@@ -293,16 +331,16 @@ class TestJoint:
                 limits=JointLimits(lower=0.0, upper=1.0),
             )
 
-    def test_default_axis_revolute(self):
-        """Test default axis for revolute is X-axis."""
-        joint = Joint(
-            name="joint1",
-            type=JointType.REVOLUTE,
-            parent="link1",
-            child="link2",
-            limits=JointLimits(lower=0.0, upper=1.0),
-        )
-        assert joint.axis == Vector3(1.0, 0.0, 0.0)
+    def test_revolute_without_axis_error(self):
+        """Test that revolute joint without axis raises error in strict model."""
+        with pytest.raises(ValueError, match="revolute joints require an axis"):
+            Joint(
+                name="joint1",
+                type=JointType.REVOLUTE,
+                parent="link1",
+                child="link2",
+                limits=JointLimits(lower=0.0, upper=1.0),
+            )
 
     def test_fixed_joint_has_no_axis(self):
         """Test that fixed joints have no axis."""
@@ -360,6 +398,7 @@ class TestJoint:
             type=JointType.REVOLUTE,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-math.pi, upper=math.pi),
             dynamics=dynamics,
         )
@@ -373,10 +412,37 @@ class TestJoint:
             type=JointType.REVOLUTE,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=-math.pi, upper=math.pi),
             mimic=mimic,
         )
         assert joint.mimic == mimic
+
+    def test_with_safety_controller(self):
+        """Test joint with safety controller."""
+        safety = JointSafetyController(soft_lower_limit=-1.0, soft_upper_limit=1.0)
+        joint = Joint(
+            name="joint1",
+            type=JointType.REVOLUTE,
+            parent="link1",
+            child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
+            limits=JointLimits(lower=-math.pi, upper=math.pi),
+            safety_controller=safety,
+        )
+        assert joint.safety_controller == safety
+
+    def test_with_calibration(self):
+        """Test joint with calibration."""
+        calib = JointCalibration(rising=0.1)
+        joint = Joint(
+            name="joint1",
+            type=JointType.FIXED,
+            parent="link1",
+            child="link2",
+            calibration=calib,
+        )
+        assert joint.calibration == calib
 
     def test_continuous_joint_no_limits_required(self):
         """Test that continuous joints don't require limits."""
@@ -385,6 +451,7 @@ class TestJoint:
             type=JointType.CONTINUOUS,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.limits is None
 
@@ -395,6 +462,7 @@ class TestJoint:
             type=JointType.CONTINUOUS,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(lower=0.0, upper=0.0, effort=10.0, velocity=1.0),
         )
         assert joint.limits is not None
@@ -418,6 +486,7 @@ class TestJoint:
             type=JointType.PLANAR,
             parent="link1",
             child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.limits is None
 
@@ -442,35 +511,29 @@ class TestJointType:
 class TestJointAxisNormalization:
     """Tests for joint axis normalization."""
 
-    def test_axis_normalization(self):
-        """Test that non-unit axis vectors are normalized."""
-        joint = Joint(
-            name="joint1",
-            type=JointType.REVOLUTE,
-            parent="link1",
-            child="link2",
-            axis=Vector3(2.0, 0.0, 0.0),  # Non-unit vector
-            limits=JointLimits(lower=0.0, upper=1.0),
-        )
-        # Should be normalized to unit vector
-        assert abs(joint.axis.x - 1.0) < 1e-6
-        assert abs(joint.axis.y) < 1e-6
-        assert abs(joint.axis.z) < 1e-6
+    def test_axis_normalization_error(self):
+        """Test that non-unit axis vectors raise error in strict model."""
+        with pytest.raises(ValueError, match="unit vector"):
+            Joint(
+                name="joint1",
+                type=JointType.REVOLUTE,
+                parent="link1",
+                child="link2",
+                axis=Vector3(2.0, 0.0, 0.0),  # Non-unit vector
+                limits=JointLimits(lower=0.0, upper=1.0),
+            )
 
-    def test_axis_normalization_complex(self):
-        """Test normalization of complex axis vector."""
-        joint = Joint(
-            name="joint1",
-            type=JointType.REVOLUTE,
-            parent="link1",
-            child="link2",
-            axis=Vector3(3.0, 4.0, 0.0),  # Magnitude = 5.0
-            limits=JointLimits(lower=0.0, upper=1.0),
-        )
-        # Should be normalized to (0.6, 0.8, 0.0)
-        assert abs(joint.axis.x - 0.6) < 1e-6
-        assert abs(joint.axis.y - 0.8) < 1e-6
-        assert abs(joint.axis.z) < 1e-6
+    def test_axis_normalization_complex_error(self):
+        """Test that non-unit complex axis vectors raise error in strict model."""
+        with pytest.raises(ValueError, match="unit vector"):
+            Joint(
+                name="joint1",
+                type=JointType.REVOLUTE,
+                parent="link1",
+                child="link2",
+                axis=Vector3(3.0, 4.0, 0.0),  # Magnitude = 5.0
+                limits=JointLimits(lower=0.0, upper=1.0),
+            )
 
     def test_axis_already_normalized(self):
         """Test that already-normalized axis is not modified."""
@@ -491,46 +554,24 @@ class TestJointAxisNormalization:
 class TestJointAxisWarnings:
     """Tests for joint axis validation warnings."""
 
-    def test_fixed_joint_with_axis_warning(self, caplog):
-        """Test that fixed joint with axis logs warning and removes axis."""
-        import logging
+    def test_fixed_joint_with_axis_error(self):
+        """Test that fixed joint with axis raises error."""
+        with pytest.raises(ValueError, match="must not have an axis"):
+            Joint(
+                name="fixed_joint",
+                type=JointType.FIXED,
+                parent="link1",
+                child="link2",
+                axis=Vector3(1.0, 0.0, 0.0),  # Fixed joints shouldn't have axis
+            )
 
-        joint = Joint(
-            name="fixed_joint",
-            type=JointType.FIXED,
-            parent="link1",
-            child="link2",
-            axis=Vector3(1.0, 0.0, 0.0),  # Fixed joints shouldn't have axis
-        )
-
-        # Verify axis was removed
-        assert joint.axis is None
-
-        # Verify warning was logged
-        assert any(
-            "Fixed/Floating joints do not use axes" in record.message
-            for record in caplog.records
-            if record.levelno == logging.WARNING
-        )
-
-    def test_floating_joint_with_axis_warning(self, caplog):
-        """Test that floating joint with axis logs warning and removes axis."""
-        import logging
-
-        joint = Joint(
-            name="floating_joint",
-            type=JointType.FLOATING,
-            parent="link1",
-            child="link2",
-            axis=Vector3(0.0, 1.0, 0.0),  # Floating joints shouldn't have axis
-        )
-
-        # Verify axis was removed
-        assert joint.axis is None
-
-        # Verify warning was logged
-        assert any(
-            "Fixed/Floating joints do not use axes" in record.message
-            for record in caplog.records
-            if record.levelno == logging.WARNING
-        )
+    def test_floating_joint_with_axis_error(self):
+        """Test that floating joint with axis raises error."""
+        with pytest.raises(ValueError, match="must not have an axis"):
+            Joint(
+                name="floating_joint",
+                type=JointType.FLOATING,
+                parent="link1",
+                child="link2",
+                axis=Vector3(0.0, 1.0, 0.0),  # Floating joints shouldn't have axis
+            )

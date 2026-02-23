@@ -24,6 +24,7 @@ def test_extract_dimensions_cylinders():
             type=JointType.CONTINUOUS,
             parent="base_link",
             child=name,
+            axis=Vector3(1.0, 0.0, 0.0),
             origin=Transform(xyz=Vector3(i, 0, 0)),
         )
         joints.append(joint)

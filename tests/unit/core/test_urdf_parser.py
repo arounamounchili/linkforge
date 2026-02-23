@@ -148,6 +148,73 @@ class TestURDFParser:
         assert joint.mimic.multiplier == 2.0
         assert joint.mimic.offset == 0.5
 
+    def test_parse_joint_safety_controller(self):
+        """Test parsing joint with safety controller."""
+        xml = """
+        <joint name="j_safety" type="revolute">
+            <parent link="base"/>
+            <child link="link1"/>
+            <limit effort="10" velocity="5" lower="-1" upper="1"/>
+            <safety_controller soft_lower_limit="-0.9" soft_upper_limit="0.9" k_position="15" k_velocity="10"/>
+        </joint>
+        """
+        elem = ET.fromstring(xml)
+        joint = parse_joint(elem)
+
+        assert joint.safety_controller is not None
+        assert joint.safety_controller.soft_lower_limit == -0.9
+        assert joint.safety_controller.soft_upper_limit == 0.9
+        assert joint.safety_controller.k_position == 15.0
+        assert joint.safety_controller.k_velocity == 10.0
+
+    def test_parse_joint_calibration(self):
+        """Test parsing joint with calibration."""
+        xml = """
+        <joint name="j_calib" type="fixed">
+            <parent link="base"/>
+            <child link="link2"/>
+            <calibration rising="0.5" falling="1.0"/>
+        </joint>
+        """
+        elem = ET.fromstring(xml)
+        joint = parse_joint(elem)
+
+        assert joint.calibration is not None
+        assert joint.calibration.rising == 0.5
+        assert joint.calibration.falling == 1.0
+
+    def test_parse_joint_postels_law(self):
+        """Test Postel's Law: liberal on import (ignore invalid tags for fixed joints)."""
+        # FIXED joint with axis and limit (invalid in model, but should be ignored by parser)
+        xml = """
+        <joint name="j_postel" type="fixed">
+            <parent link="base"/>
+            <child link="link1"/>
+            <axis xyz="0 0 1"/>
+            <limit lower="0" upper="1" effort="10" velocity="1"/>
+        </joint>
+        """
+        elem = ET.fromstring(xml)
+        joint = parse_joint(elem)
+
+        assert joint.name == "j_postel"
+        assert joint.type == JointType.FIXED
+        assert joint.axis is None  # Should have been ignored
+        assert joint.limits is None  # Should have been ignored
+
+        # REVOLUTE joint with missing axis (should default to 1 0 0)
+        xml_rev = """
+        <joint name="j_default_axis" type="revolute">
+            <parent link="base"/>
+            <child link="link1"/>
+            <limit lower="-1" upper="1" effort="10" velocity="1"/>
+        </joint>
+        """
+        joint_rev = parse_joint(ET.fromstring(xml_rev))
+        assert joint_rev.axis.x == 1.0
+        assert joint_rev.axis.y == 0.0
+        assert joint_rev.axis.z == 0.0
+
     def test_parse_sensor_camera(self):
         """Test parsing a camera sensor from Gazebo format."""
         xml = """

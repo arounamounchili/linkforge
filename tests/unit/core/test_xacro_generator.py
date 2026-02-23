@@ -233,7 +233,14 @@ class TestXACROGenerator:
         robot.add_link(l1)
         # Manually append to bypass add_joint validation
         lim = JointLimits(lower=-1, upper=1, effort=1, velocity=1)
-        joint = Joint(name="j1", type=JointType.REVOLUTE, parent="world", child="l1", limits=lim)
+        joint = Joint(
+            name="j1",
+            type=JointType.REVOLUTE,
+            parent="world",
+            child="l1",
+            axis=Vector3(1.0, 0.0, 0.0),
+            limits=lim,
+        )
         robot._joints.append(joint)
 
         gen = XACROGenerator()
@@ -420,10 +427,14 @@ class TestXACROGenerator:
 
             lim = JointLimits(lower=-1.0, upper=1.0, effort=10.0, velocity=1.0)
             joint = Joint(
-                name=f"{name}_j", type=JointType.REVOLUTE, parent=parent, child=name, limits=lim
+                name=f"{name}_j",
+                type=JointType.REVOLUTE,
+                parent=parent,
+                child=name,
+                axis=Vector3(1.0, 0.0, 0.0),
+                limits=lim,
+                dynamics=JointDynamics(damping=0.5, friction=0.1),
             )
-            # dynamics can be assigned because it's None by default or we can pass it
-            object.__setattr__(joint, "dynamics", JointDynamics(damping=0.5, friction=0.1))
             robot.add_joint(joint)
             return link
 
@@ -607,6 +618,7 @@ class TestXACROGeneratorEdgeCoverage:
             type=JointType.REVOLUTE,
             parent="l1",
             child="l2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(effort=1.0, velocity=1.0, lower=None, upper=None),
         )
         robot.add_joint(joint)
@@ -624,6 +636,7 @@ class TestXACROGeneratorEdgeCoverage:
             type=JointType.REVOLUTE,
             parent="l1",
             child="l2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(effort=1.0, velocity=1.0),
             dynamics=JointDynamics(damping=0.0, friction=0.0),
         )
@@ -655,6 +668,7 @@ class TestXACROGeneratorEdgeCoverage:
             type=JointType.REVOLUTE,
             parent="l1",
             child="l2",
+            axis=Vector3(1.0, 0.0, 0.0),
             limits=JointLimits(effort=1.0, velocity=1.0),
         )
         robot.add_joint(joint)

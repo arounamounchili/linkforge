@@ -33,6 +33,7 @@ def test_macro_generation_wheels():
             type=JointType.CONTINUOUS,
             parent="base_link",
             child=f"{name}_wheel",
+            axis=Vector3(1.0, 0.0, 0.0),
             origin=Transform(xyz=Vector3(i, 0, 0)),  # Different positions
         )
         joints.append(joint)

@@ -134,6 +134,36 @@ class LINKFORGE_PT_joints(Panel):
             col.prop(props, "mimic_multiplier")
             col.prop(props, "mimic_offset")
 
+        # Joint Safety Controller (optional)
+        box.separator()
+        box.prop(props, "use_safety_controller")
+        if props.use_safety_controller:
+            col = box.column(align=True)
+            col.prop(props, "safety_soft_lower_limit")
+            col.prop(props, "safety_soft_upper_limit")
+            col.prop(props, "safety_k_position")
+            col.prop(props, "safety_k_velocity")
+
+        # Joint Calibration (optional)
+        box.separator()
+        box.prop(props, "use_calibration")
+        if props.use_calibration:
+            col = box.column(align=True)
+
+            # Rising edge with its own toggle
+            row = col.row(align=True)
+            row.prop(props, "use_calibration_rising", text="")
+            sub = row.row()
+            sub.active = props.use_calibration_rising
+            sub.prop(props, "calibration_rising", text="Rising")
+
+            # Falling edge with its own toggle
+            row = col.row(align=True)
+            row.prop(props, "use_calibration_falling", text="")
+            sub = row.row()
+            sub.active = props.use_calibration_falling
+            sub.prop(props, "calibration_falling", text="Falling")
+
         # Remove Joint button (Danger Zone)
         box.separator()
         box.separator()
