@@ -2,7 +2,7 @@
 
 import bpy
 from linkforge.blender.utils.joint_utils import resolve_mimic_joints
-from linkforge_core.models import Joint, JointLimits, JointMimic, JointType
+from linkforge_core.models import Joint, JointLimits, JointMimic, JointType, Vector3
 
 
 def test_resolve_mimic_joints_basic():
@@ -25,13 +25,19 @@ def test_resolve_mimic_joints_basic():
     mimic = JointMimic(joint="driver_joint", multiplier=2.0, offset=0.5)
     limits = JointLimits(lower=-3.14, upper=3.14, effort=10.0, velocity=1.0)
     driver_joint = Joint(
-        name="driver_joint", type=JointType.REVOLUTE, parent="link1", child="link2", limits=limits
+        name="driver_joint",
+        type=JointType.REVOLUTE,
+        parent="link1",
+        child="link2",
+        axis=Vector3(1, 0, 0),
+        limits=limits,
     )
     follower_joint = Joint(
         name="follower_joint",
         type=JointType.REVOLUTE,
         parent="link2",
         child="link3",
+        axis=Vector3(1, 0, 0),
         limits=limits,
         mimic=mimic,
     )
@@ -66,6 +72,7 @@ def test_resolve_mimic_joints_missing_driver():
         type=JointType.REVOLUTE,
         parent="link1",
         child="link2",
+        axis=Vector3(1, 0, 0),
         limits=limits,
         mimic=mimic,
     )
@@ -92,7 +99,12 @@ def test_resolve_mimic_joints_no_mimic():
     # Create joint without mimic
     limits = JointLimits(lower=-3.14, upper=3.14, effort=10.0, velocity=1.0)
     simple_joint = Joint(
-        name="simple_joint", type=JointType.REVOLUTE, parent="link1", child="link2", limits=limits
+        name="simple_joint",
+        type=JointType.REVOLUTE,
+        parent="link1",
+        child="link2",
+        axis=Vector3(1, 0, 0),
+        limits=limits,
     )
 
     joint_objects = {"simple_joint": joint_obj}

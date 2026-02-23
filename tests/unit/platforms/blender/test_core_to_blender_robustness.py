@@ -246,12 +246,19 @@ def test_import_robot_with_mimic_and_gazebo(clean_scene):
         name="MimicBot",
         initial_links=(Link(name="base"), Link(name="m1"), Link(name="m2")),
         initial_joints=(
-            Joint(name="j1", type=JointType.CONTINUOUS, parent="base", child="m1"),
+            Joint(
+                name="j1",
+                type=JointType.CONTINUOUS,
+                parent="base",
+                child="m1",
+                axis=Vector3(1, 0, 0),
+            ),
             Joint(
                 name="j2",
                 type=JointType.CONTINUOUS,
                 parent="base",
                 child="m2",
+                axis=Vector3(1, 0, 0),
                 mimic=JointMimic(joint="j1", multiplier=2.0, offset=0.1),
             ),
         ),

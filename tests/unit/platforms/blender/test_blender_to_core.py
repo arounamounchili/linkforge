@@ -1310,6 +1310,27 @@ def test_blender_joint_advanced_cases(clean_scene):
     core = blender_joint_to_core(j, bpy.context.scene)
     assert core.axis.z == 1.0  # Fallback
 
+    # 1. Safety Controller
+    j.linkforge_joint.use_safety_controller = True
+    j.linkforge_joint.safety_soft_lower_limit = -1.23
+    j.linkforge_joint.safety_soft_upper_limit = 1.23
+    j.linkforge_joint.safety_k_position = 100.0
+    j.linkforge_joint.safety_k_velocity = 10.0
+    core = blender_joint_to_core(j, bpy.context.scene)
+    assert core.safety_controller is not None
+    assert pytest.approx(core.safety_controller.soft_lower_limit) == -1.23
+    assert pytest.approx(core.safety_controller.k_position) == 100.0
+
+    # 2. Calibration
+    j.linkforge_joint.use_calibration = True
+    j.linkforge_joint.use_calibration_rising = True
+    j.linkforge_joint.calibration_rising = 0.55
+    j.linkforge_joint.use_calibration_falling = False
+    core = blender_joint_to_core(j, bpy.context.scene)
+    assert core.calibration is not None
+    assert pytest.approx(core.calibration.rising) == 0.55
+    assert core.calibration.falling is None
+
     # Fixed joint axis (should be None)
     j.linkforge_joint.joint_type = "FIXED"
     core = blender_joint_to_core(j, bpy.context.scene)

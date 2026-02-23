@@ -12,8 +12,11 @@ from linkforge_core.models import (
     Inertial,
     InertiaTensor,
     Joint,
+    JointCalibration,
     JointDynamics,
     JointLimits,
+    JointMimic,
+    JointSafetyController,
     JointType,
     Link,
     Material,
@@ -676,3 +679,75 @@ class TestXACROGeneratorEdgeCoverage:
             out = _Path(td) / "r.xacro"
             gen.write(robot, out)
             assert out.exists()
+
+    def test_generate_macros_with_enhanced_joint(self):
+        """Test macro generation with mimic, safety_controller, and calibration."""
+        robot = Robot(name="enhanced_macro_bot")
+        base = Link(name="base")
+        robot.add_link(base)
+
+        # Template for repeated link structure
+        for side in ["left", "right"]:
+            link = Link(name=f"{side}_link")
+            link.visuals.append(Visual(geometry=Box(Vector3(0.1, 0.1, 0.1))))
+            robot.add_link(link)
+
+            joint = Joint(
+                name=f"{side}_joint",
+                type=JointType.REVOLUTE,
+                parent="base",
+                child=f"{side}_link",
+                axis=Vector3(0, 0, 1),
+                limits=JointLimits(lower=-1.0, upper=1.0, effort=10.0, velocity=1.0),
+                mimic=JointMimic(joint="master_joint", multiplier=1.0, offset=0.1),
+                safety_controller=JointSafetyController(
+                    soft_lower_limit=-0.9,
+                    soft_upper_limit=0.9,
+                    k_position=100.0,
+                    k_velocity=40.0,
+                ),
+                calibration=JointCalibration(rising=0.5, falling=None),
+            )
+            robot.add_joint(joint)
+
+        # Also add the master joint so mimic is valid
+        master_link = Link(name="master_link")
+        robot.add_link(master_link)
+        master_joint = Joint(
+            name="master_joint",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="master_link",
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(lower=-1.0, upper=1.0, effort=10.0, velocity=1.0),
+        )
+        robot.add_joint(master_joint)
+
+        generator = XACROGenerator(generate_macros=True, advanced_mode=True, pretty_print=False)
+        xml_str = generator.generate(robot, validate=False)
+        root = ET.fromstring(xml_str)
+
+        # Find the macro definition
+        macro = root.find(f"{XACRO_NS}macro")
+        assert macro is not None
+
+        joint_elem = macro.find("joint")
+        assert joint_elem is not None
+
+        # Check Mimic
+        mimic_elem = joint_elem.find("mimic")
+        assert mimic_elem is not None
+        assert mimic_elem.get("joint") == "master_joint"
+        assert mimic_elem.get("offset") == "0.1"
+
+        # Check Safety Controller
+        safety_elem = joint_elem.find("safety_controller")
+        assert safety_elem is not None
+        assert safety_elem.get("soft_lower_limit") == "-0.9"
+        assert safety_elem.get("k_position") == "100"
+
+        # Check Calibration
+        calib_elem = joint_elem.find("calibration")
+        assert calib_elem is not None
+        assert calib_elem.get("rising") == "0.5"
+        assert calib_elem.get("falling") is None

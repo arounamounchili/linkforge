@@ -203,6 +203,7 @@ def test_create_joint_object_advanced_props():
         type=JointType.REVOLUTE,
         parent="p_link_adv",
         child="c_link_adv",
+        axis=Vector3(1, 0, 0),
         limits=JointLimits(lower=-1.57, upper=1.57, effort=10.0, velocity=1.0),
         safety_controller=safety,
         calibration=calib,
@@ -462,7 +463,7 @@ def test_create_joint_object_prismatic():
         type=JointType.PRISMATIC,
         parent="p",
         child="c",
-        axis=Vector3(1, 1, 0),  # Custom axis (will be normalized)
+        axis=Vector3(0.70710678, 0.70710678, 0.0),  # Correct unit vector
         limits=JointLimits(lower=0, upper=1.0, effort=10, velocity=1),
     )
 
@@ -487,7 +488,9 @@ def test_create_joint_object_continuous_floating():
     link_objects = {"p_c": p_obj, "c_c": c_obj}
 
     # 1. Continuous
-    j_cont = Joint(name="cont", type=JointType.CONTINUOUS, parent="p_c", child="c_c")
+    j_cont = Joint(
+        name="cont", type=JointType.CONTINUOUS, parent="p_c", child="c_c", axis=Vector3(1, 0, 0)
+    )
     obj_cont = create_joint_object(j_cont, link_objects)
     assert obj_cont.linkforge_joint.joint_type == "CONTINUOUS"
 
@@ -607,6 +610,7 @@ def test_import_robot_with_legacy_transmissions_skipped():
         type=JointType.REVOLUTE,
         parent="base",
         child="arm",
+        axis=Vector3(0, 0, 1),
         limits=JointLimits(0, 1, 10, 1),
     )
 
@@ -651,6 +655,7 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists():
         type=JointType.REVOLUTE,
         parent="base",
         child="arm",
+        axis=Vector3(1, 0, 0),
         limits=JointLimits(0, 1, 10, 1),
     )
 
@@ -722,7 +727,7 @@ def test_create_joint_with_custom_axis():
         type=JointType.REVOLUTE,
         parent="p",
         child="c",
-        axis=Vector3(0.5, 0.5, 0.707),
+        axis=Vector3(0.5, 0.5, 0.70710678),
         limits=JointLimits(0, 1, 10, 1),
     )
 
@@ -938,6 +943,7 @@ def test_create_joint_object_mimic_logic():
         type=JointType.REVOLUTE,
         parent="p",
         child="c",
+        axis=Vector3(1, 0, 0),
         limits=JointLimits(lower=-1.0, upper=1.0, effort=10.0, velocity=1.0),
         mimic=JointMimic(joint="driver_joint", multiplier=0.5),
     )

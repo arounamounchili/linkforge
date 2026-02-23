@@ -209,18 +209,19 @@ class XACROGenerator(URDFGenerator):
         """Override: Check for macro usage before adding link."""
         # Check if this link is part of a macro group
         if link.name in self.links_in_macros:
-            # Find which group it belongs to
-            link_sig: str | None = self._get_link_signature(link)
-            if link_sig and link_sig in self.macro_groups:
-                # Find the joint for this link
-                joint = None
-                for j in robot.joints:
-                    if j.child == link.name:
-                        joint = j
-                        break
+            # Find the joint for this link
+            joint = None
+            for j in robot.joints:
+                if j.child == link.name:
+                    joint = j
+                    break
 
-                # Generate Macro Call
-                self._generate_macro_call(parent, link_sig, link, joint)
+            if joint:
+                # Find which group it belongs to
+                link_sig = self._get_macro_signature(link, joint)
+                if link_sig and link_sig in self.macro_groups:
+                    # Generate Macro Call
+                    self._generate_macro_call(parent, link_sig, link, joint)
         else:
             # Standard Link Generation
             self._add_link_element(parent, link)
@@ -410,26 +411,29 @@ class XACROGenerator(URDFGenerator):
         return prefix.rstrip("_")
 
     def _identify_macro_groups(self, robot: Robot) -> dict[str, list[tuple[Link, Joint | None]]]:
-        """Group links by geometry signature."""
+        """Group links by geometry and joint functional signature."""
         link_groups: dict[str, list[tuple[Link, Joint | None]]] = defaultdict(list)
 
         for link in robot.links:
-            signature = self._get_link_signature(link)
-            if signature:
-                joint = None
-                for j in robot.joints:
-                    if j.child == link.name:
-                        joint = j
-                        break
-                # Only group if it has a joint (macros usually include the joint)
-                if joint:
+            # Find the joint for this link
+            joint = None
+            for j in robot.joints:
+                if j.child == link.name:
+                    joint = j
+                    break
+
+            # Create signature based on both link geometry and joint properties
+            # If no joint, we don't group it into a macro (standard practice)
+            if joint:
+                signature = self._get_macro_signature(link, joint)
+                if signature:
                     link_groups[signature].append((link, joint))
 
         # Filter for groups with 2+ members
         return {k: v for k, v in link_groups.items() if len(v) >= 2}
 
-    def _get_link_signature(self, link: Link) -> str | None:
-        """Create a signature string for a link based on its geometry and transforms.
+    def _get_macro_signature(self, link: Link, joint: Joint) -> str | None:
+        """Create a signature string for a macro based on link geometry and joint properties.
 
         Includes all visuals, collisions, and their relative origins to ensure
         that only truly identical links are grouped into macros.
@@ -493,6 +497,39 @@ class XACROGenerator(URDFGenerator):
                     ]
                 )
 
+        # --- Include Joint Properties in Signature ---
+        parts.append(f"j_{joint.type.value}")
+
+        if joint.axis:
+            parts.append(f"a_{joint.axis.x:.3f}_{joint.axis.y:.3f}_{joint.axis.z:.3f}")
+
+        if joint.limits:
+            parts.append(f"l_{joint.limits.effort:.3f}_{joint.limits.velocity:.3f}")
+            if joint.limits.lower is not None:
+                parts.append(f"{joint.limits.lower:.3f}")
+            if joint.limits.upper is not None:
+                parts.append(f"{joint.limits.upper:.3f}")
+
+        if joint.dynamics:
+            parts.append(f"d_{joint.dynamics.damping:.3f}_{joint.dynamics.friction:.3f}")
+
+        if joint.mimic:
+            parts.append(
+                f"m_{joint.mimic.joint}_{joint.mimic.multiplier:.3f}_{joint.mimic.offset:.3f}"
+            )
+
+        if joint.safety_controller:
+            s = joint.safety_controller
+            parts.append(
+                f"s_{s.soft_lower_limit:.3f}_{s.soft_upper_limit:.3f}_{s.k_position:.3f}_{s.k_velocity:.3f}"
+            )
+
+        if joint.calibration:
+            c = joint.calibration
+            rising = f"{c.rising:.3f}" if c.rising is not None else "N"
+            falling = f"{c.falling:.3f}" if c.falling is not None else "N"
+            parts.append(f"cal_{rising}_{falling}")
+
         return "_".join(parts)
 
     def _get_macro_name(self, signature: str) -> str:
@@ -542,18 +579,7 @@ class XACROGenerator(URDFGenerator):
 
         # --- Generate Link Body (Parameterized) ---
         link_elem = ET.SubElement(macro_elem, "link", name="${name}")
-
-        # Visuals
-        for visual in template_link.visuals:
-            self._add_visual_element(link_elem, visual)
-
-        # Collisions
-        for collision in template_link.collisions:
-            self._add_collision_element(link_elem, collision)
-
-        # Inertial
-        if template_link.inertial:
-            self._add_inertial_element(link_elem, template_link.inertial)
+        self._add_link_contents(link_elem, template_link)
 
         # --- Generate Joint Body (Parameterized) ---
         joint_elem = ET.SubElement(
@@ -564,34 +590,8 @@ class XACROGenerator(URDFGenerator):
         ET.SubElement(joint_elem, "child", link="${name}")
         ET.SubElement(joint_elem, "origin", xyz="${xyz}", rpy="${rpy}")
 
-        if template_joint.axis:
-            axis_str = format_vector(
-                template_joint.axis.x, template_joint.axis.y, template_joint.axis.z
-            )
-            ET.SubElement(joint_elem, "axis", xyz=axis_str)
-
-        if template_joint.limits:
-            limit_attrib = {
-                "effort": format_float(template_joint.limits.effort),
-                "velocity": format_float(template_joint.limits.velocity),
-            }
-            if (
-                template_joint.limits.lower is not None
-                and template_joint.limits.upper is not None
-                and (template_joint.limits.lower != 0.0 or template_joint.limits.upper != 0.0)
-            ):
-                limit_attrib["lower"] = format_float(template_joint.limits.lower)
-                limit_attrib["upper"] = format_float(template_joint.limits.upper)
-            ET.SubElement(joint_elem, "limit", **limit_attrib)  # type: ignore[arg-type]
-
-        if template_joint.dynamics:
-            dyn_attrib = {}
-            if template_joint.dynamics.damping != 0.0:
-                dyn_attrib["damping"] = format_float(template_joint.dynamics.damping)
-            if template_joint.dynamics.friction != 0.0:
-                dyn_attrib["friction"] = format_float(template_joint.dynamics.friction)
-            if dyn_attrib:
-                ET.SubElement(joint_elem, "dynamics", **dyn_attrib)  # type: ignore[arg-type]
+        # Use shared logic for all functional properties (Axis, Limits, Mimic, Safety Controller, Calibration)
+        self._add_joint_properties(joint_elem, template_joint)
 
     def _generate_macro_call(
         self, root: ET.Element, signature: str, link: Link, joint: Joint | None

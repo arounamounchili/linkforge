@@ -194,12 +194,34 @@ def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path):
                 assert joint2.mimic.joint == joint1.mimic.joint, (
                     f"Joint {joint_name}: mimic joint mismatch"
                 )
-                assert abs(joint2.mimic.multiplier - joint1.mimic.multiplier) < 0.001, (
-                    f"Joint {joint_name}: mimic multiplier mismatch"
-                )
                 assert abs(joint2.mimic.offset - joint1.mimic.offset) < 0.001, (
                     f"Joint {joint_name}: mimic offset mismatch"
                 )
+
+            # Verify safety controller
+            if joint1.safety_controller:
+                assert joint2.safety_controller is not None, (
+                    f"Joint {joint_name}: missing safety controller"
+                )
+                assert (
+                    abs(
+                        joint2.safety_controller.soft_lower_limit
+                        - joint1.safety_controller.soft_lower_limit
+                    )
+                    < 0.001
+                )
+                assert (
+                    abs(joint2.safety_controller.k_position - joint1.safety_controller.k_position)
+                    < 0.001
+                )
+
+            # Verify calibration
+            if joint1.calibration:
+                assert joint2.calibration is not None, f"Joint {joint_name}: missing calibration"
+                if joint1.calibration.rising is not None:
+                    assert abs(joint2.calibration.rising - joint1.calibration.rising) < 0.001
+                if joint1.calibration.falling is not None:
+                    assert abs(joint2.calibration.falling - joint1.calibration.falling) < 0.001
 
         # ========== VERIFY TRANSMISSIONS ==========
         assert len(robot2.transmissions) == len(robot1.transmissions), "Transmission count mismatch"

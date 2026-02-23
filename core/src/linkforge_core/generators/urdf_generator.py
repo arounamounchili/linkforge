@@ -250,20 +250,26 @@ class URDFGenerator(RobotGenerator[str]):
             ET.SubElement(mat_elem, "texture", filename=material.texture)
 
     def _add_link_element(self, parent: ET.Element, link: Link) -> None:
-        """Add link element to parent with support for multiple visual/collision elements."""
+        """Add link element to parent."""
         link_elem = ET.SubElement(parent, "link", name=link.name)
+        self._add_link_contents(link_elem, link)
 
-        # Add all visual elements (URDF allows multiple <visual> per link)
-        for visual in link.visuals:
-            self._add_visual_element(link_elem, visual)
+    def _add_link_contents(self, link_elem: ET.Element, link: Link) -> None:
+        """Populate link element with inertial, visual, and collision data.
 
-        # Add all collision elements (URDF allows multiple <collision> per link)
-        for collision in link.collisions:
-            self._add_collision_element(link_elem, collision)
-
+        This is shared between standard links and XACRO macros.
+        """
         # Inertial
         if link.inertial:
             self._add_inertial_element(link_elem, link.inertial)
+
+        # Visuals
+        for visual in link.visuals:
+            self._add_visual_element(link_elem, visual)
+
+        # Collisions
+        for collision in link.collisions:
+            self._add_collision_element(link_elem, collision)
 
     def _add_visual_element(self, parent: ET.Element, visual: Visual) -> None:
         """Add visual element to parent."""
@@ -401,6 +407,15 @@ class URDFGenerator(RobotGenerator[str]):
         ET.SubElement(joint_elem, "parent", link=joint.parent)
         ET.SubElement(joint_elem, "child", link=joint.child)
 
+        # Properties (Axis, Limits, Mimic, etc.)
+        self._add_joint_properties(joint_elem, joint)
+
+    def _add_joint_properties(self, joint_elem: ET.Element, joint: Joint) -> None:
+        """Add functional properties to joint element.
+
+        Shared between standard joints and XACRO macro definitions.
+        Includes axis, limits, dynamics, mimic, safety controller and calibration.
+        """
         # Axis (only for revolute, continuous, prismatic, planar)
         if (
             joint.type

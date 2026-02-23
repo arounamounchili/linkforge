@@ -523,6 +523,7 @@ def test_mimic_joint_roundtrip():
             type=JointType.PRISMATIC,
             parent="base",
             child="master_link",
+            axis=Vector3(0, 0, 1),
             limits=JointLimits(lower=0.0, upper=0.1, effort=1.0, velocity=0.5),
         )
     )
@@ -533,6 +534,7 @@ def test_mimic_joint_roundtrip():
             type=JointType.PRISMATIC,
             parent="base",
             child="follower_link",
+            axis=Vector3(0, 0, 1),
             limits=JointLimits(lower=-0.1, upper=0.0, effort=1.0, velocity=0.5),
             mimic=JointMimic(joint="master_joint", multiplier=-1.0, offset=0.0),
         )

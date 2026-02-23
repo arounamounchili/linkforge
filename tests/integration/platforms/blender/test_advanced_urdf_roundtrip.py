@@ -38,6 +38,7 @@ class TestTransmissionRoundtrip:
                 type=JointType.REVOLUTE,
                 parent="base_link",
                 child="arm_link",
+                axis=Vector3(0, 0, 1),
                 limits=JointLimits(lower=-1.57, upper=1.57, velocity=2.0, effort=100.0),
             )
         )
@@ -81,6 +82,7 @@ class TestTransmissionRoundtrip:
                 type=JointType.REVOLUTE,
                 parent="base_link",
                 child="link1",
+                axis=Vector3(0, 0, 1),
                 limits=JointLimits(lower=-3.14, upper=3.14),
             )
         )
@@ -90,6 +92,7 @@ class TestTransmissionRoundtrip:
                 type=JointType.REVOLUTE,
                 parent="base_link",
                 child="link2",
+                axis=Vector3(0, 0, 1),
                 limits=JointLimits(lower=-3.14, upper=3.14),
             )
         )
@@ -188,6 +191,7 @@ class TestGazeboRoundtrip:
                 type=JointType.REVOLUTE,
                 parent="link1",
                 child="link2",
+                axis=Vector3(0, 0, 1),
                 limits=JointLimits(lower=-1.57, upper=1.57),
             )
         )
@@ -244,6 +248,7 @@ class TestComplexRobotRoundtrip:
                 type=JointType.CONTINUOUS,
                 parent="base_link",
                 child="left_wheel",
+                axis=Vector3(0.0, 1.0, 0.0),
                 origin=Transform(xyz=Vector3(0.0, 0.2, 0.0)),
             )
         )
@@ -253,6 +258,7 @@ class TestComplexRobotRoundtrip:
                 type=JointType.CONTINUOUS,
                 parent="base_link",
                 child="right_wheel",
+                axis=Vector3(0.0, 1.0, 0.0),
                 origin=Transform(xyz=Vector3(0.0, -0.2, 0.0)),
             )
         )
