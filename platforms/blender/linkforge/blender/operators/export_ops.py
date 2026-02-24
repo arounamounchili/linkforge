@@ -99,13 +99,19 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         logger.info(f"Exporting robot to: {output_path}")
         logger.debug(f"Mesh directory: {meshes_dir}")
 
+        from ...linkforge_core import LinkForgeError, RobotGeneratorError
+
         # Validate if requested
         if robot_props.validate_before_export:
             # First pass: Dry run to generate robot model without exporting meshes
             try:
                 robot_dry_run, _ = scene_to_robot(context, meshes_dir=meshes_dir, dry_run=True)
-            except Exception as e:
+            except LinkForgeError as e:
                 self.report({"ERROR"}, f"Failed to build robot model: {e}")
+                return {"CANCELLED"}
+            except Exception as e:
+                self.report({"ERROR"}, f"Unexpected crash during model build: {e}")
+                logger.exception("Dry run build crashed")
                 return {"CANCELLED"}
 
             from ...linkforge_core.validation import RobotValidator
@@ -130,17 +136,14 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
                 meshes_dir=meshes_dir,
                 dry_run=not should_write_meshes,
             )
+        except (LinkForgeError, RobotGeneratorError) as e:
+            # LinkForge specific errors are already user-friendly
+            self.report({"ERROR"}, f"Build failed: {e}")
+            return {"CANCELLED"}
         except Exception as e:
-            msg = str(e)
-            # Make error more user friendly
-            if "Unable to build robot model" in msg:
-                parts = msg.split("\n", 1)
-                if len(parts) > 1:
-                    # Show just the first error summary line to keep popup clean
-                    # The full log is usually too big for a toast notification
-                    msg = "Configuration errors found. Check console or run Validation."
-
-            self.report({"ERROR"}, f"Build failed: {msg}")
+            # Catch unexpected internal crashes
+            self.report({"ERROR"}, f"Unexpected internal error: {e}")
+            logger.exception("Export build crashed")
             return {"CANCELLED"}
 
         # Generate URDF/XACRO

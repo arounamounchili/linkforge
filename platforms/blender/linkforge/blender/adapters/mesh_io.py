@@ -31,8 +31,7 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
     if obj is None:
         return False
 
-    # CRITICAL: Must unhide BEFORE selection for some operators/context to work
-    # Store visibility state before modifying
+    # Ensure object is visible before selection for reliable Blender context.
     was_hidden = obj.hide_viewport
 
     # Ensure parent directory exists
@@ -95,7 +94,7 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
         # Deselect all and select only target object
-        # CRITICAL: Must unhide BEFORE selection
+        # Selection requires object visibility
         obj.hide_viewport = False
 
         bpy.ops.object.select_all(action="DESELECT")
@@ -214,7 +213,7 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
         # Deselect all and select only target object
-        # CRITICAL: Must unhide BEFORE selection
+        # Selection requires object visibility
         obj.hide_viewport = False
 
         bpy.ops.object.select_all(action="DESELECT")

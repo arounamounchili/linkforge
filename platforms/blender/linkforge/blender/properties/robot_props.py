@@ -19,7 +19,7 @@ import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
-from .control_props import Ros2ControlJointProperty
+from .control_props import Ros2ControlJointProperty, Ros2ControlParameterProperty
 
 
 class RobotPropertyGroup(PropertyGroup):
@@ -89,6 +89,10 @@ class RobotPropertyGroup(PropertyGroup):
     # Centralized collection of controlled joints
     ros2_control_joints: CollectionProperty(type=Ros2ControlJointProperty)  # type: ignore
     ros2_control_active_joint_index: IntProperty()  # type: ignore
+
+    # Global hardware parameters
+    ros2_control_parameters: CollectionProperty(type=Ros2ControlParameterProperty)  # type: ignore
+    show_ros2_control_parameters: BoolProperty(name="Show Parameters", default=True)  # type: ignore
 
     export_meshes: BoolProperty(  # type: ignore
         name="Export Meshes",

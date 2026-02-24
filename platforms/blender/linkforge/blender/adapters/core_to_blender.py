@@ -942,12 +942,18 @@ def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
     # Populate centralized ROS2 Control
     if robot.ros2_controls:
         lp = scene.linkforge  # type: ignore[attr-defined]
-        # Use direct scene access to ensure persistence in tests
         lp.use_ros2_control = True
         control = robot.ros2_controls[0]
         lp.ros2_control_name = control.name
         lp.ros2_control_type = control.type
         lp.hardware_plugin = control.hardware_plugin
+
+        # Map global parameters
+        lp.ros2_control_parameters.clear()
+        for key, value in control.parameters.items():
+            param_item = lp.ros2_control_parameters.add()
+            param_item.name = key
+            param_item.value = value
 
         # Map joints
         lp.ros2_control_joints.clear()
@@ -961,32 +967,34 @@ def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
             item.state_velocity = "velocity" in rc_joint.state_interfaces
             item.state_effort = "effort" in rc_joint.state_interfaces
 
-    # Gazebo Elements (Blender properties only support one main gazebo plugin name currently)
+            # Map joint-level parameters
+            item.parameters.clear()
+            for key, value in rc_joint.parameters.items():
+                param_item = item.parameters.add()
+                param_item.name = key
+                param_item.value = value
+    # Master reset of ROS2 Control / Gazebo state if not present in robot
+    if not robot.ros2_controls and hasattr(scene, "linkforge"):
+        lp = scene.linkforge
+        lp.use_ros2_control = False
+        lp.ros2_control_joints.clear()
+        lp.ros2_control_parameters.clear()
+        lp.gazebo_plugin_name = "gz_ros2_control::GazeboSimROS2ControlPlugin"  # Default
+        lp.controllers_yaml_path = ""
+
+    # Map Gazebo simulation settings if present
     if robot.gazebo_elements and hasattr(scene, "linkforge"):
+        plugin_found = False
         for elem in robot.gazebo_elements:
             for plugin in elem.plugins:
-                # Map to the single gazebo_plugin_name field if it looks like the ros2_control one
                 if "ros2_control" in plugin.name.lower():
                     scene.linkforge.gazebo_plugin_name = plugin.name
+                    if "parameters" in plugin.parameters:
+                        scene.linkforge.controllers_yaml_path = plugin.parameters["parameters"]
+                    plugin_found = True
                     break
-
-    # Check for legacy Gazebo ros2_control plugin settings
-    if hasattr(robot, "gazebo_elements") and robot.gazebo_elements:
-        for element in robot.gazebo_elements:
-            for plugin in element.plugins:
-                if "ros2_control" in plugin.name.lower():
-                    if hasattr(scene, "linkforge"):
-                        scene.linkforge.gazebo_plugin_name = plugin.name
-                        if "parameters" in plugin.parameters:
-                            scene.linkforge.controllers_yaml_path = plugin.parameters["parameters"]
-                    break
-            else:
-                continue
-            break
-
-    else:
-        if hasattr(scene, "linkforge"):
-            scene.linkforge.use_ros2_control = False
+            if plugin_found:
+                break
 
 
 def import_robot_to_scene(robot: Robot, urdf_path: Path, context: bpy.types.Context) -> bool:
