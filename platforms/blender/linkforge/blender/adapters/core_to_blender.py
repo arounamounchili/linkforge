@@ -608,9 +608,9 @@ def create_link_object(
             if collision_geom_type in ("BOX", "CYLINDER", "SPHERE"):
                 props.collision_type = collision_geom_type
             elif collision_geom_type == "MESH":
-                # For mesh collisions, default to CONVEX_HULL
-                # (most imported mesh collisions are convex hulls or simplified meshes)
-                props.collision_type = "CONVEX_HULL"
+                # For mesh collisions, default to MESH (Simplified)
+                # (most imported mesh collisions are simplified meshes)
+                props.collision_type = "MESH"
 
         # Enable material export if imported URDF has material
         if link.visuals and link.visuals[0].material:

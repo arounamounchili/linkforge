@@ -21,7 +21,7 @@ def test_collision_alignment_on_rotated_link():
     visual_obj.rotation_euler = (0, 0, 0)
 
     # 3. Generate Collision
-    collision_obj = create_collision_for_link(link_obj, "CONVEX_HULL", bpy.context)
+    collision_obj = create_collision_for_link(link_obj, "MESH", bpy.context)
 
     # ASSERTIONS
     assert collision_obj is not None

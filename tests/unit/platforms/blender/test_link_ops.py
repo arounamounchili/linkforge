@@ -98,19 +98,19 @@ def test_generate_collision_cylinder():
     assert tuple(collision_obj.dimensions) == pytest.approx((2.0, 2.0, 2.0))
 
 
-def test_generate_collision_hull():
-    """Test generating a convex hull collision for a link."""
+def test_generate_collision_mesh_simplified():
+    """Test generating a simplified mesh collision for a link."""
     bpy.ops.object.select_all(action="DESELECT")
     # Use a non-primitive shape (monkey)
     bpy.ops.mesh.primitive_monkey_add()
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
 
-    create_collision_for_link(link_obj, "CONVEX_HULL", bpy.context)
+    create_collision_for_link(link_obj, "MESH", bpy.context)
 
     collision_obj = next((c for c in link_obj.children if "_collision" in c.name), None)
     assert collision_obj is not None
-    assert collision_obj["collision_geometry_type"] == "CONVEX_HULL"
+    assert collision_obj["collision_geometry_type"] == "MESH"
     # Monkey is roughly 2.7x1.7x1.9
     assert collision_obj.dimensions.x > 2.0
 
@@ -353,11 +353,11 @@ def test_create_collision_for_link_multi_visual(mocker):
     v2.name = "v2_visual"
     v2.parent = link_obj
 
-    # Run creation with AUTO (should trigger convex hull for >1 visuals)
+    # Run creation with AUTO (should trigger mesh simplification for >1 visuals)
     create_collision_for_link(link_obj, "AUTO", bpy.context)
 
     col_obj = next(c for c in link_obj.children if "_collision" in c.name)
-    assert col_obj["collision_geometry_type"] == "CONVEX_HULL"
+    assert col_obj["collision_geometry_type"] == "MESH"
 
 
 def test_calculate_inertia_exception(mocker):
@@ -482,12 +482,12 @@ def test_link_ops_low_level_edge_cases(mocker):
     assert create_collision_for_link(link_obj, "BOX", bpy.context) is None
 
 
-def test_link_ops_convex_hull_compound_failure(mocker):
-    """Test convex hull compound failure path."""
-    from linkforge.blender.operators.link_ops import _create_convex_hull_collision_compound
+def test_link_ops_mesh_compound_failure(mocker):
+    """Test mesh compound failure path."""
+    from linkforge.blender.operators.link_ops import _create_mesh_collision_compound
 
     mocker.patch("linkforge.blender.operators.link_ops._merge_visual_meshes", return_value=None)
-    assert _create_convex_hull_collision_compound([], "test", bpy.context) is None
+    assert _create_mesh_collision_compound([], "test", bpy.context) is None
 
 
 def test_link_ops_operator_polls_and_cancellation(mocker):

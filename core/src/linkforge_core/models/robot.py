@@ -195,8 +195,6 @@ class Robot:
 
         return root_links[0]
 
-        return root_links[0]
-
     def _has_cycle(self) -> bool:
         """Check for cycles in the kinematic tree using iterative DFS.
 
@@ -251,9 +249,6 @@ class Robot:
                             return True
 
             return False
-
-        # Check from all unvisited nodes
-        return any(link.name not in visited and iterative_dfs(link.name) for link in self.links)
 
         return any(link.name not in visited and iterative_dfs(link.name) for link in self.links)
 

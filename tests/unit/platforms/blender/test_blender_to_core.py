@@ -316,15 +316,13 @@ def test_get_object_geometry_forced_primitives():
     assert pytest.approx(geom_c.length) == 2.0
 
 
-def test_get_object_geometry_convex_hull(tmp_path):
-    """Verify that convex hull fallback is handled."""
+def test_get_object_geometry_mesh_simplified(tmp_path):
+    """Verify that mesh simplification fallback is handled."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
 
-    # CONVEX_HULL currently falls back to BOX if not implemented with real hull
-    geom, wm = get_object_geometry(
-        obj, geometry_type="CONVEX_HULL", meshes_dir=tmp_path, link_name="hull"
-    )
+    # MESH currently falls back to BOX if not implemented with real hull
+    geom, wm = get_object_geometry(obj, geometry_type="MESH", meshes_dir=tmp_path, link_name="hull")
     assert isinstance(geom, (Box, Mesh))
 
 

@@ -126,8 +126,8 @@ class LINKFORGE_PT_links(Panel):
             if stored_type and stored_type in ("BOX", "CYLINDER", "SPHERE"):
                 detected_type = stored_type
                 is_primitive = True
-            elif stored_type == "CONVEX_HULL":
-                detected_type = "CONVEX_HULL"
+            elif stored_type == "MESH":
+                detected_type = "MESH"
                 is_primitive = False
             # 3. Fallback to heuristic detection
             elif detect_primitive_type:  # type: ignore[truthy-function]
@@ -155,7 +155,7 @@ class LINKFORGE_PT_links(Panel):
             is_imported = typing.cast(bool, collision_obj.get("imported_from_urdf"))
 
             # Show slider for meshes (only relevant for non-primitives)
-            if detected_type == "CONVEX_HULL":
+            if detected_type == "MESH":
                 box.separator()
                 row = box.row()
                 # Disable slider if imported from URDF (cannot be simplified via slider)

@@ -8,7 +8,7 @@ This document provides a technical specification of how LinkForge maps Blender o
 | :--- | :--- | :--- | :--- |
 | **Link** | `Empty` | Plain Axes | The coordinate frame of the link. |
 | **Visual** | `Mesh` | Textured/Solid | Must be a child of a Link Empty. |
-| **Collision** | `Mesh` | Wireframe | Child of Link Empty. Merged into single convex hull. |
+| **Collision** | `Mesh` | Wireframe | Child of Link Empty. Exported as primitive or simplified mesh. |
 | **Joint** | `Empty` | Arrows | Colored axes (RGB for XYZ). |
 | **Sensor** | `Empty` | Sphere | Wireframe sphere. Must be a child of a Link Empty. |
 

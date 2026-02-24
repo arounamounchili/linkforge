@@ -34,14 +34,14 @@ This protocol defines the mandatory manual testing steps required before every r
     - *Expected:* The collision mesh is **perfectly aligned** with the visual mesh, not doubled or shifted.
 3.  [ ] **Primitive Detection**: Create a Cube, Sphere, or Cylinder link and generate collision.
     - *Expected:* Detected as `BOX/SPHERE/CYLINDER`. **Collision Quality** slider is hidden.
-4.  [ ] **Convex Hull (Forced)**: Create a Cylinder. Set `Collision Type` to `Convex Hull` and click `Regenerate`.
-    - *Expected:* Heuristic shows **"Type: CONVEX_HULL"** (not Cylinder).
+4.  [ ] **Mesh (Simplified) (Forced)**: Create a Cylinder. Set `Collision Type` to `Mesh (Simplified)` and click `Regenerate`.
+    - *Expected:* Heuristic shows **"Type: MESH"** (not Cylinder).
     - *Expected:* The wireframe is **perfectly aligned** with the cylinder, not at `0,0,0`.
-5.  [ ] **Convex Hull (Complex)**: Use a complex mesh and generate collision.
-    - *Expected:* Detected as `CONVEX_HULL`. **Collision Quality** slider is visible.
+5.  [ ] **Mesh (Simplified) (Complex)**: Use a complex mesh and generate collision.
+    - *Expected:* Detected as `MESH`. **Collision Quality** slider is visible.
     - *Expected:* Moving the slider regenerates the wireframe mesh (decimation).
-6.  [ ] **Merged Hull**: Create a link with **two separate meshes** as children and click `Generate Collision`.
-    - *Expected:* LinkForge generates a **single** convex hull that encapsulates both meshes.
+6.  [ ] **Merged Mesh**: Create a link with **two separate meshes** as children and click `Generate Collision`.
+    - *Expected:* LinkForge generates a **single** simplified mesh that encapsulates both meshes.
 
 ### 2.3 Mass Properties (Physics)
 1.  [ ] **Auto-Inertia**: Change `Mass` value with `Auto-Calculate` ON.
