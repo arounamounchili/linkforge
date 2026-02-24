@@ -60,18 +60,27 @@ class LINKFORGE_PT_control(Panel):
     bl_order = 2
     bl_options = {"DEFAULT_CLOSED"}
 
-    def draw_joint_details(self, layout: bpy.types.UILayout, joint_item: typing.Any) -> None:
+    def draw_joint_details(
+        self, layout: bpy.types.UILayout, props: typing.Any, joint_item: typing.Any
+    ) -> None:
         """Draw the detailed interface settings for a single joint."""
         inner = layout.box()
         inner.label(text=f"Config: {joint_item.name}", icon="SETTINGS")
 
-        # Command Interfaces
+        # Hiding command interfaces for read-only sensor hardware
         row = inner.row()
-        col = row.column(align=True)
-        col.label(text="Command Interfaces:")
-        col.prop(joint_item, "cmd_position")
-        col.prop(joint_item, "cmd_velocity")
-        col.prop(joint_item, "cmd_effort")
+        is_sensor = props.ros2_control_type == "sensor"
+
+        if not is_sensor:
+            col = row.column(align=True)
+            col.label(text="Command Interfaces:")
+            col.prop(joint_item, "cmd_position")
+            col.prop(joint_item, "cmd_velocity")
+            col.prop(joint_item, "cmd_effort")
+        else:
+            col = row.column(align=True)
+            col.label(text="Command Interfaces:", icon="INFO")
+            col.label(text="Disabled for Sensor system.")
 
         # State Interfaces
         col = row.column(align=True)
@@ -79,6 +88,34 @@ class LINKFORGE_PT_control(Panel):
         col.prop(joint_item, "state_position")
         col.prop(joint_item, "state_velocity")
         col.prop(joint_item, "state_effort")
+
+        # Joint Parameters
+        inner.separator()
+        param_box = inner.box()
+        header = param_box.row()
+        header.label(text="Joint Parameters", icon="PRESET")
+        add_op = header.operator("linkforge.add_ros2_control_parameter", icon="ADD", text="")
+        add_op.target = "JOINT"
+        if len(joint_item.parameters) > 0:
+            p_row = param_box.row()
+            p_row.prop(
+                joint_item,
+                "show_parameters",
+                text=f"Parameters ({len(joint_item.parameters)})",
+                icon="TRIA_DOWN" if joint_item.show_parameters else "TRIA_RIGHT",
+                emboss=False,
+            )
+
+            if joint_item.show_parameters:
+                for i, param in enumerate(joint_item.parameters):
+                    p_row = param_box.row(align=True)
+                    p_row.prop(param, "name", text="")
+                    p_row.prop(param, "value", text="")
+                    rem_op = p_row.operator(
+                        "linkforge.remove_ros2_control_parameter", icon="REMOVE", text=""
+                    )
+                    rem_op.target = "JOINT"
+                    rem_op.index = i
 
     def draw(self, context: Context) -> None:
         """Draw the panel."""
@@ -104,6 +141,35 @@ class LINKFORGE_PT_control(Panel):
         col.prop(props, "ros2_control_name")
         col.prop(props, "ros2_control_type")
         col.prop(props, "hardware_plugin")
+
+        # Global Parameters
+        box.separator()
+        p_header = box.row()
+        p_header.label(text="Hardware Parameters", icon="PRESET")
+        add_p = p_header.operator("linkforge.add_ros2_control_parameter", icon="ADD", text="")
+        add_p.target = "GLOBAL"
+
+        if len(props.ros2_control_parameters) > 0:
+            p_box = box.box()
+            p_row = p_box.row()
+            p_row.prop(
+                props,
+                "show_ros2_control_parameters",
+                text=f"Parameters ({len(props.ros2_control_parameters)})",
+                icon="TRIA_DOWN" if props.show_ros2_control_parameters else "TRIA_RIGHT",
+                emboss=False,
+            )
+
+            if props.show_ros2_control_parameters:
+                for i, param in enumerate(props.ros2_control_parameters):
+                    p_row = p_box.row(align=True)
+                    p_row.prop(param, "name", text="")
+                    p_row.prop(param, "value", text="")
+                    rem_p = p_row.operator(
+                        "linkforge.remove_ros2_control_parameter", icon="REMOVE", text=""
+                    )
+                    rem_p.target = "GLOBAL"
+                    rem_p.index = i
 
         # === 2. INTERFACE LAYER (Joint Manager) ===
         layout.separator()
@@ -135,21 +201,12 @@ class LINKFORGE_PT_control(Panel):
 
         # Settings for the selected joint
         if len(props.ros2_control_joints) > 0:
-            box = layout.box()
-            if box:
-                # List of interfaces for each joint
-                # Only draw details for the active joint
-                active_idx = props.ros2_control_active_joint_index
-                if 0 <= active_idx < len(props.ros2_control_joints):
-                    joint_item = props.ros2_control_joints[active_idx]
-                    self.draw_joint_details(box, joint_item)
-
-                # Global control settings
-                layout.separator()
-                settings_box = layout.box()
-                if settings_box:
-                    settings_box.label(text="Control Environment", icon="WORLD")
-                    settings_box.prop(props, "control_is_gazebo")
+            # List of interfaces for each joint
+            # Only draw details for the active joint
+            active_idx = props.ros2_control_active_joint_index
+            if 0 <= active_idx < len(props.ros2_control_joints):
+                joint_item = props.ros2_control_joints[active_idx]
+                self.draw_joint_details(layout, props, joint_item)
 
         # === 3. SIMULATION & GAZEBO ===
         layout.separator()

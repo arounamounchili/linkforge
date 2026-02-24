@@ -172,11 +172,88 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_add_ros2_control_parameter(Operator):
+    """Add a parameter to ros2_control (global or joint)"""
+
+    bl_idname = "linkforge.add_ros2_control_parameter"
+    bl_label = "Add Parameter"
+    bl_description = "Add a key-value parameter to the control system"
+    bl_options = {"REGISTER", "UNDO"}
+
+    target: StringProperty(default="GLOBAL")  # "GLOBAL" or "JOINT" # type: ignore
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return hasattr(context.scene, "linkforge")
+
+    @safe_execute
+    def execute(self, context: Context) -> set[str]:
+        scene = context.scene
+        props = typing.cast(typing.Any, scene).linkforge
+
+        if self.target == "GLOBAL":
+            param = props.ros2_control_parameters.add()
+            param.name = "param"
+            param.value = "0.0"
+        else:
+            # Joint-level
+            index = props.ros2_control_active_joint_index
+            if 0 <= index < len(props.ros2_control_joints):
+                joint = props.ros2_control_joints[index]
+                param = joint.parameters.add()
+                param.name = "param"
+                param.value = "0.0"
+
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
+    """Remove a parameter from ros2_control"""
+
+    bl_idname = "linkforge.remove_ros2_control_parameter"
+    bl_label = "Remove Parameter"
+    bl_description = "Remove a hardware or joint parameter"
+    bl_options = {"REGISTER", "UNDO"}
+
+    target: StringProperty(default="GLOBAL")  # type: ignore
+    index: bpy.props.IntProperty(default=-1)  # type: ignore
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operators can run."""
+        return hasattr(context.scene, "linkforge")
+
+    @safe_execute
+    def execute(self, context: Context) -> set[str]:
+        """Execute the operator."""
+        scene = context.scene
+        props = typing.cast(typing.Any, scene).linkforge
+
+        if self.target == "GLOBAL":
+            items = props.ros2_control_parameters
+            idx = self.index
+            if 0 <= idx < len(items):
+                items.remove(idx)
+        else:
+            # Joint-level
+            joint_idx = props.ros2_control_active_joint_index
+            if 0 <= joint_idx < len(props.ros2_control_joints):
+                joint = props.ros2_control_joints[joint_idx]
+                items = joint.parameters
+                idx = self.index if self.index >= 0 else len(items) - 1
+                if 0 <= idx < len(items):
+                    items.remove(idx)
+
+        return {"FINISHED"}
+
+
 # Registration
 classes = [
     LINKFORGE_OT_add_ros2_control_joint,
     LINKFORGE_OT_remove_ros2_control_joint,
     LINKFORGE_OT_move_ros2_control_joint,
+    LINKFORGE_OT_add_ros2_control_parameter,
+    LINKFORGE_OT_remove_ros2_control_parameter,
 ]
 
 

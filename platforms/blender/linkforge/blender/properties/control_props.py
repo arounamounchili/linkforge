@@ -64,6 +64,9 @@ class Ros2ControlJointProperty(PropertyGroup):
     state_velocity: BoolProperty(name="Velocity", default=True)  # type: ignore
     state_effort: BoolProperty(name="Effort", default=False)  # type: ignore
 
+    # UI State
+    show_parameters: BoolProperty(name="Show Parameters", default=False)  # type: ignore
+
     # Advanced parameters (rarely used but supported by spec)
     parameters: CollectionProperty(type=Ros2ControlParameterProperty)  # type: ignore
 

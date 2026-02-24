@@ -15,11 +15,14 @@ class Ros2ControlJoint:
     name: str
     command_interfaces: list[str] = field(default_factory=list)
     state_interfaces: list[str] = field(default_factory=list)
+    parameters: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate joint configuration."""
         if not self.name:
             raise ValueError("Joint name cannot be empty")
+        # For sensors, both can be empty initially, but at least one state interface is usually required.
+        # However, we'll allow empty for now to support incremental building.
         if not self.command_interfaces and not self.state_interfaces:
             raise ValueError(
                 f"Joint '{self.name}' must have at least one command OR state interface"
@@ -48,3 +51,11 @@ class Ros2Control:
             raise ValueError(f"Invalid ros2_control type: {self.type}")
         if not self.hardware_plugin:
             raise ValueError("Hardware plugin cannot be empty")
+
+        # Hardware sensors are read-only and do not accept command interfaces
+        if self.type == "sensor":
+            for joint in self.joints:
+                if joint.command_interfaces:
+                    raise ValueError(
+                        f"Hardware type 'sensor' cannot have command interfaces on joint '{joint.name}'"
+                    )

@@ -129,9 +129,8 @@ sequenceDiagram
     Parser->>Parser: Validate XML & Depth
     Parser->>Parser: Resolve Duplicates (Robustness)
     Parser->>Models: Create Robot model
-    Models->>Models: Validate structure
-    Models-->>Parser: Robot object
-    Parser-->>Op: Robot object
+    Op->>Validator: validate(robot)
+    Validator-->>Op: Validation result
     Op->>Importer: import_robot(robot)
     Importer->>Blender: Create objects
     Importer->>Blender: Normalize & Bake Transforms
@@ -158,8 +157,8 @@ sequenceDiagram
     Adapter->>Adapter: Sanitize & Export Meshes
     Adapter->>Adapter: Extract joints
     Adapter->>Models: Create Robot model
-    Models->>Models: Validate structure
-    Models-->>Adapter: Robot object
+    Adapter->>Validator: validate(robot)
+    Validator-->>Adapter: Validation result
     Adapter-->>UI: Robot object
     UI->>Validator: validate(robot)
     Validator-->>UI: Validation result
@@ -188,7 +187,6 @@ classDiagram
         +add_transmission(transmission)
         +add_gazebo_element(element)
         +add_ros2_control(ros2_control)
-        +validate_tree_structure()
     }
 
     class Link {

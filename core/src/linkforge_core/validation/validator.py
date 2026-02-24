@@ -11,18 +11,10 @@ if TYPE_CHECKING:
 
 
 class RobotValidator:
-    """Validates robot structure with detailed error and warning reporting.
+    """Validates robot structure for URDF export and simulation.
 
-    This validator performs comprehensive checks on robot models to ensure they
-    are valid for URDF export and simulation. It checks for common issues like:
-    - Missing or duplicate names
-    - Invalid joint references
-    - Disconnected links (not part of kinematic tree)
-    - Missing mass/inertia properties
-    - Invalid geometry definitions
-
-    The validator distinguishes between errors (must be fixed) and warnings
-    (should be reviewed but not critical).
+    Checks for common modeling issues such as disconnected links, invalid
+    joint references, circular dependencies, and missing physical properties.
 
     Example:
         >>> from linkforge.core.models import Robot, Link
@@ -50,20 +42,10 @@ class RobotValidator:
     def validate(self) -> ValidationResult:
         """Run all validation checks on the robot model.
 
-        Performs comprehensive validation including:
-        1. Basic structure checks (has links, no duplicate names)
-        2. Joint reference validation (parent/child links exist)
-        3. Kinematic tree structure (no cycles, all links connected)
-        4. Mass properties (inertia for dynamic links)
-        5. Geometry validation (valid dimensions)
+        Resets the result on each call, permitting multiple runs on modified models.
 
         Returns:
-            ValidationResult containing:
-            - is_valid: True if no errors found (warnings are allowed)
-            - error_count: Number of critical errors
-            - warning_count: Number of non-critical warnings
-            - errors: List of ValidationIssue objects with details
-            - warnings: List of ValidationIssue objects with details
+            ValidationResult containing errors and warnings.
 
         Example:
             >>> validator = RobotValidator(robot)
@@ -86,6 +68,8 @@ class RobotValidator:
         self._check_tree_structure()
         self._check_mass_properties()
         self._check_geometry()
+        self._check_ros2_control()
+        self._check_mimic_chains()
 
         return self.result
 
@@ -255,3 +239,63 @@ class RobotValidator:
                     affected_objects=[link.name],
                     suggestion="Add collision geometry for physics simulation",
                 )
+
+    def _check_ros2_control(self) -> None:
+        """Check ros2_control joint existence."""
+        if not self.robot.ros2_controls:
+            return
+
+        joint_names = {joint.name for joint in self.robot.joints}
+        for control in self.robot.ros2_controls:
+            for rc_joint in control.joints:
+                if rc_joint.name not in joint_names:
+                    self.result.add_error(
+                        title="Invalid ros2_control joint",
+                        message=f"ros2_control joint '{rc_joint.name}' does not exist in the kinematic tree",
+                        affected_objects=[rc_joint.name],
+                        suggestion="Ensure joint name in control matches a robot joint",
+                    )
+
+    def _check_mimic_chains(self) -> None:
+        """Check for invalid mimic joint configurations."""
+        joint_names = {joint.name for joint in self.robot.joints}
+        joint_map = {joint.name: joint for joint in self.robot.joints}
+
+        for joint in self.robot.joints:
+            if joint.mimic is None:
+                continue
+
+            # Follow the mimic chain to detect cycles
+            visited = {joint.name}
+            current = joint.mimic.joint
+
+            # Traverse the mimic chain
+            while current:
+                # Check if mimic target exists
+                if current not in joint_names:
+                    self.result.add_error(
+                        title="Invalid mimic target",
+                        message=f"Joint '{joint.name}' mimics non-existent joint '{current}'",
+                        affected_objects=[joint.name],
+                        suggestion=f"Ensure joint '{current}' exists or update mimic reference",
+                    )
+                    break
+
+                # Check for circular dependency
+                if current in visited:
+                    chain = " -> ".join(visited) + f" -> {current}"
+                    self.result.add_error(
+                        title="Circular mimic dependency",
+                        message=f"Circular mimic dependency detected: {chain}",
+                        affected_objects=list(visited),
+                        suggestion="Break the circular mimic chain by changing mimic targets",
+                    )
+                    break
+
+                visited.add(current)
+
+                # Move to next joint in chain
+                next_joint = joint_map[current]
+                if next_joint.mimic is None:
+                    break
+                current = next_joint.mimic.joint

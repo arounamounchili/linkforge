@@ -637,12 +637,12 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
     # Parse parameters (optional)
     parameters: dict[str, str] = {}
 
-    # Parse hardware parameters
+    # Parse hardware-level parameters
     if hw_elem is not None:
         for param_elem in hw_elem.findall("param"):
             p_name = param_elem.get("name")
             if p_name and param_elem.text:
-                parameters[f"hardware.{p_name}"] = param_elem.text.strip()
+                parameters[p_name] = param_elem.text.strip()
 
     # Parse joints
     joints: list[Ros2ControlJoint] = []
@@ -661,6 +661,13 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
             iface_name = state_elem.get("name", "position")
             state_interfaces.append(_normalize_hardware_interface(iface_name))
 
+        # Parse joint-level parameters
+        joint_params = {}
+        for param_elem in joint_elem.findall("param"):
+            p_name = param_elem.get("name")
+            if p_name and param_elem.text:
+                joint_params[p_name] = param_elem.text.strip()
+
         # Only add joint if it has at least one command OR state interface
         if command_interfaces or state_interfaces:
             joints.append(
@@ -668,6 +675,7 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
                     name=joint_name,
                     command_interfaces=command_interfaces,
                     state_interfaces=state_interfaces,
+                    parameters=joint_params,
                 )
             )
 
