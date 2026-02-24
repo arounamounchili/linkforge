@@ -89,6 +89,7 @@ class TestControlProperties:
         assert joint.state_position is True
         assert joint.state_velocity is True
         assert joint.state_effort is False
+        assert joint.show_parameters is False
 
         # Modify values
         joint.name = "joint1"
@@ -201,6 +202,7 @@ class TestRobotProperties:
 
         # Verify we can access scene properties without error
         assert scene is not None
+        assert scene.linkforge.show_ros2_control_parameters is True
 
 
 class TestTransmissionProperties:

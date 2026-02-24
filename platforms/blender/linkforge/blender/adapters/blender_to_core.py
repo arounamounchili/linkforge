@@ -85,18 +85,15 @@ def matrix_to_transform(matrix: Any) -> Transform:
     if matrix is None or Matrix is None:
         return Transform.identity()
 
-    # Extract translation
+    # Extract translation and rotation (Euler angles in radians)
     translation = matrix.to_translation()
+    rotation = matrix.to_euler("XYZ")
+
     xyz = Vector3(
         clean_float(translation.x),
         clean_float(translation.y),
         clean_float(translation.z),
     )
-
-    # Extract rotation (Euler angles in radians)
-    # URDF uses extrinsic XYZ order (R = Rz * Ry * Rx)
-    # Blender's 'XYZ' intrinsic mode is mathematically equivalent to URDF extrinsic XYZ.
-    rotation = matrix.to_euler("XYZ")
     rpy = Vector3(
         clean_float(rotation.x),
         clean_float(rotation.y),
@@ -148,40 +145,13 @@ DEFAULT_PRIMITIVE_CONFIG = PrimitiveDetectionConfig()
 
 
 def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
-    """Detect if a Blender mesh object is a standard primitive shape.
+    """Detect if a Blender mesh object matches a standard primitive shape.
 
-    Analyzes mesh topology (vertex/face counts) and dimensions to determine
-    if the object matches a standard primitive. This allows exporting simple
-    shapes as URDF primitives instead of mesh files, which is more efficient.
-
-    Detection heuristics:
-        - **BOX**: Exactly 8 vertices, 6 quad faces
-        - **SPHERE**: 240-1000 verts, uniform dimensions (within 10% tolerance)
-        - **CYLINDER**: 32-128 verts, circular base (XY similar), distinct height (Z)
-
-    Args:
-        obj: Blender mesh object to analyze
+    Analyzes topology and dimensions to determine if the object can be
+    exported as a URDF primitive (BOX, CYLINDER, or SPHERE).
 
     Returns:
-        "BOX", "CYLINDER", or "SPHERE" if detected, None for complex meshes
-
-    Note:
-        False positives are possible for complex meshes that coincidentally
-        match vertex/face counts. Wide tolerances accommodate various
-        subdivision levels but may incorrectly classify some shapes.
-
-    Examples:
-        >>> cube = bpy.data.objects["Cube"]  # Default Blender cube
-        >>> detect_primitive_type(cube)
-        'BOX'
-
-        >>> sphere = bpy.data.objects["Sphere"]  # UV sphere
-        >>> detect_primitive_type(sphere)
-        'SPHERE'
-
-        >>> complex_mesh = bpy.data.objects["ComplexModel"]
-        >>> detect_primitive_type(complex_mesh)
-        None
+        "BOX", "CYLINDER", or "SPHERE" if detected, else None.
     """
     if obj is None or obj.type != "MESH":
         return None
@@ -206,7 +176,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     # Get config for primitive detection thresholds
     config = DEFAULT_PRIMITIVE_CONFIG
 
-    # Cube: 8 vertices, 6 quad faces
+    # Match Box: 8 vertices, 6 quad faces
     if vert_count == config.cube_vert_count and face_count == config.cube_face_count:
         # Verify it's roughly box-shaped by checking if all faces are quads
         all_quads = all(len(poly.vertices) == config.cube_verts_per_face for poly in mesh.polygons)
@@ -296,7 +266,7 @@ def get_object_geometry(
         # Use detected primitive (cleaner URDF) or fallback to mesh for complex shapes
         actual_geometry_type = detected_type or "MESH"
 
-    if actual_geometry_type in ("MESH", "CONVEX_HULL"):
+    if actual_geometry_type == "MESH":
         # Export actual mesh file if meshes_dir is provided
         if meshes_dir and link_name and obj.type == "MESH":
             from .mesh_io import export_link_mesh
@@ -523,8 +493,7 @@ def blender_link_to_core_with_origin(
                 suffix=suffix,
             )
 
-            # EXTRACT RELATIVE ORIGIN
-            # Matrix math: Relative_Pose = Link_Inv @ Geometry_World_Pose
+            # Extract relative origin (Relative_Pose = Link_Inv @ Geometry_World_Pose)
             relative_matrix = obj.matrix_world.inverted() @ geom_world_matrix
             origin = matrix_to_transform(relative_matrix)
 
@@ -534,7 +503,7 @@ def blender_link_to_core_with_origin(
                 )
 
         elif "_collision" in child_name:
-            # CRITICAL FIX: Check if this collision was imported from URDF
+            # Check if this collision was imported from URDF (skip simplification)
             is_imported = child.get("imported_from_urdf", False)
 
             # Determine simplification ratio based on collision quality setting
@@ -924,43 +893,42 @@ def _categorize_scene_objects(
     root_link = None
 
     for obj in scene.objects:
-        if obj.type == "EMPTY":
-            # Check for Link
-            if hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
-                link_name = obj.linkforge.link_name if obj.linkforge.link_name else obj.name
-                link_objects[link_name] = obj
+        # Check for Link
+        if hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
+            link_name = obj.linkforge.link_name if obj.linkforge.link_name else obj.name
+            link_objects[link_name] = obj
 
-            # Check for Joint
-            elif hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint:
-                joint_objects.append(obj)
-                props = obj.linkforge_joint
-                parent_obj = props.parent_link
-                child_obj = props.child_link
+        # Check for Joint
+        elif hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint:
+            joint_objects.append(obj)
+            props = obj.linkforge_joint
+            parent_obj = props.parent_link
+            child_obj = props.child_link
 
-                parent_name = (
-                    parent_obj.linkforge.link_name
-                    if parent_obj and hasattr(parent_obj, "linkforge")
-                    else (parent_obj.name if parent_obj else "")
-                )
-                child_name = (
-                    child_obj.linkforge.link_name
-                    if child_obj and hasattr(child_obj, "linkforge")
-                    else (child_obj.name if child_obj else "")
-                )
+            parent_name = (
+                parent_obj.linkforge.link_name
+                if parent_obj and hasattr(parent_obj, "linkforge")
+                else (parent_obj.name if parent_obj else "")
+            )
+            child_name = (
+                child_obj.linkforge.link_name
+                if child_obj and hasattr(child_obj, "linkforge")
+                else (child_obj.name if child_obj else "")
+            )
 
-                if parent_name and child_name:
-                    joints_map[child_name] = (parent_name, obj)
+            if parent_name and child_name:
+                joints_map[child_name] = (parent_name, obj)
 
-            # Check for Sensor
-            elif hasattr(obj, "linkforge_sensor") and obj.linkforge_sensor.is_robot_sensor:
-                sensor_objects.append(obj)
+        # Check for Sensor
+        elif hasattr(obj, "linkforge_sensor") and obj.linkforge_sensor.is_robot_sensor:
+            sensor_objects.append(obj)
 
-            # Check for Transmission
-            elif (
-                hasattr(obj, "linkforge_transmission")
-                and obj.linkforge_transmission.is_robot_transmission
-            ):
-                transmission_objects.append(obj)
+        # Check for Transmission
+        elif (
+            hasattr(obj, "linkforge_transmission")
+            and obj.linkforge_transmission.is_robot_transmission
+        ):
+            transmission_objects.append(obj)
 
     # Find root link (link with no parent joint)
     for link_name, obj in link_objects.items():
@@ -1337,18 +1305,16 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
         if item.state_effort:
             state_ifs.append("effort")
 
-        if cmd_ifs or state_ifs:
-            # Note: Ros2ControlJoint requires at least one of each for validation in some versions
-            # But the core model we saw earlier had validation.
-            # Let's ensure we provide defaults if empty to avoid ValueError
-            if not cmd_ifs:
-                cmd_ifs = ["position"]
-            if not state_ifs:
-                state_ifs = ["position"]
+        # Extract joint-level parameters
+        parameters = {p.name: p.value for p in item.parameters if p.name}
 
+        if cmd_ifs or state_ifs:
             joints.append(
                 Ros2ControlJoint(
-                    name=item.name, command_interfaces=cmd_ifs, state_interfaces=state_ifs
+                    name=item.name,
+                    command_interfaces=cmd_ifs,
+                    state_interfaces=state_ifs,
+                    parameters=parameters,
                 )
             )
 
@@ -1360,4 +1326,5 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
         type=props.ros2_control_type,
         hardware_plugin=props.hardware_plugin,
         joints=joints,
+        parameters={p.name: p.value for p in props.ros2_control_parameters if p.name},
     )

@@ -216,11 +216,10 @@ class LinkPropertyGroup(PropertyGroup):
         name="Collision Type",
         description="Type of collision geometry to generate",
         items=[
-            ("AUTO", "Auto", "Automatically detect primitive shape or use convex hull"),
+            ("AUTO", "Auto", "Automatically detect primitive shape or export as mesh"),
             ("BOX", "Bounding Box", "Axis-aligned bounding box around the mesh"),
             ("SPHERE", "Bounding Sphere", "Spherical bounding volume around the mesh"),
             ("CYLINDER", "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
-            ("CONVEX_HULL", "Convex Hull", "Generate convex hull from mesh"),
         ],
         default="AUTO",
     )
