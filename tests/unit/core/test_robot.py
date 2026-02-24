@@ -18,6 +18,7 @@ from linkforge_core.models import (
 )
 from linkforge_core.models.sensor import Sensor
 from linkforge_core.models.transmission import Transmission, TransmissionJoint
+from linkforge_core.validation import RobotValidator
 
 
 class TestRobot:
@@ -108,9 +109,9 @@ class TestRobot:
         ]
 
         robot = Robot(name="cyclic_robot", initial_links=links, initial_joints=joints)
-        errors = robot.validate_tree_structure()
+        result = RobotValidator(robot).validate()
 
-        assert any("cycle" in e for e in errors)
+        assert any("cycle" in e.message.lower() for e in result.errors)
         assert robot._has_cycle() is True
 
     def test_mimic_cycle_detection(self):
@@ -137,9 +138,9 @@ class TestRobot:
         )
 
         robot = Robot(name="mimic_cycle", initial_links=links, initial_joints=[j1, j2])
-        errors = robot.validate_tree_structure()
+        result = RobotValidator(robot).validate()
 
-        assert any("Circular mimic dependency" in e for e in errors)
+        assert any("Circular mimic dependency" in e.message for e in result.errors)
 
     def test_mimic_missing_joint(self):
         """Test validation of mimic pointing to non-existent joint."""
@@ -156,9 +157,9 @@ class TestRobot:
         )
 
         robot = Robot(name="mimic_missing", initial_links=links, initial_joints=[j1])
-        errors = robot.validate_tree_structure()
+        result = RobotValidator(robot).validate()
 
-        assert any("mimics non-existent joint" in e for e in errors)
+        assert any("mimics non-existent joint" in e.message for e in result.errors)
 
     def test_root_link_identification(self):
         """Test identification of the root link."""
@@ -188,9 +189,9 @@ class TestRobot:
         joints = [Joint(name="j1", parent="root", child="connected", type=JointType.FIXED)]
 
         robot = Robot(name="disconnected", initial_links=links, initial_joints=joints)
-        errors = robot.validate_tree_structure()
+        result = RobotValidator(robot).validate()
 
-        assert any("Multiple root links found" in e for e in errors)
+        assert any("Multiple root links found" in e.message for e in result.errors)
 
     def test_add_sensor_validation(self):
         """Test validation when adding sensors."""
@@ -427,8 +428,8 @@ class TestRobotCoverage:
         robot._links.append(l1)
         robot._links.append(l1)  # Duplicate!
 
-        errors = robot.validate_tree_structure()
-        assert any("Duplicate link names" in e for e in errors)
+        result = RobotValidator(robot).validate()
+        assert any("Duplicate link name" in e.title for e in result.errors)
 
         robot = Robot(name="test2")
         l1 = Link(name="l1")
@@ -440,8 +441,8 @@ class TestRobotCoverage:
         robot._joints.append(j1)
         robot._joints.append(j1)  # Duplicate!
 
-        errors = robot.validate_tree_structure()
-        assert any("Duplicate joint names" in e for e in errors)
+        result = RobotValidator(robot).validate()
+        assert any("Duplicate joint name" in e.title for e in result.errors)
 
     def test_validate_tree_structure_missing_child_mock(self):
         # Bypass add_joint check
@@ -452,8 +453,8 @@ class TestRobotCoverage:
         j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="missing")
         robot._joints.append(j1)
 
-        errors = robot.validate_tree_structure()
-        assert any("child link 'missing' not found" in e for e in errors)
+        result = RobotValidator(robot).validate()
+        assert any("Missing child link" in e.title for e in result.errors)
 
     def test_validate_tree_structure_root_none_mock(self):
         # Mock get_root_link to return None even if links exist
@@ -462,8 +463,8 @@ class TestRobotCoverage:
         robot.add_link(l1)
 
         with patch.object(robot, "get_root_link", return_value=None):
-            errors = robot.validate_tree_structure()
-            assert "No root link found" in errors
+            result = RobotValidator(robot).validate()
+            assert any("No root link found" in e.message for e in result.errors)
 
     def test_validate_tree_structure_disconnected_and_multi_parent(self):
         robot = Robot(name="test")
@@ -487,15 +488,15 @@ class TestRobotCoverage:
         robot.add_joint(j2)
         robot.add_joint(j3)
 
-        # Mock get_root_link to return l1 (ignoring l2 as second root)
+        # Mock get_root_link up to return l1 (ignoring l2 as second root)
         with patch.object(robot, "get_root_link", return_value=l1):
-            errors = robot.validate_tree_structure()
+            result = RobotValidator(robot).validate()
 
             # l2 is disconnected (count=0, != root)
-            assert any("Link 'l2' is not connected" in e for e in errors)
+            assert any("Link 'l2' is not connected" in e.message for e in result.errors)
 
             # l3 has 2 parents
-            assert any("Link 'l3' has 2 parent joints" in e for e in errors)
+            assert any("Link 'l3' has 2 parent joints" in e.message for e in result.errors)
 
     def test_mimic_chain_valid_break(self):
         # Test a mimic chain that ends properly (hitting break)
@@ -530,5 +531,5 @@ class TestRobotCoverage:
         robot.add_joint(j2)
         robot.add_joint(j1)
 
-        errors = robot._validate_mimic_chains()
-        assert not errors
+        result = RobotValidator(robot).validate()
+        assert result.is_valid

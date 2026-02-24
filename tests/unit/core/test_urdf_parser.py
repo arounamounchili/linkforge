@@ -328,7 +328,7 @@ class TestURDFParser:
         assert rc.name == "System"
         assert rc.type == "system"
         assert rc.hardware_plugin == "mock_components/GenericSystem"
-        assert rc.parameters["hardware.ip"] == "192.168.1.1"
+        assert rc.parameters["ip"] == "192.168.1.1"
         assert len(rc.joints) == 1
         assert rc.joints[0].name == "j1"
         assert "position" in rc.joints[0].command_interfaces
@@ -1311,7 +1311,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         robot = parser.parse_string(xml)
         assert len(robot.ros2_controls) == 1
         ctrl = robot.ros2_controls[0]
-        assert "hardware.joints" in ctrl.parameters
+        assert "joints" in ctrl.parameters
 
     def test_ros2_control_joint_without_interfaces_is_not_added(self):
         """A ros2_control joint with no command or state interfaces is skipped."""

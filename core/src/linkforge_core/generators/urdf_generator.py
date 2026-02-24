@@ -1,16 +1,7 @@
 """URDF XML generation from robot models.
 
-This module provides the core `URDFGenerator` class, which transforms internal
-LinkForge robot models into industry-standard Unified Robot Description Format
-(URDF) XML files. It ensures high-fidelity export for a wide range of
-simulators (Gazebo, Webots, Isaac Sim, etc.) by handling:
-
-- **Link & Joint Structures**: Precise mapping of 3D transforms to URDF origin and axis.
-- **Physical Properties**: Accurate mass, center of mass, and inertia tensor serialization.
-- **Visuals & Collisions**: Support for multiple geometric primitives and mesh-based representations.
-- **Material Management**: Automatic deduplication and global vs. inline definition of colors.
-- **ROS 2 Integration**: Native support for `ros2_control` hardware interfaces and transmissions.
-- **Sensor Modeling**: Sophisticated Gazebo plugin generation for LiDAR, IMUs, Cameras, and more.
+Transforms internal LinkForge models into Unified Robot Description Format (URDF)
+XML files, with support for physics, visuals, sensor modeling, and ROS 2.
 """
 
 from __future__ import annotations
@@ -111,9 +102,13 @@ class URDFGenerator(RobotGenerator[str]):
         """
         # Validate robot structure
         if validate:
-            errors = robot.validate_tree_structure()
-            if errors:
-                raise RobotGeneratorError("Robot validation failed:\n" + "\n".join(errors))
+            from ..validation import RobotValidator
+
+            validator = RobotValidator(robot)
+            result = validator.validate()
+            if not result.is_valid:
+                error_msgs = [str(issue) for issue in result.errors]
+                raise RobotGeneratorError("Robot validation failed:\n" + "\n".join(error_msgs))
 
         # Create root element
         root = ET.Element("robot", name=robot.name)
@@ -526,8 +521,8 @@ class URDFGenerator(RobotGenerator[str]):
                 # Normalize to short name (position, velocity, effort)
                 iface_elem.text = self._normalize_interface_name(interface)
 
-            # Always export mechanical reduction for backward compatibility and round-trip fidelity,
-            # even if it is 1.0. This ensures we don't lose data when re-importing legacy files.
+            # Always export mechanical reduction for model fidelity and deterministic round-trips,
+            # even if it is 1.0. This ensures consistency across various URDF configurations.
             # Add mechanical reduction (always include for round-trip fidelity)
             if actuator.mechanical_reduction is not None:
                 reduction_elem = ET.SubElement(actuator_elem, "mechanicalReduction")
@@ -911,7 +906,7 @@ class URDFGenerator(RobotGenerator[str]):
         """Add ros2_control to parent element.
 
         This method centralizes the logic for choosing between parsed (centralized)
-        ROS 2 Control configuration and legacy transmission-based generation.
+        ROS 2 Control configuration and standard transmission-based generation.
         It ensures consistent XML structure and comments across URDF and XACRO export.
 
         Args:
@@ -1041,6 +1036,11 @@ class URDFGenerator(RobotGenerator[str]):
         plugin_elem = ET.SubElement(hw_elem, "plugin")
         plugin_elem.text = rc.hardware_plugin
 
+        # Hardware-level parameters
+        for key, value in rc.parameters.items():
+            param_elem = ET.SubElement(hw_elem, "param", name=key)
+            param_elem.text = value
+
         # Joints
         for joint in rc.joints:
             joint_elem = ET.SubElement(rc_elem, "joint", name=joint.name)
@@ -1053,10 +1053,10 @@ class URDFGenerator(RobotGenerator[str]):
             for state_iface in joint.state_interfaces:
                 ET.SubElement(joint_elem, "state_interface", name=state_iface)
 
-        # Extra parameters
-        for key, value in rc.parameters.items():
-            param_elem = ET.SubElement(rc_elem, key)
-            param_elem.text = value
+            # Joint parameters
+            for key, value in joint.parameters.items():
+                param_elem = ET.SubElement(joint_elem, "param", name=key)
+                param_elem.text = value
 
     def _normalize_interface_name(self, hw_interface: str) -> str:
         """Normalize hardware interface name to ROS2 standard short name.

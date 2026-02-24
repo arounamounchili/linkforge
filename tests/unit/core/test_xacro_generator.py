@@ -3,6 +3,7 @@
 import xml.etree.ElementTree as ET
 
 import pytest
+from linkforge_core.base import RobotGeneratorError
 from linkforge_core.generators.xacro_generator import XACRO_NS, XACROGenerator
 from linkforge_core.models import (
     Box,
@@ -247,8 +248,9 @@ class TestXACROGenerator:
         robot._joints.append(joint)
 
         gen = XACROGenerator()
+
         # Generator's validation should catch missing 'world' link
-        with pytest.raises(ValueError, match="Robot validation failed"):
+        with pytest.raises(RobotGeneratorError, match="Robot validation failed"):
             gen.generate(robot, validate=True)
 
     def test_generator_dimension_extraction_variations(self):

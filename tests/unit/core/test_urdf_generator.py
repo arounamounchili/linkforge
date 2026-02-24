@@ -541,7 +541,9 @@ class TestURDFGenerator:
         assert len(joint.findall("command_interface")) == 2
         assert len(joint.findall("state_interface")) == 3
 
-        assert rc_elem.find("param1").text == "value1"
+        param_elem = rc_elem.find(".//param[@name='param1']")
+        assert param_elem is not None
+        assert param_elem.text == "value1"
 
     def test_generate_gazebo_plugins(self):
         """Test generation of Gazebo plugins (raw XML and parameters)."""
@@ -980,12 +982,25 @@ class TestURDFGenerator:
                 )
             ],
         )
-        robot = Robot(name="r", initial_links=[Link(name="base")], ros2_controls=[rc])
+        robot = Robot(
+            name="r",
+            initial_links=[Link(name="base"), Link(name="l1")],
+            initial_joints=[
+                Joint(
+                    name="j1",
+                    parent="base",
+                    child="l1",
+                    type=JointType.CONTINUOUS,
+                    axis=Vector3(1, 0, 0),
+                )
+            ],
+            ros2_controls=[rc],
+        )
         gen = URDFGenerator()
         xml = gen.generate(robot)
 
         assert "<plugin>plugin/name</plugin>" in xml
-        assert "<param1>val1</param1>" in xml
+        assert '<param name="param1">val1</param>' in xml
         assert '<state_interface name="velocity"' in xml
 
     def test_generate_sensor_with_plugin(self):

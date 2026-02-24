@@ -1,21 +1,8 @@
 """XACRO generation from robot models.
 
-XACRO (XML Macros) is an extension of URDF that enables modular, maintainable,
-and parameterized robot descriptions. This module implements a sophisticated
-XACRO generator with support for:
-
-- **Global Properties**: Centralized management of materials, colors, and dimensions.
-- **Intelligent Extraction**: Automatic identification of repeating geometric
-  values (radius, length, sizes) with floating-point tolerance.
-- **Advanced Macro Generation**: Pattern-based grouping of link/joint structures
-  into parameterized templates with collision-safe naming.
-- **Modular Export**: Automated splitting into robot-specific sub-files:
-    - `*_robot.xacro`: Main structural calls and robot definition.
-    - `*_properties.xacro`: Global property definitions (materials & dimensions).
-    - `*_macros.xacro`: Reusable part templates.
-
-The generator maintains full parity with URDF while promoting industry-standard
-coding patterns for ROS and ROS 2 ecosystems.
+Transforms internal models into modular, parameterized XACRO descriptions.
+Supports global property extraction, Pattern-based macro generation,
+and file splitting for maintainability.
 """
 
 from __future__ import annotations
@@ -26,6 +13,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from ..base import RobotGeneratorError
 from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
 from ..models.joint import Joint
 from ..models.link import Link, Visual
@@ -44,15 +32,8 @@ XACRO_NS = f"{{{XACRO_URI}}}"
 class XACROGenerator(URDFGenerator):
     """Generate XACRO from Robot model.
 
-    Supports both basic and advanced XACRO generation:
-    - Basic mode: Robot name property and xacro namespace
-    - Advanced mode: Material properties, dimension extraction, macro generation
-
-    Advanced features:
-    - Extract unique materials as color properties
-    - Extract common dimensions as properties
-    - Auto-generate macros for repeated patterns
-    - Optional file splitting (materials.xacro, macros.xacro, robot.xacro)
+    Supports material and dimension extraction, auto-macro generation,
+    and modular file splitting.
     """
 
     def __init__(
@@ -117,9 +98,13 @@ class XACROGenerator(URDFGenerator):
         """
         # Validate robot structure
         if validate:
-            errors = robot.validate_tree_structure()
-            if errors:
-                raise ValueError("Robot validation failed:\n" + "\n".join(errors))
+            from ..validation import RobotValidator
+
+            validator = RobotValidator(robot)
+            result = validator.validate()
+            if not result.is_valid:
+                error_msgs = [str(issue) for issue in result.errors]
+                raise RobotGeneratorError("Robot validation failed:\n" + "\n".join(error_msgs))
 
         # Reset property tracking
         self.material_properties = {}

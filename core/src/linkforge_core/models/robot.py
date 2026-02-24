@@ -1,22 +1,11 @@
-"""Robot model representing a complete robot description.
+"""Robot model representing a complete description in LinkForge.
 
-This module provides the central `Robot` class and related data structures
-that form the internal representation of a robot in LinkForge. It acts
-as the source of truth for all generators and parsers, encapsulating:
-
-- **Kinematic Tree**: Hierarchy of links connected by various joint types.
-- **Physical Properties**: Aggregate mass, inertia tensors, and center of mass data.
-- **Visual & Collision Geometry**: Support for multiple primitives and mesh assets.
-- **Actuation & Sensing**: Transmissions, hardware interfaces, and sensor configurations.
-- **Simulator Metadata**: Gazebo-specific properties and plugin definitions.
-
-The models are designed to be simulator-agnostic while providing enough
-fidelity to generate highly optimized URDF/XACRO for ROS-ready environments.
+This module provides the central `Robot` class, which serves as the source
+of truth for all kinematic, physical, and sensor data.
 """
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
 from typing import Any
@@ -32,14 +21,9 @@ from .transmission import Transmission
 
 @dataclass
 class Robot:
-    """Complete robot description.
+    """Complete robot description containing links, joints, and metadata.
 
-    A robot consists of links connected by joints, forming a kinematic tree.
-    May also include sensors, transmissions, ros2_control, and Gazebo-specific elements.
-
-    Performance Note:
-        Link and joint lookups use O(1) hash map indices for fast access,
-        which is critical for large robots with 100+ components.
+    Performance Note: Uses O(1) hash map lookups for links and joints.
     """
 
     name: str
@@ -68,7 +52,7 @@ class Robot:
         initial_links: Sequence[Link] | None,
         initial_joints: Sequence[Joint] | None,
     ) -> None:
-        """Initialize indices and validate structure."""
+        """Initialize and index the robot structure."""
         if not self.name:
             raise ValueError("Robot name cannot be empty")
 
@@ -211,80 +195,13 @@ class Robot:
 
         return root_links[0]
 
-    def validate_tree_structure(self) -> list[str]:
-        """Validate the kinematic tree structure.
-
-        Returns:
-            List of error messages (empty if valid)
-
-        """
-        errors = []
-
-        # Must have at least one link
-        if not self.links:
-            errors.append("Robot must have at least one link")
-            return errors
-
-        # Check for duplicate link names
-        link_names = [link.name for link in self.links]
-        duplicates = {name for name, count in Counter(link_names).items() if count > 1}
-        if duplicates:
-            errors.append(f"Duplicate link names: {duplicates}")
-
-        # Check for duplicate joint names
-        joint_names = [joint.name for joint in self.joints]
-        duplicates = {name for name, count in Counter(joint_names).items() if count > 1}
-        if duplicates:
-            errors.append(f"Duplicate joint names: {duplicates}")
-
-        # Check that all joint parent/child links exist
-        link_name_set = set(link_names)
-        for joint in self.joints:
-            if joint.parent not in link_name_set:
-                errors.append(f"Joint '{joint.name}': parent link '{joint.parent}' not found")
-            if joint.child not in link_name_set:
-                errors.append(f"Joint '{joint.name}': child link '{joint.child}' not found")
-
-        # Check for cycles in the kinematic tree
-        if self._has_cycle():
-            errors.append("Kinematic tree contains a cycle")
-
-        # Check for circular mimic dependencies
-        mimic_errors = self._validate_mimic_chains()
-        errors.extend(mimic_errors)
-
-        # Check that there's exactly one root link
-        root = None
-        try:
-            root = self.get_root_link()
-            if root is None:
-                errors.append("No root link found")
-        except ValueError as e:
-            errors.append(str(e))
-
-        # Check that each link (except root) is a child in exactly one joint
-        child_counts: dict[str, int] = {}
-        for joint in self.joints:
-            child_counts[joint.child] = child_counts.get(joint.child, 0) + 1
-
-        for link in self.links:
-            count = child_counts.get(link.name, 0)
-            # Only check connectivity if we have a valid root
-            if root is not None and link != root and count == 0:
-                errors.append(f"Link '{link.name}' is not connected to the tree")
-            elif count > 1:
-                errors.append(f"Link '{link.name}' has {count} parent joints (should have 1)")
-
-        return errors
+        return root_links[0]
 
     def _has_cycle(self) -> bool:
-        """Check if the kinematic tree has a cycle using iterative DFS.
-
-        Uses an iterative approach to avoid stack overflow on large robot models.
-        This prevents RecursionError on robots with 1000+ joints.
+        """Check for cycles in the kinematic tree using iterative DFS.
 
         Returns:
-            True if a cycle is detected, False otherwise
+            True if a cycle is detected
         """
         if not self.joints:
             return False
@@ -338,52 +255,7 @@ class Robot:
         # Check from all unvisited nodes
         return any(link.name not in visited and iterative_dfs(link.name) for link in self.links)
 
-    def _validate_mimic_chains(self) -> list[str]:
-        """Validate that mimic joints don't form circular dependencies.
-
-        Returns:
-            List of error messages (empty if valid)
-
-        Example circular dependency:
-            Joint A mimics Joint B
-            Joint B mimics Joint C
-            Joint C mimics Joint A  <- Circular!
-        """
-        errors = []
-
-        # Use existing joint index for O(1) lookup
-        joint_map = self._joint_index
-
-        for joint in self.joints:
-            if joint.mimic is None:
-                continue
-
-            # Follow the mimic chain to detect cycles
-            visited = {joint.name}
-            current = joint.mimic.joint
-
-            # Traverse the mimic chain
-            while current:
-                # Check if mimic target exists
-                if current not in joint_map:
-                    errors.append(f"Joint '{joint.name}' mimics non-existent joint '{current}'")
-                    break
-
-                # Check for circular dependency
-                if current in visited:
-                    chain = " -> ".join(visited) + f" -> {current}"
-                    errors.append(f"Circular mimic dependency detected: {chain}")
-                    break
-
-                visited.add(current)
-
-                # Move to next joint in chain
-                next_joint = joint_map[current]
-                if next_joint.mimic is None:
-                    break
-                current = next_joint.mimic.joint
-
-        return errors
+        return any(link.name not in visited and iterative_dfs(link.name) for link in self.links)
 
     @property
     def total_mass(self) -> float:
