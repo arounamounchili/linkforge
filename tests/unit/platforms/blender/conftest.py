@@ -1,13 +1,13 @@
+import typing
+
+import pytest
+
 try:
     import bpy
 
     HAS_BPY = True
 except ImportError:
     HAS_BPY = False
-
-import typing
-
-import pytest
 
 if HAS_BPY:
     import linkforge.blender

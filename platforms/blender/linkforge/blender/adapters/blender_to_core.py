@@ -1307,9 +1307,10 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
 
         # Intelligent defaults: if one side is empty but the other isn't,
         # apply 'position' as a sensible default to ensure validity.
-        if state_ifs and not cmd_ifs:
+        # NOTE: sensor hardware types cannot have command interfaces.
+        if state_ifs and not cmd_ifs and props.ros2_control_type != "sensor":
             cmd_ifs.append("position")
-        elif cmd_ifs and not state_ifs:
+        elif cmd_ifs and not state_ifs and props.ros2_control_type != "sensor":
             state_ifs.append("position")
 
         # Extract joint-level parameters

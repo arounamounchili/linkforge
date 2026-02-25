@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import typing
 
 import bpy
-from bpy.props import StringProperty
+from bpy.props import IntProperty, StringProperty
 from bpy.types import Context, Operator
 
 from ..utils.decorators import safe_execute
@@ -180,7 +182,7 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
     bl_description = "Add a key-value parameter to the control system"
     bl_options = {"REGISTER", "UNDO"}
 
-    target: bpy.props.StringProperty(default="GLOBAL")  # type: ignore[valid-type]
+    target: StringProperty(default="GLOBAL")  # type: ignore
 
     @classmethod
     def poll(cls, context: Context) -> bool:
@@ -216,7 +218,7 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     target: StringProperty(default="GLOBAL")  # type: ignore
-    index: bpy.props.IntProperty(default=-1)  # type: ignore
+    index: IntProperty(default=-1)  # type: ignore
 
     @classmethod
     def poll(cls, context: Context) -> bool:
