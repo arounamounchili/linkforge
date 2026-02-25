@@ -84,10 +84,8 @@ class AsynchronousRobotBuilder:
         self.tasks.append(("resolve_mimics", None))
 
         # 6. Sensors
-        if hasattr(self.robot, "sensors"):
-            for sensor in self.robot.sensors:
-                # Assuming SceneBuilder can handle sensors
-                self.tasks.append(("create_sensor", sensor))
+        for sensor in self.robot.sensors:
+            self.tasks.append(("create_sensor", sensor))
 
         # 7. Finalization
         self.tasks.append(("finalize", None))
@@ -197,7 +195,7 @@ class AsynchronousRobotBuilder:
             # Sync collision visibility
             scene = self.context.scene
             if scene and hasattr(scene, "linkforge"):
-                # Force update collision visibility if the property exist
+                # Force update collision visibility toggle
                 scene.linkforge.show_collisions = scene.linkforge.show_collisions
 
     def finish(self) -> None:

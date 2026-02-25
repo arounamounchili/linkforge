@@ -41,7 +41,7 @@ from ..utils.xml_utils import serialize_xml
 
 
 class URDFGenerator(RobotGenerator[str]):
-    """Generate URDF XML from Robot model."""
+    """Unified Robot Description Format (URDF) generator."""
 
     def __init__(
         self,
@@ -155,10 +155,7 @@ class URDFGenerator(RobotGenerator[str]):
             self._add_link_to_xml(parent, link, robot)
 
     def add_joints_section(self, parent: ET.Element, robot: Robot) -> None:
-        """Add Joints section to parent element.
-
-        Template Method for joints section.
-        """
+        """Add Joints section to parent element."""
         if robot.joints:
             parent.append(ET.Comment(" Joints "))
         for joint in robot.joints:

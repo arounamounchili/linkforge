@@ -30,13 +30,19 @@ def schedule_collision_preview_update(obj: bpy.types.Object) -> None:
     This prevents excessive regeneration during slider interaction by
     waiting 0.3 seconds after the last change before updating.
     """
+    # pylint: disable=global-statement
+    global _preview_pending_object
+    _preview_pending_object = obj
+
     # Register new timer with debounce delay
-    bpy.app.timers.register(
-        execute_collision_preview_update, first_interval=COLLISION_PREVIEW_DEBOUNCE_DELAY
-    )
+    # Note: Multiple timers may be registered, but only the first one to find
+    # _preview_pending_object as not None will execute the update.
+    if not bpy.app.timers.is_registered(execute_collision_preview_update):
+        bpy.app.timers.register(
+            execute_collision_preview_update, first_interval=COLLISION_PREVIEW_DEBOUNCE_DELAY
+        )
 
 
-# NOTE: Timer callback cannot use @safe_execute because it doesn't receive (self, context)
 @typing.no_type_check
 def execute_collision_preview_update() -> None | float:
     """Execute the actual collision mesh update after debounce delay."""
@@ -107,11 +113,17 @@ def regenerate_collision_mesh(
 
     # Delete existing collision meshes for this link
     existing_collisions = [c for c in link_obj.children if "_collision" in c.name.lower()]
-    for col_obj in existing_collisions:
-        bpy.data.objects.remove(col_obj, do_unlink=True)
+    hide_viewport = True
+    if existing_collisions:
+        # Preserve visibility of the first existing collision
+        hide_viewport = existing_collisions[0].hide_viewport
+        for col_obj in existing_collisions:
+            bpy.data.objects.remove(col_obj, do_unlink=True)
 
     # Create new collision
-    create_collision_for_link(link_obj, collision_type, context)
+    new_col = create_collision_for_link(link_obj, collision_type, context)
+    if new_col:
+        new_col.hide_viewport = hide_viewport
 
 
 def create_collision_for_link(
@@ -399,6 +411,15 @@ def _create_mesh_collision_compound(
     bpy.ops.mesh.convex_hull()
     bpy.ops.object.mode_set(mode="OBJECT")
 
+    # Apply decimation based on collision quality
+    lf = typing.cast(typing.Any, link_obj).linkforge
+    quality_ratio = lf.collision_quality / 100.0
+    if quality_ratio < 1.0:
+        decimate_mod = merged_obj.modifiers.new(name="Decimate", type="DECIMATE")
+        decimate_mod.ratio = quality_ratio
+        decimate_mod.decimate_type = "COLLAPSE"
+        bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
+
     # Restore properties
     if merged_obj:
         merged_obj.name = f"{link_obj.name}_collision"
@@ -435,7 +456,7 @@ def _create_mesh_collision_compound(
     link_obj.select_set(True)
     vl = context.view_layer
     if vl:
-        vl.objects.active = merged_obj
+        vl.objects.active = link_obj
 
     return merged_obj
 
@@ -772,7 +793,7 @@ class LINKFORGE_OT_generate_collision(Operator):
             (
                 "MESH",
                 "Mesh (Simplified)",
-                "Generate simplified mesh from visual profile",
+                "Generate simplified mesh from visual geometry",
             ),
         ],
         default="AUTO",
