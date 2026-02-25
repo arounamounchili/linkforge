@@ -140,8 +140,8 @@ def test_resolve_package_path_edge_cases_extended(tmp_path, monkeypatch):
 
     # 3. ROS_PACKAGE_PATH with empty entry and self-reference
     # ROS_PACKAGE_PATH = "/path/to/ws::/path/to/pkg"
-    # The empty entry '::' should be skipped (line 43)
-    # The entry that IS the package root should be caught (lines 50-51)
+    # The empty entry '::' should be skipped
+    # The entry that IS the package root should be caught
 
     target_pkg = tmp_path / "target_pkg"
     target_pkg.mkdir()

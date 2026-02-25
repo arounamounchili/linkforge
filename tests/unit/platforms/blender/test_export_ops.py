@@ -62,7 +62,7 @@ def test_export_urdf_validation_failure(mocker, clean_scene):
 
 
 def test_export_urdf_validation_build_error(mocker, clean_scene):
-    """Test build error during the validation dry-run (lines 103-105)."""
+    """Test build error during the validation dry-run."""
     scene = bpy.context.scene
     props = scene.linkforge
     props.validate_before_export = True
@@ -87,7 +87,7 @@ def test_validate_robot_operator(mocker, clean_scene):
     mock_self = MagicMock()
     mock_self.report = MagicMock()
 
-    # Set up some errors and warnings to cover loops (lines 257-269)
+    # Set up some errors and warnings to cover loops
     err = MagicMock()
     err.title = "Error Title"
     err.message = "Error Message"
@@ -133,7 +133,7 @@ def test_validate_robot_operator(mocker, clean_scene):
     assert result == {"CANCELLED"}
     assert bpy.context.window_manager.linkforge_validation.error_count == 1
 
-    # Case 3: Valid with no warnings (lines 272-279)
+    # Case 3: Valid with no warnings
     val_res.is_valid = True
     val_res.has_warnings = False
     val_res.error_count = 0
@@ -202,13 +202,13 @@ def test_export_urdf_exception_handling_advanced(mocker, clean_scene):
 
     result = LINKFORGE_OT_export_urdf.execute(mock_self, bpy.context)
     assert result == {"CANCELLED"}
-    # Verify shortened message (line 137)
+    # Verify shortened message
     mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)
     assert "Configuration issues" in mock_self.report.call_args[0][1]
 
 
 def test_export_urdf_invoke_branches(clean_scene):
-    """Test invoke branches (lines 58-69)."""
+    """Test invoke branches."""
     mock_op = MagicMock(spec=LINKFORGE_OT_export_urdf)
 
     # Correct extension for both formats
@@ -218,7 +218,7 @@ def test_export_urdf_invoke_branches(clean_scene):
             LINKFORGE_OT_export_urdf.invoke(mock_op, bpy.context, MagicMock())
             assert mock_op.filename_ext == ext
 
-    # Branch: missing scene/props (line 59)
+    # Branch: missing scene/props
     # Using a fake context with no scene
     bad_context = MagicMock()
     bad_context.scene = None
@@ -227,7 +227,7 @@ def test_export_urdf_invoke_branches(clean_scene):
 
 
 def test_export_urdf_execute_missing_props(mocker):
-    """Test execute with missing scene properties (line 79)."""
+    """Test execute with missing scene properties."""
     mock_self = MagicMock()
     mock_self.report = MagicMock()
     bad_context = MagicMock()
@@ -238,7 +238,7 @@ def test_export_urdf_execute_missing_props(mocker):
 
 
 def test_validate_robot_not_initialized(mocker):
-    """Test validation when system not initialized (line 193-194)."""
+    """Test validation when system not initialized."""
     mock_self = MagicMock()
     mock_self.report = MagicMock()
     bad_context = MagicMock()

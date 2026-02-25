@@ -365,7 +365,7 @@ class TestURDFGenerator:
 
         hw_ifaces = joint_elem.findall("hardwareInterface")
         assert len(hw_ifaces) == 2
-        # Generator normalizes names? No, checks logic (lines 471)
+        # Generator normalizes names? No, checks logic
         # normalize_interface_name logic: PositionJointInterface -> position
         assert hw_ifaces[0].text == "position"
         assert hw_ifaces[1].text == "velocity"

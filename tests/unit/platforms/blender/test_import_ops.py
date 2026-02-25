@@ -83,7 +83,7 @@ def test_import_urdf_directory_handling_more(mocker, tmp_path):
     subdir = tmp_path / "lonely_robot"
     subdir.mkdir()
 
-    # Case 1: Exactly one valid file (line 68)
+    # Case 1: Exactly one valid file
     robot_file = subdir / "one.urdf"
     robot_file.write_text("<robot name='one'/>")
     mock_self.filepath = str(subdir)
@@ -119,11 +119,11 @@ def test_import_urdf_directory_candidates(mocker, tmp_path):
 
     result = LINKFORGE_OT_import_urdf.execute(mock_self, bpy.context)
     assert result == {"FINISHED"}
-    # Verify candidate reporting (line 67)
+    # Verify candidate reporting
     mock_self.report.assert_any_call({"INFO"}, mocker.ANY)
     assert "Auto-detected robot description" in mock_self.report.call_args_list[0][0][1]
 
-    # Case 2: No valid files (line 72-77)
+    # Case 2: No valid files
     robot_file.unlink()
     # Create a non-matching file
     (subdir / "other.txt").write_text("not a robot")
@@ -149,7 +149,7 @@ def test_import_registration():
     register()
     assert hasattr(bpy.types, "LINKFORGE_OT_import_urdf")
 
-    # Forced recovery branch (line 171)
+    # Forced recovery branch
     with patch("bpy.utils.register_class", side_effect=[ValueError, None]):
         register()
 

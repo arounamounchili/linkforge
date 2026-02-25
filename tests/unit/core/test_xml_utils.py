@@ -143,7 +143,7 @@ def test_parsing_missing_attribute():
 
 
 def test_validate_package_uri_complex():
-    """Test complex valid package URI (line 209)."""
+    """Test complex valid package URI."""
     from linkforge_core.validation.security import validate_package_uri
 
     uri = "package://my_robot/meshes/arm.stl"
@@ -151,7 +151,7 @@ def test_validate_package_uri_complex():
 
 
 def test_is_suspicious_location_match():
-    """Test suspicious location detection (line 134)."""
+    """Test suspicious location detection."""
     from linkforge_core.validation.security import is_suspicious_location
 
     # On most systems /etc exists and resolves to /private/etc or itself.

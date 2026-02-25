@@ -118,7 +118,7 @@ def test_ros2_control_logic_gaps(clean_scene):
 
     ctrl = blender_ros2_control_to_core(scene.linkforge)
     assert ctrl is not None
-    # Verify defaults are hit for command_interfaces (lines 1294-1295)
+    # Verify defaults are hit for command_interfaces
     # cmd_ifs should default to position because state_ifs is not empty
     assert ctrl.joints[0].command_interfaces == ["position"]
     assert ctrl.joints[0].state_interfaces == ["position"]
@@ -209,7 +209,7 @@ def test_material_default_fallback(clean_scene):
     props = mock.MagicMock()
     props.use_material = True
 
-    # No material slots -> hits line 440
+    # No material slots
     mat = get_object_material(o, props)
     assert mat.color.r == 0.8
 
@@ -220,7 +220,7 @@ def test_link_conversion_edge_cases(clean_scene):
     bpy.context.collection.objects.link(o)
     o.linkforge.is_robot_link = True
 
-    # 1. urdf_name on child (hits line 498)
+    # 1. urdf_name on child
     child_mesh = bpy.data.meshes.new("VMesh")
     import bmesh
 
@@ -237,7 +237,7 @@ def test_link_conversion_edge_cases(clean_scene):
     core = blender_link_to_core_with_origin(o)
     assert core.visuals[0].name == "custom_vis"
 
-    # 2. non-robot link (hits line 468)
+    # 2. non-robot link
     o_non = bpy.data.objects.new("NonRobot", None)
     o_non.linkforge.is_robot_link = False
     assert blender_link_to_core_with_origin(o_non) is None
@@ -260,7 +260,7 @@ def test_extract_mesh_triangles_none():
 
 
 def test_ros2_control_state_default(clean_scene):
-    """Hit line 1297 (state_ifs default)."""
+    """Hit state_ifs default."""
     scene = bpy.context.scene
     scene.linkforge.ros2_control_name = "test"
     item = scene.linkforge.ros2_control_joints.add()
