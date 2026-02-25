@@ -148,10 +148,15 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     """Detect if a Blender mesh object matches a standard primitive shape.
 
     Analyzes topology and dimensions to determine if the object can be
-    exported as a URDF primitive (BOX, CYLINDER, or SPHERE).
+    exported as a URDF primitive (BOX, CYLINDER, or SPHERE). This function
+    is critical for optimizing exports and ensuring compatibility with
+    physics simulators.
+
+    Args:
+        obj: The Blender mesh object to analyze.
 
     Returns:
-        "BOX", "CYLINDER", or "SPHERE" if detected, else None.
+        "BOX", "CYLINDER", or "SPHERE" if a match is detected, else None.
     """
     if obj is None or obj.type != "MESH":
         return None
@@ -1149,13 +1154,17 @@ def scene_to_robot(
 
 
 def blender_sensor_to_core(obj: Any) -> Sensor | None:
-    """Convert Blender Empty with SensorPropertyGroup to Core Sensor.
+    """Convert a Blender sensor Empty and its properties to a Core Sensor model.
+
+    This function extracts sensor-specific configuration (Lidar, Camera, IMU)
+    from Blender custom properties and maps them to the structured LinkForge
+    core models for export.
 
     Args:
-        obj: Blender Empty object with linkforge_sensor property group
+        obj: The Blender Empty object representing the sensor.
 
     Returns:
-        Core Sensor model or None
+        A Core Sensor model if successful, or None if the object is invalid.
 
     """
     if obj is None:

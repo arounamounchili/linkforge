@@ -14,7 +14,12 @@ from ..utils.decorators import safe_execute
 
 
 class LINKFORGE_OT_create_sensor(Operator):
-    """Create a new robot sensor at selected link's location"""
+    """Create a new robot sensor at selected link's location.
+
+    This operator initializes a sensor (Blender Empty with a sphere display)
+    at the world origin of the currently selected link object, setting up
+    parent-child relationships and default sensor properties.
+    """
 
     bl_idname = "linkforge.create_sensor"
     bl_label = "Create Sensor"
@@ -119,7 +124,11 @@ class LINKFORGE_OT_create_sensor(Operator):
 
 
 class LINKFORGE_OT_delete_sensor(Operator):
-    """Delete the selected sensor"""
+    """Delete the selected sensor Empty.
+
+    This operator removes the selected sensor object from the scene and
+    cleans up its references in the LinkForge hierarchy.
+    """
 
     bl_idname = "linkforge.delete_sensor"
     bl_label = "Remove Sensor"

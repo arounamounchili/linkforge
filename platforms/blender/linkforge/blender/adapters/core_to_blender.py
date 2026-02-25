@@ -113,15 +113,18 @@ def create_material_from_color(color: Color, name: str) -> bpy.types.Material | 
 
 
 def create_primitive_mesh(geometry: typing.Any, name: str) -> bpy.types.Object | None:
-    """Create Blender mesh object from primitive geometry.
+    """Create a Blender mesh object from primitive geometry.
+
+    This function generates native Blender mesh primitives (Cube, Cylinder,
+    Sphere) based on the Core geometry model and applies the correct
+    dimensions and URDF-specific metadata tags.
 
     Args:
-        geometry: Box, Cylinder, or Sphere
-        name: Object name
+        geometry: One of Box, Cylinder, or Sphere models.
+        name: Name to assign to the created Blender object.
 
     Returns:
-        Blender Object or None
-
+        The created Blender Object or None if creation failed.
     """
     # Deselect all first
     bpy.ops.object.select_all(action="DESELECT")
@@ -174,15 +177,17 @@ def create_primitive_mesh(geometry: typing.Any, name: str) -> bpy.types.Object |
 
 
 def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
-    """Import mesh file into Blender.
+    """Import an external mesh file into the Blender scene.
+
+    Supported formats include STL, OBJ, and GLB. This function utilizes
+    modern Blender WM operators for improved performance and stability.
 
     Args:
-        mesh_path: Path to mesh file (OBJ, STL, etc.)
-        name: Object name
+        mesh_path: Absolute path to the mesh file.
+        name: Name to assign to the imported object.
 
     Returns:
-        Blender Object or None
-
+        The imported Blender Object or None if import failed.
     """
     if not mesh_path.exists():
         logger.error(f"Mesh file not found: {mesh_path}")

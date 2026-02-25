@@ -577,7 +577,12 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
 
 
 class LINKFORGE_OT_add_empty_link(Operator):
-    """Add a new robot link frame (virtual link) at 3D cursor"""
+    """Add a new robot link frame (virtual link) at the 3D cursor.
+
+    This operator creates a new Blender Empty object configured as a
+    LinkForge Robot Link at the current cursor position, initializing
+    standard visual axes and link property defaults.
+    """
 
     bl_idname = "linkforge.add_empty_link"
     bl_label = "Add Empty Link"
@@ -638,7 +643,12 @@ class LINKFORGE_OT_add_empty_link(Operator):
 
 
 class LINKFORGE_OT_create_link_from_mesh(Operator):
-    """Create a robot link from selected mesh object"""
+    """Create a robot link from a selected mesh object.
+
+    This operator converts a standard Blender mesh into a LinkForge Robot
+    Link by creating a parent Empty frame and establishing the required
+    hierarchy and naming conventions for URDF export.
+    """
 
     bl_idname = "linkforge.create_link_from_mesh"
     bl_label = "Create Link from Mesh"
@@ -771,7 +781,12 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
 
 
 class LINKFORGE_OT_generate_collision(Operator):
-    """Generate collision geometry from visual geometry"""
+    """Generate collision geometry from visual geometry for the active link.
+
+    This operator analyzes the visual mesh(es) of the selected link and
+    automatically generates simplified collision geometry (primitive or mesh)
+    based on the specified collision type.
+    """
 
     bl_idname = "linkforge.generate_collision"
     bl_label = "Generate Collision"
@@ -886,7 +901,12 @@ class LINKFORGE_OT_generate_collision(Operator):
 
 
 class LINKFORGE_OT_generate_collision_all(Operator):
-    """Generate collision geometry for ALL links in the scene"""
+    """Generate collision geometry for all robot links in the scene.
+
+    This operator performs a batch collision generation for every object
+    marked as a LinkForge Robot Link, using each link's stored collision
+    type preferences.
+    """
 
     bl_idname = "linkforge.generate_collision_all"
     bl_label = "Generate All Collisions"
@@ -925,7 +945,11 @@ class LINKFORGE_OT_generate_collision_all(Operator):
 
 
 class LINKFORGE_OT_toggle_collision_visibility(Operator):
-    """Toggle collision geometry visibility in viewport"""
+    """Toggle collision geometry visibility in the 3D viewport.
+
+    This operator recursively toggles the visibility state of all collision
+    mesh children for the selected robot link(s).
+    """
 
     bl_idname = "linkforge.toggle_collision_visibility"
     bl_label = "Toggle Collision Visibility"
@@ -984,7 +1008,12 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
 
 
 class LINKFORGE_OT_calculate_inertia(Operator):
-    """Calculate inertia tensor from object geometry"""
+    """Calculate the inertia tensor from link geometry and mass.
+
+    This operator utilizes the Core inertia calculator to derive the
+    moment of inertia and center of mass for the selected link based on its
+    visual and collision volumes.
+    """
 
     bl_idname = "linkforge.calculate_inertia"
     bl_label = "Calculate Inertia"
@@ -1043,7 +1072,12 @@ class LINKFORGE_OT_calculate_inertia(Operator):
 
 
 class LINKFORGE_OT_calculate_inertia_all(Operator):
-    """Calculate inertia for ALL links in the scene"""
+    """Calculate the inertia tensor for all robot links in the scene.
+
+    This operator performs a batch inertia calculation for every LinkForge
+    Robot Link, updating their mass and inertial properties based on their
+    active geometry.
+    """
 
     bl_idname = "linkforge.calculate_inertia_all"
     bl_label = "Calculate All Inertias"

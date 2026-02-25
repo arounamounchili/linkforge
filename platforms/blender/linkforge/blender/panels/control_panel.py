@@ -12,7 +12,11 @@ from .robot_panel import build_tree_structure
 
 
 class LINKFORGE_UL_ros2_control_joints(UIList):
-    """UI List for ros2_control joints."""
+    """UI List representation for ROS 2 control joints.
+
+    This class defines how individual joints are displayed in the centralized
+    control interface, including status indicators for command interfaces.
+    """
 
     def draw_item(
         self,
@@ -63,7 +67,16 @@ class LINKFORGE_PT_control(Panel):
     def draw_joint_details(
         self, layout: bpy.types.UILayout, props: typing.Any, joint_item: typing.Any
     ) -> None:
-        """Draw the detailed interface settings for a single joint."""
+        """Draw the detailed interface settings for a single joint.
+
+        This helper method renders the command and state interface toggles,
+        as well as joint-specific ROS 2 parameters, in a localized box.
+
+        Args:
+            layout: The parent UILayout to draw into.
+            props: The global LinkForge scene property group.
+            joint_item: The specific joint property item being configured.
+        """
         inner = layout.box()
         inner.label(text=f"Config: {joint_item.name}", icon="SETTINGS")
 

@@ -20,7 +20,12 @@ logger = get_logger(__name__)
 
 
 class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
-    """Import robot from URDF or XACRO file"""
+    """Import robot from URDF or XACRO file.
+
+    This operator opens a file browser to select a robot description file,
+    auto-detects the format (URDF or XACRO), validates the model structure,
+    and initiates an asynchronous import process into the Blender scene.
+    """
 
     bl_idname = "linkforge.import_urdf"
     bl_label = "Import Robot"
@@ -36,11 +41,26 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
     def check(self, context: Context) -> bool:  # type: ignore
+        """Check if the operator can update its properties.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True to indicate the properties have changed and the UI needs update.
+        """
         return True
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the import."""
+        """Execute the robot import process.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         from ...linkforge_core.parsers import URDFParser
 
         # Parse URDF/XACRO file

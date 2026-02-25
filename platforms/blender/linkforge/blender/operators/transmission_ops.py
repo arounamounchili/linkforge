@@ -13,7 +13,12 @@ from ..utils.decorators import safe_execute
 
 
 class LINKFORGE_OT_create_transmission(Operator):
-    """Create a new robot transmission"""
+    """Create a new robot transmission.
+
+    This operator initializes a transmission (Blender Empty with a single
+    arrow display) at the world origin of the currently selected joint,
+    setting up parent-child relationships and default transmission properties.
+    """
 
     bl_idname = "linkforge.create_transmission"
     bl_label = "Create Transmission"
@@ -153,7 +158,11 @@ class LINKFORGE_OT_create_transmission(Operator):
 
 
 class LINKFORGE_OT_delete_transmission(Operator):
-    """Delete the selected transmission"""
+    """Delete the selected transmission Empty.
+
+    This operator removes the selected transmission object from the scene and
+    cleans up its references in the LinkForge hierarchy.
+    """
 
     bl_idname = "linkforge.delete_transmission"
     bl_label = "Remove Transmission"

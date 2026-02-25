@@ -14,7 +14,12 @@ from ..utils.decorators import safe_execute
 
 
 class LINKFORGE_OT_create_joint(Operator):
-    """Create a new robot joint at selected link's location"""
+    """Create a new robot joint at selected link's location.
+
+    This operator initializes a joint (Blender Empty with colored axes) at
+    the world location of the currently selected link object, setting up
+    default joint properties and hierarchy hints.
+    """
 
     bl_idname = "linkforge.create_joint"
     bl_label = "Create Joint"
@@ -129,7 +134,12 @@ class LINKFORGE_OT_create_joint(Operator):
 
 
 class LINKFORGE_OT_delete_joint(Operator):
-    """Delete the selected joint Empty"""
+    """Delete the selected joint Empty.
+
+    This operator removes the selected joint object from the scene and
+    cleans up any associated references in the ROS 2 control system
+    to maintain architectural consistency.
+    """
 
     bl_idname = "linkforge.delete_joint"
     bl_label = "Remove Joint"
@@ -184,7 +194,12 @@ class LINKFORGE_OT_delete_joint(Operator):
 
 
 class LINKFORGE_OT_auto_detect_parent_child(Operator):
-    """Auto-detect parent and child links based on hierarchy"""
+    """Auto-detect parent and child links based on hierarchy.
+
+    This operator uses proximity heuristics and world transform analysis
+    to automatically assign parent and child link references to the
+    currently selected joint.
+    """
 
     bl_idname = "linkforge.auto_detect_parent_child"
     bl_label = "Auto-Detect Links"
