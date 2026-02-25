@@ -10,7 +10,12 @@ from ..utils.decorators import safe_execute
 
 
 class LINKFORGE_OT_add_ros2_control_joint(Operator):
-    """Add a joint to the ros2_control system"""
+    """Add a joint to the ros2_control system.
+
+    This operator allows users to select a joint from the robot's kinematic
+    tree and include it in the ROS 2 control configuration, setting up
+    default command and state interfaces.
+    """
 
     bl_idname = "linkforge.add_ros2_control_joint"
     bl_label = "Add Joint"
@@ -71,7 +76,11 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
 
 
 class LINKFORGE_OT_remove_ros2_control_joint(Operator):
-    """Remove a joint from the ros2_control system"""
+    """Remove a joint from the ros2_control system.
+
+    This operator removes the currently selected joint from the ROS 2
+    control configuration list.
+    """
 
     bl_idname = "linkforge.remove_ros2_control_joint"
     bl_label = "Remove Joint"
@@ -122,7 +131,11 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
 
 
 class LINKFORGE_OT_move_ros2_control_joint(Operator):
-    """Move a joint up or down in the control interface list"""
+    """Move a joint up or down in the control interface list.
+
+    This is a UI helper operator to reorder how joints appear in the
+    LinkForge control panel.
+    """
 
     bl_idname = "linkforge.move_ros2_control_joint"
     bl_label = "Move Joint"
@@ -175,7 +188,11 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
 
 
 class LINKFORGE_OT_add_ros2_control_parameter(Operator):
-    """Add a parameter to ros2_control (global or joint)"""
+    """Add a parameter to ros2_control (global or joint).
+
+    This operator adds a new key-value pair to either the global hardware
+    parameters or the parameters of the currently selected joint.
+    """
 
     bl_idname = "linkforge.add_ros2_control_parameter"
     bl_label = "Add Parameter"
@@ -186,10 +203,26 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
+        """Check if the operator can be executed.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if LinkForge properties are initialized in the scene.
+        """
         return hasattr(context.scene, "linkforge")
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
+        """Execute the addition of a parameter.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state.
+        """
         scene = context.scene
         props = typing.cast(typing.Any, scene).linkforge
 
@@ -210,7 +243,11 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
 
 
 class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
-    """Remove a parameter from ros2_control"""
+    """Remove a parameter from ros2_control.
+
+    This operator deletes a key-value pair from either the global
+    hardware parameters or a specific joint's parameter list.
+    """
 
     bl_idname = "linkforge.remove_ros2_control_parameter"
     bl_label = "Remove Parameter"
@@ -222,12 +259,26 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operators can run."""
+        """Check if the operator can be executed.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if LinkForge properties are initialized.
+        """
         return hasattr(context.scene, "linkforge")
 
     @safe_execute
     def execute(self, context: Context) -> set[str]:
-        """Execute the operator."""
+        """Execute the removal of a parameter.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state.
+        """
         scene = context.scene
         props = typing.cast(typing.Any, scene).linkforge
 
