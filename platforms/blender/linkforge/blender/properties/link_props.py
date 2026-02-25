@@ -220,6 +220,7 @@ class LinkPropertyGroup(PropertyGroup):
             ("BOX", "Bounding Box", "Axis-aligned bounding box around the mesh"),
             ("SPHERE", "Bounding Sphere", "Spherical bounding volume around the mesh"),
             ("CYLINDER", "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
+            ("MESH", "Mesh (Simplified)", "Generate simplified mesh from visual geometry"),
         ],
         default="AUTO",
     )

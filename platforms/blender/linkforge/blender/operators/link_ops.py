@@ -415,7 +415,9 @@ def _create_mesh_collision_compound(
     lf = typing.cast(typing.Any, link_obj).linkforge
     quality_ratio = lf.collision_quality / 100.0
     if quality_ratio < 1.0:
-        decimate_mod = merged_obj.modifiers.new(name="Decimate", type="DECIMATE")
+        decimate_mod = typing.cast(
+            bpy.types.DecimateModifier, merged_obj.modifiers.new(name="Decimate", type="DECIMATE")
+        )
         decimate_mod.ratio = quality_ratio
         decimate_mod.decimate_type = "COLLAPSE"
         bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
@@ -789,7 +791,7 @@ class LINKFORGE_OT_generate_collision(Operator):
             ),
             ("BOX", "Bounding Box", "Use axis-aligned bounding box"),
             ("SPHERE", "Bounding Sphere", "Use bounding sphere"),
-            ("CYLINDER", "Bounding Cylinder", "Use bounding cylinder"),
+            ("CYLINDER", "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
             (
                 "MESH",
                 "Mesh (Simplified)",

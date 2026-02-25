@@ -180,7 +180,7 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
     bl_description = "Add a key-value parameter to the control system"
     bl_options = {"REGISTER", "UNDO"}
 
-    target: StringProperty(default="GLOBAL")  # "GLOBAL" or "JOINT" # type: ignore
+    target: bpy.props.StringProperty(default="GLOBAL")  # type: ignore[valid-type]
 
     @classmethod
     def poll(cls, context: Context) -> bool:

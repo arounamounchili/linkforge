@@ -176,7 +176,7 @@ def test_import_xacro_resolution_error(mocker, tmp_path):
     result = LINKFORGE_OT_import_urdf.execute(mock_self, bpy.context)
     assert result == {"CANCELLED"}
     mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)
-    assert "Solutions:" in mock_self.report.call_args[0][1]
+    assert "PackageNotFoundError" in mock_self.report.call_args[0][1]
 
 
 def test_import_path_conversion_error(mocker, tmp_path):

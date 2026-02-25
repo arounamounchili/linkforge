@@ -1305,6 +1305,13 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
         if item.state_effort:
             state_ifs.append("effort")
 
+        # Intelligent defaults: if one side is empty but the other isn't,
+        # apply 'position' as a sensible default to ensure validity.
+        if state_ifs and not cmd_ifs:
+            cmd_ifs.append("position")
+        elif cmd_ifs and not state_ifs:
+            state_ifs.append("position")
+
         # Extract joint-level parameters
         parameters = {p.name: p.value for p in item.parameters if p.name}
 

@@ -79,7 +79,7 @@ def test_export_urdf_validation_build_error(mocker, clean_scene):
     result = LINKFORGE_OT_export_urdf.execute(mock_self, bpy.context)
     assert result == {"CANCELLED"}
     mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)
-    assert "Failed to build" in mock_self.report.call_args[0][1]
+    assert "Validation failed" in mock_self.report.call_args[0][1]
 
 
 def test_validate_robot_operator(mocker, clean_scene):
@@ -204,7 +204,7 @@ def test_export_urdf_exception_handling_advanced(mocker, clean_scene):
     assert result == {"CANCELLED"}
     # Verify shortened message (line 137)
     mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)
-    assert "Configuration errors found" in mock_self.report.call_args[0][1]
+    assert "Configuration issues" in mock_self.report.call_args[0][1]
 
 
 def test_export_urdf_invoke_branches(clean_scene):

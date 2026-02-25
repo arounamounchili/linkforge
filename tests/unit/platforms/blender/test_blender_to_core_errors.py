@@ -116,11 +116,12 @@ def test_ros2_control_logic_gaps(clean_scene):
     item.state_velocity = False
     item.state_effort = False
 
-    core = blender_ros2_control_to_core(scene.linkforge)
-    assert core is not None
+    ctrl = blender_ros2_control_to_core(scene.linkforge)
+    assert ctrl is not None
     # Verify defaults are hit for command_interfaces (lines 1294-1295)
-    assert core.joints[0].command_interfaces == ["position"]
-    assert core.joints[0].state_interfaces == ["position"]
+    # cmd_ifs should default to position because state_ifs is not empty
+    assert ctrl.joints[0].command_interfaces == ["position"]
+    assert ctrl.joints[0].state_interfaces == ["position"]
 
 
 def test_inertia_mesh_fallback(clean_scene):
