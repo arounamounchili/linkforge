@@ -117,8 +117,9 @@ class URDFGenerator(RobotGenerator[str]):
         self.global_materials = self._collect_materials(robot)
         if self.global_materials:
             root.append(ET.Comment(" Materials "))
-        for material in self.global_materials.values():
-            self._add_material_element(root, material)
+        # Sort materials by name for deterministic output
+        for mat_name in sorted(self.global_materials.keys()):
+            self._add_material_element(root, self.global_materials[mat_name])
 
         # Add links
         self.add_links_section(root, robot)
@@ -151,14 +152,16 @@ class URDFGenerator(RobotGenerator[str]):
         """
         if robot.links:
             parent.append(ET.Comment(" Links "))
-        for link in robot.links:
+        # Sort links by name for deterministic output
+        for link in sorted(robot.links, key=lambda link_item: link_item.name):
             self._add_link_to_xml(parent, link, robot)
 
     def add_joints_section(self, parent: ET.Element, robot: Robot) -> None:
         """Add Joints section to parent element."""
         if robot.joints:
             parent.append(ET.Comment(" Joints "))
-        for joint in robot.joints:
+        # Sort joints by name for deterministic output
+        for joint in sorted(robot.joints, key=lambda joint_item: joint_item.name):
             self._add_joint_to_xml(parent, joint, robot)
 
     def _add_link_to_xml(self, parent: ET.Element, link: Link, robot: Robot) -> None:

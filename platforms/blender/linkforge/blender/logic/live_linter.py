@@ -14,6 +14,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from ...linkforge_core.logging_config import get_logger
+from ...linkforge_core.models.graph import KinematicGraph
 
 logger = get_logger(__name__)
 
@@ -38,49 +39,30 @@ def _perform_validation() -> None:
         from ..adapters.blender_to_core import _categorize_scene_objects
 
         # 1. Categorize objects (this is the expensive loop, but necessary)
-        _, _, _, _, joints_map, _ = _categorize_scene_objects(scene)
+        link_objects, _, _, _, joints_map, _ = _categorize_scene_objects(scene)
 
-        # 2. Check for Kinematic Cycles (Simple DFS)
-        visited = set()
-        stack = set()
-        cycles = []
+        # 2. Check for Kinematic Cycles (Using Formal Core Graph)
+        class MockLink:
+            def __init__(self, name):
+                self.name = name
 
-        # joints_map: child_link_name -> (parent_link_name, joint_obj)
-        # We want to traverse from parent to child to find cycles
-        parent_to_children = {}
-        for child, (parent, _) in joints_map.items():
-            if parent not in parent_to_children:
-                parent_to_children[parent] = []
-            parent_to_children[parent].append(child)
+        class MockJoint:
+            def __init__(self, name, parent, child):
+                self.name = name
+                self.parent = parent
+                self.child = child
 
-        def find_cycle(node: str) -> bool:
-            if node in stack:
-                return True
-            if node in visited:
-                return False
+        links = [MockLink(name) for name in link_objects]
+        joints = [MockJoint(obj.name, parent, child) for child, (parent, obj) in joints_map.items()]
 
-            visited.add(node)
-            stack.add(node)
-
-            for child in parent_to_children.get(node, []):
-                if find_cycle(child):
-                    cycles.append((node, child))
-                    return True
-
-            stack.remove(node)
-            return False
-
-        for parent in parent_to_children:
-            if parent not in visited:
-                find_cycle(parent)
+        graph = KinematicGraph(links, joints)
+        has_cycles = graph.has_cycle()
 
         # 3. Update Linter Results
-        error_count = len(cycles)
-
-        if error_count > 0:
-            scene.linkforge.linter_status = f"CRITICAL: {error_count} Kinematic Cycle(s) detected!"
-            scene.linkforge.linter_error_count = error_count
-            logger.warning(f"Live Linter found {error_count} cycles.")
+        if has_cycles:
+            scene.linkforge.linter_status = "CRITICAL: Kinematic Cycle(s) detected!"
+            scene.linkforge.linter_error_count = 1  # Simplified for live feedback
+            logger.warning("Live Linter found kinematic cycles.")
         else:
             scene.linkforge.linter_status = "Ready"
             scene.linkforge.linter_error_count = 0

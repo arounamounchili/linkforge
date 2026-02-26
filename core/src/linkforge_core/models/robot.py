@@ -12,6 +12,7 @@ from typing import Any
 
 from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
+from .graph import KinematicGraph
 from .joint import Joint
 from .link import Link
 from .ros2_control import Ros2Control
@@ -177,6 +178,14 @@ class Robot:
 
         self.ros2_controls.append(ros2_control)
 
+    @property
+    def graph(self) -> KinematicGraph:
+        """Get the formal kinematic graph representing the robot's structure.
+
+        This is built on demand to ensure it reflects the current state of links and joints.
+        """
+        return KinematicGraph(self._links, self._joints)
+
     def get_root_link(self) -> Link | None:
         """Get the root link of the kinematic tree.
 
@@ -185,72 +194,17 @@ class Robot:
         if not self.links:
             return None
 
-        child_links = {joint.child for joint in self.joints}
-        root_links = [link for link in self.links if link.name not in child_links]
-
-        if len(root_links) == 0:
+        roots = self.graph.get_root_links()
+        if not roots:
             raise ValueError("No root link found (circular dependency detected)")
-        if len(root_links) > 1:
-            raise ValueError(f"Multiple root links found: {[link.name for link in root_links]}")
+        if len(roots) > 1:
+            raise ValueError(f"Multiple root links found: {roots}")
 
-        return root_links[0]
+        return self.get_link(roots[0])
 
     def _has_cycle(self) -> bool:
-        """Check for cycles in the kinematic tree using iterative DFS.
-
-        Returns:
-            True if a cycle is detected
-        """
-        if not self.joints:
-            return False
-
-        # Build adjacency list
-        graph: dict[str, list[str]] = {}
-        for joint in self.joints:
-            if joint.parent not in graph:
-                graph[joint.parent] = []
-            graph[joint.parent].append(joint.child)
-
-        visited: set[str] = set()
-        rec_stack: set[str] = set()
-
-        def iterative_dfs(start: str) -> bool:
-            """Iterative DFS with explicit stack to detect cycles."""
-            # Stack contains: (node, children_iterator, is_backtracking)
-            stack: list[tuple[str, int, bool]] = [(start, 0, False)]
-
-            while stack:
-                node, child_idx, backtracking = stack.pop()
-
-                if backtracking:
-                    # Backtracking: remove from recursion stack
-                    rec_stack.discard(node)
-                    continue
-
-                # First visit to this node
-                if child_idx == 0:
-                    visited.add(node)
-                    rec_stack.add(node)
-                    # Push backtrack marker
-                    stack.append((node, 0, True))
-
-                # Process children
-                if node in graph:
-                    children = graph[node]
-                    if child_idx < len(children):
-                        neighbor = children[child_idx]
-                        # Push next sibling
-                        stack.append((node, child_idx + 1, False))
-                        # Push child if not visited
-                        if neighbor not in visited:
-                            stack.append((neighbor, 0, False))
-                        elif neighbor in rec_stack:
-                            # Back edge detected - cycle!
-                            return True
-
-            return False
-
-        return any(link.name not in visited and iterative_dfs(link.name) for link in self.links)
+        """Check for cycles in the kinematic tree."""
+        return self.graph.has_cycle()
 
     @property
     def total_mass(self) -> float:
