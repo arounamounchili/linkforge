@@ -1316,11 +1316,23 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
 
         # Intelligent defaults: if one side is empty but the other isn't,
         # apply 'position' as a sensible default to ensure validity.
+        # Intelligent defaults: if one side is empty but the other isn't,
+        # apply 'position' as a sensible default to ensure validity.
         # NOTE: sensor hardware types cannot have command interfaces.
-        if state_ifs and not cmd_ifs and props.ros2_control_type != "sensor":
-            cmd_ifs.append("position")
-        elif cmd_ifs and not state_ifs and props.ros2_control_type != "sensor":
-            state_ifs.append("position")
+        if props.ros2_control_type == "sensor":
+            if cmd_ifs:
+                logger.warning(
+                    f"ROS2 Control: Hardware type 'sensor' cannot have command interfaces. "
+                    f"Stripping {cmd_ifs} from joint '{item.name}'."
+                )
+                cmd_ifs = []
+            if not state_ifs:
+                state_ifs.append("position")
+        else:
+            if state_ifs and not cmd_ifs:
+                cmd_ifs.append("position")
+            elif cmd_ifs and not state_ifs:
+                state_ifs.append("position")
 
         # Extract joint-level parameters
         parameters = {p.name: p.value for p in item.parameters if p.name}

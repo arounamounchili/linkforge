@@ -272,3 +272,28 @@ def test_ros2_control_state_default(clean_scene):
 
     core = blender_ros2_control_to_core(scene.linkforge)
     assert core.joints[0].state_interfaces == ["position"]
+
+
+def test_ros2_control_sensor_strips_commands(clean_scene):
+    """Verify that sensor-type control systems strip command interfaces during export."""
+    scene = bpy.context.scene
+    scene.linkforge.ros2_control_name = "test_sensor"
+    scene.linkforge.ros2_control_type = "sensor"
+
+    item = scene.linkforge.ros2_control_joints.add()
+    item.name = "joint1"
+    # Select command interfaces, which should be stripped by the adapter
+    item.cmd_position = True
+    item.cmd_velocity = True
+    # Configure state interfaces explicitly
+    item.state_position = True
+    item.state_velocity = False
+    item.state_effort = False
+
+    core = blender_ros2_control_to_core(scene.linkforge)
+    assert core is not None
+    assert core.type == "sensor"
+    # Verify command interfaces were stripped
+    assert len(core.joints[0].command_interfaces) == 0
+    # Verify state interface was preserved
+    assert core.joints[0].state_interfaces == ["position"]
