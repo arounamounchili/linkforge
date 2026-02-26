@@ -216,25 +216,6 @@ class RobotPropertyGroup(PropertyGroup):
         default="",
     )
 
-    # Live Linter (Phase 2)
-    linter_active: BoolProperty(  # type: ignore
-        name="Live Linter",
-        description="Enable real-time kinematic and property validation",
-        default=True,
-    )
-
-    linter_status: StringProperty(  # type: ignore
-        name="Linter Status",
-        description="Current status of the live validation",
-        default="Ready",
-    )
-
-    linter_error_count: IntProperty(  # type: ignore
-        name="Linter Errors",
-        description="Number of issues detected by the live linter",
-        default=0,
-    )
-
 
 def update_collision_visibility(self: RobotPropertyGroup, context: bpy.types.Context) -> None:
     """Update visibility of all collision meshes in the scene."""

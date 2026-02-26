@@ -15,10 +15,9 @@ if TYPE_CHECKING:
 
 
 class KinematicGraph:
-    """Formal representation of a robot's link-joint connectivity.
+    """Robot connectivity model for cycle detection and topological sorting.
 
-    This class encapsulates graph algorithms like cycle detection and
-    topological sorting, keeping the Robot model focused on data.
+    Decouples graph logic from the main Robot model.
     """
 
     def __init__(self, links: Iterable[Link], joints: Iterable[Joint]) -> None:
@@ -43,14 +42,7 @@ class KinematicGraph:
                 self.inv_adj[joint.child].append((joint.parent, joint.name))
 
     def has_cycle(self) -> bool:
-        """Detect kinematic loops (cycles) in the robot structure.
-
-        Uses an iterative Depth-First Search (DFS) algorithm to ensure stability
-        with deep kinematic chains and avoid recursion limits.
-
-        Returns:
-            True if at least one cycle is detected, False otherwise.
-        """
+        """Detect kinematic loops using iterative DFS stability."""
         if not self.joints:
             return False
 
