@@ -798,6 +798,60 @@ class TestURDFGenerator:
         assert node is not None
         assert node.get("filename") == "pkg/tex.png"
 
+    def test_deterministic_sorting(self):
+        """Test that the generator produces deterministic output by sorting elements."""
+        robot = Robot(name="sorting_robot")
+
+        # Add links in non-alphabetical order
+        robot.add_link(Link(name="link_C"))
+        robot.add_link(Link(name="link_A"))
+        robot.add_link(Link(name="link_B"))
+
+        # Add joints in non-alphabetical order
+        robot.add_joint(
+            Joint(name="joint_Z", parent="link_A", child="link_B", type=JointType.FIXED)
+        )
+        robot.add_joint(
+            Joint(name="joint_X", parent="link_B", child="link_C", type=JointType.FIXED)
+        )
+
+        # Add materials in non-alphabetical order
+        mat_red = Material(name="red", color=Color(1, 0, 0, 1))
+        mat_blue = Material(name="blue", color=Color(0, 0, 1, 1))
+
+        robot.add_link(
+            Link(
+                name="mat_link_1",
+                visuals=[Visual(geometry=Box(Vector3(1, 1, 1)), material=mat_red)],
+            )
+        )
+        robot.add_link(
+            Link(
+                name="mat_link_2",
+                visuals=[Visual(geometry=Box(Vector3(1, 1, 1)), material=mat_blue)],
+            )
+        )
+
+        generator = URDFGenerator(pretty_print=False)
+        xml_str = generator.generate(robot, validate=False)
+        root = ET.fromstring(xml_str)
+
+        # Check links order
+        links = [link_elem.get("name") for link_elem in root.findall("link")]
+        # Note: links which are not roots will be sorted alphabetically after root
+        # base_link is usually first if it's the only root.
+        # In this test mat_link_1, mat_link_2 and link_A are roots.
+        assert links == ["link_A", "link_B", "link_C", "mat_link_1", "mat_link_2"]
+        # link_B and link_C should follow
+
+        # Check joints order
+        joint_names = [joint_elem.get("name") for joint_elem in root.findall("joint")]
+        assert joint_names == ["joint_X", "joint_Z"]
+
+        # Check materials order
+        material_names = [mat_elem.get("name") for mat_elem in root.findall("material")]
+        assert material_names == ["blue", "red"]
+
     def test_generate_camera_with_fov(self):
         """Test generating camera with explicit horizontal FOV."""
         sensor = Sensor(
