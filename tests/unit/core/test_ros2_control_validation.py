@@ -85,3 +85,36 @@ def test_validator_detects_non_existent_ros2_control_joint():
     assert not result.is_valid
     errors = [e for e in result.issues if e.severity.value == "error"]
     assert any("joint 'joint1' does not exist" in e.message.lower() for e in errors)
+
+
+def test_ros2_control_actuator_joint_limit_validation():
+    """Test that hardware type 'actuator' must have exactly one joint."""
+    j1 = Ros2ControlJoint(name="joint1", command_interfaces=["position"])
+    j2 = Ros2ControlJoint(name="joint2", command_interfaces=["position"])
+
+    # 0 joints - should fail
+    with pytest.raises(ValueError, match="must have exactly one joint"):
+        Ros2Control(
+            name="MyActuator",
+            type="actuator",
+            hardware_plugin="mock",
+            joints=[],
+        )
+
+    # 2 joints - should fail
+    with pytest.raises(ValueError, match="must have exactly one joint"):
+        Ros2Control(
+            name="MyActuator",
+            type="actuator",
+            hardware_plugin="mock",
+            joints=[j1, j2],
+        )
+
+    # 1 joint - should pass
+    rc = Ros2Control(
+        name="MyActuator",
+        type="actuator",
+        hardware_plugin="mock",
+        joints=[j1],
+    )
+    assert len(rc.joints) == 1

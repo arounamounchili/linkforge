@@ -59,3 +59,9 @@ class Ros2Control:
                     raise ValueError(
                         f"Hardware type 'sensor' cannot have command interfaces on joint '{joint.name}'"
                     )
+
+        # Hardware actuators are designed for exactly one joint
+        if self.type == "actuator" and len(self.joints) != 1:
+            raise ValueError(
+                f"Hardware type 'actuator' must have exactly one joint (found {len(self.joints)})"
+            )

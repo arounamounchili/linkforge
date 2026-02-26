@@ -297,3 +297,34 @@ def test_ros2_control_sensor_strips_commands(clean_scene):
     assert len(core.joints[0].command_interfaces) == 0
     # Verify state interface was preserved
     assert core.joints[0].state_interfaces == ["position"]
+
+
+def test_ros2_control_actuator_strips_extra_joints(clean_scene):
+    """Verify that 'actuator' type systems strip extra joints and log a warning."""
+    scene = bpy.context.scene
+    robot_props = scene.linkforge
+    robot_props.use_ros2_control = True
+    robot_props.ros2_control_type = "actuator"
+
+    # Add two joints to the control configuration
+    j1 = robot_props.ros2_control_joints.add()
+    j1.name = "joint1"
+    j1.cmd_position = True
+
+    j2 = robot_props.ros2_control_joints.add()
+    j2.name = "joint2"
+    j2.cmd_position = True
+
+    with mock.patch("linkforge.blender.adapters.blender_to_core.logger") as mock_logger:
+        core = blender_ros2_control_to_core(scene.linkforge)
+
+    # Should only have one joint
+    assert core is not None
+    assert core.type == "actuator"
+    assert len(core.joints) == 1
+    assert core.joints[0].name == "joint1"
+
+    # Should have logged a warning
+    assert mock_logger.warning.called
+    args, _ = mock_logger.warning.call_args
+    assert "limited to exactly one joint" in args[0]

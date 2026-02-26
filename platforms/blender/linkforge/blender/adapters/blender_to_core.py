@@ -1316,8 +1316,6 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
 
         # Intelligent defaults: if one side is empty but the other isn't,
         # apply 'position' as a sensible default to ensure validity.
-        # Intelligent defaults: if one side is empty but the other isn't,
-        # apply 'position' as a sensible default to ensure validity.
         # NOTE: sensor hardware types cannot have command interfaces.
         if props.ros2_control_type == "sensor":
             if cmd_ifs:
@@ -1346,6 +1344,15 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
                     parameters=parameters,
                 )
             )
+
+    # ROS 2 Specification: 'actuator' types must have exactly one joint.
+    # Handle gracefully by taking only the first if multiple are configured.
+    if props.ros2_control_type == "actuator" and len(joints) > 1:
+        logger.warning(
+            f"ROS2 Control: Hardware type 'actuator' is limited to exactly one joint by ROS 2 "
+            f"specification. Truncating {len(joints)} joints to only include '{joints[0].name}'."
+        )
+        joints = joints[:1]
 
     if not joints:
         return None
