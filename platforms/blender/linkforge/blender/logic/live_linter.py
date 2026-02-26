@@ -42,18 +42,13 @@ def _perform_validation() -> None:
         link_objects, _, _, _, joints_map, _ = _categorize_scene_objects(scene)
 
         # 2. Check for Kinematic Cycles (Using Formal Core Graph)
-        class MockLink:
-            def __init__(self, name):
-                self.name = name
+        from collections import namedtuple
 
-        class MockJoint:
-            def __init__(self, name, parent, child):
-                self.name = name
-                self.parent = parent
-                self.child = child
+        LinkMock = namedtuple("LinkMock", ["name"])
+        JointMock = namedtuple("JointMock", ["name", "parent", "child"])
 
-        links = [MockLink(name) for name in link_objects]
-        joints = [MockJoint(obj.name, parent, child) for child, (parent, obj) in joints_map.items()]
+        links = [LinkMock(name) for name in link_objects]
+        joints = [JointMock(obj.name, parent, child) for child, (parent, obj) in joints_map.items()]
 
         graph = KinematicGraph(links, joints)
         has_cycles = graph.has_cycle()

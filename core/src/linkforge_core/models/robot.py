@@ -24,7 +24,9 @@ from .transmission import Transmission
 class Robot:
     """Complete robot description containing links, joints, and metadata.
 
-    Performance Note: Uses O(1) hash map lookups for links and joints.
+    Performance Note:
+        Uses O(1) hash map lookups for links and joints. The kinematic structure
+        is externally managed via the `KinematicGraph` property.
     """
 
     name: str
@@ -183,6 +185,7 @@ class Robot:
         """Get the formal kinematic graph representing the robot's structure.
 
         This is built on demand to ensure it reflects the current state of links and joints.
+        Useful for validation and structural traversal.
         """
         return KinematicGraph(self._links, self._joints)
 

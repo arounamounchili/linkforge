@@ -22,7 +22,12 @@ class KinematicGraph:
     """
 
     def __init__(self, links: Iterable[Link], joints: Iterable[Joint]):
-        """Initialize the graph from links and joints."""
+        """Initialize the kinematic graph.
+
+        Args:
+            links: Collection of Link objects forming the nodes of the graph.
+            joints: Collection of Joint objects forming the edges of the graph.
+        """
         self.link_names = {link.name for link in links}
         self.joints = list(joints)
 
@@ -38,7 +43,14 @@ class KinematicGraph:
                 self.inv_adj[joint.child].append((joint.parent, joint.name))
 
     def has_cycle(self) -> bool:
-        """Detect cycles in the kinematic chain using iterative DFS."""
+        """Detect kinematic loops (cycles) in the robot structure.
+
+        Uses an iterative Depth-First Search (DFS) algorithm to ensure stability
+        with deep kinematic chains and avoid recursion limits.
+
+        Returns:
+            True if at least one cycle is detected, False otherwise.
+        """
         if not self.joints:
             return False
 
@@ -77,7 +89,14 @@ class KinematicGraph:
         return False
 
     def get_root_links(self) -> list[str]:
-        """Find links that are parents but never children."""
+        """Identify all potential root links in the robot structure.
+
+        A root link is defined as a link that has outgoing joint edges (is a parent)
+        but no incoming joint edges (is never a child).
+
+        Returns:
+            Alphabetically sorted list of root link names.
+        """
         if not self.link_names:
             return []
 
@@ -126,17 +145,8 @@ class KinematicGraph:
             raise ValueError("Cannot provide topological order for a graph with cycles")
 
         order: list[str] = []
-        visited: set[str] = set()
-
-        def visit(node: str):
-            if node in visited:
-                return
-            # Visit parents first if we were doing reverse, but for standard
-            # we can just use a classic post-order traversal and reverse it.
-            # OR we can just use the roots and go down.
-            pass
-
-        # Use Kahn's algorithm or simple DFS for topological sort
+        # Implement Kahn's algorithm for topological sorting.
+        # This provides a level-by-level ordering useful for recursive solvers.
         in_degree = {name: len(self.inv_adj.get(name, [])) for name in self.link_names}
         queue = [name for name, deg in in_degree.items() if deg == 0]
 
