@@ -94,6 +94,7 @@ temp/
 # Documentation builds
 docs/_build/
 docs/.buildinfo
+docs/.doctrees/
 site/
 
 # Bundled Dependencies (managed by build script)
