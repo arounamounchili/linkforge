@@ -10,6 +10,11 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+try:
+    import numpy as np
+except ImportError:
+    np = None  # type: ignore
+
 if TYPE_CHECKING:
     # Type stubs for Blender types when type checking
     bpy: Any
@@ -239,6 +244,7 @@ def get_object_geometry(
     decimation_ratio: float = 0.5,
     dry_run: bool = False,
     suffix: str = "",
+    depsgraph: Any | None = None,
 ) -> tuple[Geometry | None, Matrix]:
     """Extract geometry from Blender object.
 
@@ -286,6 +292,7 @@ def get_object_geometry(
                 decimation_ratio=decimation_ratio,
                 dry_run=dry_run,
                 suffix=suffix,
+                depsgraph=depsgraph,
             )
 
             if mesh_path:
@@ -325,6 +332,7 @@ def get_object_geometry(
 
 def extract_mesh_triangles(
     obj: Any,
+    depsgraph: Any | None = None,
 ) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]] | None:
     """Extract triangle mesh data from Blender object.
 
@@ -341,7 +349,8 @@ def extract_mesh_triangles(
         return None
 
     # Get evaluated mesh (with modifiers applied)
-    depsgraph = bpy.context.evaluated_depsgraph_get()
+    if depsgraph is None:
+        depsgraph = bpy.context.evaluated_depsgraph_get()
     eval_obj = obj.evaluated_get(depsgraph)
     mesh = eval_obj.to_mesh()
 
@@ -351,22 +360,43 @@ def extract_mesh_triangles(
     # Ensure mesh has triangulated faces
     mesh.calc_loop_triangles()
 
-    # Extract vertices in local space with scale applied
     # We use the scale matrix (not full world matrix) to get correct dimensions
     # but keep the object centered at its local origin for proper inertia calculation
     # The inertia tensor is always computed relative to the object's center of mass
     scale_matrix = obj.matrix_world.to_scale()
+
+    # NumPy Accelerated Extraction (Industry Standard for Performance)
+    if np is not None:
+        # Fast vertex extraction via foreach_get
+        num_verts = len(mesh.vertices)
+        verts = np.empty(num_verts * 3, dtype=np.float32)
+        mesh.vertices.foreach_get("co", verts)
+        vertices_array = verts.reshape((-1, 3))
+        # Apply scale
+        vertices_array[:, 0] *= scale_matrix.x
+        vertices_array[:, 1] *= scale_matrix.y
+        vertices_array[:, 2] *= scale_matrix.z
+        vertices_list = vertices_array.tolist()
+
+        # Fast triangle extraction via loop_triangles
+        num_tris = len(mesh.loop_triangles)
+        tris = np.empty(num_tris * 3, dtype=np.int32)
+        mesh.loop_triangles.foreach_get("vertices", tris)
+        triangles_list = tris.reshape((-1, 3)).tolist()
+
+        # Cleanup memory
+        eval_obj.to_mesh_clear()
+        return vertices_list, triangles_list
+
+    # Pure Python Fallback (if NumPy is missing)
     vertices = [
         (v.co.x * scale_matrix.x, v.co.y * scale_matrix.y, v.co.z * scale_matrix.z)
         for v in mesh.vertices
     ]
+    triangles = [tuple(t.vertices) for t in mesh.loop_triangles]
 
-    # Extract triangles
-    triangles = [(tri.vertices[0], tri.vertices[1], tri.vertices[2]) for tri in mesh.loop_triangles]
-
-    # Clean up temporary mesh
+    # Cleanup memory
     eval_obj.to_mesh_clear()
-
     return vertices, triangles
 
 
@@ -428,6 +458,7 @@ def blender_link_to_core_with_origin(
     meshes_dir: Path | None = None,
     robot_props: Any = None,
     dry_run: bool = False,
+    depsgraph: Any | None = None,
 ) -> Link | None:
     """Convert Blender link (Empty with children) to Core Link with multiple visual/collision support.
 
@@ -496,6 +527,7 @@ def blender_link_to_core_with_origin(
                 decimation_ratio=1.0,
                 dry_run=dry_run,
                 suffix=suffix,
+                depsgraph=depsgraph,
             )
 
             # Extract relative origin (Relative_Pose = Link_Inv @ Geometry_World_Pose)
@@ -544,6 +576,7 @@ def blender_link_to_core_with_origin(
                 decimation_ratio=quality_ratio,
                 dry_run=dry_run,
                 suffix=suffix,
+                depsgraph=depsgraph,
             )
 
             # EXTRACT RELATIVE ORIGIN
@@ -580,7 +613,7 @@ def blender_link_to_core_with_origin(
             if geom and geom_obj:
                 # Calculate inertia based on geometry type
                 if isinstance(geom, Mesh) and geom_obj.type == "MESH":
-                    mesh_data = extract_mesh_triangles(geom_obj)
+                    mesh_data = extract_mesh_triangles(geom_obj, depsgraph=depsgraph)
                     if mesh_data:
                         vertices, triangles = mesh_data
                         inertia_tensor = calculate_mesh_inertia_from_triangles(
@@ -1027,6 +1060,10 @@ def scene_to_robot(
     robot_name = robot_props.robot_name if robot_props.robot_name else "robot"
     strict_mode = robot_props.strict_mode  # Get strict mode from properties
     robot = Robot(name=robot_name)
+    # Get evaluated depsgraph once for the entire conversion
+    # This ensures all objects are evaluated at the same point in time
+    # and significantly improves performance for complex robots.
+    depsgraph = context.evaluated_depsgraph_get()
     conversion_errors: list[str] = []
 
     # Step 1: Categorize scene objects
@@ -1041,7 +1078,9 @@ def scene_to_robot(
     for _link_name, obj in link_objects.items():
         try:
             # Create link
-            link = blender_link_to_core_with_origin(obj, meshes_dir, robot_props, dry_run=dry_run)
+            link = blender_link_to_core_with_origin(
+                obj, meshes_dir, robot_props, dry_run=dry_run, depsgraph=depsgraph
+            )
             if link:
                 robot.add_link(link)
         except Exception as e:

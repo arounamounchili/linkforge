@@ -264,6 +264,7 @@ def export_link_mesh(
     decimation_ratio: float = 0.5,
     dry_run: bool = False,
     suffix: str = "",
+    depsgraph: Any | None = None,
 ) -> tuple[Path | None, Matrix]:
     """Export mesh for a robot link.
 
@@ -317,7 +318,8 @@ def export_link_mesh(
 
     # Calculate local geometric center of the EVALUATED mesh
     try:
-        depsgraph = bpy.context.evaluated_depsgraph_get()
+        if depsgraph is None:
+            depsgraph = bpy.context.evaluated_depsgraph_get()
         obj_eval = obj.evaluated_get(depsgraph)
 
         # Corners are in local space

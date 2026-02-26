@@ -9,12 +9,14 @@ This module contains all Blender-specific code:
 from __future__ import annotations
 
 from . import operators, panels, preferences, properties
+from .logic import live_linter
 from .visualization import inertia_gizmos, joint_gizmos
 
-# Registration order matters: properties first, then operators, then panels, then gizmos
+# Registration order matters: properties first, then linter/operators, then panels, then gizmos
 modules = [
     properties,
     preferences,
+    live_linter,
     operators,
     panels,
     joint_gizmos,
