@@ -365,7 +365,7 @@ def extract_mesh_triangles(
     # The inertia tensor is always computed relative to the object's center of mass
     scale_matrix = obj.matrix_world.to_scale()
 
-    # NumPy Accelerated Extraction (Industry Standard for Performance)
+    # NumPy-accelerated extraction for O(N) mesh processing (avoids Python loop overhead)
     if np is not None:
         # Fast vertex extraction via foreach_get
         num_verts = len(mesh.vertices)
