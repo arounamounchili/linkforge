@@ -21,7 +21,7 @@ class KinematicGraph:
     topological sorting, keeping the Robot model focused on data.
     """
 
-    def __init__(self, links: Iterable[Link], joints: Iterable[Joint]):
+    def __init__(self, links: Iterable[Link], joints: Iterable[Joint]) -> None:
         """Initialize the kinematic graph.
 
         Args:
@@ -97,6 +97,7 @@ class KinematicGraph:
         Returns:
             Alphabetically sorted list of root link names.
         """
+        # Ensure we are not dealing with None
         if not self.link_names:
             return []
 

@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 try:
-    import numpy as np
+    import numpy as np  # type: ignore[import-not-found]
 except ImportError:
-    np = None  # type: ignore
+    np = None
 
 if TYPE_CHECKING:
     # Type stubs for Blender types when type checking
