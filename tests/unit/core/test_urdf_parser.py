@@ -828,7 +828,7 @@ class TestURDFParser:
         xml = '<geometry><mesh filename="package://../traversal"/></geometry>'
         assert parse_geometry(ET.fromstring(xml), urdf_directory=tmp_path) is None
 
-        # 2. File URI validation - Parse geometry swallows ValueError and returns None
+        # 2. File URI validation - Parse geometry swallows RobotModelError and returns None
         xml2 = '<geometry><mesh filename="file:///etc/passwd"/></geometry>'
         assert parse_geometry(ET.fromstring(xml2), urdf_directory=tmp_path) is None
 
@@ -880,7 +880,7 @@ class TestURDFParser:
         invalid_urdf.write_text("<not_robot></not_robot>")
 
         parser = URDFParser()
-        # Parser now wraps ValueError into RobotParserError
+        # Parser now wraps standard errors into RobotParserError
         with pytest.raises(RobotParserError, match="Root element must be <robot>"):
             parser.parse(invalid_urdf)
 
@@ -984,8 +984,8 @@ class TestURDFParser:
 
         # Invalid mechanicalReduction (557-558)
         xml = '<joint name="j1"><mechanicalReduction>not_number</mechanicalReduction></joint>'
-        comp = _parse_transmission_component(ET.fromstring(xml), TransmissionJoint)
-        assert comp.mechanical_reduction == 1.0  # Default value
+        with pytest.raises(RobotModelError, match="Invalid mechanicalReduction"):
+            _parse_transmission_component(ET.fromstring(xml), TransmissionJoint)
 
         # 5. Gazebo Sensor missing reference (681)
         xml = '<gazebo><sensor name="s" type="camera"/></gazebo>'  # No reference attr

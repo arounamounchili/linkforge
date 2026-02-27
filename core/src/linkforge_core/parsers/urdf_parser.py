@@ -19,7 +19,6 @@ high-fidelity round-tripping and includes:
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
@@ -587,15 +586,13 @@ def _parse_transmission_component(
     reduction = 1.0
     reduction_elem = elem.find("mechanicalReduction")
     if reduction_elem is not None and reduction_elem.text:
-        with suppress(ValueError):
-            reduction = float(reduction_elem.text)
+        reduction = parse_float(reduction_elem.text, "mechanicalReduction", default=1.0)
 
     # Parse offset (optional)
     offset = 0.0
     offset_elem = elem.find("offset")
     if offset_elem is not None and offset_elem.text:
-        with suppress(ValueError):
-            offset = float(offset_elem.text)
+        offset = parse_float(offset_elem.text, "offset", default=0.0)
 
     try:
         return cls(
@@ -765,10 +762,12 @@ def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
     if pose_elem is not None and pose_elem.text:
         parts = pose_elem.text.strip().split()
         if len(parts) >= 6:
-            origin = Transform(
-                xyz=Vector3(float(parts[0]), float(parts[1]), float(parts[2])),
-                rpy=Vector3(float(parts[3]), float(parts[4]), float(parts[5])),
-            )
+            try:
+                xyz = parse_vector3(" ".join(parts[0:3]))
+                rpy = parse_vector3(" ".join(parts[3:6]))
+                origin = Transform(xyz=xyz, rpy=rpy)
+            except RobotModelError as e:
+                logger.warning(f"Invalid sensor pose in Gazebo element: {e}")
 
     # Parse sensor-specific info
     camera_info = None

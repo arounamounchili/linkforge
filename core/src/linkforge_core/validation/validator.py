@@ -173,7 +173,7 @@ class RobotValidator:
                     message="No root link found. A robot must have exactly one link that is not a child in any joint.",
                     suggestion="Ensure exactly one link has no parent joint (the base/root link)",
                 )
-        except (ValueError, RobotModelError) as e:
+        except RobotModelError as e:
             error_msg = str(e)
             if "Multiple root links" in error_msg:
                 # Extract root link names from error message

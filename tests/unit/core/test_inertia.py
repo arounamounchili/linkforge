@@ -34,7 +34,7 @@ def test_calculate_mesh_inertia_negative_diagonal(caplog):
 
 
 def test_calculate_mesh_inertia_zero_volume():
-    """Degenerate mesh (zero volume) raises ValueError."""
+    """Degenerate mesh (zero volume) raises RobotModelError."""
     vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
     triangles = [(0, 1, 2)]
 

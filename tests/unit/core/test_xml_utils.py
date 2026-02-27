@@ -129,7 +129,7 @@ def test_validate_xml_depth_exceeded():
 
 
 def test_parsing_missing_attribute():
-    """Test ValueError when attribute is missing and no default is provided."""
+    """Test RobotModelError when attribute is missing and no default is provided."""
     import pytest
 
     with pytest.raises(RobotModelError, match="Missing required attribute"):
