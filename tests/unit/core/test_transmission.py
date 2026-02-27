@@ -50,7 +50,7 @@ class TestTransmissionJoint:
 
     def test_zero_reduction(self):
         """Test that zero mechanical reduction raises error."""
-        with pytest.raises(ValueError, match="mechanical reduction cannot be zero"):
+        with pytest.raises(RobotModelError, match="mechanical reduction cannot be zero"):
             TransmissionJoint(name="joint1", mechanical_reduction=0.0)
 
 
@@ -90,7 +90,7 @@ class TestTransmissionActuator:
 
     def test_zero_reduction(self):
         """Test that zero mechanical reduction raises error."""
-        with pytest.raises(ValueError, match="mechanical reduction cannot be zero"):
+        with pytest.raises(RobotModelError, match="mechanical reduction cannot be zero"):
             TransmissionActuator(name="motor1", mechanical_reduction=0.0)
 
 

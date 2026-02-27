@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.utils.string_utils import is_valid_urdf_name, sanitize_name
 
 
@@ -32,7 +33,7 @@ def test_sanitize_name_special_characters():
 def test_sanitize_name_too_long():
     """Test ReDoS protection with long names."""
     long_name = "a" * 1001
-    with pytest.raises(ValueError, match="Name too long"):
+    with pytest.raises(RobotModelError, match="Name too long"):
         sanitize_name(long_name)
 
 

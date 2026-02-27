@@ -69,26 +69,26 @@ class TestCameraInfo:
 
     def test_invalid_fov(self):
         """Test invalid field of view."""
-        with pytest.raises(ValueError, match="Horizontal FOV must be between"):
+        with pytest.raises(RobotModelError, match="Horizontal FOV must be between"):
             CameraInfo(horizontal_fov=-0.5)
 
-        with pytest.raises(ValueError, match="Horizontal FOV must be between"):
+        with pytest.raises(RobotModelError, match="Horizontal FOV must be between"):
             CameraInfo(horizontal_fov=3.2)
 
     def test_invalid_dimensions(self):
         """Test invalid image dimensions."""
-        with pytest.raises(ValueError, match="Image dimensions must be positive"):
+        with pytest.raises(RobotModelError, match="Image dimensions must be positive"):
             CameraInfo(width=-10)
 
-        with pytest.raises(ValueError, match="Image dimensions must be positive"):
+        with pytest.raises(RobotModelError, match="Image dimensions must be positive"):
             CameraInfo(height=0)
 
     def test_invalid_clip(self):
         """Test invalid clip planes."""
-        with pytest.raises(ValueError, match="Near clip must be positive"):
+        with pytest.raises(RobotModelError, match="Near clip must be positive"):
             CameraInfo(near_clip=-0.1)
 
-        with pytest.raises(ValueError, match="Far clip must be greater than near clip"):
+        with pytest.raises(RobotModelError, match="Far clip must be greater than near clip"):
             CameraInfo(near_clip=10.0, far_clip=5.0)
 
 
@@ -120,20 +120,22 @@ class TestLidarInfo:
 
     def test_invalid_samples(self):
         """Test invalid sample count."""
-        with pytest.raises(ValueError, match="Horizontal samples must be positive"):
+        with pytest.raises(RobotModelError, match="Horizontal samples must be positive"):
             LidarInfo(horizontal_samples=0)
 
     def test_invalid_range(self):
         """Test invalid range parameters."""
-        with pytest.raises(ValueError, match="Range min must be positive"):
+        with pytest.raises(RobotModelError, match="Range min must be positive"):
             LidarInfo(range_min=-0.1)
 
-        with pytest.raises(ValueError, match="Range max must be greater than range min"):
+        with pytest.raises(RobotModelError, match="Range max must be greater than range min"):
             LidarInfo(range_min=10.0, range_max=5.0)
 
     def test_invalid_angles(self):
         """Test invalid angle range."""
-        with pytest.raises(ValueError, match="Horizontal min angle must be less than max angle"):
+        with pytest.raises(
+            RobotModelError, match="Horizontal min angle must be less than max angle"
+        ):
             LidarInfo(horizontal_min_angle=1.0, horizontal_max_angle=-1.0)
 
 
@@ -346,7 +348,7 @@ class TestSensor:
 
     def test_invalid_update_rate(self):
         """Test that invalid update rate raises error."""
-        with pytest.raises(ValueError, match="Update rate must be positive"):
+        with pytest.raises(RobotModelError, match="Update rate must be positive"):
             Sensor(
                 name="camera",
                 type=SensorType.CAMERA,

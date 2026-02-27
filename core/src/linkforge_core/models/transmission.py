@@ -55,7 +55,7 @@ class TransmissionJoint:
         if not self.hardware_interfaces:
             raise RobotModelError(f"Joint '{self.name}' must have at least one hardware interface")
         if self.mechanical_reduction == 0:
-            raise ValueError(f"Joint '{self.name}' mechanical reduction cannot be zero")
+            raise RobotModelError(f"Joint '{self.name}' mechanical reduction cannot be zero")
 
 
 @dataclass(frozen=True)
@@ -79,7 +79,7 @@ class TransmissionActuator:
                 f"Actuator '{self.name}' must have at least one hardware interface"
             )
         if self.mechanical_reduction == 0:
-            raise ValueError(f"Actuator '{self.name}' mechanical reduction cannot be zero")
+            raise RobotModelError(f"Actuator '{self.name}' mechanical reduction cannot be zero")
 
 
 @dataclass(frozen=True)

@@ -34,27 +34,27 @@ class TestColor:
 
     def test_out_of_range_red(self):
         """Test that out of range red raises error."""
-        with pytest.raises(ValueError, match="must be in range"):
+        with pytest.raises(RobotModelError, match="must be in range"):
             Color(r=1.5, g=0.5, b=0.5, a=1.0)
 
     def test_negative_red(self):
         """Test that negative red raises error."""
-        with pytest.raises(ValueError, match="must be in range"):
+        with pytest.raises(RobotModelError, match="must be in range"):
             Color(r=-0.1, g=0.5, b=0.5, a=1.0)
 
     def test_out_of_range_green(self):
         """Test that out of range green raises error."""
-        with pytest.raises(ValueError, match="must be in range"):
+        with pytest.raises(RobotModelError, match="must be in range"):
             Color(r=0.5, g=1.5, b=0.5, a=1.0)
 
     def test_out_of_range_blue(self):
         """Test that out of range blue raises error."""
-        with pytest.raises(ValueError, match="must be in range"):
+        with pytest.raises(RobotModelError, match="must be in range"):
             Color(r=0.5, g=0.5, b=1.5, a=1.0)
 
     def test_out_of_range_alpha(self):
         """Test that out of range alpha raises error."""
-        with pytest.raises(ValueError, match="must be in range"):
+        with pytest.raises(RobotModelError, match="must be in range"):
             Color(r=0.5, g=0.5, b=0.5, a=1.5)
 
     def test_boundary_values(self):
