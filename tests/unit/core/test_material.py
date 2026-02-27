@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Color, Material
 
 
@@ -97,12 +98,12 @@ class TestMaterial:
 
     def test_neither_color_nor_texture(self):
         """Test that having neither color nor texture is invalid."""
-        with pytest.raises(ValueError, match="must have either color or texture"):
+        with pytest.raises(RobotModelError, match="must have either color or texture"):
             Material(name="invalid")
 
     def test_name_only(self):
         """Test material with name only is invalid."""
-        with pytest.raises(ValueError, match="must have either color or texture"):
+        with pytest.raises(RobotModelError, match="must have either color or texture"):
             Material(name="invalid_material")
 
     def test_string_representation_with_color(self):

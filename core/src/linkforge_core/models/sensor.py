@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from ..exceptions import RobotModelError
 from .gazebo import GazeboPlugin
 from .geometry import Transform
 
@@ -190,21 +191,21 @@ class Sensor:
     def __post_init__(self) -> None:
         """Validate sensor configuration."""
         if not self.name:
-            raise ValueError("Sensor name cannot be empty")
+            raise RobotModelError("Sensor name cannot be empty")
         if not self.link_name:
-            raise ValueError("Sensor must be attached to a link")
+            raise RobotModelError("Sensor must be attached to a link")
         if self.update_rate <= 0:
             raise ValueError("Update rate must be positive")
 
         # Validate that appropriate info is set for sensor type
         if self.type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA):
             if self.camera_info is None:
-                raise ValueError(f"Camera sensor '{self.name}' requires camera_info")
+                raise RobotModelError(f"Camera sensor '{self.name}' requires camera_info")
         elif self.type == SensorType.LIDAR:
             if self.lidar_info is None:
-                raise ValueError(f"LIDAR sensor '{self.name}' requires lidar_info")
+                raise RobotModelError(f"LIDAR sensor '{self.name}' requires lidar_info")
         elif self.type == SensorType.IMU:
             if self.imu_info is None:
-                raise ValueError(f"IMU sensor '{self.name}' requires imu_info")
+                raise RobotModelError(f"IMU sensor '{self.name}' requires imu_info")
         elif self.type == SensorType.GPS and self.gps_info is None:
-            raise ValueError(f"GPS sensor '{self.name}' requires gps_info")
+            raise RobotModelError(f"GPS sensor '{self.name}' requires gps_info")

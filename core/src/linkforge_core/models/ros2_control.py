@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..exceptions import RobotModelError
+
 
 @dataclass
 class Ros2ControlJoint:
@@ -20,11 +22,11 @@ class Ros2ControlJoint:
     def __post_init__(self) -> None:
         """Validate joint configuration."""
         if not self.name:
-            raise ValueError("Joint name cannot be empty")
+            raise RobotModelError("Joint name cannot be empty")
         # For sensors, both can be empty initially, but at least one state interface is usually required.
         # However, we'll allow empty for now to support incremental building.
         if not self.command_interfaces and not self.state_interfaces:
-            raise ValueError(
+            raise RobotModelError(
                 f"Joint '{self.name}' must have at least one command OR state interface"
             )
 
@@ -46,22 +48,22 @@ class Ros2Control:
     def __post_init__(self) -> None:
         """Validate ros2_control configuration."""
         if not self.name:
-            raise ValueError("ros2_control name cannot be empty")
+            raise RobotModelError("ros2_control name cannot be empty")
         if self.type not in ("system", "actuator", "sensor"):
-            raise ValueError(f"Invalid ros2_control type: {self.type}")
+            raise RobotModelError(f"Invalid ros2_control type: {self.type}")
         if not self.hardware_plugin:
-            raise ValueError("Hardware plugin cannot be empty")
+            raise RobotModelError("Hardware plugin cannot be empty")
 
         # Hardware sensors are read-only and do not accept command interfaces
         if self.type == "sensor":
             for joint in self.joints:
                 if joint.command_interfaces:
-                    raise ValueError(
+                    raise RobotModelError(
                         f"Hardware type 'sensor' cannot have command interfaces on joint '{joint.name}'"
                     )
 
         # Hardware actuators are designed for exactly one joint
         if self.type == "actuator" and len(self.joints) != 1:
-            raise ValueError(
+            raise RobotModelError(
                 f"Hardware type 'actuator' must have exactly one joint (found {len(self.joints)})"
             )

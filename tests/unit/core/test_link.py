@@ -3,18 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core.models import (
-    Box,
-    Collision,
-    Color,
-    Inertial,
-    InertiaTensor,
-    Link,
-    Material,
-    Transform,
-    Vector3,
-    Visual,
-)
+from linkforge_core.exceptions import RobotModelError
+from linkforge_core.models.geometry import Box, Transform, Vector3
+from linkforge_core.models.link import Collision, Inertial, InertiaTensor, Link, Visual
+from linkforge_core.models.material import Color, Material
 
 
 class TestInertiaTensor:
@@ -36,7 +28,7 @@ class TestInertiaTensor:
 
     def test_negative_diagonal(self):
         """Test that negative diagonal elements raise error."""
-        with pytest.raises(ValueError, match="must be positive"):
+        with pytest.raises(RobotModelError, match="must be positive"):
             InertiaTensor(
                 ixx=-1.0,  # Invalid
                 ixy=0.0,
@@ -48,7 +40,7 @@ class TestInertiaTensor:
 
     def test_negative_iyy(self):
         """Test that negative iyy raises error."""
-        with pytest.raises(ValueError, match="must be positive"):
+        with pytest.raises(RobotModelError, match="must be positive"):
             InertiaTensor(
                 ixx=1.0,
                 ixy=0.0,
@@ -60,7 +52,7 @@ class TestInertiaTensor:
 
     def test_negative_izz(self):
         """Test that negative izz raises error."""
-        with pytest.raises(ValueError, match="must be positive"):
+        with pytest.raises(RobotModelError, match="must be positive"):
             InertiaTensor(
                 ixx=1.0,
                 ixy=0.0,
@@ -85,7 +77,7 @@ class TestInertiaTensor:
 
     def test_triangle_inequality_violation(self):
         """Test that triangle inequality violations raise error."""
-        with pytest.raises(ValueError, match="triangle inequality"):
+        with pytest.raises(RobotModelError, match="triangle inequality"):
             InertiaTensor(
                 ixx=1.0,
                 ixy=0.0,
@@ -135,7 +127,7 @@ class TestInertial:
     def test_negative_mass(self):
         """Test that negative mass raises error."""
         tensor = InertiaTensor.zero()
-        with pytest.raises(ValueError, match="Mass must be non-negative"):
+        with pytest.raises(RobotModelError, match="Mass must be non-negative"):
             Inertial(
                 mass=-1.0,  # Invalid
                 inertia=tensor,
@@ -225,12 +217,12 @@ class TestLink:
 
     def test_empty_name(self):
         """Test that empty name raises error."""
-        with pytest.raises(ValueError, match="name cannot be empty"):
+        with pytest.raises(RobotModelError, match="name cannot be empty"):
             Link(name="")
 
     def test_invalid_name_characters(self):
         """Test that invalid characters raise error."""
-        with pytest.raises(ValueError, match="invalid characters"):
+        with pytest.raises(RobotModelError, match="invalid characters"):
             Link(name="link with spaces!")
 
     def test_valid_name_with_underscore(self):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     CameraInfo,
     GazeboPlugin,
@@ -192,12 +193,12 @@ class TestGazeboPlugin:
 
     def test_empty_name(self):
         """Test that empty name raises error."""
-        with pytest.raises(ValueError, match="Plugin name cannot be empty"):
+        with pytest.raises(RobotModelError, match="Plugin name cannot be empty"):
             GazeboPlugin(name="", filename="libtest.so")
 
     def test_empty_filename(self):
         """Test that empty filename raises error."""
-        with pytest.raises(ValueError, match="Plugin filename cannot be empty"):
+        with pytest.raises(RobotModelError, match="Plugin filename cannot be empty"):
             GazeboPlugin(name="test", filename="")
 
 
@@ -289,7 +290,7 @@ class TestSensor:
 
     def test_camera_without_info(self):
         """Test that camera sensor requires camera_info."""
-        with pytest.raises(ValueError, match="Camera sensor .* requires camera_info"):
+        with pytest.raises(RobotModelError, match="Camera sensor .* requires camera_info"):
             Sensor(
                 name="camera",
                 type=SensorType.CAMERA,
@@ -298,7 +299,7 @@ class TestSensor:
 
     def test_lidar_without_info(self):
         """Test that LIDAR sensor requires lidar_info."""
-        with pytest.raises(ValueError, match="LIDAR sensor .* requires lidar_info"):
+        with pytest.raises(RobotModelError, match="LIDAR sensor .* requires lidar_info"):
             Sensor(
                 name="lidar",
                 type=SensorType.LIDAR,
@@ -307,7 +308,7 @@ class TestSensor:
 
     def test_imu_without_info(self):
         """Test that IMU sensor requires imu_info."""
-        with pytest.raises(ValueError, match="IMU sensor .* requires imu_info"):
+        with pytest.raises(RobotModelError, match="IMU sensor .* requires imu_info"):
             Sensor(
                 name="imu",
                 type=SensorType.IMU,
@@ -316,7 +317,7 @@ class TestSensor:
 
     def test_gps_without_info(self):
         """Test that GPS sensor requires gps_info."""
-        with pytest.raises(ValueError, match="GPS sensor .* requires gps_info"):
+        with pytest.raises(RobotModelError, match="GPS sensor .* requires gps_info"):
             Sensor(
                 name="gps",
                 type=SensorType.GPS,
@@ -325,7 +326,7 @@ class TestSensor:
 
     def test_empty_name(self):
         """Test that empty name raises error."""
-        with pytest.raises(ValueError, match="Sensor name cannot be empty"):
+        with pytest.raises(RobotModelError, match="Sensor name cannot be empty"):
             Sensor(
                 name="",
                 type=SensorType.CAMERA,
@@ -335,7 +336,7 @@ class TestSensor:
 
     def test_empty_link_name(self):
         """Test that empty link name raises error."""
-        with pytest.raises(ValueError, match="Sensor must be attached to a link"):
+        with pytest.raises(RobotModelError, match="Sensor must be attached to a link"):
             Sensor(
                 name="camera",
                 type=SensorType.CAMERA,

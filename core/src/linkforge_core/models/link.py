@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..exceptions import RobotModelError
 from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Geometry, Transform
 from .material import Material
@@ -30,7 +31,7 @@ class InertiaTensor:
         """Validate inertia tensor values."""
         # All diagonal elements must be positive
         if self.ixx <= 0 or self.iyy <= 0 or self.izz <= 0:
-            raise ValueError("Diagonal inertia elements must be positive")
+            raise RobotModelError("Diagonal inertia elements must be positive")
 
         # Triangle inequality for principal moments
         # https://en.wikipedia.org/wiki/Moment_of_inertia#Principal_axes
@@ -41,7 +42,7 @@ class InertiaTensor:
             and self.iyy + self.izz >= self.ixx - epsilon
             and self.izz + self.ixx >= self.iyy - epsilon
         ):
-            raise ValueError("Inertia tensor violates triangle inequality")
+            raise RobotModelError("Inertia tensor violates triangle inequality")
 
     @classmethod
     def zero(cls) -> InertiaTensor:
@@ -61,7 +62,7 @@ class Inertial:
     def __post_init__(self) -> None:
         """Validate mass is non-negative."""
         if self.mass < 0:
-            raise ValueError(f"Mass must be non-negative, got {self.mass}")
+            raise RobotModelError(f"Mass must be non-negative, got {self.mass}")
 
 
 @dataclass(frozen=True)
@@ -99,11 +100,11 @@ class Link:
     def __post_init__(self) -> None:
         """Validate link."""
         if not self.name:
-            raise ValueError("Link name cannot be empty")
+            raise RobotModelError("Link name cannot be empty")
 
         # URDF naming convention: lowercase with underscores
         if not is_valid_urdf_name(self.name):
-            raise ValueError(
+            raise RobotModelError(
                 f"Link name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."
             )

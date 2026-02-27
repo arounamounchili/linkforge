@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.validation.security import find_sandbox_root, validate_mesh_path
 
 
@@ -32,7 +33,7 @@ class TestValidateMeshPath:
 
         mesh_path = Path("../meshes/test.stl")
 
-        with pytest.raises(ValueError, match="attempts to escape the sandbox root"):
+        with pytest.raises(RobotModelError, match="attempts to escape the sandbox root"):
             validate_mesh_path(mesh_path, urdf_dir)
 
     def test_allow_parent_traversal_with_sandbox_root(self, tmp_path):
@@ -62,7 +63,7 @@ class TestValidateMeshPath:
         # Attempt to escape 'package' folder into 'root'
         mesh_path = Path("../../outside.stl")
 
-        with pytest.raises(ValueError, match="attempts to escape the sandbox root"):
+        with pytest.raises(RobotModelError, match="attempts to escape the sandbox root"):
             validate_mesh_path(mesh_path, urdf_dir, sandbox_root=package)
 
     def test_block_system_paths(self, tmp_path):
@@ -74,7 +75,7 @@ class TestValidateMeshPath:
         # On mac/linux, 10 levels should be enough
         mesh_path = Path("../../../../../../../../../etc/passwd")
 
-        with pytest.raises(ValueError, match="restricted system location"):
+        with pytest.raises(RobotModelError, match="restricted system location"):
             validate_mesh_path(mesh_path, urdf_dir)
 
     def test_absolute_path_default_blocked(self, tmp_path):
@@ -82,7 +83,7 @@ class TestValidateMeshPath:
         urdf_dir = tmp_path
         mesh_path = Path("/tmp/test.stl")
 
-        with pytest.raises(ValueError, match="Absolute path.*not allowed"):
+        with pytest.raises(RobotModelError, match="Absolute path.*not allowed"):
             validate_mesh_path(mesh_path, urdf_dir)
 
     def test_absolute_path_allowed(self, tmp_path):

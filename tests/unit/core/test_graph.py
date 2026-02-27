@@ -4,6 +4,7 @@ Verifies graph theory logic for robot structure validation and traversal.
 """
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Joint, JointType, Link
 from linkforge_core.models.graph import KinematicGraph
 
@@ -34,8 +35,32 @@ def test_graph_cycle_detection():
     graph = KinematicGraph(links, joints)
 
     assert graph.has_cycle()
-    with pytest.raises(ValueError, match="cycle"):
+    with pytest.raises(RobotModelError, match="cycle"):
         graph.get_topological_order()
+
+
+def test_graph_invalid_joint_links():
+    """Verify validation of joint links during initialization."""
+    links = [Link(name="A"), Link(name="B")]
+
+    # Joint referencing unknown parent
+    with pytest.raises(RobotModelError, match="references unknown parent"):
+        KinematicGraph(links, [Joint(name="j1", parent="X", child="A", type=JointType.FIXED)])
+
+    # Joint referencing unknown child
+    with pytest.raises(RobotModelError, match="references unknown child"):
+        KinematicGraph(links, [Joint(name="j1", parent="A", child="X", type=JointType.FIXED)])
+
+
+def test_graph_isolated_link_root():
+    """Verify that isolated links are correctly handled as roots."""
+    links = [Link(name="A"), Link(name="B")]
+    joints = [Joint(name="j1", parent="A", child="B", type=JointType.FIXED)]
+    graph = KinematicGraph(links + [Link(name="C")], joints)
+
+    # C is a root because it has no incoming edges (it has no edges at all)
+    assert sorted(graph.get_root_links()) == ["A", "C"]
+    assert len(graph.find_islands()) == 2
 
 
 def test_graph_islands():

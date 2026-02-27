@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..exceptions import RobotModelError
+
 
 @dataclass(frozen=True)
 class Color:
@@ -40,4 +42,4 @@ class Material:
     def __post_init__(self) -> None:
         """Validate material has at least color or texture."""
         if self.color is None and self.texture is None:
-            raise ValueError("Material must have either color or texture")
+            raise RobotModelError("Material must have either color or texture")

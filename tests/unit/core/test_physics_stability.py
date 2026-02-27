@@ -1,4 +1,5 @@
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import InertiaTensor
 
 
@@ -19,7 +20,7 @@ def test_inertia_numerical_stability_epsilon():
 def test_inertia_validation_rejection_threshold():
     """Verify that inertia tensor correctly rejects massive violations beyond the permitted epsilon."""
     # Case: ixx + iyy = izz - 1e-8 (should FAIL)
-    with pytest.raises(ValueError, match="Inertia tensor violates triangle inequality"):
+    with pytest.raises(RobotModelError, match="Inertia tensor violates triangle inequality"):
         InertiaTensor(
             ixx=1.0,
             ixy=0.0,

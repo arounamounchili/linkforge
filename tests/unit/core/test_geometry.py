@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Box, Cylinder, Mesh, Sphere, Transform, Vector3
 
 
@@ -84,12 +85,12 @@ class TestBox:
 
     def test_negative_dimension_validation(self):
         """Test that negative dimensions are rejected."""
-        with pytest.raises(ValueError, match="Box dimensions must be positive"):
+        with pytest.raises(RobotModelError, match="Box dimensions must be positive"):
             Box(size=Vector3(-1.0, 2.0, 3.0))
 
     def test_zero_dimension_validation(self):
         """Test that zero dimensions are rejected."""
-        with pytest.raises(ValueError, match="Box dimensions must be positive"):
+        with pytest.raises(RobotModelError, match="Box dimensions must be positive"):
             Box(size=Vector3(1.0, 0.0, 3.0))
 
 
@@ -117,12 +118,12 @@ class TestCylinder:
 
     def test_negative_radius_validation(self):
         """Test that negative radius is rejected."""
-        with pytest.raises(ValueError, match="Cylinder radius must be positive"):
+        with pytest.raises(RobotModelError, match="Cylinder radius must be positive"):
             Cylinder(radius=-1.0, length=2.0)
 
     def test_zero_length_validation(self):
         """Test that zero length is rejected."""
-        with pytest.raises(ValueError, match="Cylinder length must be positive"):
+        with pytest.raises(RobotModelError, match="Cylinder length must be positive"):
             Cylinder(radius=1.0, length=0.0)
 
 
@@ -149,12 +150,12 @@ class TestSphere:
 
     def test_negative_radius_validation(self):
         """Test that negative radius is rejected."""
-        with pytest.raises(ValueError, match="Sphere radius must be positive"):
+        with pytest.raises(RobotModelError, match="Sphere radius must be positive"):
             Sphere(radius=-1.0)
 
     def test_zero_radius_validation(self):
         """Test that zero radius is rejected."""
-        with pytest.raises(ValueError, match="Sphere radius must be positive"):
+        with pytest.raises(RobotModelError, match="Sphere radius must be positive"):
             Sphere(radius=0.0)
 
 
@@ -181,10 +182,10 @@ class TestMesh:
 
     def test_negative_scale_validation(self):
         """Test that negative scale is rejected."""
-        with pytest.raises(ValueError, match="Mesh scale must be positive"):
+        with pytest.raises(RobotModelError, match="Mesh scale must be positive"):
             Mesh(filepath=Path("model.stl"), scale=Vector3(-1.0, 1.0, 1.0))
 
     def test_zero_scale_validation(self):
         """Test that zero scale is rejected."""
-        with pytest.raises(ValueError, match="Mesh scale must be positive"):
+        with pytest.raises(RobotModelError, match="Mesh scale must be positive"):
             Mesh(filepath=Path("model.stl"), scale=Vector3(1.0, 0.0, 1.0))
