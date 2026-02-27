@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
+from ..exceptions import RobotModelError
 from ..logging_config import get_logger
 from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
 from ..models.link import InertiaTensor
@@ -200,10 +201,10 @@ def calculate_mesh_inertia_from_triangles(
         return InertiaTensor.zero()
 
     if not vertices:
-        raise ValueError("Cannot calculate inertia for empty mesh (no vertices)")
+        raise RobotModelError("Cannot calculate inertia for empty mesh (no vertices)")
 
     if not triangles:
-        raise ValueError("Cannot calculate inertia for empty mesh (no triangles)")
+        raise RobotModelError("Cannot calculate inertia for empty mesh (no triangles)")
 
     # Accumulators for volume-weighted properties
     total_volume = 0.0
@@ -222,11 +223,11 @@ def calculate_mesh_inertia_from_triangles(
     for tri in triangles:
         # Validate triangle indices
         if len(tri) != 3:
-            raise ValueError(f"Triangle must have exactly 3 indices, got {len(tri)}")
+            raise RobotModelError(f"Triangle must have exactly 3 indices, got {len(tri)}")
 
         for idx in tri:
             if not (0 <= idx < len(vertices)):
-                raise ValueError(
+                raise RobotModelError(
                     f"Triangle index {idx} out of bounds (valid range: 0-{len(vertices) - 1})"
                 )
 
@@ -332,15 +333,15 @@ def calculate_mesh_inertia_from_triangles(
         # I_zz = ∫∫∫ (x² + y²) dV
         i_zz += x2 + y2
         # I_xy = -∫∫∫ xy dV
-        i_xy -= xy
-        # I_xz = -∫∫∫ xz dV
         i_xz -= xz
         # I_yz = -∫∫∫ yz dV
         i_yz -= yz
+        # I_xy = -∫∫∫ xy dV
+        i_xy -= xy
 
     # Check for degenerate mesh (all triangles are coplanar or have zero area)
     if abs(total_volume) < 1e-10:
-        raise ValueError(
+        raise RobotModelError(
             "Cannot calculate inertia: mesh has zero volume. "
             "All triangles may be degenerate (zero area) or coplanar. "
             "Check mesh geometry and ensure it forms a closed 3D volume."
@@ -430,7 +431,7 @@ def calculate_inertia(geometry: Geometry, mass: float) -> InertiaTensor:
         Inertia tensor about the center of mass
 
     Raises:
-        ValueError: If geometry type is not supported
+        RobotModelError: If geometry type is not supported
 
     """
     if mass <= 0:
@@ -445,4 +446,4 @@ def calculate_inertia(geometry: Geometry, mass: float) -> InertiaTensor:
     elif isinstance(geometry, Mesh):
         return calculate_mesh_inertia(geometry, mass)
     else:
-        raise ValueError(f"Unsupported geometry type: {type(geometry)}")
+        raise RobotModelError(f"Unsupported geometry type: {type(geometry)}")

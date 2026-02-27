@@ -52,11 +52,11 @@ def validate_mesh_path(
 
         >>> # Unsafe path - tries to escape
         >>> validate_mesh_path(Path("../../../etc/passwd"), urdf_dir)
-        ValueError: Mesh path '../../../etc/passwd' attempts to escape...
+        RobotModelError: Mesh path '../../../etc/passwd' attempts to escape...
 
         >>> # Absolute path (rejected by default)
         >>> validate_mesh_path(Path("/etc/passwd"), urdf_dir)
-        ValueError: Absolute path '/etc/passwd' not allowed...
+        RobotModelError: Absolute path '/etc/passwd' not allowed...
 
         >>> # Absolute path (allowed explicitly)
         >>> validate_mesh_path(Path("/shared/meshes/arm.stl"), urdf_dir, allow_absolute=True)
@@ -177,15 +177,15 @@ def validate_package_uri(uri: str) -> str:
         >>> validate_package_uri("package://pr2_description/meshes/base_link.dae")
         'package://pr2_description/meshes/base_link.dae'
 
-        >>> # Invalid URIs (will raise ValueError)
+        >>> # Invalid URIs (will raise RobotModelError)
         >>> validate_package_uri("file:///etc/passwd")  # Wrong scheme
-        ValueError: Invalid package URI: file:///etc/passwd (must start with 'package://')
+        RobotModelError: Invalid package URI: file:///etc/passwd (must start with 'package://')
 
         >>> validate_package_uri("package://")  # Missing package name
-        ValueError: Invalid package URI: package:// (missing package name)
+        RobotModelError: Invalid package URI: package:// (missing package name)
 
         >>> validate_package_uri("package://robot/../../../etc/passwd")  # Path traversal
-        ValueError: Invalid package URI: package://robot/../../../etc/passwd (contains suspicious path components like '..' or '.')
+        RobotModelError: Invalid package URI: package://robot/../../../etc/passwd (contains suspicious path components like '..' or '.')
 
     Note:
         This function only validates the URI format. Actual package resolution

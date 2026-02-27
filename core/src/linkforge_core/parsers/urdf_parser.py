@@ -164,7 +164,7 @@ def parse_geometry(
 
                 try:
                     validate_package_uri(filename)
-                except ValueError as e:
+                except RobotModelError as e:
                     # Re-raise with more context
                     raise RobotModelError(f"Package URI validation failed: {e}") from e
 
@@ -184,7 +184,7 @@ def parse_geometry(
                         mesh_path = validate_mesh_path(
                             mesh_path, urdf_directory, sandbox_root=sandbox_root
                         )
-                    except ValueError as e:
+                    except RobotModelError as e:
                         # Re-raise with more context
                         raise RobotModelError(f"Mesh path validation failed: {e}") from e
             else:
@@ -196,7 +196,7 @@ def parse_geometry(
                         mesh_path = validate_mesh_path(
                             mesh_path, urdf_directory, sandbox_root=sandbox_root
                         )
-                    except ValueError as e:
+                    except RobotModelError as e:
                         # Re-raise with more context
                         raise RobotModelError(f"Mesh path validation failed: {e}") from e
 
@@ -233,11 +233,11 @@ def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) 
         try:
             # Validate RGBA array bounds
             if len(parts) < 3:
-                raise ValueError(
+                raise RobotModelError(
                     f"Invalid RGBA color format: expected at least 3 components (R G B), got {len(parts)}"
                 )
             if len(parts) > 4:
-                raise ValueError(
+                raise RobotModelError(
                     f"Invalid RGBA color format: expected at most 4 components (R G B A), got {len(parts)}"
                 )
 
@@ -248,7 +248,7 @@ def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) 
                 b=float(parts[2]),
                 a=float(parts[3]) if len(parts) > 3 else 1.0,
             )
-        except (ValueError, TypeError, IndexError) as e:
+        except (RobotModelError, TypeError, IndexError) as e:
             logger.warning(f"Invalid material color ignored: {e}")
             return None
 
@@ -1113,7 +1113,7 @@ def _detect_xacro_file(root: ET.Element, filepath: Path | None = None) -> None:
         filepath: Path to file being parsed
 
     Raises:
-        ValueError: If XACRO features are detected in this parser
+        RobotModelError: If XACRO features are detected in this parser
             (XACRO files should use the "Import Robot" operator instead)
 
     """
@@ -1429,7 +1429,7 @@ class URDFParser(RobotParser):
                     else:
                         counter += 1
             else:
-                # Handle other ValueErrors (missing parent/child links)
+                # Handle other RobotModelErrors (missing parent/child links)
                 logger.warning(f"Skipping invalid joint '{joint_name}': {e}")
 
     def _parse_robot(
@@ -1456,7 +1456,7 @@ class URDFParser(RobotParser):
         validate_xml_depth(root, 0)
 
         if root.tag != "robot":
-            raise ValueError("Root element must be <robot>")
+            raise RobotModelError("Root element must be <robot>")
 
         robot = Robot(name=root.get("name", default_name))
         materials = self._parse_global_materials(root)
