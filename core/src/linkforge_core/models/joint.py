@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from ..exceptions import RobotModelError
 from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Transform, Vector3
 
@@ -36,11 +37,13 @@ class JointLimits:
         """Validate limits."""
         # Only validate lower/upper relationship if both are provided
         if self.lower is not None and self.upper is not None and self.lower > self.upper:
-            raise ValueError(f"Lower limit ({self.lower}) must be <= upper limit ({self.upper})")
+            raise RobotModelError(
+                f"Lower limit ({self.lower}) must be <= upper limit ({self.upper})"
+            )
         if self.effort < 0:
-            raise ValueError(f"Effort must be non-negative, got {self.effort}")
+            raise RobotModelError(f"Effort must be non-negative, got {self.effort}")
         if self.velocity < 0:
-            raise ValueError(f"Velocity must be non-negative, got {self.velocity}")
+            raise RobotModelError(f"Velocity must be non-negative, got {self.velocity}")
 
 
 @dataclass(frozen=True)
@@ -53,9 +56,9 @@ class JointDynamics:
     def __post_init__(self) -> None:
         """Validate dynamics."""
         if self.damping < 0:
-            raise ValueError(f"Damping must be non-negative, got {self.damping}")
+            raise RobotModelError(f"Damping must be non-negative, got {self.damping}")
         if self.friction < 0:
-            raise ValueError(f"Friction must be non-negative, got {self.friction}")
+            raise RobotModelError(f"Friction must be non-negative, got {self.friction}")
 
 
 @dataclass(frozen=True)
@@ -119,49 +122,44 @@ class Joint:
     def __post_init__(self) -> None:
         """Validate joint configuration."""
         if not self.name:
-            raise ValueError("Joint name cannot be empty")
+            raise RobotModelError("Joint name cannot be empty")
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
-            raise ValueError(
+            raise RobotModelError(
                 f"Joint name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."
             )
 
         if not self.parent:
-            raise ValueError("Parent link name cannot be empty")
+            raise RobotModelError("Parent link name cannot be empty")
 
         if not self.child:
-            raise ValueError("Child link name cannot be empty")
+            raise RobotModelError("Child link name cannot be empty")
 
         if self.parent == self.child:
-            raise ValueError(f"Parent and child cannot be the same: {self.parent}")
+            raise RobotModelError(f"Parent and child cannot be the same: {self.parent}")
 
         # Validate Axis requirements
-        axis_required = self.type in (
+        # Type-specific validation
+        if self.type in (
             JointType.REVOLUTE,
-            JointType.CONTINUOUS,
             JointType.PRISMATIC,
+            JointType.CONTINUOUS,
             JointType.PLANAR,
-        )
-        axis_forbidden = self.type in (JointType.FIXED, JointType.FLOATING)
-
-        if axis_required and self.axis is None:
-            raise ValueError(f"{self.type.value} joints require an axis")
-
-        if axis_forbidden and self.axis is not None:
-            raise ValueError(f"{self.type.value} joints must not have an axis")
+        ):
+            if self.axis is None:
+                raise RobotModelError(f"{self.type.value} joints require an axis")
+        elif self.type in (JointType.FIXED, JointType.FLOATING) and self.axis is not None:
+            raise RobotModelError(f"{self.type.value} joints must not have an axis")
 
         # Validate Limits
-        # Revolute and prismatic joints require limits
-        if self.type in (JointType.REVOLUTE, JointType.PRISMATIC) and self.limits is None:
-            raise ValueError(f"{self.type.value} joints require limits")
-
-        # Fixed and continuous joints should handle limits appropriately
-        # Continuous joints use effort/velocity but not lower/upper
-        # Fixed joints should not have limits element at all
-        if self.type == JointType.FIXED and self.limits is not None:
-            raise ValueError("Fixed joints must not have limits")
+        if self.type in (JointType.REVOLUTE, JointType.PRISMATIC):
+            if self.limits is None:
+                raise RobotModelError(f"{self.type.value} joints require limits")
+            # Limit validity is already checked in JointLimits.__post_init__ (RobotModelError)
+        elif self.type == JointType.FIXED and self.limits is not None:
+            raise RobotModelError("Fixed joints must not have limits")
 
         # Validate and normalize axis if present
         if self.axis is not None:
@@ -169,14 +167,14 @@ class Joint:
 
             axis_magnitude = math.sqrt(self.axis.x**2 + self.axis.y**2 + self.axis.z**2)
             if axis_magnitude < 1e-10:
-                raise ValueError(
+                raise RobotModelError(
                     f"Joint axis magnitude must be >= 1e-10, got {axis_magnitude:.2e} "
                     f"for axis=({self.axis.x}, {self.axis.y}, {self.axis.z})"
                 )
 
             # Enforce normalized axis in model
             if abs(axis_magnitude - 1.0) > 1e-6:
-                raise ValueError(
+                raise RobotModelError(
                     f"Joint axis must be a unit vector (magnitude 1.0), got {axis_magnitude:.4f}. "
                     "Normalize the axis vector before creating the Joint model."
                 )

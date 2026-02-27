@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     CameraInfo,
     GazeboPlugin,
@@ -68,26 +69,26 @@ class TestCameraInfo:
 
     def test_invalid_fov(self):
         """Test invalid field of view."""
-        with pytest.raises(ValueError, match="Horizontal FOV must be between"):
+        with pytest.raises(RobotModelError, match="Horizontal FOV must be between"):
             CameraInfo(horizontal_fov=-0.5)
 
-        with pytest.raises(ValueError, match="Horizontal FOV must be between"):
+        with pytest.raises(RobotModelError, match="Horizontal FOV must be between"):
             CameraInfo(horizontal_fov=3.2)
 
     def test_invalid_dimensions(self):
         """Test invalid image dimensions."""
-        with pytest.raises(ValueError, match="Image dimensions must be positive"):
+        with pytest.raises(RobotModelError, match="Image dimensions must be positive"):
             CameraInfo(width=-10)
 
-        with pytest.raises(ValueError, match="Image dimensions must be positive"):
+        with pytest.raises(RobotModelError, match="Image dimensions must be positive"):
             CameraInfo(height=0)
 
     def test_invalid_clip(self):
         """Test invalid clip planes."""
-        with pytest.raises(ValueError, match="Near clip must be positive"):
+        with pytest.raises(RobotModelError, match="Near clip must be positive"):
             CameraInfo(near_clip=-0.1)
 
-        with pytest.raises(ValueError, match="Far clip must be greater than near clip"):
+        with pytest.raises(RobotModelError, match="Far clip must be greater than near clip"):
             CameraInfo(near_clip=10.0, far_clip=5.0)
 
 
@@ -119,20 +120,22 @@ class TestLidarInfo:
 
     def test_invalid_samples(self):
         """Test invalid sample count."""
-        with pytest.raises(ValueError, match="Horizontal samples must be positive"):
+        with pytest.raises(RobotModelError, match="Horizontal samples must be positive"):
             LidarInfo(horizontal_samples=0)
 
     def test_invalid_range(self):
         """Test invalid range parameters."""
-        with pytest.raises(ValueError, match="Range min must be positive"):
+        with pytest.raises(RobotModelError, match="Range min must be positive"):
             LidarInfo(range_min=-0.1)
 
-        with pytest.raises(ValueError, match="Range max must be greater than range min"):
+        with pytest.raises(RobotModelError, match="Range max must be greater than range min"):
             LidarInfo(range_min=10.0, range_max=5.0)
 
     def test_invalid_angles(self):
         """Test invalid angle range."""
-        with pytest.raises(ValueError, match="Horizontal min angle must be less than max angle"):
+        with pytest.raises(
+            RobotModelError, match="Horizontal min angle must be less than max angle"
+        ):
             LidarInfo(horizontal_min_angle=1.0, horizontal_max_angle=-1.0)
 
 
@@ -192,12 +195,12 @@ class TestGazeboPlugin:
 
     def test_empty_name(self):
         """Test that empty name raises error."""
-        with pytest.raises(ValueError, match="Plugin name cannot be empty"):
+        with pytest.raises(RobotModelError, match="Plugin name cannot be empty"):
             GazeboPlugin(name="", filename="libtest.so")
 
     def test_empty_filename(self):
         """Test that empty filename raises error."""
-        with pytest.raises(ValueError, match="Plugin filename cannot be empty"):
+        with pytest.raises(RobotModelError, match="Plugin filename cannot be empty"):
             GazeboPlugin(name="test", filename="")
 
 
@@ -289,7 +292,7 @@ class TestSensor:
 
     def test_camera_without_info(self):
         """Test that camera sensor requires camera_info."""
-        with pytest.raises(ValueError, match="Camera sensor .* requires camera_info"):
+        with pytest.raises(RobotModelError, match="Camera sensor .* requires camera_info"):
             Sensor(
                 name="camera",
                 type=SensorType.CAMERA,
@@ -298,7 +301,7 @@ class TestSensor:
 
     def test_lidar_without_info(self):
         """Test that LIDAR sensor requires lidar_info."""
-        with pytest.raises(ValueError, match="LIDAR sensor .* requires lidar_info"):
+        with pytest.raises(RobotModelError, match="LIDAR sensor .* requires lidar_info"):
             Sensor(
                 name="lidar",
                 type=SensorType.LIDAR,
@@ -307,7 +310,7 @@ class TestSensor:
 
     def test_imu_without_info(self):
         """Test that IMU sensor requires imu_info."""
-        with pytest.raises(ValueError, match="IMU sensor .* requires imu_info"):
+        with pytest.raises(RobotModelError, match="IMU sensor .* requires imu_info"):
             Sensor(
                 name="imu",
                 type=SensorType.IMU,
@@ -316,7 +319,7 @@ class TestSensor:
 
     def test_gps_without_info(self):
         """Test that GPS sensor requires gps_info."""
-        with pytest.raises(ValueError, match="GPS sensor .* requires gps_info"):
+        with pytest.raises(RobotModelError, match="GPS sensor .* requires gps_info"):
             Sensor(
                 name="gps",
                 type=SensorType.GPS,
@@ -325,7 +328,7 @@ class TestSensor:
 
     def test_empty_name(self):
         """Test that empty name raises error."""
-        with pytest.raises(ValueError, match="Sensor name cannot be empty"):
+        with pytest.raises(RobotModelError, match="Sensor name cannot be empty"):
             Sensor(
                 name="",
                 type=SensorType.CAMERA,
@@ -335,7 +338,7 @@ class TestSensor:
 
     def test_empty_link_name(self):
         """Test that empty link name raises error."""
-        with pytest.raises(ValueError, match="Sensor must be attached to a link"):
+        with pytest.raises(RobotModelError, match="Sensor must be attached to a link"):
             Sensor(
                 name="camera",
                 type=SensorType.CAMERA,
@@ -345,7 +348,7 @@ class TestSensor:
 
     def test_invalid_update_rate(self):
         """Test that invalid update rate raises error."""
-        with pytest.raises(ValueError, match="Update rate must be positive"):
+        with pytest.raises(RobotModelError, match="Update rate must be positive"):
             Sensor(
                 name="camera",
                 type=SensorType.CAMERA,

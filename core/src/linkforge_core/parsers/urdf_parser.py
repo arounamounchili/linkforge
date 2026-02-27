@@ -19,12 +19,12 @@ high-fidelity round-tripping and includes:
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
 from ..base import RobotParser, RobotParserError, XacroDetectedError
+from ..exceptions import RobotModelError
 from ..logging_config import get_logger
 from ..models import (
     Box,
@@ -109,7 +109,7 @@ def parse_geometry(
         Geometry object (Box, Cylinder, Sphere, or Mesh) or None if no valid geometry
 
     Raises:
-        ValueError: If geometry attributes are invalid or mesh path is unsafe
+        RobotModelError: If geometry attributes are invalid or mesh path is unsafe
 
     """
     # Check for box
@@ -118,13 +118,10 @@ def parse_geometry(
         try:
             size_text = box.get("size")
             if size_text is None:
-                raise ValueError("Box geometry missing required 'size' attribute")
+                raise RobotModelError("Box geometry missing required 'size' attribute")
             size = parse_vector3(size_text)
-            # Validate positive dimensions
-            if size.x <= 0 or size.y <= 0 or size.z <= 0:
-                raise ValueError(f"Box dimensions must be positive, got: {size}")
             return Box(size=size)
-        except ValueError as e:
+        except RobotModelError as e:
             logger.warning(f"Invalid box geometry ignored: {e}")
             return None
 
@@ -134,12 +131,8 @@ def parse_geometry(
         try:
             radius = parse_float(cylinder.get("radius"), "cylinder radius", default=0.5)
             length = parse_float(cylinder.get("length"), "cylinder length", default=1.0)
-            if radius <= 0:
-                raise ValueError(f"Cylinder radius must be positive, got: {radius}")
-            if length <= 0:
-                raise ValueError(f"Cylinder length must be positive, got: {length}")
             return Cylinder(radius=radius, length=length)
-        except ValueError as e:
+        except RobotModelError as e:
             logger.warning(f"Invalid cylinder geometry ignored: {e}")
             return None
 
@@ -148,10 +141,8 @@ def parse_geometry(
     if sphere is not None:
         try:
             radius = parse_float(sphere.get("radius"), "sphere radius", default=0.5)
-            if radius <= 0:
-                raise ValueError(f"Sphere radius must be positive, got: {radius}")
             return Sphere(radius=radius)
-        except ValueError as e:
+        except RobotModelError as e:
             logger.warning(f"Invalid sphere geometry ignored: {e}")
             return None
 
@@ -161,7 +152,9 @@ def parse_geometry(
         try:
             filename = mesh.get("filename", "")
             if not filename:
-                raise ValueError("Mesh geometry missing required 'filename' attribute")
+                raise RobotModelError("Mesh geometry missing required 'filename' attribute")
+
+            mesh_path: Path | None = None
 
             # Handle package:// URIs (common in ROS URDFs)
             if filename.startswith("package://"):
@@ -170,9 +163,9 @@ def parse_geometry(
 
                 try:
                     validate_package_uri(filename)
-                except ValueError as e:
+                except RobotModelError as e:
                     # Re-raise with more context
-                    raise ValueError(f"Package URI validation failed: {e}") from e
+                    raise RobotModelError(f"Package URI validation failed: {e}") from e
 
                 # Package URIs are resolved by ROS/Blender environment
                 # Store as-is for later resolution
@@ -190,9 +183,9 @@ def parse_geometry(
                         mesh_path = validate_mesh_path(
                             mesh_path, urdf_directory, sandbox_root=sandbox_root
                         )
-                    except ValueError as e:
+                    except RobotModelError as e:
                         # Re-raise with more context
-                        raise ValueError(f"Mesh path validation failed: {e}") from e
+                        raise RobotModelError(f"Mesh path validation failed: {e}") from e
             else:
                 # Regular file path - validate for security
                 mesh_path = Path(filename)
@@ -202,17 +195,17 @@ def parse_geometry(
                         mesh_path = validate_mesh_path(
                             mesh_path, urdf_directory, sandbox_root=sandbox_root
                         )
-                    except ValueError as e:
+                    except RobotModelError as e:
                         # Re-raise with more context
-                        raise ValueError(f"Mesh path validation failed: {e}") from e
+                        raise RobotModelError(f"Mesh path validation failed: {e}") from e
+
+            if mesh_path is None:
+                raise RobotModelError("Mesh geometry missing required 'filename' attribute")
 
             scale_text = mesh.get("scale", "1 1 1")
             scale = parse_vector3(scale_text)
-            # Validate positive scale
-            if scale.x <= 0 or scale.y <= 0 or scale.z <= 0:
-                raise ValueError(f"Mesh scale must be positive, got: {scale}")
             return Mesh(filepath=mesh_path, scale=scale)
-        except ValueError as e:
+        except RobotModelError as e:
             logger.warning(f"Invalid mesh geometry ignored: {e}")
             return None
 
@@ -239,11 +232,11 @@ def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) 
         try:
             # Validate RGBA array bounds
             if len(parts) < 3:
-                raise ValueError(
+                raise RobotModelError(
                     f"Invalid RGBA color format: expected at least 3 components (R G B), got {len(parts)}"
                 )
             if len(parts) > 4:
-                raise ValueError(
+                raise RobotModelError(
                     f"Invalid RGBA color format: expected at most 4 components (R G B A), got {len(parts)}"
                 )
 
@@ -254,7 +247,7 @@ def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) 
                 b=float(parts[2]),
                 a=float(parts[3]) if len(parts) > 3 else 1.0,
             )
-        except (ValueError, TypeError, IndexError) as e:
+        except (RobotModelError, TypeError, IndexError) as e:
             logger.warning(f"Invalid material color ignored: {e}")
             return None
 
@@ -569,7 +562,7 @@ def parse_transmission(trans_elem: ET.Element) -> Transmission | None:
             joints=joints,
             actuators=actuators,
         )
-    except ValueError as e:
+    except RobotModelError as e:
         logger.warning(f"Invalid transmission '{name}' ignored: {e}")
         return None
 
@@ -593,15 +586,13 @@ def _parse_transmission_component(
     reduction = 1.0
     reduction_elem = elem.find("mechanicalReduction")
     if reduction_elem is not None and reduction_elem.text:
-        with suppress(ValueError):
-            reduction = float(reduction_elem.text)
+        reduction = parse_float(reduction_elem.text, "mechanicalReduction", default=1.0)
 
     # Parse offset (optional)
     offset = 0.0
     offset_elem = elem.find("offset")
     if offset_elem is not None and offset_elem.text:
-        with suppress(ValueError):
-            offset = float(offset_elem.text)
+        offset = parse_float(offset_elem.text, "offset", default=0.0)
 
     try:
         return cls(
@@ -610,7 +601,7 @@ def _parse_transmission_component(
             mechanical_reduction=reduction,
             offset=offset,
         )
-    except ValueError as e:
+    except RobotModelError as e:
         logger.warning(f"Invalid transmission component '{name}' ignored: {e}")
         return None
 
@@ -771,10 +762,12 @@ def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
     if pose_elem is not None and pose_elem.text:
         parts = pose_elem.text.strip().split()
         if len(parts) >= 6:
-            origin = Transform(
-                xyz=Vector3(float(parts[0]), float(parts[1]), float(parts[2])),
-                rpy=Vector3(float(parts[3]), float(parts[4]), float(parts[5])),
-            )
+            try:
+                xyz = parse_vector3(" ".join(parts[0:3]))
+                rpy = parse_vector3(" ".join(parts[3:6]))
+                origin = Transform(xyz=xyz, rpy=rpy)
+            except RobotModelError as e:
+                logger.warning(f"Invalid sensor pose in Gazebo element: {e}")
 
     # Parse sensor-specific info
     camera_info = None
@@ -941,7 +934,7 @@ def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
             # Parse collision (required)
             collision = contact_elem.findtext("collision")
             if not collision:
-                raise ValueError(
+                raise RobotModelError(
                     f"Contact sensor '{sensor_name}' missing required <collision> element"
                 )
 
@@ -949,7 +942,9 @@ def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
             noise = parse_sensor_noise(contact_elem)
             contact_info = ContactInfo(collision=collision, noise=noise)
         else:
-            raise ValueError(f"Contact sensor '{sensor_name}' missing required <contact> element")
+            raise RobotModelError(
+                f"Contact sensor '{sensor_name}' missing required <contact> element"
+            )
 
     # Parse Force/Torque
     elif sensor_type == SensorType.FORCE_TORQUE:
@@ -1117,7 +1112,7 @@ def _detect_xacro_file(root: ET.Element, filepath: Path | None = None) -> None:
         filepath: Path to file being parsed
 
     Raises:
-        ValueError: If XACRO features are detected in this parser
+        RobotModelError: If XACRO features are detected in this parser
             (XACRO files should use the "Import Robot" operator instead)
 
     """
@@ -1230,7 +1225,7 @@ class URDFParser(RobotParser):
             event, root = next(context)  # Get the root element (start of <robot>)
 
             if root.tag != "robot":
-                raise ValueError(f"Root element must be <robot>, found <{root.tag}>")
+                raise RobotModelError(f"Root element must be <robot>, found <{root.tag}>")
 
             if filepath:
                 _detect_xacro_file(root, filepath)
@@ -1258,37 +1253,54 @@ class URDFParser(RobotParser):
                                 materials[mat.name] = mat
 
                         elif elem.tag == "link":
-                            # Use provided sandbox_root or default to filepath.parent
-                            parser_sandbox = kwargs.get("sandbox_root", self.sandbox_root)
-                            link = parse_link(
-                                elem, materials, filepath.parent, sandbox_root=parser_sandbox
-                            )
-                            self._add_link_robust(robot, link)
+                            try:
+                                # Use provided sandbox_root or default to filepath.parent
+                                parser_sandbox = kwargs.get("sandbox_root", self.sandbox_root)
+                                link = parse_link(
+                                    elem,
+                                    materials,
+                                    filepath.parent if filepath else Path("."),
+                                    sandbox_root=parser_sandbox,
+                                )
+                                self._add_link_robust(robot, link)
+                            except RobotModelError as e:
+                                logger.warning(
+                                    f"Skipping invalid link '{elem.get('name', 'unnamed')}': {e}"
+                                )
 
                         elif elem.tag == "joint":
                             try:
                                 joint = parse_joint(elem)
                                 self._add_joint_robust(robot, joint, elem)
-                            except ValueError as e:
+                            except RobotModelError as e:
                                 joint_name = elem.get("name", "unnamed_joint")
                                 logger.warning(f"Skipping invalid joint '{joint_name}': {e}")
 
                         elif elem.tag == "transmission":
-                            transmission = parse_transmission(elem)
-                            if transmission is not None:
-                                robot.transmissions.append(transmission)
+                            try:
+                                transmission = parse_transmission(elem)
+                                if transmission is not None:
+                                    robot.transmissions.append(transmission)
+                            except RobotModelError as e:
+                                logger.warning(f"Skipping invalid transmission: {e}")
 
                         elif elem.tag == "ros2_control":
-                            ros2_control = parse_ros2_control(elem)
-                            robot.ros2_controls.append(ros2_control)
+                            try:
+                                ros2_control = parse_ros2_control(elem)
+                                robot.ros2_controls.append(ros2_control)
+                            except RobotModelError as e:
+                                logger.warning(f"Skipping invalid ros2_control: {e}")
 
                         elif elem.tag == "gazebo":
-                            sensor = parse_sensor_from_gazebo(elem)
-                            if sensor:
-                                robot.sensors.append(sensor)
-                            else:
-                                gazebo_element = parse_gazebo_element(elem)
-                                robot.gazebo_elements.append(gazebo_element)
+                            try:
+                                sensor = parse_sensor_from_gazebo(elem)
+                                if sensor:
+                                    robot.sensors.append(sensor)
+                                else:
+                                    gazebo_element = parse_gazebo_element(elem)
+                                    robot.gazebo_elements.append(gazebo_element)
+                            except RobotModelError as e:
+                                logger.warning(f"Skipping invalid gazebo/sensor element: {e}")
 
                         # CRITICAL: Clear the element from root to save memory
                         root.clear()
@@ -1366,7 +1378,7 @@ class URDFParser(RobotParser):
         """Add link to robot, renaming if duplicate exists."""
         try:
             robot.add_link(link)
-        except ValueError:
+        except RobotModelError:
             # Handle duplicate link names by renaming
             original_name = link.name
             counter = 1
@@ -1378,7 +1390,7 @@ class URDFParser(RobotParser):
                         robot.add_link(link)
                         logger.warning(f"Renamed duplicate link '{original_name}' to '{new_name}'")
                         break
-                    except ValueError:
+                    except RobotModelError:
                         counter += 1
                 else:
                     counter += 1
@@ -1387,7 +1399,7 @@ class URDFParser(RobotParser):
         """Add joint to robot, renaming if duplicate exists and handling broken refs."""
         try:
             robot.add_joint(joint)
-        except ValueError as e:
+        except RobotModelError as e:
             # Get joint name from element if joint object creation failed
             joint_name = joint_elem.get("name", "unnamed_joint")
             if "already exists" in str(e):
@@ -1404,7 +1416,7 @@ class URDFParser(RobotParser):
                                 f"Renamed duplicate joint '{original_name}' to '{new_name}'"
                             )
                             break
-                        except ValueError as inner_e:
+                        except RobotModelError as inner_e:
                             if "not found" in str(inner_e):
                                 # Also handle missing parent/child during rename attempt
                                 logger.warning(
@@ -1416,7 +1428,7 @@ class URDFParser(RobotParser):
                     else:
                         counter += 1
             else:
-                # Handle other ValueErrors (missing parent/child links)
+                # Handle other RobotModelErrors (missing parent/child links)
                 logger.warning(f"Skipping invalid joint '{joint_name}': {e}")
 
     def _parse_robot(
@@ -1443,7 +1455,7 @@ class URDFParser(RobotParser):
         validate_xml_depth(root, 0)
 
         if root.tag != "robot":
-            raise ValueError("Root element must be <robot>")
+            raise RobotModelError("Root element must be <robot>")
 
         robot = Robot(name=root.get("name", default_name))
         materials = self._parse_global_materials(root)
@@ -1458,7 +1470,7 @@ class URDFParser(RobotParser):
             try:
                 joint = parse_joint(joint_elem)
                 self._add_joint_robust(robot, joint, joint_elem)
-            except ValueError as e:
+            except RobotModelError as e:
                 # Handle cases where parse_joint fails before add_joint (e.g. invalid type)
                 joint_name = joint_elem.get("name", "unnamed_joint")
                 logger.warning(f"Skipping invalid joint '{joint_name}': {e}")

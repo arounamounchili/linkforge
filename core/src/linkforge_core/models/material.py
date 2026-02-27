@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..exceptions import RobotModelError
+
 
 @dataclass(frozen=True)
 class Color:
@@ -18,7 +20,9 @@ class Color:
         """Validate color values."""
         for component in (self.r, self.g, self.b, self.a):
             if not 0.0 <= component <= 1.0:
-                raise ValueError(f"Color components must be in range [0.0, 1.0], got {component}")
+                raise RobotModelError(
+                    f"Color components must be in range [0.0, 1.0], got {component}"
+                )
 
     def to_tuple(self) -> tuple[float, float, float, float]:
         """Convert to RGBA tuple."""
@@ -40,4 +44,4 @@ class Material:
     def __post_init__(self) -> None:
         """Validate material has at least color or texture."""
         if self.color is None and self.texture is None:
-            raise ValueError("Material must have either color or texture")
+            raise RobotModelError("Material must have either color or texture")

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from linkforge_core.base import RobotParserError
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     Box,
     Color,
@@ -59,23 +60,23 @@ class TestParseVector3:
         assert vec.z == pytest.approx(0.0)
 
     def test_parse_invalid_too_few_values(self):
-        """Test that parsing with too few values raises ValueError."""
-        with pytest.raises(ValueError, match="Expected 3 values"):
+        """Test that parsing with too few values raises RobotModelError."""
+        with pytest.raises(RobotModelError, match="Expected 3 values"):
             parse_vector3("1.0 2.0")
 
     def test_parse_invalid_too_many_values(self):
-        """Test that parsing with too many values raises ValueError."""
-        with pytest.raises(ValueError, match="Expected 3 values"):
+        """Test that parsing with too many values raises RobotModelError."""
+        with pytest.raises(RobotModelError, match="Expected 3 values"):
             parse_vector3("1.0 2.0 3.0 4.0")
 
     def test_parse_invalid_non_numeric(self):
-        """Test that parsing non-numeric values raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid Vector3 format"):
+        """Test that parsing non-numeric values raises RobotModelError."""
+        with pytest.raises(RobotModelError, match="Invalid Vector3 format"):
             parse_vector3("1.0 abc 3.0")
 
     def test_parse_empty_string(self):
-        """Test that parsing empty string raises ValueError."""
-        with pytest.raises(ValueError, match="Expected 3 values"):
+        """Test that parsing empty string raises RobotModelError."""
+        with pytest.raises(RobotModelError, match="Expected 3 values"):
             parse_vector3("")
 
 
@@ -685,7 +686,7 @@ class TestParseURDF:
             URDFParser().parse(urdf_file)
 
     def test_parse_non_robot_root(self, tmp_path: Path):
-        """Test that non-robot root element raises ValueError."""
+        """Test that non-robot root element raises RobotModelError."""
         urdf_content = """<?xml version="1.0"?>
 <notarobot name="invalid">
     <link name="link1"/>

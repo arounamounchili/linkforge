@@ -8,6 +8,7 @@ from linkforge.blender.adapters.blender_to_core import (
     blender_sensor_to_core,
     scene_to_robot,
 )
+from linkforge.linkforge_core.exceptions import RobotModelError
 
 
 def test_scene_to_robot_strict_mode_links(clean_scene):
@@ -24,9 +25,9 @@ def test_scene_to_robot_strict_mode_links(clean_scene):
     with (
         mock.patch(
             "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
-            side_effect=ValueError("Link Fail"),
+            side_effect=RobotModelError("Link Fail"),
         ),
-        pytest.raises(ValueError, match="Link Fail"),
+        pytest.raises(RobotModelError, match="Link Fail"),
     ):
         from unittest.mock import MagicMock
 
@@ -53,25 +54,25 @@ def test_scene_to_robot_strict_mode_others(clean_scene):
         ),
         mock.patch(
             "linkforge.blender.adapters.blender_to_core.blender_joint_to_core",
-            side_effect=ValueError("Joint Fail"),
+            side_effect=RobotModelError("Joint Fail"),
         ),
     ):
         from unittest.mock import MagicMock
 
         context = MagicMock()
         context.scene = scene
-        with pytest.raises(ValueError, match="Joint Fail"):
+        with pytest.raises(RobotModelError, match="Joint Fail"):
             scene_to_robot(context)
 
 
 def test_sensor_attachment_error(clean_scene):
-    """Verify ValueError when sensor has no attached link."""
+    """Verify RobotModelError when sensor has no attached link."""
     s = bpy.data.objects.new("Sensor", None)
     bpy.context.collection.objects.link(s)
     s.linkforge_sensor.is_robot_sensor = True
     s.linkforge_sensor.attached_link = None
 
-    with pytest.raises(ValueError, match="is not attached to any link"):
+    with pytest.raises(RobotModelError, match="is not attached to any link"):
         blender_sensor_to_core(s)
 
 
@@ -192,9 +193,9 @@ def test_scene_to_robot_non_strict_errors(clean_scene):
 
                 context = MagicMock()
                 context.scene = scene
-                # It always raises ValueError at the end if errors exist
+                # It always raises RobotModelError at the end if errors exist
                 with pytest.raises(
-                    ValueError, match="The following configuration errors were found"
+                    RobotModelError, match="The following configuration errors were found"
                 ):
                     scene_to_robot(context)
 

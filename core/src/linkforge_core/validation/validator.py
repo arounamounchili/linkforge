@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..exceptions import RobotModelError
 from .result import ValidationResult
 
 if TYPE_CHECKING:
@@ -142,12 +143,26 @@ class RobotValidator:
             return  # Already reported in _check_has_links
 
         # Check for cycles
-        if self.robot._has_cycle():
-            self.result.add_error(
-                title="Circular dependency",
-                message="Kinematic tree contains a cycle. Links must form a tree structure, not a loop.",
-                suggestion="Review joint connections to ensure they form a tree (no loops)",
-            )
+        try:
+            if self.robot._has_cycle():
+                self.result.add_error(
+                    title="Circular dependency",
+                    message="Kinematic tree contains a cycle. Links must form a tree structure, not a loop.",
+                    suggestion="Review joint connections to ensure they form a tree (no loops)",
+                )
+        except RobotModelError as e:
+            # Graph cannot be built (e.g., missing links already reported)
+            # We don't need to report this as a NEW error here if it's already
+            # caught by _check_joint_references, but let's be safe.
+            if not any(
+                err.title in ("Missing parent link", "Missing child link")
+                for err in self.result.errors
+            ):
+                self.result.add_error(
+                    title="Kinematic graph error",
+                    message=str(e),
+                    suggestion="Check joint and link consistency",
+                )
 
         # Check for root link
         try:
@@ -158,7 +173,7 @@ class RobotValidator:
                     message="No root link found. A robot must have exactly one link that is not a child in any joint.",
                     suggestion="Ensure exactly one link has no parent joint (the base/root link)",
                 )
-        except ValueError as e:
+        except RobotModelError as e:
             error_msg = str(e)
             if "Multiple root links" in error_msg:
                 # Extract root link names from error message

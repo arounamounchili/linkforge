@@ -2,6 +2,7 @@ from pathlib import Path
 
 import bpy
 import pytest
+from linkforge.linkforge_core.exceptions import RobotModelError
 
 try:
     import importlib.util
@@ -1181,7 +1182,7 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene):
             "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
             side_effect=Exception("Failed link"),
         ),
-        pytest.raises(ValueError, match="The following configuration errors were found"),
+        pytest.raises(RobotModelError, match="The following configuration errors were found"),
     ):
         scene_to_robot(bpy.context)
 
@@ -1343,7 +1344,7 @@ def test_blender_joint_advanced_cases(clean_scene):
 
     # Missing parent error
     j.linkforge_joint.parent_link = None
-    with pytest.raises(ValueError, match="no parent link"):
+    with pytest.raises(RobotModelError, match="no parent link"):
         blender_joint_to_core(j, bpy.context.scene)
 
 
@@ -1633,6 +1634,7 @@ def test_blender_to_core_missing_errors(clean_scene):
         blender_transmission_to_core,
         get_object_geometry,
     )
+    from linkforge.linkforge_core.exceptions import RobotModelError
     from linkforge.linkforge_core.models.geometry import Box
 
     # blender_link_to_core_with_origin None
@@ -1695,7 +1697,7 @@ def test_blender_to_core_missing_errors(clean_scene):
     j.linkforge_joint.is_robot_joint = True
     j.linkforge_joint.parent_link = p_link
     j.linkforge_joint.child_link = None
-    with pytest.raises(ValueError, match="no child link"):
+    with pytest.raises(RobotModelError, match="no child link"):
         blender_joint_to_core(j, bpy.context.scene)
 
     # Empty transmission

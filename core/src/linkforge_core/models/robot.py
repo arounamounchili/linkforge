@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
 from typing import Any
 
+from ..exceptions import RobotModelError
 from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
 from .graph import KinematicGraph
@@ -57,11 +58,11 @@ class Robot:
     ) -> None:
         """Initialize and index the robot structure."""
         if not self.name:
-            raise ValueError("Robot name cannot be empty")
+            raise RobotModelError("Robot name cannot be empty")
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
-            raise ValueError(
+            raise RobotModelError(
                 f"Robot name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."
             )
@@ -76,13 +77,13 @@ class Robot:
         self._link_index = {}
         for link in self._links:
             if link.name in self._link_index:
-                raise ValueError(f"Duplicate link name: {link.name}")
+                raise RobotModelError(f"Duplicate link name: {link.name}")
             self._link_index[link.name] = link
 
         self._joint_index = {}
         for joint in self._joints:
             if joint.name in self._joint_index:
-                raise ValueError(f"Duplicate joint name: {joint.name}")
+                raise RobotModelError(f"Duplicate joint name: {joint.name}")
             self._joint_index[joint.name] = joint
 
         self._sensor_index = {sensor.name: sensor for sensor in self.sensors}
@@ -90,20 +91,20 @@ class Robot:
     def add_link(self, link: Link) -> None:
         """Add a link to the robot and update indices."""
         if link.name in self._link_index:
-            raise ValueError(f"Link '{link.name}' already exists")
+            raise RobotModelError(f"Link '{link.name}' already exists")
         self._links.append(link)
         self._link_index[link.name] = link
 
     def add_joint(self, joint: Joint) -> None:
         """Add a joint to the robot and update indices."""
         if joint.name in self._joint_index:
-            raise ValueError(f"Joint '{joint.name}' already exists")
+            raise RobotModelError(f"Joint '{joint.name}' already exists")
 
         # Validate parent and child links exist
         if joint.parent not in self._link_index:
-            raise ValueError(f"Parent link '{joint.parent}' not found")
+            raise RobotModelError(f"Parent link '{joint.parent}' not found")
         if joint.child not in self._link_index:
-            raise ValueError(f"Child link '{joint.child}' not found")
+            raise RobotModelError(f"Child link '{joint.child}' not found")
 
         self._joints.append(joint)
         self._joint_index[joint.name] = joint
@@ -135,11 +136,11 @@ class Robot:
     def add_sensor(self, sensor: Sensor) -> None:
         """Add a sensor to the robot and update indices."""
         if sensor.name in self._sensor_index:
-            raise ValueError(f"Sensor '{sensor.name}' already exists")
+            raise RobotModelError(f"Sensor '{sensor.name}' already exists")
 
         # Validate that the link exists
         if sensor.link_name not in self._link_index:
-            raise ValueError(f"Sensor '{sensor.name}': link '{sensor.link_name}' not found")
+            raise RobotModelError(f"Sensor '{sensor.name}': link '{sensor.link_name}' not found")
 
         self.sensors.append(sensor)
         self._sensor_index[sensor.name] = sensor
@@ -147,12 +148,12 @@ class Robot:
     def add_transmission(self, transmission: Transmission) -> None:
         """Add a transmission to the robot."""
         if any(t.name == transmission.name for t in self.transmissions):
-            raise ValueError(f"Transmission '{transmission.name}' already exists")
+            raise RobotModelError(f"Transmission '{transmission.name}' already exists")
 
         # Validate that all referenced joints exist
         for trans_joint in transmission.joints:
             if trans_joint.name not in self._joint_index:
-                raise ValueError(
+                raise RobotModelError(
                     f"Transmission '{transmission.name}': joint '{trans_joint.name}' not found"
                 )
 
@@ -166,7 +167,7 @@ class Robot:
             and self.get_link(element.reference) is None
             and self.get_joint(element.reference) is None
         ):
-            raise ValueError(
+            raise RobotModelError(
                 f"Gazebo element reference '{element.reference}' does not match any link or joint"
             )
 
@@ -176,7 +177,7 @@ class Robot:
         """Add a ROS2 Control configuration to the robot."""
         # Check for duplicate names
         if any(rc.name == ros2_control.name for rc in self.ros2_controls):
-            raise ValueError(f"ROS2 Control '{ros2_control.name}' already exists")
+            raise RobotModelError(f"ROS2 Control '{ros2_control.name}' already exists")
 
         self.ros2_controls.append(ros2_control)
 
@@ -199,9 +200,9 @@ class Robot:
 
         roots = self.graph.get_root_links()
         if not roots:
-            raise ValueError("No root link found (circular dependency detected)")
+            raise RobotModelError("No root link found (circular dependency detected)")
         if len(roots) > 1:
-            raise ValueError(f"Multiple root links found: {roots}")
+            raise RobotModelError(f"Multiple root links found: {roots}")
 
         return self.get_link(roots[0])
 

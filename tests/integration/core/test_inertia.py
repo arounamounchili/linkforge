@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Box, Cylinder, InertiaTensor, Mesh, Sphere, Vector3
 from linkforge_core.physics import (
     calculate_box_inertia,
@@ -33,12 +34,12 @@ class TestInertiaTensor:
 
     def test_invalid_negative_diagonal(self):
         """Test that negative diagonal elements raise error."""
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(RobotModelError, match="positive"):
             InertiaTensor(ixx=-1.0, ixy=0.0, ixz=0.0, iyy=1.0, iyz=0.0, izz=1.0)
 
     def test_invalid_triangle_inequality(self):
         """Test that triangle inequality violation raises error."""
-        with pytest.raises(ValueError, match="triangle inequality"):
+        with pytest.raises(RobotModelError, match="triangle inequality"):
             # This violates Ixx + Iyy >= Izz
             InertiaTensor(ixx=1.0, ixy=0.0, ixz=0.0, iyy=1.0, iyz=0.0, izz=10.0)
 
@@ -175,14 +176,14 @@ class TestCalculateInertia:
         assert inertia == InertiaTensor.zero()
 
     def test_unsupported_geometry_type(self):
-        """Test that unsupported geometry raises ValueError."""
+        """Test that unsupported geometry raises RobotModelError."""
 
         class UnsupportedGeometry:
             """Fake unsupported geometry."""
 
             pass
 
-        with pytest.raises(ValueError, match="Unsupported geometry type"):
+        with pytest.raises(RobotModelError, match="Unsupported geometry type"):
             calculate_inertia(UnsupportedGeometry(), mass=1.0)  # type: ignore
 
 
@@ -358,10 +359,10 @@ class TestMeshInertiaFromTriangles:
         assert inertia.iyy + inertia.izz >= inertia.ixx
 
     def test_empty_mesh(self):
-        """Test that empty mesh raises ValueError."""
+        """Test that empty mesh raises RobotModelError."""
         vertices: list[tuple[float, float, float]] = []
         triangles: list[tuple[int, int, int]] = []
-        with pytest.raises(ValueError, match="Cannot calculate inertia for empty mesh"):
+        with pytest.raises(RobotModelError, match="Cannot calculate inertia for empty mesh"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
     def test_zero_mass(self):
@@ -379,9 +380,9 @@ class TestMeshInertiaFromTriangles:
         assert inertia == InertiaTensor.zero()
 
     def test_degenerate_mesh(self):
-        """Test mesh with zero volume raises ValueError."""
+        """Test mesh with zero volume raises RobotModelError."""
         # Flat triangle (zero volume)
         vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
-        with pytest.raises(ValueError, match="mesh has zero volume"):
+        with pytest.raises(RobotModelError, match="mesh has zero volume"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)

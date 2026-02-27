@@ -59,8 +59,8 @@ from pathlib import Path
 
 # Validate mesh path (prevents path traversal)
 try:
-    validate_mesh_path(Path("../../etc/passwd"), Path("/tmp"))  # Raises ValueError
-except ValueError as e:
+    validate_mesh_path(Path("../../etc/passwd"), Path("/tmp"))  # Raises RobotModelError
+except RobotModelError as e:
     print(f"Security error: {e}")
 
 # Valid paths within sandbox

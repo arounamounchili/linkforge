@@ -231,7 +231,7 @@ class TestXACROGenerator:
         assert gen._find_common_prefix(["part_a", "part_b"]) == "part"
 
     def test_generator_validation_error(self):
-        """Test that XACROGenerator.generate raises ValueError for invalid robot."""
+        """Test that XACROGenerator.generate raises RobotModelError for invalid robot."""
         robot = Robot(name="invalid")
         l1 = Link(name="l1")
         robot.add_link(l1)

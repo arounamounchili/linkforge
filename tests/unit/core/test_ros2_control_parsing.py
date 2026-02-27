@@ -2,6 +2,7 @@
 
 import pytest
 from linkforge_core import URDFGenerator
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
 from linkforge_core.parsers.urdf_parser import URDFParser
 
@@ -156,7 +157,7 @@ class TestRos2ControlJointValidation:
 
     def test_empty_joint_name(self):
         """Test that empty joint name raises error."""
-        with pytest.raises(ValueError, match="Joint name cannot be empty"):
+        with pytest.raises(RobotModelError, match="Joint name cannot be empty"):
             Ros2ControlJoint(
                 name="",
                 command_interfaces=["position"],
@@ -165,7 +166,9 @@ class TestRos2ControlJointValidation:
 
     def test_missing_all_interfaces(self):
         """Test that missing ALL interfaces raises error."""
-        with pytest.raises(ValueError, match="must have at least one command OR state interface"):
+        with pytest.raises(
+            RobotModelError, match="must have at least one command OR state interface"
+        ):
             Ros2ControlJoint(
                 name="joint1",
                 command_interfaces=[],
@@ -201,7 +204,7 @@ class TestRos2ControlValidation:
 
     def test_empty_name(self):
         """Test that empty ros2_control name raises error."""
-        with pytest.raises(ValueError, match="ros2_control name cannot be empty"):
+        with pytest.raises(RobotModelError, match="ros2_control name cannot be empty"):
             Ros2Control(
                 name="",
                 hardware_plugin="test_plugin",
@@ -209,7 +212,7 @@ class TestRos2ControlValidation:
 
     def test_invalid_type(self):
         """Test that invalid ros2_control type raises error."""
-        with pytest.raises(ValueError, match="Invalid ros2_control type"):
+        with pytest.raises(RobotModelError, match="Invalid ros2_control type"):
             Ros2Control(
                 name="TestSystem",
                 type="invalid_type",
@@ -218,7 +221,7 @@ class TestRos2ControlValidation:
 
     def test_empty_hardware_plugin(self):
         """Test that empty hardware plugin raises error."""
-        with pytest.raises(ValueError, match="Hardware plugin cannot be empty"):
+        with pytest.raises(RobotModelError, match="Hardware plugin cannot be empty"):
             Ros2Control(
                 name="TestSystem",
                 type="system",

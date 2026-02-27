@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.utils.xml_utils import (
     MAX_XML_DEPTH,
     parse_float,
@@ -79,19 +80,19 @@ def test_parsing_fallbacks():
     import pytest
 
     # Invalid floats
-    with pytest.raises(ValueError, match="NaN"):
+    with pytest.raises(RobotModelError, match="NaN"):
         parse_float("NaN")
-    with pytest.raises(ValueError, match="Infinite"):
+    with pytest.raises(RobotModelError, match="Infinite"):
         parse_float("inf")
-    with pytest.raises(ValueError, match="outside reasonable range"):
+    with pytest.raises(RobotModelError, match="outside reasonable range"):
         parse_float("1e11")
-    with pytest.raises(ValueError, match="Invalid value"):
+    with pytest.raises(RobotModelError, match="Invalid value"):
         parse_float("not-a-float")
 
     # Invalid ints
-    with pytest.raises(ValueError, match="outside reasonable range"):
+    with pytest.raises(RobotModelError, match="outside reasonable range"):
         parse_int("2000000")
-    with pytest.raises(ValueError, match="Invalid value"):
+    with pytest.raises(RobotModelError, match="Invalid value"):
         parse_int("not-an-int")
 
     # Optional bool
@@ -105,11 +106,11 @@ def test_parse_vector3_errors():
     """Test parse_vector3 with various errors."""
     import pytest
 
-    with pytest.raises(ValueError, match="Expected 3 values"):
+    with pytest.raises(RobotModelError, match="Expected 3 values"):
         parse_vector3("1 2")
-    with pytest.raises(ValueError, match="Expected 3 values"):
+    with pytest.raises(RobotModelError, match="Expected 3 values"):
         parse_vector3("1 2 3 4")
-    with pytest.raises(ValueError, match="Invalid Vector3 format"):
+    with pytest.raises(RobotModelError, match="Invalid Vector3 format"):
         parse_vector3("1 2 a")
 
 
@@ -123,22 +124,22 @@ def test_validate_xml_depth_exceeded():
     for _ in range(MAX_XML_DEPTH + 1):
         curr = ET.SubElement(curr, "a")
 
-    with pytest.raises(ValueError, match="XML nesting too deep"):
+    with pytest.raises(RobotModelError, match="XML nesting too deep"):
         validate_xml_depth(root)
 
 
 def test_parsing_missing_attribute():
-    """Test ValueError when attribute is missing and no default is provided."""
+    """Test RobotModelError when attribute is missing and no default is provided."""
     import pytest
 
-    with pytest.raises(ValueError, match="Missing required attribute"):
+    with pytest.raises(RobotModelError, match="Missing required attribute"):
         parse_float(None, attribute_name="test_float")
-    with pytest.raises(ValueError, match="Missing required attribute"):
+    with pytest.raises(RobotModelError, match="Missing required attribute"):
         parse_int(None, attribute_name="test_int")
     # Whitespace only should be treated as None
-    with pytest.raises(ValueError, match="Missing required attribute"):
+    with pytest.raises(RobotModelError, match="Missing required attribute"):
         parse_float("   ", attribute_name="test_float")
-    with pytest.raises(ValueError, match="Missing required attribute"):
+    with pytest.raises(RobotModelError, match="Missing required attribute"):
         parse_int("   ", attribute_name="test_int")
 
 

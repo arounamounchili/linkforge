@@ -3,6 +3,7 @@
 import logging
 
 from linkforge.blender.utils.decorators import safe_execute
+from linkforge.linkforge_core.exceptions import RobotModelError
 
 
 class SpyOperator:
@@ -40,7 +41,7 @@ class TestSafeExecute:
 
         @safe_execute
         def failing_op(self, context):
-            raise ValueError("Test Error")
+            raise RobotModelError("Test Error")
 
         result = failing_op(op, context)
 

@@ -1,6 +1,7 @@
 """Unit tests for Ros2Control validation logic."""
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
 
 
@@ -12,7 +13,9 @@ def test_ros2_control_sensor_read_only_validation():
         state_interfaces=["position"],
     )
 
-    with pytest.raises(ValueError, match="Hardware type 'sensor' cannot have command interfaces"):
+    with pytest.raises(
+        RobotModelError, match="Hardware type 'sensor' cannot have command interfaces"
+    ):
         Ros2Control(
             name="MySensor",
             type="sensor",
@@ -93,7 +96,7 @@ def test_ros2_control_actuator_joint_limit_validation():
     j2 = Ros2ControlJoint(name="joint2", command_interfaces=["position"])
 
     # 0 joints - should fail
-    with pytest.raises(ValueError, match="must have exactly one joint"):
+    with pytest.raises(RobotModelError, match="must have exactly one joint"):
         Ros2Control(
             name="MyActuator",
             type="actuator",
@@ -102,7 +105,7 @@ def test_ros2_control_actuator_joint_limit_validation():
         )
 
     # 2 joints - should fail
-    with pytest.raises(ValueError, match="must have exactly one joint"):
+    with pytest.raises(RobotModelError, match="must have exactly one joint"):
         Ros2Control(
             name="MyActuator",
             type="actuator",

@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 from linkforge_core import URDFGenerator
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     Box,
     Color,
@@ -43,19 +44,19 @@ from linkforge_core.validation.security import validate_package_uri
 def test_security_uri_validation():
     """Verify robust handling of malformed or malicious package URIs."""
     # Ensure non-package schemes are rejected
-    with pytest.raises(ValueError, match="must start with 'package://'"):
+    with pytest.raises(RobotModelError, match="must start with 'package://'"):
         validate_package_uri("http://bogus")
 
     # Verify path traversal detection in package strings
-    with pytest.raises(ValueError, match="Path traversal detected"):
+    with pytest.raises(RobotModelError, match="Path traversal detected"):
         validate_package_uri("package://pkg/../etc")
 
     # Validation of package name presence
-    with pytest.raises(ValueError, match="missing package name"):
+    with pytest.raises(RobotModelError, match="missing package name"):
         validate_package_uri("package://")
 
     # Detection of suspicious relative components
-    with pytest.raises(ValueError, match="suspicious path components"):
+    with pytest.raises(RobotModelError, match="suspicious path components"):
         validate_package_uri("package://pkg/./test")
 
 

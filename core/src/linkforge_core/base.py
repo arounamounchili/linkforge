@@ -5,42 +5,35 @@ This module defines the abstract base classes that all specific format generator
 API for the LinkForge ecosystem.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from .models.robot import Robot
+from .exceptions import (  # noqa: F401
+    LinkForgeError,
+    RobotGeneratorError,
+    RobotModelError,
+    RobotParserError,
+    XacroDetectedError,
+)
+
+if TYPE_CHECKING:
+    from .models.robot import Robot
 
 # Generic type for the output format (e.g., str for XML, dict for JSON)
 T = TypeVar("T")
 
-
-class LinkForgeError(Exception):
-    """Base category for all LinkForge-related exceptions."""
-
-    pass
-
-
-class RobotGeneratorError(LinkForgeError):
-    """Exception raised during robot generation or export."""
-
-    pass
-
-
-class RobotParserError(LinkForgeError):
-    """Exception raised during robot parsing or import."""
-
-    pass
-
-
-class XacroDetectedError(RobotParserError):
-    """Raised when XACRO content is detected in a URDF parser.
-
-    This allows the platform layer to catch a specific exception and
-    automatically switch to the XACRO parser.
-    """
-
-    pass
+__all__ = [
+    "RobotGenerator",
+    "RobotParser",
+    "LinkForgeError",
+    "RobotGeneratorError",
+    "RobotModelError",
+    "RobotParserError",
+    "XacroDetectedError",
+]
 
 
 class RobotGenerator(ABC, Generic[T]):  # noqa: UP046

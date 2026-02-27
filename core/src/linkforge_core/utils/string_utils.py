@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ..exceptions import RobotModelError
+
 
 def sanitize_name(name: str, allow_hyphen: bool = True) -> str:
     """Sanitize a name for URDF and Python identifier compatibility.
@@ -21,7 +23,7 @@ def sanitize_name(name: str, allow_hyphen: bool = True) -> str:
 
     # Prevent ReDoS: limit input length before processing
     if len(name) > 1000:
-        raise ValueError(f"Name too long: {len(name)} characters (maximum 1000)")
+        raise RobotModelError(f"Name too long: {len(name)} characters (maximum 1000)")
 
     # Replace spaces with underscores
     name = name.replace(" ", "_")

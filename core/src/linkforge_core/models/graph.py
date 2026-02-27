@@ -6,8 +6,11 @@ traversing the link-joint structure of a robot.
 
 from __future__ import annotations
 
+import collections
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
+
+from ..exceptions import RobotModelError
 
 if TYPE_CHECKING:
     from .joint import Joint
@@ -26,20 +29,30 @@ class KinematicGraph:
         Args:
             links: Collection of Link objects forming the nodes of the graph.
             joints: Collection of Joint objects forming the edges of the graph.
+
+        Raises:
+            RobotModelError: If a joint references a link not present in the links collection.
         """
         self.link_names = {link.name for link in links}
         self.joints = list(joints)
 
         # Build adjacency list: parent -> list of (child, joint_name)
-        self.adj: dict[str, list[tuple[str, str]]] = {name: [] for name in self.link_names}
+        self.adj: dict[str, list[tuple[str, str]]] = collections.defaultdict(list)
         # Inverse adjacency: child -> list of (parent, joint_name)
-        self.inv_adj: dict[str, list[tuple[str, str]]] = {name: [] for name in self.link_names}
+        self.inv_adj: dict[str, list[tuple[str, str]]] = collections.defaultdict(list)
 
         for joint in self.joints:
-            if joint.parent in self.adj:
-                self.adj[joint.parent].append((joint.child, joint.name))
-            if joint.child in self.inv_adj:
-                self.inv_adj[joint.child].append((joint.parent, joint.name))
+            if joint.parent not in self.link_names:
+                raise RobotModelError(
+                    f"Joint '{joint.name}' references unknown parent link '{joint.parent}'"
+                )
+            if joint.child not in self.link_names:
+                raise RobotModelError(
+                    f"Joint '{joint.name}' references unknown child link '{joint.child}'"
+                )
+
+            self.adj[joint.parent].append((joint.child, joint.name))
+            self.inv_adj[joint.child].append((joint.parent, joint.name))
 
     def has_cycle(self) -> bool:
         """Detect kinematic loops using iterative DFS stability."""
@@ -98,18 +111,22 @@ class KinematicGraph:
         return sorted(roots)
 
     def find_islands(self) -> list[set[str]]:
-        """Identify disconnected components (islands) in the robot structure."""
+        """Identify disconnected components (islands) in the robot structure.
+
+        Uses BFS traversal to find all linked components. Returns isolated links
+        as single-node islands.
+        """
         remaining = set(self.link_names)
         islands: list[set[str]] = []
 
         while remaining:
             start = next(iter(remaining))
             island: set[str] = set()
-            queue = [start]
+            queue = collections.deque([start])
             visited = {start}
 
             while queue:
-                curr = queue.pop(0)
+                curr = queue.popleft()
                 island.add(curr)
                 # Traverse both directions (undirected connectivity)
                 neighbors = [c for c, _ in self.adj.get(curr, [])] + [
@@ -132,10 +149,10 @@ class KinematicGraph:
             List of link names
 
         Raises:
-            ValueError: If a cycle is detected
+            RobotModelError: If a cycle is detected
         """
         if self.has_cycle():
-            raise ValueError("Cannot provide topological order for a graph with cycles")
+            raise RobotModelError("Cannot provide topological order for a graph with cycles")
 
         order: list[str] = []
         # Implement Kahn's algorithm for topological sorting.

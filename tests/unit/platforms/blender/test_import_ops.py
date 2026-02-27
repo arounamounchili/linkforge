@@ -6,6 +6,7 @@ from linkforge.blender.operators.import_ops import (
     register,
     unregister,
 )
+from linkforge.linkforge_core.exceptions import RobotModelError
 
 
 def test_import_urdf_logic_paths(mocker, tmp_path):
@@ -190,7 +191,7 @@ def test_import_path_conversion_error(mocker, tmp_path):
 
     mocker.patch(
         "linkforge.linkforge_core.parsers.URDFParser.parse",
-        side_effect=ValueError("Path resolution failed"),
+        side_effect=RobotModelError("Path resolution failed"),
     )
 
     result = LINKFORGE_OT_import_urdf.execute(mock_self, bpy.context)

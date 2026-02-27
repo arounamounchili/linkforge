@@ -12,6 +12,7 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
     scene_to_robot,
 )
+from linkforge.linkforge_core.exceptions import RobotModelError
 from linkforge.linkforge_core.models import (
     JointType,
 )
@@ -78,11 +79,11 @@ def test_scene_to_robot_strict_mode(clean_scene):
     with (
         patch(
             "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
-            side_effect=ValueError("Link Failed"),
+            side_effect=RobotModelError("Link Failed"),
         ),
-        pytest.raises(ValueError, match="Link Failed"),
+        pytest.raises(RobotModelError, match="Link Failed"),
     ):
-        # It wraps the collection of errors into one ValueError at the end
+        # It wraps the collection of errors into one RobotModelError at the end
         scene_to_robot(bpy.context)
 
 

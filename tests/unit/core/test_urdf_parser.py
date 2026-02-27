@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from linkforge_core.base import RobotParserError, XacroDetectedError
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     Box,
     CameraInfo,
@@ -243,6 +244,13 @@ class TestURDFParser:
         assert sensor.name == "camera1"
         assert sensor.type == SensorType.CAMERA
         assert isinstance(sensor.camera_info, CameraInfo)
+
+    def test_parse_sphere_invalid(self):
+        """Test parsing invalid sphere."""
+        # Negative radius is a RobotModelError at model level,
+        # but parse_geometry catches it and returns None (robust behavior)
+        xml = '<geometry><sphere radius="-1.0"/></geometry>'
+        assert parse_geometry(ET.fromstring(xml)) is None
 
     def test_parse_geometry_invalid(self):
         """Test parsing invalid geometries."""
@@ -609,14 +617,6 @@ class TestURDFParser:
         geom_escape = parse_geometry(elem_escape, urdf_directory=tmp_path)
         assert geom_escape is None
 
-    def test_parse_sphere_invalid(self):
-        """Test parsing sphere with invalid radius."""
-        from linkforge_core.parsers.urdf_parser import parse_geometry
-
-        xml = '<geometry><sphere radius="-1"/></geometry>'
-        geom = parse_geometry(ET.fromstring(xml))
-        assert geom is None
-
     def test_iterparse_full_structure(self, tmp_path):
         """Test iterparse loop with ALL element types to hit every branch."""
         xml = """
@@ -807,30 +807,28 @@ class TestURDFParser:
         imu = next(s for s in robot.sensors if s.name == "imu")
         assert isinstance(imu.imu_info, object)  # IMUInfo
 
-    def test_contact_sensor_missing_collision(self):
-        """Test contact sensor missing collision element raises ValueError."""
+    def test_parse_contact_sensor_missing_collision(self):
+        """Test contact sensor missing collision element raises RobotModelError."""
+        from linkforge_core.exceptions import RobotModelError
+        from linkforge_core.parsers.urdf_parser import parse_sensor_from_gazebo
+
         xml = """
-        <robot name="bad_contact">
-            <link name="base"/>
-            <gazebo reference="base">
-                <sensor name="bumper" type="contact">
-                    <contact/> <!-- Missing collision -->
-                </sensor>
-            </gazebo>
-        </robot>
+        <gazebo reference="link1">
+            <sensor name="contact1" type="contact">
+                <contact/> <!-- Missing collision -->
+            </sensor>
+        </gazebo>
         """
-        parser = URDFParser()
-        # Parser now wraps ValueError into RobotParserError
-        with pytest.raises(RobotParserError, match="missing required <collision> element"):
-            parser.parse_string(xml)
+        with pytest.raises(RobotModelError, match="missing required <collision>"):
+            parse_sensor_from_gazebo(ET.fromstring(xml))
 
     def test_security_exceptions(self, tmp_path):
         """Test security exception re-raising."""
-        # 1. Package URI validation - Parse geometry swallows ValueError and returns None
+        # 1. Package URI validation - Parse geometry swallows RobotModelError and returns None
         xml = '<geometry><mesh filename="package://../traversal"/></geometry>'
         assert parse_geometry(ET.fromstring(xml), urdf_directory=tmp_path) is None
 
-        # 2. File URI validation - Parse geometry swallows ValueError and returns None
+        # 2. File URI validation - Parse geometry swallows RobotModelError and returns None
         xml2 = '<geometry><mesh filename="file:///etc/passwd"/></geometry>'
         assert parse_geometry(ET.fromstring(xml2), urdf_directory=tmp_path) is None
 
@@ -882,7 +880,7 @@ class TestURDFParser:
         invalid_urdf.write_text("<not_robot></not_robot>")
 
         parser = URDFParser()
-        # Parser now wraps ValueError into RobotParserError
+        # Parser now wraps standard errors into RobotParserError
         with pytest.raises(RobotParserError, match="Root element must be <robot>"):
             parser.parse(invalid_urdf)
 
@@ -899,6 +897,8 @@ class TestURDFParser:
 
     def test_joint_renaming_robustness_broken_ref(self):
         """Test robustness of joint renaming when duplicates exist AND references are broken."""
+        from unittest.mock import patch
+
         from linkforge_core.models import Joint, JointType, Robot
         from linkforge_core.parsers.urdf_parser import URDFParser
 
@@ -914,8 +914,8 @@ class TestURDFParser:
 
         with patch.object(robot, "add_joint") as mock_add:
             mock_add.side_effect = [
-                ValueError("Joint 'fixed_joint' already exists"),
-                ValueError("Link 'missing' not found"),
+                RobotModelError("Joint 'fixed_joint' already exists"),
+                RobotModelError("Link 'missing' not found"),
             ]
 
             parser._add_joint_robust(robot, joint, elem)
@@ -984,8 +984,8 @@ class TestURDFParser:
 
         # Invalid mechanicalReduction (557-558)
         xml = '<joint name="j1"><mechanicalReduction>not_number</mechanicalReduction></joint>'
-        comp = _parse_transmission_component(ET.fromstring(xml), TransmissionJoint)
-        assert comp.mechanical_reduction == 1.0  # Default value
+        with pytest.raises(RobotModelError, match="Invalid mechanicalReduction"):
+            _parse_transmission_component(ET.fromstring(xml), TransmissionJoint)
 
         # 5. Gazebo Sensor missing reference (681)
         xml = '<gazebo><sensor name="s" type="camera"/></gazebo>'  # No reference attr
@@ -1087,52 +1087,56 @@ class TestURDFParser:
         ):
             parser.parse(path)
 
-    def test_joint_renaming_collision_loop(self):
-        """Duplicate joint names get a _duplicate_N suffix until a free name is found."""
-        from unittest import mock
+    def test_add_joint_robust_renaming(self):
+        """Test robust joint addition with duplicate names."""
+        from unittest.mock import MagicMock
 
         from linkforge_core.models import Joint, JointType, Robot
         from linkforge_core.parsers.urdf_parser import URDFParser
 
-        # Need to simulate: add 'j' -> exists. try 'j_dup_1' -> exists. try 'j_dup_2' -> ok.
-        robot = Robot(name="test")
         parser = URDFParser()
+        robot = MagicMock(spec=Robot)
+        robot._joint_index = {"j": MagicMock(), "j_duplicate_1": MagicMock()}
+
         joint = Joint(name="j", type=JointType.FIXED, parent="p", child="c")
-        elem = ET.Element("joint", name="j")
+        joint_elem = ET.Element("joint", name="j")
 
-        with mock.patch.object(robot, "add_joint") as m:
-            m.side_effect = [
-                ValueError("already exists"),  # j exists
-                ValueError("already exists"),  # j_duplicate_1 exists
-                None,  # j_duplicate_2 ok
-            ]
+        # First two names already exist in _joint_index
+        # Third name 'j_duplicate_2' is free
+        robot.add_joint.side_effect = [
+            RobotModelError("already exists"),  # j exists
+            RobotModelError("already exists"),  # j_duplicate_1 exists
+            None,  # Success for j_duplicate_2
+        ]
 
-            parser._add_joint_robust(robot, joint, elem)
+        parser._add_joint_robust(robot, joint, joint_elem)
 
-            assert m.call_count == 3
+        assert robot.add_joint.call_count == 3
 
-    def test_link_renaming_robustness(self):
-        """Duplicate link names get a _duplicate_N suffix until a free name is found."""
-        from unittest import mock
+    def test_add_link_robust_renaming(self):
+        """Test robust link addition with duplicate names."""
+        from unittest.mock import patch
 
         from linkforge_core.models import Link, Robot
         from linkforge_core.parsers.urdf_parser import URDFParser
 
-        robot = Robot(name="test")
         parser = URDFParser()
+        robot = Robot(name="test")
+        robot.add_link(Link(name="l"))
+        robot.add_link(Link(name="l_duplicate_1"))
+
         link = Link(name="l")
 
-        # Mock robot.add_link to fail twice then succeed
-        with mock.patch.object(robot, "add_link") as m:
-            m.side_effect = [
-                ValueError("Link 'l' already exists"),
-                ValueError("Link 'l_duplicate_1' failed"),  # Trigger exception inside loop
+        with patch.object(robot, "add_link") as mock_add_link:
+            mock_add_link.side_effect = [
+                RobotModelError("Link 'l' already exists"),
+                RobotModelError("Link 'l_duplicate_1' failed"),  # Trigger exception inside loop
                 None,  # Succeeds for l_duplicate_2
             ]
 
-            with mock.patch("linkforge_core.parsers.urdf_parser.logger") as mock_logger:
+            with patch("linkforge_core.parsers.urdf_parser.logger") as mock_logger:
                 parser._add_link_robust(robot, link)
-                assert m.call_count == 3
+                assert mock_add_link.call_count == 3
                 assert mock_logger.warning.called
                 assert "Renamed duplicate link" in mock_logger.warning.call_args[0][0]
 

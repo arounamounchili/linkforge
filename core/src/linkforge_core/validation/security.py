@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from urllib.parse import unquote
 
+from ..exceptions import RobotModelError
 from ..logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -39,9 +40,9 @@ def validate_mesh_path(
         The validated absolute path to the mesh file
 
     Raises:
-        ValueError: If the mesh path attempts to escape the URDF directory
-        ValueError: If the path contains suspicious components
-        ValueError: If absolute paths are not allowed but one is provided
+        RobotModelError: If the mesh path attempts to escape the URDF directory
+        RobotModelError: If the path contains suspicious components
+        RobotModelError: If absolute paths are not allowed but one is provided
 
     Example:
         >>> urdf_dir = Path("/home/user/robot")
@@ -51,11 +52,11 @@ def validate_mesh_path(
 
         >>> # Unsafe path - tries to escape
         >>> validate_mesh_path(Path("../../../etc/passwd"), urdf_dir)
-        ValueError: Mesh path '../../../etc/passwd' attempts to escape...
+        RobotModelError: Mesh path '../../../etc/passwd' attempts to escape...
 
         >>> # Absolute path (rejected by default)
         >>> validate_mesh_path(Path("/etc/passwd"), urdf_dir)
-        ValueError: Absolute path '/etc/passwd' not allowed...
+        RobotModelError: Absolute path '/etc/passwd' not allowed...
 
         >>> # Absolute path (allowed explicitly)
         >>> validate_mesh_path(Path("/shared/meshes/arm.stl"), urdf_dir, allow_absolute=True)
@@ -78,7 +79,7 @@ def validate_mesh_path(
     # Check for absolute paths
     if mesh_filepath.is_absolute():
         if not allow_absolute:
-            raise ValueError(
+            raise RobotModelError(
                 f"Absolute path '{mesh_filepath}' not allowed for security and portability. "
                 "Use relative paths within the URDF directory, or set allow_absolute=True "
                 "if loading trusted files."
@@ -95,7 +96,7 @@ def validate_mesh_path(
             f"SECURITY: System path access attempt - '{mesh_filepath}' "
             f"resolves to restricted location: {resolved}"
         )
-        raise ValueError(
+        raise RobotModelError(
             f"Mesh path '{mesh_filepath}' resolves to a restricted system location: {resolved}. "
             "This is not allowed for security reasons."
         )
@@ -109,7 +110,7 @@ def validate_mesh_path(
             f"SECURITY: Path traversal attempt - '{mesh_filepath}' "
             f"attempts to escape sandbox root: {check_root}"
         )
-        raise ValueError(
+        raise RobotModelError(
             f"Mesh path '{mesh_filepath}' attempts to escape the sandbox root: {check_root}. "
             "This is not allowed for security reasons."
         ) from None
@@ -166,7 +167,7 @@ def validate_package_uri(uri: str) -> str:
         The validated URI
 
     Raises:
-        ValueError: If the URI is malformed or contains suspicious components
+        RobotModelError: If the URI is malformed or contains suspicious components
 
     Example:
         >>> # Valid package URIs
@@ -176,22 +177,22 @@ def validate_package_uri(uri: str) -> str:
         >>> validate_package_uri("package://pr2_description/meshes/base_link.dae")
         'package://pr2_description/meshes/base_link.dae'
 
-        >>> # Invalid URIs (will raise ValueError)
+        >>> # Invalid URIs (will raise RobotModelError)
         >>> validate_package_uri("file:///etc/passwd")  # Wrong scheme
-        ValueError: Invalid package URI: file:///etc/passwd (must start with 'package://')
+        RobotModelError: Invalid package URI: file:///etc/passwd (must start with 'package://')
 
         >>> validate_package_uri("package://")  # Missing package name
-        ValueError: Invalid package URI: package:// (missing package name)
+        RobotModelError: Invalid package URI: package:// (missing package name)
 
         >>> validate_package_uri("package://robot/../../../etc/passwd")  # Path traversal
-        ValueError: Invalid package URI: package://robot/../../../etc/passwd (contains suspicious path components like '..' or '.')
+        RobotModelError: Invalid package URI: package://robot/../../../etc/passwd (contains suspicious path components like '..' or '.')
 
     Note:
         This function only validates the URI format. Actual package resolution
         must be handled by the ROS environment or Blender importer.
     """
     if not uri.startswith("package://"):
-        raise ValueError(f"Invalid package URI: {uri} (must start with 'package://')")
+        raise RobotModelError(f"Invalid package URI: {uri} (must start with 'package://')")
 
     # Decode URL encoding to catch encoded path traversal attempts
     decoded_uri = unquote(uri)
@@ -199,7 +200,7 @@ def validate_package_uri(uri: str) -> str:
     # Check both original and decoded for path traversal
     if ".." in uri or ".." in decoded_uri:
         logger.warning(f"SECURITY: Path traversal attempt in package URI: '{uri}'")
-        raise ValueError(
+        raise RobotModelError(
             f"Path traversal detected in package URI: '{uri}'. "
             f"URIs containing '..' are not allowed for security reasons."
         )
@@ -208,12 +209,12 @@ def validate_package_uri(uri: str) -> str:
     path_component = decoded_uri[10:]
 
     if not path_component:
-        raise ValueError(f"Invalid package URI: {uri} (missing package name)")
+        raise RobotModelError(f"Invalid package URI: {uri} (missing package name)")
 
     # Validate path components (skip package name at index 0)
     parts = path_component.split("/")
     if any(part in (".", "") for part in parts[1:]):
-        raise ValueError(
+        raise RobotModelError(
             f"Invalid package URI: {uri} (contains suspicious path components like '.' or empty segments)"
         )
 

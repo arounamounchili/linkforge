@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.physics.inertia import calculate_mesh_inertia_from_triangles
 
 
@@ -33,9 +34,9 @@ def test_calculate_mesh_inertia_negative_diagonal(caplog):
 
 
 def test_calculate_mesh_inertia_zero_volume():
-    """Degenerate mesh (zero volume) raises ValueError."""
+    """Degenerate mesh (zero volume) raises RobotModelError."""
     vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
     triangles = [(0, 1, 2)]
 
-    with pytest.raises(ValueError, match="mesh has zero volume"):
+    with pytest.raises(RobotModelError, match="mesh has zero volume"):
         calculate_mesh_inertia_from_triangles(vertices, triangles, 1.0)

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import bpy
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
+from linkforge.linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Joint, JointType, Link, Robot
 
 
@@ -82,7 +83,7 @@ def test_builder_error_handling(mocker):
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
 
     # Force an error in _execute_task
-    mocker.patch.object(builder, "_execute_task", side_effect=ValueError("Boom"))
+    mocker.patch.object(builder, "_execute_task", side_effect=RobotModelError("Boom"))
 
     result = builder.process_next_chunk()
     assert result is None

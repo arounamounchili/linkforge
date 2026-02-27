@@ -3,6 +3,7 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
+from ..exceptions import RobotModelError
 from ..models import Vector3
 
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
@@ -19,10 +20,10 @@ def validate_xml_depth(element: ET.Element, depth: int = 0) -> None:
         depth: Current nesting depth
 
     Raises:
-        ValueError: If depth exceeds MAX_XML_DEPTH
+        RobotModelError: If depth exceeds MAX_XML_DEPTH
     """
     if depth > MAX_XML_DEPTH:
-        raise ValueError(
+        raise RobotModelError(
             f"XML nesting too deep: {depth} levels (maximum {MAX_XML_DEPTH}). "
             "This may indicate a malicious or corrupted XML file."
         )
@@ -104,7 +105,7 @@ def parse_float(
         Parsed float
 
     Raises:
-        ValueError: If input is invalid
+        RobotModelError: If input is invalid
     """
     import math
 
@@ -114,20 +115,20 @@ def parse_float(
     if text is None:
         if default is not None:
             return default
-        raise ValueError(f"Missing required attribute '{attribute_name}'")
+        raise RobotModelError(f"Missing required attribute '{attribute_name}'")
 
     try:
         value = float(text)
         if math.isnan(value):
-            raise ValueError("NaN (Not a Number) values are not allowed")
+            raise RobotModelError("NaN (Not a Number) values are not allowed")
         if math.isinf(value):
-            raise ValueError("Infinite values are not allowed")
+            raise RobotModelError("Infinite values are not allowed")
         # Sanity check for reasonable values (Standard LinkForge limit)
         if not (-1e10 < value < 1e10):
-            raise ValueError(f"Value {value} is outside reasonable range (-1e10 to 1e10)")
+            raise RobotModelError(f"Value {value} is outside reasonable range (-1e10 to 1e10)")
         return value
     except ValueError as e:
-        raise ValueError(f"Invalid {attribute_name} value '{text}': {e}") from e
+        raise RobotModelError(f"Invalid {attribute_name} value '{text}': {e}") from e
 
 
 def parse_int(text: str | None, attribute_name: str = "value", default: int | None = None) -> int:
@@ -138,30 +139,30 @@ def parse_int(text: str | None, attribute_name: str = "value", default: int | No
     if text is None:
         if default is not None:
             return default
-        raise ValueError(f"Missing required attribute '{attribute_name}'")
+        raise RobotModelError(f"Missing required attribute '{attribute_name}'")
 
     try:
         value = int(text)
         # Sanity check for reasonable values (standard LinkForge limit)
         if not (-1000000 < value < 1000000):
-            raise ValueError(f"Value {value} is outside reasonable range")
+            raise RobotModelError(f"Value {value} is outside reasonable range")
         return value
     except ValueError as e:
-        raise ValueError(f"Invalid {attribute_name} value '{text}': {e}") from e
+        raise RobotModelError(f"Invalid {attribute_name} value '{text}': {e}") from e
 
 
 def parse_vector3(text: str) -> Vector3:
     """Parse space-separated vector3 string."""
     parts = text.strip().split()
     if len(parts) != 3:
-        raise ValueError(f"Expected 3 values for Vector3, got {len(parts)}: '{text}'")
+        raise RobotModelError(f"Expected 3 values for Vector3, got {len(parts)}: '{text}'")
     try:
         x = parse_float(parts[0], "x")
         y = parse_float(parts[1], "y")
         z = parse_float(parts[2], "z")
         return Vector3(x, y, z)
-    except (ValueError, IndexError) as e:
-        raise ValueError(f"Invalid Vector3 format '{text}': {e}") from e
+    except (RobotModelError, ValueError, IndexError) as e:
+        raise RobotModelError(f"Invalid Vector3 format '{text}': {e}") from e
 
 
 def parse_optional_bool(elem: ET.Element, tag: str, default: str = "false") -> bool | None:

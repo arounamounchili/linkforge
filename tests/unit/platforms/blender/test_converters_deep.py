@@ -6,6 +6,7 @@ from linkforge.blender.adapters.blender_to_core import (
     blender_ros2_control_to_core,
     scene_to_robot,
 )
+from linkforge.linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import CameraInfo, Link, Sensor, SensorType
 
 
@@ -27,17 +28,17 @@ def test_scene_to_robot_strict_mode(mocker):
     # Mock blender_link_to_core to throw
     mocker.patch(
         "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
-        side_effect=ValueError("Link error"),
+        side_effect=RobotModelError("Link error"),
     )
 
     # 1. Strict mode = True
     scene.linkforge.strict_mode = True
-    with pytest.raises(ValueError, match="Link error"):
+    with pytest.raises(RobotModelError, match="Link error"):
         scene_to_robot(bpy.context)
 
     # 2. Strict mode = False
     scene.linkforge.strict_mode = False
-    with pytest.raises(ValueError, match="Unable to build robot model"):
+    with pytest.raises(RobotModelError, match="Unable to build robot model"):
         scene_to_robot(bpy.context)
 
 

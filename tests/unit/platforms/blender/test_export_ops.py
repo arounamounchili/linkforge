@@ -250,7 +250,7 @@ def test_validate_robot_not_initialized(mocker):
 
 def test_export_registration_recovery(mocker):
     """Verify operator registration error recovery logic."""
-    # Force a ValueError during registration for the FIRST class
+    # Force a RobotModelError during registration for the FIRST class
     # The loop will:
     # 1. Try register(cls1) -> ValueError
     # 2. unregister(cls1)

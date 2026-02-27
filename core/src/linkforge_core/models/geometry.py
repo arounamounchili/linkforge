@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from ..exceptions import RobotModelError
+
 
 class GeometryType(Enum):
     """Supported geometry types for URDF (standard specification only)."""
@@ -70,7 +72,7 @@ class Box:
     def __post_init__(self) -> None:
         """Validate box dimensions."""
         if self.size.x <= 0 or self.size.y <= 0 or self.size.z <= 0:
-            raise ValueError(
+            raise RobotModelError(
                 f"Box dimensions must be positive, got size=({self.size.x}, {self.size.y}, {self.size.z})"
             )
 
@@ -93,9 +95,9 @@ class Cylinder:
     def __post_init__(self) -> None:
         """Validate cylinder dimensions."""
         if self.radius <= 0:
-            raise ValueError(f"Cylinder radius must be positive, got radius={self.radius}")
+            raise RobotModelError(f"Cylinder radius must be positive, got radius={self.radius}")
         if self.length <= 0:
-            raise ValueError(f"Cylinder length must be positive, got length={self.length}")
+            raise RobotModelError(f"Cylinder length must be positive, got length={self.length}")
 
     @property
     def type(self) -> GeometryType:
@@ -117,7 +119,7 @@ class Sphere:
     def __post_init__(self) -> None:
         """Validate sphere dimensions."""
         if self.radius <= 0:
-            raise ValueError(f"Sphere radius must be positive, got radius={self.radius}")
+            raise RobotModelError(f"Sphere radius must be positive, got radius={self.radius}")
 
     @property
     def type(self) -> GeometryType:
@@ -140,7 +142,7 @@ class Mesh:
     def __post_init__(self) -> None:
         """Validate mesh scale."""
         if self.scale.x <= 0 or self.scale.y <= 0 or self.scale.z <= 0:
-            raise ValueError(
+            raise RobotModelError(
                 f"Mesh scale must be positive, got scale=({self.scale.x}, {self.scale.y}, {self.scale.z})"
             )
 

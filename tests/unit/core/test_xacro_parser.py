@@ -5,6 +5,7 @@ from unittest import mock
 
 import pytest
 from linkforge_core.base import RobotParserError
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.parsers.xacro_parser import XACROParser, XacroResolver
 from linkforge_core.parsers.xacro_parser import logger as xacro_logger
 
@@ -288,7 +289,7 @@ def test_resolve_file_raises_generic_error(monkeypatch):
     from linkforge_core.parsers.xacro_parser import XacroResolver
 
     def mock_parse(*args, **kwargs):
-        raise ValueError("Generic crash")
+        raise RobotModelError("Generic crash")
 
     monkeypatch.setattr(ET, "parse", mock_parse)
 

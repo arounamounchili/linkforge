@@ -6,6 +6,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from enum import Enum
 
+from ..exceptions import RobotModelError
 from ..utils.string_utils import is_valid_urdf_name
 
 
@@ -50,11 +51,11 @@ class TransmissionJoint:
     def __post_init__(self) -> None:
         """Validate transmission joint."""
         if not self.name:
-            raise ValueError("Transmission joint name cannot be empty")
+            raise RobotModelError("Transmission joint name cannot be empty")
         if not self.hardware_interfaces:
-            raise ValueError(f"Joint '{self.name}' must have at least one hardware interface")
+            raise RobotModelError(f"Joint '{self.name}' must have at least one hardware interface")
         if self.mechanical_reduction == 0:
-            raise ValueError(f"Joint '{self.name}' mechanical reduction cannot be zero")
+            raise RobotModelError(f"Joint '{self.name}' mechanical reduction cannot be zero")
 
 
 @dataclass(frozen=True)
@@ -72,11 +73,13 @@ class TransmissionActuator:
     def __post_init__(self) -> None:
         """Validate transmission actuator."""
         if not self.name:
-            raise ValueError("Transmission actuator name cannot be empty")
+            raise RobotModelError("Transmission actuator name cannot be empty")
         if not self.hardware_interfaces:
-            raise ValueError(f"Actuator '{self.name}' must have at least one hardware interface")
+            raise RobotModelError(
+                f"Actuator '{self.name}' must have at least one hardware interface"
+            )
         if self.mechanical_reduction == 0:
-            raise ValueError(f"Actuator '{self.name}' mechanical reduction cannot be zero")
+            raise RobotModelError(f"Actuator '{self.name}' mechanical reduction cannot be zero")
 
 
 @dataclass(frozen=True)
@@ -98,33 +101,35 @@ class Transmission:
     def __post_init__(self) -> None:
         """Validate transmission configuration."""
         if not self.name:
-            raise ValueError("Transmission name cannot be empty")
+            raise RobotModelError("Transmission name cannot be empty")
         if not self.type:
-            raise ValueError("Transmission type cannot be empty")
+            raise RobotModelError("Transmission type cannot be empty")
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
-            raise ValueError(
+            raise RobotModelError(
                 f"Transmission name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."
             )
 
         # Must have at least one joint
         if not self.joints:
-            raise ValueError(f"Transmission '{self.name}' must have at least one joint")
+            raise RobotModelError(f"Transmission '{self.name}' must have at least one joint")
 
         # Check for duplicate joint names
         joint_names = [j.name for j in self.joints]
         duplicates = {name for name, count in Counter(joint_names).items() if count > 1}
         if duplicates:
-            raise ValueError(f"Transmission '{self.name}' has duplicate joint names: {duplicates}")
+            raise RobotModelError(
+                f"Transmission '{self.name}' has duplicate joint names: {duplicates}"
+            )
 
         # Check for duplicate actuator names
         if self.actuators:
             actuator_names = [a.name for a in self.actuators]
             duplicates = {name for name, count in Counter(actuator_names).items() if count > 1}
             if duplicates:
-                raise ValueError(
+                raise RobotModelError(
                     f"Transmission '{self.name}' has duplicate actuator names: {duplicates}"
                 )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     GazeboElement,
     GazeboPlugin,
@@ -34,12 +35,12 @@ class TestGazeboPlugin:
 
     def test_empty_name(self):
         """Test that empty name raises error."""
-        with pytest.raises(ValueError, match="Plugin name cannot be empty"):
+        with pytest.raises(RobotModelError, match="Plugin name cannot be empty"):
             GazeboPlugin(name="", filename="lib.so")
 
     def test_empty_filename(self):
         """Test that empty filename raises error."""
-        with pytest.raises(ValueError, match="Plugin filename cannot be empty"):
+        with pytest.raises(RobotModelError, match="Plugin filename cannot be empty"):
             GazeboPlugin(name="test", filename="")
 
 
@@ -111,5 +112,5 @@ class TestGazeboElement:
 
     def test_empty_reference_string(self):
         """Test that empty string reference raises error."""
-        with pytest.raises(ValueError, match="Gazebo reference cannot be empty string"):
+        with pytest.raises(RobotModelError, match="Gazebo reference cannot be empty string"):
             GazeboElement(reference="")
