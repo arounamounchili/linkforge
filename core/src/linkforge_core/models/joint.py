@@ -157,7 +157,7 @@ class Joint:
         if self.type in (JointType.REVOLUTE, JointType.PRISMATIC):
             if self.limits is None:
                 raise RobotModelError(f"{self.type.value} joints require limits")
-            # Limit validity is already checked in JointLimit.__post_init__ (ValueError)
+            # Limit validity is already checked in JointLimits.__post_init__ (RobotModelError)
         elif self.type == JointType.FIXED and self.limits is not None:
             raise RobotModelError("Fixed joints must not have limits")
 

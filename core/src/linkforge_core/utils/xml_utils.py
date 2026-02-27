@@ -20,7 +20,7 @@ def validate_xml_depth(element: ET.Element, depth: int = 0) -> None:
         depth: Current nesting depth
 
     Raises:
-        ValueError: If depth exceeds MAX_XML_DEPTH
+        RobotModelError: If depth exceeds MAX_XML_DEPTH
     """
     if depth > MAX_XML_DEPTH:
         raise RobotModelError(
@@ -105,7 +105,7 @@ def parse_float(
         Parsed float
 
     Raises:
-        ValueError: If input is invalid
+        RobotModelError: If input is invalid
     """
     import math
 
