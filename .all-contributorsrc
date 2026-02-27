@@ -48,6 +48,15 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "julianmueller",
+      "name": "Julian Müller",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32650678?v=4",
+      "profile": "https://www.mec.ed.tum.de/en/iwb/staff/research-team-assembly-technology-and-robotics/mueller-julian/",
+      "contributions": [
+        "ideas"
+      ]
     }
   ],
   "contributorsPerLine": 7,
