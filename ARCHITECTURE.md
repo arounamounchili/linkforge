@@ -391,9 +391,9 @@ Models validate themselves in `__post_init__()` to ensure data integrity.
 ```python
 def __post_init__(self) -> None:
     if not self.name:
-        raise ValueError("Link name cannot be empty")
+        raise RobotModelError("Link name cannot be empty")
     if self.inertial and self.inertial.mass <= 0:
-        raise ValueError("Mass must be positive")
+        raise RobotModelError("Mass must be positive")
 ```
 
 ### 3. **Resilient Parsing & Duplicate Resolution**

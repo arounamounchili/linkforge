@@ -276,10 +276,10 @@ def calculate_inertia(geometry: Box, mass: float) -> InertiaTensor:
         Inertia tensor for the box
 
     Raises:
-        ValueError: If mass is non-positive
+        RobotModelError: If mass is non-positive
     """
     if mass <= 0:
-        raise ValueError("Mass must be positive")
+        raise RobotModelError("Mass must be positive")
 
     # Calculate moments of inertia
     ixx = (mass / 12.0) * (geometry.size.y**2 + geometry.size.z**2)
