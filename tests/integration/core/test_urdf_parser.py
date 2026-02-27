@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from linkforge_core.base import RobotParserError
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     Box,
     Color,
@@ -60,22 +61,22 @@ class TestParseVector3:
 
     def test_parse_invalid_too_few_values(self):
         """Test that parsing with too few values raises ValueError."""
-        with pytest.raises(ValueError, match="Expected 3 values"):
+        with pytest.raises(RobotModelError, match="Expected 3 values"):
             parse_vector3("1.0 2.0")
 
     def test_parse_invalid_too_many_values(self):
         """Test that parsing with too many values raises ValueError."""
-        with pytest.raises(ValueError, match="Expected 3 values"):
+        with pytest.raises(RobotModelError, match="Expected 3 values"):
             parse_vector3("1.0 2.0 3.0 4.0")
 
     def test_parse_invalid_non_numeric(self):
         """Test that parsing non-numeric values raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid Vector3 format"):
+        with pytest.raises(RobotModelError, match="Invalid Vector3 format"):
             parse_vector3("1.0 abc 3.0")
 
     def test_parse_empty_string(self):
         """Test that parsing empty string raises ValueError."""
-        with pytest.raises(ValueError, match="Expected 3 values"):
+        with pytest.raises(RobotModelError, match="Expected 3 values"):
             parse_vector3("")
 
 
