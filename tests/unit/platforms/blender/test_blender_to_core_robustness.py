@@ -12,10 +12,10 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
     scene_to_robot,
 )
+from linkforge.linkforge_core.exceptions import RobotModelError
 from linkforge.linkforge_core.models import (
     JointType,
 )
-from linkforge_core.exceptions import RobotModelError
 from mathutils import Matrix
 
 

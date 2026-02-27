@@ -6,7 +6,7 @@ from linkforge.blender.operators.import_ops import (
     register,
     unregister,
 )
-from linkforge_core.exceptions import RobotModelError
+from linkforge.linkforge_core.exceptions import RobotModelError
 
 
 def test_import_urdf_logic_paths(mocker, tmp_path):

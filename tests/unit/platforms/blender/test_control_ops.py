@@ -178,10 +178,10 @@ def test_control_ops_polls_extended(clean_scene):
 
 def test_control_ops_registry():
     """Target registration branches."""
-    # unregister first to hit ValueErrors if any, then register
+    # unregister first to hit RobotModelErrors if any, then register
     unregister()
     register()
-    # Re-register to hit the "except ValueError" branch (class already registered)
+    # Re-register to hit the "except RobotModelError" branch (class already registered)
     register()
 
 

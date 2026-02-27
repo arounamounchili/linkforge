@@ -2,7 +2,7 @@ from pathlib import Path
 
 import bpy
 import pytest
-from linkforge_core.exceptions import RobotModelError
+from linkforge.linkforge_core.exceptions import RobotModelError
 
 try:
     import importlib.util
@@ -1634,8 +1634,8 @@ def test_blender_to_core_missing_errors(clean_scene):
         blender_transmission_to_core,
         get_object_geometry,
     )
+    from linkforge.linkforge_core.exceptions import RobotModelError
     from linkforge.linkforge_core.models.geometry import Box
-    from linkforge_core.exceptions import RobotModelError
 
     # blender_link_to_core_with_origin None
     assert blender_link_to_core_with_origin(None) is None
