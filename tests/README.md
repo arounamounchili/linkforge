@@ -19,9 +19,9 @@ End-to-end tests verifying the interaction between multiple components.
 ## How to Run Tests
 
 ### Standard Python Tests
-To run core unit tests and parser integration tests:
+To run core unit tests and core integration tests:
 ```bash
-pytest tests/unit/core tests/integration/parsers
+pytest tests/unit/core tests/integration/core
 ```
 
 ### Blender-Dependent Tests

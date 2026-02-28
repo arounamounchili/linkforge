@@ -165,14 +165,15 @@ The package will be created in the `dist/` directory.
 - [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
 - [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
 - [x] **v1.2.0**: **Architectural Stability** (Hexagonal Core, Numerical Precision).
-- [ ] **v1.3.0**: **High-Fidelity Expansion** (MJCF/MuJoCo & SDF/Gazebo support).
-- [ ] **v1.4.0**: **Mechanical Debugging** (Real-time IK & Collision Interference Validation).
+- [ ] **v1.3.0**: **Performance & Control** (NumPy Acceleration, Depsgraph, & ROS2 Control).
+- [ ] **v1.4.0**: **Modular Assembly** (SRDF, Composer API, `linkforge_ros`).
+- [ ] **v1.5.0**: **High-Fidelity Expansion pt.1** (MJCF/MuJoCo support).
+- [ ] **v1.6.0**: **High-Fidelity Expansion pt.2** (SDF/Gazebo support).
+- [ ] **v1.7.0**: **Mechanical Debugging** (Real-time IK & Collision Interference Validation).
 - [ ] **v2.0.0**: **Intelligence-Driven Rigging** (AI-assisted geometry analysis & Auto-Rigging).
 
 ## 🔭 Vision & Future
 For a deep dive into our long-term strategy, the **Digital Twin** philosophy, and our technical roadmap for AI and Kinematics, please read our [Project Vision](VISION.md).
-
-
 
 ## 🤝 Contributing
 

@@ -163,7 +163,7 @@ uv add --dev linkify-it-py
 Use relative paths for local files:
 
 ```markdown
-See [Architecture](architecture.md) for details.
+See [Architecture](ARCHITECTURE.md) for details.
 ```
 
 ### Build warnings

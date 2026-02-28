@@ -23,6 +23,6 @@ The core library is built and managed using [`uv`](https://docs.astral.sh/uv/).
 # Install dependencies
 uv sync
 
-# Run core tests
+# Run core tests (execute from the project root directory)
 uv run pytest tests/unit/core
 ```
