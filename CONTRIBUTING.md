@@ -323,6 +323,16 @@ Pre-commit automatically runs on `git commit`:
 
 ## Submitting Changes
 
+### Developer Certificate of Origin (DCO)
+
+All contributions to this project must be accompanied by a Developer Certificate of Origin (DCO) sign-off. This ensures that you have the right to submit the code under the project's open-source license.
+
+To sign off on a commit, simply use the `-s` flag when committing:
+`git commit -s -m "Your descriptive commit message"`
+
+This will automatically add the following line to your commit message:
+`Signed-off-by: Your Name <your.email@example.com>`
+
 ### Pull Request Process
 
 1. **Push your branch**
