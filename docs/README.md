@@ -121,7 +121,7 @@ make html
 git checkout gh-pages
 cp -r build/html/* .
 git add .
-git commit -m "Update documentation"
+git commit -s -m "Update documentation"
 git push origin gh-pages
 ```
 

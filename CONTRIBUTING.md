@@ -139,7 +139,7 @@ just build
 
 ```bash
 git add .
-git commit -m "feat: add your feature description"
+git commit -s -m "feat: add your feature description"
 ```
 
 **Commit Message Format:**
