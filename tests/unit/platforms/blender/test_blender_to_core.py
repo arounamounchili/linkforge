@@ -1034,6 +1034,34 @@ def test_blender_ros2_control_defaults(clean_scene):
     assert control.joints[0].state_interfaces == ["position"]
 
 
+def test_blender_ros2_control_joint_obj_name_sync(clean_scene):
+    """Verify that ros2_control generation uses the joint_obj.linkforge_joint.joint_name instead of item.name if present."""
+    props = bpy.context.scene.linkforge
+    props.ros2_control_name = "SyncedBot"
+
+    # Setup a mapped joint object
+    bpy.ops.object.empty_add(type="ARROWS")
+    joint_obj = bpy.context.active_object
+    joint_obj.name = "MyRealJoint"
+    joint_obj.linkforge_joint.is_robot_joint = True
+    joint_obj.linkforge_joint.joint_name = "MyRealJoint"
+
+    joint = props.ros2_control_joints.add()
+    joint.name = "StaleJointName"
+    joint.joint_obj = joint_obj
+    joint.cmd_position = True
+    joint.state_position = True
+
+    from linkforge.blender.adapters.blender_to_core import blender_ros2_control_to_core
+
+    control = blender_ros2_control_to_core(props)
+
+    assert control is not None
+    assert len(control.joints) == 1
+    # Should use the real name from the pointer, not the stale item name
+    assert control.joints[0].name == "MyRealJoint"
+
+
 def test_blender_sensor_gps_and_lidar_full(clean_scene):
     """Exhaustive test for GPS and LIDAR properties."""
     link = bpy.data.objects.new("L", None)

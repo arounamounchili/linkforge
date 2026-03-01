@@ -53,6 +53,12 @@ class Ros2ControlJointProperty(PropertyGroup):
         default="",
     )
 
+    joint_obj: bpy.props.PointerProperty(  # type: ignore
+        name="Joint Object",
+        type=bpy.types.Object,
+        description="Reference to the physical joint object",
+    )
+
     # Command Interfaces (what we send)
     # Using Booleans for common interfaces for quick UI access
     cmd_position: BoolProperty(name="Position", default=True)  # type: ignore

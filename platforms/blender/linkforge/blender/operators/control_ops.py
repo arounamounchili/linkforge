@@ -51,9 +51,28 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
             return {"CANCELLED"}
         props = typing.cast(typing.Any, scene).linkforge
 
-        # Check if joint already exists in collection
+        # Find the target joint object we intend to add
+        target_joint_obj = next(
+            (
+                obj
+                for obj in scene.objects
+                if obj.type == "EMPTY"
+                and hasattr(obj, "linkforge_joint")
+                and obj.linkforge_joint.is_robot_joint
+                and obj.linkforge_joint.joint_name == self.joint_name
+            ),
+            None,
+        )
+
+        # Check if joint or its specific object already exists in collection
         for item in props.ros2_control_joints:
-            if item.name == self.joint_name:
+            # Check if name exactly matches OR physical object exactly matches
+            if item.name == self.joint_name or (
+                hasattr(item, "joint_obj")
+                and item.joint_obj is not None
+                and target_joint_obj is not None
+                and item.joint_obj == target_joint_obj
+            ):
                 self.report(
                     {"WARNING"}, f"Joint '{self.joint_name}' is already in the control system"
                 )
@@ -62,6 +81,8 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
         # Add to collection
         item = props.ros2_control_joints.add()
         item.name = self.joint_name
+
+        item.joint_obj = target_joint_obj
 
         # Set default interfaces
         item.cmd_position = True

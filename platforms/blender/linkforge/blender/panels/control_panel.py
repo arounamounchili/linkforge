@@ -33,7 +33,16 @@ class LINKFORGE_UL_ros2_control_joints(UIList):
         """Draw an item in the list."""
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
-            row.label(text=item.name, icon="EMPTY_AXIS")
+
+            # Determine display name dynamically from pointer
+            display_name = item.name
+
+            if hasattr(item, "joint_obj") and item.joint_obj:
+                real_name = getattr(item.joint_obj.linkforge_joint, "joint_name", "")
+                if real_name:
+                    display_name = real_name
+
+            row.label(text=display_name, icon="EMPTY_AXIS")
 
             # Indicators for enabled interfaces
             interfaces = []
@@ -78,7 +87,15 @@ class LINKFORGE_PT_control(Panel):
             joint_item: The specific joint property item being configured.
         """
         inner = layout.box()
-        inner.label(text=f"Config: {joint_item.name}", icon="SETTINGS")
+
+        # Determine display name dynamically from pointer
+        display_name = joint_item.name
+        if hasattr(joint_item, "joint_obj") and joint_item.joint_obj:
+            real_name = getattr(joint_item.joint_obj.linkforge_joint, "joint_name", "")
+            if real_name:
+                display_name = real_name
+
+        inner.label(text=f"Config: {display_name}", icon="SETTINGS")
 
         # Hiding command interfaces for read-only sensor hardware
         row = inner.row()
@@ -246,8 +263,13 @@ class LINKFORGE_MT_add_control_joint(Menu):
         # Get all joints from tree
         tree, root_link, joints_dict, links_dict = build_tree_structure(scene)
 
-        # Get already added joint names
-        added_joints = {item.name for item in props.ros2_control_joints}
+        # Get already added joint names and object references
+        added_names = {item.name for item in props.ros2_control_joints}
+        added_objs = {
+            item.joint_obj
+            for item in props.ros2_control_joints
+            if hasattr(item, "joint_obj") and item.joint_obj
+        }
 
         joint_objs = []
         for obj in scene.objects:
@@ -257,7 +279,8 @@ class LINKFORGE_MT_add_control_joint(Menu):
                 and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
             ):
                 name = typing.cast(typing.Any, obj).linkforge_joint.joint_name
-                if name not in added_joints:
+                # Check if the exact object or the exact name was already added
+                if obj not in added_objs and name not in added_names:
                     joint_objs.append((name, obj))
 
         if not joint_objs:

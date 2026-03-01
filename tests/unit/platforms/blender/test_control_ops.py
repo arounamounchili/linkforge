@@ -16,6 +16,12 @@ def test_add_ros2_control_joint_execute(mocker, clean_scene):
     props = scene.linkforge
     props.ros2_control_joints.clear()
 
+    # Mock actual joint in scene for the new joint_obj reference fetch logic
+    joint_obj = bpy.data.objects.new("joint1", None)
+    joint_obj.linkforge_joint.is_robot_joint = True
+    joint_obj.linkforge_joint.joint_name = "joint1"
+    scene.collection.objects.link(joint_obj)
+
     mock_self = MagicMock()
     mock_self.report = MagicMock()
     mock_self.joint_name = "joint1"
@@ -26,6 +32,7 @@ def test_add_ros2_control_joint_execute(mocker, clean_scene):
     assert result == {"FINISHED"}
     assert len(props.ros2_control_joints) == 1
     assert props.ros2_control_joints[0].name == "joint1"
+    assert props.ros2_control_joints[0].joint_obj == joint_obj
     mock_self.report.assert_called_with({"INFO"}, mocker.ANY)
 
 
@@ -82,13 +89,28 @@ def test_control_ops_add_failures(mocker, clean_scene):
     props = scene.linkforge
     props.ros2_control_joints.clear()
 
-    # 1. Duplicate check
+    # 1. Duplicate check by name
     joint = props.ros2_control_joints.add()
     joint.name = "duplicate_joint"
 
     mock_self = MagicMock()
     mock_self.joint_name = "duplicate_joint"
 
+    res = LINKFORGE_OT_add_ros2_control_joint.execute(mock_self, bpy.context)
+    assert res == {"CANCELLED"}
+
+    # 2. Duplicate check by object reference
+    props.ros2_control_joints.clear()
+    joint_obj = bpy.data.objects.new("test_joint_obj", None)
+    joint_obj.linkforge_joint.is_robot_joint = True
+    joint_obj.linkforge_joint.joint_name = "new_name"  # Physical object name is new
+    scene.collection.objects.link(joint_obj)
+
+    joint = props.ros2_control_joints.add()
+    joint.name = "old_stale_name"
+    joint.joint_obj = joint_obj
+
+    mock_self.joint_name = "new_name"  # Trying to add it under its new name
     res = LINKFORGE_OT_add_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"CANCELLED"}
 
