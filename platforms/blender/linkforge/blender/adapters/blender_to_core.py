@@ -1382,14 +1382,7 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
         parameters = {p.name: p.value for p in item.parameters if p.name}
 
         # Determine the correct joint name
-        joint_name = item.name
-        if (
-            hasattr(item, "joint_obj")
-            and item.joint_obj
-            and hasattr(item.joint_obj, "linkforge_joint")
-            and item.joint_obj.linkforge_joint.joint_name
-        ):
-            joint_name = item.joint_obj.linkforge_joint.joint_name
+        joint_name = item.joint_obj.linkforge_joint.joint_name if item.joint_obj else item.name
 
         if cmd_ifs or state_ifs:
             joints.append(

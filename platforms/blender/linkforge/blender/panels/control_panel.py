@@ -35,12 +35,9 @@ class LINKFORGE_UL_ros2_control_joints(UIList):
             row = layout.row(align=True)
 
             # Determine display name dynamically from pointer
-            display_name = item.name
-
-            if hasattr(item, "joint_obj") and item.joint_obj:
-                real_name = getattr(item.joint_obj.linkforge_joint, "joint_name", "")
-                if real_name:
-                    display_name = real_name
+            display_name = (
+                item.joint_obj.linkforge_joint.joint_name if item.joint_obj else item.name
+            )
 
             row.label(text=display_name, icon="EMPTY_AXIS")
 
@@ -89,11 +86,11 @@ class LINKFORGE_PT_control(Panel):
         inner = layout.box()
 
         # Determine display name dynamically from pointer
-        display_name = joint_item.name
-        if hasattr(joint_item, "joint_obj") and joint_item.joint_obj:
-            real_name = getattr(joint_item.joint_obj.linkforge_joint, "joint_name", "")
-            if real_name:
-                display_name = real_name
+        display_name = (
+            joint_item.joint_obj.linkforge_joint.joint_name
+            if joint_item.joint_obj
+            else joint_item.name
+        )
 
         inner.label(text=f"Config: {display_name}", icon="SETTINGS")
 
@@ -265,11 +262,7 @@ class LINKFORGE_MT_add_control_joint(Menu):
 
         # Get already added joint names and object references
         added_names = {item.name for item in props.ros2_control_joints}
-        added_objs = {
-            item.joint_obj
-            for item in props.ros2_control_joints
-            if hasattr(item, "joint_obj") and item.joint_obj
-        }
+        added_objs = {item.joint_obj for item in props.ros2_control_joints if item.joint_obj}
 
         joint_objs = []
         for obj in scene.objects:
