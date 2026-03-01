@@ -65,9 +65,10 @@ generator = XACROGenerator(
 
 files = generator.generate(robot)
 # Creates:
-# - robot.xacro (main file)
-# - properties.xacro (parameters)
-# - macros.xacro (reusable macros)
+# - robot.xacro (main assembly)
+# - robot_properties.xacro (materials & dimensions)
+# - robot_macros.xacro (reusable geometries)
+# - robot_ros2_control.xacro (hardware plugins & interfaces)
 ```
 
 ### Export Options

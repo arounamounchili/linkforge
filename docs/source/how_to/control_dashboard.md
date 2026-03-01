@@ -31,3 +31,10 @@ In the **Hardware System** section, you can configure:
 - **Name**: The name of the `ros2_control` system (default: `GazeboSimSystem`).
 - **Plugin**: The C++ hardware plugin to load (default: `gz_ros2_control/GazeboSimSystem`).
 - **Gazebo Integration**: Parameters for the Gazebo Classic/Sim plugin definition in URDF.
+
+## 4. Exporting (Modular XACRO)
+When exporting your robot, it is highly recommended to use the **Split Files** option if you are exporting to **XACRO**.
+
+By checking **Split Files** in the export panel, LinkForge will automatically extract all `<ros2_control>` tags and related hardware `<gazebo>` plugins into a dedicated `[robot_name]_ros2_control.xacro` file.
+
+This adheres strictly to modern ROS 2 industry standards, keeping your control logic completely modular and separate from your geometric links.
