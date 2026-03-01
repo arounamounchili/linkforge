@@ -1171,9 +1171,11 @@ def scene_to_robot(
                     if robot_props.controllers_yaml_path:
                         params["parameters"] = robot_props.controllers_yaml_path
 
+                    # Map UI string directly. Conventionally users input the exact plugin tag content,
+                    # e.g., gz_ros2_control::GazeboSimROS2ControlPlugin, or libgazebo_ros2_control.so.
                     gazebo_plugin = GazeboPlugin(
                         name="gazebo_ros2_control",
-                        filename="libgz_ros2_control-system.so",  # Default filename for simulation
+                        filename=robot_props.gazebo_plugin_name,
                         parameters=params,
                     )
                     # Note: We wrap the plugin in a GazeboElement without a reference (global)
