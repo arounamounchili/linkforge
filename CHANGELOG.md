@@ -5,6 +5,46 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/arounamounchili/linkforge/compare/v1.2.3...v1.3.0) (2026-03-01)
+
+
+### 🚀 Features
+
+* add component search filter for component browser ([#128](https://github.com/arounamounchili/linkforge/issues/128)) ([e7ac61a](https://github.com/arounamounchili/linkforge/commit/e7ac61a62cdf37a900054ec8b8f7adf17976d411))
+* enhance joint model with safety/calibration and fix xacro grouping ([#140](https://github.com/arounamounchili/linkforge/issues/140)) ([a0c0c3e](https://github.com/arounamounchili/linkforge/commit/a0c0c3efa74808e86f90b6d78982f57905bb5e35))
+* enhance ros2_control intelligence and unify simplified mesh terminology ([7de79fe](https://github.com/arounamounchili/linkforge/commit/7de79feb6264a8bf0756958ac6c1906aef3d7c90))
+* **ros2-control:** joint sync, xacro modularity, and 100% core test coverage ([#156](https://github.com/arounamounchili/linkforge/issues/156)) ([7b78606](https://github.com/arounamounchili/linkforge/commit/7b7860631d302048d45a01797bf455cc05259e82))
+
+
+### 🐞 Bug Fixes
+
+* **core:** resolve security gaps and documentation discrepancies ([d1dc15a](https://github.com/arounamounchili/linkforge/commit/d1dc15a6942cd5f21f457865ea47564af31cbadb))
+* enhance XACRO generator to remove additional types of empty placeholder ([#160](https://github.com/arounamounchili/linkforge/issues/160)) ([bbb99e6](https://github.com/arounamounchili/linkforge/commit/bbb99e6880bcc063cc1d06b1ec58af1eac50eec1))
+* resolve xacro import failures for ros2-style robot descriptions ([#134](https://github.com/arounamounchili/linkforge/issues/134)) ([c162d5c](https://github.com/arounamounchili/linkforge/commit/c162d5c8b00964c43f55ff332a51f31c97dfb109))
+* robust mesh import cleanup and xacro improvements ([#136](https://github.com/arounamounchili/linkforge/issues/136)) ([2dede4f](https://github.com/arounamounchili/linkforge/commit/2dede4f30cd3c752494b692fc843ad9ff29afe1b))
+
+
+### 📚 Documentation
+
+* add andreas-loeffler as a contributor for code, and test ([#130](https://github.com/arounamounchili/linkforge/issues/130)) ([fd02561](https://github.com/arounamounchili/linkforge/commit/fd02561bf867ac49da2343648824fbe22b82c1e5))
+* add dco signoff requirement ([3484345](https://github.com/arounamounchili/linkforge/commit/34843455a535bb22168abe382c0d58d112ec7671))
+* add julianmueller as a contributor for ideas ([f565cd5](https://github.com/arounamounchili/linkforge/commit/f565cd554fc49a56b9538841953cbae727e35749))
+* align component READMEs and refine documentation ([af63a14](https://github.com/arounamounchili/linkforge/commit/af63a14bfaa00fe816e5ffe806c63f6f2e086809))
+* align multi-package roadmaps and correct architectural references ([781a9b2](https://github.com/arounamounchili/linkforge/commit/781a9b2af9919139b9b85172e238ee931c62a71b))
+* clarify link/joint frame hierarchy and mesh origin behaviour ([01094ea](https://github.com/arounamounchili/linkforge/commit/01094eaa6f79fc695040055ff396d31b791d92f5))
+* transition core branding to "The Linter & Bridge for Robotics ([#127](https://github.com/arounamounchili/linkforge/issues/127)) ([73e44e2](https://github.com/arounamounchili/linkforge/commit/73e44e2e299632634654421d3f095fd80f75fdc9))
+* **vision:** upgrade vision image to 'the truth layer' ([#137](https://github.com/arounamounchili/linkforge/issues/137)) ([3b1eea9](https://github.com/arounamounchili/linkforge/commit/3b1eea9756e98a9803112c583cdb36ef24255502))
+
+
+### ⚡ Performance Updates
+
+* Depsgraph Caching, NumPy acceleration, and Formal Kinematic Graph ([ab4485b](https://github.com/arounamounchili/linkforge/commit/ab4485bb4250ca21bdbc9fca9650e63637d7eb13))
+
+
+### 🛠️ Refactors
+
+* modernize exception hierarchy and domain-specific validation ([3c75d15](https://github.com/arounamounchili/linkforge/commit/3c75d15f69895cd78b7c8032abea16ea077dc5ca))
+
 ## [1.2.3](https://github.com/arounamounchili/linkforge/compare/v1.2.2...v1.2.3) (2026-02-14)
 
 
