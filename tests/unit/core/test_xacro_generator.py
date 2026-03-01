@@ -637,6 +637,11 @@ class TestXACROGenerator:
         assert "xacro:include" in main_content
         assert 'filename="control_bot_ros2_control.xacro"' in main_content
 
+        # Main file should NOT contain the empty placeholder comments at the bottom
+        # It should ONLY have the single comment above the include tag
+        assert main_content.count("<!-- ROS2 Control -->") == 1
+        assert "<!-- Gazebo -->" not in main_content
+
         # Control file should contain ros2_control and gazebo tags
         assert "<ros2_control" in control_content
         assert "<gazebo" in control_content

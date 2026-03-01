@@ -814,12 +814,13 @@ class XACROGenerator(URDFGenerator):
             main_root.append(include_control)
 
         # Clean up remaining comments in root that are no longer relevant
-        # (e.g. if we moved all properties, remove the "Properties" comment)
+        # (e.g. if we moved all properties, remove the "Properties" comment space, Gazebo, etc.)
         for child in list(root):
             if (
                 child.tag is ET.Comment  # type: ignore[comparison-overlap]
                 and child.text
-                and child.text.strip() in ("Properties", "Macros")
+                and child.text.strip()
+                in ("Properties", "Macros", "ROS2 Control", "Gazebo", "Sensors", "Transmissions")
             ):
                 root.remove(child)
 
