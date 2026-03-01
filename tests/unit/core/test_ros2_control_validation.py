@@ -121,3 +121,47 @@ def test_ros2_control_actuator_joint_limit_validation():
         joints=[j1],
     )
     assert len(rc.joints) == 1
+
+
+def test_ros2_control_empty_name_validation():
+    """Test that Ros2Control must have a non-empty name."""
+    with pytest.raises(RobotModelError, match="ros2_control name cannot be empty"):
+        Ros2Control(name="", hardware_plugin="mock")
+
+
+def test_ros2_control_invalid_type_validation():
+    """Test that Ros2Control must have a valid type."""
+    with pytest.raises(RobotModelError, match="Invalid ros2_control type"):
+        Ros2Control(name="ctrl", type="invalid", hardware_plugin="mock")
+
+
+def test_ros2_control_joint_empty_name_validation():
+    """Test that Ros2ControlJoint must have a non-empty name."""
+    with pytest.raises(RobotModelError, match="Joint name cannot be empty"):
+        Ros2ControlJoint(name="")
+
+
+def test_ros2_control_joint_empty_interfaces_validation():
+    """Test that Ros2ControlJoint must have at least one interface."""
+    with pytest.raises(RobotModelError, match="must have at least one command OR state interface"):
+        Ros2ControlJoint(name="joint1", command_interfaces=[], state_interfaces=[])
+
+
+def test_ros2_control_empty_hardware_plugin_validation():
+    """Test that Ros2Control must have a non-empty hardware plugin."""
+    with pytest.raises(RobotModelError, match="Hardware plugin cannot be empty"):
+        Ros2Control(name="ctrl", hardware_plugin="")
+
+
+def test_ros2_control_sensor_no_command_interfaces():
+    """Test that a sensor without command interfaces passes validation."""
+    j1 = Ros2ControlJoint(name="sensor_joint", state_interfaces=["position"])
+    rc = Ros2Control(name="sens", type="sensor", hardware_plugin="mock", joints=[j1])
+    assert len(rc.joints) == 1
+    assert rc.joints[0].name == "sensor_joint"
+
+
+def test_ros2_control_sensor_empty_joints():
+    """Test that a sensor with no joints passes validation (e.g., IMU on a link)."""
+    rc = Ros2Control(name="sens", type="sensor", hardware_plugin="mock", joints=[])
+    assert len(rc.joints) == 0

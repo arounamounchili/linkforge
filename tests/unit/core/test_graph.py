@@ -102,3 +102,23 @@ def test_graph_empty_input():
     assert graph.get_root_links() == []
     assert graph.get_topological_order() == []
     assert graph.find_islands() == []
+
+
+def test_graph_diamond_dag_coverage():
+    """Verify diamond structure: A -> B, A -> C, B -> D, C -> D (no cycles)."""
+    links = [Link(name="A"), Link(name="B"), Link(name="C"), Link(name="D")]
+    joints = [
+        Joint(name="j1", parent="A", child="B", type=JointType.FIXED),
+        Joint(name="j2", parent="A", child="C", type=JointType.FIXED),
+        Joint(name="j3", parent="B", child="D", type=JointType.FIXED),
+        Joint(name="j4", parent="C", child="D", type=JointType.FIXED),
+    ]
+    graph = KinematicGraph(links, joints)
+
+    # This hits the 'do nothing' branch in has_cycle when child is visited but not in rec_stack
+    assert not graph.has_cycle()
+    assert graph.get_root_links() == ["A"]
+
+    # This hits the in_degree[child] != 0 branch in get_topological_order
+    order = graph.get_topological_order()
+    assert order == ["A", "B", "C", "D"]

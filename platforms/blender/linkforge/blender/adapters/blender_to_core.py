@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 try:
-    import numpy as np  # type: ignore[import-not-found]
+    import numpy as np
 except ImportError:
     np = None
 

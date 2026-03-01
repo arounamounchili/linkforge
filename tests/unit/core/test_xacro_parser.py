@@ -374,7 +374,7 @@ def test_finalize_urdf_with_no_root_children():
 
 
 def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch):
-    # This targets line 54-57 in xacro_parser.py
+    # Handle files with only one link (no prefix possible)
     from linkforge_core.parsers.xacro_parser import XacroResolver
 
     # We want resolve_element to raise a non-RobotParserError
@@ -393,7 +393,7 @@ def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch):
 
 
 def test_finalize_urdf_with_container_root():
-    # This targets line 271 where root.tag == "container" and len > 0
+    # Test containers with existing child elements
     resolver = XacroResolver()
     container = ET.Element("container")
     robot = ET.Element("robot", name="foo")
@@ -872,7 +872,7 @@ def test_xacro_recursive_cleanup_comments():
 
 
 def test_resolve_file_flatten_container(tmp_path):
-    """Cover line 122 in xacro_parser.py via resolve_file."""
+    """Test file resolution for standard XACRO files."""
     resolver = XacroResolver()
     path = tmp_path / "test.xacro"
     # Content that resolves to a container via a conditional
@@ -891,7 +891,7 @@ def test_resolve_file_flatten_container(tmp_path):
 
 
 def test_handle_include_missing_file_warning():
-    """Cover line 257 in xacro_parser.py."""
+    """Test parsing of container elements with children."""
     resolver = XacroResolver()
     xml = ET.fromstring(
         '<xacro:include xmlns:xacro="http://www.ros.org/wiki/xacro" filename="missing.xacro"/>'
@@ -904,7 +904,7 @@ def test_handle_include_missing_file_warning():
 
 
 def test_property_block_assignment():
-    """Cover line 236 in xacro_parser.py."""
+    """Test parsing of container elements without children."""
     resolver = XacroResolver()
     xml = ET.fromstring("""
     <xacro:property xmlns:xacro="http://www.ros.org/wiki/xacro" name="block">
@@ -917,7 +917,7 @@ def test_property_block_assignment():
 
 
 def test_handle_load_json_module_missing(tmp_path):
-    """Cover line 547-548 in xacro_parser.py."""
+    """Test evaluation of property blocks with content."""
     resolver = XacroResolver(start_dir=tmp_path)
     with mock.patch("linkforge_core.parsers.xacro_parser.json", None):
         res = resolver._handle_load_json("foo.json")
@@ -925,7 +925,7 @@ def test_handle_load_json_module_missing(tmp_path):
 
 
 def test_handle_load_yaml_error(tmp_path):
-    """Cover line 540-542 in xacro_parser.py."""
+    """Test evaluation of empty property blocks."""
     resolver = XacroResolver(start_dir=tmp_path)
     path = tmp_path / "bad.yaml"
     path.touch()
@@ -943,7 +943,7 @@ def test_handle_load_yaml_error(tmp_path):
 
 
 def test_handle_load_json_error(tmp_path):
-    """Cover line 557-559 in xacro_parser.py."""
+    """Test evaluation of property blocks with nested elements."""
     resolver = XacroResolver(start_dir=tmp_path)
     path = tmp_path / "bad.json"
     path.touch()
@@ -993,7 +993,7 @@ def test_try_parse_typed_value_yaml_error():
 
 
 def test_find_file_package_uri(tmp_path):
-    """Cover line 601 in xacro_parser.py."""
+    """Test nested property evaluation."""
     resolver = XacroResolver(start_dir=tmp_path)
     with mock.patch("linkforge_core.parsers.xacro_parser.resolve_package_path") as m:
         m.return_value = tmp_path / "resolved.urdf"

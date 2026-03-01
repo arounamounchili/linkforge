@@ -14,6 +14,7 @@ from linkforge_core.models import (
     Cylinder,
     GazeboElement,
     GPSInfo,
+    IMUInfo,
     Inertial,
     InertiaTensor,
     Joint,
@@ -1172,3 +1173,234 @@ class TestURDFGeneratorEdgeCoverage:
         gen = URDFGenerator()
         result = gen.generate(robot)
         assert "ft" in result
+
+    def test_generate_robot_with_empty_sections(self) -> None:
+        """Verify the generator skips XML sections when the robot model has no relevant elements."""
+        robot = Robot(name="empty")
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert "<link" not in xml
+        assert "<joint" not in xml
+        assert "<!-- Links -->" not in xml
+
+    def test_generate_collision_without_name(self) -> None:
+        """Verify the generator correctly handles collisions that lack an explicit name."""
+        link = Link(name="l", collisions=[Collision(geometry=Box(Vector3(1, 1, 1)))])
+        robot = Robot(name="r", initial_links=[link])
+        gen = URDFGenerator()
+        xml = gen.generate(robot)
+        assert "<collision>" in xml
+        assert 'name="' not in xml.split("<collision>")[1].split(">")[0]
+
+    def test_generate_joint_with_partial_calibration(self) -> None:
+        """Verify the generator correctly renders partial joint calibration data."""
+        robot = Robot(name="r")
+        robot.add_link(Link(name="p"))
+        robot.add_link(Link(name="c"))
+        j1 = Joint(
+            name="j1",
+            type=JointType.FIXED,
+            parent="p",
+            child="c",
+            calibration=JointCalibration(falling=0.5),
+        )
+        robot.add_joint(j1)
+        gen = URDFGenerator()
+        xml = gen.generate(robot)
+        assert 'falling="0.5"' in xml
+        assert "rising" not in xml
+
+    def test_generate_transmission_with_default_actuator_values(self) -> None:
+        """Verify the generator skips optional actuator tags when they match default values."""
+        trans = Transmission(
+            name="t1",
+            type="Simple",
+            joints=[TransmissionJoint(name="j1")],
+            actuators=[TransmissionActuator(name="a1", mechanical_reduction=None, offset=0.0)],
+        )
+        robot = Robot(name="r", initial_links=[Link(name="base")], transmissions=[trans])
+        gen = URDFGenerator()
+        xml = gen.generate(robot)
+        assert "<mechanicalReduction>" not in xml
+        assert "<offset>" not in xml
+
+    def test_generate_imu_sensor_with_partial_noise_profile(self) -> None:
+        """Verify the generator correctly renders IMU sensors with incomplete noise data."""
+        sensor = Sensor(
+            name="imu",
+            type=SensorType.IMU,
+            link_name="base",
+            imu_info=IMUInfo(angular_velocity_noise=SensorNoise(stddev=0.1)),
+        )
+        robot = Robot(name="r", initial_links=[Link(name="base")], sensors=[sensor])
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert "<angular_velocity>" in xml
+        assert "<linear_acceleration>" not in xml
+
+    def test_gps_vertical_noise_only_branch(self):
+        """Test sensor noise configuration with partial data."""
+        sensor = Sensor(
+            name="gps",
+            type=SensorType.GPS,
+            link_name="base",
+            gps_info=GPSInfo(position_sensing_vertical_noise=SensorNoise(stddev=0.1)),
+        )
+        robot = Robot(name="r", initial_links=[Link(name="base")], sensors=[sensor])
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert "<position_sensing>" in xml
+        assert "<vertical>" in xml
+        assert "<horizontal>" not in xml
+
+    def test_ros2_control_plugin_traversal(self) -> None:
+        """Verify ROS2 control plugin detection logic handles multiple gazebo plugins."""
+        from linkforge_core.models.gazebo import GazeboPlugin
+
+        p1 = GazeboPlugin(name="other", filename="o.so")
+        p2 = GazeboPlugin(name="my_ros2_control", filename="r.so")
+        gz = GazeboElement(plugins=[p1, p2])
+        robot = Robot(name="r", initial_links=[Link(name="base")], gazebo_elements=[gz])
+        gen = URDFGenerator(use_ros2_control=True)
+        robot.transmissions.append(
+            Transmission(name="t", joints=[TransmissionJoint(name="j")], type="Simple")
+        )
+        xml = gen.generate(robot, validate=False)
+        assert xml.count("libgz_ros2_control-system.so") == 0
+
+    def test_generate_ros2_control_joint_parameters(self) -> None:
+        """Verify generator handles custom parameters for ROS2 control joints."""
+        from linkforge_core.models.ros2_control import Ros2ControlJoint
+
+        # Must have matching joint in robot model for auto-sync logic
+        robot = Robot(name="r")
+        robot.add_link(Link(name="p"))
+        robot.add_link(Link(name="c"))
+        robot.add_joint(
+            Joint(name="j", type=JointType.CONTINUOUS, parent="p", child="c", axis=Vector3(1, 0, 0))
+        )
+
+        rc = Ros2Control(
+            name="c",
+            hardware_plugin="lib.so",
+            joints=[
+                Ros2ControlJoint(name="j", command_interfaces=["position"], parameters={"p1": "v1"})
+            ],
+        )
+        robot.ros2_controls.append(rc)
+
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert '<param name="p1">v1</param>' in xml
+
+    def test_generate_joint_without_calibration_tags(self) -> None:
+        """Verify the generator skips calibration tags when they are empty."""
+        # This is tricky because JointCalibration fields default to None,
+        # but if we have an empty calibration object, we hit the branch.
+        j = Joint(
+            name="j",
+            type=JointType.FIXED,
+            parent="a",
+            child="b",
+            # rising=None, falling=None is default
+            calibration=JointCalibration(),
+        )
+        robot = Robot(name="r", initial_links=[Link(name="a"), Link(name="b")], initial_joints=[j])
+        gen = URDFGenerator()
+        xml = gen.generate(robot)
+        assert "<calibration" not in xml
+
+    def test_generate_imu_sensor_with_linear_acceleration_noise_only(self) -> None:
+        """Verify IMU sensor generation when only linear acceleration noise is configured."""
+        sensor = Sensor(
+            name="imu",
+            type=SensorType.IMU,
+            link_name="base",
+            imu_info=IMUInfo(linear_acceleration_noise=SensorNoise(stddev=0.1)),
+        )
+        robot = Robot(name="r", initial_links=[Link(name="base")], sensors=[sensor])
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert "<angular_velocity>" not in xml
+        assert "<linear_acceleration>" in xml
+
+    def test_generate_gps_sensor_with_full_position_noise(self) -> None:
+        """Verify GPS sensor generation when both horizontal and vertical position noise are present."""
+        sensor = Sensor(
+            name="gps",
+            type=SensorType.GPS,
+            link_name="base",
+            gps_info=GPSInfo(
+                position_sensing_horizontal_noise=SensorNoise(stddev=0.1),
+                position_sensing_vertical_noise=SensorNoise(stddev=0.2),
+            ),
+        )
+        robot = Robot(name="r", initial_links=[Link(name="base")], sensors=[sensor])
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert "<position_sensing>" in xml
+        assert "<horizontal>" in xml
+        assert "<vertical>" in xml
+
+    def test_generate_ros2_control_with_empty_plugins_or_gazebo_elements(self) -> None:
+        """Verify ROS2 control generation when optional plugins or Gazebo elements are missing."""
+        # Case 1: Empty gazebo_elements
+        robot = Robot(name="r", initial_links=[Link(name="base")])
+        robot.transmissions.append(
+            Transmission(name="t", joints=[TransmissionJoint(name="j")], type="Simple")
+        )
+        gen = URDFGenerator(use_ros2_control=True)
+        xml = gen.generate(robot, validate=False)
+        assert "libgz_ros2_control-system.so" in xml
+
+        # Case 2: Gazebo elements with NO plugins (covers 1005->1009 skip)
+        robot.gazebo_elements.append(GazeboElement(reference="base"))
+        xml = gen.generate(robot, validate=False)
+        assert "libgz_ros2_control-system.so" in xml
+
+    def test_generate_unsupported_geometry_fallback(self) -> None:
+        """Verify the generator provides a safe fallback for unknown geometry types."""
+
+        # Just create any object that is NOT Box, Cylinder, Sphere, or Mesh
+        class UnknownGeometry:
+            pass
+
+        # Python dataclasses don't enforce type constraints at runtime by default.
+        # We just need an object that fails all isinstance checks in _add_geometry_element.
+        link = Link(name="l", visuals=[Visual(geometry=UnknownGeometry())])  # type: ignore
+        robot = Robot(name="r", initial_links=[link])
+        gen = URDFGenerator()
+        xml = gen.generate(robot)
+        # Should create <geometry> but no child element
+        # Using a more flexible check for the tag presence
+        assert "<geometry" in xml
+        assert "<box" not in xml
+        assert "<mesh" not in xml
+
+    def test_generate_gps_sensor_with_horizontal_velocity_noise_only(self) -> None:
+        """Verify GPS sensor generation with partial velocity noise data."""
+        sensor = Sensor(
+            name="gps",
+            type=SensorType.GPS,
+            link_name="base",
+            gps_info=GPSInfo(velocity_sensing_horizontal_noise=SensorNoise(stddev=0.1)),
+        )
+        robot = Robot(name="r", initial_links=[Link(name="base")], sensors=[sensor])
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert "<velocity_sensing>" in xml
+        assert "<horizontal>" in xml
+        assert "<vertical>" not in xml
+
+    def test_generate_sensor_without_info_block(self) -> None:
+        """Verify sensor generation correctly skips info blocks when none are provided."""
+        # FORCE_TORQUE doesn't require info in Sensor.__post_init__
+        sensor = Sensor(name="s", type=SensorType.FORCE_TORQUE, link_name="base")
+        robot = Robot(name="r")
+        robot.add_link(Link(name="base"))
+        robot.sensors.append(sensor)
+
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert '<sensor name="s" type="force_torque">' in xml
+        assert "<force_torque>" not in xml

@@ -68,8 +68,8 @@ class XACROGenerator(URDFGenerator):
         self.advanced_mode = advanced_mode
         self.extract_materials = extract_materials if advanced_mode else False
         self.extract_dimensions = extract_dimensions if advanced_mode else False
-        self.generate_macros = generate_macros if advanced_mode else False
-        self.split_files = split_files if advanced_mode else False
+        self.generate_macros = generate_macros
+        self.split_files = split_files
 
         # Track extracted properties
         self.material_properties: dict[str, str] = {}
@@ -117,12 +117,11 @@ class XACROGenerator(URDFGenerator):
         # 1. Collect properties (Materials & Dimensions)
         properties: list[tuple[str, str]] = []
 
-        if self.advanced_mode:
-            if self.extract_materials:
-                self._extract_materials(robot, properties)
+        if self.extract_materials:
+            self._extract_materials(robot, properties)
 
-            if self.extract_dimensions:
-                self._extract_dimensions(robot, properties)
+        if self.extract_dimensions:
+            self._extract_dimensions(robot, properties)
 
         # 2. Identify Macros
         self.macro_groups = {}
@@ -775,6 +774,22 @@ class XACROGenerator(URDFGenerator):
             macros_root.append(macro_elem)
             root.remove(macro_elem)
 
+        # Extract ros2_control and associated gazebo tags
+        control_root = ET.Element("robot")
+        has_control = False
+
+        for control_elem in list(root.findall("ros2_control")):
+            control_root.append(control_elem)
+            root.remove(control_elem)
+            has_control = True
+
+        for gazebo_elem in list(root.findall("gazebo")):
+            # Only move gazebo tags that contain plugins (likely ros2_control or sensors)
+            if gazebo_elem.findall("plugin"):
+                control_root.append(gazebo_elem)
+                root.remove(gazebo_elem)
+                has_control = True
+
         # Create main file with includes
         main_root = ET.Element("robot")
         main_root.set("name", root.get("name", robot.name))
@@ -791,6 +806,12 @@ class XACROGenerator(URDFGenerator):
             include_mac = ET.Element(f"{XACRO_NS}include")
             include_mac.set("filename", f"{robot_name}_macros.xacro")
             main_root.append(include_mac)
+
+        if has_control:
+            main_root.append(ET.Comment(" ROS2 Control "))
+            include_control = ET.Element(f"{XACRO_NS}include")
+            include_control.set("filename", f"{robot_name}_ros2_control.xacro")
+            main_root.append(include_control)
 
         # Clean up remaining comments in root that are no longer relevant
         # (e.g. if we moved all properties, remove the "Properties" comment)
@@ -822,6 +843,13 @@ class XACROGenerator(URDFGenerator):
             mac_path = base_dir / f"{robot_name}_macros.xacro"
             mac_path.write_text(
                 serialize_xml(macros_root, self.pretty_print, __version__, ns),
+                encoding="utf-8",
+            )
+
+        if has_control:
+            control_path = base_dir / f"{robot_name}_ros2_control.xacro"
+            control_path.write_text(
+                serialize_xml(control_root, self.pretty_print, __version__, ns),
                 encoding="utf-8",
             )
 

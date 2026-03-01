@@ -40,3 +40,15 @@ def test_calculate_mesh_inertia_zero_volume():
 
     with pytest.raises(RobotModelError, match="mesh has zero volume"):
         calculate_mesh_inertia_from_triangles(vertices, triangles, 1.0)
+
+
+def test_calculate_inertia_unsupported_geometry_fallback():
+    """Unsupported geometry types raise RobotModelError in the inertia facade."""
+
+    class UnsupportedShape:
+        pass
+
+    with pytest.raises(RobotModelError, match="Unsupported geometry type"):
+        from linkforge_core.physics.inertia import calculate_inertia
+
+        calculate_inertia(UnsupportedShape(), mass=1.0)  # type: ignore
