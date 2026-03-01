@@ -21,6 +21,16 @@ It allows you to model your robot as naturally as sculpting a 3D scene, while ac
  3.  **Perceive & Control**: Attach sensors and configure `ros2_control` interfaces.
  4.  **Export Production Code**: Generate hardened URDF/XACRO files.
 
+## 💎 Why LinkForge?
+
+| Feature | Legacy Exporters | LinkForge |
+| :--- | :--- | :--- |
+| **Architecture** | Monolithic / Tied to one CAD tool | **Hexagonal / Multi-Host & Multi-Target** |
+| **Validation** | Post-Export (Fail in Sim) | **Automated Linting (Fail in Editor)** |
+| **Physics** | "Close Enough" Mesh Export | **Scientific Inertia & Mass Sanity** |
+| **Control** | Manual `ros2_control` XML | **Centralized Dashboard with auto-generation** |
+| **Fidelity** | One-way export | **Round-Trip Precision (Import → Edit → Export)** |
+
 ### 🛠️ Technical Specifications
 
 | Feature | Support | Details |
@@ -94,7 +104,7 @@ It allows you to model your robot as naturally as sculpting a 3D scene, while ac
 3. Select your file and edit the robot structure normally.
 4. Export back via the **Validate & Export** panel.
 
-## 📚 Examples
+## 🤖 Examples
 
 Complete examples in `examples/` directory:
 
@@ -177,7 +187,7 @@ For a deep dive into our long-term strategy, the **Digital Twin** philosophy, an
 
 ## 🤝 Contributing
 
-We welcome contributions! LinkForge is an community-driven project.
+We welcome contributions! LinkForge is a community-driven project.
 - 🙋 Review our [Contributing Guide](CONTRIBUTING.md).
 - 🏗️ Check our [Architecture](ARCHITECTURE.md) to understand the internals.
 - 💬 Join the conversation on [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).
