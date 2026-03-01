@@ -68,8 +68,7 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
         for item in props.ros2_control_joints:
             # Check if name exactly matches OR physical object exactly matches
             if item.name == self.joint_name or (
-                hasattr(item, "joint_obj")
-                and item.joint_obj is not None
+                item.joint_obj is not None
                 and target_joint_obj is not None
                 and item.joint_obj == target_joint_obj
             ):

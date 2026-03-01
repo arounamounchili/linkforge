@@ -483,9 +483,7 @@ def blender_link_to_core_with_origin(
     link_name = props.link_name if props.link_name else obj.name
 
     # Get mesh format from robot props
-    mesh_format = "STL"
-    if robot_props and hasattr(robot_props, "mesh_format"):
-        mesh_format = robot_props.mesh_format
+    mesh_format = robot_props.mesh_format if robot_props else "STL"
 
     # Find all visual and collision geometry objects (children with _visual or _collision in name)
     visuals: list[Visual] = []
