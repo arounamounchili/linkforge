@@ -838,7 +838,7 @@ class TestXACROGeneratorEdgeCoverage:
         assert gen._find_common_prefix(["link1", "link2"]) == "link"
         assert gen._find_common_prefix(["a", "abc"]) == "a"
         assert gen._find_common_prefix(["abc", "a"]) == "a"
-        assert gen._find_common_prefix(["abc", "and"]) == "ab"
+        assert gen._find_common_prefix(["abc", "abx"]) == "ab"
         assert gen._find_common_prefix(["", "a"]) == ""
 
     def test_generate_robot_with_empty_name_and_missing_joint_axis(self) -> None:

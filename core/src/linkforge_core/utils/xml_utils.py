@@ -88,6 +88,14 @@ def serialize_xml(
         indent_xml(element)
 
     xml_str = ET.tostring(element, encoding="unicode")
+
+    # Ensure namespaces are explicitly present on root if ElementTree dropped them
+    if namespaces:
+        for prefix, uri in namespaces.items():
+            ns_attr = f'xmlns:{prefix}="{uri}"'
+            if ns_attr not in xml_str and "<robot" in xml_str:
+                xml_str = xml_str.replace("<robot", f"<robot {ns_attr}", 1)
+
     return get_xml_header(element, version) + xml_str
 
 
