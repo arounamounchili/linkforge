@@ -181,6 +181,8 @@ classDiagram
         +list~Transmission~ transmissions
         +list~Ros2Control~ ros2_controls
         +list~GazeboElement~ gazebo_elements
+        +dict metadata
+        +IResourceResolver resource_resolver
         +add_link(link)
         +add_joint(joint)
         +add_sensor(sensor)
@@ -355,7 +357,7 @@ classDiagram
     }
 
     class Mesh {
-        +Path filepath
+        +str resource
         +Vector3 scale
     }
 
@@ -369,6 +371,18 @@ classDiagram
     Geometry <|-- Cylinder
     Geometry <|-- Sphere
     Geometry <|-- Mesh
+
+    class IResourceResolver {
+        <<interface>>
+        +resolve(uri, relative_to) Path
+    }
+
+    class FileSystemResolver {
+        +resolve(uri, relative_to) Path
+    }
+
+    IResourceResolver <|-- FileSystemResolver
+    Robot "1" *-- "1" IResourceResolver
 ```
 
 ## Key Design Patterns
@@ -470,18 +484,22 @@ graph TB
 
 Comprehensive execution instructions and setup details for each layer are maintained in the **[CONTRIBUTING.md](https://github.com/arounamounchili/linkforge/blob/main/CONTRIBUTING.md#testing)** guide.
 
+### 7. Unified Resource Resolution
+LinkForge uses a unified resolver architecture to handle external assets (`package://`, `file://`, and relative paths). This ensures that robot models remain portable between different environments (ROS, local filesystem, or future cloud storage).
+
 ## Security by Design
 
 LinkForge implements a multi-layered security architecture to protect against malicious URDF/XACRO inputs:
 
-1. **Sandboxed I/O**: The **Sandbox Root** auto-detection prevents path traversal attacks by restricting mesh asset access to the robot's package directory.
-2. **Resource Throttling**: Hard limits on file size (100MB), XML nesting depth (100), and numeric ranges (±1e10) protect against "Billion Laughs" attacks and system resource exhaustion.
-3. **Atomic Sanitization**: All incoming strings (links, joints, meshes) are sanitized at the engine's edge to ensure validity for both URDF XML and cross-platform filesystems.
-4. **Validation Pass**: The `RobotValidator` performs a pre-export sanity check to ensure kinematic connectivity and physical property validity.
+1. **Sandboxed I/O**: The **FileSystemResolver** implements sandbox protection by restricting access to a validated root directory (usually the robot's package or URDF folder).
+2. **URI Validation**: Standardized security helpers validate `package://` and `file://` URIs to prevent path traversal attacks before resolution occurs.
+3. **Resource Throttling**: Hard limits on file size (100MB), XML nesting depth (100), and numeric ranges (±1e10) protect against "Billion Laughs" attacks and system resource exhaustion.
+4. **Atomic Sanitization**: All incoming strings (links, joints, meshes) are sanitized at the engine's edge to ensure validity for both URDF XML and cross-platform filesystems.
+5. **Validation Pass**: The `RobotValidator` performs a pre-export sanity check to ensure kinematic connectivity and physical property validity.
 
 
 
 ---
 
-**Last Updated:** 2026-02-19
-**Version:** 1.2.3
+**Last Updated:** 2026-03-05
+**Version:** 1.4.0

@@ -5,6 +5,20 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] (2026-03-05)
+
+### 🚀 Features
+
+* **core:** implement Abstract Resource Resolver and URI-based mesh handling ([#8](https://github.com/arounamounchili/linkforge/issues/8))
+* **core:** unify mesh resolution logic and remove platform-specific handlers
+* **generators:** preserve `package://` and `file://` URIs during URDF/XACRO export
+* **utils:** add `normalize_uri_to_path` and `get_export_path` for standardized URI management
+
+### 🛠️ Refactors
+
+* **blender:** migrate `create_link_object` to use unified `Robot.resolve_resource` API
+* **models:** update `Mesh` geometry to store universal resource URIs
+
 ## [1.3.0](https://github.com/arounamounchili/linkforge/compare/v1.2.3...v1.3.0) (2026-03-01)
 
 
