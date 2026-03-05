@@ -404,6 +404,12 @@ While LinkForge supports `ros2_control`, it is designed to be distribution-agnos
 - **Compatibility**: We target compatibility with active ROS 2 LTS distributions (like Humble and Jazzy) and Rolling.
 - **Maintenance**: If the official `ros2_control` XML syntax changes in a newer ROS version, we update our generators to support those changes while maintaining backward compatibility.
 
+### 4. Validation Extensibility (Quality Control)
+To maintain the highest standards of robot description quality, LinkForge uses a **Modular Validation Registry**.
+- **The Rule**: Every new core model feature must be accompanied by a corresponding `ValidationCheck` in `core/src/linkforge_core/validation/checks.py`.
+- **Implementation**: Inherit from `ValidationCheck`, implement the `run()` method, and append your class to `RobotValidator.DEFAULT_CHECKS`.
+- **Testing**: Add isolated unit tests for your new check in `tests/unit/core/test_validation_checks.py`.
+
 ## Maintainer Expectations
 
 As a maintainer-driven project, we aim to be transparent about our availability and response times:

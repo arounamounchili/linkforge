@@ -103,10 +103,10 @@ graph TB
 | Module | Purpose |
 |--------|----------|
 | **Models** | Core data structures (`Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`) |
-| **Parsers** | URDF/XACRO → Python objects |
-| **Generators** | Python objects → URDF/XACRO |
-| **Physics** | Mass & inertia calculations |
-| **Validation** | Error checking & security |
+| **Parsers** | URDF/XACRO parsing |
+| **Generators** | XML generation |
+| **Physics** | Inertia & dynamics |
+| **Validation** | Modular checks & security registry |
 | **Utils** | Shared internal logic (math, strings, XML, kinematics) |
 
 ## Data Flow
@@ -399,7 +399,16 @@ class Link:
     inertial: Inertial | None
 ```
 
-### 2. **Validation at Construction**
+### 2. **Validation Registry**
+
+The system uses a modular validation registry. `RobotValidator` acts as a thin orchestrator that runs a configurable list of `ValidationCheck` instances.
+
+**Design Principles:**
+- **Encapsulation**: Each check (e.g., `MimicChainCheck`, `TreeStructureCheck`) is isolated and focus on one specific rule.
+- **Injectability**: Callers can inject a custom list of checks for targeted validation (e.g., during interactive modeling).
+- **Statelessness**: Checks write results to a shared `ValidationResult` object, ensuring thread safety and clear data flow.
+
+### 3. **Validation at Construction**
 Models validate themselves in `__post_init__()` to ensure data integrity.
 
 ```python
@@ -410,7 +419,7 @@ def __post_init__(self) -> None:
         raise RobotModelError("Mass must be positive")
 ```
 
-### 3. **Resilient Parsing & Duplicate Resolution**
+### 4. **Resilient Parsing & Duplicate Resolution**
 Parser logic is designed to be highly resilient to malformed or non-compliant URDFs.
 - **Graceful Failure**: Individual invalid elements (e.g., malformed joints) are skipped with warnings rather than halting the process.
 - **Duplicate Resolution**: If duplicate link or joint names are detected, LinkForge automatically renames them (e.g., `link_duplicate_1`) to preserve kinematic integrity while maintaining compliance with Blender/Core unique naming requirements.
@@ -495,7 +504,7 @@ LinkForge implements a multi-layered security architecture to protect against ma
 2. **URI Validation**: Standardized security helpers validate `package://` and `file://` URIs to prevent path traversal attacks before resolution occurs.
 3. **Resource Throttling**: Hard limits on file size (100MB), XML nesting depth (100), and numeric ranges (±1e10) protect against "Billion Laughs" attacks and system resource exhaustion.
 4. **Atomic Sanitization**: All incoming strings (links, joints, meshes) are sanitized at the engine's edge to ensure validity for both URDF XML and cross-platform filesystems.
-5. **Validation Pass**: The `RobotValidator` performs a pre-export sanity check to ensure kinematic connectivity and physical property validity.
+5. **Validation Pass**: The `RobotValidator` runs a comprehensive suite of modular `ValidationChecks` to ensure kinematic connectivity, cycle-free mimic chains, and physical property validity.
 
 
 
