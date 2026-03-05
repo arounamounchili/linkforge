@@ -171,7 +171,7 @@ class AsynchronousRobotBuilder:
                 self.context.scene.collection.children.link(self.collection)
 
         elif task_type == "create_link":
-            obj = create_link_object(data, self.urdf_path.parent, self.collection)
+            obj = create_link_object(data, self.robot, self.urdf_path.parent, self.collection)
             if obj:
                 self.link_objects[data.name] = obj
 
