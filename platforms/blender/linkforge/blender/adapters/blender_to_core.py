@@ -298,7 +298,9 @@ def get_object_geometry(
 
             if mesh_path:
                 # Return Mesh geometry with file path
-                return Mesh(filepath=mesh_path, scale=Vector3(1.0, 1.0, 1.0)), geom_world_matrix
+                return Mesh(
+                    resource=str(mesh_path), scale=Vector3(1.0, 1.0, 1.0)
+                ), geom_world_matrix
 
         # Fallback: approximate with bounding box if export failed or not requested
         actual_geometry_type = "BOX"

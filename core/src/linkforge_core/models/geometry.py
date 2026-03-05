@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 
 from ..exceptions import RobotModelError
 
@@ -134,9 +133,9 @@ class Sphere:
 
 @dataclass(frozen=True)
 class Mesh:
-    """Mesh geometry from file."""
+    """Mesh geometry from file or URI."""
 
-    filepath: Path
+    resource: str
     scale: Vector3 = field(default_factory=lambda: Vector3(1.0, 1.0, 1.0))
 
     def __post_init__(self) -> None:

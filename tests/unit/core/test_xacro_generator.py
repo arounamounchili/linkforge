@@ -331,7 +331,7 @@ class TestXACROGenerator:
 
         add_pair(Cylinder(radius=0.1, length=1.0))
         add_pair(Sphere(radius=0.5))
-        add_pair(Mesh(filepath=Path("test.stl"), scale=Vector3(2, 2, 2)))
+        add_pair(Mesh(resource="test.stl", scale=Vector3(2, 2, 2)))
         add_pair(Box(size=Vector3(1, 2, 3)))
 
         gen = XACROGenerator(advanced_mode=True, generate_macros=True, extract_dimensions=True)
@@ -387,7 +387,7 @@ class TestXACROGenerator:
         mesh_path.parent.mkdir(parents=True)
         mesh_path.write_text("dummy")
 
-        link = Link(name="l", visuals=[Visual(geometry=Mesh(filepath=mesh_path))])
+        link = Link(name="l", visuals=[Visual(geometry=Mesh(resource=str(mesh_path)))])
         robot.add_link(link)
 
         gen = XACROGenerator(advanced_mode=True, urdf_path=tmp_path / "urdf" / "robot.xacro")
@@ -435,7 +435,7 @@ class TestXACROGenerator:
 
         def create_link(name: str, parent: str) -> Link:
             link = Link(name=name)
-            link.visuals.append(Visual(geometry=Mesh(filepath=Path("mesh.dae")), material=mat))
+            link.visuals.append(Visual(geometry=Mesh(resource="mesh.dae"), material=mat))
             robot.add_link(link)
             from linkforge_core.models.joint import JointLimits
 

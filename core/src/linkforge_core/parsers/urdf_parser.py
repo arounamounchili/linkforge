@@ -204,7 +204,7 @@ def parse_geometry(
 
             scale_text = mesh.get("scale", "1 1 1")
             scale = parse_vector3(scale_text)
-            return Mesh(filepath=mesh_path, scale=scale)
+            return Mesh(resource=str(mesh_path), scale=scale)
         except RobotModelError as e:
             logger.warning(f"Invalid mesh geometry ignored: {e}")
             return None

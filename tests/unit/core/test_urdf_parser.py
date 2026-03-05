@@ -70,7 +70,7 @@ class TestURDFParser:
         geom = parse_geometry(elem)
 
         assert isinstance(geom, Mesh)
-        assert geom.filepath.name == "mesh.stl"
+        assert Path(geom.resource).name == "mesh.stl"
         assert geom.scale.x == 0.1
 
     def test_parse_material_color(self):
@@ -598,9 +598,9 @@ class TestURDFParser:
         elem = ET.fromstring(xml)
 
         geom = parse_geometry(elem, urdf_directory=tmp_path)
-        assert geom.filepath.name == mesh_file.name
+        assert Path(geom.resource).name == mesh_file.name
 
-        assert geom.filepath.name == mesh_file.name
+        assert Path(geom.resource).name == mesh_file.name
 
         xml_bad = '<geometry><mesh filename="file:///etc/passwd"/></geometry>'
         elem_bad = ET.fromstring(xml_bad)

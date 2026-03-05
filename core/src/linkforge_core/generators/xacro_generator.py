@@ -439,7 +439,7 @@ class XACROGenerator(URDFGenerator):
             elif isinstance(geom, Sphere):
                 parts.extend([f"{geom.radius:.3f}"])
             elif isinstance(geom, Mesh):
-                parts.append(str(geom.filepath))
+                parts.append(str(geom.resource))
 
             # Include visual origin (Critical for transform fidelity)
             if visual.origin:
@@ -468,7 +468,7 @@ class XACROGenerator(URDFGenerator):
             elif isinstance(geom, Sphere):
                 parts.extend([f"{geom.radius:.3f}"])
             elif isinstance(geom, Mesh):
-                parts.append(str(geom.filepath))
+                parts.append(str(geom.resource))
 
             # Include collision origin
             if collision.origin:
@@ -703,7 +703,7 @@ class XACROGenerator(URDFGenerator):
 
         elif isinstance(geometry, Mesh):
             # Mesh handling (same as parent class)
-            mesh_path = geometry.filepath
+            mesh_path = Path(geometry.resource)
             if self.urdf_path and mesh_path.is_absolute():
                 with contextlib.suppress(ValueError):
                     mesh_path = mesh_path.relative_to(self.urdf_path.parent)

@@ -377,7 +377,7 @@ class URDFGenerator(RobotGenerator[str]):
 
         elif isinstance(geometry, Mesh):
             # Make mesh path relative to URDF location if possible
-            mesh_path = geometry.filepath
+            mesh_path = Path(geometry.resource)
             if self.urdf_path and mesh_path.is_absolute():
                 import contextlib
 

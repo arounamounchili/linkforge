@@ -443,7 +443,7 @@ def create_link_object(
         # Create geometry
         if isinstance(visual.geometry, Mesh):
             # Resolve mesh path
-            mesh_path = resolve_mesh_path(visual.geometry.filepath, urdf_dir)
+            mesh_path = resolve_mesh_path(Path(visual.geometry.resource), urdf_dir)
             visual_obj = import_mesh_file(mesh_path, visual_name)
 
             # Apply scale from URDF
@@ -505,7 +505,7 @@ def create_link_object(
         # Create geometry
         if isinstance(collision.geometry, Mesh):
             # Resolve mesh path
-            mesh_path = resolve_mesh_path(collision.geometry.filepath, urdf_dir)
+            mesh_path = resolve_mesh_path(Path(collision.geometry.resource), urdf_dir)
             collision_obj = import_mesh_file(mesh_path, collision_name)
 
             # Apply scale from URDF

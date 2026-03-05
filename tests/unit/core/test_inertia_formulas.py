@@ -368,7 +368,7 @@ class TestInertiaEdgeCases:
         """Test calculate_mesh_inertia (approximation) with zero mass."""
         from linkforge_core.physics.inertia import calculate_mesh_inertia
 
-        mesh = Mesh(filepath="package://test/meshes/test.stl", scale=Vector3(1.0, 1.0, 1.0))
+        mesh = Mesh(resource="package://test/meshes/test.stl", scale=Vector3(1.0, 1.0, 1.0))
         inertia = calculate_mesh_inertia(mesh, mass=0.0)
 
         assert inertia.ixx == pytest.approx(1e-06)
@@ -380,7 +380,7 @@ class TestInertiaEdgeCases:
         from linkforge_core.physics.inertia import calculate_mesh_inertia
 
         # Mesh with scale 2x3x4
-        mesh = Mesh(filepath="package://test/meshes/test.stl", scale=Vector3(2.0, 3.0, 4.0))
+        mesh = Mesh(resource="package://test/meshes/test.stl", scale=Vector3(2.0, 3.0, 4.0))
         inertia = calculate_mesh_inertia(mesh, mass=10.0)
 
         # Should approximate as a box with the same scale
@@ -486,7 +486,7 @@ class TestInertiaWrapper:
         from linkforge_core.physics.inertia import calculate_inertia
 
         # calculate_mesh_inertia uses approximation if triangles not provided
-        mesh = Mesh(filepath="package://test/test.stl", scale=Vector3(1.0, 1.0, 1.0))
+        mesh = Mesh(resource="package://test/test.stl", scale=Vector3(1.0, 1.0, 1.0))
         inertia = calculate_inertia(mesh, mass=1.0)
         # Should call calculate_mesh_inertia -> approx box
         assert inertia.ixx > 0

@@ -1,7 +1,6 @@
 """Unit tests for URDF generator."""
 
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 import pytest
 from linkforge_core.base import RobotGeneratorError
@@ -73,7 +72,7 @@ class TestURDFGenerator:
         sph = Sphere(radius=1.0)
         link.visuals.append(Visual(geometry=sph, name="sph_vis"))
 
-        mesh = Mesh(filepath=Path("meshes/part.stl"), scale=Vector3(0.1, 0.1, 0.1))
+        mesh = Mesh(resource="meshes/part.stl", scale=Vector3(0.1, 0.1, 0.1))
         link.visuals.append(Visual(geometry=mesh, name="mesh_vis"))
 
         robot.add_link(link)
@@ -313,7 +312,7 @@ class TestURDFGenerator:
         mesh_file.touch()
 
         # Use absolute path in model
-        mesh = Mesh(filepath=mesh_file)
+        mesh = Mesh(resource=str(mesh_file))
         link.visuals.append(Visual(geometry=mesh))
         robot.add_link(link)
 

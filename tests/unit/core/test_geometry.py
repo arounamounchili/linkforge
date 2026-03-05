@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 from linkforge_core.exceptions import RobotModelError
@@ -164,28 +163,28 @@ class TestMesh:
 
     def test_creation(self):
         """Test creating a mesh."""
-        mesh = Mesh(filepath=Path("model.stl"))
-        assert mesh.filepath == Path("model.stl")
+        mesh = Mesh(resource="model.stl")
+        assert mesh.resource == "model.stl"
         assert mesh.scale == Vector3(1.0, 1.0, 1.0)
 
     def test_creation_with_scale(self):
         """Test creating a mesh with custom scale."""
-        mesh = Mesh(filepath=Path("model.stl"), scale=Vector3(2.0, 2.0, 2.0))
+        mesh = Mesh(resource="model.stl", scale=Vector3(2.0, 2.0, 2.0))
         assert mesh.scale == Vector3(2.0, 2.0, 2.0)
 
     def test_type(self):
         """Test geometry type."""
         from linkforge_core.models import GeometryType
 
-        mesh = Mesh(filepath=Path("model.stl"))
+        mesh = Mesh(resource="model.stl")
         assert mesh.type == GeometryType.MESH
 
     def test_negative_scale_validation(self):
         """Test that negative scale is rejected."""
         with pytest.raises(RobotModelError, match="Mesh scale must be positive"):
-            Mesh(filepath=Path("model.stl"), scale=Vector3(-1.0, 1.0, 1.0))
+            Mesh(resource="model.stl", scale=Vector3(-1.0, 1.0, 1.0))
 
     def test_zero_scale_validation(self):
         """Test that zero scale is rejected."""
         with pytest.raises(RobotModelError, match="Mesh scale must be positive"):
-            Mesh(filepath=Path("model.stl"), scale=Vector3(1.0, 0.0, 1.0))
+            Mesh(resource="model.stl", scale=Vector3(1.0, 0.0, 1.0))

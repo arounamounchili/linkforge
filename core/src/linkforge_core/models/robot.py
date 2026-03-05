@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
+from pathlib import Path
 from typing import Any
 
-from ..exceptions import RobotModelError
+from ..base import FileSystemResolver, IResourceResolver, RobotModelError
 from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
 from .graph import KinematicGraph
@@ -37,6 +38,7 @@ class Robot:
     ros2_controls: list[Ros2Control] = field(default_factory=list)
     gazebo_elements: list[GazeboElement] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    resource_resolver: IResourceResolver = field(default_factory=FileSystemResolver)
 
     # Internal storage
     _links: list[Link] = field(default_factory=list, init=False)
@@ -108,6 +110,17 @@ class Robot:
 
         self._joints.append(joint)
         self._joint_index[joint.name] = joint
+
+    def resolve_resource(self, uri: str) -> Path:
+        """Resolve a resource URI using the robot's configured resolver.
+
+        Args:
+            uri: The resource URI to resolve (e.g. mesh path, package://).
+
+        Returns:
+            The resolved absolute Path.
+        """
+        return self.resource_resolver.resolve(uri)
 
     def get_link(self, name: str) -> Link | None:
         """Get link by name - O(1) lookup."""

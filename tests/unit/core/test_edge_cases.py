@@ -76,7 +76,7 @@ def test_urdf_generator_complex_scenarios():
 
     # Fallback to absolute paths when mesh relativization is cross-volume or invalid
     abs_mesh = Path("/different/volume/mesh.stl")
-    robot.add_link(Link(name="l3", visuals=[Visual(geometry=Mesh(filepath=abs_mesh))]))
+    robot.add_link(Link(name="l3", visuals=[Visual(geometry=Mesh(resource=str(abs_mesh)))]))
     robot.add_joint(Joint(name="j3", parent="base", child="l3", type=JointType.FIXED))
 
     # Serialization of actuator parameters and offsets
