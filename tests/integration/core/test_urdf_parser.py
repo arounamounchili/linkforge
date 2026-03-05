@@ -176,7 +176,7 @@ class TestParseGeometry:
         geom = parse_geometry(elem)
 
         assert isinstance(geom, Mesh)
-        assert str(geom.filepath) == "robot.stl"
+        assert geom.resource == "robot.stl"
         assert geom.scale.x == pytest.approx(1.0)
         assert geom.scale.y == pytest.approx(1.0)
         assert geom.scale.z == pytest.approx(1.0)

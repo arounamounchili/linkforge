@@ -12,7 +12,6 @@ from linkforge.blender.adapters.core_to_blender import (
     import_mesh_file,
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
-    resolve_mesh_path,
 )
 from linkforge.linkforge_core.models import (
     Box,
@@ -41,6 +40,7 @@ from linkforge.linkforge_core.models import (
     Visual,
 )
 from linkforge.linkforge_core.models.sensor import GPSInfo, IMUInfo
+from linkforge_core.base import FileSystemResolver
 from mathutils import Vector
 
 
@@ -63,35 +63,42 @@ def test_resolve_mesh_path(tmp_path):
     """Test resolution of various mesh path types."""
     urdf_dir = tmp_path / "urdf"
     urdf_dir.mkdir()
+    resolver = FileSystemResolver()
 
     # 1. Local relative path (exists)
     mesh_file = urdf_dir / "mesh.stl"
     mesh_file.touch()
-    assert resolve_mesh_path(str(Path("mesh.stl")), urdf_dir) == mesh_file
+    assert resolver.resolve("mesh.stl", relative_to=urdf_dir) == mesh_file.absolute()
 
     # 2. Package URI (requires mock of resolve_package_path)
-    with patch("linkforge.blender.adapters.core_to_blender.resolve_package_path") as mock_resolve:
+    with patch("linkforge_core.utils.path_utils.resolve_package_path") as mock_resolve:
         mock_resolve.return_value = mesh_file
-        assert resolve_mesh_path("package://my_pkg/mesh.stl", urdf_dir) == mesh_file
+        # Note: resolve_package_path mock needs to return a Path that exists
+        assert (
+            resolver.resolve("package://my_pkg/mesh.stl", relative_to=urdf_dir)
+            == mesh_file.absolute()
+        )
 
-    # 3. Non-existent path falls back to absolute conversion
-    abs_path = Path("/tmp/non_existent.obj")
-    assert resolve_mesh_path(str(abs_path), urdf_dir) == abs_path
+    # 3. Non-existent path raises FileNotFoundError (new behavior)
+    with pytest.raises(FileNotFoundError):
+        resolver.resolve("/tmp/non_existent.obj", relative_to=urdf_dir)
 
     # 4. file:// URI
-    file_uri = Path("file:///tmp/mesh.stl")
-    assert resolve_mesh_path(str(file_uri), urdf_dir) == Path("/tmp/mesh.stl")
+    file_uri = "file:///tmp/mesh.stl"
+    # Create the file so it can be resolved (FileSystemResolver checks existence)
+    mesh_tmp = Path("/tmp/mesh.stl")
+    mesh_tmp.touch()
+    assert resolver.resolve(file_uri, relative_to=urdf_dir) == mesh_tmp.absolute()
 
-    # 5. Windows style with leading slash (Hit line 54)
-    win_path = "file:///C:/path/to/mesh.stl"
-    res = resolve_mesh_path(win_path, urdf_dir)
-    assert str(res).startswith("C:")
-
-    # 6. Package resolution failure warning (Hit line 62)
-    with patch(
-        "linkforge.blender.adapters.core_to_blender.resolve_package_path", return_value=None
-    ):
-        resolve_mesh_path("package://missing/mesh.stl", urdf_dir)
+    # 5. Windows style URI (mocking Windows environment is hard, but we can test the regex)
+    # FileSystemResolver uses re.sub and Path.
+    # On Unix, file:///C:/path becomes /C:/path
+    win_uri = "file:///C:/path/to/mesh.stl"
+    with patch("pathlib.Path.exists", return_value=True):
+        res = resolver.resolve(win_uri, relative_to=urdf_dir)
+        # Our logic for Windows URIs strips the leading slash if : is present
+        # On Posix, Path("C:/...").absolute() will prepend CWD, so we check for presence
+        assert "C:/path/to/mesh.stl" in str(res).replace("\\", "/")
 
 
 def test_create_material_from_color(clean_scene):
@@ -269,7 +276,8 @@ def test_import_robot_with_mimic_and_gazebo(clean_scene):
         ],
     )
 
-    with patch("linkforge.blender.adapters.core_to_blender.resolve_mesh_path"):
+    with patch("linkforge_core.models.robot.Robot.resolve_resource") as mock_resolve:
+        mock_resolve.return_value = Path("dummy.stl")
         import_robot_to_scene(robot, Path("robot.urdf"), bpy.context)
 
     assert "j2" in bpy.data.objects

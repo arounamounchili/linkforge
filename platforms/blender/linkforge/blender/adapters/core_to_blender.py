@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import re
 import typing
 from pathlib import Path
 
@@ -22,53 +21,11 @@ from ...linkforge_core.models import (
     Sphere,
 )
 from ...linkforge_core.utils.kinematics import sort_joints_topological
-from ...linkforge_core.utils.path_utils import resolve_package_path
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.scene_utils import move_to_collection
 
 logger = get_logger(__name__)
-
-
-def resolve_mesh_path(filepath: Path, urdf_dir: Path) -> Path:
-    """Resolve mesh path relative to URDF directory, as package:// URI, or absolute.
-
-    Args:
-        filepath: Original mesh filepath from URDF
-        urdf_dir: Directory containing the URDF file
-
-    Returns:
-        Resolved Path object
-    """
-    path_str = str(filepath)
-
-    # Handle file:// URIs
-    if path_str.startswith("file://") or path_str.startswith("file:/"):
-        # Handle file:/// (standard), file:// (non-standard but common),
-        # and file:/ (Blender's Path representation in some cases)
-        # Replace "file:" followed by any number of slashes with a single slash
-        path_str = re.sub(r"^file:/*", "/", path_str)
-
-        # On Windows, a path like "/C:/path" needs to become "C:/path"
-        if path_str.startswith("/") and len(path_str) > 2 and path_str[2] == ":":
-            path_str = path_str.lstrip("/")
-        return Path(path_str)
-
-    # Handle package:// URIs
-    if "package:" in path_str:
-        resolved = resolve_package_path(path_str, urdf_dir)
-        if resolved and resolved.exists():
-            return resolved
-        logger.warning(f"Failed to resolve package URI: {path_str}")
-        # Fallback to stripping prefix and trying relative
-        path_str = path_str.replace("package://", "").replace("package:/", "")
-        filepath = Path(path_str)
-
-    mesh_path = urdf_dir / filepath
-    if not mesh_path.exists():
-        # Try as absolute path
-        return Path(filepath)
-    return mesh_path
 
 
 def create_material_from_color(color: Color, name: str) -> bpy.types.Material | None:
@@ -394,7 +351,10 @@ def _get_geometry_type_str(geometry: typing.Any) -> str:
 
 
 def create_link_object(
-    link: Link, urdf_dir: Path, collection: bpy.types.Collection | None = None
+    link: Link,
+    robot: Robot,
+    urdf_dir: Path,
+    collection: bpy.types.Collection | None = None,
 ) -> bpy.types.Object | None:
     """Create Blender object from Link model with support for multiple visual/collision elements.
 
@@ -442,9 +402,13 @@ def create_link_object(
 
         # Create geometry
         if isinstance(visual.geometry, Mesh):
-            # Resolve mesh path
-            mesh_path = resolve_mesh_path(Path(visual.geometry.resource), urdf_dir)
-            visual_obj = import_mesh_file(mesh_path, visual_name)
+            # Resolve mesh path using unified Robot resolver
+            try:
+                mesh_path = robot.resolve_resource(visual.geometry.resource, relative_to=urdf_dir)
+                visual_obj = import_mesh_file(mesh_path, visual_name)
+            except FileNotFoundError as e:
+                logger.warning(f"Mesh not found for visual '{visual_name}': {e}")
+                visual_obj = None
 
             # Apply scale from URDF
             if visual_obj and visual.geometry.scale:
@@ -504,9 +468,15 @@ def create_link_object(
 
         # Create geometry
         if isinstance(collision.geometry, Mesh):
-            # Resolve mesh path
-            mesh_path = resolve_mesh_path(Path(collision.geometry.resource), urdf_dir)
-            collision_obj = import_mesh_file(mesh_path, collision_name)
+            # Resolve mesh path using unified Robot resolver
+            try:
+                mesh_path = robot.resolve_resource(
+                    collision.geometry.resource, relative_to=urdf_dir
+                )
+                collision_obj = import_mesh_file(mesh_path, collision_name)
+            except FileNotFoundError as e:
+                logger.warning(f"Mesh not found for collision '{collision_name}': {e}")
+                collision_obj = None
 
             # Apply scale from URDF
             if collision_obj and collision.geometry.scale:
@@ -1038,7 +1008,7 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context: bpy.types.Cont
     logger.info(f"Importing robot '{robot.name}' ({', '.join(parts)})")
 
     for link in robot.links:
-        obj = create_link_object(link, urdf_dir, collection)
+        obj = create_link_object(link, robot, urdf_dir, collection)
         if obj:
             link_objects[link.name] = obj
 

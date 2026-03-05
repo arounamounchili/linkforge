@@ -119,11 +119,12 @@ class RobotParser(ABC):
 class IResourceResolver(Protocol):
     """Protocol for resolving resource URIs (e.g. package://, file://, https://)."""
 
-    def resolve(self, uri: str) -> Path:
+    def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
         """Resolve a URI to a local filesystem Path.
 
         Args:
             uri: The resource URI to resolve.
+            relative_to: Optional base directory for relative path resolution.
 
         Returns:
             The resolved absolute Path.
@@ -137,19 +138,48 @@ class IResourceResolver(Protocol):
 class FileSystemResolver:
     """Default resolver that handles standard file paths and package:// URIs."""
 
-    def resolve(self, uri: str) -> Path:
-        """Resolve standard file paths.
+    def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
+        """Resolve standard file paths, file:// URIs, and package:// URIs."""
+        from .utils.path_utils import resolve_package_path
 
-        Note: package:// resolution is currently handled by converters, but
-        this resolver will eventually absorb that logic.
-        """
+        # 1. Handle package:// URIs
+        if "package://" in uri or "package:/" in uri:
+            # We use an empty Path if relative_to is not provided,
+            # though package resolution usually doesn't strictly need it if ROS_PACKAGE_PATH is set.
+            resolved = resolve_package_path(uri, relative_to or Path.cwd())
+            if resolved and resolved.exists():
+                return resolved.absolute()
+            raise FileNotFoundError(f"Could not resolve package resource: {uri}")
+
+        # 2. Handle file:// URIs
+        if uri.startswith("file://"):
+            import re
+
+            path_str = re.sub(r"^file:/*", "/", uri)
+            # Windows handling: /C:/ -> C:/
+            if path_str.startswith("/") and len(path_str) > 2 and path_str[2] == ":":
+                path_str = path_str.lstrip("/")
+            path = Path(path_str)
+            if path.exists():
+                return path.absolute()
+            raise FileNotFoundError(f"Could not resolve file URI: {uri}")
+
+        # 3. Handle standard paths (absolute or relative)
         path = Path(uri)
+        if path.is_absolute():
+            if path.exists():
+                return path.absolute()
+        elif relative_to is not None:
+            # Try relative to the provided directory
+            rel_path = (relative_to / path).resolve()
+            if rel_path.exists():
+                return rel_path
+
+        # Final fallback: current working directory if it exists there
         if path.exists():
             return path.absolute()
 
-        # Fallback for relative paths if needed, though usually URIs are absolute
-        # or resolved relative to the URDF file during parsing.
-        raise FileNotFoundError(f"Could not resolve resource: {uri}")
+        raise FileNotFoundError(f"Could not resolve resource: {uri} (relative_to={relative_to})")
 
 
 class NetworkResolver:
@@ -159,7 +189,7 @@ class NetworkResolver:
     Currently raises a NotImplementedError if a network URI is detected.
     """
 
-    def resolve(self, uri: str) -> Path:
+    def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
         """Simulate network resolution."""
         if any(uri.startswith(p) for p in ("http://", "https://", "s3://")):
             # In a real implementation, this would download to a /tmp cache
@@ -170,4 +200,4 @@ class NetworkResolver:
             )
 
         # Fallback to standard filesystem if it's a local path
-        return FileSystemResolver().resolve(uri)
+        return FileSystemResolver().resolve(uri, relative_to=relative_to)

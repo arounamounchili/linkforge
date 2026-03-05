@@ -158,7 +158,7 @@ class TestCalculateInertia:
 
     def test_mesh(self):
         """Test calculation for mesh."""
-        mesh = Mesh(filepath="test.stl")
+        mesh = Mesh(resource="test.stl")
         inertia = calculate_inertia(mesh, mass=1.0)
         expected = calculate_mesh_inertia(mesh, mass=1.0)
         assert inertia == expected
@@ -192,7 +192,7 @@ class TestMeshInertia:
 
     def test_mesh_default_approximation(self):
         """Test mesh inertia uses box approximation by default."""
-        mesh = Mesh(filepath="robot.stl")
+        mesh = Mesh(resource="robot.stl")
         mass = 5.0
         inertia = calculate_mesh_inertia(mesh, mass)
 
@@ -203,7 +203,7 @@ class TestMeshInertia:
 
     def test_mesh_with_scale(self):
         """Test mesh inertia with custom scale."""
-        mesh = Mesh(filepath="model.dae", scale=Vector3(2.0, 2.0, 2.0))
+        mesh = Mesh(resource="model.dae", scale=Vector3(2.0, 2.0, 2.0))
         mass = 10.0
         inertia = calculate_mesh_inertia(mesh, mass)
 
@@ -214,13 +214,13 @@ class TestMeshInertia:
 
     def test_mesh_zero_mass(self):
         """Test that zero mass returns zero inertia."""
-        mesh = Mesh(filepath="test.stl")
+        mesh = Mesh(resource="test.stl")
         inertia = calculate_mesh_inertia(mesh, mass=0.0)
         assert inertia == InertiaTensor.zero()
 
     def test_mesh_negative_mass(self):
         """Test that negative mass returns zero inertia."""
-        mesh = Mesh(filepath="test.stl")
+        mesh = Mesh(resource="test.stl")
         inertia = calculate_mesh_inertia(mesh, mass=-1.0)
         assert inertia == InertiaTensor.zero()
 

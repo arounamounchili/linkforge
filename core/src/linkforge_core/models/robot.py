@@ -111,16 +111,17 @@ class Robot:
         self._joints.append(joint)
         self._joint_index[joint.name] = joint
 
-    def resolve_resource(self, uri: str) -> Path:
+    def resolve_resource(self, uri: str, relative_to: Path | None = None) -> Path:
         """Resolve a resource URI using the robot's configured resolver.
 
         Args:
             uri: The resource URI to resolve (e.g. mesh path, package://).
+            relative_to: Optional base directory for relative path resolution.
 
         Returns:
             The resolved absolute Path.
         """
-        return self.resource_resolver.resolve(uri)
+        return self.resource_resolver.resolve(uri, relative_to=relative_to)
 
     def get_link(self, name: str) -> Link | None:
         """Get link by name - O(1) lookup."""

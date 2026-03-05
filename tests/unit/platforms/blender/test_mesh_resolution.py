@@ -4,7 +4,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from linkforge.blender.adapters.core_to_blender import resolve_mesh_path, resolve_package_path
+from linkforge_core.base import FileSystemResolver
+from linkforge_core.utils.path_utils import resolve_package_path
 
 
 @pytest.fixture
@@ -63,16 +64,16 @@ def test_resolve_mesh_path_package_uri(mock_workspace):
     urdf_dir, pkg_dir = mock_workspace
     uri_path = Path("package://robot_pkg/meshes/base.stl")
 
-    resolved = resolve_mesh_path(uri_path, urdf_dir)
+    resolved = FileSystemResolver().resolve(str(uri_path), relative_to=urdf_dir)
     assert resolved.exists()
     assert resolved.is_absolute()
 
 
 def test_resolve_mesh_path_relative(mock_workspace):
     urdf_dir, pkg_dir = mock_workspace
-    rel_path = Path("../meshes/base.stl")
+    rel_path = "../meshes/base.stl"
 
-    resolved = resolve_mesh_path(rel_path, urdf_dir)
+    resolved = FileSystemResolver().resolve(rel_path, relative_to=urdf_dir)
     assert resolved.exists()
     # Resolve to remove .. for comparison
     assert resolved.resolve() == (pkg_dir / "meshes" / "base.stl").resolve()

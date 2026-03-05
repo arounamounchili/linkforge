@@ -68,10 +68,14 @@ def test_robot_custom_resolver():
     """Test that a Robot can be initialized with a custom resolver."""
 
     class MockResolver:
-        def resolve(self, uri: str) -> Path:
+        def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
             return Path("/mock/resolved") / uri
 
     robot = Robot(name="mock_bot", resource_resolver=MockResolver())
     resolved = robot.resolve_resource("some_uri")
 
     assert resolved == Path("/mock/resolved/some_uri")
+
+    # Verify relative_to is passed (conceptually, MockResolver doesn't use it but it shouldn't crash)
+    resolved_rel = robot.resolve_resource("some_uri", relative_to=Path("/tmp"))
+    assert resolved_rel == Path("/mock/resolved/some_uri")

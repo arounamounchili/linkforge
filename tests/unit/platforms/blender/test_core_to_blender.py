@@ -12,7 +12,6 @@ from linkforge.blender.adapters.core_to_blender import (
     import_mesh_file,
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
-    resolve_mesh_path,
 )
 from linkforge.linkforge_core.models import (
     Box,
@@ -65,7 +64,8 @@ def test_create_link_object_multi_collisions():
     coll2 = Collision(geometry=Sphere(radius=0.5), name="c2")
     link = Link(name="multi_coll_link", collisions=[coll1, coll2])
 
-    obj = create_link_object(link, Path("/tmp"))
+    robot = Robot(name="test")
+    obj = create_link_object(link, robot, Path("/tmp"))
 
     collisions = [c for c in obj.children if "_collision" in c.name]
     assert len(collisions) == 2
@@ -76,7 +76,8 @@ def test_create_link_object_multi_collisions():
 def test_create_link_object_zero_mass():
     """Test link creation with no inertial properties (should default to 0 mass)."""
     link = Link(name="dummy_link")  # No inertial
-    obj = create_link_object(link, Path("/tmp"))
+    robot = Robot(name="test")
+    obj = create_link_object(link, robot, Path("/tmp"))
 
     assert obj.linkforge.mass == 0.0
     assert obj.linkforge.use_auto_inertia is False
@@ -99,7 +100,8 @@ def test_create_link_object_primitives():
     collection = bpy.data.collections.new("TestCol")
     bpy.context.scene.collection.children.link(collection)
 
-    obj = create_link_object(link, Path("/tmp"), collection=collection)
+    robot = Robot(name="test")
+    obj = create_link_object(link, robot, Path("/tmp"), collection=collection)
 
     # 3. Verify
     assert obj is not None
@@ -517,7 +519,8 @@ def test_create_link_object_with_mesh_visual(tmp_path):
     link = Link(name="mesh_link", visuals=[visual])
 
     # 3. Build (providing tmp_path as urdf_dir)
-    obj = create_link_object(link, tmp_path)
+    robot = Robot(name="test")
+    obj = create_link_object(link, robot, tmp_path)
 
     # 4. Verify
     assert obj is not None
@@ -700,7 +703,8 @@ def test_create_link_with_material():
     visual = Visual(geometry=Box(size=Vector3(1, 1, 1)), material=material)
     link = Link(name="colored_link", visuals=[visual])
 
-    obj = create_link_object(link, Path("/tmp"))
+    robot = Robot(name="test")
+    obj = create_link_object(link, robot, Path("/tmp"))
 
     assert obj is not None
     assert obj.linkforge.use_material is True
@@ -761,7 +765,8 @@ def test_create_link_with_collision_mesh(tmp_path):
     link = Link(name="mesh_coll_link", collisions=[collision])
 
     # Build
-    obj = create_link_object(link, tmp_path)
+    robot = Robot(name="test")
+    obj = create_link_object(link, robot, tmp_path)
 
     # Verify
     assert obj is not None
@@ -1014,7 +1019,8 @@ def test_multi_visual_collision_naming(clean_scene):
         collisions=[Collision(geometry=box_geom), Collision(geometry=box_geom)],
     )
 
-    obj = create_link_object(link, Path("/cwd"), collection=bpy.context.collection)
+    robot = Robot(name="test")
+    obj = create_link_object(link, robot, Path("/cwd"), collection=bpy.context.collection)
     assert obj is not None
 
     # Check visuals: naming should follow {link_name}_visual_{idx}
@@ -1034,23 +1040,6 @@ def test_normalize_consolidate_empty_cleanup(clean_scene):
     res = normalize_and_consolidate_imported_objects([empty], "Final")
     assert res is None
     assert "EmptyContainer" not in bpy.data.objects
-
-
-def test_resolve_mesh_path_package_fallback():
-    """Verify resolve_mesh_path fallback for package:// URIs."""
-    with mock.patch(
-        "linkforge.blender.adapters.core_to_blender.resolve_package_path", return_value=None
-    ):
-        res = resolve_mesh_path(Path("package://my_pkg/mesh.stl"), Path("/cwd"))
-        # Should fallback to stripping package:// and trying relative (which returns the relative path if not exists)
-        assert res == Path("my_pkg/mesh.stl")
-
-
-def test_resolve_mesh_path_errors():
-    """Verify resolve_mesh_path error handling branches."""
-    with mock.patch.object(Path, "resolve", side_effect=OSError("FS Error")):
-        # Should fallback to original path if resolution fails
-        assert resolve_mesh_path(Path("bad/path"), Path("/cwd")) == Path("bad/path")
 
 
 def test_import_robot_sensor_creation_failure(clean_scene):
