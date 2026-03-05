@@ -453,7 +453,7 @@ def test_full_robot_import_integration(clean_scene):
     # Mocking OBJ for mesh import
     with (
         patch("linkforge.blender.adapters.core_to_blender.import_mesh_file") as mock_io,
-        patch("linkforge.blender.adapters.core_to_blender.resolve_package_path") as mock_pkg,
+        patch("linkforge_core.utils.path_utils.resolve_package_path") as mock_pkg,
     ):
         mock_io.return_value = bpy.data.objects.new("MeshObj", None)
         mock_pkg.return_value = Path("/tmp/mesh.stl")

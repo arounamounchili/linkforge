@@ -106,9 +106,9 @@ def test_inertial_preserved(examples_dir: Path):
 
 def test_quadruped_roundtrip(examples_dir: Path):
     """Test roundtrip for the complex quadruped robot example."""
-    urdf_path = examples_dir / "quadruped_robot.urdf"
+    urdf_path = examples_dir / "urdf" / "quadruped_robot.urdf"
     if not urdf_path.exists():
-        pytest.skip("quadruped_robot.urdf not found")
+        pytest.skip(f"quadruped_robot.urdf not found at {urdf_path}")
 
     # 1. Parse original URDF
     robot = URDFParser().parse(urdf_path)
