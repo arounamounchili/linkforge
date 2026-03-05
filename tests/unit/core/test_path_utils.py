@@ -1,4 +1,10 @@
-from linkforge_core.utils.path_utils import resolve_package_path
+from pathlib import Path
+
+from linkforge_core.utils.path_utils import (
+    get_export_path,
+    normalize_uri_to_path,
+    resolve_package_path,
+)
 
 
 def test_resolve_package_path_invalid_uri(tmp_path):
@@ -182,3 +188,48 @@ def test_resolve_package_path_root_recursion():
     fake_root = FakePath()
     # Should loop, find nothing, hit root check, and break/return None
     assert resolve_package_path("package://missing/file.stl", fake_root) is None
+
+
+def test_normalize_uri_to_path():
+    """Test normalization of file:// URIs."""
+    # Absolute mapping
+    assert normalize_uri_to_path("file:///path/to/mesh.stl") == Path("/path/to/mesh.stl")
+
+    # Relative mapping
+    assert normalize_uri_to_path("file://mesh.stl") == Path("mesh.stl")
+
+    # Windows style (strip leading slash before drive letter)
+    # Note: On actual Windows, Path("/C:/...") and Path("C:/...") behave differently
+    # but our utility ensures consistency.
+    assert normalize_uri_to_path("file:///C:/path/mesh.stl") == Path("C:/path/mesh.stl")
+
+    # Regular path
+    assert normalize_uri_to_path("/abs/path") == Path("/abs/path")
+
+
+def test_get_export_path(tmp_path):
+    """Test preparation of paths for URDF/XACRO export."""
+    # 1. Package URIs should be preserved untouched
+    assert get_export_path("package://pkg/mesh.stl") == "package://pkg/mesh.stl"
+
+    # 2. File URIs within export directory should become relative
+    # Case: file:///tmp/work/subdir/mesh.stl relative to /tmp/work
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    res = f"file://{work_dir.absolute()}/mesh.stl"
+
+    # Important: .absolute() might have different slash patterns on Windows
+    # get_export_path handles this.
+    export = get_export_path(res, relative_to=work_dir)
+    assert export == "mesh.stl"
+
+    # 3. Plain absolute paths within export directory should become relative
+    res_abs = f"{work_dir.absolute()}/subdir/mesh.stl"
+    export = get_export_path(res_abs, relative_to=work_dir)
+    assert export == "subdir/mesh.stl"
+
+    # 4. Paths outside relative_to should remain as is
+    other = tmp_path / "other"
+    other.mkdir()
+    res_other = f"{other.absolute()}/mesh.stl"
+    assert get_export_path(res_other, relative_to=work_dir) == res_other

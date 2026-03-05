@@ -360,7 +360,8 @@ def create_link_object(
 
     Args:
         link: Link model
-        urdf_dir: Directory containing URDF file (for resolving mesh paths)
+        robot: Robot model (for resolving resources)
+        urdf_dir: Directory containing URDF file (for resolving relative paths)
         collection: Blender Collection to add object to
 
     Returns:

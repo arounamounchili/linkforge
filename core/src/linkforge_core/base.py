@@ -153,13 +153,9 @@ class FileSystemResolver:
 
         # 2. Handle file:// URIs
         if uri.startswith("file://"):
-            import re
+            from .utils.path_utils import normalize_uri_to_path
 
-            path_str = re.sub(r"^file:/*", "/", uri)
-            # Windows handling: /C:/ -> C:/
-            if path_str.startswith("/") and len(path_str) > 2 and path_str[2] == ":":
-                path_str = path_str.lstrip("/")
-            path = Path(path_str)
+            path = normalize_uri_to_path(uri)
             if path.exists():
                 return path.absolute()
             raise FileNotFoundError(f"Could not resolve file URI: {uri}")

@@ -376,15 +376,13 @@ class URDFGenerator(RobotGenerator[str]):
             ET.SubElement(geom_elem, "sphere", radius=format_float(geometry.radius))
 
         elif isinstance(geometry, Mesh):
-            # Make mesh path relative to URDF location if possible
-            mesh_path = Path(geometry.resource)
-            if self.urdf_path and mesh_path.is_absolute():
-                import contextlib
+            from ..utils.path_utils import get_export_path
 
-                with contextlib.suppress(ValueError):
-                    mesh_path = mesh_path.relative_to(self.urdf_path.parent)
+            urdf_dir = self.urdf_path.parent if self.urdf_path else None
+            export_path = get_export_path(geometry.resource, relative_to=urdf_dir)
 
-            attrib: dict[str, str] = {"filename": str(mesh_path)}
+            attrib: dict[str, str] = {"filename": export_path}
+
             # Check if scale is not default (1.0, 1.0, 1.0)
             if geometry.scale.x != 1.0 or geometry.scale.y != 1.0 or geometry.scale.z != 1.0:
                 scale_str = format_vector(geometry.scale.x, geometry.scale.y, geometry.scale.z)

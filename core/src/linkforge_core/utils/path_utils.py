@@ -76,3 +76,69 @@ def resolve_package_path(uri: str, start_dir: Path) -> Path | None:
         curr = curr.parent
 
     return None
+
+
+def normalize_uri_to_path(uri: str) -> Path:
+    """Normalize a resource URI (specifically file://) to a local filesystem Path.
+
+    Handles Windows-style file:// URIs (e.g. file:///C:/) by stripping the
+    leading slash if a drive letter is detected. This ensures portability across
+    Posix and Windows environments.
+
+    Args:
+        uri: The URI to normalize (e.g. file:///path/mesh.stl).
+
+    Returns:
+        A Path object representing the local path.
+    """
+    if uri.startswith("file://"):
+        # Strip scheme (file://)
+        path_str = uri[7:]
+        # Windows handling: /C:/ -> C:/ (strip leading slash before drive letter)
+        if path_str.startswith("/") and len(path_str) > 2 and path_str[2] == ":":
+            path_str = path_str[1:]
+        return Path(path_str)
+
+    return Path(uri)
+
+
+def get_export_path(resource: str, relative_to: Path | None = None) -> str:
+    """Prepare a resource string for export in URDF/XACRO.
+
+    Ensures that URIs (package://, file://) are preserved correctly and not
+    mangled by standard Path normalization. If a base directory is provided,
+    local paths and file:// URIs are converted to relative paths where possible.
+
+    Args:
+        resource: The resource URI or path string.
+        relative_to: Optional base directory to make paths relative to.
+
+    Returns:
+        The string to be used in the 'filename' attribute.
+    """
+    # 1. Preserve package:// URIs (never make relative)
+    if resource.startswith("package://") or resource.startswith("package:/"):
+        return resource
+
+    # 2. Handle file:// URIs
+    if resource.startswith("file://"):
+        path = normalize_uri_to_path(resource)
+        if relative_to and path.is_absolute():
+            try:
+                # Use .absolute() on relative_to just in case it's not
+                rel = path.relative_to(relative_to.absolute())
+                return str(rel)
+            except ValueError:
+                pass
+        return resource
+
+    # 3. Handle standard paths
+    path = Path(resource)
+    if relative_to and path.is_absolute():
+        try:
+            rel = path.relative_to(relative_to.absolute())
+            return str(rel)
+        except ValueError:
+            pass
+
+    return resource

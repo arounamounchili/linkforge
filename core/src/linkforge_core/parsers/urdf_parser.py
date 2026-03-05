@@ -162,10 +162,9 @@ def parse_geometry(
             # Extract path for validation if it's a file:// URI or a regular path
             validation_path: Path | None = None
             if filename.startswith("file://"):
-                # Strip scheme for validation. Support both relative (file://mesh.stl)
-                # and absolute (file:///path/to/mesh.stl) variants often found in XACRO.
-                path_str = filename[7:]
-                validation_path = Path(path_str)
+                from ..utils.path_utils import normalize_uri_to_path
+
+                validation_path = normalize_uri_to_path(filename)
             elif not filename.startswith("package://"):
                 validation_path = Path(filename)
 
