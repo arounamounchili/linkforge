@@ -15,6 +15,7 @@ from ..exceptions import RobotModelError
 from .result import ValidationResult
 
 if TYPE_CHECKING:
+    from ..models.link import Link
     from ..models.robot import Robot
 
 
@@ -74,12 +75,10 @@ class DuplicateNameCheck(ValidationCheck):
                     title=f"Duplicate {kind} name",
                     message=(
                         f"{kind.capitalize()} name '{name}' is used by "
-                        f"{names.count(name)} {kind}s. Each {kind} must have a unique name."
+                        f"{names.count(name)} {kind}s. Each {kind} must have a unique name"
                     ),
                     affected_objects=[n for n in names if n == name],
-                    suggestion=(
-                        f"Rename duplicate {kind}s to unique names (e.g., '{name}_1', '{name}_2')"
-                    ),
+                    suggestion=f"Rename duplicate {kind}s to unique names (e.g., '{name}_1', '{name}_2')",
                 )
                 return  # Report once per kind
             seen.add(name)
@@ -101,10 +100,7 @@ class JointReferenceCheck(ValidationCheck):
                         f"'{joint.parent}' which does not exist"
                     ),
                     affected_objects=[joint.name],
-                    suggestion=(
-                        f"Create a link named '{joint.parent}' "
-                        "or update the joint's parent reference"
-                    ),
+                    suggestion=f"Create a link named '{joint.parent}' or update the joint's parent reference",
                 )
 
             if joint.child not in link_names:
@@ -115,9 +111,7 @@ class JointReferenceCheck(ValidationCheck):
                         f"'{joint.child}' which does not exist"
                     ),
                     affected_objects=[joint.name],
-                    suggestion=(
-                        f"Create a link named '{joint.child}' or update the joint's child reference"
-                    ),
+                    suggestion=f"Create a link named '{joint.child}' or update the joint's child reference",
                 )
 
 
@@ -158,7 +152,7 @@ class TreeStructureCheck(ValidationCheck):
                 )
 
     @staticmethod
-    def _check_root(robot: Robot, result: ValidationResult) -> object:
+    def _check_root(robot: Robot, result: ValidationResult) -> Link | None:
         """Return the root link, or None if it cannot be determined."""
         try:
             root = robot.get_root_link()
@@ -169,7 +163,7 @@ class TreeStructureCheck(ValidationCheck):
                         "No root link found. A robot must have exactly one link "
                         "that is not a child in any joint."
                     ),
-                    suggestion=("Ensure exactly one link has no parent joint (the base/root link)"),
+                    suggestion="Ensure exactly one link has no parent joint (the base/root link)",
                 )
             return root
         except RobotModelError as e:
@@ -178,10 +172,7 @@ class TreeStructureCheck(ValidationCheck):
                 result.add_error(
                     title="Multiple root links",
                     message=error_msg,
-                    suggestion=(
-                        "Ensure only one link has no parent joint. "
-                        "Connect other root links to the tree with joints."
-                    ),
+                    suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
                 )
             else:
                 result.add_error(
@@ -204,9 +195,7 @@ class TreeStructureCheck(ValidationCheck):
                     title="Disconnected link",
                     message=f"Link '{link.name}' is not connected to the kinematic tree",
                     affected_objects=[link.name],
-                    suggestion=(
-                        f"Create a joint connecting '{link.name}' to another link in the tree"
-                    ),
+                    suggestion=f"Create a joint connecting '{link.name}' to another link in the tree",
                 )
             elif count > 1:
                 result.add_error(
@@ -215,7 +204,7 @@ class TreeStructureCheck(ValidationCheck):
                         f"Link '{link.name}' has {count} parent joints (should have exactly 1)"
                     ),
                     affected_objects=[link.name],
-                    suggestion="Remove extra joints. Each link can only have one parent.",
+                    suggestion="Remove extra joints. Each link can only have one parent",
                 )
 
 
@@ -228,12 +217,9 @@ class MassPropertiesCheck(ValidationCheck):
             if link.mass < 0.01:
                 result.add_warning(
                     title="Very low mass",
-                    message=f"Link '{link.name}' has very low mass ({link.mass:.6f} kg)",
+                    message=f"Link '{link.name}' has very low mass ({link.mass:.6f} kg).",
                     affected_objects=[link.name],
-                    suggestion=(
-                        "Consider if this mass is realistic. "
-                        "Very low masses can cause simulation instability."
-                    ),
+                    suggestion="Consider providing a more realistic mass to avoid simulation instability",
                 )
 
             if link.inertial is None:
