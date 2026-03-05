@@ -32,8 +32,7 @@ class RobotValidator:
 
     Runs a configurable registry of :class:`ValidationCheck` instances.
     By default, all standard checks run in dependency order. Callers can
-    pass a custom list to run only a specific subset (e.g., the Composer
-    running only :class:`TreeStructureCheck` after an ``attach()`` call).
+    pass a custom list to run only a specific subset of validation rules.
 
     Example:
         >>> from linkforge_core.models import Robot, Link

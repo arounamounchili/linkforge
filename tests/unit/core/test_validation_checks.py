@@ -1,8 +1,8 @@
 """Targeted unit tests for individual ValidationCheck classes.
 
 These tests exercise each check in isolation by calling check.run() directly,
-independent of the full RobotValidator pipeline. This enables the Composer
-(Issue 4) to import and test targeted subsets of validation logic.
+independent of the full RobotValidator pipeline. This ensures that focused
+validation rules can be reused in different parts of the application.
 """
 
 import pytest
