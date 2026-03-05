@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Date**: 2026-03-04
-- **Authors**: Arouna Patouossamounchili (@arounamounchili)
+- **Authors**: Arouna Patouossa Mounchili (@arounamounchili)
 
 ---
 
