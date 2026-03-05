@@ -185,9 +185,9 @@ def test_get_object_geometry_mesh_export(clean_scene, tmp_path):
             meshes_dir=tmp_path,
             dry_run=False,
         )
-        # Core Mesh model uses 'filepath'
-        assert hasattr(geom, "filepath")
-        assert geom.filepath == Path("monkey.stl")
+        # Core Mesh model uses 'resource'
+        assert hasattr(geom, "resource")
+        assert geom.resource == str(Path("monkey.stl"))
 
 
 def test_sensor_origin_custom_mount(clean_scene):

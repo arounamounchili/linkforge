@@ -512,7 +512,7 @@ def test_create_link_object_with_mesh_visual(tmp_path):
     bpy.ops.object.delete()
 
     # 2. Model
-    mesh_geom = Mesh(filepath="v.stl")
+    mesh_geom = Mesh(resource="v.stl")
     visual = Visual(geometry=mesh_geom)
     link = Link(name="mesh_link", visuals=[visual])
 
@@ -756,7 +756,7 @@ def test_create_link_with_collision_mesh(tmp_path):
     bpy.ops.object.delete()
 
     # Model
-    mesh_geom = Mesh(filepath="collision.stl")
+    mesh_geom = Mesh(resource="collision.stl")
     collision = Collision(geometry=mesh_geom)
     link = Link(name="mesh_coll_link", collisions=[collision])
 

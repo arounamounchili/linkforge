@@ -27,9 +27,9 @@ def test_single_visual_no_suffix():
 
     # Assert
     assert len(core_link.visuals) == 1
-    # The Mesh geometry should have a filepath "test_link_visual.stl" (no _0)
-    assert hasattr(core_link.visuals[0].geometry, "filepath")
-    assert core_link.visuals[0].geometry.filepath.name == "test_link_visual.stl"
+    # The Mesh geometry should have a resource "test_link_visual.stl" (no _0)
+    assert hasattr(core_link.visuals[0].geometry, "resource")
+    assert Path(core_link.visuals[0].geometry.resource).name == "test_link_visual.stl"
 
 
 def test_multiple_visuals_with_suffix():
@@ -61,7 +61,7 @@ def test_multiple_visuals_with_suffix():
     # Assert
     assert len(core_link.visuals) == 2
     # Filenames should be "multi_link_visual_0.stl" and "multi_link_visual_1.stl"
-    filenames = [v.geometry.filepath.name for v in core_link.visuals]
+    filenames = [Path(v.geometry.resource).name for v in core_link.visuals]
     assert "multi_link_visual_0.stl" in filenames
     assert "multi_link_visual_1.stl" in filenames
 
@@ -90,5 +90,5 @@ def test_urdf_name_preservation():
     # Assert
     assert len(core_link.visuals) == 1
     # Filename should be "name_link_visual_custom_part.stl"
-    assert hasattr(core_link.visuals[0].geometry, "filepath")
-    assert core_link.visuals[0].geometry.filepath.name == "name_link_visual_custom_part.stl"
+    assert hasattr(core_link.visuals[0].geometry, "resource")
+    assert Path(core_link.visuals[0].geometry.resource).name == "name_link_visual_custom_part.stl"

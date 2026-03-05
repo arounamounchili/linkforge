@@ -67,31 +67,31 @@ def test_resolve_mesh_path(tmp_path):
     # 1. Local relative path (exists)
     mesh_file = urdf_dir / "mesh.stl"
     mesh_file.touch()
-    assert resolve_mesh_path(Path("mesh.stl"), urdf_dir) == mesh_file
+    assert resolve_mesh_path(str(Path("mesh.stl")), urdf_dir) == mesh_file
 
     # 2. Package URI (requires mock of resolve_package_path)
     with patch("linkforge.blender.adapters.core_to_blender.resolve_package_path") as mock_resolve:
         mock_resolve.return_value = mesh_file
-        assert resolve_mesh_path(Path("package://my_pkg/mesh.stl"), urdf_dir) == mesh_file
+        assert resolve_mesh_path("package://my_pkg/mesh.stl", urdf_dir) == mesh_file
 
     # 3. Non-existent path falls back to absolute conversion
     abs_path = Path("/tmp/non_existent.obj")
-    assert resolve_mesh_path(abs_path, urdf_dir) == abs_path
+    assert resolve_mesh_path(str(abs_path), urdf_dir) == abs_path
 
     # 4. file:// URI
     file_uri = Path("file:///tmp/mesh.stl")
-    assert resolve_mesh_path(file_uri, urdf_dir) == Path("/tmp/mesh.stl")
+    assert resolve_mesh_path(str(file_uri), urdf_dir) == Path("/tmp/mesh.stl")
 
     # 5. Windows style with leading slash (Hit line 54)
     win_path = "file:///C:/path/to/mesh.stl"
-    res = resolve_mesh_path(Path(win_path), urdf_dir)
+    res = resolve_mesh_path(win_path, urdf_dir)
     assert str(res).startswith("C:")
 
     # 6. Package resolution failure warning (Hit line 62)
     with patch(
         "linkforge.blender.adapters.core_to_blender.resolve_package_path", return_value=None
     ):
-        resolve_mesh_path(Path("package://missing/mesh.stl"), urdf_dir)
+        resolve_mesh_path("package://missing/mesh.stl", urdf_dir)
 
 
 def test_create_material_from_color(clean_scene):
@@ -360,8 +360,8 @@ def test_full_robot_import_integration(clean_scene):
     # Mesh geometry in 3rd link with mesh collision
     l3 = Link(
         name="mesh_link",
-        visuals=[Visual(geometry=Mesh(filepath=Path("package://pkg/mesh.stl")))],
-        collisions=[Collision(geometry=Mesh(filepath=Path("package://pkg/mesh.stl")))],
+        visuals=[Visual(geometry=Mesh(resource="package://pkg/mesh.stl"))],
+        collisions=[Collision(geometry=Mesh(resource="package://pkg/mesh.stl"))],
     )
     # Sensors
     Sensor(
@@ -387,9 +387,7 @@ def test_full_robot_import_integration(clean_scene):
     )
 
     # Mesh geometry in 3rd link
-    l3 = Link(
-        name="mesh_link", visuals=[Visual(geometry=Mesh(filepath=Path("package://pkg/mesh.stl")))]
-    )
+    l3 = Link(name="mesh_link", visuals=[Visual(geometry=Mesh(resource="package://pkg/mesh.stl"))])
     j2 = Joint(name="j2", type=JointType.FIXED, parent="base_link", child="mesh_link")
 
     # Sensors with more info
