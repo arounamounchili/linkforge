@@ -206,7 +206,8 @@ def validate_package_uri(uri: str) -> str:
         )
 
     # Extract path component after package://
-    path_component = decoded_uri[10:]
+    scheme = "package://"
+    path_component = decoded_uri[len(scheme) :]
 
     if not path_component:
         raise RobotModelError(f"Invalid package URI: {uri} (missing package name)")

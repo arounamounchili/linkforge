@@ -93,7 +93,8 @@ def normalize_uri_to_path(uri: str) -> Path:
     """
     if uri.startswith("file://"):
         # Strip scheme (file://)
-        path_str = uri[7:]
+        scheme = "file://"
+        path_str = uri[len(scheme) :]
         # Windows handling: /C:/ -> C:/ (strip leading slash before drive letter)
         if path_str.startswith("/") and len(path_str) > 2 and path_str[2] == ":":
             path_str = path_str[1:]
