@@ -175,7 +175,7 @@ The package will be created in the `dist/` directory.
 - [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
 - [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
 - [x] **v1.2.0**: **Architectural Stability** (Hexagonal Core, Numerical Precision).
-- [ ] **v1.3.0**: **Performance & Control** (NumPy Acceleration, Depsgraph, & ROS2 Control).
+- [x] **v1.3.0**: **Performance & Control** (NumPy Acceleration, Depsgraph, & ROS2 Control).
 - [ ] **v1.4.0**: **Modular Assembly** (SRDF, Composer API, `linkforge_ros`).
 - [ ] **v1.5.0**: **High-Fidelity Expansion pt.1** (MJCF/MuJoCo support).
 - [ ] **v1.6.0**: **High-Fidelity Expansion pt.2** (SDF/Gazebo support).
