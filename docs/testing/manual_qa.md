@@ -72,7 +72,13 @@ This protocol defines the mandatory manual testing steps required before every r
     - *Expected:* A `Use Limits` checkbox appears. Enabling it shows Effort/Velocity fields only.
 6.  [ ] **Mimic Joints**: Set a joint to `Mimic` another joint.
     - *Expected:* Fields for `Multiplier` and `Offset` appear.
-5.  [ ] **Enhanced Viz**: Enable `Show Joint Frames` in Preferences and move the `Frame Size` slider.
+7.  [ ] **Joint Dynamics**: Enable `Use Dynamics`.
+    - *Expected:* Fields for `Damping` and `Friction` appear.
+8.  [ ] **Joint Safety Controller**: Enable `Use Safety Controller`.
+    - *Expected:* Fields for `Soft Lower Limit`, `Soft Upper Limit`, `k_position`, and `k_velocity` appear.
+9.  [ ] **Joint Calibration**: Enable `Use Calibration`.
+    - *Expected:* Toggles and fields for `Rising` and `Falling` edges appear.
+10. [ ] **Enhanced Viz**: Enable `Show Joint Frames` in Preferences and move the `Frame Size` slider.
     - *Expected:* Large RGB arrows appear and scale smoothly in the viewport.
 
 ---
@@ -94,12 +100,16 @@ This protocol defines the mandatory manual testing steps required before every r
 
 1.  [ ] **Validation Hub**: Go to `Validate & Export` and click `Validate Robot`.
     - *Expected:* The Component Browser lists all Links, Joints, Sensors. No "Generic Error" icons.
-2.  [ ] **URDF Export**: Click `Export URDF/XACRO`.
+2.  [ ] **Component Browser Search**: Type a partial name in the Component Browser search bar.
+    - *Expected:* The list filters in real-time.
+    - *Action:* Click the **Clear (X)** icon.
+    - *Expected:* The search field is cleared and all components return.
+3.  [ ] **URDF Export**: Click `Export URDF/XACRO`.
     - *Expected:* Successful file generation. Check the text file:
         - `xyz` and `rpy` values match Blender's transforms.
         - `mass` and `inertia` are non-zero.
         - Mesh paths are relative to the URDF folder.
-3.  [ ] **XACRO Advanced**: Switch to XACRO format and enable **Extract Materials**, **Extract Dimensions**, and **Generate Macros**.
+4.  [ ] **XACRO Advanced**: Switch to XACRO format and enable **Extract Materials**, **Extract Dimensions**, and **Generate Macros**.
     - *Expected:* The output file uses `<xacro:macro>` and `<xacro:property>`.
     - *Expected:* Property names starting with digits (e.g., `001`) are automatically sanitized (e.g., `_001`).
 4.  [ ] **XACRO Split Files**: Enable **Split Files**.
