@@ -223,183 +223,198 @@ class XacroResolver:
                 tag = tag.replace(prefix, "xacro:")
                 break
 
-        # 1. Handle properties: <xacro:property name="..." value="..."/>
-        if tag == "xacro:property":
-            name = element.get("name")
-            value = element.get("value")
-            if name:
-                # Apply namespace prefix if active
-                if self._ns_stack:
-                    name = f"{'.'.join(self._ns_stack)}.{name}"
+        # Dispatch dictionary for known xacro tags
+        dispatch = {
+            "xacro:property": self._handle_property,
+            "xacro:arg": self._handle_arg,
+            "xacro:include": self._handle_include,
+            "xacro:macro": self._handle_macro_def,
+            "xacro:if": self._handle_conditional,
+            "xacro:unless": self._handle_conditional,
+            "xacro:insert_block": self._handle_insert_block,
+        }
 
-                # If no 'value' attribute, check for children (block property)
-                if value is None and len(element) > 0:
-                    self.properties[name] = list(element)
-                else:
-                    self.properties[name] = self._try_parse_typed_value(
-                        self._substitute(value or element.text or "")
-                    )
-            return ET.Element("skip")
+        if tag in dispatch:
+            return dispatch[tag](element)
 
-        # 2. Handle arguments: <xacro:arg name="..." default="..."/>
-        if tag == "xacro:arg":
-            name = element.get("name")
-            default = element.get("default")
-            if name and name not in self.args:
-                self.args[name] = self._try_parse_typed_value(self._substitute(default or ""))
-            return ET.Element("skip")
-
-        # 3. Handle includes: <xacro:include filename="..." ns="..."/>
-        if tag == "xacro:include":
-            filename = str(self._substitute(element.get("filename") or ""))
-            ns = element.get("ns")
-            included_path = self._find_file(filename)
-            if not included_path:
-                logger.warning(
-                    f"XACRO: Could not find included file: '{filename}'. Check your paths and $(find ...) usage."
-                )
-                return ET.Element("skip")
-
-            container, _, _ = self._process_include_file(included_path, ns=ns)
-            return container
-
-        # 4. Handle macro definitions: <xacro:macro name="..." params="...">
-        if tag == "xacro:macro":
-            name = element.get("name")
-            params = [p.strip() for p in (element.get("params") or "").split() if p.strip()]
-            if name:
-                # Apply namespace prefix if active
-                if self._ns_stack:
-                    name = f"{'.'.join(self._ns_stack)}.{name}"
-                self.macros[name] = (params, element)
-            return ET.Element("skip")
-
-        # 5. Handle conditionals: <xacro:if value="..."/> or <xacro:unless value="..."/>
-        if tag in ("xacro:if", "xacro:unless"):
-            condition = element.get("value") or "0"
-            is_true = self._eval_condition(condition)
-            if tag == "xacro:unless":
-                is_true = not is_true
-
-            if is_true:
-                container = ET.Element("container")
-                for child in element:
-                    resolved_child = self.resolve_element(child)
-                    if resolved_child.tag == "container":
-                        for sc in resolved_child:
-                            container.append(sc)
-                    elif resolved_child.tag != "skip":
-                        container.append(resolved_child)
-                return container
-            return ET.Element("skip")
-
-        # 6. Handle block insertion: <xacro:insert_block name="..."/>
-        if tag == "xacro:insert_block":
-            name = str(self._substitute(element.get("name") or ""))
-            if name and name in self.properties:
-                # Cycle detection for blocks
-                if name in self._block_stack:
-                    raise RobotParserError(
-                        f"Circular block insertion detected: {name}. This causes infinite recursion."
-                    )
-
-                self._block_stack.add(name)
-                try:
-                    block = self.properties[name]
-                    if isinstance(block, (ET.Element, list)):
-                        # It's an XML block
-                        # CRITICAL: We must deepcopy the block before insertion!
-                        # Otherwise, if a block refers to itself (directly or via macro),
-                        # we create a cycle in the Python object graph that causes infinite recursion.
-                        container = ET.Element("container")
-
-                        def _process_block_item(item: ET.Element) -> None:
-                            res = self.resolve_element(copy.deepcopy(item))
-                            if res.tag == "container":
-                                for child in res:
-                                    container.append(child)
-                            elif res.tag != "skip":
-                                container.append(res)
-
-                        if isinstance(block, ET.Element):
-                            # Single element
-                            _process_block_item(block)
-                        else:
-                            # List of elements (usual case for block params)
-                            for b_elem in block:
-                                _process_block_item(b_elem)
-
-                        return container
-                finally:
-                    self._block_stack.remove(name)
-            return ET.Element("skip")
-
-        # 7. Handle macro calls
         if tag.startswith("xacro:"):
-            if tag[6:] in self.macros:
-                params, macro_elem = self.macros[tag[6:]]
-                local_props: dict[str, Any] = {}
+            return self._handle_macro_call(tag, element)
 
-                # Parse parameters
-                block_params = [p[1:] for p in params if p.startswith("*")]
-                regular_params = [p for p in params if not p.startswith("*")]
+        return self._handle_regular_element(element)
 
-                # Map children to block parameters (simplified: all children to all block params)
-                # CRITICAL: We must resolve the block content in the CALLER'S scope before passing it
-                # to the macro. Otherwise, if we pass a "lazy" insert_block instruction,
-                # and the macro uses the same parameter name, we create an infinite loop.
-                resolved_block_content: list[ET.Element] = []
-                for child in element:
-                    # Resolve child in current scope
-                    # We use deepcopy to ensure we don't modify the original definition
-                    res = self.resolve_element(copy.deepcopy(child))
-                    if res.tag == "container":
-                        resolved_block_content.extend(res)
-                    elif res.tag != "skip":
-                        resolved_block_content.append(res)
+    def _handle_property(self, element: ET.Element) -> ET.Element:
+        """Handle 1. properties: <xacro:property name="..." value="..."/>"""
+        name = element.get("name")
+        value = element.get("value")
+        if name:
+            # Apply namespace prefix if active
+            if self._ns_stack:
+                name = f"{'.'.join(self._ns_stack)}.{name}"
 
-                for bp in block_params:
-                    local_props[bp] = resolved_block_content
+            # If no 'value' attribute, check for children (block property)
+            if value is None and len(element) > 0:
+                self.properties[name] = list(element)
+            else:
+                self.properties[name] = self._try_parse_typed_value(
+                    self._substitute(value or element.text or "")
+                )
+        return ET.Element("skip")
 
-                # Map attributes to regular parameters
-                for p in regular_params:
-                    # Handle default values in params (e.g. "mass:=1.0")
-                    bits = p.split(":=")
-                    p_name = bits[0]
-                    # Substitute the default value from the parameter definition
-                    default = self._try_parse_typed_value(
-                        self._substitute(bits[1] if len(bits) > 1 else "")
-                    )
+    def _handle_arg(self, element: ET.Element) -> ET.Element:
+        """Handle 2. arguments: <xacro:arg name="..." default="..."/>"""
+        name = element.get("name")
+        default = element.get("default")
+        if name and name not in self.args:
+            self.args[name] = self._try_parse_typed_value(self._substitute(default or ""))
+        return ET.Element("skip")
 
-                    raw_val = element.get(p_name)
-                    val = self._substitute(raw_val) if raw_val is not None else default
-
-                    local_props[p_name] = self._try_parse_typed_value(val)
-
-                # Expand macro body
-                parent_props = self.properties.copy()
-                self.properties.update(local_props)
-
-                container = ET.Element("container")
-                for child in macro_elem:
-                    resolved_child = self.resolve_element(child)
-                    if resolved_child.tag == "container":
-                        for sc in resolved_child:
-                            container.append(sc)
-                    elif resolved_child.tag != "skip":
-                        container.append(resolved_child)
-
-                self.properties = parent_props
-                return container
-
-            # Unknown xacro tag - report warning and skip it
-            macro_name = tag[6:]
+    def _handle_include(self, element: ET.Element) -> ET.Element:
+        """Handle 3. includes: <xacro:include filename="..." ns="..."/>"""
+        filename = str(self._substitute(element.get("filename") or ""))
+        ns = element.get("ns")
+        included_path = self._find_file(filename)
+        if not included_path:
             logger.warning(
-                f"XACRO: Unknown macro or tag: '{macro_name}'. Did you forget to include the corresponding file?"
+                f"XACRO: Could not find included file: '{filename}'. Check your paths and $(find ...) usage."
             )
             return ET.Element("skip")
 
-        # 8. Handle substitutions in text and attributes for regular elements
+        container, _, _ = self._process_include_file(included_path, ns=ns)
+        return container
+
+    def _handle_macro_def(self, element: ET.Element) -> ET.Element:
+        """Handle 4. macro definitions: <xacro:macro name="..." params="...">"""
+        name = element.get("name")
+        params = [p.strip() for p in (element.get("params") or "").split() if p.strip()]
+        if name:
+            # Apply namespace prefix if active
+            if self._ns_stack:
+                name = f"{'.'.join(self._ns_stack)}.{name}"
+            self.macros[name] = (params, element)
+        return ET.Element("skip")
+
+    def _handle_conditional(self, element: ET.Element) -> ET.Element:
+        """Handle 5. conditionals: <xacro:if value="..."/> or <xacro:unless value="..."/>"""
+        tag = element.tag
+        # Check against normal and URI namespaces for the conditional tag
+        is_unless = "xacro:unless" in tag or "unless" in tag
+
+        condition = element.get("value") or "0"
+        is_true = self._eval_condition(condition)
+        if is_unless:
+            is_true = not is_true
+
+        if is_true:
+            container = ET.Element("container")
+            for child in element:
+                resolved_child = self.resolve_element(child)
+                if resolved_child.tag == "container":
+                    for sc in resolved_child:
+                        container.append(sc)
+                elif resolved_child.tag != "skip":
+                    container.append(resolved_child)
+            return container
+        return ET.Element("skip")
+
+    def _handle_insert_block(self, element: ET.Element) -> ET.Element:
+        """Handle 6. block insertion: <xacro:insert_block name="..."/>"""
+        name = str(self._substitute(element.get("name") or ""))
+        if name and name in self.properties:
+            # Cycle detection for blocks
+            if name in self._block_stack:
+                raise RobotParserError(
+                    f"Circular block insertion detected: {name}. This causes infinite recursion."
+                )
+
+            self._block_stack.add(name)
+            try:
+                block = self.properties[name]
+                if isinstance(block, (ET.Element, list)):
+                    # It's an XML block
+                    # CRITICAL: We must deepcopy the block before insertion!
+                    container = ET.Element("container")
+
+                    def _process_block_item(item: ET.Element) -> None:
+                        res = self.resolve_element(copy.deepcopy(item))
+                        if res.tag == "container":
+                            for child in res:
+                                container.append(child)
+                        elif res.tag != "skip":
+                            container.append(res)
+
+                    if isinstance(block, ET.Element):
+                        # Single element
+                        _process_block_item(block)
+                    else:
+                        # List of elements
+                        for b_elem in block:
+                            _process_block_item(b_elem)
+
+                    return container
+            finally:
+                self._block_stack.remove(name)
+        return ET.Element("skip")
+
+    def _handle_macro_call(self, tag: str, element: ET.Element) -> ET.Element:
+        """Handle 7. macro calls: <xacro:my_macro_name ...>"""
+        macro_name = tag[6:]
+        if macro_name in self.macros:
+            params, macro_elem = self.macros[macro_name]
+            local_props: dict[str, Any] = {}
+
+            # Parse parameters
+            block_params = [p[1:] for p in params if p.startswith("*")]
+            regular_params = [p for p in params if not p.startswith("*")]
+
+            # Map children to block parameters
+            resolved_block_content: list[ET.Element] = []
+            for child in element:
+                res = self.resolve_element(copy.deepcopy(child))
+                if res.tag == "container":
+                    resolved_block_content.extend(res)
+                elif res.tag != "skip":
+                    resolved_block_content.append(res)
+
+            for bp in block_params:
+                local_props[bp] = resolved_block_content
+
+            # Map attributes to regular parameters
+            for p in regular_params:
+                bits = p.split(":=")
+                p_name = bits[0]
+                default = self._try_parse_typed_value(
+                    self._substitute(bits[1] if len(bits) > 1 else "")
+                )
+
+                raw_val = element.get(p_name)
+                val = self._substitute(raw_val) if raw_val is not None else default
+
+                local_props[p_name] = self._try_parse_typed_value(val)
+
+            # Expand macro body
+            parent_props = self.properties.copy()
+            self.properties.update(local_props)
+
+            container = ET.Element("container")
+            for child in macro_elem:
+                resolved_child = self.resolve_element(child)
+                if resolved_child.tag == "container":
+                    for sc in resolved_child:
+                        container.append(sc)
+                elif resolved_child.tag != "skip":
+                    container.append(resolved_child)
+
+            self.properties = parent_props
+            return container
+
+        # Unknown xacro tag - report warning and skip it
+        logger.warning(
+            f"XACRO: Unknown macro or tag: '{macro_name}'. Did you forget to include the corresponding file?"
+        )
+        return ET.Element("skip")
+
+    def _handle_regular_element(self, element: ET.Element) -> ET.Element:
+        """Handle 8. Substitutions in text and attributes for regular elements"""
         new_attrib = {}
         for key, val in element.attrib.items():
             # Attributes in XML must be strings
@@ -409,7 +424,7 @@ class XacroResolver:
         new_element.text = str(self._substitute(element.text or ""))
         new_element.tail = str(self._substitute(element.tail or ""))
 
-        # 9. Recursively process children
+        # Recursively process children
         for child in element:
             resolved_child = self.resolve_element(child)
             if resolved_child.tag == "container":
