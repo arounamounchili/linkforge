@@ -33,6 +33,7 @@ XACRO_URIS = [
     "http://wiki.ros.org/xacro",
 ]
 
+_DUNDER_PATTERN: re.Pattern[str] = re.compile(r"__\w+__")
 
 # Safe math context for evaluations
 MATH_CONTEXT: dict[str, Any] = {
@@ -392,7 +393,7 @@ class XacroResolver:
                 local_props[p_name] = self._try_parse_typed_value(val)
 
             # Expand macro body
-            parent_props = self.properties.copy()
+            parent_props = copy.deepcopy(self.properties)
             self.properties.update(local_props)
 
             container = ET.Element("container")
@@ -541,6 +542,13 @@ class XacroResolver:
 
     def _evaluate(self, expr: str) -> Any:
         """Evaluate a single XACRO expression with hierarchical namespace support."""
+        if _DUNDER_PATTERN.search(expr):
+            raise RobotParserError(
+                f"Expression '{expr}' is not a valid xacro math expression: "
+                "dunder attributes (__class__, __mro__, etc.) are not allowed "
+                "for security reasons."
+            )
+
         try:
             # Build nested context for hierarchical namespaces (e.g. arm.mass)
             ctx = self.eval_context.copy()
