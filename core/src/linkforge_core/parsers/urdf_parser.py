@@ -82,7 +82,14 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB (generous for robot models with many
 
 
 def parse_origin(elem: ET.Element | None) -> Transform:
-    """Parse origin element to Transform."""
+    """Parse origin element to a Transform object.
+
+    Args:
+        elem: The origin XML element.
+
+    Returns:
+        A Transform object representing the pose.
+    """
     if elem is None:
         return Transform.identity()
 
@@ -194,7 +201,15 @@ def parse_geometry(
 
 
 def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) -> Material | None:
-    """Parse material element or reference."""
+    """Parse material element or reference.
+
+    Args:
+        mat_elem: The material XML element.
+        materials: Dictionary of already defined materials.
+
+    Returns:
+        The parsed Material object or None if invalid.
+    """
     if mat_elem is None:
         return None
 
@@ -338,7 +353,17 @@ def parse_link(
 
 
 def parse_joint(joint_elem: ET.Element) -> Joint:
-    """Parse joint element."""
+    """Parse joint element into a Joint object.
+
+    Args:
+        joint_elem: The joint XML element.
+
+    Returns:
+        The parsed Joint model.
+
+    Raises:
+        RobotModelError: If the joint definition is invalid.
+    """
     name = joint_elem.get("name", "unnamed_joint")
     joint_type_str = joint_elem.get("type", "fixed")
 
@@ -480,10 +505,10 @@ def _normalize_hardware_interface(interface: str) -> str:
     ("hardware_interface/PositionJointInterface") and returns short form.
 
     Args:
-        interface: Hardware interface string
+        interface: Hardware interface string.
 
     Returns:
-        Normalized short form (e.g., "position", "velocity", "effort")
+        Normalized short form (e.g., "position", "velocity", "effort").
     """
     # Mapping from full ROS2 interface names to short form
     full_to_short = {
@@ -505,11 +530,13 @@ def parse_transmission(trans_elem: ET.Element) -> Transmission | None:
     """Parse transmission element.
 
     Args:
-        trans_elem: <transmission> XML element
+        trans_elem: <transmission> XML element.
 
     Returns:
-        Transmission model
+        The parsed Transmission model.
 
+    Raises:
+        RobotModelError: If transmission XML is malformed.
     """
     name = trans_elem.get("name", "")
     trans_type = trans_elem.findtext("type", "")
@@ -591,10 +618,13 @@ def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
     """Parse ros2_control element.
 
     Args:
-        rc_elem: <ros2_control> XML element
+        rc_elem: <ros2_control> XML element.
 
     Returns:
-        Ros2Control model
+        The parsed Ros2Control model.
+
+    Raises:
+        RobotModelError: If ros2_control XML is malformed.
     """
     name = rc_elem.get("name", "")
     rc_type = rc_elem.get("type", "system")
@@ -669,11 +699,10 @@ def parse_sensor_noise(noise_elem: ET.Element | None) -> SensorNoise | None:
     """Parse sensor noise element.
 
     Args:
-        noise_elem: <noise> XML element or element containing noise sub-elements
+        noise_elem: <noise> XML element or element containing noise sub-elements.
 
     Returns:
-        SensorNoise model or None
-
+        The parsed SensorNoise model or None.
     """
     if noise_elem is None:
         return None
@@ -695,11 +724,10 @@ def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
     """Parse sensor from Gazebo element.
 
     Args:
-        gazebo_elem: <gazebo reference="link"> element containing <sensor>
+        gazebo_elem: <gazebo reference="link"> element containing <sensor>.
 
     Returns:
-        Sensor model or None
-
+        The parsed Sensor model or None if no sensor is found.
     """
     # Get reference link
     link_name = gazebo_elem.get("reference", "")
@@ -977,11 +1005,10 @@ def parse_gazebo_plugin(plugin_elem: ET.Element) -> GazeboPlugin:
     """Parse Gazebo plugin element.
 
     Args:
-        plugin_elem: <plugin> XML element
+        plugin_elem: <plugin> XML element.
 
     Returns:
-        GazeboPlugin model
-
+        The parsed GazeboPlugin model.
     """
     name = plugin_elem.get("name", "")
     filename = plugin_elem.get("filename", "")
@@ -1004,11 +1031,10 @@ def parse_gazebo_element(gazebo_elem: ET.Element) -> GazeboElement:
     """Parse Gazebo extension element.
 
     Args:
-        gazebo_elem: <gazebo> XML element
+        gazebo_elem: <gazebo> XML element.
 
     Returns:
-        GazeboElement model
-
+        The parsed GazeboElement model.
     """
     reference = gazebo_elem.get("reference", None)
 
@@ -1085,17 +1111,14 @@ def _detect_xacro_file(root: ET.Element, filepath: Path | None = None) -> None:
     """Detect if file is XACRO and raise helpful error.
 
     This function is called by parse_urdf() to prevent attempting to parse
-    raw XACRO files. XACRO files should be handled by the import operator
-    which converts them to URDF first using xacrodoc.
+    raw XACRO files. XACRO files should be handled by the XACRO parser.
 
     Args:
-        root: XML root element
-        filepath: Path to file being parsed
+        root: The root XML element of the file.
+        filepath: Optional path to the file for better error messages.
 
     Raises:
-        RobotModelError: If XACRO features are detected in this parser
-            (XACRO files should use the "Import Robot" operator instead)
-
+        XacroDetectedError: If XACRO features are detected.
     """
     # Check for .xacro extension
     is_xacro_extension = False
@@ -1217,6 +1240,8 @@ class URDFParser(RobotParser):
             materials: dict[str, Material] = {}
             depth = 0
 
+            delayed_elements: list[tuple[str, ET.Element]] = []
+
             for event, elem in context:
                 if event == "start":
                     depth += 1
@@ -1249,44 +1274,47 @@ class URDFParser(RobotParser):
                                     f"Skipping invalid link '{elem.get('name', 'unnamed')}': {e}"
                                 )
 
-                        elif elem.tag == "joint":
-                            try:
-                                joint = parse_joint(elem)
-                                self._add_joint_robust(robot, joint, elem)
-                            except RobotModelError as e:
-                                joint_name = elem.get("name", "unnamed_joint")
-                                logger.warning(f"Skipping invalid joint '{joint_name}': {e}")
-
-                        elif elem.tag == "transmission":
-                            try:
-                                transmission = parse_transmission(elem)
-                                if transmission is not None:
-                                    robot.transmissions.append(transmission)
-                            except RobotModelError as e:
-                                logger.warning(f"Skipping invalid transmission: {e}")
-
-                        elif elem.tag == "ros2_control":
-                            try:
-                                ros2_control = parse_ros2_control(elem)
-                                robot.ros2_controls.append(ros2_control)
-                            except RobotModelError as e:
-                                logger.warning(f"Skipping invalid ros2_control: {e}")
-
-                        elif elem.tag == "gazebo":
-                            try:
-                                sensor = parse_sensor_from_gazebo(elem)
-                                if sensor:
-                                    robot.sensors.append(sensor)
-                                else:
-                                    gazebo_element = parse_gazebo_element(elem)
-                                    robot.gazebo_elements.append(gazebo_element)
-                            except RobotModelError as e:
-                                logger.warning(f"Skipping invalid gazebo/sensor element: {e}")
+                        elif elem.tag in ("joint", "transmission", "ros2_control", "gazebo"):
+                            # Collect dependent elements to parse after all links are loaded
+                            delayed_elements.append((elem.tag, elem))
+                            # Skip clearing this element so it remains valid for later parsing
+                            depth -= 1
+                            continue
 
                         # CRITICAL: Clear the element from root to save memory
                         root.clear()
 
                     depth -= 1
+
+            # Second pass: Process dependent elements once all links are loaded
+            for tag, elem in delayed_elements:
+                try:
+                    if tag == "joint":
+                        joint = parse_joint(elem)
+                        self._add_joint_robust(robot, joint, elem)
+
+                    elif tag == "transmission":
+                        transmission = parse_transmission(elem)
+                        if transmission is not None:
+                            robot.transmissions.append(transmission)
+
+                    elif tag == "ros2_control":
+                        ros2_control = parse_ros2_control(elem)
+                        robot.ros2_controls.append(ros2_control)
+
+                    elif tag == "gazebo":
+                        sensor = parse_sensor_from_gazebo(elem)
+                        if sensor:
+                            robot.sensors.append(sensor)
+                        else:
+                            gazebo_element = parse_gazebo_element(elem)
+                            robot.gazebo_elements.append(gazebo_element)
+                except RobotModelError as e:
+                    name = elem.get("name", "unnamed")
+                    logger.warning(f"Skipping invalid {tag} '{name}': {e}")
+                finally:
+                    # Clear the element now that we're truly done with it
+                    elem.clear()
 
             return robot
 
@@ -1304,16 +1332,16 @@ class URDFParser(RobotParser):
         default_name: str = "unnamed_robot",
         **kwargs: Any,
     ) -> Robot:
-        """Parse URDF from XML string instead of file.
+        """Parse URDF from string.
 
         Args:
-            urdf_string: URDF XML content as string
-            urdf_directory: Optional directory for mesh path validation.
-            default_name: Fallback name if <robot name="..."> is missing.
-            **kwargs: Additional parsing options
+            urdf_string: The URDF XML content as a string.
+            urdf_directory: Directory to use for relative path resolution.
+            default_name: Name to use if robot name is missing.
+            **kwargs: Additional parsing options.
 
         Returns:
-            Robot model
+            The parsed Robot model.
         """
         # Check string size to prevent DoS
         string_size = len(urdf_string.encode("utf-8"))
@@ -1347,7 +1375,14 @@ class URDFParser(RobotParser):
             raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
 
     def _parse_global_materials(self, root: ET.Element) -> dict[str, Material]:
-        """Parse global material definitions from the root element."""
+        """Parse global material definitions from the root element.
+
+        Args:
+            root: The root XML element.
+
+        Returns:
+            A dictionary mapping material names to Material objects.
+        """
         materials: dict[str, Material] = {}
         for mat_elem in root.findall("material"):
             mat = parse_material(mat_elem, materials)
@@ -1356,7 +1391,12 @@ class URDFParser(RobotParser):
         return materials
 
     def _add_link_robust(self, robot: Robot, link: Link) -> None:
-        """Add link to robot, renaming if duplicate exists."""
+        """Add link to robot, renaming if duplicate exists.
+
+        Args:
+            robot: The Robot model to update.
+            link: The Link object to add.
+        """
         try:
             robot.add_link(link)
         except RobotModelError:
@@ -1377,7 +1417,13 @@ class URDFParser(RobotParser):
                     counter += 1
 
     def _add_joint_robust(self, robot: Robot, joint: Joint, joint_elem: ET.Element) -> None:
-        """Add joint to robot, renaming if duplicate exists and handling broken refs."""
+        """Add joint to robot, renaming if duplicate exists and handling broken refs.
+
+        Args:
+            robot: The Robot model to update.
+            joint: The Joint object to add.
+            joint_elem: The XML element containing the joint definition.
+        """
         try:
             robot.add_joint(joint)
         except RobotModelError as e:
@@ -1418,19 +1464,19 @@ class URDFParser(RobotParser):
         filepath: Path | None = None,
         sandbox_root: Path | None = None,
         default_name: str = "unnamed_robot",
+        **kwargs: Any,
     ) -> Robot:
-        """Parse robot elements into model.
-
-        This is used by parse_string() for smaller URDFs since it performs
-        a full ElementTree traversal.
+        """Internal iterative parser implementation.
 
         Args:
-            root: XML root element
-            filepath: Original file directory for mesh resolution
-            sandbox_root: Root directory for security sandboxing
+            root: The root XML element of the robot.
+            filepath: Optional path to the file for relative checks.
+            sandbox_root: Optional root for security sandboxing.
+            default_name: Default name if robot tag lacks name attribute.
+            **kwargs: Additional options.
 
         Returns:
-            Robot model
+            The generically parsed Robot model.
         """
         # Safety validation
         validate_xml_depth(root, 0)
