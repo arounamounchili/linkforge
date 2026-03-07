@@ -243,7 +243,7 @@ class XacroResolver:
         return self._handle_regular_element(element)
 
     def _handle_property(self, element: ET.Element) -> ET.Element:
-        """Handle 1. properties: <xacro:property name="..." value="..."/>"""
+        """Handle properties: <xacro:property name="..." value="..."/>"""
         name = element.get("name")
         value = element.get("value")
         if name:
@@ -261,7 +261,7 @@ class XacroResolver:
         return ET.Element("skip")
 
     def _handle_arg(self, element: ET.Element) -> ET.Element:
-        """Handle 2. arguments: <xacro:arg name="..." default="..."/>"""
+        """Handle arguments: <xacro:arg name="..." default="..."/>"""
         name = element.get("name")
         default = element.get("default")
         if name and name not in self.args:
@@ -269,7 +269,7 @@ class XacroResolver:
         return ET.Element("skip")
 
     def _handle_include(self, element: ET.Element) -> ET.Element:
-        """Handle 3. includes: <xacro:include filename="..." ns="..."/>"""
+        """Handle includes: <xacro:include filename="..." ns="..."/>"""
         filename = str(self._substitute(element.get("filename") or ""))
         ns = element.get("ns")
         included_path = self._find_file(filename)
@@ -283,7 +283,7 @@ class XacroResolver:
         return container
 
     def _handle_macro_def(self, element: ET.Element) -> ET.Element:
-        """Handle 4. macro definitions: <xacro:macro name="..." params="...">"""
+        """Handle macro definitions: <xacro:macro name="..." params="...">"""
         name = element.get("name")
         params = [p.strip() for p in (element.get("params") or "").split() if p.strip()]
         if name:
@@ -294,7 +294,7 @@ class XacroResolver:
         return ET.Element("skip")
 
     def _handle_conditional(self, element: ET.Element) -> ET.Element:
-        """Handle 5. conditionals: <xacro:if value="..."/> or <xacro:unless value="..."/>"""
+        """Handle conditionals: <xacro:if value="..."/> or <xacro:unless value="..."/>"""
         tag = element.tag
         # Check against normal and URI namespaces for the conditional tag
         is_unless = "xacro:unless" in tag or "unless" in tag
@@ -317,7 +317,7 @@ class XacroResolver:
         return ET.Element("skip")
 
     def _handle_insert_block(self, element: ET.Element) -> ET.Element:
-        """Handle 6. block insertion: <xacro:insert_block name="..."/>"""
+        """Handle block insertion: <xacro:insert_block name="..."/>"""
         name = str(self._substitute(element.get("name") or ""))
         if name and name in self.properties:
             # Cycle detection for blocks
@@ -356,7 +356,7 @@ class XacroResolver:
         return ET.Element("skip")
 
     def _handle_macro_call(self, tag: str, element: ET.Element) -> ET.Element:
-        """Handle 7. macro calls: <xacro:my_macro_name ...>"""
+        """Handle macro calls: <xacro:my_macro_name ...>"""
         macro_name = tag[6:]
         if macro_name in self.macros:
             params, macro_elem = self.macros[macro_name]
@@ -414,7 +414,7 @@ class XacroResolver:
         return ET.Element("skip")
 
     def _handle_regular_element(self, element: ET.Element) -> ET.Element:
-        """Handle 8. Substitutions in text and attributes for regular elements"""
+        """Handle substitutions in text and attributes for regular elements"""
         new_attrib = {}
         for key, val in element.attrib.items():
             # Attributes in XML must be strings
