@@ -1100,3 +1100,83 @@ def test_substitute_env(monkeypatch):
     monkeypatch.delenv("MY_VAR", raising=False)
     with pytest.raises(RobotParserError, match="MY_VAR"):
         resolver._substitute("$(env MY_VAR)")
+
+
+def test_xacro_substitute_undefined_arg_raises():
+    """Undefined $(arg) must raise RobotParserError."""
+    resolver = XacroResolver()
+    with pytest.raises(RobotParserError, match="Undefined substitution argument 'nonexistent'"):
+        resolver._substitute("$(arg nonexistent)")
+
+
+def test_xacro_substitute_dollar_escape():
+    """Spec gap: $$ must escape the dollar sign."""
+    resolver = XacroResolver()
+    # $${1+1} should produce literal ${1+1} string, not 2
+    assert resolver._substitute("$${1+1}") == "${1+1}"
+    # $$(arg x) should produce literal $(arg x) string
+    assert resolver._substitute("$$(arg x)") == "$(arg x)"
+
+
+def test_xacro_macro_parent_scope_inheritance():
+    """Macro parameter p:=^ should inherit from outer scope."""
+    resolver = XacroResolver()
+    resolver.properties["test_p"] = 42
+
+    macro_xml = """<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test" params="test_p:=^">
+        <val v="${test_p}"/>
+    </xacro:macro>"""
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    res = resolver.resolve_element(
+        ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+    )
+    assert res[0].get("v") == "42"
+
+
+def test_xacro_macro_parent_scope_inheritance_with_fallback():
+    """Macro parameter p:=^|default should use default if outer scope is missing."""
+    resolver = XacroResolver()
+    # No 'test_p' in outer scope
+
+    macro_xml = """<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test" params="test_p:=^|100">
+        <val v="${test_p}"/>
+    </xacro:macro>"""
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    res = resolver.resolve_element(
+        ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+    )
+    assert res[0].get("v") == "100"
+
+
+def test_xacro_macro_parent_scope_not_found_raises():
+    """Macro parameter p:=^ should raise error if outer scope is missing and no default."""
+    resolver = XacroResolver()
+    macro_xml = (
+        '<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test" params="test_p:=^"/>'
+    )
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    with pytest.raises(RobotParserError, match="uses '\^' scope inheritance"):
+        resolver.resolve_element(
+            ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+        )
+
+
+def test_xacro_macro_params_smart_split():
+    """Ensure macro parameters are split correctly even with spaces in defaults."""
+    resolver = XacroResolver()
+    resolver.args["default_val"] = 50
+
+    macro_xml = """<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test"
+                    params="p:=^|$(arg default_val) q:=10">
+        <val v="${p}" q="${q}"/>
+    </xacro:macro>"""
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    res = resolver.resolve_element(
+        ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+    )
+    assert res[0].get("v") == "50"
+    assert res[0].get("q") == "10"
