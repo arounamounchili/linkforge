@@ -52,7 +52,8 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 **Solution**:
 - Go to **Edit > Preferences > Add-ons > LinkForge**.
 - Under the **Environment & Paths** section, locate **Additional ROS Package Paths**.
-- Enter the absolute paths to your ROS workspaces or package folders, separated by commas (e.g., `/home/user/ros2_ws/src,/opt/ros/humble/share`).
+- Enter the absolute paths to your ROS workspaces or package folders. LinkForge supports specifying multiple paths separated by **commas**, or your native **OS path separator** (`:` on Linux/macOS, `;` on Windows).
+  - *Example:* `/home/user/ros2_ws/src, /opt/ros/humble/share`
 - LinkForge will check these fallback paths *first* when attempting to resolve `package://` URIs, completely bypassing the sandbox restrictions.
 
 ### Properties changing across "Duplicate" Links

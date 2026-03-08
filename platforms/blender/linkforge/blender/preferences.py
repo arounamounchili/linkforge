@@ -213,7 +213,7 @@ class LinkForgePreferences(AddonPreferences):
     # File and Environment Paths
     additional_search_paths: StringProperty(  # type: ignore
         name="Additional ROS Package Paths",
-        description="Comma-separated optional fallback paths to search for package:// meshes (useful for Snap/Flatpak sandboxes)",
+        description="Comma (or OS path separator) separated fallback paths for package:// meshes (useful for Snap/Flatpak)",
         default="",
     )
 
@@ -277,7 +277,7 @@ class LinkForgePreferences(AddonPreferences):
         col = box.column(align=True)
         col.scale_y = 0.7
         col.label(
-            text="Fallback ROS workspace paths for package:// resolution (comma-separated)",
+            text="Fallback ROS workspace paths for package:// resolution (comma or OS-path separated)",
             icon="INFO",
         )
 
