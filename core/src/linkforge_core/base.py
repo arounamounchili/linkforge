@@ -138,6 +138,14 @@ class IResourceResolver(Protocol):
 class FileSystemResolver:
     """Default resolver that handles standard file paths and package:// URIs."""
 
+    def __init__(self, additional_search_paths: list[Path] | None = None) -> None:
+        """Initialize the resolver.
+
+        Args:
+            additional_search_paths: Optional list of paths to check before ROS_PACKAGE_PATH.
+        """
+        self.additional_search_paths = additional_search_paths
+
     def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
         """Resolve standard file paths, file:// URIs, and package:// URIs."""
         from .utils.path_utils import resolve_package_path
@@ -146,7 +154,9 @@ class FileSystemResolver:
         if "package://" in uri or "package:/" in uri:
             # We use an empty Path if relative_to is not provided,
             # though package resolution usually doesn't strictly need it if ROS_PACKAGE_PATH is set.
-            resolved = resolve_package_path(uri, relative_to or Path.cwd())
+            resolved = resolve_package_path(
+                uri, relative_to or Path.cwd(), additional_search_paths=self.additional_search_paths
+            )
             if resolved and resolved.exists():
                 return resolved.absolute()
             raise FileNotFoundError(f"Could not resolve package resource: {uri}")

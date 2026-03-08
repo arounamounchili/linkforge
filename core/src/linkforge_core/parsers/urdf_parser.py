@@ -23,7 +23,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
-from ..base import RobotParser, RobotParserError, XacroDetectedError
+from ..base import IResourceResolver, RobotParser, RobotParserError, XacroDetectedError
 from ..exceptions import RobotModelError
 from ..logging_config import get_logger
 from ..models import (
@@ -1177,16 +1177,21 @@ class URDFParser(RobotParser):
     """Refined URDF Parser using a class-based interface."""
 
     def __init__(
-        self, max_file_size: int = MAX_FILE_SIZE, sandbox_root: Path | None = None
+        self,
+        max_file_size: int = MAX_FILE_SIZE,
+        sandbox_root: Path | None = None,
+        resource_resolver: IResourceResolver | None = None,
     ) -> None:
         """Initialize parser.
 
         Args:
             max_file_size: Maximum allowed file size in bytes (default: 100MB)
             sandbox_root: Optional root directory for security sandbox
+            resource_resolver: Optional resolver for URIs
         """
         self.max_file_size = max_file_size
         self.sandbox_root = sandbox_root
+        self.resource_resolver = resource_resolver
 
     def parse(self, filepath: Path, **kwargs: Any) -> Robot:
         """Parse URDF file into a Robot model using iterative parsing.
@@ -1236,7 +1241,10 @@ class URDFParser(RobotParser):
 
             # Fallback to filename if robot name is missing
             default_name = filepath.stem if filepath else "unnamed_robot"
-            robot = Robot(name=root.get("name", default_name))
+            kwargs = {"name": root.get("name", default_name)}
+            if self.resource_resolver is not None:
+                kwargs["resource_resolver"] = self.resource_resolver
+            robot = Robot(**kwargs)
             materials: dict[str, Material] = {}
             depth = 0
 
@@ -1484,7 +1492,10 @@ class URDFParser(RobotParser):
         if root.tag != "robot":
             raise RobotModelError("Root element must be <robot>")
 
-        robot = Robot(name=root.get("name", default_name))
+        kwargs = {"name": root.get("name", default_name)}
+        if self.resource_resolver is not None:
+            kwargs["resource_resolver"] = self.resource_resolver
+        robot = Robot(**kwargs)
         materials = self._parse_global_materials(root)
 
         # Parse all links first (joints need links to exist)

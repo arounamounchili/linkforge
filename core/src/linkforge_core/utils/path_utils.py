@@ -4,7 +4,9 @@ import os
 from pathlib import Path
 
 
-def resolve_package_path(uri: str, start_dir: Path) -> Path | None:
+def resolve_package_path(
+    uri: str, start_dir: Path, additional_search_paths: list[Path] | None = None
+) -> Path | None:
     """Resolve package:// URI by searching ROS_PACKAGE_PATH or upward in the tree.
 
     This enables LinkForge to work both in standard ROS environments and in
@@ -13,6 +15,7 @@ def resolve_package_path(uri: str, start_dir: Path) -> Path | None:
     Args:
         uri: URI starting with package:// or package:/
         start_dir: Starting directory for upward search (usually URDF/XACRO directory)
+        additional_search_paths: Optional list of fallback directories to check first.
 
     Returns:
         Path to the resolved resource or None
@@ -33,7 +36,19 @@ def resolve_package_path(uri: str, start_dir: Path) -> Path | None:
     package_name = parts[0]
     relative_path = "/".join(parts[1:])
 
-    # Step 1: Check ROS_PACKAGE_PATH (ROS Mode)
+    # Step 1: Check provided additional search paths first (highest priority for overrides)
+    if additional_search_paths:
+        for p in additional_search_paths:
+            pkg_base = Path(p)
+            pkg_path = pkg_base / package_name
+            if pkg_path.exists():
+                return pkg_path / relative_path
+
+            # Also check if we ARE inside the package base already
+            if pkg_base.name == package_name:
+                return pkg_base / relative_path
+
+    # Step 2: Check ROS_PACKAGE_PATH (ROS Mode)
     ros_path = os.environ.get("ROS_PACKAGE_PATH")
     if ros_path:
         for path in ros_path.split(os.pathsep):
@@ -50,7 +65,7 @@ def resolve_package_path(uri: str, start_dir: Path) -> Path | None:
             if pkg_base.name == package_name:
                 return pkg_base / relative_path
 
-    # Step 2: Fallback to upward search (Standalone Mode)
+    # Step 3: Fallback to upward search (Standalone Mode)
     # This searches for a folder matching the package name or a package.xml
     curr = start_dir.resolve()
     if curr.is_file():

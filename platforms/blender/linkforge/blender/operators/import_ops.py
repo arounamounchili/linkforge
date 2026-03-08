@@ -114,12 +114,29 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         # 1. If it looks like URDF, try parsing as URDF.
         # 2. If parsing fails because of Xacro tags, catch the error and switch to Xacro mode.
         from ...linkforge_core import RobotParserError, XacroDetectedError
+        from ...linkforge_core.base import FileSystemResolver
+
+        # Read additional package paths from preferences
+        from ..preferences import get_addon_prefs
+
+        prefs = get_addon_prefs(context)
+        additional_paths = []
+        if prefs and hasattr(prefs, "additional_search_paths") and prefs.additional_search_paths:
+            import os
+
+            # Split by comma or os.pathsep (collapsing spaces)
+            raw_paths = prefs.additional_search_paths.replace(",", os.pathsep).split(os.pathsep)
+            additional_paths = [Path(p.strip()) for p in raw_paths if p.strip()]
+
+        resolver = FileSystemResolver(additional_search_paths=additional_paths)
 
         try:
             if not is_xacro:
                 try:
                     # Attempt standard URDF import
-                    robot = URDFParser(sandbox_root=sandbox_root).parse(urdf_path)
+                    robot = URDFParser(sandbox_root=sandbox_root, resource_resolver=resolver).parse(
+                        urdf_path
+                    )
                 except XacroDetectedError:
                     # Explicitly detected Xacro, enable fallback
                     self.report(
@@ -139,12 +156,15 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
 
                 self.report({"INFO"}, f"Processing XACRO file: {urdf_path.name}")
 
-                resolver = XacroResolver()
-                urdf_string = resolver.resolve_file(urdf_path)
+                # Pass the additional paths so XACRO includes can find package:// references
+                xacro_resolver = XacroResolver(search_paths=additional_paths)
+                urdf_string = xacro_resolver.resolve_file(urdf_path)
 
                 # Parse URDF string with directory for mesh path validation
                 self.report({"INFO"}, "Parsing URDF...")
-                robot = URDFParser(sandbox_root=sandbox_root).parse_string(
+                robot = URDFParser(
+                    sandbox_root=sandbox_root, resource_resolver=resolver
+                ).parse_string(
                     urdf_string,
                     urdf_directory=urdf_path.parent,
                     default_name=urdf_path.stem,

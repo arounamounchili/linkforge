@@ -94,6 +94,10 @@ class XacroResolver:
         xacro_ns = SimpleNamespace()
         xacro_ns.load_yaml = self._handle_load_yaml
         xacro_ns.load_json = self._handle_load_json
+        xacro_ns.warning = logger.warning
+        xacro_ns.error = logger.error
+        xacro_ns.fatal = logger.critical
+        xacro_ns.message = logger.info
         self.eval_context["xacro"] = xacro_ns
 
     def resolve_file(self, filepath: Path) -> str:
