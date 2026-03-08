@@ -47,6 +47,14 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 - **Check Package Name**: LinkForge uses a **Hybrid Path Resolver**. It automatically searches your directory tree to find the package root for `package://` and `$(find ...)` paths. Ensure your robot files are stored within a folder structure that includes a `package.xml` or matches the package name.
 - **Standalone Support**: Since v1.2.3, you **no longer need a ROS installation** on Windows or macOS for asset resolution; LinkForge performs its own heuristic search to find your meshes.
 
+### Meshes Not Found in Sandboxed Environments (Snap / Flatpak)
+**Cause**: When running Blender from a sandbox (like Snap or Flatpak), the environment variables (like `ROS_PACKAGE_PATH`) from your host system's terminal are often stripped or unavailable.
+**Solution**:
+- Go to **Edit > Preferences > Add-ons > LinkForge**.
+- Under the **Environment & Paths** section, locate **Additional ROS Package Paths**.
+- Enter the absolute paths to your ROS workspaces or package folders, separated by commas (e.g., `/home/user/ros2_ws/src,/opt/ros/humble/share`).
+- LinkForge will check these fallback paths *first* when attempting to resolve `package://` URIs, completely bypassing the sandbox restrictions.
+
 ### Properties changing across "Duplicate" Links
 **Cause**: Blender's Linked Data (instancing).
 **Solutions**:
