@@ -8,7 +8,7 @@ from __future__ import annotations
 import contextlib
 
 import bpy
-from bpy.props import BoolProperty, FloatProperty
+from bpy.props import BoolProperty, FloatProperty, StringProperty
 from bpy.types import AddonPreferences, Context
 
 
@@ -210,6 +210,13 @@ class LinkForgePreferences(AddonPreferences):
         update=update_inertia_size,
     )
 
+    # File and Environment Paths
+    additional_search_paths: StringProperty(  # type: ignore
+        name="Additional ROS Package Paths",
+        description="Comma-separated optional fallback paths to search for package:// meshes (useful for Snap/Flatpak sandboxes)",
+        default="",
+    )
+
     def draw(self, context: Context) -> None:
         """Draw the preferences UI."""
         layout = self.layout
@@ -260,6 +267,19 @@ class LinkForgePreferences(AddonPreferences):
         if self.show_inertia_gizmos:
             row = box.row()
             row.prop(self, "inertia_gizmo_size", text="Frame Size", slider=True)
+
+        # Environment & Paths
+        layout.separator()
+        box = layout.box()
+        box.label(text="Environment & Paths", icon="FILE_FOLDER")
+        row = box.row()
+        row.prop(self, "additional_search_paths")
+        col = box.column(align=True)
+        col.scale_y = 0.7
+        col.label(
+            text="Fallback ROS workspace paths for package:// resolution (comma-separated)",
+            icon="INFO",
+        )
 
         # General help text
         layout.separator()

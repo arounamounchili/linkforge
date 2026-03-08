@@ -528,6 +528,28 @@ def test_xacro_load_json(tmp_path):
     assert link.get("mass") == "10.5"
 
 
+def test_xacro_logging_functions():
+    """Verify that xacro.warning, xacro.error, and xacro.message are available."""
+    main_xml = ET.fromstring("""
+        <root xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:property name="radius" value="1.5"/>
+            <xacro:if value="1">
+                <xacro:property name="dummy1" value="${xacro.warning('test warning')}"/>
+                <xacro:property name="dummy2" value="${xacro.error('test error')}"/>
+                <xacro:property name="dummy3" value="${xacro.fatal('test fatal')}"/>
+                <xacro:property name="dummy4" value="${xacro.message('The radius is very large: ' + str(radius))}"/>
+            </xacro:if>
+            <link name="bot"/>
+        </root>
+    """)
+
+    resolver = XacroResolver()
+    # It should resolve without throwing an AttributeError
+    resolved = resolver.resolve_element(main_xml)
+    link = next(c for c in resolved if c.tag == "link")
+    assert link.get("name") == "bot"
+
+
 def test_xacro_circular_include(tmp_path):
     """Test detection of circular XACRO includes."""
     file1 = tmp_path / "file1.xacro"
