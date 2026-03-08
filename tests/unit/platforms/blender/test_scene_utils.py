@@ -178,6 +178,42 @@ def test_move_to_collection_none_collection():
     move_to_collection(obj, None)
 
 
+def test_move_to_collection_both_none():
+    """Test with both None."""
+    move_to_collection(None, None)
+    # Should not raise error
+
+
+def test_move_to_collection_multiple_collections():
+    """Test moving object that exists in multiple collections."""
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    # Create object
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
+    # Create multiple collections and link object
+    coll1 = bpy.data.collections.new("Collection1")
+    coll2 = bpy.data.collections.new("Collection2")
+    target_coll = bpy.data.collections.new("TargetCollection")
+
+    bpy.context.scene.collection.children.link(coll1)
+    bpy.context.scene.collection.children.link(coll2)
+    bpy.context.scene.collection.children.link(target_coll)
+
+    coll1.objects.link(obj)
+    coll2.objects.link(obj)
+
+    # Move to target
+    move_to_collection(obj, target_coll)
+
+    # Should only be in target collection now
+    assert obj in target_coll.objects[:]
+    assert obj not in coll1.objects[:]
+    assert obj not in coll2.objects[:]
+
+
 def test_get_robot_statistics_empty_scene():
     """Test get_robot_statistics with empty scene returns zeros."""
     stats = get_robot_statistics(bpy.context.scene)
