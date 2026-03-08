@@ -528,6 +528,28 @@ def test_xacro_load_json(tmp_path):
     assert link.get("mass") == "10.5"
 
 
+def test_xacro_logging_functions():
+    """Verify that xacro.warning, xacro.error, and xacro.message are available."""
+    main_xml = ET.fromstring("""
+        <root xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:property name="radius" value="1.5"/>
+            <xacro:if value="1">
+                <xacro:property name="dummy1" value="${xacro.warning('test warning')}"/>
+                <xacro:property name="dummy2" value="${xacro.error('test error')}"/>
+                <xacro:property name="dummy3" value="${xacro.fatal('test fatal')}"/>
+                <xacro:property name="dummy4" value="${xacro.message('The radius is very large: ' + str(radius))}"/>
+            </xacro:if>
+            <link name="bot"/>
+        </root>
+    """)
+
+    resolver = XacroResolver()
+    # It should resolve without throwing an AttributeError
+    resolved = resolver.resolve_element(main_xml)
+    link = next(c for c in resolved if c.tag == "link")
+    assert link.get("name") == "bot"
+
+
 def test_xacro_circular_include(tmp_path):
     """Test detection of circular XACRO includes."""
     file1 = tmp_path / "file1.xacro"
@@ -1100,3 +1122,83 @@ def test_substitute_env(monkeypatch):
     monkeypatch.delenv("MY_VAR", raising=False)
     with pytest.raises(RobotParserError, match="MY_VAR"):
         resolver._substitute("$(env MY_VAR)")
+
+
+def test_xacro_substitute_undefined_arg_raises():
+    """Undefined $(arg) must raise RobotParserError."""
+    resolver = XacroResolver()
+    with pytest.raises(RobotParserError, match="Undefined substitution argument 'nonexistent'"):
+        resolver._substitute("$(arg nonexistent)")
+
+
+def test_xacro_substitute_dollar_escape():
+    """Spec gap: $$ must escape the dollar sign."""
+    resolver = XacroResolver()
+    # $${1+1} should produce literal ${1+1} string, not 2
+    assert resolver._substitute("$${1+1}") == "${1+1}"
+    # $$(arg x) should produce literal $(arg x) string
+    assert resolver._substitute("$$(arg x)") == "$(arg x)"
+
+
+def test_xacro_macro_parent_scope_inheritance():
+    """Macro parameter p:=^ should inherit from outer scope."""
+    resolver = XacroResolver()
+    resolver.properties["test_p"] = 42
+
+    macro_xml = """<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test" params="test_p:=^">
+        <val v="${test_p}"/>
+    </xacro:macro>"""
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    res = resolver.resolve_element(
+        ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+    )
+    assert res[0].get("v") == "42"
+
+
+def test_xacro_macro_parent_scope_inheritance_with_fallback():
+    """Macro parameter p:=^|default should use default if outer scope is missing."""
+    resolver = XacroResolver()
+    # No 'test_p' in outer scope
+
+    macro_xml = """<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test" params="test_p:=^|100">
+        <val v="${test_p}"/>
+    </xacro:macro>"""
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    res = resolver.resolve_element(
+        ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+    )
+    assert res[0].get("v") == "100"
+
+
+def test_xacro_macro_parent_scope_not_found_raises():
+    """Macro parameter p:=^ should raise error if outer scope is missing and no default."""
+    resolver = XacroResolver()
+    macro_xml = (
+        '<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test" params="test_p:=^"/>'
+    )
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    with pytest.raises(RobotParserError, match="uses '\^' scope inheritance"):
+        resolver.resolve_element(
+            ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+        )
+
+
+def test_xacro_macro_params_smart_split():
+    """Ensure macro parameters are split correctly even with spaces in defaults."""
+    resolver = XacroResolver()
+    resolver.args["default_val"] = 50
+
+    macro_xml = """<xacro:macro xmlns:xacro="http://www.ros.org/wiki/xacro" name="test"
+                    params="p:=^|$(arg default_val) q:=10">
+        <val v="${p}" q="${q}"/>
+    </xacro:macro>"""
+    resolver._handle_macro_def(ET.fromstring(macro_xml))
+
+    res = resolver.resolve_element(
+        ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
+    )
+    assert res[0].get("v") == "50"
+    assert res[0].get("q") == "10"

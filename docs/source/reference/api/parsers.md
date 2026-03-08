@@ -89,4 +89,5 @@ The parser includes professional-grade protections for production robotics:
 *   **Duplicate Name Resolution**: Re-names conflicting link/joint names (e.g., `link_duplicate_1`) to preserve kinematic tree integrity while alerting the user.
 *   **DoS Protection**: Enforces a maximum XML depth (100 levels) and file size (100 MB) to prevent "XML Bomb" attacks.
 *   **Path Sandboxing**: Validates all mesh paths to prevent directory traversal and ensure assets remain within authorized project folders.
+*   **XACRO Debugging Support**: Natively evaluates and routes `xacro.warning()`, `xacro.error()`, `xacro.fatal()`, and `xacro.message()` calls to the LinkForge Python logger, allowing users to see in-file debug messages directly in the console.
 *   **Resilient Skip**: Malformed geometry or broken joint references are logged as warnings, allowing the rest of the robot to load successfully.

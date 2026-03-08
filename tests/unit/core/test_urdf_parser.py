@@ -1382,3 +1382,28 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         parser.max_file_size = 1  # 1 byte — will trip immediately
         with pytest.raises(RobotParserError, match="too large"):
             parser.parse_string(content)
+
+    def test_parse_iterative_out_of_order(self, tmp_path):
+        """Test that URDFParser.parse (iterative) handles joints before links."""
+        urdf_content = """<?xml version="1.0"?>
+<robot name="test_robot">
+  <joint name="joint1" type="fixed">
+    <parent link="link1"/>
+    <child link="link2"/>
+  </joint>
+  <link name="link1"/>
+  <link name="link2"/>
+</robot>
+"""
+        urdf_file = tmp_path / "test.urdf"
+        urdf_file.write_text(urdf_content)
+
+        parser = URDFParser()
+        # This should succeed even though joint is before links
+        robot = parser.parse(urdf_file)
+
+        assert "link1" in robot._link_index
+        assert "link2" in robot._link_index
+        assert "joint1" in robot._joint_index
+        assert robot.get_joint("joint1").parent == "link1"
+        assert robot.get_joint("joint1").child == "link2"
