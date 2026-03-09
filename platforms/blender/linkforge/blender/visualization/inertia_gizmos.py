@@ -22,6 +22,7 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Matrix, Vector
 
 from ..preferences import get_addon_prefs
+from ..utils.scene_utils import get_robot_statistics
 
 _builtin_shader_name = None
 
@@ -193,15 +194,10 @@ def draw_inertia_gizmos() -> None:
         all_line_positions = []
         all_line_colors = []
 
-        for obj in objects_to_draw:
-            # Check if it's a robot link
-            if not hasattr(obj, "linkforge") or not obj.linkforge.is_robot_link:
-                continue
+        # Use centralized scene statistics to avoid redundant scene traversing
+        stats = get_robot_statistics(context.scene)
 
-            # Only draw if Manual Inertia is active (Auto-Calculate is OFF)
-            if obj.linkforge.use_auto_inertia:
-                continue
-
+        for obj in stats.manual_inertia_objects:
             axis_data = generate_inertia_axes_geometry(obj, axis_length=gizmo_size)
             if axis_data["lines"]:
                 all_line_positions.extend(axis_data["lines"])
@@ -273,18 +269,9 @@ def check_manual_inertia_on_load(dummy_a: Any = None, dummy_b: Any = None) -> fl
     except (AttributeError, RuntimeError):
         return None
 
-    # Scan scene for any link with manual inertia
-    found_manual = False
-    for obj in scene.objects:
-        if (
-            hasattr(obj, "linkforge")
-            and obj.linkforge.is_robot_link
-            and not obj.linkforge.use_auto_inertia
-        ):
-            found_manual = True
-            break
-
-    if found_manual:
+    # Scan scene for any link with manual inertia using centralized statistics
+    stats = get_robot_statistics(scene)
+    if stats.manual_inertia_objects:
         ensure_inertia_handler()
 
     return None  # For timer compliance

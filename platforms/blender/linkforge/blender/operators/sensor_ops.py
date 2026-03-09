@@ -11,6 +11,7 @@ from bpy.types import Context, Operator
 from ..properties.link_props import sanitize_urdf_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
+from ..utils.scene_utils import clear_stats_cache
 
 
 class LINKFORGE_OT_create_sensor(Operator):
@@ -120,6 +121,7 @@ class LINKFORGE_OT_create_sensor(Operator):
         name = sensor_empty.name if sensor_empty else "sensor"
         parent_name = link_obj.name if link_obj else "unknown"
         self.report({"INFO"}, f"Created sensor '{name}' attached to '{parent_name}'")
+        clear_stats_cache()
         return {"FINISHED"}
 
 
@@ -163,6 +165,7 @@ class LINKFORGE_OT_delete_sensor(Operator):
             bpy.data.objects.remove(obj, do_unlink=True)
 
         self.report({"INFO"}, f"Deleted sensor '{sensor_name}'")
+        clear_stats_cache()
         return {"FINISHED"}
 
 

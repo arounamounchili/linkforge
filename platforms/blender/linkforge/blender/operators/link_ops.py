@@ -13,6 +13,7 @@ from ...linkforge_core.logging_config import get_logger
 from ..properties.link_props import sanitize_urdf_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
+from ..utils.scene_utils import clear_stats_cache
 
 logger = get_logger(__name__)
 
@@ -638,6 +639,7 @@ class LINKFORGE_OT_add_empty_link(Operator):
         # Ensure name is sanitized
         typing.cast(typing.Any, empty).linkforge.link_name = empty.name
 
+        clear_stats_cache()
         self.report({"INFO"}, f"Added virtual link frame '{empty.name}' at cursor.")
         return {"FINISHED"}
 
@@ -777,6 +779,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             f"Created link '{link_name}' with visual mesh. "
             f"Tip: Use 'Generate Collision' to add collision geometry.",
         )
+        clear_stats_cache()
         return {"FINISHED"}
 
 
@@ -897,6 +900,7 @@ class LINKFORGE_OT_generate_collision(Operator):
 
         lp = typing.cast(typing.Any, link_obj).linkforge
         self.report({"INFO"}, f"Generated '{collision_type}' collision for '{lp.link_name}'")
+        clear_stats_cache()
         return {"FINISHED"}
 
 
@@ -936,11 +940,10 @@ class LINKFORGE_OT_generate_collision_all(Operator):
                     else:
                         failed += 1
 
-        if count > 0:
-            self.report({"INFO"}, f"Generated collision for {count} links")
         if failed > 0:
             self.report({"WARNING"}, f"Failed to generate collision for {failed} links")
 
+        clear_stats_cache()
         return {"FINISHED"}
 
 
@@ -1223,6 +1226,7 @@ class LINKFORGE_OT_remove_link(Operator):
 
         msg = f"Removed link '{link_name}'. Restored {len(visual_children)} mesh(es)."
         self.report({"INFO"}, msg)
+        clear_stats_cache()
         return {"FINISHED"}
 
 

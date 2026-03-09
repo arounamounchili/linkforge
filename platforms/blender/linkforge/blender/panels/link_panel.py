@@ -8,7 +8,7 @@ import typing
 import bpy
 from bpy.types import Context, Panel
 
-from ..adapters.blender_to_core import detect_primitive_type
+from ..utils.scene_utils import get_robot_statistics
 
 
 class LINKFORGE_PT_links(Panel):
@@ -110,45 +110,20 @@ class LINKFORGE_PT_links(Panel):
         row.enabled = not is_virtual
         row.prop(props, "collision_type", text="Collision Type")
 
-        # Geometry Detection Info
-        detected_type = None
+        # Geometry Detection Info (Uses centralized statistics for performance)
+        stats = get_robot_statistics(context.scene)
+        geo_info = stats.geometry_stats.get(props.link_name)
+
+        collision_obj = None
+        detected_type = "MESH"
         is_primitive = False
-        collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
 
-        if collision_obj:
-            # 1. Check explicit URDF tag (Strongest guarantee)
-            if collision_obj.get("urdf_geometry_type"):  # type: ignore[func-returns-value]
-                detected_type = collision_obj["urdf_geometry_type"]
-                is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
+        if geo_info:
+            collision_obj, detected_type, is_primitive = geo_info
 
-            # 2. Check generator tag (from generate_collision operator)
-            stored_type = typing.cast(str, collision_obj.get("collision_geometry_type", "AUTO"))
-            if stored_type and stored_type in ("BOX", "CYLINDER", "SPHERE"):
-                detected_type = stored_type
-                is_primitive = True
-            elif stored_type == "MESH":
-                detected_type = "MESH"
-                is_primitive = False
-            # 3. Fallback to heuristic detection
-            elif detect_primitive_type:  # type: ignore[truthy-function]
-                try:
-                    heuristic_type = detect_primitive_type(collision_obj)
-                    detected_type = heuristic_type if heuristic_type else "MESH"
-                    is_primitive = heuristic_type is not None
-                except Exception:
-                    detected_type = "MESH"
-            else:
-                detected_type = "MESH"
-
-        # Display detected type
         # Display detected type - ONLY if collision exists
         if collision_obj:
             row = box.row()
-            icon = "INFO"
-            icon = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
-        if collision_obj:
-            row = box.row()
-            icon = "INFO"
             icon_name = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
             row.label(text=f"Detected Collision: {detected_type}", icon=icon_name)  # type: ignore[arg-type]
 
@@ -187,7 +162,7 @@ class LINKFORGE_PT_links(Panel):
                 is_hidden = collision_obj.hide_viewport
                 icon_name = "HIDE_OFF" if is_hidden else "HIDE_ON"
                 text = "Show Collision" if is_hidden else "Hide Collision"
-                col.operator("linkforge.toggle_collision_visibility", icon=icon_name, text=text)  # type: ignore
+                col.operator("linkforge.toggle_collision_visibility", icon=icon_name, text=text)  # type: ignore[arg-type]
 
         # Physics properties
         box.separator()

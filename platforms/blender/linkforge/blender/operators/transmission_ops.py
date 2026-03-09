@@ -10,6 +10,7 @@ from bpy.types import Context, Operator
 
 from ..properties.link_props import sanitize_urdf_name
 from ..utils.decorators import safe_execute
+from ..utils.scene_utils import clear_stats_cache
 
 
 class LINKFORGE_OT_create_transmission(Operator):
@@ -154,6 +155,7 @@ class LINKFORGE_OT_create_transmission(Operator):
         self.report(
             {"INFO"}, f"Created transmission '{transmission_empty.name}' for joint '{joint_name}'"
         )
+        clear_stats_cache()
         return {"FINISHED"}
 
 
@@ -211,6 +213,7 @@ class LINKFORGE_OT_delete_transmission(Operator):
         bpy.data.objects.remove(obj, do_unlink=True)
 
         self.report({"INFO"}, f"Deleted transmission '{transmission_name}'")
+        clear_stats_cache()
         return {"FINISHED"}
 
 
