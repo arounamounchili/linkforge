@@ -1,7 +1,9 @@
 """XML utility functions for LinkForge."""
 
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from datetime import datetime
+from typing import Any
 
 from ..exceptions import RobotModelError
 from ..models import Vector3
@@ -186,3 +188,42 @@ def parse_optional_float(elem: ET.Element, tag: str, default: float | None = 0.0
         text = elem.findtext(tag)
         return parse_float(text, tag, default=default)
     return None
+
+
+def xml_add_text(parent: ET.Element, tag: str, value: Any) -> ET.Element:
+    """Create a sub-element with text content.
+
+    Args:
+        parent: The parent XML element.
+        tag: The tag name for the new element.
+        value: The text content to set. Will be converted to string if not None.
+
+    Returns:
+        The newly created XML element.
+    """
+    elem = ET.SubElement(parent, tag)
+    if value is not None:
+        elem.text = str(value)
+    return elem
+
+
+def xml_add_vector(
+    parent: ET.Element,
+    tag: str,
+    vector: Vector3,
+    formatter: Callable[[float], str],
+) -> ET.Element:
+    """Create a sub-element for a vector relying on a formatter for the values.
+
+    Args:
+        parent: The parent XML element.
+        tag: The tag name for the new element.
+        vector: The Vector3 object containing the values.
+        formatter: A callable that takes a float and returns a string (e.g., format_float).
+
+    Returns:
+        The newly created XML element with the formatted text string.
+    """
+    # Create text from formatted components
+    text_val = f"{formatter(vector.x)} {formatter(vector.y)} {formatter(vector.z)}"
+    return xml_add_text(parent, tag, text_val)

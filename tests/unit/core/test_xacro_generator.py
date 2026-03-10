@@ -662,6 +662,20 @@ class TestXACROGeneratorEdgeCoverage:
         result = gen.generate(robot)
         assert "l1" in result
 
+    def test_generator_unsupported_geometry_fallback(self) -> None:
+        """Test that XACROGenerator handles unsupported geometry types via fallback."""
+        gen = XACROGenerator()
+        robot = Robot(name="r")
+
+        class UnknownGeometry:
+            pass
+
+        link = Link(name="l1", visuals=[Visual(geometry=UnknownGeometry())])  # type: ignore
+        robot.add_link(link)
+        xml = gen.generate(robot)
+        # It should generate an empty geometry container `<geometry />` or `<geometry></geometry>`
+        assert "<geometry />" in xml or "<geometry></geometry>" in xml
+
     def test_visual_with_non_standard_geometry_in_signature(self) -> None:
         """Verify signature generation handles non-standard geometry objects."""
         gen = XACROGenerator(generate_macros=True)

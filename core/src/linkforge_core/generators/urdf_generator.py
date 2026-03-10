@@ -16,11 +16,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from ..base import RobotGenerator, RobotGeneratorError
+from ..base import RobotGeneratorError
 from ..models.gazebo import GazeboElement, GazeboPlugin
-from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform
+from ..models.geometry import Transform
 from ..models.joint import Joint, JointType
-from ..models.link import Collision, Inertial, Link, Visual
+from ..models.link import Collision, Link, Visual
 from ..models.material import Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2Control
@@ -38,9 +38,10 @@ from ..models.sensor import (
 from ..models.transmission import Transmission
 from ..utils.math_utils import format_float, format_vector
 from ..utils.xml_utils import serialize_xml
+from .xml_base import RobotXMLGenerator
 
 
-class URDFGenerator(RobotGenerator[str]):
+class URDFGenerator(RobotXMLGenerator):
     """Unified Robot Description Format (URDF) generator."""
 
     def __init__(
@@ -67,7 +68,7 @@ class URDFGenerator(RobotGenerator[str]):
             >>> # Generator with relative mesh paths
             >>> generator = URDFGenerator(urdf_path=Path("/workspace/robot.urdf"))
         """
-        self.pretty_print = pretty_print
+        super().__init__(pretty_print=pretty_print, output_path=urdf_path)
         self.urdf_path = urdf_path
         self.use_ros2_control = use_ros2_control
 
@@ -154,7 +155,7 @@ class URDFGenerator(RobotGenerator[str]):
             parent.append(ET.Comment(" Links "))
         # Sort links by name for deterministic output
         for link in sorted(robot.links, key=lambda link_item: link_item.name):
-            self._add_link_to_xml(parent, link, robot)
+            self._add_link_to_xml(parent, link)
 
     def add_joints_section(self, parent: ET.Element, robot: Robot) -> None:
         """Add Joints section to parent element."""
@@ -162,13 +163,13 @@ class URDFGenerator(RobotGenerator[str]):
             parent.append(ET.Comment(" Joints "))
         # Sort joints by name for deterministic output
         for joint in sorted(robot.joints, key=lambda joint_item: joint_item.name):
-            self._add_joint_to_xml(parent, joint, robot)
+            self._add_joint_to_xml(parent, joint)
 
-    def _add_link_to_xml(self, parent: ET.Element, link: Link, robot: Robot) -> None:
+    def _add_link_to_xml(self, parent: ET.Element, link: Link) -> None:
         """Hook for adding a single link. Can be overridden (e.g. for XACRO macros)."""
         self._add_link_element(parent, link)
 
-    def _add_joint_to_xml(self, parent: ET.Element, joint: Joint, robot: Robot) -> None:
+    def _add_joint_to_xml(self, parent: ET.Element, joint: Joint) -> None:
         """Hook for adding a single joint. Can be overridden."""
         self._add_joint_element(parent, joint)
 
@@ -277,7 +278,7 @@ class URDFGenerator(RobotGenerator[str]):
         self._add_origin_element(visual_elem, visual.origin)
 
         # Geometry
-        self._add_geometry_element(visual_elem, visual.geometry)
+        self._add_geometry_element(visual.geometry, visual_elem)
 
         # Material (reference if in global materials, inline otherwise)
         if visual.material:
@@ -321,73 +322,7 @@ class URDFGenerator(RobotGenerator[str]):
         self._add_origin_element(collision_elem, collision.origin)
 
         # Geometry
-        self._add_geometry_element(collision_elem, collision.geometry)
-
-    def _add_inertial_element(self, parent: ET.Element, inertial: Inertial) -> None:
-        """Add inertial element to parent."""
-        inertial_elem = ET.SubElement(parent, "inertial")
-
-        # Origin (COM position)
-        self._add_origin_element(inertial_elem, inertial.origin)
-
-        # Mass
-        ET.SubElement(inertial_elem, "mass", value=format_float(inertial.mass))
-
-        # Inertia tensor
-        inertia = inertial.inertia
-        ET.SubElement(
-            inertial_elem,
-            "inertia",
-            ixx=format_float(inertia.ixx),
-            ixy=format_float(inertia.ixy),
-            ixz=format_float(inertia.ixz),
-            iyy=format_float(inertia.iyy),
-            iyz=format_float(inertia.iyz),
-            izz=format_float(inertia.izz),
-        )
-
-    def _add_origin_element(self, parent: ET.Element, transform: Transform) -> None:
-        """Add origin element to parent."""
-        # Skip if None or identity transform
-        if transform is None or transform == Transform.identity():
-            return
-
-        xyz_str = format_vector(transform.xyz.x, transform.xyz.y, transform.xyz.z)
-        rpy_str = format_vector(transform.rpy.x, transform.rpy.y, transform.rpy.z)
-        ET.SubElement(parent, "origin", xyz=xyz_str, rpy=rpy_str)
-
-    def _add_geometry_element(self, parent: ET.Element, geometry: Geometry) -> None:
-        """Add geometry element to parent."""
-        geom_elem = ET.SubElement(parent, "geometry")
-
-        if isinstance(geometry, Box):
-            size_str = format_vector(geometry.size.x, geometry.size.y, geometry.size.z)
-            ET.SubElement(geom_elem, "box", size=size_str)
-
-        elif isinstance(geometry, Cylinder):
-            ET.SubElement(
-                geom_elem,
-                "cylinder",
-                radius=format_float(geometry.radius),
-                length=format_float(geometry.length),
-            )
-
-        elif isinstance(geometry, Sphere):
-            ET.SubElement(geom_elem, "sphere", radius=format_float(geometry.radius))
-
-        elif isinstance(geometry, Mesh):
-            from ..utils.path_utils import get_export_path
-
-            urdf_dir = self.urdf_path.parent if self.urdf_path else None
-            export_path = get_export_path(geometry.resource, relative_to=urdf_dir)
-
-            attrib: dict[str, str] = {"filename": export_path}
-
-            # Check if scale is not default (1.0, 1.0, 1.0)
-            if geometry.scale.x != 1.0 or geometry.scale.y != 1.0 or geometry.scale.z != 1.0:
-                scale_str = format_vector(geometry.scale.x, geometry.scale.y, geometry.scale.z)
-                attrib["scale"] = scale_str
-            ET.SubElement(geom_elem, "mesh", **attrib)  # type: ignore[arg-type]
+        self._add_geometry_element(collision.geometry, collision_elem)
 
     def _add_joint_element(self, parent: ET.Element, joint: Joint) -> None:
         """Add joint element to parent."""

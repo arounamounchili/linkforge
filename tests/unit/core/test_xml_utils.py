@@ -158,3 +158,45 @@ def test_is_suspicious_location_match():
     # On most systems /etc exists and resolves to /private/etc or itself.
     # We use a path that is definitely suspicious.
     assert is_suspicious_location(Path("/etc/passwd")) is True
+
+
+def test_xml_add_text():
+    """Test xml_add_text utility function."""
+    from linkforge_core.utils.xml_utils import xml_add_text
+
+    parent = ET.Element("root")
+
+    # Test adding a string
+    elem1 = xml_add_text(parent, "child1", "value1")
+    assert elem1.tag == "child1"
+    assert elem1.text == "value1"
+    assert parent.find("child1") is not None
+
+    # Test adding a number
+    elem2 = xml_add_text(parent, "child2", 42)
+    assert elem2.tag == "child2"
+    assert elem2.text == "42"
+
+    # Test adding None (should not set text)
+    elem3 = xml_add_text(parent, "child3", None)
+    assert elem3.tag == "child3"
+    assert elem3.text is None
+
+
+def test_xml_add_vector():
+    """Test xml_add_vector utility function."""
+    from linkforge_core.models import Vector3
+    from linkforge_core.utils.xml_utils import xml_add_vector
+
+    parent = ET.Element("root")
+    vec = Vector3(1.1234, 2.0, -3.5)
+
+    # Custom formatter for testing
+    def mock_formatter(val: float) -> str:
+        return f"{val:.2f}"
+
+    elem = xml_add_vector(parent, "origin", vec, formatter=mock_formatter)
+
+    assert elem.tag == "origin"
+    assert elem.text == "1.12 2.00 -3.50"
+    assert parent.find("origin") is not None

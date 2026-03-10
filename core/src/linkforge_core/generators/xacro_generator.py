@@ -9,16 +9,18 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from functools import singledispatchmethod
 from pathlib import Path
 from typing import Any
 
 from ..base import RobotGeneratorError
-from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
+from ..models.geometry import Box, Cylinder, Mesh, Sphere
 from ..models.joint import Joint
 from ..models.link import Link, Visual
 from ..models.material import Material
 from ..models.robot import Robot
 from ..utils.math_utils import format_float, format_vector
+from ..utils.path_utils import get_export_path
 from ..utils.string_utils import sanitize_name
 from ..utils.xml_utils import serialize_xml
 from .urdf_generator import URDFGenerator
@@ -80,7 +82,10 @@ class XACROGenerator(URDFGenerator):
         from .. import __version__
 
         root = self.generate_robot_element(robot, validate=validate)
-        return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)
+        ns = {"xacro": XACRO_URI}
+        return serialize_xml(
+            root, pretty_print=self.pretty_print, version=__version__, namespaces=ns
+        )
 
     def generate_robot_element(self, robot: Robot, validate: bool = True) -> ET.Element:
         """Generate XACRO XML Element tree from robot.
@@ -109,6 +114,9 @@ class XACROGenerator(URDFGenerator):
         self.material_properties = {}
         self.dimension_properties = {}
         self.generated_macros = []
+
+        # Track current robot for generation hooks that lost 'robot' argument
+        self._current_robot = robot
 
         # Create root element
         root = ET.Element("robot", name=robot.name)
@@ -188,13 +196,13 @@ class XACROGenerator(URDFGenerator):
 
         return root
 
-    def _add_link_to_xml(self, parent: ET.Element, link: Link, robot: Robot) -> None:
+    def _add_link_to_xml(self, parent: ET.Element, link: Link) -> None:
         """Override: Check for macro usage before adding link."""
         # Check if this link is part of a macro group
         if link.name in self.links_in_macros:
             # Find the joint for this link
             joint = None
-            for j in robot.joints:
+            for j in self._current_robot.joints:
                 if j.child == link.name:
                     joint = j
                     break
@@ -209,7 +217,7 @@ class XACROGenerator(URDFGenerator):
             # Standard Link Generation
             self._add_link_element(parent, link)
 
-    def _add_joint_to_xml(self, parent: ET.Element, joint: Joint, robot: Robot) -> None:
+    def _add_joint_to_xml(self, parent: ET.Element, joint: Joint) -> None:
         """Override: Skip joint if it's included in a macro call."""
         # If joint is part of a macro (child link is in macro), skip it
         # because the macro call includes the joint
@@ -618,7 +626,7 @@ class XACROGenerator(URDFGenerator):
         self._add_origin_element(visual_elem, visual.origin)
 
         # Geometry
-        self._add_geometry_element(visual_elem, visual.geometry)
+        self._add_geometry_element(visual.geometry, visual_elem)
 
         # Material
         if visual.material:
@@ -657,60 +665,68 @@ class XACROGenerator(URDFGenerator):
             if material.texture:
                 ET.SubElement(mat_elem, "texture", filename=material.texture)
 
-    def _add_geometry_element(self, parent: ET.Element, geometry: Geometry) -> None:
+    @singledispatchmethod
+    def _add_geometry_element(
+        self, geometry: Any, parent: ET.Element, tag: str = "geometry"
+    ) -> None:
         """Add geometry element with dimension substitution.
 
         Overrides parent method to substitute dimensions with XACRO properties
         when extract_dimensions is enabled.
         """
-        geom_elem = ET.SubElement(parent, "geometry")
+        # Call the base class fallback (should create empty container)
+        super()._add_geometry_element(geometry, parent, tag)
 
-        if isinstance(geometry, Box):
-            # Check if dimensions should be substituted
-            x_prop = self._get_dimension_property("box_x", geometry.size.x)
-            y_prop = self._get_dimension_property("box_y", geometry.size.y)
-            z_prop = self._get_dimension_property("box_z", geometry.size.z)
+    @_add_geometry_element.register
+    def _(self, geometry: Box, parent: ET.Element, tag: str = "geometry") -> None:
+        geom_elem = ET.SubElement(parent, tag)
+        x_prop = self._get_dimension_property("box_x", geometry.size.x)
+        y_prop = self._get_dimension_property("box_y", geometry.size.y)
+        z_prop = self._get_dimension_property("box_z", geometry.size.z)
 
-            size_str = (
-                f"${{{x_prop}}} ${{{y_prop}}} ${{{z_prop}}}"
-                if x_prop and y_prop and z_prop
-                else format_vector(geometry.size.x, geometry.size.y, geometry.size.z)
-            )
-            ET.SubElement(geom_elem, "box", size=size_str)
+        size_str = (
+            f"${{{x_prop}}} ${{{y_prop}}} ${{{z_prop}}}"
+            if x_prop and y_prop and z_prop
+            else self._format_vector(geometry.size.x, geometry.size.y, geometry.size.z)
+        )
+        ET.SubElement(geom_elem, "box", size=size_str)
 
-        elif isinstance(geometry, Cylinder):
-            # Check if dimensions should be substituted
-            radius_prop = self._get_dimension_property("cylinder_radius", geometry.radius)
-            length_prop = self._get_dimension_property("cylinder_length", geometry.length)
+    @_add_geometry_element.register
+    def _(self, geometry: Cylinder, parent: ET.Element, tag: str = "geometry") -> None:
+        geom_elem = ET.SubElement(parent, tag)
+        radius_prop = self._get_dimension_property("cylinder_radius", geometry.radius)
+        length_prop = self._get_dimension_property("cylinder_length", geometry.length)
 
-            ET.SubElement(
-                geom_elem,
-                "cylinder",
-                radius=f"${{{radius_prop}}}" if radius_prop else format_float(geometry.radius),
-                length=f"${{{length_prop}}}" if length_prop else format_float(geometry.length),
-            )
+        ET.SubElement(
+            geom_elem,
+            "cylinder",
+            radius=f"${{{radius_prop}}}" if radius_prop else self._format_value(geometry.radius),
+            length=f"${{{length_prop}}}" if length_prop else self._format_value(geometry.length),
+        )
 
-        elif isinstance(geometry, Sphere):
-            # Check if dimension should be substituted
-            radius_prop = self._get_dimension_property("sphere_radius", geometry.radius)
+    @_add_geometry_element.register
+    def _(self, geometry: Sphere, parent: ET.Element, tag: str = "geometry") -> None:
+        geom_elem = ET.SubElement(parent, tag)
+        radius_prop = self._get_dimension_property("sphere_radius", geometry.radius)
 
-            ET.SubElement(
-                geom_elem,
-                "sphere",
-                radius=f"${{{radius_prop}}}" if radius_prop else format_float(geometry.radius),
-            )
+        ET.SubElement(
+            geom_elem,
+            "sphere",
+            radius=f"${{{radius_prop}}}" if radius_prop else self._format_value(geometry.radius),
+        )
 
-        elif isinstance(geometry, Mesh):
-            from ..utils.path_utils import get_export_path
+    @_add_geometry_element.register
+    def _(self, geometry: Mesh, parent: ET.Element, tag: str = "geometry") -> None:
+        geom_elem = ET.SubElement(parent, tag)
 
-            urdf_dir = self.urdf_path.parent if self.urdf_path else None
-            export_path = get_export_path(geometry.resource, relative_to=urdf_dir)
+        urdf_dir = self.urdf_path.parent if self.urdf_path else None
+        export_path = get_export_path(geometry.resource, relative_to=urdf_dir)
 
-            attrib: dict[str, str] = {"filename": export_path}
-            if geometry.scale.x != 1.0 or geometry.scale.y != 1.0 or geometry.scale.z != 1.0:
-                scale_str = format_vector(geometry.scale.x, geometry.scale.y, geometry.scale.z)
-                attrib["scale"] = scale_str
-            ET.SubElement(geom_elem, "mesh", **attrib)  # type: ignore[arg-type]
+        attrib: dict[str, str] = {"filename": export_path}
+        if geometry.scale.x != 1.0 or geometry.scale.y != 1.0 or geometry.scale.z != 1.0:
+            scale_str = self._format_vector(geometry.scale.x, geometry.scale.y, geometry.scale.z)
+            attrib["scale"] = scale_str
+        ET.SubElement(geom_elem, "mesh", **attrib)  # type: ignore[arg-type]
 
     def _get_dimension_property(self, dim_key: str, value: float) -> str | None:
         """Get property name for a dimension if it was extracted.
