@@ -9,8 +9,11 @@ from linkforge_core.models.link import Inertial, InertiaTensor
 from linkforge_core.models.robot import Robot
 
 
-class TestXMLGenerator(RobotXMLGenerator):
-    """Test generator to test the base class."""
+class MockXMLGenerator(RobotXMLGenerator):
+    """Minimal implementation of abstract RobotXMLGenerator for testing base functionality."""
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
     def generate(self, robot: Robot, **kwargs) -> str:
         return "<robot></robot>"
@@ -18,7 +21,7 @@ class TestXMLGenerator(RobotXMLGenerator):
 
 def test_format_value():
     """Test value formatting hook."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     assert gen._format_value(1.0) == "1"
     assert gen._format_value(1.12345678) == "1.123457"  # Assuming math_utils.format_float behavior
     assert gen._format_value(42) == "42"
@@ -27,14 +30,14 @@ def test_format_value():
 
 def test_format_vector():
     """Test vector formatting hook."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     assert gen._format_vector(1.0, 2.0, 3.0) == "1 2 3"
     assert gen._format_vector(1.12345678, 0.0, -1.0) == "1.123457 0 -1"
 
 
 def test_add_origin_element():
     """Test origin element generation."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     parent = ET.Element("parent")
 
     # Test identity transform (should not add an element)
@@ -53,7 +56,7 @@ def test_add_origin_element():
 
 def test_add_inertial_element():
     """Test inertial element generation."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     parent = ET.Element("parent")
 
     inertial = Inertial(
@@ -96,7 +99,7 @@ def test_add_inertial_element():
 
 def test_add_geometry_element_box():
     """Test geometry element generation for Box."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     parent = ET.Element("parent")
     box = Box(size=Vector3(1, 2, 3))
 
@@ -111,7 +114,7 @@ def test_add_geometry_element_box():
 
 def test_add_geometry_element_cylinder():
     """Test geometry element generation for Cylinder."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     parent = ET.Element("parent")
     cylinder = Cylinder(radius=0.5, length=2.0)
 
@@ -127,7 +130,7 @@ def test_add_geometry_element_cylinder():
 
 def test_add_geometry_element_sphere():
     """Test geometry element generation for Sphere."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     parent = ET.Element("parent")
     sphere = Sphere(radius=1.5)
 
@@ -143,7 +146,7 @@ def test_add_geometry_element_sphere():
 def test_add_geometry_element_mesh():
     """Test geometry element generation for Mesh."""
     # Test with output_path set (relative path)
-    gen = TestXMLGenerator(output_path=Path("/tmp/robot/robot.urdf"))
+    gen = MockXMLGenerator(output_path=Path("/tmp/robot/robot.urdf"))
     parent = ET.Element("parent")
     mesh = Mesh(resource="package://my_robot/meshes/part.stl", scale=Vector3(2, 2, 2))
 
@@ -159,7 +162,7 @@ def test_add_geometry_element_mesh():
 
 def test_add_geometry_element_unsupported():
     """Test that unsupported geometry type creates an empty container as fallback."""
-    gen = TestXMLGenerator()
+    gen = MockXMLGenerator()
     parent = ET.Element("parent")
 
     class UnknownGeometry:

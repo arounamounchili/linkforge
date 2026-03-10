@@ -23,8 +23,9 @@ def test_operator_empty_xacro_naming(tmp_path):
     parser = XACROParser()
     robot = parser.parse(xacro_file)
 
-    # Verify the core parser gave us the right name
-    assert robot.name == "my_robot_model"
+    # Verify the core parser gave us the right name (parent strictly defines it when empty)
+    expected_name = xacro_file.parent.name
+    assert robot.name == expected_name
 
     # 3. Use the builder manually (synchronously for the test)
     builder = AsynchronousRobotBuilder(robot, xacro_file, bpy.context)
@@ -34,7 +35,7 @@ def test_operator_empty_xacro_naming(tmp_path):
         builder.process_next_chunk()
 
     # 4. Verify collection naming
-    collection_name = "my_robot_model"
+    collection_name = expected_name
     assert collection_name in bpy.data.collections
 
     collection = bpy.data.collections[collection_name]

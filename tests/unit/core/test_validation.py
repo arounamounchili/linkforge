@@ -454,7 +454,7 @@ def test_validator_unreachable_code_mocks():
     from linkforge_core.models.robot import Robot
     from linkforge_core.validation import RobotValidator
 
-    # Case 1: get_root_link returns None even with links (Line 171)
+    # Case 1: get_root_link returns None even with links
     robot = Robot(name="mock_bot")
     robot.add_link(Link(name="base", inertial=Inertial(mass=1.0)))
 
@@ -466,7 +466,7 @@ def test_validator_unreachable_code_mocks():
         # The message is "No root link found. A robot must have exactly one link..."
         assert any("No root link found" in e.message for e in result.errors)
 
-    # Case 2: Disconnected link check (Line 203)
+    # Case 2: Disconnected link check
     # logic: if root and link != root and count == 0:
     # Normally get_root_link would raise if there are multiple roots.
     # We need to mock get_root_link to return one root, while another exists.
@@ -486,7 +486,7 @@ def test_validator_unreachable_code_mocks():
 
         # Should detect 'disconnected' as a disconnected link
         # Because count for 'disconnected' is 0, and it != base.
-        # Line 203: if root and link != root and count == 0:
+        # if root and link != root and count == 0:
         # result.add_error(title="Disconnected link", ...)
         assert any("Disconnected link" in e.title for e in result2.errors)
         assert any("disconnected" in e.message for e in result2.errors)

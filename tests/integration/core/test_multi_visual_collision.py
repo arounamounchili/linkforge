@@ -264,7 +264,7 @@ class TestExportCheckboxBehavior:
 
     These tests verify the expected behavior when use_visual_geometry=False
     or export_collision=False in Blender properties. The actual checkbox
-    logic is in converters.py lines 413 and 450.
+    logic is in converters.py.
     """
 
     def test_link_with_no_visuals_exports_correctly(self):

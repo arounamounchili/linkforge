@@ -13,15 +13,6 @@ URDF and XACRO parsers for converting files to Python objects.
    :show-inheritance:
 ```
 
-### Component Parsing Helpers
-
-```{eval-rst}
-.. autofunction:: linkforge_core.parsers.urdf_parser.parse_link
-
-.. autofunction:: linkforge_core.parsers.urdf_parser.parse_joint
-
-.. autofunction:: linkforge_core.parsers.urdf_parser.parse_sensor_from_gazebo
-```
 
 ## XACRO Parser
 

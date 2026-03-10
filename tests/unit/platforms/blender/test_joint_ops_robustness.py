@@ -97,7 +97,7 @@ def test_auto_detect_parent_child_failure(clean_scene):
     joint = bpy.context.active_object
     joint.linkforge_joint.is_robot_joint = True
 
-    # Run auto-detect; it should fail to find any meshes (hits lines 228-229)
+    # Run auto-detect; it should fail to find any meshes
     res = bpy.ops.linkforge.auto_detect_parent_child()
     assert res == {"CANCELLED"}
 

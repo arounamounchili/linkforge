@@ -404,7 +404,7 @@ def test_finalize_urdf_with_container_root():
 
 
 def test_resolve_file_re_raises_robot_parser_error(tmp_path):
-    # This targets line 56 in xacro_parser.py
+    # Edge case
     # Recursive macro in a file
     bad_xacro = tmp_path / "recursive.xacro"
     bad_xacro.write_text("""
@@ -982,7 +982,7 @@ def test_handle_load_json_error(tmp_path):
 
 
 def test_substitute_mixed_text():
-    """Cover lines 491-493, 498 in xacro_parser.py."""
+    """Cover edge cases."""
     resolver = XacroResolver()
     resolver.properties["p"] = 1.5
     res = resolver._substitute("val=${p}m")
@@ -990,7 +990,7 @@ def test_substitute_mixed_text():
 
 
 def test_cleanup_non_string_tag():
-    """Cover lines 578-579 in xacro_parser.py."""
+    """Cover edge cases."""
     resolver = XacroResolver()
     # Create element with a Comment child (tag is a function/type, not string)
     root = ET.Element("robot")
@@ -1004,7 +1004,7 @@ def test_cleanup_non_string_tag():
 
 
 def test_try_parse_typed_value_yaml_error():
-    """Cover lines 455-456 in xacro_parser.py."""
+    """Cover edge cases."""
     resolver = XacroResolver()
     # Mock yaml.safe_load to raise Exception
     with mock.patch(

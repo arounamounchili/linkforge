@@ -18,28 +18,24 @@ high-fidelity round-tripping and includes:
 
 from __future__ import annotations
 
+import io
+import math
 import xml.etree.ElementTree as ET
-from dataclasses import replace
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
-from ..base import IResourceResolver, RobotParser, RobotParserError, XacroDetectedError
+from ..base import IResourceResolver, RobotParserError, XacroDetectedError
 from ..exceptions import RobotModelError
 from ..logging_config import get_logger
 from ..models import (
-    Box,
     CameraInfo,
     Collision,
-    Color,
     ContactInfo,
-    Cylinder,
     ForceTorqueInfo,
     GazeboElement,
     GazeboPlugin,
     GPSInfo,
     IMUInfo,
-    Inertial,
-    InertiaTensor,
     Joint,
     JointCalibration,
     JointDynamics,
@@ -50,14 +46,12 @@ from ..models import (
     LidarInfo,
     Link,
     Material,
-    Mesh,
     Robot,
     Ros2Control,
     Ros2ControlJoint,
     Sensor,
     SensorNoise,
     SensorType,
-    Sphere,
     Transform,
     Transmission,
     TransmissionActuator,
@@ -72,1108 +66,13 @@ from ..utils.xml_utils import (
     parse_optional_bool,
     parse_optional_float,
     parse_vector3,
-    validate_xml_depth,
 )
-from ..validation import validate_mesh_path
+from .xml_base import MAX_FILE_SIZE, RobotXMLParser
 
 logger = get_logger(__name__)
 
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB (generous for robot models with many links)
 
-
-def parse_origin(elem: ET.Element | None) -> Transform:
-    """Parse origin element to a Transform object.
-
-    Args:
-        elem: The origin XML element.
-
-    Returns:
-        A Transform object representing the pose.
-    """
-    if elem is None:
-        return Transform.identity()
-
-    xyz_text = elem.get("xyz", "0 0 0")
-    rpy_text = elem.get("rpy", "0 0 0")
-
-    xyz = parse_vector3(xyz_text)
-    rpy = parse_vector3(rpy_text)
-
-    return Transform(xyz=xyz, rpy=rpy)
-
-
-def parse_geometry(
-    geom_elem: ET.Element, urdf_directory: Path | None = None, sandbox_root: Path | None = None
-) -> Box | Cylinder | Sphere | Mesh | None:
-    """Parse geometry element with security validation for mesh paths.
-
-    Args:
-        geom_elem: XML element containing geometry definition
-        urdf_directory: Directory containing the URDF file (required for mesh path validation)
-        sandbox_root: Root directory for the sandbox (optional)
-
-    Returns:
-        Geometry object (Box, Cylinder, Sphere, or Mesh) or None if no valid geometry
-
-    Raises:
-        RobotModelError: If geometry attributes are invalid or mesh path is unsafe
-
-    """
-    # Check for box
-    box = geom_elem.find("box")
-    if box is not None:
-        try:
-            size_text = box.get("size")
-            if size_text is None:
-                raise RobotModelError("Box geometry missing required 'size' attribute")
-            size = parse_vector3(size_text)
-            return Box(size=size)
-        except RobotModelError as e:
-            logger.warning(f"Invalid box geometry ignored: {e}")
-            return None
-
-    # Check for cylinder
-    cylinder = geom_elem.find("cylinder")
-    if cylinder is not None:
-        try:
-            radius = parse_float(cylinder.get("radius"), "cylinder radius", default=0.5)
-            length = parse_float(cylinder.get("length"), "cylinder length", default=1.0)
-            return Cylinder(radius=radius, length=length)
-        except RobotModelError as e:
-            logger.warning(f"Invalid cylinder geometry ignored: {e}")
-            return None
-
-    # Check for sphere
-    sphere = geom_elem.find("sphere")
-    if sphere is not None:
-        try:
-            radius = parse_float(sphere.get("radius"), "sphere radius", default=0.5)
-            return Sphere(radius=radius)
-        except RobotModelError as e:
-            logger.warning(f"Invalid sphere geometry ignored: {e}")
-            return None
-
-    # Check for mesh
-    mesh = geom_elem.find("mesh")
-    if mesh is not None:
-        try:
-            filename = mesh.get("filename", "")
-            if not filename:
-                raise RobotModelError("Mesh geometry missing required 'filename' attribute")
-
-            # Store the raw filename as the resource.
-            # The Robot.resolve_resource() will handle the actual resolution logic.
-            # However, for local paths (including file://), we still validate they don't escape the URDF directory.
-            resource = filename
-
-            # Extract path for validation if it's a file:// URI or a regular path
-            validation_path: Path | None = None
-            if filename.startswith("file://"):
-                from ..utils.path_utils import normalize_uri_to_path
-
-                validation_path = normalize_uri_to_path(filename)
-            elif not filename.startswith("package://"):
-                validation_path = Path(filename)
-
-            if validation_path is not None and urdf_directory is not None:
-                try:
-                    # Ensure it stays within sandbox/urdf_dir
-                    validate_mesh_path(validation_path, urdf_directory, sandbox_root=sandbox_root)
-                except RobotModelError as e:
-                    # In test_security_exceptions, we want to return None (invalid mesh ignored)
-                    logger.warning(f"Mesh path validation failed: {e}")
-                    return None
-            elif filename.startswith("package://"):
-                from ..validation import validate_package_uri
-
-                try:
-                    validate_package_uri(filename)
-                except RobotModelError as e:
-                    logger.warning(f"Package URI validation failed: {e}")
-                    return None
-
-            return Mesh(resource=resource, scale=parse_vector3(mesh.get("scale", "1 1 1")))
-        except RobotModelError as e:
-            logger.warning(f"Invalid mesh geometry ignored: {e}")
-            return None
-
-    return None
-
-
-def parse_material(mat_elem: ET.Element | None, materials: dict[str, Material]) -> Material | None:
-    """Parse material element or reference.
-
-    Args:
-        mat_elem: The material XML element.
-        materials: Dictionary of already defined materials.
-
-    Returns:
-        The parsed Material object or None if invalid.
-    """
-    if mat_elem is None:
-        return None
-
-    # Check if it's a reference
-    mat_name = mat_elem.get("name", "")
-    if mat_name and mat_name in materials:
-        return materials[mat_name]
-
-    # Parse color
-    color = None
-    color_elem = mat_elem.find("color")
-    if color_elem is not None:
-        rgba_text = color_elem.get("rgba", "0.8 0.8 0.8 1.0")
-        parts = rgba_text.strip().split()
-
-        try:
-            # Validate RGBA array bounds
-            if len(parts) < 3:
-                raise RobotModelError(
-                    f"Invalid RGBA color format: expected at least 3 components (R G B), got {len(parts)}"
-                )
-            if len(parts) > 4:
-                raise RobotModelError(
-                    f"Invalid RGBA color format: expected at most 4 components (R G B A), got {len(parts)}"
-                )
-
-            # Parse with bounds checking (Color validates 0-1 range)
-            color = Color(
-                r=float(parts[0]),
-                g=float(parts[1]),
-                b=float(parts[2]),
-                a=float(parts[3]) if len(parts) > 3 else 1.0,
-            )
-        except (RobotModelError, TypeError, IndexError) as e:
-            logger.warning(f"Invalid material color ignored: {e}")
-            return None
-
-    # Parse texture
-    texture = None
-    texture_elem = mat_elem.find("texture")
-    if texture_elem is not None:
-        texture = texture_elem.get("filename")
-
-    if color or texture:
-        return Material(name=mat_name if mat_name else "default", color=color, texture=texture)
-
-    return None
-
-
-def parse_link(
-    link_elem: ET.Element,
-    materials: dict[str, Material],
-    urdf_directory: Path | None = None,
-    sandbox_root: Path | None = None,
-) -> Link:
-    """Parse link element with support for multiple visual/collision elements.
-
-    Args:
-        link_elem: XML element containing link definition
-        materials: Dictionary of global materials
-        urdf_directory: Directory containing the URDF file (for mesh path validation)
-        sandbox_root: Root directory for the sandbox (optional)
-
-    Returns:
-        Link object with visuals, collisions, and inertial properties
-    """
-    name = link_elem.get("name", "unnamed_link")
-
-    # Parse all visual elements (URDF allows multiple <visual> per link)
-    visuals: list[Visual] = []
-    for visual_elem in link_elem.findall("visual"):
-        origin = parse_origin(visual_elem.find("origin"))
-        geom_elem = visual_elem.find("geometry")
-        geometry = (
-            parse_geometry(geom_elem, urdf_directory, sandbox_root=sandbox_root)
-            if geom_elem is not None
-            else None
-        )
-        material = parse_material(visual_elem.find("material"), materials)
-        visual_name = visual_elem.get("name")  # Optional name attribute
-
-        if geometry:
-            visuals.append(
-                Visual(geometry=geometry, origin=origin, material=material, name=visual_name)
-            )
-
-    # Parse all collision elements (URDF allows multiple <collision> per link)
-    collisions: list[Collision] = []
-    for collision_elem in link_elem.findall("collision"):
-        origin = parse_origin(collision_elem.find("origin"))
-        geom_elem = collision_elem.find("geometry")
-        geometry = (
-            parse_geometry(geom_elem, urdf_directory, sandbox_root=sandbox_root)
-            if geom_elem is not None
-            else None
-        )
-        collision_name = collision_elem.get("name")  # Optional name attribute
-
-        if geometry:
-            collisions.append(Collision(geometry=geometry, origin=origin, name=collision_name))
-
-    # Parse inertial
-    inertial = None
-    inertial_elem = link_elem.find("inertial")
-    if inertial_elem is not None:
-        origin = parse_origin(inertial_elem.find("origin"))
-
-        mass_elem = inertial_elem.find("mass")
-        mass = (
-            parse_float(mass_elem.get("value"), "mass", default=1.0)
-            if mass_elem is not None
-            else 1.0
-        )
-
-        inertia_elem = inertial_elem.find("inertia")
-        if inertia_elem is not None:
-            # Helper to sanitize diagonal inertia moments
-            def sanitize_inertia(val: float, name: str) -> float:
-                if val <= 0:
-                    logger.warning(
-                        f"Sanitizing invalid inertia {name}={val} to 1e-6 for link '{name}'"
-                    )
-                    return 1e-6
-                return val
-
-            ixx = parse_float(inertia_elem.get("ixx"), "ixx", default=1.0)
-            iyy = parse_float(inertia_elem.get("iyy"), "iyy", default=1.0)
-            izz = parse_float(inertia_elem.get("izz"), "izz", default=1.0)
-
-            inertia = InertiaTensor(
-                ixx=sanitize_inertia(ixx, "ixx"),
-                ixy=parse_float(inertia_elem.get("ixy"), "ixy", default=0.0),
-                ixz=parse_float(inertia_elem.get("ixz"), "ixz", default=0.0),
-                iyy=sanitize_inertia(iyy, "iyy"),
-                iyz=parse_float(inertia_elem.get("iyz"), "iyz", default=0.0),
-                izz=sanitize_inertia(izz, "izz"),
-            )
-            inertial = Inertial(mass=mass, origin=origin, inertia=inertia)
-
-    return Link(name=name, visuals=visuals, collisions=collisions, inertial=inertial)
-
-
-def parse_joint(joint_elem: ET.Element) -> Joint:
-    """Parse joint element into a Joint object.
-
-    Args:
-        joint_elem: The joint XML element.
-
-    Returns:
-        The parsed Joint model.
-
-    Raises:
-        RobotModelError: If the joint definition is invalid.
-    """
-    name = joint_elem.get("name", "unnamed_joint")
-    joint_type_str = joint_elem.get("type", "fixed")
-
-    # Map URDF type string to JointType enum
-    type_map = {
-        "revolute": JointType.REVOLUTE,
-        "continuous": JointType.CONTINUOUS,
-        "prismatic": JointType.PRISMATIC,
-        "fixed": JointType.FIXED,
-        "floating": JointType.FLOATING,
-        "planar": JointType.PLANAR,
-    }
-    joint_type = type_map.get(joint_type_str.lower(), JointType.FIXED)
-
-    # Parse parent and child
-    parent_elem = joint_elem.find("parent")
-    child_elem = joint_elem.find("child")
-    parent = parent_elem.get("link", "") if parent_elem is not None else ""
-    child = child_elem.get("link", "") if child_elem is not None else ""
-
-    # Parse origin
-    origin = parse_origin(joint_elem.find("origin"))
-
-    # Parse axis (only relevant for revolute, continuous, prismatic, planar)
-    axis_elem = joint_elem.find("axis")
-    axis: Vector3 | None = None
-
-    if joint_type in (
-        JointType.REVOLUTE,
-        JointType.CONTINUOUS,
-        JointType.PRISMATIC,
-        JointType.PLANAR,
-    ):
-        if axis_elem is not None:
-            # Explicit axis provided
-            axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
-            # Normalize axis to unit vector
-            import math
-
-            axis_mag = math.sqrt(axis.x**2 + axis.y**2 + axis.z**2)
-            if axis_mag > 1e-10:
-                axis = Vector3(axis.x / axis_mag, axis.y / axis_mag, axis.z / axis_mag)
-            else:
-                # Fallback to default if magnitude is too small
-                axis = Vector3(1.0, 0.0, 0.0)
-        else:
-            # Default axis per URDF spec is (1, 0, 0)
-            axis = Vector3(1.0, 0.0, 0.0)
-    else:
-        # FIXED and FLOATING joints must not have an axis
-        axis = None
-
-    # Parse limits
-    limits = None
-    if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS):
-        limits_elem = joint_elem.find("limit")
-        if limits_elem is not None:
-            # Get lower/upper (optional for CONTINUOUS joints)
-            lower_str = limits_elem.get("lower")
-            upper_str = limits_elem.get("upper")
-
-            # Parse limits with optional lower/upper
-            limits = JointLimits(
-                lower=float(lower_str) if lower_str is not None else None,
-                upper=float(upper_str) if upper_str is not None else None,
-                effort=parse_float(limits_elem.get("effort"), "effort", default=0.0),
-                velocity=parse_float(limits_elem.get("velocity"), "velocity", default=0.0),
-            )
-        elif joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
-            # These types REQUIRE limits
-            # We'll create a minimal limit to avoid crashing the model, but this is legally invalid URDF
-            limits = JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
-
-    # Parse dynamics
-    dynamics = None
-    dynamics_elem = joint_elem.find("dynamics")
-    if dynamics_elem is not None:
-        dynamics = JointDynamics(
-            damping=parse_float(dynamics_elem.get("damping"), "damping", default=0.0),
-            friction=parse_float(dynamics_elem.get("friction"), "friction", default=0.0),
-        )
-
-    # Parse mimic
-    mimic = None
-    mimic_elem = joint_elem.find("mimic")
-    if mimic_elem is not None:
-        mimic = JointMimic(
-            joint=mimic_elem.get("joint", ""),
-            multiplier=parse_float(mimic_elem.get("multiplier"), "multiplier", default=1.0),
-            offset=parse_float(mimic_elem.get("offset"), "offset", default=0.0),
-        )
-
-    # Parse safety controller
-    safety_controller = None
-    safety_elem = joint_elem.find("safety_controller")
-    if safety_elem is not None:
-        safety_controller = JointSafetyController(
-            soft_lower_limit=parse_float(
-                safety_elem.get("soft_lower_limit"), "soft_lower_limit", default=0.0
-            ),
-            soft_upper_limit=parse_float(
-                safety_elem.get("soft_upper_limit"), "soft_upper_limit", default=0.0
-            ),
-            k_position=parse_float(safety_elem.get("k_position"), "k_position", default=0.0),
-            k_velocity=parse_float(safety_elem.get("k_velocity"), "k_velocity", default=0.0),
-        )
-
-    # Parse calibration
-    calibration = None
-    calib_elem = joint_elem.find("calibration")
-    if calib_elem is not None:
-        rising_str = calib_elem.get("rising")
-        falling_str = calib_elem.get("falling")
-
-        calibration = JointCalibration(
-            rising=parse_float(rising_str, "rising") if rising_str is not None else None,
-            falling=parse_float(falling_str, "falling") if falling_str is not None else None,
-        )
-
-    return Joint(
-        name=name,
-        type=joint_type,
-        parent=parent,
-        child=child,
-        origin=origin,
-        axis=axis,
-        limits=limits,
-        dynamics=dynamics,
-        mimic=mimic,
-        safety_controller=safety_controller,
-        calibration=calibration,
-    )
-
-
-def _normalize_hardware_interface(interface: str) -> str:
-    """Normalize hardware interface name to short form.
-
-    Accepts both short form ("position") and full ROS2 form
-    ("hardware_interface/PositionJointInterface") and returns short form.
-
-    Args:
-        interface: Hardware interface string.
-
-    Returns:
-        Normalized short form (e.g., "position", "velocity", "effort").
-    """
-    # Mapping from full ROS2 interface names to short form
-    full_to_short = {
-        "hardware_interface/positionjointinterface": "position",
-        "hardware_interface/velocityjointinterface": "velocity",
-        "hardware_interface/effortjointinterface": "effort",
-    }
-
-    # Try case-insensitive match for full form
-    normalized = full_to_short.get(interface.lower())
-    if normalized:
-        return normalized
-
-    # Already in short form or custom interface - return as-is
-    return interface
-
-
-def parse_transmission(trans_elem: ET.Element) -> Transmission | None:
-    """Parse transmission element.
-
-    Args:
-        trans_elem: <transmission> XML element.
-
-    Returns:
-        The parsed Transmission model.
-
-    Raises:
-        RobotModelError: If transmission XML is malformed.
-    """
-    name = trans_elem.get("name", "")
-    trans_type = trans_elem.findtext("type", "")
-
-    # Parse joints
-    # Cast to ensure mypy knows these are specifically TransmissionJoints, not Unions
-    joints = [
-        cast(TransmissionJoint, j)
-        for j in (
-            _parse_transmission_component(joint_elem, TransmissionJoint)
-            for joint_elem in trans_elem.findall("joint")
-        )
-        if j is not None
-    ]
-
-    # Parse actuators
-    # Cast to ensure mypy knows these are specifically TransmissionActuators, not Unions
-    actuators = [
-        cast(TransmissionActuator, a)
-        for a in (
-            _parse_transmission_component(actuator_elem, TransmissionActuator)
-            for actuator_elem in trans_elem.findall("actuator")
-        )
-        if a is not None
-    ]
-
-    try:
-        return Transmission(
-            name=name,
-            type=trans_type,
-            joints=joints,
-            actuators=actuators,
-        )
-    except RobotModelError as e:
-        logger.warning(f"Invalid transmission '{name}' ignored: {e}")
-        return None
-
-
-def _parse_transmission_component(
-    elem: ET.Element, cls: type[TransmissionJoint] | type[TransmissionActuator]
-) -> TransmissionJoint | TransmissionActuator | None:
-    """Helper to parse common transmission components (joints/actuators)."""
-    name = elem.get("name", "")
-
-    # Parse hardware interfaces
-    interfaces = []
-    for iface_elem in elem.findall("hardwareInterface"):
-        raw_interface = iface_elem.text or "position"
-        interfaces.append(_normalize_hardware_interface(raw_interface))
-
-    if not interfaces:
-        interfaces = ["position"]  # Default
-
-    # Parse mechanical reduction (optional)
-    reduction = 1.0
-    reduction_elem = elem.find("mechanicalReduction")
-    if reduction_elem is not None and reduction_elem.text:
-        reduction = parse_float(reduction_elem.text, "mechanicalReduction", default=1.0)
-
-    # Parse offset (optional)
-    offset = 0.0
-    offset_elem = elem.find("offset")
-    if offset_elem is not None and offset_elem.text:
-        offset = parse_float(offset_elem.text, "offset", default=0.0)
-
-    try:
-        return cls(
-            name=name,
-            hardware_interfaces=interfaces,
-            mechanical_reduction=reduction,
-            offset=offset,
-        )
-    except RobotModelError as e:
-        logger.warning(f"Invalid transmission component '{name}' ignored: {e}")
-        return None
-
-
-def parse_ros2_control(rc_elem: ET.Element) -> Ros2Control:
-    """Parse ros2_control element.
-
-    Args:
-        rc_elem: <ros2_control> XML element.
-
-    Returns:
-        The parsed Ros2Control model.
-
-    Raises:
-        RobotModelError: If ros2_control XML is malformed.
-    """
-    name = rc_elem.get("name", "")
-    rc_type = rc_elem.get("type", "system")
-
-    # Parse hardware plugin
-    hw_elem = rc_elem.find("hardware")
-    plugin_elem = hw_elem.find("plugin") if hw_elem is not None else None
-    hardware_plugin = (
-        plugin_elem.text.strip() if plugin_elem is not None and plugin_elem.text else ""
-    )
-
-    # Parse parameters (optional)
-    parameters: dict[str, str] = {}
-
-    # Parse hardware-level parameters
-    if hw_elem is not None:
-        for param_elem in hw_elem.findall("param"):
-            p_name = param_elem.get("name")
-            if p_name and param_elem.text:
-                parameters[p_name] = param_elem.text.strip()
-
-    # Parse joints
-    joints: list[Ros2ControlJoint] = []
-    for joint_elem in rc_elem.findall("joint"):
-        joint_name = joint_elem.get("name", "")
-
-        # Parse command interfaces
-        command_interfaces = []
-        for cmd_elem in joint_elem.findall("command_interface"):
-            iface_name = cmd_elem.get("name", "position")
-            command_interfaces.append(_normalize_hardware_interface(iface_name))
-
-        # Parse state interfaces
-        state_interfaces = []
-        for state_elem in joint_elem.findall("state_interface"):
-            iface_name = state_elem.get("name", "position")
-            state_interfaces.append(_normalize_hardware_interface(iface_name))
-
-        # Parse joint-level parameters
-        joint_params = {}
-        for param_elem in joint_elem.findall("param"):
-            p_name = param_elem.get("name")
-            if p_name and param_elem.text:
-                joint_params[p_name] = param_elem.text.strip()
-
-        # Only add joint if it has at least one command OR state interface
-        if command_interfaces or state_interfaces:
-            joints.append(
-                Ros2ControlJoint(
-                    name=joint_name,
-                    command_interfaces=command_interfaces,
-                    state_interfaces=state_interfaces,
-                    parameters=joint_params,
-                )
-            )
-
-    # Parse remaining top-level parameters
-    for child in rc_elem:
-        if child.tag not in ("hardware", "joint") and child.text:
-            parameters[child.tag] = child.text.strip()
-
-    return Ros2Control(
-        name=name,
-        type=rc_type,
-        hardware_plugin=hardware_plugin,
-        joints=joints,
-        parameters=parameters,
-    )
-
-
-def parse_sensor_noise(noise_elem: ET.Element | None) -> SensorNoise | None:
-    """Parse sensor noise element.
-
-    Args:
-        noise_elem: <noise> XML element or element containing noise sub-elements.
-
-    Returns:
-        The parsed SensorNoise model or None.
-    """
-    if noise_elem is None:
-        return None
-
-    # Check if we have a <noise> child or if this IS the noise element
-    actual_noise_elem = noise_elem.find("noise") if noise_elem.tag != "noise" else noise_elem
-
-    if actual_noise_elem is None:
-        return None
-
-    noise_type = actual_noise_elem.findtext("type", "gaussian")
-    mean = parse_float(actual_noise_elem.findtext("mean", "0.0"), "noise mean", default=0.0)
-    stddev = parse_float(actual_noise_elem.findtext("stddev", "0.0"), "noise stddev", default=0.0)
-
-    return SensorNoise(type=noise_type, mean=mean, stddev=stddev)
-
-
-def parse_sensor_from_gazebo(gazebo_elem: ET.Element) -> Sensor | None:
-    """Parse sensor from Gazebo element.
-
-    Args:
-        gazebo_elem: <gazebo reference="link"> element containing <sensor>.
-
-    Returns:
-        The parsed Sensor model or None if no sensor is found.
-    """
-    # Get reference link
-    link_name = gazebo_elem.get("reference", "")
-    if not link_name:
-        return None
-
-    # Find sensor element
-    sensor_elem = gazebo_elem.find("sensor")
-    if sensor_elem is None:
-        return None
-
-    sensor_name = sensor_elem.get("name", "")
-    sensor_type_str = sensor_elem.get("type", "camera")
-
-    # Map Gazebo sensor type to SensorType enum
-    type_map = {
-        "camera": SensorType.CAMERA,
-        "depth": SensorType.DEPTH_CAMERA,
-        "depth_camera": SensorType.DEPTH_CAMERA,  # Standard Gazebo depth camera
-        "multicamera": SensorType.CAMERA,
-        "ray": SensorType.LIDAR,
-        "lidar": SensorType.LIDAR,  # Modern Gazebo uses "lidar" instead of "ray"
-        "gpu_ray": SensorType.LIDAR,  # Normalize GPU lidar to internal LIDAR type
-        "gpu_lidar": SensorType.LIDAR,  # Normalize GPU lidar to internal LIDAR type
-        "imu": SensorType.IMU,
-        "gps": SensorType.GPS,
-        "navsat": SensorType.GPS,  # Gazebo Sim uses navsat for GPS
-        "contact": SensorType.CONTACT,
-        "force_torque": SensorType.FORCE_TORQUE,
-    }
-    sensor_type = type_map.get(sensor_type_str.lower(), SensorType.CAMERA)
-
-    # Parse update rate
-    update_rate = parse_float(
-        sensor_elem.findtext("update_rate", "30.0"), "update_rate", default=30.0
-    )
-
-    # Parse origin from pose element (Gazebo uses <pose> instead of <origin>)
-    origin = Transform.identity()
-    pose_elem = sensor_elem.find("pose")
-    if pose_elem is not None and pose_elem.text:
-        parts = pose_elem.text.strip().split()
-        if len(parts) >= 6:
-            try:
-                xyz = parse_vector3(" ".join(parts[0:3]))
-                rpy = parse_vector3(" ".join(parts[3:6]))
-                origin = Transform(xyz=xyz, rpy=rpy)
-            except RobotModelError as e:
-                logger.warning(f"Invalid sensor pose in Gazebo element: {e}")
-
-    # Parse sensor-specific info
-    camera_info = None
-    lidar_info = None
-    imu_info = None
-    gps_info = None
-    contact_info = None
-    force_torque_info = None
-
-    # Parse camera
-    if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA):
-        camera_elem = sensor_elem.find("camera")
-        if camera_elem is not None:
-            horizontal_fov = parse_float(
-                camera_elem.findtext("horizontal_fov", "1.047"), "horizontal_fov", default=1.047
-            )
-
-            image_elem = camera_elem.find("image")
-            width = 640
-            height = 480
-            format_str = "R8G8B8"
-            if image_elem is not None:
-                width = parse_int(image_elem.findtext("width", "640"), "image width", default=640)
-                height = parse_int(
-                    image_elem.findtext("height", "480"), "image height", default=480
-                )
-                format_str = image_elem.findtext("format", "R8G8B8")
-
-            clip_elem = camera_elem.find("clip")
-            near_clip = 0.1
-            far_clip = 100.0
-            if clip_elem is not None:
-                near_clip = parse_float(clip_elem.findtext("near", "0.1"), "near_clip", default=0.1)
-                far_clip = parse_float(
-                    clip_elem.findtext("far", "100.0"), "far_clip", default=100.0
-                )
-
-            # Parse noise
-            noise = parse_sensor_noise(camera_elem)
-
-            camera_info = CameraInfo(
-                horizontal_fov=horizontal_fov,
-                width=width,
-                height=height,
-                format=format_str,
-                near_clip=near_clip,
-                far_clip=far_clip,
-                noise=noise,
-            )
-        else:
-            # Create default camera info if <camera> element is missing but type is camera
-            camera_info = CameraInfo()
-
-    # Parse LIDAR (ray sensor)
-    elif sensor_type == SensorType.LIDAR:
-        ray_elem = sensor_elem.find("ray")
-        if ray_elem is not None:
-            scan_elem = ray_elem.find("scan")
-            horizontal_elem = scan_elem.find("horizontal") if scan_elem is not None else None
-
-            horizontal_samples = 640
-            horizontal_min_angle = -1.570796
-            horizontal_max_angle = 1.570796
-            vertical_samples = 1
-
-            if horizontal_elem is not None:
-                horizontal_samples = parse_int(
-                    horizontal_elem.findtext("samples", "640"), "horizontal_samples", default=640
-                )
-                horizontal_min_angle = parse_float(
-                    horizontal_elem.findtext("min_angle", "-1.570796"),
-                    "horizontal_min_angle",
-                    default=-1.570796,
-                )
-                horizontal_max_angle = parse_float(
-                    horizontal_elem.findtext("max_angle", "1.570796"),
-                    "horizontal_max_angle",
-                    default=1.570796,
-                )
-
-            range_elem = ray_elem.find("range")
-            range_min = 0.1
-            range_max = 10.0
-            if range_elem is not None:
-                range_min = parse_float(range_elem.findtext("min", "0.1"), "range_min", default=0.1)
-                range_max = parse_float(
-                    range_elem.findtext("max", "10.0"), "range_max", default=10.0
-                )
-
-            # Parse noise
-            noise = parse_sensor_noise(ray_elem)
-
-            lidar_info = LidarInfo(
-                horizontal_samples=horizontal_samples,
-                horizontal_min_angle=horizontal_min_angle,
-                horizontal_max_angle=horizontal_max_angle,
-                vertical_samples=vertical_samples,
-                range_min=range_min,
-                range_max=range_max,
-                noise=noise,
-            )
-        else:
-            # Create default LIDAR info if <ray> element is missing but type is LIDAR
-            lidar_info = LidarInfo()
-
-    # Parse GPS
-    elif sensor_type == SensorType.GPS:
-        gps_elem = sensor_elem.find("gps")
-        if gps_elem is not None:
-            # Helper to parse specific noise path
-            def _parse_gps_noise(
-                parent: ET.Element, category: str, axis: str
-            ) -> SensorNoise | None:
-                cat_elem = parent.find(category)
-                if cat_elem is not None:
-                    axis_elem = cat_elem.find(axis)
-                    if axis_elem is not None:
-                        return parse_sensor_noise(axis_elem)
-                return None
-
-            pos_horiz = _parse_gps_noise(gps_elem, "position_sensing", "horizontal")
-            pos_vert = _parse_gps_noise(gps_elem, "position_sensing", "vertical")
-            vel_horiz = _parse_gps_noise(gps_elem, "velocity_sensing", "horizontal")
-            vel_vert = _parse_gps_noise(gps_elem, "velocity_sensing", "vertical")
-
-            gps_info = GPSInfo(
-                position_sensing_horizontal_noise=pos_horiz,
-                position_sensing_vertical_noise=pos_vert,
-                velocity_sensing_horizontal_noise=vel_horiz,
-                velocity_sensing_vertical_noise=vel_vert,
-            )
-        else:
-            # Create default GPS info if <gps> element is missing but type is GPS
-            gps_info = GPSInfo()
-
-    # Parse IMU
-    elif sensor_type == SensorType.IMU:
-        imu_elem = sensor_elem.find("imu")
-        if imu_elem is not None:
-            # Parse angular velocity noise
-            ang_vel_noise = None
-            ang_vel_elem = imu_elem.find("angular_velocity")
-            if ang_vel_elem is not None:
-                ang_vel_noise = parse_sensor_noise(ang_vel_elem.find("x"))
-
-            # Parse linear acceleration noise
-            lin_acc_noise = None
-            lin_acc_elem = imu_elem.find("linear_acceleration")
-            if lin_acc_elem is not None:
-                lin_acc_noise = parse_sensor_noise(lin_acc_elem.find("x"))
-
-            imu_info = IMUInfo(
-                angular_velocity_noise=ang_vel_noise,
-                linear_acceleration_noise=lin_acc_noise,
-            )
-        else:
-            # Create default IMU info if <imu> element is missing but type is IMU
-            imu_info = IMUInfo()
-
-    # Parse Contact
-    elif sensor_type == SensorType.CONTACT:
-        contact_elem = sensor_elem.find("contact")
-        if contact_elem is not None:
-            # Parse collision (required)
-            collision = contact_elem.findtext("collision")
-            if not collision:
-                raise RobotModelError(
-                    f"Contact sensor '{sensor_name}' missing required <collision> element"
-                )
-
-            # Parse noise
-            noise = parse_sensor_noise(contact_elem)
-            contact_info = ContactInfo(collision=collision, noise=noise)
-        else:
-            raise RobotModelError(
-                f"Contact sensor '{sensor_name}' missing required <contact> element"
-            )
-
-    # Parse Force/Torque
-    elif sensor_type == SensorType.FORCE_TORQUE:
-        ft_elem = sensor_elem.find("force_torque")
-        frame = "child"
-        measure_direction = "child_to_parent"
-        noise = None
-
-        if ft_elem is not None:
-            frame = ft_elem.findtext("frame", "child")
-            measure_direction = ft_elem.findtext("measure_direction", "child_to_parent")
-            noise = parse_sensor_noise(ft_elem)
-
-        force_torque_info = ForceTorqueInfo(
-            frame=frame,
-            measure_direction=measure_direction,
-            noise=noise,
-        )
-
-    # Parse plugin
-    plugin = None
-    plugin_elem = sensor_elem.find("plugin")
-    if plugin_elem is not None:
-        plugin = parse_gazebo_plugin(plugin_elem)
-
-    # Get topic from sensor element or default
-    topic = sensor_elem.findtext("topic")
-    if not topic:
-        topic = f"/{sensor_name}"
-
-    return Sensor(
-        name=sensor_name,
-        type=sensor_type,
-        link_name=link_name,
-        origin=origin,
-        update_rate=update_rate,
-        camera_info=camera_info,
-        lidar_info=lidar_info,
-        imu_info=imu_info,
-        gps_info=gps_info,
-        contact_info=contact_info,
-        force_torque_info=force_torque_info,
-        plugin=plugin,
-        topic=topic,
-    )
-
-
-def parse_gazebo_plugin(plugin_elem: ET.Element) -> GazeboPlugin:
-    """Parse Gazebo plugin element.
-
-    Args:
-        plugin_elem: <plugin> XML element.
-
-    Returns:
-        The parsed GazeboPlugin model.
-    """
-    name = plugin_elem.get("name", "")
-    filename = plugin_elem.get("filename", "")
-
-    # Parse all sub-elements as parameters (for simple cases)
-    parameters: dict[str, str] = {}
-    for child in plugin_elem:
-        if child.text and not len(child):  # Only if no nested children
-            parameters[child.tag] = child.text.strip()
-
-    # Store raw XML content for round-trip fidelity (preserves nested elements)
-    raw_xml = None
-    if len(plugin_elem):  # If plugin has sub-elements
-        raw_xml = "".join(ET.tostring(child, encoding="unicode") for child in plugin_elem)
-
-    return GazeboPlugin(name=name, filename=filename, parameters=parameters, raw_xml=raw_xml)
-
-
-def parse_gazebo_element(gazebo_elem: ET.Element) -> GazeboElement:
-    """Parse Gazebo extension element.
-
-    Args:
-        gazebo_elem: <gazebo> XML element.
-
-    Returns:
-        The parsed GazeboElement model.
-    """
-    reference = gazebo_elem.get("reference", None)
-
-    # Parse properties as dict
-    properties: dict[str, str] = {}
-
-    # Parse plugins
-    plugins: list[GazeboPlugin] = []
-    for plugin_elem in gazebo_elem.findall("plugin"):
-        plugins.append(parse_gazebo_plugin(plugin_elem))
-
-    # Parse common properties
-    material = gazebo_elem.findtext("material")
-
-    # Parse boolean properties
-    self_collide = parse_optional_bool(gazebo_elem, "selfCollide")
-    static = parse_optional_bool(gazebo_elem, "static")
-    gravity = parse_optional_bool(gazebo_elem, "gravity", "true")
-    provide_feedback = parse_optional_bool(gazebo_elem, "provideFeedback")
-    implicit_spring_damper = parse_optional_bool(gazebo_elem, "implicitSpringDamper")
-
-    # Parse numeric properties
-    mu1 = parse_optional_float(gazebo_elem, "mu1")
-    mu2 = parse_optional_float(gazebo_elem, "mu2")
-    kp = parse_optional_float(gazebo_elem, "kp")
-    kd = parse_optional_float(gazebo_elem, "kd")
-    stop_cfm = parse_optional_float(gazebo_elem, "stopCfm")
-    stop_erp = parse_optional_float(gazebo_elem, "stopErp")
-
-    # Store any other elements as properties
-    for child in gazebo_elem:
-        if (
-            child.tag
-            not in [
-                "plugin",
-                "sensor",
-                "material",
-                "selfCollide",
-                "static",
-                "gravity",
-                "provideFeedback",
-                "implicitSpringDamper",
-                "mu1",
-                "mu2",
-                "kp",
-                "kd",
-                "stopCfm",
-                "stopErp",
-            ]
-            and child.text
-        ):
-            properties[child.tag] = child.text.strip()
-
-    return GazeboElement(
-        reference=reference,
-        properties=properties,
-        plugins=plugins,
-        material=material,
-        self_collide=self_collide,
-        static=static,
-        gravity=gravity,
-        stop_cfm=stop_cfm,
-        stop_erp=stop_erp,
-        provide_feedback=provide_feedback,
-        implicit_spring_damper=implicit_spring_damper,
-        mu1=mu1,
-        mu2=mu2,
-        kp=kp,
-        kd=kd,
-    )
-
-
-def _detect_xacro_file(root: ET.Element, filepath: Path | None = None) -> None:
-    """Detect if file is XACRO and raise helpful error.
-
-    This function is called by parse_urdf() to prevent attempting to parse
-    raw XACRO files. XACRO files should be handled by the XACRO parser.
-
-    Args:
-        root: The root XML element of the file.
-        filepath: Optional path to the file for better error messages.
-
-    Raises:
-        XacroDetectedError: If XACRO features are detected.
-    """
-    # Check for .xacro extension
-    is_xacro_extension = False
-    has_xacro_namespace = False
-
-    if filepath:
-        is_xacro_extension = filepath.suffix.lower() in [".xacro", ".urdf.xacro"]
-
-        # Check file content for xmlns:xacro (ElementTree may not preserve it)
-        try:
-            content = filepath.read_text(encoding="utf-8")
-            has_xacro_namespace = "xmlns:xacro" in content
-        except (OSError, UnicodeDecodeError):
-            # If we can't read the file, assume no XACRO namespace
-            pass
-
-    # Check for xacro elements in root
-    xacro_elements = []
-    for child in root:
-        tag = child.tag
-        # Handle both namespaced and non-namespaced tags
-        if "xacro:" in tag or (isinstance(tag, str) and tag.startswith("{") and "xacro" in tag):
-            element_name = tag.split("}")[-1] if "}" in tag else tag.split("xacro:")[-1]
-            xacro_elements.append(element_name)
-
-    # Check for xacro substitutions in attributes
-    has_substitutions = False
-    for elem in root.iter():
-        for attr_value in elem.attrib.values():
-            if isinstance(attr_value, str) and ("${" in attr_value or "$(" in attr_value):
-                has_substitutions = True
-                break
-        if has_substitutions:
-            break
-
-    # Raise error if XACRO features detected
-    if is_xacro_extension or has_xacro_namespace or xacro_elements or has_substitutions:
-        filename = filepath.name if filepath else "URDF String"
-        error_msg = (
-            f"XACRO file detected: {filename}\n\n"
-            "This parser handles URDF files only. For XACRO files, use the 'Import Robot' "
-            "operator in Blender which automatically resolves XACRO natively.\n\n"
-            "If using the core library programmatically, use the XACROParser instead:\n"
-            "   from linkforge_core.parsers import XACROParser\n"
-            "   parser = XACROParser()\n"
-            "   robot = parser.parse(filepath)\n"
-        )
-
-        if xacro_elements:
-            error_msg += f"\n\nDetected XACRO features: {', '.join(set(xacro_elements))}"
-
-        raise XacroDetectedError(error_msg)
-
-
-class URDFParser(RobotParser):
+class URDFParser(RobotXMLParser):
     """Refined URDF Parser using a class-based interface."""
 
     def __init__(
@@ -1189,9 +88,623 @@ class URDFParser(RobotParser):
             sandbox_root: Optional root directory for security sandbox
             resource_resolver: Optional resolver for URIs
         """
-        self.max_file_size = max_file_size
-        self.sandbox_root = sandbox_root
-        self.resource_resolver = resource_resolver
+        super().__init__(
+            max_file_size=max_file_size,
+            sandbox_root=sandbox_root,
+            resource_resolver=resource_resolver,
+        )
+
+    def _parse_link(
+        self,
+        link_elem: ET.Element,
+        materials: dict[str, Material],
+        urdf_directory: Path | None = None,
+        sandbox_root: Path | None = None,
+    ) -> Link:
+        """Parse link element with support for multiple visual/collision elements."""
+        name = link_elem.get("name", "unnamed_link")
+
+        visuals: list[Visual] = []
+        for visual_elem in link_elem.findall("visual"):
+            origin = self._parse_origin_element(visual_elem.find("origin"))
+            geom_elem = visual_elem.find("geometry")
+            geometry = (
+                self._parse_geometry_element(geom_elem, urdf_directory)
+                if geom_elem is not None
+                else None
+            )
+            material = self._parse_material_element(visual_elem.find("material"), materials)
+            visual_name = visual_elem.get("name")
+
+            if geometry:
+                visuals.append(
+                    Visual(geometry=geometry, origin=origin, material=material, name=visual_name)
+                )
+
+        collisions: list[Collision] = []
+        for collision_elem in link_elem.findall("collision"):
+            origin = self._parse_origin_element(collision_elem.find("origin"))
+            geom_elem = collision_elem.find("geometry")
+            geometry = (
+                self._parse_geometry_element(geom_elem, urdf_directory)
+                if geom_elem is not None
+                else None
+            )
+            collision_name = collision_elem.get("name")
+
+            if geometry:
+                collisions.append(Collision(geometry=geometry, origin=origin, name=collision_name))
+
+        inertial = self._parse_inertial_element(link_elem.find("inertial"))
+        return Link(name=name, visuals=visuals, collisions=collisions, inertial=inertial)
+
+    def _parse_joint(self, joint_elem: ET.Element) -> Joint:
+        """Parse joint element into a Joint object."""
+        name = joint_elem.get("name", "unnamed_joint")
+        joint_type_str = joint_elem.get("type", "fixed")
+
+        type_map = {
+            "revolute": JointType.REVOLUTE,
+            "continuous": JointType.CONTINUOUS,
+            "prismatic": JointType.PRISMATIC,
+            "fixed": JointType.FIXED,
+            "floating": JointType.FLOATING,
+            "planar": JointType.PLANAR,
+        }
+        joint_type = type_map.get(joint_type_str.lower(), JointType.FIXED)
+
+        parent_elem = joint_elem.find("parent")
+        child_elem = joint_elem.find("child")
+        parent = parent_elem.get("link", "") if parent_elem is not None else ""
+        child = child_elem.get("link", "") if child_elem is not None else ""
+
+        origin = self._parse_origin_element(joint_elem.find("origin"))
+
+        axis: Vector3 | None = None
+        if joint_type in (
+            JointType.REVOLUTE,
+            JointType.CONTINUOUS,
+            JointType.PRISMATIC,
+            JointType.PLANAR,
+        ):
+            axis_elem = joint_elem.find("axis")
+            if axis_elem is not None:
+                axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
+                # Normalize axis
+                axis_mag = math.sqrt(axis.x**2 + axis.y**2 + axis.z**2)
+                if axis_mag > 1e-10:
+                    axis = Vector3(axis.x / axis_mag, axis.y / axis_mag, axis.z / axis_mag)
+                else:
+                    axis = Vector3(1.0, 0.0, 0.0)
+            else:
+                axis = Vector3(1.0, 0.0, 0.0)
+
+        limits = None
+        if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS):
+            limits_elem = joint_elem.find("limit")
+            if limits_elem is not None:
+                lower_str = limits_elem.get("lower")
+                upper_str = limits_elem.get("upper")
+                limits = JointLimits(
+                    lower=float(lower_str) if lower_str is not None else None,
+                    upper=float(upper_str) if upper_str is not None else None,
+                    effort=parse_float(limits_elem.get("effort"), "effort", default=0.0),
+                    velocity=parse_float(limits_elem.get("velocity"), "velocity", default=0.0),
+                )
+            elif joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
+                limits = JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
+
+        dynamics = None
+        dynamics_elem = joint_elem.find("dynamics")
+        if dynamics_elem is not None:
+            dynamics = JointDynamics(
+                damping=parse_float(dynamics_elem.get("damping"), "damping", default=0.0),
+                friction=parse_float(dynamics_elem.get("friction"), "friction", default=0.0),
+            )
+
+        mimic = None
+        mimic_elem = joint_elem.find("mimic")
+        if mimic_elem is not None:
+            mimic = JointMimic(
+                joint=mimic_elem.get("joint", ""),
+                multiplier=parse_float(mimic_elem.get("multiplier"), "multiplier", default=1.0),
+                offset=parse_float(mimic_elem.get("offset"), "offset", default=0.0),
+            )
+
+        safety_controller = None
+        safety_elem = joint_elem.find("safety_controller")
+        if safety_elem is not None:
+            safety_controller = JointSafetyController(
+                soft_lower_limit=parse_float(safety_elem.get("soft_lower_limit"), default=0.0),
+                soft_upper_limit=parse_float(safety_elem.get("soft_upper_limit"), default=0.0),
+                k_position=parse_float(safety_elem.get("k_position"), "k_position", default=0.0),
+                k_velocity=parse_float(safety_elem.get("k_velocity"), "k_velocity", default=0.0),
+            )
+
+        calibration = None
+        calib_elem = joint_elem.find("calibration")
+        if calib_elem is not None:
+            rising_str = calib_elem.get("rising")
+            falling_str = calib_elem.get("falling")
+            calibration = JointCalibration(
+                rising=parse_float(rising_str, "rising") if rising_str is not None else None,
+                falling=parse_float(falling_str, "falling") if falling_str is not None else None,
+            )
+
+        return Joint(
+            name=name,
+            type=joint_type,
+            parent=parent,
+            child=child,
+            origin=origin,
+            axis=axis,
+            limits=limits,
+            dynamics=dynamics,
+            mimic=mimic,
+            safety_controller=safety_controller,
+            calibration=calibration,
+        )
+
+    def _normalize_hardware_interface(self, interface: str) -> str:
+        """Normalize hardware interface string (e.g., 'PositionJointInterface' -> 'position')."""
+        clean = interface.lower().replace("hardware_interface/", "").replace("jointinterface", "")
+        return clean.replace("interface", "")
+
+    def _parse_ros2_control(self, rc_elem: ET.Element) -> Ros2Control | None:
+        """Parse ros2_control element."""
+        name = rc_elem.get("name", "")
+        rc_type = rc_elem.get("type", "system")
+
+        hw_elem = rc_elem.find("hardware")
+        plugin_elem = hw_elem.find("plugin") if hw_elem is not None else None
+        hardware_plugin = (
+            plugin_elem.text.strip() if plugin_elem is not None and plugin_elem.text else ""
+        )
+
+        parameters: dict[str, str] = {}
+        if hw_elem is not None:
+            for param_elem in hw_elem.findall("param"):
+                p_name = param_elem.get("name")
+                if p_name and param_elem.text:
+                    parameters[p_name] = param_elem.text.strip()
+
+        joints: list[Ros2ControlJoint] = []
+        for joint_elem in rc_elem.findall("joint"):
+            joint_name = joint_elem.get("name", "")
+            command_interfaces = [
+                self._normalize_hardware_interface(cmd.get("name", "position"))
+                for cmd in joint_elem.findall("command_interface")
+            ]
+            state_interfaces = [
+                self._normalize_hardware_interface(state.get("name", "position"))
+                for state in joint_elem.findall("state_interface")
+            ]
+            joint_params: dict[str, str] = {
+                str(param.get("name")): param.text.strip()
+                for param in joint_elem.findall("param")
+                if param.get("name") and param.text
+            }
+
+            if command_interfaces or state_interfaces:
+                joints.append(
+                    Ros2ControlJoint(
+                        name=joint_name,
+                        command_interfaces=command_interfaces,
+                        state_interfaces=state_interfaces,
+                        parameters=joint_params,
+                    )
+                )
+
+        for child in rc_elem:
+            if child.tag not in ("hardware", "joint") and child.text:
+                parameters[child.tag] = child.text.strip()
+
+        try:
+            return Ros2Control(
+                name=name,
+                type=rc_type,
+                hardware_plugin=hardware_plugin,
+                joints=joints,
+                parameters=parameters,
+            )
+        except RobotModelError as e:
+            logger.warning(f"Invalid ros2_control '{name}' ignored: {e}")
+            return None
+
+    def _parse_transmission_component(
+        self, elem: ET.Element, tag: str
+    ) -> TransmissionJoint | TransmissionActuator | None:
+        """Parse joint or actuator within a transmission."""
+        name = elem.get("name", "")
+        if not name:
+            return None
+
+        hw_interfaces = [
+            self._normalize_hardware_interface(hw.text.strip())
+            for hw in (elem.findall("hardwareInterface") + elem.findall("hardware_interface"))
+            if hw.text
+        ]
+
+        reduction = parse_float(
+            elem.findtext("mechanicalReduction") or elem.findtext("mechanical_reduction"),
+            default=1.0,
+        )
+        offset = parse_float(elem.findtext("offset"), default=0.0)
+
+        if tag == "joint":
+            return TransmissionJoint(
+                name=name,
+                hardware_interfaces=hw_interfaces or ["position"],
+                mechanical_reduction=reduction,
+                offset=offset,
+            )
+        else:
+            return TransmissionActuator(
+                name=name,
+                hardware_interfaces=hw_interfaces or ["position"],
+                mechanical_reduction=reduction,
+                offset=offset,
+            )
+
+    def _parse_transmission(self, trans_elem: ET.Element) -> Transmission | None:
+        """Parse transmission element."""
+        name = trans_elem.get("name", "unnamed_transmission")
+        trans_type = trans_elem.findtext("type", "")
+
+        joints: list[TransmissionJoint] = []
+        for j_elem in trans_elem.findall("joint"):
+            comp = self._parse_transmission_component(j_elem, "joint")
+            if isinstance(comp, TransmissionJoint):
+                joints.append(comp)
+
+        actuators: list[TransmissionActuator] = []
+        for a_elem in trans_elem.findall("actuator"):
+            comp = self._parse_transmission_component(a_elem, "actuator")
+            if isinstance(comp, TransmissionActuator):
+                actuators.append(comp)
+
+        try:
+            return Transmission(name=name, type=trans_type, joints=joints, actuators=actuators)
+        except RobotModelError as e:
+            logger.warning(f"Invalid transmission '{name}' ignored: {e}")
+            return None
+
+    def _parse_sensor_noise(self, noise_elem: ET.Element | None) -> SensorNoise | None:
+        """Parse sensor noise element."""
+        if noise_elem is None:
+            return None
+        actual_noise_elem = noise_elem.find("noise") if noise_elem.tag != "noise" else noise_elem
+        if actual_noise_elem is None:
+            return None
+        return SensorNoise(
+            type=actual_noise_elem.findtext("type", "gaussian"),
+            mean=parse_float(actual_noise_elem.findtext("mean", "0.0"), default=0.0),
+            stddev=parse_float(actual_noise_elem.findtext("stddev", "0.0"), default=0.0),
+        )
+
+    def _parse_sensor_from_gazebo(self, gazebo_elem: ET.Element) -> Sensor | None:
+        """Parse sensor from Gazebo element."""
+        link_name = gazebo_elem.get("reference", "")
+        sensor_elem = gazebo_elem.find("sensor")
+        if not link_name or sensor_elem is None:
+            return None
+
+        sensor_name = sensor_elem.get("name", "")
+        sensor_type_str = sensor_elem.get("type", "camera")
+
+        type_map = {
+            "camera": SensorType.CAMERA,
+            "depth": SensorType.DEPTH_CAMERA,
+            "depth_camera": SensorType.DEPTH_CAMERA,
+            "multicamera": SensorType.CAMERA,
+            "ray": SensorType.LIDAR,
+            "lidar": SensorType.LIDAR,
+            "gpu_ray": SensorType.LIDAR,
+            "gpu_lidar": SensorType.LIDAR,
+            "imu": SensorType.IMU,
+            "gps": SensorType.GPS,
+            "navsat": SensorType.GPS,
+            "contact": SensorType.CONTACT,
+            "force_torque": SensorType.FORCE_TORQUE,
+        }
+        sensor_type = type_map.get(sensor_type_str.lower(), SensorType.CAMERA)
+        update_rate = parse_float(sensor_elem.findtext("update_rate", "30.0"), default=30.0)
+
+        origin = Transform.identity()
+        pose_elem = sensor_elem.find("pose")
+        if pose_elem is not None and pose_elem.text:
+            parts = pose_elem.text.strip().split()
+            if len(parts) >= 6:
+                try:
+                    xyz = parse_vector3(" ".join(parts[0:3]))
+                    rpy = parse_vector3(" ".join(parts[3:6]))
+                    origin = Transform(xyz=xyz, rpy=rpy)
+                except RobotModelError as e:
+                    logger.warning(f"Invalid sensor pose in Gazebo element: {e}")
+
+        camera_info = None
+        lidar_info = None
+        imu_info = None
+        gps_info = None
+        contact_info = None
+        force_torque_info = None
+
+        if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA):
+            camera_elem = sensor_elem.find("camera")
+            if camera_elem is not None:
+                camera_info = CameraInfo(
+                    horizontal_fov=parse_float(
+                        camera_elem.findtext("horizontal_fov"), default=1.047
+                    ),
+                    width=parse_int(camera_elem.findtext("image/width"), default=640),
+                    height=parse_int(camera_elem.findtext("image/height"), default=480),
+                    format=camera_elem.findtext("image/format", "R8G8B8"),
+                    near_clip=parse_float(camera_elem.findtext("clip/near"), default=0.1),
+                    far_clip=parse_float(camera_elem.findtext("clip/far"), default=100.0),
+                    noise=self._parse_sensor_noise(camera_elem),
+                )
+            else:
+                camera_info = CameraInfo()
+
+        elif sensor_type == SensorType.LIDAR:
+            ray_elem = sensor_elem.find("ray")
+            if ray_elem is not None:
+                lidar_info = LidarInfo(
+                    horizontal_samples=parse_int(
+                        ray_elem.findtext("scan/horizontal/samples"), default=640
+                    ),
+                    horizontal_min_angle=parse_float(
+                        ray_elem.findtext("scan/horizontal/min_angle"), default=-1.570796
+                    ),
+                    horizontal_max_angle=parse_float(
+                        ray_elem.findtext("scan/horizontal/max_angle"), default=1.570796
+                    ),
+                    range_min=parse_float(ray_elem.findtext("range/min"), default=0.1),
+                    range_max=parse_float(ray_elem.findtext("range/max"), default=10.0),
+                    noise=self._parse_sensor_noise(ray_elem),
+                )
+            else:
+                lidar_info = LidarInfo()
+
+        elif sensor_type == SensorType.GPS:
+            gps_elem = sensor_elem.find("gps")
+            if gps_elem is not None:
+                gps_info = GPSInfo(
+                    position_sensing_horizontal_noise=self._parse_sensor_noise(
+                        gps_elem.find("position_sensing/horizontal")
+                    ),
+                    position_sensing_vertical_noise=self._parse_sensor_noise(
+                        gps_elem.find("position_sensing/vertical")
+                    ),
+                    velocity_sensing_horizontal_noise=self._parse_sensor_noise(
+                        gps_elem.find("velocity_sensing/horizontal")
+                    ),
+                    velocity_sensing_vertical_noise=self._parse_sensor_noise(
+                        gps_elem.find("velocity_sensing/vertical")
+                    ),
+                )
+            else:
+                gps_info = GPSInfo()
+
+        elif sensor_type == SensorType.IMU:
+            imu_elem = sensor_elem.find("imu")
+            if imu_elem is not None:
+                imu_info = IMUInfo(
+                    angular_velocity_noise=self._parse_sensor_noise(
+                        imu_elem.find("angular_velocity/x")
+                    ),
+                    linear_acceleration_noise=self._parse_sensor_noise(
+                        imu_elem.find("linear_acceleration/x")
+                    ),
+                )
+            else:
+                imu_info = IMUInfo()
+
+        elif sensor_type == SensorType.CONTACT:
+            contact_elem = sensor_elem.find("contact")
+            if contact_elem is not None:
+                collision = contact_elem.findtext("collision")
+                if not collision:
+                    raise RobotModelError(f"Contact sensor '{sensor_name}' missing <collision>")
+                contact_info = ContactInfo(
+                    collision=collision, noise=self._parse_sensor_noise(contact_elem)
+                )
+            else:
+                raise RobotModelError(f"Contact sensor '{sensor_name}' missing <contact>")
+
+        elif sensor_type == SensorType.FORCE_TORQUE:
+            ft_elem = sensor_elem.find("force_torque")
+            force_torque_info = ForceTorqueInfo(
+                frame=ft_elem.findtext("frame", "child") if ft_elem is not None else "child",
+                measure_direction=ft_elem.findtext("measure_direction", "child_to_parent")
+                if ft_elem is not None
+                else "child_to_parent",
+                noise=self._parse_sensor_noise(ft_elem),
+            )
+
+        topic = sensor_elem.findtext("topic") or f"/{sensor_name}"
+        return Sensor(
+            name=sensor_name,
+            type=sensor_type,
+            link_name=link_name,
+            origin=origin,
+            update_rate=update_rate,
+            camera_info=camera_info,
+            lidar_info=lidar_info,
+            imu_info=imu_info,
+            gps_info=gps_info,
+            contact_info=contact_info,
+            force_torque_info=force_torque_info,
+            plugin=self._parse_gazebo_plugin(sensor_elem.find("plugin")),
+            topic=topic,
+        )
+
+    def _parse_gazebo_plugin(self, plugin_elem: ET.Element | None) -> GazeboPlugin | None:
+        """Parse Gazebo plugin element."""
+        if plugin_elem is None:
+            return None
+        name = plugin_elem.get("name", "")
+        filename = plugin_elem.get("filename", "")
+        parameters = {
+            child.tag: child.text.strip() for child in plugin_elem if child.text and not len(child)
+        }
+        raw_xml = (
+            "".join(ET.tostring(child, encoding="unicode") for child in plugin_elem)
+            if len(plugin_elem)
+            else None
+        )
+        return GazeboPlugin(name=name, filename=filename, parameters=parameters, raw_xml=raw_xml)
+
+    def _parse_gazebo_element(self, gazebo_elem: ET.Element) -> GazeboElement:
+        """Parse Gazebo extension element."""
+        reference = gazebo_elem.get("reference")
+        plugins = [
+            self._parse_gazebo_plugin(p) for p in gazebo_elem.findall("plugin") if p is not None
+        ]
+
+        # Filter out None values from cast
+        valid_plugins = [p for p in plugins if p is not None]
+
+        properties = {}
+        excluded_tags = [
+            "plugin",
+            "sensor",
+            "material",
+            "selfCollide",
+            "static",
+            "gravity",
+            "provideFeedback",
+            "implicitSpringDamper",
+            "mu1",
+            "mu2",
+            "kp",
+            "kd",
+            "stopCfm",
+            "stopErp",
+        ]
+        for child in gazebo_elem:
+            if child.tag not in excluded_tags and child.text:
+                properties[child.tag] = child.text.strip()
+
+        return GazeboElement(
+            reference=reference,
+            properties=properties,
+            plugins=valid_plugins,
+            material=gazebo_elem.findtext("material"),
+            self_collide=parse_optional_bool(gazebo_elem, "selfCollide"),
+            static=parse_optional_bool(gazebo_elem, "static"),
+            gravity=parse_optional_bool(gazebo_elem, "gravity", "true"),
+            stop_cfm=parse_optional_float(gazebo_elem, "stopCfm"),
+            stop_erp=parse_optional_float(gazebo_elem, "stopErp"),
+            provide_feedback=parse_optional_bool(gazebo_elem, "provideFeedback"),
+            implicit_spring_damper=parse_optional_bool(gazebo_elem, "implicitSpringDamper"),
+            mu1=parse_optional_float(gazebo_elem, "mu1"),
+            mu2=parse_optional_float(gazebo_elem, "mu2"),
+            kp=parse_optional_float(gazebo_elem, "kp"),
+            kd=parse_optional_float(gazebo_elem, "kd"),
+        )
+
+    def _detect_xacro_file(self, root: ET.Element, filepath: Path | None = None) -> None:
+        """Detect if file is XACRO and raise helpful error."""
+        is_xacro = False
+        if filepath:
+            is_xacro = filepath.suffix.lower() in [".xacro", ".urdf.xacro"]
+            if not is_xacro:
+                try:
+                    content = filepath.read_text(encoding="utf-8")
+                    is_xacro = "xmlns:xacro" in content
+                except (OSError, UnicodeDecodeError):
+                    pass
+
+        if not is_xacro:
+            for child in root:
+                if "xacro:" in child.tag or (isinstance(child.tag, str) and "xacro" in child.tag):
+                    is_xacro = True
+                    break
+
+        if not is_xacro:
+            for elem in root.iter():
+                if any("${" in v or "$(" in v for v in elem.attrib.values() if isinstance(v, str)):
+                    is_xacro = True
+                    break
+
+        if is_xacro:
+            filename = filepath.name if filepath else "URDF String"
+            raise XacroDetectedError(
+                f"XACRO file detected: {filename}\nUse the XACROParser or Blender importer."
+            )
+
+    def _parse_from_context(
+        self, context: Any, root: ET.Element, filepath: Path | None = None
+    ) -> Robot:
+        """Internal processor for iterative XML parsing."""
+        self._detect_xacro_file(root, filepath)
+
+        default_name = filepath.stem if filepath else "unnamed_robot"
+        kwargs: dict[str, Any] = {"name": root.get("name", default_name)}
+        if self.resource_resolver is not None:
+            kwargs["resource_resolver"] = self.resource_resolver
+        robot = Robot(**kwargs)
+        materials: dict[str, Material] = {}
+        depth = 0
+
+        delayed_elements: list[tuple[str, ET.Element]] = []
+
+        for event, elem in context:
+            if event == "start":
+                depth += 1
+                if depth > MAX_XML_DEPTH:
+                    raise RobotParserError(f"XML nesting too deep: {depth}")
+            elif event == "end":
+                if depth == 1:
+                    if elem.tag == "material":
+                        mat = self._parse_material_element(elem, materials)
+                        if mat:
+                            materials[mat.name] = mat
+                            robot.materials[mat.name] = mat
+
+                    elif elem.tag == "link":
+                        try:
+                            link = self._parse_link(
+                                elem, materials, filepath.parent if filepath else Path(".")
+                            )
+                            self._add_link_robust(robot, link)
+                        except (RobotModelError, ValueError, RobotParserError) as e:
+                            logger.warning(f"Skipping invalid link '{elem.get('name')}': {e}")
+
+                    elif elem.tag in ("joint", "transmission", "ros2_control", "gazebo"):
+                        delayed_elements.append((elem.tag, elem))
+                        depth -= 1
+                        continue
+
+                    root.clear()
+                depth -= 1
+
+        for tag, elem in delayed_elements:
+            try:
+                if tag == "joint":
+                    joint = self._parse_joint(elem)
+                    self._add_joint_robust(robot, joint, elem)
+                elif tag == "transmission":
+                    transmission = self._parse_transmission(elem)
+                    if transmission:
+                        robot.transmissions.append(transmission)
+                elif tag == "ros2_control":
+                    ros2_ctrl = self._parse_ros2_control(elem)
+                    if ros2_ctrl:
+                        robot.ros2_controls.append(ros2_ctrl)
+                elif tag == "gazebo":
+                    sensor = self._parse_sensor_from_gazebo(elem)
+                    if sensor:
+                        robot.sensors.append(sensor)
+                    else:
+                        robot.gazebo_elements.append(self._parse_gazebo_element(elem))
+            except (RobotModelError, ValueError, RobotParserError) as e:
+                logger.warning(f"Skipping invalid {tag} '{elem.get('name')}': {e}")
+            finally:
+                elem.clear()
+
+        return robot
 
     def parse(self, filepath: Path, **kwargs: Any) -> Robot:
         """Parse URDF file into a Robot model using iterative parsing.
@@ -1231,308 +744,47 @@ class URDFParser(RobotParser):
         try:
             # We use iterparse to process elements as they are closed
             context = ET.iterparse(str(filepath), events=("start", "end"))
-            event, root = next(context)  # Get the root element (start of <robot>)
+            event, root = next(context)
 
             if root.tag != "robot":
-                raise RobotModelError(f"Root element must be <robot>, found <{root.tag}>")
+                raise RobotParserError(f"Root element must be <robot>, found <{root.tag}>")
 
-            if filepath:
-                _detect_xacro_file(root, filepath)
-
-            # Fallback to filename if robot name is missing
-            default_name = filepath.stem if filepath else "unnamed_robot"
-            kwargs = {"name": root.get("name", default_name)}
-            if self.resource_resolver is not None:
-                kwargs["resource_resolver"] = self.resource_resolver
-            robot = Robot(**kwargs)
-            materials: dict[str, Material] = {}
-            depth = 0
-
-            delayed_elements: list[tuple[str, ET.Element]] = []
-
-            for event, elem in context:
-                if event == "start":
-                    depth += 1
-                    if depth > MAX_XML_DEPTH:
-                        raise RobotParserError(
-                            f"XML nesting too deep: {depth} levels (maximum {MAX_XML_DEPTH}). "
-                            "This may indicate a malicious or corrupted XML file."
-                        )
-                elif event == "end":
-                    if depth == 1:
-                        # Direct children of <robot>
-                        if elem.tag == "material":
-                            mat = parse_material(elem, materials)
-                            if mat:
-                                materials[mat.name] = mat
-
-                        elif elem.tag == "link":
-                            try:
-                                # Use provided sandbox_root or default to filepath.parent
-                                parser_sandbox = kwargs.get("sandbox_root", self.sandbox_root)
-                                link = parse_link(
-                                    elem,
-                                    materials,
-                                    filepath.parent if filepath else Path("."),
-                                    sandbox_root=parser_sandbox,
-                                )
-                                self._add_link_robust(robot, link)
-                            except RobotModelError as e:
-                                logger.warning(
-                                    f"Skipping invalid link '{elem.get('name', 'unnamed')}': {e}"
-                                )
-
-                        elif elem.tag in ("joint", "transmission", "ros2_control", "gazebo"):
-                            # Collect dependent elements to parse after all links are loaded
-                            delayed_elements.append((elem.tag, elem))
-                            # Skip clearing this element so it remains valid for later parsing
-                            depth -= 1
-                            continue
-
-                        # CRITICAL: Clear the element from root to save memory
-                        root.clear()
-
-                    depth -= 1
-
-            # Second pass: Process dependent elements once all links are loaded
-            for tag, elem in delayed_elements:
-                try:
-                    if tag == "joint":
-                        joint = parse_joint(elem)
-                        self._add_joint_robust(robot, joint, elem)
-
-                    elif tag == "transmission":
-                        transmission = parse_transmission(elem)
-                        if transmission is not None:
-                            robot.transmissions.append(transmission)
-
-                    elif tag == "ros2_control":
-                        ros2_control = parse_ros2_control(elem)
-                        robot.ros2_controls.append(ros2_control)
-
-                    elif tag == "gazebo":
-                        sensor = parse_sensor_from_gazebo(elem)
-                        if sensor:
-                            robot.sensors.append(sensor)
-                        else:
-                            gazebo_element = parse_gazebo_element(elem)
-                            robot.gazebo_elements.append(gazebo_element)
-                except RobotModelError as e:
-                    name = elem.get("name", "unnamed")
-                    logger.warning(f"Skipping invalid {tag} '{name}': {e}")
-                finally:
-                    # Clear the element now that we're truly done with it
-                    elem.clear()
-
-            return robot
+            return self._parse_from_context(context, root, filepath)
 
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise
-            raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
+            raise RobotParserError(f"Unexpected error: {e}") from e
 
     def parse_string(
         self,
         urdf_string: str,
         urdf_directory: Path | None = None,
-        default_name: str = "unnamed_robot",
         **kwargs: Any,
     ) -> Robot:
-        """Parse URDF from string.
-
-        Args:
-            urdf_string: The URDF XML content as a string.
-            urdf_directory: Directory to use for relative path resolution.
-            default_name: Name to use if robot name is missing.
-            **kwargs: Additional parsing options.
-
-        Returns:
-            The parsed Robot model.
-        """
-        # Check string size to prevent DoS
+        """Parse URDF from string."""
         string_size = len(urdf_string.encode("utf-8"))
         if string_size > self.max_file_size:
-            raise RobotParserError(
-                f"URDF string too large: {string_size / (1024 * 1024):.1f} MB "
-                f"(maximum {self.max_file_size / (1024 * 1024):.1f} MB)."
-            )
+            raise RobotParserError("URDF string too large")
 
-        # Verify it's not a XACRO file with Xacro tags.
         if "<xacro:" in urdf_string:
-            raise XacroDetectedError(
-                "XACRO file detected: XACRO features found in URDF string. Use the Blender XACRO resolver."
-            )
+            raise XacroDetectedError("XACRO file detected in URDF string.")
 
         try:
-            root = ET.fromstring(urdf_string)
-            _detect_xacro_file(root)
-            parser_sandbox = kwargs.get("sandbox_root", self.sandbox_root)
-            return self._parse_robot(
-                root,
-                filepath=urdf_directory,
-                sandbox_root=parser_sandbox,
-                default_name=default_name,
-            )
+            stream = io.BytesIO(urdf_string.encode("utf-8"))
+            context = ET.iterparse(stream, events=("start", "end"))
+            event, root = next(context)
+
+            if root.tag != "robot":
+                raise RobotParserError(f"Root element must be <robot>, found <{root.tag}>")
+
+            return self._parse_from_context(context, root, urdf_directory)
+
         except ET.ParseError as e:
             raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise
-            raise RobotParserError(f"Unexpected error parsing URDF: {e}") from e
-
-    def _parse_global_materials(self, root: ET.Element) -> dict[str, Material]:
-        """Parse global material definitions from the root element.
-
-        Args:
-            root: The root XML element.
-
-        Returns:
-            A dictionary mapping material names to Material objects.
-        """
-        materials: dict[str, Material] = {}
-        for mat_elem in root.findall("material"):
-            mat = parse_material(mat_elem, materials)
-            if mat:
-                materials[mat.name] = mat
-        return materials
-
-    def _add_link_robust(self, robot: Robot, link: Link) -> None:
-        """Add link to robot, renaming if duplicate exists.
-
-        Args:
-            robot: The Robot model to update.
-            link: The Link object to add.
-        """
-        try:
-            robot.add_link(link)
-        except RobotModelError:
-            # Handle duplicate link names by renaming
-            original_name = link.name
-            counter = 1
-            while True:
-                new_name = f"{original_name}_duplicate_{counter}"
-                if new_name not in robot._link_index:
-                    link = replace(link, name=new_name)
-                    try:
-                        robot.add_link(link)
-                        logger.warning(f"Renamed duplicate link '{original_name}' to '{new_name}'")
-                        break
-                    except RobotModelError:
-                        counter += 1
-                else:
-                    counter += 1
-
-    def _add_joint_robust(self, robot: Robot, joint: Joint, joint_elem: ET.Element) -> None:
-        """Add joint to robot, renaming if duplicate exists and handling broken refs.
-
-        Args:
-            robot: The Robot model to update.
-            joint: The Joint object to add.
-            joint_elem: The XML element containing the joint definition.
-        """
-        try:
-            robot.add_joint(joint)
-        except RobotModelError as e:
-            # Get joint name from element if joint object creation failed
-            joint_name = joint_elem.get("name", "unnamed_joint")
-            if "already exists" in str(e):
-                # Handle duplicate joint name by renaming
-                original_name = joint_name
-                counter = 1
-                while True:
-                    new_name = f"{original_name}_duplicate_{counter}"
-                    if new_name not in robot._joint_index:
-                        joint = replace(joint, name=new_name)
-                        try:
-                            robot.add_joint(joint)
-                            logger.warning(
-                                f"Renamed duplicate joint '{original_name}' to '{new_name}'"
-                            )
-                            break
-                        except RobotModelError as inner_e:
-                            if "not found" in str(inner_e):
-                                # Also handle missing parent/child during rename attempt
-                                logger.warning(
-                                    f"Skipping duplicate joint '{original_name}' (renamed '{new_name}') "
-                                    f"due to broken reference: {inner_e}"
-                                )
-                                break
-                            counter += 1
-                    else:
-                        counter += 1
-            else:
-                # Handle other RobotModelErrors (missing parent/child links)
-                logger.warning(f"Skipping invalid joint '{joint_name}': {e}")
-
-    def _parse_robot(
-        self,
-        root: ET.Element,
-        filepath: Path | None = None,
-        sandbox_root: Path | None = None,
-        default_name: str = "unnamed_robot",
-        **kwargs: Any,
-    ) -> Robot:
-        """Internal iterative parser implementation.
-
-        Args:
-            root: The root XML element of the robot.
-            filepath: Optional path to the file for relative checks.
-            sandbox_root: Optional root for security sandboxing.
-            default_name: Default name if robot tag lacks name attribute.
-            **kwargs: Additional options.
-
-        Returns:
-            The generically parsed Robot model.
-        """
-        # Safety validation
-        validate_xml_depth(root, 0)
-
-        if root.tag != "robot":
-            raise RobotModelError("Root element must be <robot>")
-
-        kwargs = {"name": root.get("name", default_name)}
-        if self.resource_resolver is not None:
-            kwargs["resource_resolver"] = self.resource_resolver
-        robot = Robot(**kwargs)
-        materials = self._parse_global_materials(root)
-
-        # Parse all links first (joints need links to exist)
-        for link_elem in root.findall("link"):
-            link = parse_link(link_elem, materials, filepath, sandbox_root=sandbox_root)
-            self._add_link_robust(robot, link)
-
-        # Parse all joints
-        for joint_elem in root.findall("joint"):
-            try:
-                joint = parse_joint(joint_elem)
-                self._add_joint_robust(robot, joint, joint_elem)
-            except RobotModelError as e:
-                # Handle cases where parse_joint fails before add_joint (e.g. invalid type)
-                joint_name = joint_elem.get("name", "unnamed_joint")
-                logger.warning(f"Skipping invalid joint '{joint_name}': {e}")
-
-        # Parse all transmissions
-        for trans_elem in root.findall("transmission"):
-            transmission = parse_transmission(trans_elem)
-            if transmission is not None:
-                robot.transmissions.append(transmission)
-
-        # Parse ros2_control blocks
-        for rc_elem in root.findall("ros2_control"):
-            ros2_control = parse_ros2_control(rc_elem)
-            robot.ros2_controls.append(ros2_control)
-
-        # Parse all Gazebo elements (including sensors)
-        for gazebo_elem in root.findall("gazebo"):
-            # Try to parse as sensor first
-            sensor = parse_sensor_from_gazebo(gazebo_elem)
-            if sensor:
-                robot.sensors.append(sensor)
-            else:
-                # Parse as regular Gazebo element
-                gazebo_element = parse_gazebo_element(gazebo_elem)
-                robot.gazebo_elements.append(gazebo_element)
-
-        return robot
+            raise RobotParserError(f"Unexpected error: {e}") from e

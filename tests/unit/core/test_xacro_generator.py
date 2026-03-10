@@ -498,7 +498,7 @@ class TestXACROGenerator:
         assert len(groups) == 2
 
     def test_generator_generate_macro_definition_no_joint(self) -> None:
-        """Cover line 534 in xacro_generator.py."""
+        """Cover edge case."""
         gen = XACROGenerator()
         root = ET.Element("robot")
         # Template list with link but None joint
@@ -509,7 +509,7 @@ class TestXACROGenerator:
         assert len(root) == 0
 
     def test_generator_generate_macro_call_no_joint(self) -> None:
-        """Cover line 611 in xacro_generator.py."""
+        """Cover edge case."""
         gen = XACROGenerator()
         root = ET.Element("robot")
         link = Link(name="l")

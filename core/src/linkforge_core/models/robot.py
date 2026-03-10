@@ -17,6 +17,7 @@ from .gazebo import GazeboElement
 from .graph import KinematicGraph
 from .joint import Joint
 from .link import Link
+from .material import Material
 from .ros2_control import Ros2Control
 from .sensor import Sensor
 from .transmission import Transmission
@@ -33,6 +34,7 @@ class Robot:
 
     name: str
     version: str = "1.1"  # LinkForge IR Version
+    materials: dict[str, Material] = field(default_factory=dict)
     sensors: list[Sensor] = field(default_factory=list)
     transmissions: list[Transmission] = field(default_factory=list)
     ros2_controls: list[Ros2Control] = field(default_factory=list)

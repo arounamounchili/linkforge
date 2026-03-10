@@ -1058,7 +1058,7 @@ class TestURDFGenerator:
         assert '<state_interface name="velocity"' in xml
 
     def test_generate_sensor_with_plugin(self):
-        """Line 578: Sensor with plugin."""
+        """Sensor with plugin."""
         from linkforge_core.models.gazebo import GazeboPlugin
 
         p = GazeboPlugin(name="p", filename="f.so")

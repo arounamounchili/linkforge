@@ -481,10 +481,10 @@ def test_full_robot_import_integration(clean_scene):
 
 
 def test_import_mesh_file_robustness(tmp_path):
-    """Hit lines 216, 224, 254, 261 in core_to_blender.py."""
+    """Hit edge cases."""
     from unittest import mock
 
-    # Line 216 (DAE on Blender 5.0+ mock)
+    # (DAE on Blender 5.0+ mock)
     dae = tmp_path / "test.dae"
     dae.touch()
 
@@ -495,18 +495,18 @@ def test_import_mesh_file_robustness(tmp_path):
         mock_bpy.app.version = (5, 0, 0)
         assert import_mesh_file(dae, "test") is None
 
-    # Line 224 (Unsupported extension)
+    # (Unsupported extension)
     txt = tmp_path / "test.txt"
     txt.touch()
     assert import_mesh_file(txt, "test") is None
 
-    # Line 254 (No functional importer)
+    # (No functional importer)
     obj_file = tmp_path / "test.obj"
     obj_file.touch()
     with mock.patch("bpy.ops.wm.obj_import", side_effect=RuntimeError("Fail")):
         assert import_mesh_file(obj_file, "test") is None
 
-    # Line 261 (Importer ran but no objects)
+    # (Importer ran but no objects)
     with (
         mock.patch("bpy.ops.wm.obj_import", return_value={"FINISHED"}),
         mock.patch("linkforge.blender.adapters.core_to_blender.bpy") as mock_bpy_at_use,
@@ -518,7 +518,7 @@ def test_import_mesh_file_robustness(tmp_path):
 
 
 def test_get_geometry_type_str_robustness():
-    """Hit line 403 in core_to_blender.py (Unknown type fallback and Cylinder)."""
+    """Hit edge case (Unknown type fallback and Cylinder)."""
     from unittest import mock
 
     cyl = Cylinder(radius=1.0, length=2.0)

@@ -18,7 +18,7 @@ def test_parse_macro_only_xacro(tmp_path):
 
     # In this case, the robot name is not specified in the <robot> tag,
     # and the macro is never called, so no links are created.
-    assert robot.name == "macro_only"
+    assert robot.name == tmp_path.stem
     assert len(robot.links) == 0
     assert len(robot.joints) == 0
 

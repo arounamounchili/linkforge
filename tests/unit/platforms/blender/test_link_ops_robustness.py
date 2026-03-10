@@ -10,7 +10,7 @@ from linkforge.blender.operators.link_ops import (
 
 
 def test_execute_collision_preview_update_branches(clean_scene):
-    """Hit lines 62-81 in link_ops.py."""
+    """Hit edge cases."""
     link_obj = bpy.data.objects.new("Link", None)
     bpy.context.collection.objects.link(link_obj)
     link_obj.linkforge.is_robot_link = True
@@ -20,7 +20,7 @@ def test_execute_collision_preview_update_branches(clean_scene):
     bpy.context.collection.objects.link(col_obj)
     col_obj.parent = link_obj
 
-    # Line 62: No view_layer
+    # No view_layer
     with patch("linkforge.blender.operators.link_ops.bpy") as mock_bpy:
         mock_bpy.data.objects = {"Link": link_obj}
         mock_bpy.context.view_layer = None
@@ -30,7 +30,7 @@ def test_execute_collision_preview_update_branches(clean_scene):
         link_ops._preview_pending_object = link_obj
         assert execute_collision_preview_update() is None
 
-    # Line 73: imported_from_urdf
+    # imported_from_urdf
     col_obj["imported_from_urdf"] = True
     link_ops._preview_pending_object = link_obj
     assert execute_collision_preview_update() is None
@@ -38,7 +38,7 @@ def test_execute_collision_preview_update_branches(clean_scene):
 
 
 def test_regenerate_collision_mesh_validation(clean_scene):
-    """Hit lines 528-533 (validation in regenerate)."""
+    """Hit edge cases validation in regenerate."""
     # Passing None or non-link object
     regenerate_collision_mesh(None, "AUTO", bpy.context)
 
@@ -47,7 +47,7 @@ def test_regenerate_collision_mesh_validation(clean_scene):
 
 
 def test_create_collision_failure_branches(clean_scene):
-    """Hit lines 553-555 (collision creation failure)."""
+    """Hit edge cases collision creation failure."""
     link_obj = bpy.data.objects.new("Link", None)
     bpy.context.collection.objects.link(link_obj)
     link_obj.linkforge.is_robot_link = True
@@ -61,7 +61,7 @@ def test_create_collision_failure_branches(clean_scene):
 
 
 def test_generate_collision_all_skip(clean_scene):
-    """Hit lines 591-592 (skipping links with no visuals)."""
+    """Hit edge cases skipping links with no visuals."""
     link_obj = bpy.data.objects.new("EmptyLink", None)
     bpy.context.collection.objects.link(link_obj)
     link_obj.linkforge.is_robot_link = True
@@ -72,7 +72,7 @@ def test_generate_collision_all_skip(clean_scene):
 
 
 def test_add_material_slot_skip(clean_scene):
-    """Hit lines 1140-1141 (skipping if no visual)."""
+    """Hit edge cases skipping if no visual."""
     link_obj = bpy.data.objects.new("MatLink", None)
     bpy.context.collection.objects.link(link_obj)
     link_obj.linkforge.is_robot_link = True

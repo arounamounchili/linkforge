@@ -233,12 +233,12 @@ def test_manual_inertia_origin(clean_scene):
 
 
 def test_matrix_to_transform_none():
-    """Hit line 84 in blender_to_core.py."""
+    """Hit edge case."""
     assert matrix_to_transform(None).xyz.x == 0.0
 
 
 def test_detect_primitive_type_none():
-    """Hit lines 185, 189 in blender_to_core.py."""
+    """Hit edge cases."""
     assert detect_primitive_type(None) is None
 
     # Object with no data
@@ -247,25 +247,24 @@ def test_detect_primitive_type_none():
 
 
 def test_get_object_geometry_none_and_fallback():
-    """Hit lines 288, 330, 346 in blender_to_core.py."""
-    # Line 288
+    """Hit edge cases."""
     geom, mat = get_object_geometry(None)
     assert geom is None
 
-    # Line 330 (Zero size fallback)
+    # (Zero size fallback)
     o = bpy.data.objects.new("ZeroBox", bpy.data.meshes.new("ZeroMesh"))
     o.dimensions = (0, 0, 0)
     geom, mat = get_object_geometry(o, geometry_type="BOX")
     assert geom is None
 
-    # Line 346 (Unknown type)
+    # (Unknown type)
     o.dimensions = (1, 1, 1)
     geom, mat = get_object_geometry(o, geometry_type="UNKNOWN")
     assert geom is None
 
 
 def test_extract_mesh_triangles_null_mesh():
-    """Hit line 372 in blender_to_core.py."""
+    """Hit edge case."""
     from unittest import mock
 
     # We create a complete mock of the object.
