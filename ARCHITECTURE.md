@@ -104,7 +104,7 @@ graph TB
 |--------|----------|
 | **Models** | Core data structures (`Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`) |
 | **Parsers** | URDF/XACRO parsing |
-| **Generators** | XML generation |
+| **Generators** | Shared XML engine & format-specific generation (URDF, XACRO, etc.) |
 | **Physics** | Inertia & dynamics |
 | **Validation** | Modular checks & security registry |
 | **Utils** | Shared internal logic (math, strings, XML, kinematics) |
@@ -444,14 +444,14 @@ As an extensible framework, LinkForge is designed with clear "hooks" for adding 
 To support a new sensor (e.g., a custom LiDAR or Depth Camera variant):
 1. **Model**: Add enum to `SensorType` and create a metadata dataclass in `linkforge_core/models/sensor.py`.
 2. **Parser**: Update `URDFParser._parse_sensor` in `linkforge_core/parsers/urdf_parser.py`.
-3. **Generator**: Add XML mapping in `linkforge_core/generators/urdf_generator.py`.
+3. **Generator**: Add XML mapping in `linkforge_core/generators/xml_base.py` for shared logic or in `urdf_generator.py` for format-specific tags.
 4. **UI**: Add property group and panel logic in `blender/properties/sensor_props.py` and `blender/panels/sensor_panel.py`.
 
 ### Adding New Joint Types
 To implement experimental joint types (e.g., screw joints or custom bushings):
 1. **Model**: Add enum to `JointType` in `linkforge_core/models/joint.py`.
 2. **Validation**: Update `Joint.__post_init__` for type-specific constraints.
-3. **Parser/Generator**: Update the corresponding logic in `urdf_parser.py` and `urdf_generator.py`.
+3. **Parser/Generator**: Update parsing in `urdf_parser.py` and generation in `xml_base.py` (shared) or `urdf_generator.py` (URDF-specific tags).
 4. **Gizmos**: Add custom drawing logic in `blender/visualization/joint_gizmos.py`.
 
 ### Adding New Mesh Formats
@@ -459,6 +459,13 @@ To support additional 3D formats (e.g., USD or PLY):
 1. **Core**: Ensure `Mesh` model handles paths correctly in `linkforge_core/models/geometry.py`.
 2. **Blender Logic**: Implement the export wrapper in `blender/adapters/mesh_io.py`.
 3. **UI/Export**: Add the format option to the global `RobotPropertyGroup` in `blender/properties/robot_props.py`.
+
+### Adding New Robotics Formats (SDF, MuJoCo, etc.)
+To support a completely new robotics format:
+1. **Inheritance**: Create a new class (e.g., `MJCFGenerator`) inheriting from `RobotXMLGenerator` in `linkforge_core/generators/`.
+2. **Formatting Hooks**: Override `_format_value` and `_format_vector` if the format uses non-standard numeric representations (e.g., MuJoCo's space-separated attributes).
+3. **Tag Overrides**: Implement `_add_geometry_element` or other XML hooks to match the target format's schema (e.g., `<geom>` for MuJoCo instead of `<geometry>`).
+4. **Implementation**: Define the top-level `generate` method to orchestrate the robot element and section creation.
 
 ## Performance Considerations
 
@@ -510,5 +517,5 @@ LinkForge implements a multi-layered security architecture to protect against ma
 
 ---
 
-**Last Updated:** 2026-03-05
-**Version:** 1.4.0
+**Last Updated:** 2026-03-10
+**Version:** 1.5.0

@@ -2,6 +2,17 @@
 
 URDF and XACRO generators for converting Python objects to files.
 
+## Base XML Engine
+
+All XML-based generators in LinkForge inherit from a shared base engine that handles common geometry, inertial, and origin logic.
+
+```{eval-rst}
+.. autoclass:: linkforge_core.generators.xml_base.RobotXMLGenerator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
 ## URDF Generator
 
 ```{eval-rst}
