@@ -15,6 +15,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from ...linkforge_core.logging_config import get_logger
 from ..utils.decorators import safe_execute
+from ..utils.scene_utils import clear_stats_cache
 
 logger = get_logger(__name__)
 
@@ -212,6 +213,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
             {"INFO"},
             f"Started background import of {file_type}: '{robot.name}'...",
         )
+        clear_stats_cache()
         return {"FINISHED"}
 
 

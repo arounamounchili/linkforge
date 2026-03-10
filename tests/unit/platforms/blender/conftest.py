@@ -63,8 +63,14 @@ if HAS_BPY:
                 bpy.data.collections.remove(col, do_unlink=True)
 
         # Reset Scene properties
-        if hasattr(bpy.context.scene, "linkforge"):
-            bpy.context.scene.linkforge.use_ros2_control = False
-            bpy.context.scene.linkforge.ros2_control_joints.clear()
+        scene = typing.cast(typing.Any, bpy.context.scene)
+        if scene and hasattr(scene, "linkforge"):
+            scene.linkforge.use_ros2_control = False
+            scene.linkforge.ros2_control_joints.clear()
+
+        # Clear architectural statistics cache for test isolation
+        from linkforge.blender.utils.scene_utils import clear_stats_cache
+
+        clear_stats_cache()
 
         yield

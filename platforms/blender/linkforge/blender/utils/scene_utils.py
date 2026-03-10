@@ -9,6 +9,8 @@ from typing import Any
 
 import bpy
 
+from ..adapters.blender_to_core import detect_primitive_type
+
 
 def is_robot_link(obj: Any) -> bool:
     """Check if blender obj is a robot_link.
@@ -95,30 +97,86 @@ class RobotSceneStatistics:
     root_link: tuple[str, Any] | None
     # Map from child link name -> (parent link name, joint object)
     joints_map: dict[str, tuple[str, Any]] = field(default_factory=dict)
+    # Map from link name -> (collision_obj, detected_type, is_primitive)
+    geometry_stats: dict[str, tuple[Any, str, bool]] = field(default_factory=dict)
+    # List of objects that need manual inertia gizmos
+    manual_inertia_objects: list[Any] = field(default_factory=list)
 
 
-def get_robot_statistics(scene: Any) -> RobotSceneStatistics:
+# Internal cache for scene statistics to avoid redundant scans within the same frame
+_stats_cache: dict[tuple[int, int, int], RobotSceneStatistics] = {}
+
+
+def clear_stats_cache() -> None:
+    """Clear the global scene statistics cache.
+
+    Should be called when the scene structure changes significantly outside
+     of the standard Blender dependency graph updates (e.g., during tests).
+    """
+    _stats_cache.clear()
+
+
+# Map joint types to DOF contribution
+JOINT_DOF_MAP = {
+    "FIXED": 0,
+    "REVOLUTE": 1,
+    "CONTINUOUS": 1,
+    "PRISMATIC": 1,
+    "PLANAR": 2,
+    "FLOATING": 6,
+}
+
+
+def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneStatistics:
     """Analyze scene and setup robot statistics/properties.
 
     Categorizes all robot components (links, joints, sensors, transmissions)
-    and calc total link mass and DOFs from all joints found.
+    and calculates total link mass and DOFs from all joints found.
+    Uses frame-level caching to ensure the scene is scanned only once per frame.
 
     Args:
         scene: Blender scene to be analyzed
+        force_refresh: If True, ignore cache and perform a full scan.
 
     Returns:
-        RobotSceneStatistics with all pre-calculated properties. Empty if scene is None or has no objects.
+        RobotSceneStatistics with all pre-calculated properties.
     """
     link_objects: dict[str, Any] = {}
     joint_objects: list[Any] = []
     sensor_objects: list[Any] = []
     transmission_objects: list[Any] = []
+
+    if scene:
+        # Check cache (keyed by scene memory address, frame, and object count)
+        # Including object count helps prevent stale data in test environments
+        cache_key = (
+            id(scene),
+            getattr(scene, "frame_current", 0),
+            len(getattr(scene, "objects", [])),
+        )
+
+        if not force_refresh and cache_key in _stats_cache:
+            cached_stats = _stats_cache[cache_key]
+            # Defensive check: if an operator deleted an object in the same frame,
+            # accessing it will raise a ReferenceError. We catch this and invalidate the cache.
+            try:
+                # Validate link objects
+                for link_obj in cached_stats.link_objects.values():
+                    _ = link_obj.name
+                # Validate geometry objects
+                for geo_info in cached_stats.geometry_stats.values():
+                    _ = geo_info[0].name
+                return cached_stats
+            except (ReferenceError, KeyError, AttributeError):
+                del _stats_cache[cache_key]
+
     total_mass = 0.0
     total_dof = 0
-    joints_map: dict[str, tuple[str, Any]] = {}  # child_name -> (parent_name, joint_obj)
+    joints_map: dict[str, tuple[str, Any]] = {}
+    geometry_stats: dict[str, tuple[Any, str, bool]] = {}
+    manual_inertia_objects: list[Any] = []
     root_link: tuple[str, Any] | None = None
 
-    # invalid scene/nothing to be checked
     if not scene or not hasattr(scene, "objects"):
         return RobotSceneStatistics(
             num_links=0,
@@ -129,16 +187,10 @@ def get_robot_statistics(scene: Any) -> RobotSceneStatistics:
             sensor_objects=[],
             transmission_objects=[],
             root_link=None,
+            joints_map={},
+            geometry_stats={},
+            manual_inertia_objects=[],
         )
-    # Map joint types to DOF contribution
-    dof_map = {
-        "FIXED": 0,
-        "REVOLUTE": 1,
-        "CONTINUOUS": 1,
-        "PRISMATIC": 1,
-        "PLANAR": 2,
-        "FLOATING": 6,
-    }
 
     for obj in scene.objects:
         if is_robot_link(obj):
@@ -149,11 +201,47 @@ def get_robot_statistics(scene: Any) -> RobotSceneStatistics:
             if obj.linkforge.mass > 0:
                 total_mass += obj.linkforge.mass
 
-        elif is_robot_joint(obj):
+            # Track manual inertia gizmos
+            if not obj.linkforge.use_auto_inertia:
+                manual_inertia_objects.append(obj)
+
+            # Heuristic Geometry Detection (moved from link_panel.py)
+            collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
+            if collision_obj:
+                detected_type = "MESH"
+                is_primitive = False
+
+                # 1. Check explicit URDF tag
+                if collision_obj.get("urdf_geometry_type"):
+                    detected_type = typing.cast(str, collision_obj["urdf_geometry_type"])
+                    is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
+                # 2. Check generator tag
+                else:
+                    stored_type = typing.cast(
+                        str, collision_obj.get("collision_geometry_type", "AUTO")
+                    )
+                    if stored_type and stored_type in ("BOX", "CYLINDER", "SPHERE"):
+                        detected_type = stored_type
+                        is_primitive = True
+                    elif stored_type == "MESH":
+                        detected_type = "MESH"
+                    # 3. Fallback to heuristic
+                    else:
+                        try:
+                            heuristic_type = detect_primitive_type(collision_obj)
+                            if heuristic_type:
+                                detected_type = heuristic_type
+                                is_primitive = True
+                        except Exception:
+                            pass
+
+                geometry_stats[link_name] = (collision_obj, detected_type, is_primitive)
+
+        if is_robot_joint(obj):
             joint_objects.append(obj)
 
             joint_type = obj.linkforge_joint.joint_type
-            total_dof += dof_map.get(joint_type, 0)
+            total_dof += JOINT_DOF_MAP.get(joint_type, 0)
 
             child = obj.linkforge_joint.child_link
             parent = obj.linkforge_joint.parent_link
@@ -169,10 +257,10 @@ def get_robot_statistics(scene: Any) -> RobotSceneStatistics:
                 if child_name and parent_name:
                     joints_map[child_name] = (parent_name, obj)
 
-        elif is_robot_sensor(obj):
+        if is_robot_sensor(obj):
             sensor_objects.append(obj)
 
-        elif is_robot_transmission(obj):
+        if is_robot_transmission(obj):
             transmission_objects.append(obj)
 
     # get root link (link that is not a child in any joint)
@@ -181,7 +269,7 @@ def get_robot_statistics(scene: Any) -> RobotSceneStatistics:
             root_link = (link_name, obj)
             break
 
-    return RobotSceneStatistics(
+    stats = RobotSceneStatistics(
         num_links=len(link_objects),
         total_mass=total_mass,
         total_dof=total_dof,
@@ -191,7 +279,15 @@ def get_robot_statistics(scene: Any) -> RobotSceneStatistics:
         transmission_objects=transmission_objects,
         root_link=root_link,
         joints_map=joints_map,
+        geometry_stats=geometry_stats,
+        manual_inertia_objects=manual_inertia_objects,
     )
+
+    # Update cache
+    cache_key = (id(scene), getattr(scene, "frame_current", 0), len(getattr(scene, "objects", [])))
+    _stats_cache[cache_key] = stats
+
+    return stats
 
 
 def build_tree_from_stats(

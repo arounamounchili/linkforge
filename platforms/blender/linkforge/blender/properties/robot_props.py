@@ -14,12 +14,33 @@ URDF and XACRO generators, including:
 from __future__ import annotations
 
 import contextlib
+import typing
 
 import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
 from .control_props import Ros2ControlJointProperty, Ros2ControlParameterProperty
+
+
+def update_collision_visibility(self: typing.Any, context: bpy.types.Context) -> None:
+    """Update visibility of all collision meshes in the scene."""
+    if not context or not context.scene:
+        return
+
+    show = self.show_collisions
+    scene = context.scene
+
+    for obj in scene.objects:
+        # Check if object is a collision mesh
+        # Criteria: Parent is a robot link AND name contains "_collision"
+        if (
+            obj.parent
+            and hasattr(obj.parent, "linkforge")
+            and obj.parent.linkforge.is_robot_link
+            and "_collision" in obj.name.lower()
+        ):
+            obj.hide_viewport = not show
 
 
 class RobotPropertyGroup(PropertyGroup):
@@ -215,26 +236,6 @@ class RobotPropertyGroup(PropertyGroup):
         description="Current status message from the background importer",
         default="",
     )
-
-
-def update_collision_visibility(self: RobotPropertyGroup, context: bpy.types.Context) -> None:
-    """Update visibility of all collision meshes in the scene."""
-    if not context or not context.scene:
-        return
-
-    show = self.show_collisions
-    scene = context.scene
-
-    for obj in scene.objects:
-        # Check if object is a collision mesh
-        # Criteria: Parent is a robot link AND name contains "_collision"
-        if (
-            obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and obj.parent.linkforge.is_robot_link
-            and "_collision" in obj.name.lower()
-        ):
-            obj.hide_viewport = not show
 
 
 # Registration

@@ -21,6 +21,7 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 
 from ..preferences import get_addon_prefs
+from ..utils.scene_utils import get_robot_statistics
 
 _builtin_shader_name = None
 
@@ -209,18 +210,16 @@ def _draw_internal() -> None:
     if not scene:
         return
 
-    for obj in scene.objects:
-        if (
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and obj.linkforge_joint.is_robot_joint
-        ):
-            # Generate axis geometry for this joint
-            axis_data = generate_axis_geometry(obj, axis_length)
-            all_line_positions.extend(axis_data["lines"])
-            all_line_colors.extend(axis_data["line_colors"])
-            all_tri_positions.extend(axis_data["tris"])
-            all_tri_colors.extend(axis_data["tri_colors"])
+    # Use centralized scene statistics to avoid redundant scene traversing
+    stats = get_robot_statistics(scene)
+
+    for obj in stats.joint_objects:
+        # Generate axis geometry for this joint
+        axis_data = generate_axis_geometry(obj, axis_length)
+        all_line_positions.extend(axis_data["lines"])
+        all_line_colors.extend(axis_data["line_colors"])
+        all_tri_positions.extend(axis_data["tris"])
+        all_tri_colors.extend(axis_data["tri_colors"])
 
     if not all_line_positions:
         return

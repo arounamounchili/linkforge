@@ -8,7 +8,7 @@ import typing
 import bpy
 from bpy.types import Context, Menu, Panel, UIList
 
-from .robot_panel import build_tree_structure
+from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
 class LINKFORGE_UL_ros2_control_joints(UIList):
@@ -257,8 +257,9 @@ class LINKFORGE_MT_add_control_joint(Menu):
 
         props = typing.cast(typing.Any, scene).linkforge
 
-        # Get all joints from tree
-        tree, root_link, joints_dict, links_dict = build_tree_structure(scene)
+        # Get all joints from tree using centralized statistics
+        stats = get_robot_statistics(scene)
+        tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
 
         # Get already added joint names and object references
         added_names = {item.name for item in props.ros2_control_joints}
