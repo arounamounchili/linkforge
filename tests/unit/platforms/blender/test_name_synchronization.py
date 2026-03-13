@@ -1,5 +1,3 @@
-import typing
-
 import bpy
 
 
@@ -112,7 +110,7 @@ def test_auto_linking_integration() -> None:
     builder._execute_task("finalize", None)
 
     # Verify re-linking by URDF Identity (casting to Any to avoid dynamic property errors)
-    lp_final = typing.cast(typing.Any, scene).linkforge
+    lp_final = scene.linkforge  # type: ignore[attr-defined]
     rc_joint = lp_final.ros2_control_joints[0]
     assert rc_joint.joint_obj == joint_obj
     assert rc_joint.joint_obj.name == "j1.001"  # Linked despite suffix

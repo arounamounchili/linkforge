@@ -64,7 +64,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
 
-        robot_props = typing.cast("RobotPropertyGroup", context.scene.linkforge)
+        robot_props = typing.cast("RobotPropertyGroup", context.scene.linkforge)  # type: ignore[attr-defined]
         if robot_props.export_format == "XACRO":
             self.filename_ext = ".xacro"
         else:
@@ -84,7 +84,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
         scene = context.scene
-        robot_props = typing.cast("RobotPropertyGroup", scene.linkforge)
+        robot_props = typing.cast("RobotPropertyGroup", scene.linkforge)  # type: ignore[attr-defined]
 
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)

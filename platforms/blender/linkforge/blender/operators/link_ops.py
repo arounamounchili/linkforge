@@ -43,7 +43,7 @@ class LINKFORGE_OT_create_link(Operator):
         # Only allow if object is not already a link
         return not bool(
             hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
+            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link  # type: ignore[attr-defined]
         )
 
     @safe_execute
@@ -54,7 +54,7 @@ class LINKFORGE_OT_create_link(Operator):
             return {"CANCELLED"}
 
         # Enable link properties
-        props = typing.cast("LinkPropertyGroup", obj.linkforge)
+        props = typing.cast("LinkPropertyGroup", obj.linkforge)  # type: ignore[attr-defined]
         props.is_robot_link = True
         props.link_name = sanitize_urdf_name(obj.name)
 
@@ -85,7 +85,7 @@ class LINKFORGE_OT_delete_link(Operator):
         return bool(
             obj
             and hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
+            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link  # type: ignore[attr-defined]
         )
 
     @safe_execute
@@ -96,7 +96,7 @@ class LINKFORGE_OT_delete_link(Operator):
             return {"CANCELLED"}
 
         # Disable link properties (preserves other object data)
-        typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link = False
+        typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link = False  # type: ignore[attr-defined]
 
         self.report({"INFO"}, f"Removed robot link status from '{obj.name}'")
         clear_stats_cache()
@@ -117,7 +117,7 @@ def update_collision_quality_realtime(
 
     # FAST PATH: If we have a Decimate modifier, just update the ratio
     # This provides instant feedback without expensive mesh regeneration
-    lf = typing.cast("LinkPropertyGroup", obj.linkforge)
+    lf = typing.cast("LinkPropertyGroup", obj.linkforge)  # type: ignore[attr-defined]
     quality_ratio = lf.collision_quality / 100.0
 
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)

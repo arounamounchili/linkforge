@@ -45,14 +45,14 @@ class LINKFORGE_OT_create_sensor(Operator):
         # Allow if object is a link (not a joint!)
         if (
             hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
+            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link  # type: ignore[attr-defined]
         ):
             return True
 
         return bool(
             obj.parent
             and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", obj.parent.linkforge).is_robot_link
+            and typing.cast("LinkPropertyGroup", obj.parent.linkforge).is_robot_link  # type: ignore[attr-defined]
         )
 
     @safe_execute
@@ -69,7 +69,7 @@ class LINKFORGE_OT_create_sensor(Operator):
             obj
             if obj
             and hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
+            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link  # type: ignore[attr-defined]
             else (obj.parent if obj else None)
         )
         if not link_obj:
@@ -90,7 +90,7 @@ class LINKFORGE_OT_create_sensor(Operator):
 
         # Ensure unique name
         link_name = (
-            typing.cast("LinkPropertyGroup", link_obj.linkforge).link_name
+            typing.cast("LinkPropertyGroup", link_obj.linkforge).link_name  # type: ignore[attr-defined]
             if link_obj
             else "unknown"
         )
@@ -118,7 +118,10 @@ class LINKFORGE_OT_create_sensor(Operator):
 
         # Enable sensor properties
         if sensor_empty:
-            sensor_props = typing.cast("SensorPropertyGroup", sensor_empty.linkforge_sensor)
+            sensor_props = typing.cast(
+                "SensorPropertyGroup",
+                sensor_empty.linkforge_sensor,  # type: ignore[attr-defined]
+            )
             sensor_props.is_robot_sensor = True
             sensor_props.sensor_name = sanitize_urdf_name(sensor_empty.name)
 
@@ -158,7 +161,7 @@ class LINKFORGE_OT_delete_sensor(Operator):
         return bool(
             obj.type == "EMPTY"
             and hasattr(obj, "linkforge_sensor")
-            and typing.cast("SensorPropertyGroup", obj.linkforge_sensor).is_robot_sensor
+            and typing.cast("SensorPropertyGroup", obj.linkforge_sensor).is_robot_sensor  # type: ignore[attr-defined]
         )
 
     @safe_execute
@@ -168,7 +171,7 @@ class LINKFORGE_OT_delete_sensor(Operator):
         if not obj:
             return {"CANCELLED"}
 
-        sensor_props = typing.cast("SensorPropertyGroup", obj.linkforge_sensor)
+        sensor_props = typing.cast("SensorPropertyGroup", obj.linkforge_sensor)  # type: ignore[attr-defined]
         sensor_name = sensor_props.sensor_name or obj.name
 
         # Delete the object

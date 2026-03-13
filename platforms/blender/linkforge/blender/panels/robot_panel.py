@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import typing
 
 import bpy
 from bpy.props import StringProperty
@@ -124,7 +123,7 @@ class LINKFORGE_OT_clear_component_search(Operator):
         """
         if not hasattr(context.scene, "linkforge"):
             return False
-        props = typing.cast(typing.Any, context.scene).linkforge
+        props = context.scene.linkforge  # type: ignore[attr-defined]
         return bool(props.component_browser_search)
 
     @safe_execute
@@ -140,7 +139,7 @@ class LINKFORGE_OT_clear_component_search(Operator):
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
-        props = typing.cast(typing.Any, scene).linkforge
+        props = scene.linkforge  # type: ignore[attr-defined]
         props.component_browser_search = ""
         return {"FINISHED"}
 

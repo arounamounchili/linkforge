@@ -52,7 +52,7 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
-        props = typing.cast(typing.Any, scene).linkforge
+        props = scene.linkforge  # type: ignore[attr-defined]
 
         # Find the target joint object we intend to add
         target_joint_obj = next(
@@ -61,8 +61,9 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
                 for obj in scene.objects
                 if obj.type == "EMPTY"
                 and hasattr(obj, "linkforge_joint")
-                and obj.linkforge_joint.is_robot_joint
-                and obj.linkforge_joint.joint_name == self.joint_name
+                and typing.cast("JointPropertyGroup", obj.linkforge_joint).is_robot_joint  # type: ignore[attr-defined]
+                and typing.cast("JointPropertyGroup", obj.linkforge_joint).joint_name  # type: ignore[attr-defined]
+                == self.joint_name
             ),
             None,
         )
@@ -137,7 +138,7 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
         """
         if not context.scene:
             return {"CANCELLED"}
-        props = typing.cast(typing.Any, context.scene).linkforge
+        props = context.scene.linkforge  # type: ignore[attr-defined]
         index = props.ros2_control_active_joint_index
 
         if 0 <= index < len(props.ros2_control_joints):
@@ -194,7 +195,7 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         """
         if not context.scene:
             return {"CANCELLED"}
-        props = typing.cast(typing.Any, context.scene).linkforge
+        props = context.scene.linkforge  # type: ignore[attr-defined]
         index = props.ros2_control_active_joint_index
         new_index = index
 
@@ -206,7 +207,7 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
             return {"CANCELLED"}
 
         props.ros2_control_joints.move(index, new_index)
-        props.ros2_control_active_joint_index = new_index
+        props.ros2_control_active_joint_index = new_index  # type: ignore[attr-defined]
         return {"FINISHED"}
 
 
@@ -247,7 +248,9 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
             Set containing the execution state.
         """
         scene = context.scene
-        props = typing.cast(typing.Any, scene).linkforge
+        if not scene:
+            return {"CANCELLED"}
+        props = scene.linkforge  # type: ignore[attr-defined]
 
         if self.target == "GLOBAL":
             param = props.ros2_control_parameters.add()
@@ -303,7 +306,9 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
             Set containing the execution state.
         """
         scene = context.scene
-        props = typing.cast(typing.Any, scene).linkforge
+        if not scene:
+            return {"CANCELLED"}
+        props = scene.linkforge  # type: ignore[attr-defined]
 
         if self.target == "GLOBAL":
             items = props.ros2_control_parameters
@@ -348,7 +353,7 @@ class LINKFORGE_OT_purge_ros2_control_data(Operator):
         if not scene:
             return {"CANCELLED"}
 
-        props = typing.cast(typing.Any, scene).linkforge
+        props = scene.linkforge
         joints = props.ros2_control_joints
 
         to_remove = []
@@ -361,7 +366,12 @@ class LINKFORGE_OT_purge_ros2_control_data(Operator):
             # Check if object still exists and is a robot joint
             exists = obj is not None and obj.name in scene.objects
             is_valid = (
-                exists and hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint
+                exists
+                and hasattr(obj, "linkforge_joint")
+                and typing.cast(
+                    "JointPropertyGroup",
+                    obj.linkforge_joint,  # type: ignore[attr-defined]
+                ).is_robot_joint
             )
 
             if not is_valid:
@@ -369,7 +379,10 @@ class LINKFORGE_OT_purge_ros2_control_data(Operator):
                 continue
 
             # Check for name mismatch (renamed in scene but not in control system)
-            scene_name = typing.cast("JointPropertyGroup", obj.linkforge_joint).joint_name
+            scene_name = typing.cast(
+                "JointPropertyGroup",
+                obj.linkforge_joint,  # type: ignore[attr-defined]
+            ).joint_name
             if item.name != scene_name:
                 item.name = scene_name
                 updated_count += 1

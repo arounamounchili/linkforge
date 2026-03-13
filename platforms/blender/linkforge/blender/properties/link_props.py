@@ -88,7 +88,7 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
         return
 
     obj = typing.cast(bpy.types.Object, self.id_data)
-    lf = typing.cast(typing.Any, obj).linkforge
+    lf = obj.linkforge  # type: ignore[attr-defined]
     if not lf.is_robot_link:
         return
 
@@ -98,7 +98,7 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
         return
 
     # Check if it's imported from URDF (don't regenerate imported collisions)
-    if typing.cast(typing.Any, collision_obj).get("imported_from_urdf"):
+    if collision_obj.get("imported_from_urdf"):  # type: ignore[attr-defined]
         return
 
     # Update ratio in realtime

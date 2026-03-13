@@ -38,7 +38,7 @@ class LINKFORGE_PT_perceive(Panel):
             and obj.select_get()
             and obj.type == "EMPTY"
             and hasattr(obj, "linkforge_sensor")
-            and typing.cast(typing.Any, obj).linkforge_sensor.is_robot_sensor
+            and obj.linkforge_sensor.is_robot_sensor  # type: ignore[attr-defined]
         )
 
         # Only show Create button when NOT editing a sensor
@@ -47,14 +47,13 @@ class LINKFORGE_PT_perceive(Panel):
             target_link = None
             if obj and obj.select_get():
                 if (
-                    hasattr(obj, "linkforge")
-                    and typing.cast(typing.Any, obj).linkforge.is_robot_link
+                    hasattr(obj, "linkforge") and obj.linkforge.is_robot_link  # type: ignore[attr-defined]
                 ):
                     target_link = obj
                 elif (
                     obj.parent
                     and hasattr(obj.parent, "linkforge")
-                    and typing.cast(typing.Any, obj.parent).linkforge.is_robot_link
+                    and obj.parent.linkforge.is_robot_link  # type: ignore[attr-defined]
                 ):
                     # Selected object is a visual/collision child of a link
                     target_link = obj.parent
@@ -71,7 +70,7 @@ class LINKFORGE_PT_perceive(Panel):
         if not is_sensor or not obj:
             return
 
-        props = typing.cast(typing.Any, obj).linkforge_sensor
+        props = obj.linkforge_sensor  # type: ignore[attr-defined]
 
         # === SENSOR IDENTIFICATION ===
         box = layout.box()

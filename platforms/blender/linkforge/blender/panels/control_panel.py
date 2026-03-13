@@ -151,7 +151,7 @@ class LINKFORGE_PT_control(Panel):
         if not (layout and scene):
             return
 
-        props = typing.cast(typing.Any, scene).linkforge
+        props = scene.linkforge  # type: ignore[attr-defined]
 
         # Master Toggle
         layout.prop(props, "use_ros2_control", text="Use ROS2 Control", icon="CHECKMARK")
@@ -257,7 +257,7 @@ class LINKFORGE_MT_add_control_joint(Menu):
         if not (layout and scene):
             return
 
-        props = typing.cast(typing.Any, scene).linkforge
+        props = scene.linkforge  # type: ignore[attr-defined]
 
         # Get all joints from tree using centralized statistics
         stats = get_robot_statistics(scene)
@@ -272,9 +272,9 @@ class LINKFORGE_MT_add_control_joint(Menu):
             if (
                 obj.type == "EMPTY"
                 and hasattr(obj, "linkforge_joint")
-                and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
+                and obj.linkforge_joint.is_robot_joint  # type: ignore[attr-defined]
             ):
-                name = typing.cast(typing.Any, obj).linkforge_joint.joint_name
+                name = obj.linkforge_joint.joint_name  # type: ignore[attr-defined]
                 # Check if the exact object or the exact name was already added
                 if obj not in added_objs and name not in added_names:
                     joint_objs.append((name, obj))

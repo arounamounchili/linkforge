@@ -7,7 +7,6 @@ It must be registered BEFORE any child panels.
 from __future__ import annotations
 
 import contextlib
-import typing
 
 import bpy
 from bpy.types import Context, Panel
@@ -36,7 +35,7 @@ class LINKFORGE_PT_forge(Panel):
 
         if not context.scene:
             return
-        scene_props = typing.cast(typing.Any, context.scene).linkforge
+        scene_props = context.scene.linkforge  # type: ignore[attr-defined]
 
         if scene_props.is_importing:
             # Active Import Status
