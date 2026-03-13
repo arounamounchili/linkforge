@@ -10,7 +10,7 @@ from linkforge.blender.operators.control_ops import (
 )
 
 
-def test_add_ros2_control_joint_execute(mocker, clean_scene):
+def test_add_ros2_control_joint_execute(mocker, clean_scene) -> None:
     """Test adding a joint using real collection properties."""
     scene = bpy.context.scene
     props = scene.linkforge
@@ -36,7 +36,7 @@ def test_add_ros2_control_joint_execute(mocker, clean_scene):
     mock_self.report.assert_called_with({"INFO"}, mocker.ANY)
 
 
-def test_remove_ros2_control_joint_execute(mocker, clean_scene):
+def test_remove_ros2_control_joint_execute(mocker, clean_scene) -> None:
     """Test removing a joint using real collection properties."""
     scene = bpy.context.scene
     props = scene.linkforge
@@ -58,7 +58,7 @@ def test_remove_ros2_control_joint_execute(mocker, clean_scene):
     mock_self.report.assert_called_with({"INFO"}, mocker.ANY)
 
 
-def test_move_ros2_control_joint_execute(mocker, clean_scene):
+def test_move_ros2_control_joint_execute(mocker, clean_scene) -> None:
     """Test moving a joint using real collection properties."""
     scene = bpy.context.scene
     props = scene.linkforge
@@ -83,7 +83,7 @@ def test_move_ros2_control_joint_execute(mocker, clean_scene):
     assert props.ros2_control_active_joint_index == 0
 
 
-def test_control_ops_add_failures(mocker, clean_scene):
+def test_control_ops_add_failures(mocker, clean_scene) -> None:
     """Test add_ros2_control_joint error branches."""
     scene = bpy.context.scene
     props = scene.linkforge
@@ -115,7 +115,7 @@ def test_control_ops_add_failures(mocker, clean_scene):
     assert res == {"CANCELLED"}
 
 
-def test_control_ops_remove_failures(clean_scene):
+def test_control_ops_remove_failures(clean_scene) -> None:
     """Test remove_ros2_control_joint edge cases."""
     scene = bpy.context.scene
     props = scene.linkforge
@@ -133,7 +133,7 @@ def test_control_ops_remove_failures(clean_scene):
     assert res == {"CANCELLED"}
 
 
-def test_control_ops_move_variants(clean_scene):
+def test_control_ops_move_variants(clean_scene) -> None:
     """Test move_ros2_control_joint direction and boundary branches."""
     scene = bpy.context.scene
     props = scene.linkforge
@@ -178,7 +178,7 @@ def test_control_ops_move_variants(clean_scene):
     assert res == {"CANCELLED"}
 
 
-def test_control_ops_polls_extended(clean_scene):
+def test_control_ops_polls_extended(clean_scene) -> None:
     """Test poll success/fail cases."""
     scene = bpy.context.scene
     scene.linkforge.ros2_control_joints.clear()
@@ -198,7 +198,7 @@ def test_control_ops_polls_extended(clean_scene):
     assert LINKFORGE_OT_move_ros2_control_joint.poll(bpy.context) is True
 
 
-def test_control_ops_registry():
+def test_control_ops_registry() -> None:
     """Target registration branches."""
     # unregister first to hit RobotModelErrors if any, then register
     unregister()
@@ -207,7 +207,7 @@ def test_control_ops_registry():
     register()
 
 
-def test_control_ops_no_scene_fail(mocker):
+def test_control_ops_no_scene_fail(mocker) -> None:
     """Extreme case: context.scene is missing."""
     mock_context = MagicMock()
     mock_context.scene = None

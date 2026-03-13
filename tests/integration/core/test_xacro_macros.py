@@ -9,7 +9,7 @@ from linkforge_core.models import Color, Joint, JointType, Link, Material, Robot
 from linkforge_core.models.geometry import Box, Cylinder, Transform, Vector3
 
 
-def test_macro_generation_wheels():
+def test_macro_generation_wheels() -> None:
     """Test that 4 identical wheels are converted to a macro."""
     # Create base link
     base_link = Link(name="base_link")
@@ -73,7 +73,7 @@ def test_macro_generation_wheels():
     assert "front_left_wheel" not in link_names, "Original link should be replaced by macro call"
 
 
-def test_macro_generation_mixed():
+def test_macro_generation_mixed() -> None:
     """Test that unique links are NOT converted to macros."""
     # Base + 2 identical wheels + 1 unique arm
     base = Link(name="base")

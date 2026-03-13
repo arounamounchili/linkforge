@@ -25,7 +25,7 @@ def reset_logging():
     logger.setLevel(original_level)
 
 
-def test_setup_logging_console(caplog):
+def test_setup_logging_console(caplog) -> None:
     """Test logging setup with console only."""
     # setup_logging will add handlers to 'linkforge'
     setup_logging(console=True)
@@ -41,7 +41,7 @@ def test_setup_logging_console(caplog):
     assert logger.name == "linkforge.test_console"
 
 
-def test_setup_logging_file(tmp_path):
+def test_setup_logging_file(tmp_path) -> None:
     """Test logging setup with file."""
     log_file = tmp_path / "test.log"
     setup_logging(log_file=log_file, console=False)
@@ -60,7 +60,7 @@ def test_setup_logging_file(tmp_path):
     assert "Test file message" in content
 
 
-def test_get_logger():
+def test_get_logger() -> None:
     """Test that get_logger returns correctly named logger."""
     logger = get_logger("my_module")
     assert logger.name == "linkforge.my_module"

@@ -3,7 +3,7 @@ import pytest
 from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
 
 
-def test_inertial_origin_extraction():
+def test_inertial_origin_extraction() -> None:
     """Verify that inertial origin properties are correctly converted to Core model using real Blender objects."""
     # 1. Setup real Blender object
     bpy.ops.object.empty_add(type="PLAIN_AXES")

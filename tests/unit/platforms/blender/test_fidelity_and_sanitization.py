@@ -2,7 +2,7 @@ import bpy
 from linkforge.blender.adapters.mesh_io import export_link_mesh
 
 
-def test_high_fidelity_multi_geometry_export_suffixes(tmp_path):
+def test_high_fidelity_multi_geometry_export_suffixes(tmp_path) -> None:
     """Verify that the unique suffixes correctly generate distinct collision/visual filenames."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -30,7 +30,7 @@ def test_high_fidelity_multi_geometry_export_suffixes(tmp_path):
     assert p2.name == "base_link_visual_1.stl"
 
 
-def test_filename_sanitization_conformity(tmp_path):
+def test_filename_sanitization_conformity(tmp_path) -> None:
     """Verify that LinkForge aggressively sanitizes link names to ensure URDF filename compatibility."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -49,7 +49,7 @@ def test_filename_sanitization_conformity(tmp_path):
     assert "." not in p.stem
 
 
-def test_mesh_export_suffix_hardening(tmp_path):
+def test_mesh_export_suffix_hardening(tmp_path) -> None:
     """Verify that injected suffixes are hardened against illegal characters."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object

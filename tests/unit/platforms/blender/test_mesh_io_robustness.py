@@ -12,7 +12,7 @@ from linkforge.blender.adapters.mesh_io import (
 from mathutils import Matrix
 
 
-def test_mesh_io_simplification(clean_scene):
+def test_mesh_io_simplification(clean_scene) -> None:
     """Test create_simplified_mesh and decimation."""
     bpy.ops.mesh.primitive_cube_add()
     o = bpy.context.active_object
@@ -30,7 +30,7 @@ def test_mesh_io_simplification(clean_scene):
     bpy.data.objects.remove(simplified, do_unlink=True)
 
 
-def test_export_mesh_error_handling(clean_scene, tmp_path):
+def test_export_mesh_error_handling(clean_scene, tmp_path) -> None:
     """Hit error paths in mesh exporters using Path mocks."""
     bpy.ops.mesh.primitive_monkey_add()
     o = bpy.context.active_object
@@ -45,7 +45,7 @@ def test_export_mesh_error_handling(clean_scene, tmp_path):
         assert export_mesh_glb(o, filepath) is False
 
 
-def test_export_link_mesh_success_and_centering(clean_scene, tmp_path):
+def test_export_link_mesh_success_and_centering(clean_scene, tmp_path) -> None:
     """Verify combined centering and export logic."""
     bpy.ops.mesh.primitive_cube_add(location=(1, 2, 3))
     o = bpy.context.active_object
@@ -124,7 +124,7 @@ def test_export_link_mesh_success_and_centering(clean_scene, tmp_path):
         assert path is None
 
 
-def test_mesh_io_unexpected_errors(clean_scene, tmp_path):
+def test_mesh_io_unexpected_errors(clean_scene, tmp_path) -> None:
     """Hit edge cases."""
     bpy.ops.mesh.primitive_monkey_add()
     o = bpy.context.active_object

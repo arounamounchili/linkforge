@@ -11,7 +11,7 @@ class TestXacroEvalSandbox:
         """Provide a fresh XacroResolver instance for each test."""
         return XacroResolver()
 
-    def test_allows_safe_math(self, resolver):
+    def test_allows_safe_math(self, resolver) -> None:
         """Verify that standard mathematical operations are allowed."""
 
         # Simple arithmetic
@@ -23,7 +23,7 @@ class TestXacroEvalSandbox:
         assert resolver._evaluate("cos(pi)") == pytest.approx(-1.0)
         assert resolver._evaluate("pow(2, 3)") == 8
 
-    def test_blocks_builtins(self, resolver):
+    def test_blocks_builtins(self, resolver) -> None:
         """Verify that standard Python built-ins like open() are blocked."""
         with pytest.raises(RobotParserError, match="name 'open' is not defined"):
             resolver._evaluate("open('/etc/passwd', 'r').read()")
@@ -34,7 +34,7 @@ class TestXacroEvalSandbox:
         with pytest.raises(RobotParserError, match="name 'exec' is not defined"):
             resolver._evaluate("exec('x = 1')")
 
-    def test_blocks_dunder_attribute_access(self, resolver):
+    def test_blocks_dunder_attribute_access(self, resolver) -> None:
         """Verify that dunder attributes (__class__, etc.) are strictly blocked.
 
         This is the primary mitigation against the well-known eval() sandbox

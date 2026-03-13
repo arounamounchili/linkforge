@@ -1,7 +1,7 @@
 import bpy
 
 
-def test_validation_issue_line_splitting():
+def test_validation_issue_line_splitting() -> None:
     """Test correctly splitting long messages and suggestions into lines."""
     # We can't easily instantiate PropertyGroups directly without registration/ID data integration,
     # but we can test the property methods on a registered instance.
@@ -34,7 +34,7 @@ def test_validation_issue_line_splitting():
     assert err.has_objects is False
 
 
-def test_validation_result_clearing():
+def test_validation_result_clearing() -> None:
     """Test clearing validation results."""
     wm = bpy.context.window_manager
     res = wm.linkforge_validation
@@ -53,7 +53,7 @@ def test_validation_result_clearing():
     assert len(res.errors) == 0
 
 
-def test_validation_issue_objects_str():
+def test_validation_issue_objects_str() -> None:
     """Test affected objects string formatting."""
     wm = bpy.context.window_manager
     res = wm.linkforge_validation

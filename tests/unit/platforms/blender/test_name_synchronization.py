@@ -3,7 +3,7 @@ import typing
 import bpy
 
 
-def test_link_urdf_name_persistence():
+def test_link_urdf_name_persistence() -> None:
     """Test that link_name remains persistent even if Blender renames the object."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -31,7 +31,7 @@ def test_link_urdf_name_persistence():
     # but the logical name must match our intent.
 
 
-def test_joint_urdf_name_persistence():
+def test_joint_urdf_name_persistence() -> None:
     """Test that joint_name remains persistent even if Blender renames the object."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -50,7 +50,7 @@ def test_joint_urdf_name_persistence():
     assert obj.linkforge_joint.joint_name == "elbow_joint"
 
 
-def test_reimport_name_matching():
+def test_reimport_name_matching() -> None:
     """Test that the importer correctly sets persistent names using real data."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
     from linkforge_core.models import Joint, JointType
@@ -78,7 +78,7 @@ def test_reimport_name_matching():
     bpy.data.objects.remove(obj)
 
 
-def test_auto_linking_integration():
+def test_auto_linking_integration() -> None:
     """Test that the builder auto-links real ROS 2 Control pointers by URDF identity."""
     from pathlib import Path
 

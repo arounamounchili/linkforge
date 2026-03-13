@@ -8,7 +8,7 @@ from linkforge.blender.utils.transform_utils import (
 )
 
 
-def test_set_parent_keep_transform_basic():
+def test_set_parent_keep_transform_basic() -> None:
     """Test parenting while preserving world transform."""
     # Clean scene
     bpy.ops.object.select_all(action="SELECT")
@@ -38,7 +38,7 @@ def test_set_parent_keep_transform_basic():
     assert child_obj.matrix_world.translation.z == pytest.approx(original_world_loc.z, abs=1e-4)
 
 
-def test_set_parent_keep_transform_with_rotation():
+def test_set_parent_keep_transform_with_rotation() -> None:
     """Test parenting with rotated parent."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -63,7 +63,7 @@ def test_set_parent_keep_transform_with_rotation():
     assert new_world_loc.z == pytest.approx(original_world_loc.z, abs=1e-4)
 
 
-def test_set_parent_keep_transform_none_child():
+def test_set_parent_keep_transform_none_child() -> None:
     """Test with None child."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -75,7 +75,7 @@ def test_set_parent_keep_transform_none_child():
     set_parent_keep_transform(None, parent_obj)
 
 
-def test_set_parent_keep_transform_none_parent():
+def test_set_parent_keep_transform_none_parent() -> None:
     """Test with None parent."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -87,7 +87,7 @@ def test_set_parent_keep_transform_none_parent():
     set_parent_keep_transform(child_obj, None)
 
 
-def test_clear_parent_keep_transform_basic():
+def test_clear_parent_keep_transform_basic() -> None:
     """Test clearing parent while preserving world transform."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -117,13 +117,13 @@ def test_clear_parent_keep_transform_basic():
     assert child_obj.matrix_world.translation.z == pytest.approx(original_world_loc.z, abs=1e-4)
 
 
-def test_clear_parent_keep_transform_none():
+def test_clear_parent_keep_transform_none() -> None:
     """Test with None object."""
     clear_parent_keep_transform(None)
     # Should not raise error
 
 
-def test_clear_parent_keep_transform_no_parent():
+def test_clear_parent_keep_transform_no_parent() -> None:
     """Test clearing parent on object without parent."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -143,7 +143,7 @@ def test_clear_parent_keep_transform_no_parent():
     assert obj.matrix_world.translation.z == pytest.approx(original_loc.z, abs=1e-4)
 
 
-def test_set_parent_with_scale():
+def test_set_parent_with_scale() -> None:
     """Test that parenting preserves transform even with scaled parent."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()

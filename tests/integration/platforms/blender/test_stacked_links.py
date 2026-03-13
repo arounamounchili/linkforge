@@ -147,7 +147,7 @@ def create_stacked_robot() -> Robot:
     return robot
 
 
-def test_stacked_links_export():
+def test_stacked_links_export() -> None:
     """Test that exporting stacked links produces correct joint origins and collision origins."""
     robot = create_stacked_robot()
 
@@ -200,7 +200,7 @@ def test_stacked_links_export():
     )
 
 
-def test_stacked_links_roundtrip(tmp_path: Path):
+def test_stacked_links_roundtrip(tmp_path: Path) -> None:
     """Test full export-import roundtrip for stacked links.
 
     Verifies that:

@@ -14,7 +14,7 @@ from linkforge_core.validation.security import (
 class TestValidateMeshPath:
     """Tests for validate_mesh_path function."""
 
-    def test_valid_relative_path(self, tmp_path):
+    def test_valid_relative_path(self, tmp_path) -> None:
         """Test valid relative path inside URDF directory."""
         urdf_dir = tmp_path / "robot"
         urdf_dir.mkdir()
@@ -24,7 +24,7 @@ class TestValidateMeshPath:
         expected = (urdf_dir / mesh_path).resolve()
         assert resolved == expected
 
-    def test_allow_parent_traversal_blocked(self, tmp_path):
+    def test_allow_parent_traversal_blocked(self, tmp_path) -> None:
         """Test blocking '..' traversal that escapes URDF directory."""
         # Structure:
         # /root/urdf/robot.urdf
@@ -40,7 +40,7 @@ class TestValidateMeshPath:
         with pytest.raises(RobotModelError, match="attempts to escape the sandbox root"):
             validate_mesh_path(mesh_path, urdf_dir)
 
-    def test_allow_parent_traversal_with_sandbox_root(self, tmp_path):
+    def test_allow_parent_traversal_with_sandbox_root(self, tmp_path) -> None:
         """Test allowing '..' traversal when it stays within sandbox_root."""
         # /root/urdf/ (urdf_dir)
         # /root/meshes/ (target)
@@ -56,7 +56,7 @@ class TestValidateMeshPath:
         resolved = validate_mesh_path(mesh_path, urdf_dir, sandbox_root=root)
         assert resolved == (meshes_dir / "test.stl").resolve()
 
-    def test_escape_sandbox_root_blocked(self, tmp_path):
+    def test_escape_sandbox_root_blocked(self, tmp_path) -> None:
         """Test blocking traversal even with sandbox_root if it escapes the root."""
         root = tmp_path.resolve()
         package = root / "package"
@@ -70,7 +70,7 @@ class TestValidateMeshPath:
         with pytest.raises(RobotModelError, match="attempts to escape the sandbox root"):
             validate_mesh_path(mesh_path, urdf_dir, sandbox_root=package)
 
-    def test_block_system_paths(self, tmp_path):
+    def test_block_system_paths(self, tmp_path) -> None:
         """Test that paths resolving to system directories are blocked."""
         urdf_dir = tmp_path
 
@@ -82,7 +82,7 @@ class TestValidateMeshPath:
         with pytest.raises(RobotModelError, match="restricted system location"):
             validate_mesh_path(mesh_path, urdf_dir)
 
-    def test_absolute_path_default_blocked(self, tmp_path):
+    def test_absolute_path_default_blocked(self, tmp_path) -> None:
         """Test that absolute paths are blocked by default."""
         urdf_dir = tmp_path
         mesh_path = Path("/tmp/test.stl")
@@ -90,7 +90,7 @@ class TestValidateMeshPath:
         with pytest.raises(RobotModelError, match="Absolute path.*not allowed"):
             validate_mesh_path(mesh_path, urdf_dir)
 
-    def test_absolute_path_allowed(self, tmp_path):
+    def test_absolute_path_allowed(self, tmp_path) -> None:
         """Test allowing absolute paths when requested."""
         urdf_dir = tmp_path
         # Use a safe absolute path (temp dir)
@@ -99,7 +99,7 @@ class TestValidateMeshPath:
         resolved = validate_mesh_path(mesh_path, urdf_dir, allow_absolute=True)
         assert resolved == mesh_path
 
-    def test_url_encoded_path(self, tmp_path):
+    def test_url_encoded_path(self, tmp_path) -> None:
         """Test that URL-encoded paths are decoded."""
         from linkforge_core.validation.security import validate_mesh_path
 
@@ -114,7 +114,7 @@ class TestValidateMeshPath:
         assert "my file.stl" in str(result)
 
 
-def test_find_sandbox_root(tmp_path):
+def test_find_sandbox_root(tmp_path) -> None:
     """Test the sandbox root detection logic."""
     # 1. Standard URDF folder structure
     package_root = tmp_path / "my_robot"
@@ -153,7 +153,7 @@ def test_find_sandbox_root(tmp_path):
     assert find_sandbox_root(random_file) == random_dir
 
 
-def test_security_sandbox_root_loop(tmp_path):
+def test_security_sandbox_root_loop(tmp_path) -> None:
     """Test find_sandbox_root loop termination (depth limit)."""
     # Create a structure deep enough to hit the 5-level limit
     # root/a/b/c/d/e/f/file.urdf
@@ -170,7 +170,7 @@ def test_security_sandbox_root_loop(tmp_path):
     assert root == deep_path
 
 
-def test_find_sandbox_root_recursion_break():
+def test_find_sandbox_root_recursion_break() -> None:
     """Test recursion break at root (check_path.parent == check_path)."""
 
     class FakePath:
@@ -214,7 +214,7 @@ def test_find_sandbox_root_recursion_break():
     assert res == fake_root
 
 
-def test_package_uri_security_validation():
+def test_package_uri_security_validation() -> None:
     """Verify security validation for package URIs, including scheme and traversal checks."""
     with pytest.raises(RobotModelError, match="must start with 'package://'"):
         validate_package_uri("file://invalid")

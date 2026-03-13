@@ -7,13 +7,13 @@ from linkforge_core.utils.path_utils import (
 )
 
 
-def test_resolve_package_path_invalid_uri(tmp_path):
+def test_resolve_package_path_invalid_uri(tmp_path) -> None:
     """Test invalid URIs return None."""
     assert resolve_package_path("invalid://uri", tmp_path) is None
     assert resolve_package_path("package://", tmp_path) is None
 
 
-def test_resolve_package_path_standalone_structure(tmp_path):
+def test_resolve_package_path_standalone_structure(tmp_path) -> None:
     """Test resolving in a standalone folder structure (no ROS env)."""
     # Structure:
     # /tmp/pkg_root/package.xml
@@ -38,7 +38,7 @@ def test_resolve_package_path_standalone_structure(tmp_path):
     assert resolved.resolve() == model.resolve()
 
 
-def test_resolve_package_path_folder_name_match(tmp_path):
+def test_resolve_package_path_folder_name_match(tmp_path) -> None:
     """Test resolving based on folder name matching package name."""
     # Structure:
     # /tmp/my_robot_pkg/meshes/model.stl
@@ -60,7 +60,7 @@ def test_resolve_package_path_folder_name_match(tmp_path):
     assert resolved.resolve() == model.resolve()
 
 
-def test_resolve_ros_package_path(tmp_path, monkeypatch):
+def test_resolve_ros_package_path(tmp_path, monkeypatch) -> None:
     """Test resolving via ROS_PACKAGE_PATH environment variable."""
     # Mock a ROS workspace
     ws = tmp_path / "ros_ws"
@@ -84,7 +84,7 @@ def test_resolve_ros_package_path(tmp_path, monkeypatch):
     assert resolved.resolve() == (pkg / "mesh.stl").resolve()
 
 
-def test_resolve_uri_formats(tmp_path):
+def test_resolve_uri_formats(tmp_path) -> None:
     """Test variations of package URI prefixes."""
     pkg = tmp_path / "pkg"
     pkg.mkdir()
@@ -103,7 +103,7 @@ def test_resolve_uri_formats(tmp_path):
     )
 
 
-def test_resolve_max_depth_exceeded(tmp_path):
+def test_resolve_max_depth_exceeded(tmp_path) -> None:
     """Test that we don't go up forever."""
     # Deeply nested folder without matching package
     deep = tmp_path / "a/b/c/d/e/f/g/h/i/j/k"
@@ -113,7 +113,7 @@ def test_resolve_max_depth_exceeded(tmp_path):
     assert resolved is None
 
 
-def test_resolve_package_path_edge_cases_extended(tmp_path, monkeypatch):
+def test_resolve_package_path_edge_cases_extended(tmp_path, monkeypatch) -> None:
     """Test extended edge cases for comprehensive coverage."""
 
     # 1. Start dir is a file
@@ -161,7 +161,7 @@ def test_resolve_package_path_edge_cases_extended(tmp_path, monkeypatch):
     assert res.resolve() == (target_pkg / "mesh.stl").resolve()
 
 
-def test_resolve_package_path_root_recursion():
+def test_resolve_package_path_root_recursion() -> None:
     """Test recursion break at root (curr.parent == curr)."""
 
     # Create a fake path object that acts like root
@@ -190,7 +190,7 @@ def test_resolve_package_path_root_recursion():
     assert resolve_package_path("package://missing/file.stl", fake_root) is None
 
 
-def test_normalize_uri_to_path():
+def test_normalize_uri_to_path() -> None:
     """Test normalization of file:// URIs."""
     # Absolute mapping
     assert normalize_uri_to_path("file:///path/to/mesh.stl") == Path("/path/to/mesh.stl")
@@ -207,7 +207,7 @@ def test_normalize_uri_to_path():
     assert normalize_uri_to_path("/abs/path") == Path("/abs/path")
 
 
-def test_get_export_path(tmp_path):
+def test_get_export_path(tmp_path) -> None:
     """Test preparation of paths for URDF/XACRO export."""
     # 1. Package URIs should be preserved untouched
     assert get_export_path("package://pkg/mesh.stl") == "package://pkg/mesh.stl"
@@ -235,7 +235,7 @@ def test_get_export_path(tmp_path):
     assert get_export_path(res_other, relative_to=work_dir) == res_other
 
 
-def test_path_utils_search_and_export_edge_cases(tmp_path):
+def test_path_utils_search_and_export_edge_cases(tmp_path) -> None:
     """Test additional search paths and export resolution edge cases."""
     pkg_root = tmp_path / "my_pkg"
     pkg_root.mkdir()
@@ -257,7 +257,7 @@ def test_path_utils_search_and_export_edge_cases(tmp_path):
     assert res == "/root/path.stl"
 
 
-def test_path_utils_ros_and_search_fallbacks(tmp_path):
+def test_path_utils_ros_and_search_fallbacks(tmp_path) -> None:
     """Test ROS_PACKAGE_PATH and search path priority logic."""
     import os
 
@@ -294,7 +294,7 @@ def test_path_utils_ros_and_search_fallbacks(tmp_path):
             del os.environ["ROS_PACKAGE_PATH"]
 
 
-def test_path_utils_export_errors():
+def test_path_utils_export_errors() -> None:
     """Test export path formatting when relativity fails."""
     # file:// URI absolute but not under relative_to
     res = "file:///root/mesh.stl"
@@ -302,7 +302,7 @@ def test_path_utils_export_errors():
     assert get_export_path(res, relative_to=rel) == res
 
 
-def test_package_path_resolution_search_failure():
+def test_package_path_resolution_search_failure() -> None:
     """Verify that resolve_package_path returns None when all search paths fail."""
     from pathlib import Path
 

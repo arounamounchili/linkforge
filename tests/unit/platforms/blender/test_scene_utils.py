@@ -14,7 +14,7 @@ from linkforge.blender.utils.scene_utils import (
 )
 
 
-def test_is_robot_link_with_valid_link():
+def test_is_robot_link_with_valid_link() -> None:
     """Test is_robot_link returns True for valid robot link object."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -24,7 +24,7 @@ def test_is_robot_link_with_valid_link():
     assert is_robot_link(obj) is True
 
 
-def test_is_robot_link_with_non_link():
+def test_is_robot_link_with_non_link() -> None:
     """Test is_robot_link returns False for non-link object."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -32,12 +32,12 @@ def test_is_robot_link_with_non_link():
     assert is_robot_link(obj) is False
 
 
-def test_is_robot_link_with_none():
+def test_is_robot_link_with_none() -> None:
     """Test is_robot_link handles None input without throwing an error."""
     assert is_robot_link(None) is False
 
 
-def test_is_robot_joint_with_valid_joint():
+def test_is_robot_joint_with_valid_joint() -> None:
     """Test is_robot_joint returns True for valid robot_joint object."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
@@ -48,7 +48,7 @@ def test_is_robot_joint_with_valid_joint():
     assert is_robot_joint(obj) is True
 
 
-def test_is_robot_joint_with_mesh_object():
+def test_is_robot_joint_with_mesh_object() -> None:
     """Test is_robot_joint returns False for objects that cannot be robot_joints."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -56,7 +56,7 @@ def test_is_robot_joint_with_mesh_object():
     assert is_robot_joint(obj) is False
 
 
-def test_is_robot_joint_with_empty_not_marked():
+def test_is_robot_joint_with_empty_not_marked() -> None:
     """Test is_robot_joint returns False for non robot_joint objects."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
@@ -64,7 +64,7 @@ def test_is_robot_joint_with_empty_not_marked():
     assert is_robot_joint(obj) is False
 
 
-def test_is_robot_sensor_with_valid_sensor():
+def test_is_robot_sensor_with_valid_sensor() -> None:
     """Test is_robot_sensor returns True for valid robot_sensor object."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
@@ -75,7 +75,7 @@ def test_is_robot_sensor_with_valid_sensor():
     assert is_robot_sensor(obj) is True
 
 
-def test_is_robot_sensor_with_mesh_object():
+def test_is_robot_sensor_with_mesh_object() -> None:
     """Test is_robot_sensor returns False for objects that cannot be robot_sensors."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -83,7 +83,7 @@ def test_is_robot_sensor_with_mesh_object():
     assert is_robot_sensor(obj) is False
 
 
-def test_is_robot_sensor_with_empty_not_marked():
+def test_is_robot_sensor_with_empty_not_marked() -> None:
     """Test is_robot_sensor returns False for non robot_sensor objects."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
@@ -91,7 +91,7 @@ def test_is_robot_sensor_with_empty_not_marked():
     assert is_robot_sensor(obj) is False
 
 
-def test_is_robot_transmission_with_valid_transmission():
+def test_is_robot_transmission_with_valid_transmission() -> None:
     """Test is_robot_transmission returns True for valid transmission."""
     # Create an empty and mark it as a transmission
     bpy.ops.object.empty_add(type="PLAIN_AXES")
@@ -102,7 +102,7 @@ def test_is_robot_transmission_with_valid_transmission():
     assert is_robot_transmission(obj) is True
 
 
-def test_is_robot_transmission_with_unmarked_object():
+def test_is_robot_transmission_with_unmarked_object() -> None:
     """Test is_robot_transmission returns False for unmarked object."""
     # Create an object but don't mark it as a transmission
     bpy.ops.mesh.primitive_cube_add()
@@ -111,7 +111,7 @@ def test_is_robot_transmission_with_unmarked_object():
     assert is_robot_transmission(obj) is False
 
 
-def test_move_to_collection_basic():
+def test_move_to_collection_basic() -> None:
     """Test moving an object to a new collection."""
     # Clean scene
     bpy.ops.object.select_all(action="SELECT")
@@ -134,7 +134,7 @@ def test_move_to_collection_basic():
     assert obj not in bpy.context.scene.collection.objects[:]
 
 
-def test_move_to_collection_already_in_target():
+def test_move_to_collection_already_in_target() -> None:
     """Test moving an object to its current collection."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -157,7 +157,7 @@ def test_move_to_collection_already_in_target():
     assert list(obj.users_collection) == [target_collection]
 
 
-def test_move_to_collection_none_object():
+def test_move_to_collection_none_object() -> None:
     """Test with None object."""
     target_collection = bpy.data.collections.new("TestCollection")
     bpy.context.scene.collection.children.link(target_collection)
@@ -166,7 +166,7 @@ def test_move_to_collection_none_object():
     move_to_collection(None, target_collection)
 
 
-def test_move_to_collection_none_collection():
+def test_move_to_collection_none_collection() -> None:
     """Test with None collection."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -178,13 +178,13 @@ def test_move_to_collection_none_collection():
     move_to_collection(obj, None)
 
 
-def test_move_to_collection_both_none():
+def test_move_to_collection_both_none() -> None:
     """Test with both None."""
     move_to_collection(None, None)
     # Should not raise error
 
 
-def test_move_to_collection_multiple_collections():
+def test_move_to_collection_multiple_collections() -> None:
     """Test moving object that exists in multiple collections."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -214,7 +214,7 @@ def test_move_to_collection_multiple_collections():
     assert obj not in coll2.objects[:]
 
 
-def test_get_robot_statistics_empty_scene():
+def test_get_robot_statistics_empty_scene() -> None:
     """Test get_robot_statistics with empty scene returns zeros."""
     stats = get_robot_statistics(bpy.context.scene)
 
@@ -228,7 +228,7 @@ def test_get_robot_statistics_empty_scene():
     assert stats.root_link is None
 
 
-def test_get_robot_statistics_none_scene():
+def test_get_robot_statistics_none_scene() -> None:
     """Test get_robot_statistics with None returns zeros."""
     stats = get_robot_statistics(None)
 
@@ -242,7 +242,7 @@ def test_get_robot_statistics_none_scene():
     assert stats.root_link is None
 
 
-def test_get_robot_statistics_with_links():
+def test_get_robot_statistics_with_links() -> None:
     """Test get_robot_statistics counts links and calculates mass."""
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     link1 = bpy.context.active_object
@@ -276,7 +276,7 @@ def test_get_robot_statistics_with_links():
     assert "gripper_link" in stats.link_objects
 
 
-def test_get_robot_statistics_dof_calculation():
+def test_get_robot_statistics_dof_calculation() -> None:
     """Test get_robot_statistics correctly calculates DOF for different joint types."""
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     parent_link = bpy.context.active_object
@@ -326,7 +326,7 @@ def test_get_robot_statistics_dof_calculation():
     assert len(stats.joint_objects) == 4
 
 
-def test_get_robot_statistics_root_link_detection():
+def test_get_robot_statistics_root_link_detection() -> None:
     """Test get_robot_statistics correctly identifies root link."""
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     base_link = bpy.context.active_object
@@ -372,7 +372,7 @@ def test_get_robot_statistics_root_link_detection():
     assert stats.root_link[1] == base_link
 
 
-def test_get_robot_statistics_with_sensors_and_transmissions():
+def test_get_robot_statistics_with_sensors_and_transmissions() -> None:
     """Test get_robot_statistics counts sensors and transmissions."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -399,7 +399,7 @@ def test_get_robot_statistics_with_sensors_and_transmissions():
     assert stats.transmission_objects[0] == transmission
 
 
-def test_build_tree_from_stats_basic():
+def test_build_tree_from_stats_basic() -> None:
     """Test build_tree_from_stats creates tree and joints mapping from stats."""
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     base = bpy.context.active_object
@@ -433,7 +433,7 @@ def test_build_tree_from_stats_basic():
     assert "base_link" in links_dict and "child_link" in links_dict
 
 
-def test_build_tree_from_stats_single_link():
+def test_build_tree_from_stats_single_link() -> None:
     """Test build_tree_from_stats handles no joint scene."""
     bpy.ops.mesh.primitive_cube_add(location=(2, 0, 0))
     only = bpy.context.active_object
@@ -450,7 +450,7 @@ def test_build_tree_from_stats_single_link():
     assert joints_dict == {}
 
 
-def test_build_tree_from_stats_parent_not_in_tree():
+def test_build_tree_from_stats_parent_not_in_tree() -> None:
     """If a joint refs a parent that is not a robot_link, it should be ignored."""
     # invalid parent
     bpy.ops.mesh.primitive_cube_add(location=(10, 0, 0))
@@ -483,7 +483,7 @@ def test_build_tree_from_stats_parent_not_in_tree():
     assert ("maybe_parent", "real_child") not in joints_dict
 
 
-def test_build_tree_from_stats_no_root_when_all_links_are_children():
+def test_build_tree_from_stats_no_root_when_all_links_are_children() -> None:
     """If every link appears as a child in joints_map, root_link should be None."""
     bpy.ops.mesh.primitive_cube_add(location=(20, 0, 0))
     a = bpy.context.active_object
@@ -521,7 +521,7 @@ def test_build_tree_from_stats_no_root_when_all_links_are_children():
     assert root_link is None
 
 
-def test_get_robot_statistics_excludes_invalid_mass():
+def test_get_robot_statistics_excludes_invalid_mass() -> None:
     """Test that links with <0 mass do not add up to total_mass.
     If a link has invalid its still counted in num_links but its mass is
     ignored in total_mass, since its not a valid physical link."""
@@ -556,7 +556,7 @@ def test_get_robot_statistics_excludes_invalid_mass():
     assert stats.total_mass == 10.0  # 10 + 0 (ignored) + (-5)(ignored)
 
 
-def test_get_robot_statistics_joint_with_none_parent():
+def test_get_robot_statistics_joint_with_none_parent() -> None:
     """Test that joints with None parent_link are counted but not added to joints_map.
 
     If parent_link is None, the joint shld be counted but not create a parent-child relation in joints_map.
@@ -594,7 +594,7 @@ def test_get_robot_statistics_joint_with_none_parent():
     assert stats.total_mass == 5.0
 
 
-def test_get_robot_statistics_joint_with_empty_link_names():
+def test_get_robot_statistics_joint_with_empty_link_names() -> None:
     """Test that joints with empty link_name strings are counted but not added to joints_map.
 
     If parent or child has an empty link_name, the joint should be counted

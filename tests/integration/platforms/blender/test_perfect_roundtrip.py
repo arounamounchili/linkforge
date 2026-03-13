@@ -309,7 +309,7 @@ def compare_robots(robot1: Robot, robot2: Robot, context: str = "") -> list[str]
     return differences
 
 
-def test_perfect_roundtrip_comprehensive_robot(examples_dir: Path):
+def test_perfect_roundtrip_comprehensive_robot(examples_dir: Path) -> None:
     """Test that comprehensive test robot survives perfect roundtrip."""
     # Load original
     original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
@@ -344,7 +344,7 @@ def test_perfect_roundtrip_comprehensive_robot(examples_dir: Path):
         temp_path.unlink()
 
 
-def test_geometry_types_roundtrip():
+def test_geometry_types_roundtrip() -> None:
     """Test that all geometry types survive roundtrip."""
     robot = Robot(name="geometry_test")
 
@@ -432,7 +432,7 @@ def test_geometry_types_roundtrip():
         temp_path.unlink()
 
 
-def test_joint_types_roundtrip():
+def test_joint_types_roundtrip() -> None:
     """Test that all joint types survive roundtrip."""
     robot = Robot(name="joint_test")
     robot.add_link(Link(name="base"))
@@ -510,7 +510,7 @@ def test_joint_types_roundtrip():
         temp_path.unlink()
 
 
-def test_mimic_joint_roundtrip():
+def test_mimic_joint_roundtrip() -> None:
     """Test that mimic joints survive roundtrip."""
     robot = Robot(name="mimic_test")
     robot.add_link(Link(name="base"))
@@ -565,7 +565,7 @@ def test_mimic_joint_roundtrip():
         temp_path.unlink()
 
 
-def test_material_preservation_roundtrip():
+def test_material_preservation_roundtrip() -> None:
     """Test that materials with colors survive roundtrip."""
     robot = Robot(name="material_test")
 
@@ -622,7 +622,7 @@ def test_material_preservation_roundtrip():
         temp_path.unlink()
 
 
-def test_collision_geometry_roundtrip():
+def test_collision_geometry_roundtrip() -> None:
     """Test that collision geometries survive roundtrip."""
     robot = Robot(name="collision_test")
 

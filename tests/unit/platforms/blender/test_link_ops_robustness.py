@@ -9,7 +9,7 @@ from linkforge.blender.operators.link_ops import (
 )
 
 
-def test_execute_collision_preview_update_branches(clean_scene):
+def test_execute_collision_preview_update_branches(clean_scene) -> None:
     """Hit edge cases."""
     link_obj = bpy.data.objects.new("Link", None)
     bpy.context.collection.objects.link(link_obj)
@@ -37,7 +37,7 @@ def test_execute_collision_preview_update_branches(clean_scene):
     col_obj["imported_from_urdf"] = False
 
 
-def test_regenerate_collision_mesh_validation(clean_scene):
+def test_regenerate_collision_mesh_validation(clean_scene) -> None:
     """Hit edge cases validation in regenerate."""
     # Passing None or non-link object
     regenerate_collision_mesh(None, "AUTO", bpy.context)
@@ -46,7 +46,7 @@ def test_regenerate_collision_mesh_validation(clean_scene):
     regenerate_collision_mesh(o, "AUTO", bpy.context)
 
 
-def test_create_collision_failure_branches(clean_scene):
+def test_create_collision_failure_branches(clean_scene) -> None:
     """Hit edge cases collision creation failure."""
     link_obj = bpy.data.objects.new("Link", None)
     bpy.context.collection.objects.link(link_obj)
@@ -60,7 +60,7 @@ def test_create_collision_failure_branches(clean_scene):
         assert create_collision_for_link(link_obj, "BOX", bpy.context) is None
 
 
-def test_generate_collision_all_skip(clean_scene):
+def test_generate_collision_all_skip(clean_scene) -> None:
     """Hit edge cases skipping links with no visuals."""
     link_obj = bpy.data.objects.new("EmptyLink", None)
     bpy.context.collection.objects.link(link_obj)
@@ -71,7 +71,7 @@ def test_generate_collision_all_skip(clean_scene):
     assert not any("_collision" in obj.name for obj in bpy.data.objects)
 
 
-def test_add_material_slot_skip(clean_scene):
+def test_add_material_slot_skip(clean_scene) -> None:
     """Hit edge cases skipping if no visual."""
     link_obj = bpy.data.objects.new("MatLink", None)
     bpy.context.collection.objects.link(link_obj)

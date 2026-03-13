@@ -13,7 +13,7 @@ import pytest
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_xacro_with_relative_includes():
+def test_xacro_with_relative_includes() -> None:
     """Test that XACRO files with relative includes are processed correctly."""
     from linkforge_core.parsers import XacroResolver
 
@@ -107,7 +107,7 @@ def test_xacro_with_relative_includes():
         assert wheel_link.visuals[0].material.color.r == pytest.approx(0.0)
 
 
-def test_xacro_nested_includes():
+def test_xacro_nested_includes() -> None:
     """Test XACRO files with multiple levels of includes."""
     from linkforge_core.parsers import XacroResolver
 
@@ -177,7 +177,7 @@ def test_xacro_nested_includes():
         assert base_link.inertial.mass == pytest.approx(10.0)
 
 
-def test_xacro_absolute_path_includes():
+def test_xacro_absolute_path_includes() -> None:
     """Test that absolute path includes still work."""
     from linkforge_core.parsers import XacroResolver
 

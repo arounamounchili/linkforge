@@ -16,7 +16,7 @@ from linkforge_core.models import (
 class TestTransmissionJoint:
     """Tests for TransmissionJoint model."""
 
-    def test_default_joint(self):
+    def test_default_joint(self) -> None:
         """Test creating a transmission joint with defaults."""
         joint = TransmissionJoint(name="joint1")
         assert joint.name == "joint1"
@@ -24,7 +24,7 @@ class TestTransmissionJoint:
         assert joint.mechanical_reduction == 1.0
         assert joint.offset == 0.0
 
-    def test_custom_joint(self):
+    def test_custom_joint(self) -> None:
         """Test creating a transmission joint with custom parameters."""
         joint = TransmissionJoint(
             name="joint1",
@@ -38,17 +38,17 @@ class TestTransmissionJoint:
         assert joint.mechanical_reduction == 50.0
         assert joint.offset == pytest.approx(0.1)
 
-    def test_empty_name(self):
+    def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError, match="Transmission joint name cannot be empty"):
             TransmissionJoint(name="")
 
-    def test_empty_interfaces(self):
+    def test_empty_interfaces(self) -> None:
         """Test that empty interfaces raises error."""
         with pytest.raises(RobotModelError, match="must have at least one hardware interface"):
             TransmissionJoint(name="joint1", hardware_interfaces=[])
 
-    def test_zero_reduction(self):
+    def test_zero_reduction(self) -> None:
         """Test that zero mechanical reduction raises error."""
         with pytest.raises(RobotModelError, match="mechanical reduction cannot be zero"):
             TransmissionJoint(name="joint1", mechanical_reduction=0.0)
@@ -57,7 +57,7 @@ class TestTransmissionJoint:
 class TestTransmissionActuator:
     """Tests for TransmissionActuator model."""
 
-    def test_default_actuator(self):
+    def test_default_actuator(self) -> None:
         """Test creating a transmission actuator with defaults."""
         actuator = TransmissionActuator(name="motor1")
         assert actuator.name == "motor1"
@@ -65,7 +65,7 @@ class TestTransmissionActuator:
         assert actuator.mechanical_reduction == 1.0
         assert actuator.offset == 0.0
 
-    def test_custom_actuator(self):
+    def test_custom_actuator(self) -> None:
         """Test creating a transmission actuator with custom parameters."""
         actuator = TransmissionActuator(
             name="motor1",
@@ -78,17 +78,17 @@ class TestTransmissionActuator:
         assert actuator.mechanical_reduction == 100.0
         assert actuator.offset == pytest.approx(-0.05)
 
-    def test_empty_name(self):
+    def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError, match="Transmission actuator name cannot be empty"):
             TransmissionActuator(name="")
 
-    def test_empty_interfaces(self):
+    def test_empty_interfaces(self) -> None:
         """Test that empty interfaces raises error."""
         with pytest.raises(RobotModelError, match="must have at least one hardware interface"):
             TransmissionActuator(name="motor1", hardware_interfaces=[])
 
-    def test_zero_reduction(self):
+    def test_zero_reduction(self) -> None:
         """Test that zero mechanical reduction raises error."""
         with pytest.raises(RobotModelError, match="mechanical reduction cannot be zero"):
             TransmissionActuator(name="motor1", mechanical_reduction=0.0)
@@ -97,7 +97,7 @@ class TestTransmissionActuator:
 class TestTransmission:
     """Tests for Transmission model."""
 
-    def test_simple_transmission(self):
+    def test_simple_transmission(self) -> None:
         """Test creating a simple transmission."""
         joint = TransmissionJoint(name="joint1", mechanical_reduction=50.0)
         actuator = TransmissionActuator(name="motor1")
@@ -112,7 +112,7 @@ class TestTransmission:
         assert len(trans.joints) == 1
         assert len(trans.actuators) == 1
 
-    def test_differential_transmission(self):
+    def test_differential_transmission(self) -> None:
         """Test creating a differential transmission."""
         joint1 = TransmissionJoint(name="joint1")
         joint2 = TransmissionJoint(name="joint2")
@@ -128,7 +128,7 @@ class TestTransmission:
         assert len(trans.joints) == 2
         assert len(trans.actuators) == 2
 
-    def test_create_simple_factory(self):
+    def test_create_simple_factory(self) -> None:
         """Test creating a simple transmission with factory method."""
         trans = Transmission.create_simple(
             name="trans1",
@@ -145,7 +145,7 @@ class TestTransmission:
         assert len(trans.actuators) == 1
         assert trans.actuators[0].name == "shoulder_joint_motor"
 
-    def test_create_simple_with_custom_actuator_name(self):
+    def test_create_simple_with_custom_actuator_name(self) -> None:
         """Test creating simple transmission with custom actuator name."""
         trans = Transmission.create_simple(
             name="trans1",
@@ -154,7 +154,7 @@ class TestTransmission:
         )
         assert trans.actuators[0].name == "elbow_motor"
 
-    def test_create_differential_factory(self):
+    def test_create_differential_factory(self) -> None:
         """Test creating a differential transmission with factory method."""
         trans = Transmission.create_differential(
             name="diff_trans",
@@ -174,7 +174,7 @@ class TestTransmission:
         assert trans.actuators[0].name == "left_wheel_joint_motor"
         assert trans.actuators[1].name == "right_wheel_joint_motor"
 
-    def test_create_differential_with_custom_actuator_names(self):
+    def test_create_differential_with_custom_actuator_names(self) -> None:
         """Test creating differential transmission with custom actuator names."""
         trans = Transmission.create_differential(
             name="diff_trans",
@@ -186,7 +186,7 @@ class TestTransmission:
         assert trans.actuators[0].name == "motor_left"
         assert trans.actuators[1].name == "motor_right"
 
-    def test_transmission_with_parameters(self):
+    def test_transmission_with_parameters(self) -> None:
         """Test transmission with additional parameters."""
         joint = TransmissionJoint(name="joint1")
         trans = Transmission(
@@ -198,7 +198,7 @@ class TestTransmission:
         assert trans.parameters["param1"] == "value1"
         assert trans.parameters["param2"] == "42"
 
-    def test_empty_name(self):
+    def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         joint = TransmissionJoint(name="joint1")
         with pytest.raises(RobotModelError, match="Transmission name cannot be empty"):
@@ -208,7 +208,7 @@ class TestTransmission:
                 joints=[joint],
             )
 
-    def test_empty_type(self):
+    def test_empty_type(self) -> None:
         """Test that empty type raises error."""
         joint = TransmissionJoint(name="joint1")
         with pytest.raises(RobotModelError, match="Transmission type cannot be empty"):
@@ -218,7 +218,7 @@ class TestTransmission:
                 joints=[joint],
             )
 
-    def test_invalid_name(self):
+    def test_invalid_name(self) -> None:
         """Test that invalid name raises error."""
         joint = TransmissionJoint(name="joint1")
         with pytest.raises(RobotModelError, match="contains invalid characters"):
@@ -228,7 +228,7 @@ class TestTransmission:
                 joints=[joint],
             )
 
-    def test_no_joints(self):
+    def test_no_joints(self) -> None:
         """Test that transmission without joints raises error."""
         with pytest.raises(RobotModelError, match="must have at least one joint"):
             Transmission(
@@ -237,7 +237,7 @@ class TestTransmission:
                 joints=[],
             )
 
-    def test_duplicate_joint_names(self):
+    def test_duplicate_joint_names(self) -> None:
         """Test that duplicate joint names raise error."""
         joint1 = TransmissionJoint(name="joint1")
         joint2 = TransmissionJoint(name="joint1")  # Duplicate
@@ -248,7 +248,7 @@ class TestTransmission:
                 joints=[joint1, joint2],
             )
 
-    def test_duplicate_actuator_names(self):
+    def test_duplicate_actuator_names(self) -> None:
         """Test that duplicate actuator names raise error."""
         joint = TransmissionJoint(name="joint1")
         actuator1 = TransmissionActuator(name="motor1")
@@ -265,7 +265,7 @@ class TestTransmission:
 class TestTransmissionType:
     """Tests for TransmissionType enum."""
 
-    def test_enum_values(self):
+    def test_enum_values(self) -> None:
         """Test that enum has expected values."""
         assert TransmissionType.SIMPLE.value == "transmission_interface/SimpleTransmission"
         assert (
@@ -281,7 +281,7 @@ class TestTransmissionType:
 class TestHardwareInterface:
     """Tests for HardwareInterface enum."""
 
-    def test_enum_values(self):
+    def test_enum_values(self) -> None:
         """Test that enum has expected values."""
         assert HardwareInterface.POSITION.value == "hardware_interface/PositionJointInterface"
         assert HardwareInterface.VELOCITY.value == "hardware_interface/VelocityJointInterface"

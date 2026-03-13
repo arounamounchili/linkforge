@@ -10,7 +10,7 @@ import pytest
 from linkforge.blender.adapters.blender_to_core import blender_joint_to_core
 
 
-def test_enhanced_joint_conversion_roundtrip(clean_scene):
+def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     """Verify that calibration and safety controller survive Blender to Core conversion."""
     # 1. Setup Links
     p = bpy.data.objects.new("Parent", None)

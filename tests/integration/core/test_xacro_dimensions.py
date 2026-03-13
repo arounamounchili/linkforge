@@ -9,7 +9,7 @@ from linkforge_core.models import Color, Joint, JointType, Link, Material, Robot
 from linkforge_core.models.geometry import Box, Cylinder, Sphere, Transform, Vector3
 
 
-def test_extract_dimensions_cylinders():
+def test_extract_dimensions_cylinders() -> None:
     """Test that repeated cylinder dimensions are extracted as properties."""
     # Create robot with 4 identical wheels
     base = Link(name="base_link")
@@ -61,7 +61,7 @@ def test_extract_dimensions_cylinders():
         assert cyl.get("length") == "${wheel_length}", "Length should use property"
 
 
-def test_extract_dimensions_boxes():
+def test_extract_dimensions_boxes() -> None:
     """Test that repeated box dimensions are extracted as properties."""
     # Create robot with 2 identical legs
     base = Link(name="base_link")
@@ -100,7 +100,7 @@ def test_extract_dimensions_boxes():
         assert box.get("size") == "${leg_width} ${leg_depth} ${leg_height}"
 
 
-def test_extract_dimensions_spheres():
+def test_extract_dimensions_spheres() -> None:
     """Test that repeated sphere dimensions are extracted as properties."""
     # Create robot with 3 identical balls
     base = Link(name="base_link")
@@ -134,7 +134,7 @@ def test_extract_dimensions_spheres():
         assert sphere.get("radius") == "${ball_radius}"
 
 
-def test_no_extract_unique_dimensions():
+def test_no_extract_unique_dimensions() -> None:
     """Test that unique dimensions are NOT extracted as properties."""
     # Create robot with unique dimensions
     base = Link(name="base_link")
@@ -169,7 +169,7 @@ def test_no_extract_unique_dimensions():
     assert cylinders[1].get("length") == "0.03"
 
 
-def test_extract_dimensions_mixed_geometries():
+def test_extract_dimensions_mixed_geometries() -> None:
     """Test dimension extraction with multiple geometry types."""
     # Create robot with cylinders + boxes
     base = Link(name="base_link")
@@ -216,7 +216,7 @@ def test_extract_dimensions_mixed_geometries():
     assert "leg_height" in prop_names
 
 
-def test_dimension_floating_point_tolerance():
+def test_dimension_floating_point_tolerance() -> None:
     """Test that similar dimensions are grouped with tolerance."""
     # Create wheels with slightly different dimensions (within tolerance)
     base = Link(name="base_link")
@@ -245,7 +245,7 @@ def test_dimension_floating_point_tolerance():
     assert "wheel_length" in prop_names
 
 
-def test_dimension_property_naming():
+def test_dimension_property_naming() -> None:
     """Test that property names are descriptive."""
     # Test various naming scenarios
     base = Link(name="base_link")
@@ -279,7 +279,7 @@ def test_dimension_property_naming():
     assert "wheel_length" in prop_names
 
 
-def test_extract_dimensions_disabled():
+def test_extract_dimensions_disabled() -> None:
     """Test that dimensions are NOT extracted when extract_dimensions=False."""
     # Create robot with repeated dimensions
     base = Link(name="base_link")
@@ -311,7 +311,7 @@ def test_extract_dimensions_disabled():
         assert cyl.get("length") == "0.02"
 
 
-def test_extract_dimensions_with_materials():
+def test_extract_dimensions_with_materials() -> None:
     """Test that dimension and material extraction work together."""
     # Create robot with repeated dimensions AND materials
     base = Link(name="base_link")

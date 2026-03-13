@@ -16,13 +16,14 @@ import re
 import shutil
 import subprocess
 import sys
+import typing
 from pathlib import Path
 
 # Use tomllib (Py3.11+) or fall back to string parsing for manifest metadata
 try:
     import tomllib
 except ImportError:
-    tomllib = None
+    tomllib = None  # type: ignore[assignment]
 
 # --- Configuration ---
 REPO_ROOT = Path(__file__).resolve().parents[3]  # platforms/blender/scripts/build.py -> root
@@ -34,7 +35,7 @@ WHEELS_DIR = PLATFORM_DIR / "wheels"
 DIST_DIR = REPO_ROOT / "dist"  # Keep dist in root for easy access
 
 # Packages to bundle as wheels for cross-platform/cross-version compatibility
-DEP_CONFIG = {
+DEP_CONFIG: dict[str, dict[str, typing.Any]] = {
     "PyYAML": {
         "version": "6.0.3",
         "universal": False,
@@ -61,7 +62,7 @@ def read_manifest_value(key: str) -> str:
     return "0.0.0"
 
 
-def sync_dependencies():
+def sync_dependencies() -> None:
     """Download required wheels and update the manifest."""
     print("🔄 Syncing dependencies...")
 
@@ -122,7 +123,7 @@ def sync_dependencies():
     update_manifest_wheels()
 
 
-def update_manifest_wheels():
+def update_manifest_wheels() -> None:
     """Scan wheels/ directory and update blender_manifest.toml."""
     if not MANIFEST_PATH.exists():
         print(f"❌ Error: {MANIFEST_PATH} not found")
@@ -249,7 +250,7 @@ def build_extension() -> Path:
     return DIST_DIR
 
 
-def clean():
+def clean() -> None:
     """Clean build artifacts."""
     if DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)

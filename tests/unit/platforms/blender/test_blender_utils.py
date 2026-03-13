@@ -3,7 +3,7 @@ from linkforge.blender.utils.property_helpers import find_property_owner
 from linkforge.blender.utils.transform_utils import clear_parent_keep_transform
 
 
-def test_find_property_owner_strategies():
+def test_find_property_owner_strategies() -> None:
     """Test find_property_owner with various strategies."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -26,7 +26,7 @@ def test_find_property_owner_strategies():
     assert find_property_owner(bpy.context, props, "invalid_attr") is None
 
 
-def test_clear_parent_keep_transform():
+def test_clear_parent_keep_transform() -> None:
     """Test unparenting while preserving world transform."""
     bpy.ops.object.select_all(action="DESELECT")
 

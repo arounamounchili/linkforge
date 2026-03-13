@@ -10,7 +10,7 @@ from linkforge_core.parsers.xacro_parser import XACROParser, XacroResolver
 from linkforge_core.parsers.xacro_parser import logger as xacro_logger
 
 
-def test_xacro_substitute_basic_math():
+def test_xacro_substitute_basic_math() -> None:
     resolver = XacroResolver()
     # Simple math
     assert resolver._substitute("${1 + 1}") == 2
@@ -20,7 +20,7 @@ def test_xacro_substitute_basic_math():
     assert resolver._substitute("${(1 + 2) * 3}") == 9
 
 
-def test_substitute_resolves_properties_in_math():
+def test_substitute_resolves_properties_in_math() -> None:
     resolver = XacroResolver()
     resolver.properties["base_mass"] = 10.0
     resolver.properties["x"] = 0.4
@@ -36,7 +36,7 @@ def test_substitute_resolves_properties_in_math():
     )
 
 
-def test_substitute_ignores_literal_vectors():
+def test_substitute_ignores_literal_vectors() -> None:
     resolver = XacroResolver()
     # Space-separated vector in ${} is invalid syntax -> should raise error
     with pytest.raises(RobotParserError, match="invalid syntax"):
@@ -51,14 +51,14 @@ def test_substitute_ignores_literal_vectors():
         resolver._substitute("${1 + / 2}")
 
 
-def test_substitute_resolves_arguments():
+def test_substitute_resolves_arguments() -> None:
     resolver = XacroResolver()
     resolver.args["pkg_name"] = "my_robot"
     assert resolver._substitute("$(arg pkg_name)") == "my_robot"
     assert resolver._substitute("package://$(arg pkg_name)/meshes") == "package://my_robot/meshes"
 
 
-def test_resolve_elements_with_conditionals():
+def test_resolve_elements_with_conditionals() -> None:
     resolver = XacroResolver()
 
     # Test xacro:if true
@@ -84,7 +84,7 @@ def test_resolve_elements_with_conditionals():
     assert not any(c.tag == "link" for c in resolved)
 
 
-def test_resolve_elements_with_block_insertion():
+def test_resolve_elements_with_block_insertion() -> None:
     resolver = XacroResolver()
     # Define a block
     block_xml = ET.fromstring("<origin xyz='0 0 1'/>")
@@ -99,7 +99,7 @@ def test_resolve_elements_with_block_insertion():
     assert any(c.tag == "origin" and c.get("xyz") == "0 0 1" for c in resolved)
 
 
-def test_resolver_enforces_recursion_limit():
+def test_resolver_enforces_recursion_limit() -> None:
     resolver = XacroResolver(max_depth=5)
     # Define a recursive macro
     macro_xml = ET.fromstring("""
@@ -114,7 +114,7 @@ def test_resolver_enforces_recursion_limit():
         resolver.resolve_element(call_xml)
 
 
-def test_resolver_handles_malformed_tags_gracefully():
+def test_resolver_handles_malformed_tags_gracefully() -> None:
     resolver = XacroResolver()
     # Test malformed property (missing name)
     bad_prop = ET.fromstring(
@@ -130,7 +130,7 @@ def test_resolver_handles_malformed_tags_gracefully():
     assert res.tag == "skip"
 
 
-def test_macro_expansion_with_block_parameters():
+def test_macro_expansion_with_block_parameters() -> None:
     resolver = XacroResolver()
     # Macro with block parameter
     macro_xml = ET.fromstring("""
@@ -153,14 +153,14 @@ def test_macro_expansion_with_block_parameters():
     assert any(c.tag == "origin" and c.get("xyz") == "1 2 3" for c in link)
 
 
-def test_resolve_file_raises_error_on_missing_file():
+def test_resolve_file_raises_error_on_missing_file() -> None:
     resolver = XacroResolver()
     # Test non-existent file
     with pytest.raises(RobotParserError, match="Failed to process XACRO file"):
         resolver.resolve_file(Path("/non/existent/path.xacro"))
 
 
-def test_substitute_handles_non_numeric_eval_results():
+def test_substitute_handles_non_numeric_eval_results() -> None:
     resolver = XacroResolver()
     # eval returning a string (not a number)
     assert resolver._substitute("${'hello'}") == "hello"
@@ -168,7 +168,7 @@ def test_substitute_handles_non_numeric_eval_results():
     assert resolver._substitute("${True}") is True
 
 
-def test_resolve_elements_flattens_nested_containers():
+def test_resolve_elements_flattens_nested_containers() -> None:
     resolver = XacroResolver()
     # Nested if statements creating containers
     xml = ET.fromstring("""
@@ -185,7 +185,7 @@ def test_resolve_elements_flattens_nested_containers():
     assert any(c.tag == "link" and c.get("name") == "nested" for c in resolved)
 
 
-def test_resolve_file_raises_error_on_malformed_xml(tmp_path):
+def test_resolve_file_raises_error_on_malformed_xml(tmp_path) -> None:
     resolver = XacroResolver()
     # Malformed XML (unclosed tag)
     bad_xml = tmp_path / "bad.xacro"
@@ -194,7 +194,7 @@ def test_resolve_file_raises_error_on_malformed_xml(tmp_path):
         resolver.resolve_file(bad_xml)
 
 
-def test_resolve_element_handles_arguments_tag():
+def test_resolve_element_handles_arguments_tag() -> None:
     resolver = XacroResolver()
     arg_xml = ET.fromstring(
         "<xacro:arg xmlns:xacro='http://www.ros.org/wiki/xacro' name='my_arg' default='10'/>"
@@ -210,7 +210,7 @@ def test_resolve_element_handles_arguments_tag():
     assert resolver.args["my_arg"] == 10
 
 
-def test_macro_expansion_with_parameter_defaults():
+def test_macro_expansion_with_parameter_defaults() -> None:
     resolver = XacroResolver()
     # Macro with default parameter value
     macro_xml = ET.fromstring("""
@@ -227,7 +227,7 @@ def test_macro_expansion_with_parameter_defaults():
     assert link.get("mass") == "1.5"
 
 
-def test_finalize_urdf_returns_empty_on_empty_container():
+def test_finalize_urdf_returns_empty_on_empty_container() -> None:
     resolver = XacroResolver()
     # Empty container should yield valid XML with empty container, not empty string
     empty_root = ET.Element("container")
@@ -236,7 +236,7 @@ def test_finalize_urdf_returns_empty_on_empty_container():
     assert "<?xml" in res
 
 
-def test_find_file_and_search_paths(tmp_path):
+def test_find_file_and_search_paths(tmp_path) -> None:
     sub = tmp_path / "sub"
     sub.mkdir()
     inc = sub / "include.xacro"
@@ -250,7 +250,7 @@ def test_find_file_and_search_paths(tmp_path):
     assert resolver._find_file(str(inc)) == inc
 
 
-def test_xacro_parser_class_entry_point(tmp_path):
+def test_xacro_parser_class_entry_point(tmp_path) -> None:
     from linkforge_core.parsers.xacro_parser import XACROParser
 
     robot_xml = tmp_path / "robot.xacro"
@@ -262,7 +262,7 @@ def test_xacro_parser_class_entry_point(tmp_path):
     assert len(robot.links) == 1
 
 
-def test_resolve_elements_with_nested_container_in_includes(tmp_path):
+def test_resolve_elements_with_nested_container_in_includes(tmp_path) -> None:
     # This specifically targets the container flattening in includes
     inc_path = tmp_path / "inc.xacro"
     inc_path.write_text("""
@@ -285,7 +285,7 @@ def test_resolve_elements_with_nested_container_in_includes(tmp_path):
     assert any(c.tag == "link" and c.get("name") == "inc_link" for c in resolved)
 
 
-def test_resolve_file_raises_generic_error(monkeypatch):
+def test_resolve_file_raises_generic_error(monkeypatch) -> None:
     from linkforge_core.parsers.xacro_parser import XacroResolver
 
     def mock_parse(*args, **kwargs):
@@ -298,7 +298,7 @@ def test_resolve_file_raises_generic_error(monkeypatch):
         resolver.resolve_file(Path("any.xacro"))
 
 
-def test_resolve_element_skips_missing_include():
+def test_resolve_element_skips_missing_include() -> None:
     resolver = XacroResolver()
     xml = ET.fromstring(
         "<xacro:include xmlns:xacro='http://www.ros.org/wiki/xacro' filename='missing.xacro'/>"
@@ -307,7 +307,7 @@ def test_resolve_element_skips_missing_include():
     assert res.tag == "skip"
 
 
-def test_conditional_falls_back_on_eval_failure():
+def test_conditional_falls_back_on_eval_failure() -> None:
     resolver = XacroResolver()
     # "not_math" will fail eval, then fallback to string check
     xml = ET.fromstring("""
@@ -321,7 +321,7 @@ def test_conditional_falls_back_on_eval_failure():
     assert any(c.tag == "link" for c in resolved)
 
 
-def test_insert_block_skips_non_xml_property():
+def test_insert_block_skips_non_xml_property() -> None:
     resolver = XacroResolver()
     resolver.properties["my_string"] = "just a string"
     xml = ET.fromstring("""
@@ -334,7 +334,7 @@ def test_insert_block_skips_non_xml_property():
     assert len(res) == 0
 
 
-def test_macro_expansion_flattens_nested_containers():
+def test_macro_expansion_flattens_nested_containers() -> None:
     resolver = XacroResolver()
     # Macro body that starts with a conditional (produces a container)
     macro_xml = ET.fromstring("""
@@ -352,7 +352,7 @@ def test_macro_expansion_flattens_nested_containers():
     assert any(c.tag == "link" for c in resolved)
 
 
-def test_finalize_urdf_cleans_namespaced_attributes():
+def test_finalize_urdf_cleans_namespaced_attributes() -> None:
     resolver = XacroResolver()
     # Element with XACRO and namespaced attributes
     root = ET.Element(
@@ -365,7 +365,7 @@ def test_finalize_urdf_cleans_namespaced_attributes():
     assert "example.com" not in res_xml
 
 
-def test_finalize_urdf_with_no_root_children():
+def test_finalize_urdf_with_no_root_children() -> None:
     resolver = XacroResolver()
     # Container with NO children -> valid XML
     root = ET.Element("container")
@@ -373,7 +373,7 @@ def test_finalize_urdf_with_no_root_children():
     assert "<container />" in res
 
 
-def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch):
+def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch) -> None:
     # Handle files with only one link (no prefix possible)
     from linkforge_core.parsers.xacro_parser import XacroResolver
 
@@ -392,7 +392,7 @@ def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch):
         resolver.resolve_file(robot_xml)
 
 
-def test_finalize_urdf_with_container_root():
+def test_finalize_urdf_with_container_root() -> None:
     # Test containers with existing child elements
     resolver = XacroResolver()
     container = ET.Element("container")
@@ -403,7 +403,7 @@ def test_finalize_urdf_with_container_root():
     assert '<robot name="foo"' in xml_str
 
 
-def test_resolve_file_re_raises_robot_parser_error(tmp_path):
+def test_resolve_file_re_raises_robot_parser_error(tmp_path) -> None:
     # Edge case
     # Recursive macro in a file
     bad_xacro = tmp_path / "recursive.xacro"
@@ -422,7 +422,7 @@ def test_resolve_file_re_raises_robot_parser_error(tmp_path):
     assert "depth" in str(excinfo.value).lower()
 
 
-def test_resolver_supports_legacy_xacro_namespace():
+def test_resolver_supports_legacy_xacro_namespace() -> None:
     """Verify that legacy http://wiki.ros.org/xacro namespace is recognized."""
     resolver = XacroResolver()
 
@@ -439,7 +439,7 @@ def test_resolver_supports_legacy_xacro_namespace():
     assert link.get("mass") == "42"
 
 
-def test_xacro_substitute_trig_math():
+def test_xacro_substitute_trig_math() -> None:
     """Verify that trigonometric functions are supported in substitutions."""
     resolver = XacroResolver()
     import math
@@ -457,7 +457,7 @@ def test_xacro_substitute_trig_math():
     assert float(resolver._substitute("${sqrt(pow(3, 2) + pow(4, 2))}")) == pytest.approx(5.0)
 
 
-def test_xacro_namespaced_include(tmp_path):
+def test_xacro_namespaced_include(tmp_path) -> None:
     """Verify that macros and properties in namespaced includes are prefixed."""
     inc_path = tmp_path / "arm.xacro"
     inc_path.write_text("""
@@ -488,7 +488,7 @@ def test_xacro_namespaced_include(tmp_path):
     assert any(c.tag == "link" and c.get("name") == "arm_link" for c in resolved)
 
 
-def test_xacro_load_yaml(tmp_path):
+def test_xacro_load_yaml(tmp_path) -> None:
     """Verify that YAML data can be loaded and accessed in expressions."""
     yaml_path = tmp_path / "config.yaml"
     yaml_path.write_text("mass: 10.5\nname: bot")
@@ -508,7 +508,7 @@ def test_xacro_load_yaml(tmp_path):
     assert link.get("mass") == "10.5"
 
 
-def test_xacro_load_json(tmp_path):
+def test_xacro_load_json(tmp_path) -> None:
     """Verify that JSON data can be loaded and accessed in expressions."""
     json_path = tmp_path / "config.json"
     json_path.write_text('{"mass": 10.5, "name": "bot"}')
@@ -528,7 +528,7 @@ def test_xacro_load_json(tmp_path):
     assert link.get("mass") == "10.5"
 
 
-def test_xacro_logging_functions():
+def test_xacro_logging_functions() -> None:
     """Verify that xacro.warning, xacro.error, and xacro.message are available."""
     main_xml = ET.fromstring("""
         <root xmlns:xacro="http://www.ros.org/wiki/xacro">
@@ -550,7 +550,7 @@ def test_xacro_logging_functions():
     assert link.get("name") == "bot"
 
 
-def test_xacro_circular_include(tmp_path):
+def test_xacro_circular_include(tmp_path) -> None:
     """Test detection of circular XACRO includes."""
     file1 = tmp_path / "file1.xacro"
     file2 = tmp_path / "file2.xacro"
@@ -569,7 +569,7 @@ def test_xacro_circular_include(tmp_path):
         resolver.resolve_file(file1)
 
 
-def test_xacro_resolve_file_exception(tmp_path):
+def test_xacro_resolve_file_exception(tmp_path) -> None:
     """Test RobotParserError wrap in resolve_file."""
     resolver = XacroResolver()
     # Mock _process_include_file to raise a plain Exception
@@ -584,7 +584,7 @@ def test_xacro_resolve_file_exception(tmp_path):
         resolver.resolve_file(Path("some.xacro"))
 
 
-def test_xacro_parser_math_eval_error():
+def test_xacro_parser_math_eval_error() -> None:
     """Test that math evaluation errors raise RobotParserError."""
     resolver = XacroResolver()
     # Undefined variable
@@ -592,7 +592,7 @@ def test_xacro_parser_math_eval_error():
         resolver._evaluate("undefined_var + 1")
 
 
-def test_xacro_parser_finalize_urdf_recursive_cleanup():
+def test_xacro_parser_finalize_urdf_recursive_cleanup() -> None:
     """Test recursive cleanup in finalize_urdf."""
     resolver = XacroResolver()
     root = ET.Element("robot")
@@ -605,7 +605,7 @@ def test_xacro_parser_finalize_urdf_recursive_cleanup():
     assert "xacro:info" not in xml
 
 
-def test_xacro_eval_condition_math():
+def test_xacro_eval_condition_math() -> None:
     """Test complex math in conditions."""
     resolver = XacroResolver()
     resolver.properties["x"] = 10
@@ -615,7 +615,7 @@ def test_xacro_eval_condition_math():
     assert resolver._eval_condition("invalid syntax!") is True  # Fallback to string-truthy
 
 
-def test_xacro_circular_block(tmp_path):
+def test_xacro_circular_block(tmp_path) -> None:
     """Test detection of circular block insertions."""
     xacro_file = tmp_path / "test.xacro"
     content = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
@@ -631,7 +631,7 @@ def test_xacro_circular_block(tmp_path):
         resolver.resolve_file(xacro_file)
 
 
-def test_load_yaml_no_module():
+def test_load_yaml_no_module() -> None:
     """Test behavior when PyYAML is not installed (simulated)."""
     # We need to simulate the absence of yaml module in linkforge_core.parsers.xacro_parser
     # This is tricky because it's imported at top level.
@@ -654,7 +654,7 @@ def test_load_yaml_no_module():
         assert mock_logger.error.called
 
 
-def test_parse_typed_value_fallback():
+def test_parse_typed_value_fallback() -> None:
     """Test fallback behavior for typed value parsing."""
     from linkforge_core.parsers.xacro_parser import XacroResolver
 
@@ -670,7 +670,7 @@ def test_parse_typed_value_fallback():
     assert resolver._try_parse_typed_value("string") == "string"
 
 
-def test_xacro_eval_hierarchical_properties():
+def test_xacro_eval_hierarchical_properties() -> None:
     """Test hierarchical property access like ${arm.mass}."""
     resolver = XacroResolver()
     resolver.properties["arm.mass"] = 5.0
@@ -680,7 +680,7 @@ def test_xacro_eval_hierarchical_properties():
     assert resolver._evaluate("arm.link1.length") == 1.0
 
 
-def test_xacro_eval_condition_fallbacks():
+def test_xacro_eval_condition_fallbacks() -> None:
     """Test condition evaluation fallbacks and error cases."""
     resolver = XacroResolver()
 
@@ -703,7 +703,7 @@ def test_xacro_eval_condition_fallbacks():
     assert resolver._eval_condition("") is False
 
 
-def test_xacro_load_data_errors(tmp_path):
+def test_xacro_load_data_errors(tmp_path) -> None:
     """Test error handling when loading YAML/JSON files."""
     resolver = XacroResolver(start_dir=tmp_path)
     with mock.patch("linkforge_core.parsers.xacro_parser.logger") as m:
@@ -733,7 +733,7 @@ def test_xacro_load_data_errors(tmp_path):
         assert m.error.called
 
 
-def test_xacro_substitute_math_types():
+def test_xacro_substitute_math_types() -> None:
     """Test math substitution with various types to hit all branches."""
     resolver = XacroResolver()
     # int/float branch in _substitute
@@ -751,7 +751,7 @@ def test_xacro_substitute_math_types():
     assert res == "normal string"
 
 
-def test_xacro_unless(tmp_path):
+def test_xacro_unless(tmp_path) -> None:
     """Test xacro:unless logic."""
     xacro_file = tmp_path / "test.xacro"
     xacro_file.write_text(
@@ -765,7 +765,7 @@ def test_xacro_unless(tmp_path):
     assert "l2" not in xml
 
 
-def test_xacro_recursion_depth_with_name(tmp_path):
+def test_xacro_recursion_depth_with_name(tmp_path) -> None:
     """Test recursion depth error includes element name."""
     xacro_file = tmp_path / "test.xacro"
     # Create an infinite macro loop with a name
@@ -783,7 +783,7 @@ def test_xacro_recursion_depth_with_name(tmp_path):
     assert "depth" in str(excinfo.value).lower()
 
 
-def test_xacro_insert_block_container(tmp_path):
+def test_xacro_insert_block_container(tmp_path) -> None:
     """Test insert_block when it resolves to a container (nested elements)."""
     # Create a file to include
     inc_file = tmp_path / "inc.xacro"
@@ -803,7 +803,7 @@ def test_xacro_insert_block_container(tmp_path):
     assert "<l1" in xml
 
 
-def test_xacro_macro_call_child_container(tmp_path):
+def test_xacro_macro_call_child_container(tmp_path) -> None:
     """Test macro call where child resolves to a container."""
     inc_file = tmp_path / "inc.xacro"
     inc_file.write_text("<robot><l1/></robot>")
@@ -826,7 +826,7 @@ def test_xacro_macro_call_child_container(tmp_path):
     assert "<parent><l1" in xml.replace(" ", "").replace("\n", "").replace("\r", "")
 
 
-def test_xacro_conditional_nested_container(tmp_path):
+def test_xacro_conditional_nested_container(tmp_path) -> None:
     """Test xacro:if with content that resolves to a container."""
     inc_file = tmp_path / "inc.xacro"
     inc_file.write_text("<robot><l1/></robot>")
@@ -844,7 +844,7 @@ def test_xacro_conditional_nested_container(tmp_path):
     assert "<l1" in xml
 
 
-def test_xacro_parser_extra_args_coverage(tmp_path):
+def test_xacro_parser_extra_args_coverage(tmp_path) -> None:
     """Test passing extra arguments to XACROParser.parse (coverage variant)."""
     xacro_file = tmp_path / "test.xacro"
     xacro_file.write_text(
@@ -857,7 +857,7 @@ def test_xacro_parser_extra_args_coverage(tmp_path):
     assert robot.links[0].name == "custom_name"
 
 
-def test_xacro_unknown_tag(tmp_path, caplog):
+def test_xacro_unknown_tag(tmp_path, caplog) -> None:
     """Test warning for unknown xacro tags."""
     xacro_file = tmp_path / "test.xacro"
     xacro_file.write_text(
@@ -879,7 +879,7 @@ def test_xacro_unknown_tag(tmp_path, caplog):
         xacro_logger.propagate = original_propagate
 
 
-def test_xacro_recursive_cleanup_comments():
+def test_xacro_recursive_cleanup_comments() -> None:
     """Test that finalize_urdf cleans up non-string elements like comments."""
     resolver = XacroResolver()
     root = ET.Element("robot")
@@ -893,7 +893,7 @@ def test_xacro_recursive_cleanup_comments():
     assert '<link name="l" />' in xml_str or '<link name="l"/>' in xml_str
 
 
-def test_resolve_file_flatten_container(tmp_path):
+def test_resolve_file_flatten_container(tmp_path) -> None:
     """Test file resolution for standard XACRO files."""
     resolver = XacroResolver()
     path = tmp_path / "test.xacro"
@@ -912,7 +912,7 @@ def test_resolve_file_flatten_container(tmp_path):
     assert '<link name="l"' in xml
 
 
-def test_handle_include_missing_file_warning():
+def test_handle_include_missing_file_warning() -> None:
     """Test parsing of container elements with children."""
     resolver = XacroResolver()
     xml = ET.fromstring(
@@ -925,7 +925,7 @@ def test_handle_include_missing_file_warning():
         assert "Could not find included file" in m.warning.call_args[0][0]
 
 
-def test_property_block_assignment():
+def test_property_block_assignment() -> None:
     """Test parsing of container elements without children."""
     resolver = XacroResolver()
     xml = ET.fromstring("""
@@ -938,7 +938,7 @@ def test_property_block_assignment():
     assert isinstance(resolver.properties["block"], list)
 
 
-def test_handle_load_json_module_missing(tmp_path):
+def test_handle_load_json_module_missing(tmp_path) -> None:
     """Test evaluation of property blocks with content."""
     resolver = XacroResolver(start_dir=tmp_path)
     with mock.patch("linkforge_core.parsers.xacro_parser.json", None):
@@ -946,7 +946,7 @@ def test_handle_load_json_module_missing(tmp_path):
         assert res == {}
 
 
-def test_handle_load_yaml_error(tmp_path):
+def test_handle_load_yaml_error(tmp_path) -> None:
     """Test evaluation of empty property blocks."""
     resolver = XacroResolver(start_dir=tmp_path)
     path = tmp_path / "bad.yaml"
@@ -964,7 +964,7 @@ def test_handle_load_yaml_error(tmp_path):
         assert mock_logger.error.called
 
 
-def test_handle_load_json_error(tmp_path):
+def test_handle_load_json_error(tmp_path) -> None:
     """Test evaluation of property blocks with nested elements."""
     resolver = XacroResolver(start_dir=tmp_path)
     path = tmp_path / "bad.json"
@@ -981,7 +981,7 @@ def test_handle_load_json_error(tmp_path):
         assert mock_logger.error.called
 
 
-def test_substitute_mixed_text():
+def test_substitute_mixed_text() -> None:
     """Cover edge cases."""
     resolver = XacroResolver()
     resolver.properties["p"] = 1.5
@@ -989,7 +989,7 @@ def test_substitute_mixed_text():
     assert res == "val=1.5m"
 
 
-def test_cleanup_non_string_tag():
+def test_cleanup_non_string_tag() -> None:
     """Cover edge cases."""
     resolver = XacroResolver()
     # Create element with a Comment child (tag is a function/type, not string)
@@ -1003,7 +1003,7 @@ def test_cleanup_non_string_tag():
         # Should not crash.
 
 
-def test_try_parse_typed_value_yaml_error():
+def test_try_parse_typed_value_yaml_error() -> None:
     """Cover edge cases."""
     resolver = XacroResolver()
     # Mock yaml.safe_load to raise Exception
@@ -1014,7 +1014,7 @@ def test_try_parse_typed_value_yaml_error():
         assert res == "foo"
 
 
-def test_find_file_package_uri(tmp_path):
+def test_find_file_package_uri(tmp_path) -> None:
     """Test nested property evaluation."""
     resolver = XacroResolver(start_dir=tmp_path)
     with mock.patch("linkforge_core.parsers.xacro_parser.resolve_package_path") as m:
@@ -1032,7 +1032,7 @@ class TestXACROParserEdgeCoverage:
         p.write_text(xml)
         XACROParser().parse(p)
 
-    def test_unknown_xacro_tag_is_skipped_with_warning(self, tmp_path, caplog):
+    def test_unknown_xacro_tag_is_skipped_with_warning(self, tmp_path, caplog) -> None:
         """An unknown xacro: tag logs a warning and resolves to skip."""
         xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
             <link name="l1"/>
@@ -1042,7 +1042,7 @@ class TestXACROParserEdgeCoverage:
             self._write_and_parse(xml, tmp_path)
         assert any("no_such_macro" in r.message for r in caplog.records)
 
-    def test_macro_with_empty_name_is_not_registered(self, tmp_path):
+    def test_macro_with_empty_name_is_not_registered(self, tmp_path) -> None:
         """A xacro:macro with no name attribute is ignored gracefully."""
         xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
             <xacro:macro params=""><link name="l1"/></xacro:macro>
@@ -1050,7 +1050,7 @@ class TestXACROParserEdgeCoverage:
         </robot>"""
         self._write_and_parse(xml, tmp_path)
 
-    def test_insert_block_with_non_xml_property_is_skipped(self, tmp_path):
+    def test_insert_block_with_non_xml_property_is_skipped(self, tmp_path) -> None:
         """insert_block on a scalar property resolves to skip."""
         xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
             <xacro:property name="mass" value="1.0"/>
@@ -1059,7 +1059,7 @@ class TestXACROParserEdgeCoverage:
         </robot>"""
         self._write_and_parse(xml, tmp_path)
 
-    def test_include_nonexistent_file_is_handled_gracefully(self, tmp_path, caplog):
+    def test_include_nonexistent_file_is_handled_gracefully(self, tmp_path, caplog) -> None:
         """Including a file that does not exist is silently skipped with a warning."""
         xml = """<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">
             <xacro:include filename="/no/such/file.xacro"/>
@@ -1071,7 +1071,7 @@ class TestXACROParserEdgeCoverage:
         assert any("no/such" in r.message or "include" in r.message.lower() for r in caplog.records)
 
 
-def test_substitute_handles_file_uri_find_pattern():
+def test_substitute_handles_file_uri_find_pattern() -> None:
     """Verify that file://$(find pkg)/path is converted to package://pkg/path."""
     resolver = XacroResolver()
 
@@ -1083,7 +1083,7 @@ def test_substitute_handles_file_uri_find_pattern():
     assert result2 == "package://my_robot/meshes/base.stl"
 
 
-def test_xacro_parser_skips_none_kwargs(tmp_path):
+def test_xacro_parser_skips_none_kwargs(tmp_path) -> None:
     """Verify that None-valued kwargs do not override xacro arg defaults."""
     xacro_file = tmp_path / "robot.xacro"
     xacro_file.write_text(
@@ -1098,7 +1098,7 @@ def test_xacro_parser_skips_none_kwargs(tmp_path):
     assert "link_0" in [link.name for link in robot.links]
 
 
-def test_substitute_optenv(monkeypatch):
+def test_substitute_optenv(monkeypatch) -> None:
     """Verify $(optenv VAR default) resolves from environment, with fallback."""
     resolver = XacroResolver()
 
@@ -1110,7 +1110,7 @@ def test_substitute_optenv(monkeypatch):
     assert resolver._substitute("$(optenv MY_VAR)") == ""
 
 
-def test_substitute_env(monkeypatch):
+def test_substitute_env(monkeypatch) -> None:
     """Verify $(env VAR) resolves a set variable and raises when unset."""
     from linkforge_core.base import RobotParserError
 
@@ -1124,14 +1124,14 @@ def test_substitute_env(monkeypatch):
         resolver._substitute("$(env MY_VAR)")
 
 
-def test_xacro_substitute_undefined_arg_raises():
+def test_xacro_substitute_undefined_arg_raises() -> None:
     """Undefined $(arg) must raise RobotParserError."""
     resolver = XacroResolver()
     with pytest.raises(RobotParserError, match="Undefined substitution argument 'nonexistent'"):
         resolver._substitute("$(arg nonexistent)")
 
 
-def test_xacro_substitute_dollar_escape():
+def test_xacro_substitute_dollar_escape() -> None:
     """Spec gap: $$ must escape the dollar sign."""
     resolver = XacroResolver()
     # $${1+1} should produce literal ${1+1} string, not 2
@@ -1140,7 +1140,7 @@ def test_xacro_substitute_dollar_escape():
     assert resolver._substitute("$$(arg x)") == "$(arg x)"
 
 
-def test_xacro_macro_parent_scope_inheritance():
+def test_xacro_macro_parent_scope_inheritance() -> None:
     """Macro parameter p:=^ should inherit from outer scope."""
     resolver = XacroResolver()
     resolver.properties["test_p"] = 42
@@ -1156,7 +1156,7 @@ def test_xacro_macro_parent_scope_inheritance():
     assert res[0].get("v") == "42"
 
 
-def test_xacro_macro_parent_scope_inheritance_with_fallback():
+def test_xacro_macro_parent_scope_inheritance_with_fallback() -> None:
     """Macro parameter p:=^|default should use default if outer scope is missing."""
     resolver = XacroResolver()
     # No 'test_p' in outer scope
@@ -1172,7 +1172,7 @@ def test_xacro_macro_parent_scope_inheritance_with_fallback():
     assert res[0].get("v") == "100"
 
 
-def test_xacro_macro_parent_scope_not_found_raises():
+def test_xacro_macro_parent_scope_not_found_raises() -> None:
     """Macro parameter p:=^ should raise error if outer scope is missing and no default."""
     resolver = XacroResolver()
     macro_xml = (
@@ -1186,7 +1186,7 @@ def test_xacro_macro_parent_scope_not_found_raises():
         )
 
 
-def test_xacro_macro_params_smart_split():
+def test_xacro_macro_params_smart_split() -> None:
     """Ensure macro parameters are split correctly even with spaces in defaults."""
     resolver = XacroResolver()
     resolver.args["default_val"] = 50

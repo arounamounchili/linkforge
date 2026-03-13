@@ -8,6 +8,9 @@ from bpy.types import Context, Operator
 
 from ..utils.decorators import safe_execute
 
+if typing.TYPE_CHECKING:
+    from ..properties.joint_props import JointPropertyGroup
+
 
 class LINKFORGE_OT_add_ros2_control_joint(Operator):
     """Add a joint to the ros2_control system.
@@ -366,7 +369,7 @@ class LINKFORGE_OT_purge_ros2_control_data(Operator):
                 continue
 
             # Check for name mismatch (renamed in scene but not in control system)
-            scene_name = obj.linkforge_joint.joint_name
+            scene_name = typing.cast("JointPropertyGroup", obj.linkforge_joint).joint_name
             if item.name != scene_name:
                 item.name = scene_name
                 updated_count += 1

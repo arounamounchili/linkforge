@@ -9,7 +9,7 @@ from linkforge.blender.operators.import_ops import (
 from linkforge.linkforge_core.exceptions import RobotModelError
 
 
-def test_import_urdf_logic_paths(mocker, tmp_path):
+def test_import_urdf_logic_paths(mocker, tmp_path) -> None:
     """Test import operator logic by calling the unbound method."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()
@@ -30,7 +30,7 @@ def test_import_urdf_logic_paths(mocker, tmp_path):
     assert result == {"FINISHED"}
 
 
-def test_import_invalid_path_logic(mocker):
+def test_import_invalid_path_logic(mocker) -> None:
     """Test handling of invalid paths or missing directories."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.filepath = "/non/existent/path.urdf"
@@ -43,7 +43,7 @@ def test_import_invalid_path_logic(mocker):
     mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)
 
 
-def test_import_urdf_xacro_fallback(mocker, tmp_path):
+def test_import_urdf_xacro_fallback(mocker, tmp_path) -> None:
     """Test switching to Xacro parser if Xacro content is detected."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()
@@ -76,7 +76,7 @@ def test_import_urdf_xacro_fallback(mocker, tmp_path):
     mock_self.report.assert_any_call({"WARNING"}, mocker.ANY)
 
 
-def test_import_urdf_directory_handling_more(mocker, tmp_path):
+def test_import_urdf_directory_handling_more(mocker, tmp_path) -> None:
     """Test standard directory handling branches."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()
@@ -100,7 +100,7 @@ def test_import_urdf_directory_handling_more(mocker, tmp_path):
     mock_self.report.assert_any_call({"INFO"}, mocker.ANY)
 
 
-def test_import_urdf_directory_candidates(mocker, tmp_path):
+def test_import_urdf_directory_candidates(mocker, tmp_path) -> None:
     """Test candidate detection when importing a directory."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()
@@ -133,7 +133,7 @@ def test_import_urdf_directory_candidates(mocker, tmp_path):
     mock_self.report.assert_any_call({"ERROR"}, mocker.ANY)
 
 
-def test_import_urdf_invoke_check():
+def test_import_urdf_invoke_check() -> None:
     """Test invoke and check methods using class methods on mock."""
     mock_op = MagicMock(spec=LINKFORGE_OT_import_urdf)
     assert LINKFORGE_OT_import_urdf.check(mock_op, bpy.context) is True
@@ -144,7 +144,7 @@ def test_import_urdf_invoke_check():
         assert result == {"RUNNING_MODAL"}
 
 
-def test_import_registration():
+def test_import_registration() -> None:
     """Test operator registration and error recovery branches."""
     unregister()
     register()
@@ -159,7 +159,7 @@ def test_import_registration():
     register()
 
 
-def test_import_xacro_resolution_error(mocker, tmp_path):
+def test_import_xacro_resolution_error(mocker, tmp_path) -> None:
     """Test error handling during XACRO resolution."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()
@@ -180,7 +180,7 @@ def test_import_xacro_resolution_error(mocker, tmp_path):
     assert "PackageNotFoundError" in mock_self.report.call_args[0][1]
 
 
-def test_import_path_conversion_error(mocker, tmp_path):
+def test_import_path_conversion_error(mocker, tmp_path) -> None:
     """Test error handling during URDF path conversion."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()
@@ -199,7 +199,7 @@ def test_import_path_conversion_error(mocker, tmp_path):
     mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)
 
 
-def test_import_main_entry(mocker):
+def test_import_main_entry(mocker) -> None:
     """Verify execution of module entry point logic."""
     with (
         patch("linkforge.blender.operators.import_ops.register"),

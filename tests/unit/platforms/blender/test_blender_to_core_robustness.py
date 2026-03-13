@@ -19,7 +19,7 @@ from linkforge.linkforge_core.models import (
 from mathutils import Matrix
 
 
-def test_detect_primitive_type_robustness(clean_scene):
+def test_detect_primitive_type_robustness(clean_scene) -> None:
     """Test detect_primitive_type with edge cases."""
     # 1. Box with non-quad faces (should return None)
     m = bpy.data.meshes.new("NonQuadBox")
@@ -55,7 +55,7 @@ def test_detect_primitive_type_robustness(clean_scene):
     assert detect_primitive_type(cyl) is None
 
 
-def test_scene_to_robot_strict_mode(clean_scene):
+def test_scene_to_robot_strict_mode(clean_scene) -> None:
     """Test strict_mode behavior in scene_to_robot."""
     # Set up scene with a broken link (is_robot_link=True but no geometry/faulty)
     p = bpy.data.objects.new("FaultyLink", None)
@@ -87,7 +87,7 @@ def test_scene_to_robot_strict_mode(clean_scene):
         scene_to_robot(bpy.context)
 
 
-def test_joint_to_core_advanced_properties(clean_scene):
+def test_joint_to_core_advanced_properties(clean_scene) -> None:
     """Test custom axis, dynamics, and continuous limits."""
     # Parent and Child Links
     p = bpy.data.objects.new("Parent", None)
@@ -138,7 +138,7 @@ def test_joint_to_core_advanced_properties(clean_scene):
     assert core.limits.lower is None
 
 
-def test_ros2_control_gazebo_plugin(clean_scene):
+def test_ros2_control_gazebo_plugin(clean_scene) -> None:
     """Test Gazebo plugin generation for ROS2 control."""
     scene_props = bpy.context.scene.linkforge
     scene_props.use_ros2_control = True
@@ -166,7 +166,7 @@ def test_ros2_control_gazebo_plugin(clean_scene):
         )
 
 
-def test_get_object_geometry_mesh_export(clean_scene, tmp_path):
+def test_get_object_geometry_mesh_export(clean_scene, tmp_path) -> None:
     """Test mesh export path in get_object_geometry."""
     bpy.ops.mesh.primitive_monkey_add()
     monkey = bpy.context.active_object
@@ -190,7 +190,7 @@ def test_get_object_geometry_mesh_export(clean_scene, tmp_path):
         assert geom.resource == str(Path("monkey.stl"))
 
 
-def test_sensor_origin_custom_mount(clean_scene):
+def test_sensor_origin_custom_mount(clean_scene) -> None:
     """Test sensor corrected origin calculation when not a direct child."""
     # Link
     p = bpy.data.objects.new("Base", None)
@@ -216,7 +216,7 @@ def test_sensor_origin_custom_mount(clean_scene):
     assert robot.sensors[0].origin.xyz == Vector3(1.0, 1.0, 1.0)
 
 
-def test_manual_inertia_origin(clean_scene):
+def test_manual_inertia_origin(clean_scene) -> None:
     """Verify manual inertia origin extraction."""
     o = bpy.data.objects.new("InertialLink", None)
     bpy.context.collection.objects.link(o)
@@ -232,12 +232,12 @@ def test_manual_inertia_origin(clean_scene):
     assert core.inertial.origin.xyz.z == pytest.approx(0.3)
 
 
-def test_matrix_to_transform_none():
+def test_matrix_to_transform_none() -> None:
     """Hit edge case."""
     assert matrix_to_transform(None).xyz.x == 0.0
 
 
-def test_detect_primitive_type_none():
+def test_detect_primitive_type_none() -> None:
     """Hit edge cases."""
     assert detect_primitive_type(None) is None
 
@@ -246,7 +246,7 @@ def test_detect_primitive_type_none():
     assert detect_primitive_type(o) is None
 
 
-def test_get_object_geometry_none_and_fallback():
+def test_get_object_geometry_none_and_fallback() -> None:
     """Hit edge cases."""
     geom, mat = get_object_geometry(None)
     assert geom is None
@@ -263,7 +263,7 @@ def test_get_object_geometry_none_and_fallback():
     assert geom is None
 
 
-def test_extract_mesh_triangles_null_mesh():
+def test_extract_mesh_triangles_null_mesh() -> None:
     """Hit edge case."""
     from unittest import mock
 

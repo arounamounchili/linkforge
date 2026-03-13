@@ -4,7 +4,7 @@ import yaml
 from linkforge_core.parsers.xacro_parser import XacroResolver
 
 
-def test_xacro_namespaced_load_yaml(tmp_path):
+def test_xacro_namespaced_load_yaml(tmp_path) -> None:
     # 1. Create a mock package structure
     pkg_dir = tmp_path / "franka_description"
     pkg_dir.mkdir()
@@ -42,7 +42,7 @@ def test_xacro_namespaced_load_yaml(tmp_path):
     assert mass_elem.get("value") == "1.23"
 
 
-def test_unknown_macro_warning(caplog):
+def test_unknown_macro_warning(caplog) -> None:
     xacro_content = """<?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test">
     <xacro:unknown_macro params="foo"/>
@@ -57,7 +57,7 @@ def test_unknown_macro_warning(caplog):
     assert "Unknown macro or tag: 'unknown_macro'" in caplog.text
 
 
-def test_xacro_namespaced_load_json(tmp_path):
+def test_xacro_namespaced_load_json(tmp_path) -> None:
     # Create a mock json file
     json_dir = tmp_path / "data"
     json_dir.mkdir()
@@ -88,7 +88,7 @@ def test_xacro_namespaced_load_json(tmp_path):
     assert cyl.get("radius") == "0.1"
 
 
-def test_xacro_nested_property_evaluation():
+def test_xacro_nested_property_evaluation() -> None:
     # Test that nested properties derived from load_yaml work in expressions
     xacro_content = """<?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test">
@@ -105,7 +105,7 @@ def test_xacro_nested_property_evaluation():
     assert link.get("length") == "2.0"
 
 
-def test_xacro_circular_include(tmp_path):
+def test_xacro_circular_include(tmp_path) -> None:
     # A includes B, B includes A
     file_a = tmp_path / "a.xacro"
     file_b = tmp_path / "b.xacro"
@@ -132,7 +132,7 @@ def test_xacro_circular_include(tmp_path):
     assert "a.xacro -> b.xacro -> a.xacro" in str(excinfo.value)
 
 
-def test_xacro_recursion_limit():
+def test_xacro_recursion_limit() -> None:
     # Macro M1 calls M1
     xacro_content = """<?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test">

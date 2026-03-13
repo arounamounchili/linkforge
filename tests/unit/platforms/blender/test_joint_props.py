@@ -2,7 +2,7 @@ import bpy
 from linkforge.blender.properties.joint_props import poll_robot_joint, poll_robot_link
 
 
-def test_joint_name_getter_setter():
+def test_joint_name_getter_setter() -> None:
     """Test that joint_name mirrors and sanitizes the object name."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -18,7 +18,7 @@ def test_joint_name_getter_setter():
     assert obj.name == "New-Joint-Name"
 
 
-def test_joint_hierarchy_links():
+def test_joint_hierarchy_links() -> None:
     """Test that assigning parent/child links updates the hierarchy correctly."""
     bpy.ops.object.select_all(action="DESELECT")
 
@@ -61,7 +61,7 @@ def test_joint_hierarchy_links():
     assert joint.parent is None
 
 
-def test_poll_filters():
+def test_poll_filters() -> None:
     """Test the poll functions for links and joints."""
     bpy.ops.object.select_all(action="DESELECT")
 

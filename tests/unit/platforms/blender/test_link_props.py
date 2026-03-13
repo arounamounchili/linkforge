@@ -1,7 +1,7 @@
 import bpy
 
 
-def test_link_name_getter_setter():
+def test_link_name_getter_setter() -> None:
     """Test that link_name getter/setter work and sanitize names."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -18,7 +18,7 @@ def test_link_name_getter_setter():
     assert obj.linkforge.link_name == "New-Link-Name_"
 
 
-def test_automatic_child_renaming():
+def test_automatic_child_renaming() -> None:
     """Test that renaming a link object also renames its visual/collision children."""
     bpy.ops.object.select_all(action="DESELECT")
 
@@ -49,7 +49,7 @@ def test_automatic_child_renaming():
     assert col_obj.name == "chassis_collision_01"
 
 
-def test_collision_quality_update_trigger(mocker):
+def test_collision_quality_update_trigger(mocker) -> None:
     """Test that changing collision quality schedules a preview update."""
     # We need to mock the schedule_collision_preview_update to avoid background timer issues
     mock_schedule = mocker.patch(
@@ -74,7 +74,7 @@ def test_collision_quality_update_trigger(mocker):
     mock_schedule.assert_called_once_with(obj)
 
 
-def test_collision_quality_skip_imported():
+def test_collision_quality_skip_imported() -> None:
     """Test that quality update is skipped for imported collision meshes."""
     import linkforge.blender.operators.link_ops as link_ops
 
@@ -110,7 +110,7 @@ def test_collision_quality_skip_imported():
         link_ops.schedule_collision_preview_update = original_schedule
 
 
-def test_auto_inertia_toggle(mocker):
+def test_auto_inertia_toggle(mocker) -> None:
     """Test that disabling auto-inertia ensures the inertia handler is running."""
     mock_ensure = mocker.patch(
         "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"

@@ -21,14 +21,14 @@ from linkforge_core.models import (
 class TestSensorNoise:
     """Tests for SensorNoise model."""
 
-    def test_default_noise(self):
+    def test_default_noise(self) -> None:
         """Test default noise parameters."""
         noise = SensorNoise()
         assert noise.type == "gaussian"
         assert noise.mean == 0.0
         assert noise.stddev == 0.0
 
-    def test_custom_noise(self):
+    def test_custom_noise(self) -> None:
         """Test custom noise parameters."""
         noise = SensorNoise(
             type="gaussian_quantized",
@@ -45,7 +45,7 @@ class TestSensorNoise:
 class TestCameraInfo:
     """Tests for CameraInfo model."""
 
-    def test_default_camera(self):
+    def test_default_camera(self) -> None:
         """Test default camera parameters."""
         camera = CameraInfo()
         assert camera.horizontal_fov == pytest.approx(1.047, rel=0.01)
@@ -54,7 +54,7 @@ class TestCameraInfo:
         assert camera.near_clip == 0.1
         assert camera.far_clip == 100.0
 
-    def test_custom_camera(self):
+    def test_custom_camera(self) -> None:
         """Test custom camera parameters."""
         camera = CameraInfo(
             horizontal_fov=1.57,
@@ -67,7 +67,7 @@ class TestCameraInfo:
         assert camera.width == 1920
         assert camera.height == 1080
 
-    def test_invalid_fov(self):
+    def test_invalid_fov(self) -> None:
         """Test invalid field of view."""
         with pytest.raises(RobotModelError, match="Horizontal FOV must be between"):
             CameraInfo(horizontal_fov=-0.5)
@@ -75,7 +75,7 @@ class TestCameraInfo:
         with pytest.raises(RobotModelError, match="Horizontal FOV must be between"):
             CameraInfo(horizontal_fov=3.2)
 
-    def test_invalid_dimensions(self):
+    def test_invalid_dimensions(self) -> None:
         """Test invalid image dimensions."""
         with pytest.raises(RobotModelError, match="Image dimensions must be positive"):
             CameraInfo(width=-10)
@@ -83,7 +83,7 @@ class TestCameraInfo:
         with pytest.raises(RobotModelError, match="Image dimensions must be positive"):
             CameraInfo(height=0)
 
-    def test_invalid_clip(self):
+    def test_invalid_clip(self) -> None:
         """Test invalid clip planes."""
         with pytest.raises(RobotModelError, match="Near clip must be positive"):
             CameraInfo(near_clip=-0.1)
@@ -95,7 +95,7 @@ class TestCameraInfo:
 class TestLidarInfo:
     """Tests for LidarInfo model."""
 
-    def test_default_lidar(self):
+    def test_default_lidar(self) -> None:
         """Test default 2D LIDAR parameters."""
         lidar = LidarInfo()
         assert lidar.horizontal_samples == 640
@@ -105,7 +105,7 @@ class TestLidarInfo:
         assert lidar.range_max == 10.0
         assert lidar.vertical_samples == 1
 
-    def test_3d_lidar(self):
+    def test_3d_lidar(self) -> None:
         """Test 3D LIDAR parameters."""
         lidar = LidarInfo(
             horizontal_samples=1024,
@@ -118,12 +118,12 @@ class TestLidarInfo:
         assert lidar.vertical_samples == 64
         assert lidar.range_max == 100.0
 
-    def test_invalid_samples(self):
+    def test_invalid_samples(self) -> None:
         """Test invalid sample count."""
         with pytest.raises(RobotModelError, match="Horizontal samples must be positive"):
             LidarInfo(horizontal_samples=0)
 
-    def test_invalid_range(self):
+    def test_invalid_range(self) -> None:
         """Test invalid range parameters."""
         with pytest.raises(RobotModelError, match="Range min must be positive"):
             LidarInfo(range_min=-0.1)
@@ -131,7 +131,7 @@ class TestLidarInfo:
         with pytest.raises(RobotModelError, match="Range max must be greater than range min"):
             LidarInfo(range_min=10.0, range_max=5.0)
 
-    def test_invalid_angles(self):
+    def test_invalid_angles(self) -> None:
         """Test invalid angle range."""
         with pytest.raises(
             RobotModelError, match="Horizontal min angle must be less than max angle"
@@ -142,13 +142,13 @@ class TestLidarInfo:
 class TestIMUInfo:
     """Tests for IMUInfo model."""
 
-    def test_default_imu(self):
+    def test_default_imu(self) -> None:
         """Test default IMU parameters."""
         imu = IMUInfo()
         assert imu.angular_velocity_noise is None
         assert imu.linear_acceleration_noise is None
 
-    def test_imu_with_noise(self):
+    def test_imu_with_noise(self) -> None:
         """Test IMU with noise models."""
         noise = SensorNoise(stddev=0.01)
         imu = IMUInfo(
@@ -162,12 +162,12 @@ class TestIMUInfo:
 class TestGPSInfo:
     """Tests for GPSInfo model."""
 
-    def test_default_gps(self):
+    def test_default_gps(self) -> None:
         """Test default GPS parameters."""
         gps = GPSInfo()
         assert gps.position_sensing_horizontal_noise is None
 
-    def test_gps_with_noise(self):
+    def test_gps_with_noise(self) -> None:
         """Test GPS with noise models."""
         pos_noise = SensorNoise(stddev=0.5)
         vel_noise = SensorNoise(stddev=0.1)
@@ -182,7 +182,7 @@ class TestGPSInfo:
 class TestGazeboPlugin:
     """Tests for GazeboPlugin model."""
 
-    def test_plugin_creation(self):
+    def test_plugin_creation(self) -> None:
         """Test creating a plugin."""
         plugin = GazeboPlugin(
             name="test_plugin",
@@ -193,12 +193,12 @@ class TestGazeboPlugin:
         assert plugin.filename == "libtest.so"
         assert plugin.parameters["param1"] == "value1"
 
-    def test_empty_name(self):
+    def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError, match="Plugin name cannot be empty"):
             GazeboPlugin(name="", filename="libtest.so")
 
-    def test_empty_filename(self):
+    def test_empty_filename(self) -> None:
         """Test that empty filename raises error."""
         with pytest.raises(RobotModelError, match="Plugin filename cannot be empty"):
             GazeboPlugin(name="test", filename="")
@@ -207,7 +207,7 @@ class TestGazeboPlugin:
 class TestSensor:
     """Tests for Sensor model."""
 
-    def test_camera_sensor(self):
+    def test_camera_sensor(self) -> None:
         """Test creating a camera sensor."""
         camera_info = CameraInfo(width=1920, height=1080)
         sensor = Sensor(
@@ -221,7 +221,7 @@ class TestSensor:
         assert sensor.link_name == "camera_link"
         assert sensor.camera_info.width == 1920
 
-    def test_lidar_sensor(self):
+    def test_lidar_sensor(self) -> None:
         """Test creating a LIDAR sensor."""
         lidar_info = LidarInfo(horizontal_samples=1024)
         sensor = Sensor(
@@ -234,7 +234,7 @@ class TestSensor:
         assert sensor.type == SensorType.LIDAR
         assert sensor.lidar_info.horizontal_samples == 1024
 
-    def test_imu_sensor(self):
+    def test_imu_sensor(self) -> None:
         """Test creating an IMU sensor."""
         imu_info = IMUInfo()
         sensor = Sensor(
@@ -248,7 +248,7 @@ class TestSensor:
         assert sensor.type == SensorType.IMU
         assert sensor.update_rate == 100.0
 
-    def test_gps_sensor(self):
+    def test_gps_sensor(self) -> None:
         """Test creating a GPS sensor."""
         gps_info = GPSInfo()
         sensor = Sensor(
@@ -260,7 +260,7 @@ class TestSensor:
         assert sensor.name == "gps"
         assert sensor.type == SensorType.GPS
 
-    def test_sensor_with_plugin(self):
+    def test_sensor_with_plugin(self) -> None:
         """Test sensor with plugin."""
         camera_info = CameraInfo()
         plugin = GazeboPlugin(name="camera_plugin", filename="libgazebo_ros_camera.so")
@@ -276,7 +276,7 @@ class TestSensor:
         assert sensor.plugin.name == "camera_plugin"
         assert sensor.topic == "camera/image_raw"
 
-    def test_sensor_with_transform(self):
+    def test_sensor_with_transform(self) -> None:
         """Test sensor with custom transform."""
         camera_info = CameraInfo()
         transform = Transform(xyz=Vector3(0.1, 0.0, 0.2))
@@ -290,7 +290,7 @@ class TestSensor:
         assert sensor.origin.xyz.x == pytest.approx(0.1)
         assert sensor.origin.xyz.z == pytest.approx(0.2)
 
-    def test_camera_without_info(self):
+    def test_camera_without_info(self) -> None:
         """Test that camera sensor requires camera_info."""
         with pytest.raises(RobotModelError, match="Camera sensor .* requires camera_info"):
             Sensor(
@@ -299,7 +299,7 @@ class TestSensor:
                 link_name="camera_link",
             )
 
-    def test_lidar_without_info(self):
+    def test_lidar_without_info(self) -> None:
         """Test that LIDAR sensor requires lidar_info."""
         with pytest.raises(RobotModelError, match="LIDAR sensor .* requires lidar_info"):
             Sensor(
@@ -308,7 +308,7 @@ class TestSensor:
                 link_name="lidar_link",
             )
 
-    def test_imu_without_info(self):
+    def test_imu_without_info(self) -> None:
         """Test that IMU sensor requires imu_info."""
         with pytest.raises(RobotModelError, match="IMU sensor .* requires imu_info"):
             Sensor(
@@ -317,7 +317,7 @@ class TestSensor:
                 link_name="imu_link",
             )
 
-    def test_gps_without_info(self):
+    def test_gps_without_info(self) -> None:
         """Test that GPS sensor requires gps_info."""
         with pytest.raises(RobotModelError, match="GPS sensor .* requires gps_info"):
             Sensor(
@@ -326,7 +326,7 @@ class TestSensor:
                 link_name="gps_link",
             )
 
-    def test_empty_name(self):
+    def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError, match="Sensor name cannot be empty"):
             Sensor(
@@ -336,7 +336,7 @@ class TestSensor:
                 camera_info=CameraInfo(),
             )
 
-    def test_empty_link_name(self):
+    def test_empty_link_name(self) -> None:
         """Test that empty link name raises error."""
         with pytest.raises(RobotModelError, match="Sensor must be attached to a link"):
             Sensor(
@@ -346,7 +346,7 @@ class TestSensor:
                 camera_info=CameraInfo(),
             )
 
-    def test_invalid_update_rate(self):
+    def test_invalid_update_rate(self) -> None:
         """Test that invalid update rate raises error."""
         with pytest.raises(RobotModelError, match="Update rate must be positive"):
             Sensor(
@@ -358,7 +358,7 @@ class TestSensor:
             )
 
 
-def test_sensor_parsing_pose_robustness():
+def test_sensor_parsing_pose_robustness() -> None:
     """Verify that malformed or incomplete sensor pose elements are handled gracefully."""
     import xml.etree.ElementTree as ET
 

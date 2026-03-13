@@ -627,9 +627,11 @@ def create_joint_object(
 
     # Add to collection (hierarchy-aware)
     if collection:
-        sync_object_collections(empty, collection) if hasattr(
-            collection, "objects"
-        ) else collection.objects.link(empty)
+        if isinstance(collection, bpy.types.Collection):
+            collection.objects.link(empty)
+        else:
+            # It's an object, sync to its collections
+            sync_object_collections(empty, collection)
     elif bpy.context.scene and bpy.context.scene.collection:
         bpy.context.scene.collection.objects.link(empty)
 

@@ -8,7 +8,7 @@ from linkforge_core.models.geometry import Mesh
 from linkforge_core.models.robot import Robot
 
 
-def test_file_system_resolver_absolute_path(tmp_path: Path):
+def test_file_system_resolver_absolute_path(tmp_path: Path) -> None:
     """Test that FileSystemResolver correctly resolves an existing absolute path."""
     test_file = tmp_path / "test_mesh.stl"
     test_file.write_text("dummy mesh data")
@@ -20,14 +20,14 @@ def test_file_system_resolver_absolute_path(tmp_path: Path):
     assert resolved.exists()
 
 
-def test_file_system_resolver_non_existent():
+def test_file_system_resolver_non_existent() -> None:
     """Test that FileSystemResolver raises FileNotFoundError for non-existent files."""
     resolver = FileSystemResolver()
     with pytest.raises(FileNotFoundError, match="Could not resolve resource"):
         resolver.resolve("/non/existent/path/mesh.stl")
 
 
-def test_network_resolver_local_fallback(tmp_path: Path):
+def test_network_resolver_local_fallback(tmp_path: Path) -> None:
     """Test that NetworkResolver falls back to FileSystemResolver for local paths."""
     test_file = tmp_path / "localmesh.obj"
     test_file.write_text("data")
@@ -38,7 +38,7 @@ def test_network_resolver_local_fallback(tmp_path: Path):
     assert resolved == test_file.absolute()
 
 
-def test_network_resolver_unimplemented_uri():
+def test_network_resolver_unimplemented_uri() -> None:
     """Test that NetworkResolver raises NotImplementedError for external URIs."""
     resolver = NetworkResolver()
 
@@ -49,7 +49,7 @@ def test_network_resolver_unimplemented_uri():
         resolver.resolve("s3://bucket/mesh.dae")
 
 
-def test_robot_resource_resolution(tmp_path: Path):
+def test_robot_resource_resolution(tmp_path: Path) -> None:
     """Test that the Robot model correctly uses its resolver."""
     test_file = tmp_path / "robot_mesh.stl"
     test_file.write_text("mesh")
@@ -64,7 +64,7 @@ def test_robot_resource_resolution(tmp_path: Path):
     assert robot.resolve_resource(mesh.resource) == test_file.absolute()
 
 
-def test_robot_custom_resolver():
+def test_robot_custom_resolver() -> None:
     """Test that a Robot can be initialized with a custom resolver."""
 
     class MockResolver:
@@ -81,7 +81,7 @@ def test_robot_custom_resolver():
     assert resolved_rel == Path("/mock/resolved/some_uri")
 
 
-def test_filesystem_resolver_errors_and_fallbacks(tmp_path):
+def test_filesystem_resolver_errors_and_fallbacks(tmp_path) -> None:
     """Test resolution successes, failures, and relative path fallbacks."""
     resolver = FileSystemResolver()
 
@@ -142,7 +142,7 @@ def test_filesystem_resolver_errors_and_fallbacks(tmp_path):
         os.chdir(old_cwd)
 
 
-def test_resolver_current_directory_fallback(tmp_path):
+def test_resolver_current_directory_fallback(tmp_path) -> None:
     """Verify that the file resolver correctly falls back to CWD if relative resolution fails."""
     resolver = FileSystemResolver()
     test_file = Path("cwd_test_file_robust.txt")

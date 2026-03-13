@@ -18,26 +18,26 @@ from linkforge_core.physics import (
 class TestInertiaTensor:
     """Tests for InertiaTensor."""
 
-    def test_creation(self):
+    def test_creation(self) -> None:
         """Test creating an inertia tensor."""
         inertia = InertiaTensor(ixx=1.0, ixy=0.0, ixz=0.0, iyy=1.0, iyz=0.0, izz=1.0)
         assert inertia.ixx == 1.0
         assert inertia.iyy == 1.0
         assert inertia.izz == 1.0
 
-    def test_zero_inertia(self):
+    def test_zero_inertia(self) -> None:
         """Test zero inertia tensor."""
         inertia = InertiaTensor.zero()
         assert inertia.ixx > 0
         assert inertia.iyy > 0
         assert inertia.izz > 0
 
-    def test_invalid_negative_diagonal(self):
+    def test_invalid_negative_diagonal(self) -> None:
         """Test that negative diagonal elements raise error."""
         with pytest.raises(RobotModelError, match="positive"):
             InertiaTensor(ixx=-1.0, ixy=0.0, ixz=0.0, iyy=1.0, iyz=0.0, izz=1.0)
 
-    def test_invalid_triangle_inequality(self):
+    def test_invalid_triangle_inequality(self) -> None:
         """Test that triangle inequality violation raises error."""
         with pytest.raises(RobotModelError, match="triangle inequality"):
             # This violates Ixx + Iyy >= Izz
@@ -47,7 +47,7 @@ class TestInertiaTensor:
 class TestBoxInertia:
     """Tests for box inertia calculation."""
 
-    def test_unit_cube(self):
+    def test_unit_cube(self) -> None:
         """Test inertia of unit cube with unit mass."""
         box = Box(size=Vector3(1.0, 1.0, 1.0))
         inertia = calculate_box_inertia(box, mass=1.0)
@@ -61,7 +61,7 @@ class TestBoxInertia:
         assert inertia.ixz == 0.0
         assert inertia.iyz == 0.0
 
-    def test_rectangular_box(self):
+    def test_rectangular_box(self) -> None:
         """Test inertia of rectangular box."""
         box = Box(size=Vector3(2.0, 3.0, 4.0))
         mass = 10.0
@@ -76,7 +76,7 @@ class TestBoxInertia:
         assert inertia.iyy == pytest.approx(iyy)
         assert inertia.izz == pytest.approx(izz)
 
-    def test_zero_mass(self):
+    def test_zero_mass(self) -> None:
         """Test that zero mass returns zero inertia."""
         box = Box(size=Vector3(1.0, 1.0, 1.0))
         inertia = calculate_box_inertia(box, mass=0.0)
@@ -86,7 +86,7 @@ class TestBoxInertia:
 class TestCylinderInertia:
     """Tests for cylinder inertia calculation."""
 
-    def test_unit_cylinder(self):
+    def test_unit_cylinder(self) -> None:
         """Test inertia of unit cylinder."""
         cyl = Cylinder(radius=1.0, length=2.0)
         mass = 1.0
@@ -102,7 +102,7 @@ class TestCylinderInertia:
         assert inertia.izz == pytest.approx(izz)
         assert inertia.ixy == 0.0
 
-    def test_zero_mass(self):
+    def test_zero_mass(self) -> None:
         """Test that zero mass returns zero inertia."""
         cyl = Cylinder(radius=1.0, length=1.0)
         inertia = calculate_cylinder_inertia(cyl, mass=0.0)
@@ -112,7 +112,7 @@ class TestCylinderInertia:
 class TestSphereInertia:
     """Tests for sphere inertia calculation."""
 
-    def test_unit_sphere(self):
+    def test_unit_sphere(self) -> None:
         """Test inertia of unit sphere."""
         sphere = Sphere(radius=1.0)
         mass = 1.0
@@ -125,7 +125,7 @@ class TestSphereInertia:
         assert inertia.iyy == pytest.approx(expected)
         assert inertia.izz == pytest.approx(expected)
 
-    def test_zero_mass(self):
+    def test_zero_mass(self) -> None:
         """Test that zero mass returns zero inertia."""
         sphere = Sphere(radius=1.0)
         inertia = calculate_sphere_inertia(sphere, mass=0.0)
@@ -135,47 +135,47 @@ class TestSphereInertia:
 class TestCalculateInertia:
     """Tests for generic calculate_inertia function."""
 
-    def test_box(self):
+    def test_box(self) -> None:
         """Test calculation for box."""
         box = Box(size=Vector3(1.0, 1.0, 1.0))
         inertia = calculate_inertia(box, mass=1.0)
         expected = calculate_box_inertia(box, mass=1.0)
         assert inertia == expected
 
-    def test_cylinder(self):
+    def test_cylinder(self) -> None:
         """Test calculation for cylinder."""
         cyl = Cylinder(radius=1.0, length=1.0)
         inertia = calculate_inertia(cyl, mass=1.0)
         expected = calculate_cylinder_inertia(cyl, mass=1.0)
         assert inertia == expected
 
-    def test_sphere(self):
+    def test_sphere(self) -> None:
         """Test calculation for sphere."""
         sphere = Sphere(radius=1.0)
         inertia = calculate_inertia(sphere, mass=1.0)
         expected = calculate_sphere_inertia(sphere, mass=1.0)
         assert inertia == expected
 
-    def test_mesh(self):
+    def test_mesh(self) -> None:
         """Test calculation for mesh."""
         mesh = Mesh(resource="test.stl")
         inertia = calculate_inertia(mesh, mass=1.0)
         expected = calculate_mesh_inertia(mesh, mass=1.0)
         assert inertia == expected
 
-    def test_zero_mass(self):
+    def test_zero_mass(self) -> None:
         """Test that zero mass returns zero inertia."""
         box = Box(size=Vector3(1.0, 1.0, 1.0))
         inertia = calculate_inertia(box, mass=0.0)
         assert inertia == InertiaTensor.zero()
 
-    def test_negative_mass(self):
+    def test_negative_mass(self) -> None:
         """Test that negative mass returns zero inertia."""
         sphere = Sphere(radius=1.0)
         inertia = calculate_inertia(sphere, mass=-1.0)
         assert inertia == InertiaTensor.zero()
 
-    def test_unsupported_geometry_type(self):
+    def test_unsupported_geometry_type(self) -> None:
         """Test that unsupported geometry raises RobotModelError."""
 
         class UnsupportedGeometry:
@@ -190,7 +190,7 @@ class TestCalculateInertia:
 class TestMeshInertia:
     """Tests for mesh inertia calculation."""
 
-    def test_mesh_default_approximation(self):
+    def test_mesh_default_approximation(self) -> None:
         """Test mesh inertia uses box approximation by default."""
         mesh = Mesh(resource="robot.stl")
         mass = 5.0
@@ -201,7 +201,7 @@ class TestMeshInertia:
         assert inertia.iyy > 0
         assert inertia.izz > 0
 
-    def test_mesh_with_scale(self):
+    def test_mesh_with_scale(self) -> None:
         """Test mesh inertia with custom scale."""
         mesh = Mesh(resource="model.dae", scale=Vector3(2.0, 2.0, 2.0))
         mass = 10.0
@@ -212,13 +212,13 @@ class TestMeshInertia:
         assert inertia.iyy > 0
         assert inertia.izz > 0
 
-    def test_mesh_zero_mass(self):
+    def test_mesh_zero_mass(self) -> None:
         """Test that zero mass returns zero inertia."""
         mesh = Mesh(resource="test.stl")
         inertia = calculate_mesh_inertia(mesh, mass=0.0)
         assert inertia == InertiaTensor.zero()
 
-    def test_mesh_negative_mass(self):
+    def test_mesh_negative_mass(self) -> None:
         """Test that negative mass returns zero inertia."""
         mesh = Mesh(resource="test.stl")
         inertia = calculate_mesh_inertia(mesh, mass=-1.0)
@@ -228,7 +228,7 @@ class TestMeshInertia:
 class TestMeshInertiaFromTriangles:
     """Tests for triangle-based mesh inertia calculation."""
 
-    def test_unit_cube_mesh(self):
+    def test_unit_cube_mesh(self) -> None:
         """Test inertia of unit cube mesh has reasonable values."""
         # Create vertices for unit cube centered at origin
         vertices = [
@@ -283,7 +283,7 @@ class TestMeshInertiaFromTriangles:
         assert abs(mesh_inertia.ixz) < 0.01
         assert abs(mesh_inertia.iyz) < 0.01
 
-    def test_rectangular_mesh(self):
+    def test_rectangular_mesh(self) -> None:
         """Test inertia of rectangular box mesh has reasonable values."""
         # Create vertices for 2x3x4 box centered at origin
         x, y, z = 1.0, 1.5, 2.0  # Half-dimensions
@@ -328,7 +328,7 @@ class TestMeshInertiaFromTriangles:
         assert mesh_inertia.ixx != pytest.approx(mesh_inertia.iyy, abs=0.1)
         assert mesh_inertia.iyy != pytest.approx(mesh_inertia.izz, abs=0.1)
 
-    def test_tetrahedron_mesh(self):
+    def test_tetrahedron_mesh(self) -> None:
         """Test inertia of simple tetrahedron mesh."""
         # Regular tetrahedron
         vertices = [
@@ -358,28 +358,28 @@ class TestMeshInertiaFromTriangles:
         assert inertia.ixx + inertia.izz >= inertia.iyy
         assert inertia.iyy + inertia.izz >= inertia.ixx
 
-    def test_empty_mesh(self):
+    def test_empty_mesh(self) -> None:
         """Test that empty mesh raises RobotModelError."""
         vertices: list[tuple[float, float, float]] = []
         triangles: list[tuple[int, int, int]] = []
         with pytest.raises(RobotModelError, match="Cannot calculate inertia for empty mesh"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
-    def test_zero_mass(self):
+    def test_zero_mass(self) -> None:
         """Test that zero mass returns zero inertia."""
         vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
         inertia = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=0.0)
         assert inertia == InertiaTensor.zero()
 
-    def test_negative_mass(self):
+    def test_negative_mass(self) -> None:
         """Test that negative mass returns zero inertia."""
         vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
         inertia = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=-1.0)
         assert inertia == InertiaTensor.zero()
 
-    def test_degenerate_mesh(self):
+    def test_degenerate_mesh(self) -> None:
         """Test mesh with zero volume raises RobotModelError."""
         # Flat triangle (zero volume)
         vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]

@@ -1,7 +1,7 @@
 import bpy
 
 
-def test_operator_empty_xacro_naming(tmp_path):
+def test_operator_empty_xacro_naming(tmp_path) -> None:
     """Test that the Blender operator uses the filename as fallback and reports no links."""
     # 1. Create a macro-only XACRO file
     xacro_content = """<?xml version="1.0"?>

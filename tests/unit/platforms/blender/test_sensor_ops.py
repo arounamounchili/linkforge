@@ -1,7 +1,7 @@
 import bpy
 
 
-def test_sensor_ops_create_sensor():
+def test_sensor_ops_create_sensor() -> None:
     """Test LINKFORGE_OT_create_sensor operator."""
     # Setup: Create a link and a joint
     bpy.ops.object.select_all(action="SELECT")
@@ -28,7 +28,7 @@ def test_sensor_ops_create_sensor():
     assert sensor_obj.parent == link_obj
 
 
-def test_sensor_ops_delete_sensor():
+def test_sensor_ops_delete_sensor() -> None:
     """Test LINKFORGE_OT_delete_sensor operator."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -48,7 +48,7 @@ def test_sensor_ops_delete_sensor():
     assert sensor_name not in bpy.data.objects
 
 
-def test_sensor_ops_poll_failures():
+def test_sensor_ops_poll_failures() -> None:
     """Hit poll failures for sensor operators."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -61,7 +61,7 @@ def test_sensor_ops_poll_failures():
     assert bpy.ops.linkforge.create_sensor.poll() is False
 
 
-def test_sensor_ops_main_entry(mocker):
+def test_sensor_ops_main_entry(mocker) -> None:
     """Simulate module main entry."""
     from linkforge.blender.operators import sensor_ops
 

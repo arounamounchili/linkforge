@@ -14,38 +14,38 @@ from linkforge_core.utils.xml_utils import (
 )
 
 
-def test_parse_float_valid():
+def test_parse_float_valid() -> None:
     assert parse_float("1.23") == 1.23
     assert parse_float(None, default=5.0) == 5.0
     assert parse_float("  0.1  ") == 0.1
 
 
-def test_parse_int_valid():
+def test_parse_int_valid() -> None:
     assert parse_int("10") == 10
     assert parse_int(None, default=5) == 5
 
 
-def test_parse_vector3_valid():
+def test_parse_vector3_valid() -> None:
     vec = parse_vector3("1 2 3")
     assert vec.x == 1.0
     assert vec.y == 2.0
     assert vec.z == 3.0
 
 
-def test_parse_optional_bool():
+def test_parse_optional_bool() -> None:
     root = ET.fromstring("<root><val>true</val><other>false</other></root>")
     assert parse_optional_bool(root, "val") is True
     assert parse_optional_bool(root, "other") is False
     assert parse_optional_bool(root, "missing") is None
 
 
-def test_parse_optional_float():
+def test_parse_optional_float() -> None:
     root = ET.fromstring("<root><val>1.5</val></root>")
     assert parse_optional_float(root, "val") == 1.5
     assert parse_optional_float(root, "missing") is None
 
 
-def test_serialize_xml():
+def test_serialize_xml() -> None:
     root = ET.Element("robot", name="test")
     xml_str = serialize_xml(root, version="1.2.0")
     assert "Robot: test" in xml_str
@@ -53,12 +53,12 @@ def test_serialize_xml():
     assert '<robot name="test"' in xml_str
 
 
-def test_validate_xml_depth_ok():
+def test_validate_xml_depth_ok() -> None:
     root = ET.fromstring("<root><a/></root>")
     validate_xml_depth(root)  # Should not raise
 
 
-def test_serialize_xml_with_namespaces():
+def test_serialize_xml_with_namespaces() -> None:
     """Test XML serialization with custom namespaces."""
     import xml.etree.ElementTree as ET
 
@@ -75,7 +75,7 @@ def test_serialize_xml_with_namespaces():
     assert "test" in xml_str
 
 
-def test_parsing_fallbacks():
+def test_parsing_fallbacks() -> None:
     """Test fallbacks for invalid numeric and boolean parsing."""
     import pytest
 
@@ -102,7 +102,7 @@ def test_parsing_fallbacks():
     assert parse_optional_bool(root2, "val") is False
 
 
-def test_parse_vector3_errors():
+def test_parse_vector3_errors() -> None:
     """Test parse_vector3 with various errors."""
     import pytest
 
@@ -114,7 +114,7 @@ def test_parse_vector3_errors():
         parse_vector3("1 2 a")
 
 
-def test_validate_xml_depth_exceeded():
+def test_validate_xml_depth_exceeded() -> None:
     """Test XML depth validation with exceeding depth."""
     import pytest
 
@@ -128,7 +128,7 @@ def test_validate_xml_depth_exceeded():
         validate_xml_depth(root)
 
 
-def test_parsing_missing_attribute():
+def test_parsing_missing_attribute() -> None:
     """Test RobotModelError when attribute is missing and no default is provided."""
     import pytest
 
@@ -143,7 +143,7 @@ def test_parsing_missing_attribute():
         parse_int("   ", attribute_name="test_int")
 
 
-def test_validate_package_uri_complex():
+def test_validate_package_uri_complex() -> None:
     """Test complex valid package URI."""
     from linkforge_core.validation.security import validate_package_uri
 
@@ -151,7 +151,7 @@ def test_validate_package_uri_complex():
     assert validate_package_uri(uri) == uri
 
 
-def test_is_suspicious_location_match():
+def test_is_suspicious_location_match() -> None:
     """Test suspicious location detection."""
     from linkforge_core.validation.security import is_suspicious_location
 
@@ -160,7 +160,7 @@ def test_is_suspicious_location_match():
     assert is_suspicious_location(Path("/etc/passwd")) is True
 
 
-def test_xml_add_text():
+def test_xml_add_text() -> None:
     """Test xml_add_text utility function."""
     from linkforge_core.utils.xml_utils import xml_add_text
 
@@ -183,7 +183,7 @@ def test_xml_add_text():
     assert elem3.text is None
 
 
-def test_xml_add_vector():
+def test_xml_add_vector() -> None:
     """Test xml_add_vector utility function."""
     from linkforge_core.models import Vector3
     from linkforge_core.utils.xml_utils import xml_add_vector

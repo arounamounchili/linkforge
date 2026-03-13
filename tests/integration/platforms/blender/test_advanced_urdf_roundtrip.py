@@ -26,7 +26,7 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 class TestTransmissionRoundtrip:
     """Test round-trip for transmission elements."""
 
-    def test_simple_transmission_roundtrip(self):
+    def test_simple_transmission_roundtrip(self) -> None:
         """Test that simple transmission survives round-trip."""
         # Create robot with transmission
         robot = Robot(name="test_robot")
@@ -68,7 +68,7 @@ class TestTransmissionRoundtrip:
         assert parsed_trans.joints[0].mechanical_reduction == 50.0
         assert "effort" in parsed_trans.joints[0].hardware_interfaces
 
-    def test_differential_transmission_roundtrip(self):
+    def test_differential_transmission_roundtrip(self) -> None:
         """Test that differential transmission survives round-trip."""
         # Create robot with differential transmission
         robot = Robot(name="diff_robot")
@@ -122,7 +122,7 @@ class TestTransmissionRoundtrip:
 class TestGazeboRoundtrip:
     """Test round-trip for Gazebo elements."""
 
-    def test_robot_level_gazebo_roundtrip(self):
+    def test_robot_level_gazebo_roundtrip(self) -> None:
         """Test that robot-level Gazebo element survives round-trip."""
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -149,7 +149,7 @@ class TestGazeboRoundtrip:
         assert len(parsed_elem.plugins) == 1
         assert parsed_elem.plugins[0].name == "joint_state_publisher"
 
-    def test_link_level_gazebo_roundtrip(self):
+    def test_link_level_gazebo_roundtrip(self) -> None:
         """Test that link-level Gazebo element survives round-trip."""
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="base_link"))
@@ -180,7 +180,7 @@ class TestGazeboRoundtrip:
         assert parsed_elem.kp == pytest.approx(1000.0)
         assert parsed_elem.kd == pytest.approx(100.0)
 
-    def test_joint_level_gazebo_roundtrip(self):
+    def test_joint_level_gazebo_roundtrip(self) -> None:
         """Test that joint-level Gazebo element survives round-trip."""
         robot = Robot(name="test_robot")
         robot.add_link(Link(name="link1"))
@@ -220,7 +220,7 @@ class TestGazeboRoundtrip:
 class TestComplexRobotRoundtrip:
     """Test round-trip for complex robot with multiple advanced elements."""
 
-    def test_complete_robot_with_all_elements(self):
+    def test_complete_robot_with_all_elements(self) -> None:
         """Test robot with sensors, transmissions, and Gazebo elements."""
         # Create a mobile robot with camera and IMU
         robot = Robot(name="mobile_robot")

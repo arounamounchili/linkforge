@@ -2,7 +2,7 @@ import bpy
 from linkforge.blender.operators.link_ops import create_collision_for_link
 
 
-def test_collision_alignment_on_rotated_link():
+def test_collision_alignment_on_rotated_link() -> None:
     """Verify that generating collision for a rotated link avoids 'Inverse Rotation' offsets."""
     # 1. Setup a Link at a specific rotation (e.g. 90 deg X)
     bpy.ops.object.empty_add()

@@ -10,7 +10,7 @@ import bpy
 class TestControlProperties:
     """Tests for ros2_control property groups."""
 
-    def test_ros2_control_parameter_property(self):
+    def test_ros2_control_parameter_property(self) -> None:
         """Test Ros2ControlParameterProperty creation and defaults."""
         from linkforge.blender.properties import control_props
 
@@ -36,7 +36,7 @@ class TestControlProperties:
         scene.test_params.clear()
         del bpy.types.Scene.test_params
 
-    def test_ros2_control_interface_property(self):
+    def test_ros2_control_interface_property(self) -> None:
         """Test Ros2ControlInterfaceProperty creation and defaults."""
         from linkforge.blender.properties import control_props
 
@@ -66,7 +66,7 @@ class TestControlProperties:
         scene.test_interfaces.clear()
         del bpy.types.Scene.test_interfaces
 
-    def test_ros2_control_joint_property(self):
+    def test_ros2_control_joint_property(self) -> None:
         """Test Ros2ControlJointProperty creation and defaults."""
         from linkforge.blender.properties import control_props
 
@@ -113,7 +113,7 @@ class TestControlProperties:
 class TestSensorProperties:
     """Tests for sensor property groups."""
 
-    def test_sensor_property_defaults(self, clean_scene):
+    def test_sensor_property_defaults(self, clean_scene) -> None:
         """Test SensorPropertyGroup default values."""
         # Create sensor object
         sensor_obj = bpy.data.objects.new("test_sensor", None)
@@ -146,7 +146,7 @@ class TestSensorProperties:
         # Cleanup
         bpy.data.objects.remove(sensor_obj)
 
-    def test_sensor_name_property(self, clean_scene):
+    def test_sensor_name_property(self, clean_scene) -> None:
         """Test sensor name getter/setter."""
         sensor_obj = bpy.data.objects.new("my_sensor", None)
         bpy.context.scene.collection.objects.link(sensor_obj)
@@ -164,7 +164,7 @@ class TestSensorProperties:
         # Cleanup
         bpy.data.objects.remove(sensor_obj)
 
-    def test_sensor_types(self, clean_scene):
+    def test_sensor_types(self, clean_scene) -> None:
         """Test all sensor types."""
         sensor_obj = bpy.data.objects.new("test_sensor", None)
         bpy.context.scene.collection.objects.link(sensor_obj)
@@ -184,7 +184,7 @@ class TestSensorProperties:
 class TestRobotProperties:
     """Tests for robot property groups."""
 
-    def test_robot_property_exists(self, clean_scene):
+    def test_robot_property_exists(self, clean_scene) -> None:
         """Test robot property exists on scene."""
         scene = bpy.context.scene
 
@@ -196,7 +196,7 @@ class TestRobotProperties:
             or hasattr(scene, "robot")
         )
 
-    def test_robot_property_access(self, clean_scene):
+    def test_robot_property_access(self, clean_scene) -> None:
         """Test accessing robot properties."""
         scene = bpy.context.scene
 
@@ -208,7 +208,7 @@ class TestRobotProperties:
 class TestTransmissionProperties:
     """Tests for transmission property groups."""
 
-    def test_transmission_property_defaults(self, clean_scene):
+    def test_transmission_property_defaults(self, clean_scene) -> None:
         """Test transmission property defaults."""
         # Create transmission object
         trans_obj = bpy.data.objects.new("test_transmission", None)
@@ -230,7 +230,7 @@ class TestTransmissionProperties:
         # Cleanup
         bpy.data.objects.remove(trans_obj)
 
-    def test_transmission_types(self, clean_scene):
+    def test_transmission_types(self, clean_scene) -> None:
         """Test transmission types."""
         # Create transmission object
         trans_obj = bpy.data.objects.new("test_transmission", None)

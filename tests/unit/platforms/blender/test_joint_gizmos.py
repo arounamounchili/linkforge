@@ -11,7 +11,7 @@ from linkforge.blender.visualization.joint_gizmos import (
 from mathutils import Vector
 
 
-def test_generate_arrow_cone_vertices():
+def test_generate_arrow_cone_vertices() -> None:
     """Test the math behind arrow cone vertex generation."""
     origin = Vector((0, 0, 0))
     direction = Vector((0, 0, 1))  # Z-axis
@@ -36,7 +36,7 @@ def test_generate_arrow_cone_vertices():
         assert xy_dist == pytest.approx(0.06)
 
 
-def test_generate_axis_geometry():
+def test_generate_axis_geometry() -> None:
     """Test the orchestration of RGB axis geometry generation."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -66,7 +66,7 @@ def test_generate_axis_geometry():
     assert data["line_colors"][0] == (1.0, 0.0, 0.0, 1.0)
 
 
-def test_fix_existing_joints():
+def test_fix_existing_joints() -> None:
     """Test the iteration logic that forces PLAIN_AXES on joints."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -79,7 +79,7 @@ def test_fix_existing_joints():
     assert obj.empty_display_type == "PLAIN_AXES"
 
 
-def test_update_viz_handle_switching(mocker):
+def test_update_viz_handle_switching(mocker) -> None:
     """Test registering and unregistering the draw handler based on prefs."""
     # Mock bpy.types.SpaceView3D to avoid real handler registration
     mock_add = mocker.patch("bpy.types.SpaceView3D.draw_handler_add", return_value="handle_123")
@@ -101,7 +101,7 @@ def test_update_viz_handle_switching(mocker):
     assert "linkforge_joint_gizmo_handler" not in bpy.app.driver_namespace
 
 
-def test_draw_internal(mocker):
+def test_draw_internal(mocker) -> None:
     """Test the drawing logic by mocking the GPU module."""
     # Create a joint object in the scene BEFORE mocking context
     bpy.ops.object.select_all(action="SELECT")
@@ -137,7 +137,7 @@ def test_draw_internal(mocker):
     assert mock_shader_obj.uniform_float.called
 
 
-def test_fix_current_scene(mocker):
+def test_fix_current_scene(mocker) -> None:
     """Test the timer callback for fixing joints."""
     mock_fix = mocker.patch("linkforge.blender.visualization.joint_gizmos.fix_existing_joints")
     mock_update = mocker.patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle")
@@ -151,7 +151,7 @@ def test_fix_current_scene(mocker):
     mock_update.assert_called_once()
 
 
-def test_shader_fallback(mocker):
+def test_shader_fallback(mocker) -> None:
     """Test get_shader fallback for older Blender versions."""
     from linkforge.blender.visualization import joint_gizmos
 
@@ -166,7 +166,7 @@ def test_shader_fallback(mocker):
     assert joint_gizmos._builtin_shader_name == "3D_FLAT_COLOR"
 
 
-def test_generate_axis_geometry_invalid():
+def test_generate_axis_geometry_invalid() -> None:
     """Test generating geometry for invalid objects."""
     # None object
     data = generate_axis_geometry(None)
@@ -179,7 +179,7 @@ def test_generate_axis_geometry_invalid():
     assert len(data["lines"]) == 0
 
 
-def test_draw_internal_no_objects(mocker):
+def test_draw_internal_no_objects(mocker) -> None:
     """Test that drawing returns early if no joints are present."""
     mocker.patch(
         "linkforge.blender.visualization.joint_gizmos.get_addon_prefs",
@@ -206,7 +206,7 @@ def test_draw_internal_no_objects(mocker):
     assert not mock_gpu_state.called
 
 
-def test_draw_internal_disabled(mocker):
+def test_draw_internal_disabled(mocker) -> None:
     """Test that drawing returns early if disabled in prefs."""
     mocker.patch(
         "linkforge.blender.visualization.joint_gizmos.get_addon_prefs",
@@ -222,7 +222,7 @@ def test_draw_internal_disabled(mocker):
     assert not mock_gpu_state.called
 
 
-def test_unregister(mocker):
+def test_unregister(mocker) -> None:
     """Test the unregistration cleanup."""
     mock_handler = MagicMock()
     bpy.app.driver_namespace["linkforge_joint_gizmo_handler"] = mock_handler
@@ -236,7 +236,7 @@ def test_unregister(mocker):
     assert "linkforge_joint_gizmo_handler" not in bpy.app.driver_namespace
 
 
-def test_draw_joint_axes(mocker):
+def test_draw_joint_axes(mocker) -> None:
     """Test the main entry point for joint axis drawing."""
     mock_draw_internal = mocker.patch("linkforge.blender.visualization.joint_gizmos._draw_internal")
     from linkforge.blender.visualization.joint_gizmos import draw_joint_axes
@@ -245,7 +245,7 @@ def test_draw_joint_axes(mocker):
     mock_draw_internal.assert_called_once()
 
 
-def test_draw_internal_no_region_data(mocker):
+def test_draw_internal_no_region_data(mocker) -> None:
     """Test early return if region_data is missing."""
     mocker.patch(
         "linkforge.blender.visualization.joint_gizmos.get_addon_prefs",
@@ -266,7 +266,7 @@ def test_draw_internal_no_region_data(mocker):
     assert not mock_gpu_state.called
 
 
-def test_fix_existing_joints_exception(mocker):
+def test_fix_existing_joints_exception(mocker) -> None:
     """Test exception handling in fix_existing_joints."""
     mock_context = MagicMock()
     type(mock_context).scene = mocker.PropertyMock(side_effect=AttributeError("Mock Error"))

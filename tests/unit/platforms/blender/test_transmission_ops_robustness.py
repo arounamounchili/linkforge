@@ -8,7 +8,7 @@ from linkforge.blender.operators.transmission_ops import (
 )
 
 
-def test_create_transmission_axes(clean_scene):
+def test_create_transmission_axes(clean_scene) -> None:
     """Test transmission creation with all joint axis types."""
     # Setup Joint
     j = bpy.data.objects.new("Joint", None)
@@ -45,7 +45,7 @@ def test_create_transmission_axes(clean_scene):
         bpy.data.objects.remove(trans, do_unlink=True)
 
 
-def test_create_transmission_preferences(clean_scene):
+def test_create_transmission_preferences(clean_scene) -> None:
     """Verify transmission size from preferences."""
     with patch("linkforge.blender.preferences.get_addon_prefs") as mock_prefs:
         prefs = MagicMock()
@@ -63,7 +63,7 @@ def test_create_transmission_preferences(clean_scene):
         assert trans.empty_display_size == pytest.approx(0.123)
 
 
-def test_create_transmission_collection_sync(clean_scene):
+def test_create_transmission_collection_sync(clean_scene) -> None:
     """Verify transmission is in joint's collection."""
     custom_coll = bpy.data.collections.new("MechColl")
     bpy.context.scene.collection.children.link(custom_coll)
@@ -80,7 +80,7 @@ def test_create_transmission_collection_sync(clean_scene):
     assert trans in custom_coll.objects.values()
 
 
-def test_delete_transmission(clean_scene):
+def test_delete_transmission(clean_scene) -> None:
     """Test deletion of transmission."""
     j = bpy.data.objects.new("Joint", None)
     bpy.context.collection.objects.link(j)
@@ -103,7 +103,7 @@ def test_delete_transmission(clean_scene):
     bpy.ops.linkforge.delete_transmission()
 
 
-def test_transmission_logic_gaps(clean_scene):
+def test_transmission_logic_gaps(clean_scene) -> None:
     """Hit remaining logic gaps in transmission_ops."""
     # 1. Non-EMPTY object poll failure
     bpy.ops.mesh.primitive_cube_add()
@@ -115,7 +115,7 @@ def test_transmission_logic_gaps(clean_scene):
     assert LINKFORGE_OT_create_transmission.poll(bpy.context) is False
 
 
-def test_create_transmission_no_axis_fallback(clean_scene):
+def test_create_transmission_no_axis_fallback(clean_scene) -> None:
     """Hit transmission fallback when no axis vec is detectable."""
     j = bpy.data.objects.new("Joint", None)
     bpy.context.collection.objects.link(j)

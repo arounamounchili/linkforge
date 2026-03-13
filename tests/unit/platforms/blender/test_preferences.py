@@ -14,7 +14,7 @@ from linkforge.blender.preferences import (
 )
 
 
-def test_get_addon_id():
+def test_get_addon_id() -> None:
     """Test that addon ID is correctly derived from package name."""
     # We can't easily mock __package__ globally, but we can verify current state
     # In tests, it usually defaults to 'linkforge' or similar
@@ -23,7 +23,7 @@ def test_get_addon_id():
     assert len(addon_id) > 0
 
 
-def test_update_joint_empty_size():
+def test_update_joint_empty_size() -> None:
     """Test that updating joint size in prefs affects scene objects."""
     # Create a joint
     bpy.ops.object.select_all(action="SELECT")
@@ -46,7 +46,7 @@ def test_update_joint_empty_size():
     assert obj.empty_display_size == pytest.approx(0.5)
 
 
-def test_update_sensor_empty_size():
+def test_update_sensor_empty_size() -> None:
     """Test that updating sensor size in prefs affects scene objects."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -63,7 +63,7 @@ def test_update_sensor_empty_size():
     assert obj.empty_display_size == pytest.approx(0.3)
 
 
-def test_update_link_empty_size():
+def test_update_link_empty_size() -> None:
     """Test that updating link size in prefs affects scene objects."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -80,7 +80,7 @@ def test_update_link_empty_size():
     assert obj.empty_display_size == pytest.approx(0.4)
 
 
-def test_get_addon_prefs_missing():
+def test_get_addon_prefs_missing() -> None:
     """Test that get_addon_prefs returns None if addon not found."""
     mock_context = MagicMock()
     mock_context.preferences.addons.get.return_value = None
@@ -90,14 +90,14 @@ def test_get_addon_prefs_missing():
         assert prefs is None
 
 
-def test_update_joint_axes_visibility():
+def test_update_joint_axes_visibility() -> None:
     """Test that toggling joint axes visibility calls update_viz_handle."""
     with patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle") as mock_viz:
         update_joint_axes_visibility(MagicMock(), bpy.context)
         mock_viz.assert_called_once_with(bpy.context)
 
 
-def test_update_inertia_visibility():
+def test_update_inertia_visibility() -> None:
     """Test that toggling inertia visibility calls tag_redraw and ensure_handler."""
     mock_prefs = MagicMock()
     mock_prefs.show_inertia_gizmos = True
@@ -113,14 +113,14 @@ def test_update_inertia_visibility():
         mock_ensure.assert_called_once()
 
 
-def test_update_inertia_size():
+def test_update_inertia_size() -> None:
     """Test that changing inertia size calls tag_redraw."""
     with patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw") as mock_redraw:
         update_inertia_size(MagicMock(), bpy.context)
         mock_redraw.assert_called_once()
 
 
-def test_preferences_draw():
+def test_preferences_draw() -> None:
     """Test the draw method of LinkForgePreferences."""
     from linkforge.blender.preferences import LinkForgePreferences
 

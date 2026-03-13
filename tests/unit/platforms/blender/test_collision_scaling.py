@@ -2,7 +2,7 @@ import bpy
 from linkforge.blender.operators.link_ops import create_collision_for_link
 
 
-def test_primitive_box_collision_scaling_fidelity():
+def test_primitive_box_collision_scaling_fidelity() -> None:
     """Verify that a scaled cube results in a matching collision primitive.
 
     Prevents the 'half-size' bug where collision was 2x1.5x0.5 for a 4x3x1 cube.
@@ -29,7 +29,7 @@ def test_primitive_box_collision_scaling_fidelity():
     assert abs(collision_obj.scale.x - 1.0) < 1e-5
 
 
-def test_primitive_sphere_collision_scaling_fidelity():
+def test_primitive_sphere_collision_scaling_fidelity() -> None:
     """Verify sphere collision radius matches scaled visual dimensions."""
     bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0)  # 2m diameter
     visual_obj = bpy.context.active_object

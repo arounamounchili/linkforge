@@ -2,7 +2,7 @@ from linkforge_core.generators.urdf_generator import URDFGenerator
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_round_trip_safety_calibration():
+def test_round_trip_safety_calibration() -> None:
     # 1. Start with URDF XML
     original_xml = """<?xml version='1.0' encoding='utf-8'?>
 <robot name="round_trip_bot">

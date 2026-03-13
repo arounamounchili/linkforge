@@ -4,7 +4,7 @@ import bpy
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_ros2_control_sensor_and_parameters_export(clean_scene):
+def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     """Test that choosing 'sensor' type exports read-only and includes parameters."""
     scene = bpy.context.scene
     props = scene.linkforge

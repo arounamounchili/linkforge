@@ -101,10 +101,10 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
     if typing.cast(typing.Any, collision_obj).get("imported_from_urdf"):
         return
 
-    # Schedule regeneration (debounced via timer to prevent lag)
-    from ..operators.link_ops import schedule_collision_preview_update
+    # Update ratio in realtime
+    from ..operators.link_ops import update_collision_quality_realtime
 
-    schedule_collision_preview_update(obj)
+    update_collision_quality_realtime(obj, collision_obj)
 
 
 def update_auto_inertia_toggle(self: PropertyGroup, context: Context) -> None:

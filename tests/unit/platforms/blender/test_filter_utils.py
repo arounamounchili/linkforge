@@ -12,7 +12,7 @@ def _get_simple_named_object(name: str):
     return SimpleNamespace(name=name)
 
 
-def test_filter_dict_empty_search_returns_all():
+def test_filter_dict_empty_search_returns_all() -> None:
     """Test empty search term returns all dict input items."""
     items = {"Link1": "obj1", "Link2": "obj2", "base_link": "obj3"}
     result = filter_items_by_name(items, "")
@@ -21,7 +21,7 @@ def test_filter_dict_empty_search_returns_all():
     assert len(result) == 3
 
 
-def test_filter_list_empty_search_returns_all():
+def test_filter_list_empty_search_returns_all() -> None:
     """Test empty search term returns all list input items."""
     items = [
         _get_simple_named_object("Link1"),
@@ -34,7 +34,7 @@ def test_filter_list_empty_search_returns_all():
     assert len(result) == 3
 
 
-def test_filter_dict_case_sensitivity_uppercase():
+def test_filter_dict_case_sensitivity_uppercase() -> None:
     """Test non case-sensitive filtering with uppercase search term."""
     items = {"Link1": "obj1", "Link2": "obj2", "base_link": "obj3"}
     result = filter_items_by_name(items, "LINK")
@@ -45,7 +45,7 @@ def test_filter_dict_case_sensitivity_uppercase():
     assert "base_link" in result
 
 
-def test_filter_dict_case_sensitivity_lowercase():
+def test_filter_dict_case_sensitivity_lowercase() -> None:
     """Test non case-sensitive filtering with lowercase search term."""
     items = {"LINK1": "obj1", "LINK2": "obj2", "BASE_LINK": "obj3"}
     result = filter_items_by_name(items, "link")
@@ -56,7 +56,7 @@ def test_filter_dict_case_sensitivity_lowercase():
     assert "BASE_LINK" in result
 
 
-def test_filter_dict_case_sensitivity_mixed():
+def test_filter_dict_case_sensitivity_mixed() -> None:
     """Test non case-sensitive filtering with mixed case (upper and lower)."""
     items = {"Link1": "obj1", "LINK2": "obj2", "base_link": "obj3"}
     result = filter_items_by_name(items, "LiNk")
@@ -64,7 +64,7 @@ def test_filter_dict_case_sensitivity_mixed():
     assert len(result) == 3
 
 
-def test_filter_list_case_sensitivity_uppercase():
+def test_filter_list_case_sensitivity_uppercase() -> None:
     """Test non case-sensitive list filtering with uppercase search term."""
     items = [
         _get_simple_named_object("Link1"),
@@ -79,7 +79,7 @@ def test_filter_list_case_sensitivity_uppercase():
     assert result[2].name == "BASE_LINK"
 
 
-def test_filter_list_case_sensitivity_lowercase():
+def test_filter_list_case_sensitivity_lowercase() -> None:
     """Test non case-sensitive list filtering with lowercase search term."""
     items = [
         _get_simple_named_object("LINK1"),
@@ -91,7 +91,7 @@ def test_filter_list_case_sensitivity_lowercase():
     assert len(result) == 3
 
 
-def test_filter_dict_substring_match():
+def test_filter_dict_substring_match() -> None:
     """Test substring matching for dictionary input types."""
     items = {"Link1": "obj1", "Link2": "obj2", "base_link": "obj3", "sensor_1": "obj4"}
     result = filter_items_by_name(items, "Link")
@@ -103,7 +103,7 @@ def test_filter_dict_substring_match():
     assert "sensor_1" not in result
 
 
-def test_filter_list_substring_match():
+def test_filter_list_substring_match() -> None:
     """Test substring matching for list input types."""
     items = [
         _get_simple_named_object("Link1"),
@@ -119,7 +119,7 @@ def test_filter_list_substring_match():
     assert result[2].name == "base_link"
 
 
-def test_filter_dict_exact_match():
+def test_filter_dict_exact_match() -> None:
     """Test exact match returns single item (dictionary input type)."""
     items = {"Link1": "obj1", "Link2": "obj2", "base_link": "obj3"}
     result = filter_items_by_name(items, "Link1")
@@ -128,7 +128,7 @@ def test_filter_dict_exact_match():
     assert "Link1" in result
 
 
-def test_filter_list_exact_match():
+def test_filter_list_exact_match() -> None:
     """Test exact match returns single item (list input type)."""
     items = [
         _get_simple_named_object("Link1"),
@@ -141,7 +141,7 @@ def test_filter_list_exact_match():
     assert result[0].name == "Link2"
 
 
-def test_filter_dict_no_matches():
+def test_filter_dict_no_matches() -> None:
     """Test that no matches returns empty dictionary."""
     items = {"Link1": "obj1", "Link2": "obj2"}
     result = filter_items_by_name(items, "sensor")
@@ -150,7 +150,7 @@ def test_filter_dict_no_matches():
     assert len(result) == 0
 
 
-def test_filter_list_no_matches():
+def test_filter_list_no_matches() -> None:
     """Test that no matches returns empty list."""
     items = [_get_simple_named_object("Link1"), _get_simple_named_object("Link2")]
     result = filter_items_by_name(items, "sensor")
@@ -159,21 +159,21 @@ def test_filter_list_no_matches():
     assert len(result) == 0
 
 
-def test_filter_empty_dict():
+def test_filter_empty_dict() -> None:
     """Test filtering empty dictionary."""
     result = filter_items_by_name({}, "test")
 
     assert result == {}
 
 
-def test_filter_empty_list():
+def test_filter_empty_list() -> None:
     """Test filtering empty list."""
     result = filter_items_by_name([], "test")
 
     assert result == []
 
 
-def test_filter_none_search_term_dict():
+def test_filter_none_search_term_dict() -> None:
     """Test None search term returns all input items (dictionary)."""
     items = {"Link1": "obj1", "Link2": "obj2"}
     result = filter_items_by_name(items, None)  # type: ignore
@@ -181,7 +181,7 @@ def test_filter_none_search_term_dict():
     assert result == items
 
 
-def test_filter_none_search_term_list():
+def test_filter_none_search_term_list() -> None:
     """Test None search term returns all input items (list)."""
     items = [_get_simple_named_object("Link1"), _get_simple_named_object("Link2")]
     result = filter_items_by_name(items, None)  # type: ignore
@@ -189,7 +189,7 @@ def test_filter_none_search_term_list():
     assert result == items
 
 
-def test_filter_whitespace_only_search():
+def test_filter_whitespace_only_search() -> None:
     """Test search term with only whitespace returns all input items."""
     items = {"Link1": "obj1", "Link2": "obj2"}
     result = filter_items_by_name(items, "   ")
@@ -197,7 +197,7 @@ def test_filter_whitespace_only_search():
     assert result == items
 
 
-def test_filter_leading_trailing_whitespace():
+def test_filter_leading_trailing_whitespace() -> None:
     """Test search term with leading/trailing whitespace."""
     items = {"Link1": "obj1", "Link2": "obj2"}
     result = filter_items_by_name(items, " Link1 ")
@@ -208,7 +208,7 @@ def test_filter_leading_trailing_whitespace():
     assert len(result) == 0
 
 
-def test_filter_special_chars():
+def test_filter_special_chars() -> None:
     """Test that special chars are treated correctly as 'normal' strings."""
     items = {
         "Link.1": "obj1",
@@ -230,7 +230,7 @@ def test_filter_special_chars():
     assert "Link?3" in result
 
 
-def test_filter_trailing_spaces_in_search_query():
+def test_filter_trailing_spaces_in_search_query() -> None:
     """Test search term with multiple trailing spaces."""
     items = {"Link  1": "obj1", "Link 2": "obj2", "Link1": "obj3"}
 
@@ -239,7 +239,7 @@ def test_filter_trailing_spaces_in_search_query():
     assert "Link  1" in result
 
 
-def test_filter_very_long_search_query():
+def test_filter_very_long_search_query() -> None:
     """Test with very long search query."""
     items = {"short": "obj1", "a" * 1000: "obj2"}
 
@@ -248,7 +248,7 @@ def test_filter_very_long_search_query():
     assert "a" * 1000 in result
 
 
-def test_filter_list_objects_missing_name_attr():
+def test_filter_list_objects_missing_name_attr() -> None:
     """Test list filtering with objects missing name attribute."""
     valid_obj = _get_simple_named_object("Link1")
 
@@ -266,7 +266,7 @@ def test_filter_list_objects_missing_name_attr():
     assert result[0] == valid_obj
 
 
-def test_dict_input_returns_dict_type():
+def test_dict_input_returns_dict_type() -> None:
     """Test that dictionary input returns dictionary type."""
     items = {"Link1": "obj1"}
     result = filter_items_by_name(items, "Link")
@@ -274,7 +274,7 @@ def test_dict_input_returns_dict_type():
     assert isinstance(result, dict)
 
 
-def test_list_input_returns_list_type():
+def test_list_input_returns_list_type() -> None:
     """Test that list input returns list type."""
     items = [_get_simple_named_object("Link1")]
     result = filter_items_by_name(items, "Link")

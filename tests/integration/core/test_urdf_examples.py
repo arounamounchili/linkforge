@@ -5,7 +5,7 @@ from pathlib import Path
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_mobile_robot_structure(examples_dir: Path):
+def test_mobile_robot_structure(examples_dir: Path) -> None:
     """Test mobile_robot.urdf has correct structure."""
     robot = URDFParser().parse(examples_dir / "urdf" / "mobile_robot.urdf")
 
@@ -25,7 +25,7 @@ def test_mobile_robot_structure(examples_dir: Path):
         assert joint.parent == "base_link"
 
 
-def test_diff_drive_robot_structure(examples_dir: Path):
+def test_diff_drive_robot_structure(examples_dir: Path) -> None:
     """Test diff_drive_robot.urdf has correct structure and advanced features."""
     robot = URDFParser().parse(examples_dir / "urdf" / "diff_drive_robot.urdf")
 
@@ -49,7 +49,7 @@ def test_diff_drive_robot_structure(examples_dir: Path):
     assert "right_wheel_joint" in rc_joints
 
 
-def test_roundtrip_test_robot_structure(examples_dir: Path):
+def test_roundtrip_test_robot_structure(examples_dir: Path) -> None:
     """Test roundtrip_test_robot.urdf has correct structure and all features."""
     robot = URDFParser().parse(examples_dir / "urdf" / "roundtrip_test_robot.urdf")
 
@@ -78,7 +78,7 @@ def test_roundtrip_test_robot_structure(examples_dir: Path):
     assert JointType.FLOATING in joint_types
 
 
-def test_roundtrip_robot_has_all_joint_types(examples_dir: Path):
+def test_roundtrip_robot_has_all_joint_types(examples_dir: Path) -> None:
     """Verify roundtrip_test_robot.urdf includes ALL 6 URDF joint types."""
     robot = URDFParser().parse(examples_dir / "urdf" / "roundtrip_test_robot.urdf")
 
@@ -94,7 +94,7 @@ def test_roundtrip_robot_has_all_joint_types(examples_dir: Path):
     assert JointType.FLOATING in joint_types
 
 
-def test_all_examples_have_inertia(examples_dir: Path):
+def test_all_examples_have_inertia(examples_dir: Path) -> None:
     """Verify all links in all examples have inertial properties."""
     examples = [
         "mobile_robot.urdf",
@@ -110,7 +110,7 @@ def test_all_examples_have_inertia(examples_dir: Path):
             assert link.inertial.mass > 0
 
 
-def test_all_examples_parse_without_errors(examples_dir: Path):
+def test_all_examples_parse_without_errors(examples_dir: Path) -> None:
     """Ensure all example files can be parsed without exceptions."""
     examples = [
         "mobile_robot.urdf",

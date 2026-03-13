@@ -16,7 +16,7 @@ from linkforge_core import URDFGenerator
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_simple_arm_roundtrip(examples_dir: Path):
+def test_simple_arm_roundtrip(examples_dir: Path) -> None:
     """Test importing and re-exporting roundtrip_test_robot.urdf preserves structure."""
     # Get path to example URDF
     urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
@@ -73,7 +73,7 @@ def test_simple_arm_roundtrip(examples_dir: Path):
         assert joint_names2 == joint_names
 
 
-def test_materials_preserved(examples_dir: Path):
+def test_materials_preserved(examples_dir: Path) -> None:
     """Test that material colors are preserved in round-trip."""
     urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
 
@@ -91,7 +91,7 @@ def test_materials_preserved(examples_dir: Path):
     assert "arm_material" in material_names or "base_material" in material_names
 
 
-def test_inertial_preserved(examples_dir: Path):
+def test_inertial_preserved(examples_dir: Path) -> None:
     """Test that inertial properties are preserved in round-trip."""
     urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
 
@@ -104,7 +104,7 @@ def test_inertial_preserved(examples_dir: Path):
         assert link.inertial.inertia is not None, f"Link {link.name} missing inertia tensor"
 
 
-def test_quadruped_roundtrip(examples_dir: Path):
+def test_quadruped_roundtrip(examples_dir: Path) -> None:
     """Test roundtrip for the complex quadruped robot example."""
     urdf_path = examples_dir / "urdf" / "quadruped_robot.urdf"
     if not urdf_path.exists():
@@ -139,7 +139,7 @@ def test_quadruped_roundtrip(examples_dir: Path):
     assert rc.joints[0].command_interfaces[0] == "effort"
 
 
-def test_joint_limits_preserved(examples_dir: Path):
+def test_joint_limits_preserved(examples_dir: Path) -> None:
     """Test that joint limits are preserved in round-trip."""
     urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
 

@@ -10,7 +10,7 @@ from linkforge_core.models import (
 )
 
 
-def test_xacro_namespace_prefix():
+def test_xacro_namespace_prefix() -> None:
     """Verify that XACRO generator uses the 'xacro:' prefix instead of 'ns0:'."""
     from linkforge_core.models import Color, Material
 

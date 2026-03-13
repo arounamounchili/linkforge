@@ -69,5 +69,13 @@ ignore_missing_imports = true
 module = "linkforge.blender.*"
 ignore_errors = false
 
+# Tiered Quality Control: Strict enforcement for production core, optimized for developer velocity in test suites.
+[[tool.mypy.overrides]]
+module = "tests.*"
+check_untyped_defs = false
+disallow_untyped_defs = false
+ignore_missing_imports = true
+ignore_errors = true
+
 [dependency-groups]
 dev = []

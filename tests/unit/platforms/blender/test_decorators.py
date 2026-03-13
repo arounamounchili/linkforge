@@ -21,7 +21,7 @@ class SpyOperator:
 class TestSafeExecute:
     """Test standard error handling decorator."""
 
-    def test_successful_execution(self):
+    def test_successful_execution(self) -> None:
         """Test that successful execution returns expected value."""
         op = SpyOperator()
         context = {}
@@ -34,7 +34,7 @@ class TestSafeExecute:
         assert result == {"FINISHED"}
         assert len(op.reports) == 0
 
-    def test_exception_handling(self):
+    def test_exception_handling(self) -> None:
         """Test that exceptions are caught and reported."""
         op = SpyOperator()
         context = {}
@@ -54,7 +54,7 @@ class TestSafeExecute:
         assert type_set == {"ERROR"}
         assert "Operation failed: Test Error" in message
 
-    def test_logging(self, caplog):
+    def test_logging(self, caplog) -> None:
         """Test that full traceback is logged."""
         op = SpyOperator()
         context = {}

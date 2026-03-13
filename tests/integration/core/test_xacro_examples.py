@@ -5,7 +5,7 @@ from pathlib import Path
 from linkforge_core.parsers.xacro_parser import XACROParser
 
 
-def test_xacro_roundtrip_master_structure(examples_dir: Path):
+def test_xacro_roundtrip_master_structure(examples_dir: Path) -> None:
     """Test roundtrip.xacro parses into a valid robot with expected features."""
     parser = XACROParser()
     # The XACROParser.parse() handles search path setup
@@ -28,7 +28,7 @@ def test_xacro_roundtrip_master_structure(examples_dir: Path):
     assert round(base_link.inertial.inertia.ixx, 6) == 0.120833
 
 
-def test_xacro_roundtrip_with_disabled_arm(examples_dir: Path):
+def test_xacro_roundtrip_with_disabled_arm(examples_dir: Path) -> None:
     """Test roundtrip.xacro with argument-driven conditional logic."""
     parser = XACROParser()
     # Arguments are now passed directly to parse()

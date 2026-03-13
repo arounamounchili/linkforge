@@ -13,7 +13,7 @@ from linkforge_core.models import (
 class TestGazeboPlugin:
     """Tests for GazeboPlugin model."""
 
-    def test_plugin_creation(self):
+    def test_plugin_creation(self) -> None:
         """Test creating a basic plugin."""
         plugin = GazeboPlugin(
             name="test_plugin",
@@ -23,7 +23,7 @@ class TestGazeboPlugin:
         assert plugin.filename == "libtest.so"
         assert len(plugin.parameters) == 0
 
-    def test_plugin_with_parameters(self):
+    def test_plugin_with_parameters(self) -> None:
         """Test creating a plugin with parameters."""
         plugin = GazeboPlugin(
             name="test_plugin",
@@ -33,12 +33,12 @@ class TestGazeboPlugin:
         assert plugin.parameters["param1"] == "value1"
         assert plugin.parameters["param2"] == "42"
 
-    def test_empty_name(self):
+    def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError, match="Plugin name cannot be empty"):
             GazeboPlugin(name="", filename="lib.so")
 
-    def test_empty_filename(self):
+    def test_empty_filename(self) -> None:
         """Test that empty filename raises error."""
         with pytest.raises(RobotModelError, match="Plugin filename cannot be empty"):
             GazeboPlugin(name="test", filename="")
@@ -47,7 +47,7 @@ class TestGazeboPlugin:
 class TestGazeboElement:
     """Tests for GazeboElement model."""
 
-    def test_robot_level_element(self):
+    def test_robot_level_element(self) -> None:
         """Test creating a robot-level Gazebo element (no reference)."""
         element = GazeboElement(
             reference=None,
@@ -58,7 +58,7 @@ class TestGazeboElement:
         assert element.properties["gravity"] == "true"
         assert element.static is True
 
-    def test_link_element(self):
+    def test_link_element(self) -> None:
         """Test creating a link-level Gazebo element."""
         element = GazeboElement(
             reference="base_link",
@@ -77,7 +77,7 @@ class TestGazeboElement:
         assert element.kp == pytest.approx(1000.0)
         assert element.kd == pytest.approx(100.0)
 
-    def test_joint_element(self):
+    def test_joint_element(self) -> None:
         """Test creating a joint-level Gazebo element."""
         element = GazeboElement(
             reference="joint1",
@@ -92,7 +92,7 @@ class TestGazeboElement:
         assert element.provide_feedback is True
         assert element.implicit_spring_damper is True
 
-    def test_element_with_plugin(self):
+    def test_element_with_plugin(self) -> None:
         """Test Gazebo element with plugin."""
         plugin = GazeboPlugin(name="test", filename="lib.so")
         element = GazeboElement(
@@ -102,7 +102,7 @@ class TestGazeboElement:
         assert len(element.plugins) == 1
         assert element.plugins[0].name == "test"
 
-    def test_element_with_properties(self):
+    def test_element_with_properties(self) -> None:
         """Test Gazebo element with custom properties."""
         element = GazeboElement(
             reference="link1",
@@ -110,7 +110,7 @@ class TestGazeboElement:
         )
         assert element.properties["custom_prop"] == "custom_value"
 
-    def test_empty_reference_string(self):
+    def test_empty_reference_string(self) -> None:
         """Test that empty string reference raises error."""
         with pytest.raises(RobotModelError, match="Gazebo reference cannot be empty string"):
             GazeboElement(reference="")

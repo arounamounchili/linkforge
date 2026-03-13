@@ -5,7 +5,7 @@ from linkforge.blender.utils.joint_utils import resolve_mimic_joints
 from linkforge_core.models import Joint, JointLimits, JointMimic, JointType, Vector3
 
 
-def test_resolve_mimic_joints_basic():
+def test_resolve_mimic_joints_basic() -> None:
     """Test basic mimic joint resolution."""
     # Create two joints
     bpy.ops.object.select_all(action="SELECT")
@@ -54,7 +54,7 @@ def test_resolve_mimic_joints_basic():
     assert follower_obj.linkforge_joint.mimic_joint == driver_obj
 
 
-def test_resolve_mimic_joints_missing_driver():
+def test_resolve_mimic_joints_missing_driver() -> None:
     """Test mimic joint resolution when driver joint doesn't exist."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -86,7 +86,7 @@ def test_resolve_mimic_joints_missing_driver():
     assert follower_obj.linkforge_joint.mimic_joint is None
 
 
-def test_resolve_mimic_joints_no_mimic():
+def test_resolve_mimic_joints_no_mimic() -> None:
     """Test processing joints without mimic."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -115,7 +115,7 @@ def test_resolve_mimic_joints_no_mimic():
     assert joint_obj.linkforge_joint.mimic_joint is None
 
 
-def test_resolve_mimic_joints_empty_lists():
+def test_resolve_mimic_joints_empty_lists() -> None:
     """Test with empty joint lists."""
     resolve_mimic_joints([], {})
     # Should not raise errors

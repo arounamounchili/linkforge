@@ -5,7 +5,7 @@ from __future__ import annotations
 from linkforge_core.utils.math_utils import clean_float, format_float, normalize_vector
 
 
-def test_clean_float():
+def test_clean_float() -> None:
     """Test cleaning floating point values."""
     assert clean_float(1.0) == 1.0
     assert clean_float(1e-11) == 0.0
@@ -13,7 +13,7 @@ def test_clean_float():
     assert clean_float(1e-9, epsilon=1e-8) == 0.0
 
 
-def test_format_float():
+def test_format_float() -> None:
     """Test formatting floating point values."""
     assert format_float(1.1234567) == "1.123457"
     assert format_float(1.0) == "1"
@@ -22,7 +22,7 @@ def test_format_float():
     assert format_float(-0.0) == "0"
 
 
-def test_normalize_vector():
+def test_normalize_vector() -> None:
     """Test normalizing 3D vectors."""
     # Unit vectors
     assert normalize_vector(1, 0, 0) == (1.0, 0.0, 0.0)

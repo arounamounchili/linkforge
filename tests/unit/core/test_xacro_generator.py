@@ -998,7 +998,7 @@ class TestXACROGeneratorEdgeCoverage:
         xml3 = gen3.generate(robot3)
         assert "xacro:macro" in xml3
 
-    def test_xacro_generator_macro_with_mesh_and_disconnected_link(self):
+    def test_xacro_generator_macro_with_mesh_and_disconnected_link(self) -> None:
         """Test macro signatures with meshes and links without joints."""
         robot = Robot(name="test")
         link = Link(
@@ -1031,7 +1031,7 @@ class TestXACROGeneratorEdgeCoverage:
         assert "p_0.000_0.000_0.000" in sig
 
 
-def test_xacro_macro_signature_robustness():
+def test_xacro_macro_signature_robustness() -> None:
     """Verify macro signature generation handles meshes without explicit origin elements."""
     from linkforge_core.generators.xacro_generator import XACROGenerator
     from linkforge_core.models.geometry import Mesh

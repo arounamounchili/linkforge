@@ -6,7 +6,7 @@ from linkforge.blender.operators.joint_ops import (
 )
 
 
-def test_create_joint_from_child_mesh(clean_scene):
+def test_create_joint_from_child_mesh(clean_scene) -> None:
     """Verify creating a joint when a link's child mesh is selected."""
     # Link Empty
     link = bpy.data.objects.new("Base", None)
@@ -33,7 +33,7 @@ def test_create_joint_from_child_mesh(clean_scene):
     assert joint.linkforge_joint.child_link == link
 
 
-def test_create_joint_collection_sync(clean_scene):
+def test_create_joint_collection_sync(clean_scene) -> None:
     """Verify joint is moved to link's collection."""
     custom_coll = bpy.data.collections.new("RobotColl")
     bpy.context.scene.collection.children.link(custom_coll)
@@ -51,7 +51,7 @@ def test_create_joint_collection_sync(clean_scene):
     assert joint in custom_coll.objects.values()
 
 
-def test_create_joint_preferences_size(clean_scene):
+def test_create_joint_preferences_size(clean_scene) -> None:
     """Verify joint display size from preferences."""
     with patch("linkforge.blender.preferences.get_addon_prefs") as mock_prefs:
         # Create a mock object for preferences
@@ -70,7 +70,7 @@ def test_create_joint_preferences_size(clean_scene):
         assert joint.empty_display_size == 0.5
 
 
-def test_delete_joint_ros2_control_sync(clean_scene):
+def test_delete_joint_ros2_control_sync(clean_scene) -> None:
     """Verify joint is removed from ROS2 control list if exists."""
     link = bpy.data.objects.new("Link", None)
     bpy.context.collection.objects.link(link)
@@ -90,7 +90,7 @@ def test_delete_joint_ros2_control_sync(clean_scene):
     assert len(scene_props.ros2_control_joints) == 1
 
 
-def test_auto_detect_parent_child_failure(clean_scene):
+def test_auto_detect_parent_child_failure(clean_scene) -> None:
     """Test auto-detection failure when no meshes are present."""
     # Satisfy poll: needs active joint Empty
     bpy.ops.object.empty_add(type="PLAIN_AXES")
@@ -102,7 +102,7 @@ def test_auto_detect_parent_child_failure(clean_scene):
     assert res == {"CANCELLED"}
 
 
-def test_delete_transmission_error(clean_scene):
+def test_delete_transmission_error(clean_scene) -> None:
     """Hit error path in delete_transmission."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     trans = bpy.context.active_object
@@ -125,7 +125,7 @@ def test_delete_transmission_error(clean_scene):
         LINKFORGE_OT_delete_transmission().execute(None)
 
 
-def test_auto_detect_single_link(clean_scene):
+def test_auto_detect_single_link(clean_scene) -> None:
     """Hit the single-link branch in auto-detect."""
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     link = bpy.context.active_object
@@ -140,7 +140,7 @@ def test_auto_detect_single_link(clean_scene):
     assert joint.linkforge_joint.child_link == link
 
 
-def test_auto_detect_error_paths(clean_scene):
+def test_auto_detect_error_paths(clean_scene) -> None:
     """Hit error paths in auto-detect."""
     # 1. No links warning
     j = bpy.data.objects.new("Joint", None)

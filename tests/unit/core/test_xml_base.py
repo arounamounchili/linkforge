@@ -19,7 +19,7 @@ class MockXMLGenerator(RobotXMLGenerator):
         return "<robot></robot>"
 
 
-def test_format_value():
+def test_format_value() -> None:
     """Test value formatting hook."""
     gen = MockXMLGenerator()
     assert gen._format_value(1.0) == "1"
@@ -28,14 +28,14 @@ def test_format_value():
     assert gen._format_value("test") == "test"
 
 
-def test_format_vector():
+def test_format_vector() -> None:
     """Test vector formatting hook."""
     gen = MockXMLGenerator()
     assert gen._format_vector(1.0, 2.0, 3.0) == "1 2 3"
     assert gen._format_vector(1.12345678, 0.0, -1.0) == "1.123457 0 -1"
 
 
-def test_add_origin_element():
+def test_add_origin_element() -> None:
     """Test origin element generation."""
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
@@ -54,7 +54,7 @@ def test_add_origin_element():
     assert elem.get("rpy") == "0.1 0.2 0.3"
 
 
-def test_add_inertial_element():
+def test_add_inertial_element() -> None:
     """Test inertial element generation."""
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
@@ -97,7 +97,7 @@ def test_add_inertial_element():
     assert inertia_elem.get("izz") == "3"
 
 
-def test_add_geometry_element_box():
+def test_add_geometry_element_box() -> None:
     """Test geometry element generation for Box."""
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
@@ -112,7 +112,7 @@ def test_add_geometry_element_box():
     assert box_elem.get("size") == "1 2 3"
 
 
-def test_add_geometry_element_cylinder():
+def test_add_geometry_element_cylinder() -> None:
     """Test geometry element generation for Cylinder."""
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
@@ -128,7 +128,7 @@ def test_add_geometry_element_cylinder():
     assert cyl_elem.get("length") == "2"
 
 
-def test_add_geometry_element_sphere():
+def test_add_geometry_element_sphere() -> None:
     """Test geometry element generation for Sphere."""
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
@@ -143,7 +143,7 @@ def test_add_geometry_element_sphere():
     assert sphere_elem.get("radius") == "1.5"
 
 
-def test_add_geometry_element_mesh():
+def test_add_geometry_element_mesh() -> None:
     """Test geometry element generation for Mesh."""
     # Test with output_path set (relative path)
     gen = MockXMLGenerator(output_path=Path("/tmp/robot/robot.urdf"))
@@ -160,7 +160,7 @@ def test_add_geometry_element_mesh():
     assert mesh_elem.get("scale") == "2 2 2"
 
 
-def test_add_geometry_element_unsupported():
+def test_add_geometry_element_unsupported() -> None:
     """Test that unsupported geometry type creates an empty container as fallback."""
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
@@ -174,7 +174,7 @@ def test_add_geometry_element_unsupported():
     assert len(elem) == 0  # No specific geometry child created
 
 
-def test_geometry_parsing_unsupported_mesh_warning():
+def test_geometry_parsing_unsupported_mesh_warning() -> None:
     """Verify that malformed mesh geometry triggers a warning during base XML parsing."""
     from unittest.mock import patch
 

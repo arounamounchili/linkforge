@@ -7,7 +7,7 @@ from linkforge.linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Joint, JointType, Link, Robot
 
 
-def test_builder_prepare_tasks():
+def test_builder_prepare_tasks() -> None:
     """Test that tasks are correctly queued based on robot structure."""
     l1 = Link(name="base_link")
     l2 = Link(name="link1")
@@ -35,7 +35,7 @@ def test_builder_prepare_tasks():
     assert "finalize" in task_types
 
 
-def test_builder_execution_flow(mocker):
+def test_builder_execution_flow(mocker) -> None:
     """Test that process_next_chunk executes tasks and updates status."""
     l1 = Link(name="base_link")
     robot = Robot(name="test_robot", initial_links=[l1])
@@ -64,7 +64,7 @@ def test_builder_execution_flow(mocker):
     assert bpy.context.scene.linkforge.import_status != ""
 
 
-def test_builder_abort(mocker):
+def test_builder_abort(mocker) -> None:
     """Test that import can be aborted via scene property."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
@@ -77,7 +77,7 @@ def test_builder_abort(mocker):
     assert "cancelled" in builder.error.lower()
 
 
-def test_builder_error_handling(mocker):
+def test_builder_error_handling(mocker) -> None:
     """Test that exceptions in task execution are caught and reported."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
@@ -91,7 +91,7 @@ def test_builder_error_handling(mocker):
     assert builder.is_finished is True
 
 
-def test_builder_timer_start(mocker):
+def test_builder_timer_start(mocker) -> None:
     """Test that start() registers the timer."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
@@ -105,7 +105,7 @@ def test_builder_timer_start(mocker):
     assert args[0] == builder.process_next_chunk
 
 
-def test_builder_timer_callback_interval(mocker):
+def test_builder_timer_callback_interval(mocker) -> None:
     """Test that the callback returns a float interval while running."""
     # Add many tasks so it doesn't finish immediately
     robot = Robot(name="test_robot", initial_links=[Link(name=f"link{i}") for i in range(10)])
@@ -126,7 +126,7 @@ def test_builder_timer_callback_interval(mocker):
     assert result is None  # Finished
 
 
-def test_builder_full_completion(mocker):
+def test_builder_full_completion(mocker) -> None:
     """Test that builder runs all tasks and finishes correctly."""
     robot = Robot(name="test_robot", initial_links=[Link(name="link1")])
 
@@ -146,7 +146,7 @@ def test_builder_full_completion(mocker):
     assert builder.error is None
 
 
-def test_builder_with_joints_and_sensors(mocker):
+def test_builder_with_joints_and_sensors(mocker) -> None:
     """Test that builder correctly queues joints and sensors."""
     l1 = Link(name="l1")
     l2 = Link(name="l2")

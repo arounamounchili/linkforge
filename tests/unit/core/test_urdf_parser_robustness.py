@@ -19,7 +19,7 @@ class MockXMLParser(RobotXMLParser):
 # --- Base Parser Robustness (RobotXMLParser) ---
 
 
-def test_xml_base_material_parsing_robustness():
+def test_xml_base_material_parsing_robustness() -> None:
     """Verify robust handling of invalid material attributes."""
     parser = MockXMLParser()
 
@@ -34,7 +34,7 @@ def test_xml_base_material_parsing_robustness():
     assert mat.color.a == 1.0
 
 
-def test_xml_base_inertia_sanitization():
+def test_xml_base_inertia_sanitization() -> None:
     """Ensure inertia tensor violations fall back to safe minimal values."""
     parser = MockXMLParser()
 
@@ -47,7 +47,7 @@ def test_xml_base_inertia_sanitization():
     assert inertial.inertia.ixx == 1e-6
 
 
-def test_xml_base_geometry_error_handling():
+def test_xml_base_geometry_error_handling() -> None:
     """Verify geometry parsing handles malformed elements or security violations."""
     parser = MockXMLParser()
 
@@ -68,7 +68,7 @@ def test_xml_base_geometry_error_handling():
         assert "box geometry" in mock_logger.warning.call_args[0][0]
 
 
-def test_xml_base_robust_joint_addition_errors():
+def test_xml_base_robust_joint_addition_errors() -> None:
     """Verify logging of non-duplicate joint model errors."""
     parser = MockXMLParser()
     robot = Robot(name="test")
@@ -87,7 +87,7 @@ def test_xml_base_robust_joint_addition_errors():
 # --- URDF Parser Feature Robustness ---
 
 
-def test_urdf_parser_axis_normalization():
+def test_urdf_parser_axis_normalization() -> None:
     """Verify normalization of zero-magnitude joint axes."""
     parser = URDFParser()
     xml = """
@@ -105,7 +105,7 @@ def test_urdf_parser_axis_normalization():
     assert robot.joints[0].axis.x == 1.0
 
 
-def test_urdf_parser_revolute_joint_without_limits():
+def test_urdf_parser_revolute_joint_without_limits() -> None:
     """Verify revolute joints without limits are handled by defaulting to zero range."""
     parser = URDFParser()
     xml = """
@@ -121,7 +121,7 @@ def test_urdf_parser_revolute_joint_without_limits():
     assert robot.joints[0].limits.upper == 0.0
 
 
-def test_urdf_parser_gazebo_sensor_parsing_robustness():
+def test_urdf_parser_gazebo_sensor_parsing_robustness() -> None:
     """Verify parsing of various Gazebo sensor types and error handling."""
     parser = URDFParser()
 
@@ -147,7 +147,7 @@ def test_urdf_parser_gazebo_sensor_parsing_robustness():
         parser._parse_sensor_from_gazebo(ET.fromstring(xml))
 
 
-def test_urdf_parser_ros2_control_robustness():
+def test_urdf_parser_ros2_control_robustness() -> None:
     """Verify robust handling of invalid ros2_control configurations."""
     parser = URDFParser()
 
@@ -160,7 +160,7 @@ def test_urdf_parser_ros2_control_robustness():
         assert mock_logger.warning.called
 
 
-def test_urdf_parser_transmission_parsing_robustness():
+def test_urdf_parser_transmission_parsing_robustness() -> None:
     """Verify robust parsing of transmission components."""
     parser = URDFParser()
 
@@ -173,7 +173,7 @@ def test_urdf_parser_transmission_parsing_robustness():
     assert parser._parse_transmission_component(elem, "actuator") is None
 
 
-def test_urdf_parser_xacro_detection_robustness(tmp_path):
+def test_urdf_parser_xacro_detection_robustness(tmp_path) -> None:
     """Verify all layers of XACRO detection."""
     parser = URDFParser()
 
@@ -189,7 +189,7 @@ def test_urdf_parser_xacro_detection_robustness(tmp_path):
         parser.parse_string(xml)
 
 
-def test_urdf_parser_iterative_parsing_robustness(tmp_path):
+def test_urdf_parser_iterative_parsing_robustness(tmp_path) -> None:
     """Verify robust handling of structural errors in iterative parsing."""
     parser = URDFParser()
 
@@ -214,7 +214,7 @@ def test_urdf_parser_iterative_parsing_robustness(tmp_path):
         assert mock_logger.warning.called
 
 
-def test_urdf_parser_link_renaming_recursive():
+def test_urdf_parser_link_renaming_recursive() -> None:
     """Verify iterative renaming handles multiple sequential collisions."""
     parser = URDFParser()
     robot = Robot(name="test")
@@ -226,7 +226,7 @@ def test_urdf_parser_link_renaming_recursive():
     assert "l_duplicate_2" in robot._link_index
 
 
-def test_urdf_parser_material_naming():
+def test_urdf_parser_material_naming() -> None:
     """Verify material without name uses 'default'."""
     parser = URDFParser()
     xml = '<robot><material><color rgba="1 1 1 1"/></material></robot>'
@@ -234,7 +234,7 @@ def test_urdf_parser_material_naming():
     assert "default" in robot.materials
 
 
-def test_urdf_parser_joint_invalid_origin():
+def test_urdf_parser_joint_invalid_origin() -> None:
     """Verify joint with invalid origin is skipped."""
     parser = URDFParser()
     xml = """
@@ -253,7 +253,7 @@ def test_urdf_parser_joint_invalid_origin():
         assert mock_logger.warning.called
 
 
-def test_urdf_parser_xml_error_in_parse(tmp_path):
+def test_urdf_parser_xml_error_in_parse(tmp_path) -> None:
     """Verify XML ParseError is wrapped in RobotParserError."""
     parser = URDFParser()
     p = tmp_path / "bad.urdf"

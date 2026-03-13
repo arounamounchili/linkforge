@@ -7,7 +7,7 @@ from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_parse_ros2_control_basic():
+def test_parse_ros2_control_basic() -> None:
     """Test parsing basic ros2_control element."""
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
@@ -37,7 +37,7 @@ def test_parse_ros2_control_basic():
     assert rc.joints[0].state_interfaces == ["position", "velocity"]
 
 
-def test_parse_ros2_control_multiple_interfaces():
+def test_parse_ros2_control_multiple_interfaces() -> None:
     """Test parsing ros2_control with multiple command interfaces."""
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
@@ -63,7 +63,7 @@ def test_parse_ros2_control_multiple_interfaces():
     assert rc.joints[0].state_interfaces == ["position", "velocity", "effort"]
 
 
-def test_ros2_control_roundtrip():
+def test_ros2_control_roundtrip() -> None:
     """Test that ros2_control is preserved during import/export round-trip."""
     original_urdf = """<?xml version="1.0"?>
     <robot name="test_robot">
@@ -119,7 +119,7 @@ def test_ros2_control_roundtrip():
     assert rc2.joints[0].state_interfaces == ["position", "velocity", "effort"]
 
 
-def test_ros2_control_multiple_joints():
+def test_ros2_control_multiple_joints() -> None:
     """Test ros2_control with multiple joints."""
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
@@ -155,7 +155,7 @@ def test_ros2_control_multiple_joints():
 class TestRos2ControlJointValidation:
     """Tests for Ros2ControlJoint validation."""
 
-    def test_empty_joint_name(self):
+    def test_empty_joint_name(self) -> None:
         """Test that empty joint name raises error."""
         with pytest.raises(RobotModelError, match="Joint name cannot be empty"):
             Ros2ControlJoint(
@@ -164,7 +164,7 @@ class TestRos2ControlJointValidation:
                 state_interfaces=["position"],
             )
 
-    def test_missing_all_interfaces(self):
+    def test_missing_all_interfaces(self) -> None:
         """Test that missing ALL interfaces raises error."""
         with pytest.raises(
             RobotModelError, match="must have at least one command OR state interface"
@@ -176,7 +176,7 @@ class TestRos2ControlJointValidation:
             )
 
 
-def test_ros2_control_normalization():
+def test_ros2_control_normalization() -> None:
     """Test that interface names are normalized (e.g. full ROS paths to short names)."""
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
@@ -202,7 +202,7 @@ def test_ros2_control_normalization():
 class TestRos2ControlValidation:
     """Tests for Ros2Control validation."""
 
-    def test_empty_name(self):
+    def test_empty_name(self) -> None:
         """Test that empty ros2_control name raises error."""
         with pytest.raises(RobotModelError, match="ros2_control name cannot be empty"):
             Ros2Control(
@@ -210,7 +210,7 @@ class TestRos2ControlValidation:
                 hardware_plugin="test_plugin",
             )
 
-    def test_invalid_type(self):
+    def test_invalid_type(self) -> None:
         """Test that invalid ros2_control type raises error."""
         with pytest.raises(RobotModelError, match="Invalid ros2_control type"):
             Ros2Control(
@@ -219,7 +219,7 @@ class TestRos2ControlValidation:
                 hardware_plugin="test_plugin",
             )
 
-    def test_empty_hardware_plugin(self):
+    def test_empty_hardware_plugin(self) -> None:
         """Test that empty hardware plugin raises error."""
         with pytest.raises(RobotModelError, match="Hardware plugin cannot be empty"):
             Ros2Control(
@@ -229,7 +229,7 @@ class TestRos2ControlValidation:
             )
 
 
-def test_parse_ros2_control_readonly_joint():
+def test_parse_ros2_control_readonly_joint() -> None:
     """Test parsing a joint with ONLY state interfaces (should be valid)."""
     xml = """
     <robot name="test">
@@ -249,7 +249,7 @@ def test_parse_ros2_control_readonly_joint():
     assert rc.joints[0].state_interfaces == ["position"]
 
 
-def test_parse_ros2_control_writeonly_joint():
+def test_parse_ros2_control_writeonly_joint() -> None:
     """Test parsing a joint with ONLY command interfaces (should be valid)."""
     xml = """
     <robot name="test">

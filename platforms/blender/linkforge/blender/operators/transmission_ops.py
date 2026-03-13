@@ -143,7 +143,8 @@ class LINKFORGE_OT_create_transmission(Operator):
 
         # Enable transmission properties
         trans_props = typing.cast(
-            "TransmissionPropertyGroup", transmission_empty.linkforge_transmission
+            "TransmissionPropertyGroup",
+            transmission_empty.linkforge_transmission,
         )
         trans_props.is_robot_transmission = True
         trans_props.transmission_name = sanitize_urdf_name(transmission_empty.name)

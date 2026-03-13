@@ -3,7 +3,7 @@ from unittest.mock import patch
 import bpy
 
 
-def test_joint_ops_create_joint():
+def test_joint_ops_create_joint() -> None:
     """Test LINKFORGE_OT_create_joint operator."""
     # Setup: Create a link
     bpy.ops.object.select_all(action="SELECT")
@@ -32,7 +32,7 @@ def test_joint_ops_create_joint():
     assert joint_obj.linkforge_joint.child_link == link_obj
 
 
-def test_joint_ops_delete_joint():
+def test_joint_ops_delete_joint() -> None:
     """Test LINKFORGE_OT_delete_joint operator."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -64,7 +64,7 @@ def test_joint_ops_delete_joint():
         assert len(scene.linkforge.ros2_control_joints) == 0
 
 
-def test_joint_ops_auto_detect():
+def test_joint_ops_auto_detect() -> None:
     """Test LINKFORGE_OT_auto_detect_parent_child operator."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -99,7 +99,7 @@ def test_joint_ops_auto_detect():
     assert joint_obj.linkforge_joint.parent_link == parent_link
 
 
-def test_joint_ops_auto_detect_edge_cases(mocker):
+def test_joint_ops_auto_detect_edge_cases(mocker) -> None:
     """Test edge cases for auto-detect."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -149,7 +149,7 @@ def test_joint_ops_auto_detect_edge_cases(mocker):
     assert joint_obj.linkforge_joint.parent_link is not None
 
 
-def test_joint_ops_poll_failures():
+def test_joint_ops_poll_failures() -> None:
     """Hit poll failures for joint operators."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -168,7 +168,7 @@ def test_joint_ops_poll_failures():
     assert bpy.ops.linkforge.auto_detect_parent_child.poll() is False
 
 
-def test_joint_ops_create_joint_edge_cases(mocker):
+def test_joint_ops_create_joint_edge_cases(mocker) -> None:
     """Hit error paths in create_joint."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -193,7 +193,7 @@ def test_joint_ops_create_joint_edge_cases(mocker):
         pass
 
 
-def test_joint_ops_main_entry(mocker):
+def test_joint_ops_main_entry(mocker) -> None:
     """Simulate module main entry."""
     from linkforge.blender.operators import joint_ops
 

@@ -8,7 +8,7 @@ from linkforge_core.parsers.xacro_parser import RobotParserError, XacroResolver
 class TestXacroEvaluation:
     """Tests for XACRO evaluation logic including math, cleanup, and error handling."""
 
-    def test_strict_output_cleanup(self):
+    def test_strict_output_cleanup(self) -> None:
         """Verify that ALL xacro-related tags are stripped, even with weird namespaces."""
         # Using a non-standard namespace often causes issues
         xml_content = """
@@ -47,7 +47,7 @@ class TestXacroEvaluation:
             assert "xacro:unknown_tag_that_leaks" not in urdf_str
             # assert "ns:xacro_feature" not in urdf_str  # Our cleaner looks for "xacro" in tag
 
-    def test_math_evaluation_failure_reporting(self):
+    def test_math_evaluation_failure_reporting(self) -> None:
         """Verify that math evaluation failures raise a clear error instead of silent corruption."""
         # User error scenario: Mathematical expression fails (e.g. div by zero or missing var)
         xml_content = """
@@ -73,7 +73,7 @@ class TestXacroEvaluation:
             with pytest.raises(RobotParserError, match=r"Failed to evaluate expression"):
                 resolver.resolve_file(p)
 
-    def test_math_type_error_reporting(self):
+    def test_math_type_error_reporting(self) -> None:
         """Verify handling when variables are wrong types (e.g. str instead of float)."""
         # User error scenario: Variable is a string '0.5' instead of number 0.5
         # This can happen if yaml parses it as string (e.g. forced quotes)

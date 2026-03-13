@@ -6,7 +6,7 @@ from linkforge_core.models.robot import Robot
 from linkforge_core.validation import RobotValidator, ValidationResult
 
 
-def test_validation_result_creation():
+def test_validation_result_creation() -> None:
     """Test creating a validation result."""
     result = ValidationResult(robot_name="test_robot")
 
@@ -16,7 +16,7 @@ def test_validation_result_creation():
     assert result.warning_count == 0
 
 
-def test_validation_result_add_error():
+def test_validation_result_add_error() -> None:
     """Test adding an error to validation result."""
     result = ValidationResult()
 
@@ -41,7 +41,7 @@ def test_validation_result_add_error():
     assert not error.is_warning
 
 
-def test_validation_result_add_warning():
+def test_validation_result_add_warning() -> None:
     """Test adding a warning to validation result."""
     result = ValidationResult()
 
@@ -63,7 +63,7 @@ def test_validation_result_add_warning():
     assert not warning.is_error
 
 
-def test_valid_robot():
+def test_valid_robot() -> None:
     """Test validation of a valid robot."""
     robot = Robot(name="valid_robot")
 
@@ -93,7 +93,7 @@ def test_valid_robot():
     # Note: Will have warnings about missing geometry
 
 
-def test_robot_with_no_links():
+def test_robot_with_no_links() -> None:
     """Test validation of robot with no links."""
     robot = Robot(name="empty_robot")
 
@@ -105,7 +105,7 @@ def test_robot_with_no_links():
     assert result.errors[0].title == "No links"
 
 
-def test_duplicate_link_names():
+def test_duplicate_link_names() -> None:
     """Test validation of robot with duplicate link names."""
     robot = Robot(name="duplicate_links")
 
@@ -121,7 +121,7 @@ def test_duplicate_link_names():
     assert len(errors) == 1
 
 
-def test_duplicate_joint_names():
+def test_duplicate_joint_names() -> None:
     """Test validation of robot with duplicate joint names."""
     robot = Robot(name="duplicate_joints")
 
@@ -149,7 +149,7 @@ def test_duplicate_joint_names():
     assert len(errors) == 1
 
 
-def test_missing_parent_link():
+def test_missing_parent_link() -> None:
     """Test validation of joint with missing parent link."""
     robot = Robot(name="missing_parent")
 
@@ -170,7 +170,7 @@ def test_missing_parent_link():
     assert "nonexistent" in errors[0].message
 
 
-def test_missing_child_link():
+def test_missing_child_link() -> None:
     """Test validation of joint with missing child link."""
     robot = Robot(name="missing_child")
 
@@ -190,7 +190,7 @@ def test_missing_child_link():
     assert len(errors) == 1
 
 
-def test_disconnected_link():
+def test_disconnected_link() -> None:
     """Test validation of disconnected link (shows as multiple root links)."""
     robot = Robot(name="disconnected")
 
@@ -215,7 +215,7 @@ def test_disconnected_link():
     assert "link2" in errors[0].message or "base" in errors[0].message
 
 
-def test_multiple_parent_joints():
+def test_multiple_parent_joints() -> None:
     """Test validation of link with multiple parent joints.
 
     URDF spec: No <link> element can serve as a child node in more than one <joint> element.
@@ -251,7 +251,7 @@ def test_multiple_parent_joints():
     assert errors[0].affected_objects == ["link2"]
 
 
-def test_multiple_parent_joints_complex():
+def test_multiple_parent_joints_complex() -> None:
     """Test validation with multiple links having multiple parents.
 
     This tests a more complex invalid structure where multiple links violate the single-parent rule.
@@ -310,7 +310,7 @@ def test_multiple_parent_joints_complex():
     assert "link4" in affected_links
 
 
-def test_low_mass_warning():
+def test_low_mass_warning() -> None:
     """Test warning for very low mass link."""
     robot = Robot(name="low_mass")
 
@@ -328,7 +328,7 @@ def test_low_mass_warning():
     assert "0.001" in warnings[0].message or "base" in warnings[0].message
 
 
-def test_missing_inertia_warning():
+def test_missing_inertia_warning() -> None:
     """Test warning for missing inertia."""
     robot = Robot(name="no_inertia")
 
@@ -345,7 +345,7 @@ def test_missing_inertia_warning():
     assert len(warnings) == 1
 
 
-def test_missing_geometry_warnings():
+def test_missing_geometry_warnings() -> None:
     """Test warnings for missing visual and collision geometry."""
     robot = Robot(name="no_geometry")
 
@@ -367,7 +367,7 @@ def test_missing_geometry_warnings():
     assert len(collision_warnings) == 1
 
 
-def test_validation_result_string_representation():
+def test_validation_result_string_representation() -> None:
     """Test string representation of validation results."""
     result = ValidationResult(robot_name="my_robot")
 
@@ -386,7 +386,7 @@ def test_validation_result_string_representation():
     assert "my_robot" in str(result)
 
 
-def test_validator_cycle_detection():
+def test_validator_cycle_detection() -> None:
     """Test that validator detects cycles in kinematic tree."""
     from linkforge_core.validation.validator import RobotValidator
 
@@ -408,7 +408,7 @@ def test_validator_cycle_detection():
     )
 
 
-def test_validator_no_root_link():
+def test_validator_no_root_link() -> None:
     """Test that validator detects when no root link exists."""
     from linkforge_core.validation.validator import RobotValidator
 
@@ -428,7 +428,7 @@ def test_validator_no_root_link():
     assert len(result.issues) > 0
 
 
-def test_validator_missing_collision():
+def test_validator_missing_collision() -> None:
     """Test validator warns on missing collision geometry."""
     from linkforge_core.models.geometry import Box, Vector3
     from linkforge_core.models.link import Visual
@@ -446,7 +446,7 @@ def test_validator_missing_collision():
     assert any("no collision geometry" in w.message for w in result.warnings)
 
 
-def test_validator_unreachable_code_mocks():
+def test_validator_unreachable_code_mocks() -> None:
     """Test unreachable code paths via mocking (for 100% coverage)."""
     from unittest.mock import patch
 

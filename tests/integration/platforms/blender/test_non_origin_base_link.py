@@ -30,7 +30,7 @@ from linkforge_core.models import (
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_base_link_at_non_origin_preserves_relative_positions():
+def test_base_link_at_non_origin_preserves_relative_positions() -> None:
     """Test that child links maintain relative positions when base_link is not at origin."""
     # Create a robot where base_link is at (5, 0, 2) and child links are offset
     robot = Robot(name="offset_test_robot")
@@ -125,7 +125,7 @@ def test_base_link_at_non_origin_preserves_relative_positions():
     assert math.isclose(visual_origin.xyz.z, 2.0, abs_tol=1e-6)
 
 
-def test_base_link_with_rotation_preserves_child_orientations():
+def test_base_link_with_rotation_preserves_child_orientations() -> None:
     """Test that child links maintain relative orientations when base_link is rotated."""
     robot = Robot(name="rotated_base_test")
 

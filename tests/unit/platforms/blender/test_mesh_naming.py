@@ -4,7 +4,7 @@ import bpy
 from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
 
 
-def test_single_visual_no_suffix():
+def test_single_visual_no_suffix() -> None:
     """Test that a single visual mesh has no suffix."""
     # Setup link and one visual child
     bpy.ops.object.select_all(action="DESELECT")
@@ -32,7 +32,7 @@ def test_single_visual_no_suffix():
     assert Path(core_link.visuals[0].geometry.resource).name == "test_link_visual.stl"
 
 
-def test_multiple_visuals_with_suffix():
+def test_multiple_visuals_with_suffix() -> None:
     """Test that multiple visual meshes have suffixes."""
     # Setup link and two visual children
     bpy.ops.object.select_all(action="DESELECT")
@@ -66,7 +66,7 @@ def test_multiple_visuals_with_suffix():
     assert "multi_link_visual_1.stl" in filenames
 
 
-def test_urdf_name_preservation():
+def test_urdf_name_preservation() -> None:
     """Test that urdf_name is preserved even for single meshes."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()

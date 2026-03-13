@@ -10,7 +10,7 @@ import bpy
 from linkforge.blender.utils.scene_utils import clear_stats_cache, get_robot_statistics
 
 
-def test_get_robot_statistics_cache_hit():
+def test_get_robot_statistics_cache_hit() -> None:
     """Test that statistics are successfully retrieved from the frame-level cache."""
     clear_stats_cache()
 
@@ -35,7 +35,7 @@ def test_get_robot_statistics_cache_hit():
     assert stats3.num_links == 1
 
 
-def test_get_robot_statistics_manual_inertia():
+def test_get_robot_statistics_manual_inertia() -> None:
     """Test detection of objects requiring manual inertia gizmos."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -48,7 +48,7 @@ def test_get_robot_statistics_manual_inertia():
     assert stats.manual_inertia_objects[0] == obj
 
 
-def test_get_robot_statistics_geometry_detection_urdf_tag():
+def test_get_robot_statistics_geometry_detection_urdf_tag() -> None:
     """Test geometry detection via explicit urdf_geometry_type tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -69,7 +69,7 @@ def test_get_robot_statistics_geometry_detection_urdf_tag():
     assert is_prim is True
 
 
-def test_get_robot_statistics_geometry_detection_stored_type():
+def test_get_robot_statistics_geometry_detection_stored_type() -> None:
     """Test geometry detection via stored collision_geometry_type tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -90,7 +90,7 @@ def test_get_robot_statistics_geometry_detection_stored_type():
     assert is_prim is True
 
 
-def test_get_robot_statistics_geometry_detection_heuristic():
+def test_get_robot_statistics_geometry_detection_heuristic() -> None:
     """Test geometry detection via heuristic topological analysis."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -110,7 +110,7 @@ def test_get_robot_statistics_geometry_detection_heuristic():
     assert is_prim is True
 
 
-def test_get_robot_statistics_geometry_detection_non_primitive():
+def test_get_robot_statistics_geometry_detection_non_primitive() -> None:
     """Test heuristic fallback to MESH for a complex (non-primitive) object."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -135,7 +135,7 @@ def test_get_robot_statistics_geometry_detection_non_primitive():
     assert is_prim is False
 
 
-def test_get_robot_statistics_heuristic_error_handling():
+def test_get_robot_statistics_heuristic_error_handling() -> None:
     """Test robustness when heuristic detection fails."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -156,7 +156,7 @@ def test_get_robot_statistics_heuristic_error_handling():
         assert gtype == "MESH"
 
 
-def test_get_robot_statistics_geometry_detection_mesh_tag():
+def test_get_robot_statistics_geometry_detection_mesh_tag() -> None:
     """Test geometry detection forcing MESH type via stored tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -177,7 +177,7 @@ def test_get_robot_statistics_geometry_detection_mesh_tag():
     assert is_prim is False
 
 
-def test_get_robot_statistics_stale_cache_recovery():
+def test_get_robot_statistics_stale_cache_recovery() -> None:
     """Test recovery from stale cache when an object is deleted in the same frame."""
     clear_stats_cache()
 

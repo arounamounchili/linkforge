@@ -6,7 +6,7 @@ from linkforge_core.validation.result import Severity, ValidationIssue, Validati
 class TestValidationIssue:
     """Tests for ValidationIssue class."""
 
-    def test_str_with_affected_objects(self):
+    def test_str_with_affected_objects(self) -> None:
         """Test __str__ includes affected objects."""
         issue = ValidationIssue(
             severity=Severity.ERROR,
@@ -21,7 +21,7 @@ class TestValidationIssue:
         assert "link1" in str_repr
         assert "link2" in str_repr
 
-    def test_str_without_affected_objects(self):
+    def test_str_without_affected_objects(self) -> None:
         """Test __str__ without affected objects."""
         issue = ValidationIssue(
             severity=Severity.WARNING,
@@ -34,7 +34,7 @@ class TestValidationIssue:
         assert "Test Warning" in str_repr
         assert "[" not in str_repr  # No affected objects
 
-    def test_is_error(self):
+    def test_is_error(self) -> None:
         """Test is_error property."""
         error = ValidationIssue(severity=Severity.ERROR, title="Error", message="msg")
         warning = ValidationIssue(severity=Severity.WARNING, title="Warning", message="msg")
@@ -42,7 +42,7 @@ class TestValidationIssue:
         assert error.is_error
         assert not warning.is_error
 
-    def test_is_warning(self):
+    def test_is_warning(self) -> None:
         """Test is_warning property."""
         error = ValidationIssue(severity=Severity.ERROR, title="Error", message="msg")
         warning = ValidationIssue(severity=Severity.WARNING, title="Warning", message="msg")
@@ -54,13 +54,13 @@ class TestValidationIssue:
 class TestValidationResult:
     """Tests for ValidationResult class."""
 
-    def test_empty_result_is_valid(self):
+    def test_empty_result_is_valid(self) -> None:
         """Test that empty result is valid."""
         result = ValidationResult()
         assert result.is_valid
         assert len(result.issues) == 0
 
-    def test_add_error(self):
+    def test_add_error(self) -> None:
         """Test adding an error."""
         result = ValidationResult()
         result.add_error(title="Error", message="Test error")
@@ -69,7 +69,7 @@ class TestValidationResult:
         assert len(result.issues) == 1
         assert result.issues[0].is_error
 
-    def test_add_warning(self):
+    def test_add_warning(self) -> None:
         """Test adding a warning."""
         result = ValidationResult()
         result.add_warning(title="Warning", message="Test warning")

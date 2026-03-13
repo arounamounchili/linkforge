@@ -59,7 +59,7 @@ def clean_scene():
     return bpy.context.scene
 
 
-def test_resolve_mesh_path(tmp_path):
+def test_resolve_mesh_path(tmp_path) -> None:
     """Test resolution of various mesh path types."""
     urdf_dir = tmp_path / "urdf"
     urdf_dir.mkdir()
@@ -101,7 +101,7 @@ def test_resolve_mesh_path(tmp_path):
         assert "C:/path/to/mesh.stl" in str(res).replace("\\", "/")
 
 
-def test_create_material_from_color(clean_scene):
+def test_create_material_from_color(clean_scene) -> None:
     """Test material creation from color model."""
     color = Color(1.0, 0.5, 0.0, 1.0)
     mat = create_material_from_color(color, "TestMaterial")
@@ -121,7 +121,7 @@ def test_create_material_from_color(clean_scene):
     assert mat_reuse == mat
 
 
-def test_create_primitive_mesh(clean_scene):
+def test_create_primitive_mesh(clean_scene) -> None:
     """Test creation of primitive meshes (Box, Cylinder, Sphere)."""
     # 1. Box
     box = Box(size=Vector3(2.0, 2.0, 2.0))
@@ -148,7 +148,7 @@ def test_create_primitive_mesh(clean_scene):
     assert create_primitive_mesh(None, "Fail") is None
 
 
-def test_normalize_and_consolidate(clean_scene):
+def test_normalize_and_consolidate(clean_scene) -> None:
     """Test joining multiple objects and normalization."""
     # Add temporary meshes
     bpy.ops.mesh.primitive_cube_add(location=(1, 1, 1))
@@ -172,7 +172,7 @@ def test_normalize_and_consolidate(clean_scene):
     assert len(bpy.data.objects) == 1
 
 
-def test_import_mesh_file_success(clean_scene, tmp_path):
+def test_import_mesh_file_success(clean_scene, tmp_path) -> None:
     """Test successful mesh import flow with a real minimal file."""
     p = tmp_path / "test.obj"
     p.write_text("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n")
@@ -192,7 +192,7 @@ def test_import_mesh_file_success(clean_scene, tmp_path):
         assert "ConsolidatedCube" in res.name
 
 
-def test_create_joint_object(clean_scene):
+def test_create_joint_object(clean_scene) -> None:
     """Test reconstruction of a Joint and its parenting."""
     parent_link = bpy.data.objects.new("ParentLink", None)
     child_link = bpy.data.objects.new("ChildLink", None)
@@ -221,7 +221,7 @@ def test_create_joint_object(clean_scene):
     assert obj.linkforge_joint.axis == "Z"
 
 
-def test_create_sensor_object(clean_scene):
+def test_create_sensor_object(clean_scene) -> None:
     """Test reconstruction of a Sensor."""
     link_obj = bpy.data.objects.new("LinkA", None)
     clean_scene.collection.objects.link(link_obj)
@@ -244,7 +244,7 @@ def test_create_sensor_object(clean_scene):
     assert obj.linkforge_sensor.sensor_type == "CAMERA"
 
 
-def test_import_robot_with_mimic_and_gazebo(clean_scene):
+def test_import_robot_with_mimic_and_gazebo(clean_scene) -> None:
     """Test import of robot with mimic joints and gazebo plugins."""
     from linkforge.linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
     from linkforge.linkforge_core.models.joint import JointMimic
@@ -289,7 +289,7 @@ def test_import_robot_with_mimic_and_gazebo(clean_scene):
     assert clean_scene.linkforge.gazebo_plugin_name == "p3d_ros2_control"
 
 
-def test_create_material_no_tree(clean_scene):
+def test_create_material_no_tree(clean_scene) -> None:
     """Test material creation when node tree is missing."""
     col = Color(1, 0, 0, 1)
     # Use a real material but force use_nodes=False
@@ -302,7 +302,7 @@ def test_create_material_no_tree(clean_scene):
     assert res.name.startswith("NoTree_Test")
 
 
-def test_import_robot_with_transmissions(clean_scene):
+def test_import_robot_with_transmissions(clean_scene) -> None:
     """Test importing robot with transmissions."""
     from linkforge.linkforge_core.models.transmission import (
         Transmission,
@@ -327,7 +327,7 @@ def test_import_robot_with_transmissions(clean_scene):
     assert clean_scene.linkforge.robot_name == "TransBot"
 
 
-def test_full_robot_import_integration(clean_scene):
+def test_full_robot_import_integration(clean_scene) -> None:
     """A 'MegaBot' test to hit as many code paths as possible in core_to_blender."""
     from linkforge.linkforge_core.models.transmission import (
         Transmission,
@@ -482,7 +482,7 @@ def test_full_robot_import_integration(clean_scene):
     print(f"DEBUG: Objects in scene: {[o.name for o in bpy.data.objects]}")
 
 
-def test_import_mesh_file_robustness(tmp_path):
+def test_import_mesh_file_robustness(tmp_path) -> None:
     """Hit edge cases."""
     from unittest import mock
 
@@ -519,7 +519,7 @@ def test_import_mesh_file_robustness(tmp_path):
         assert import_mesh_file(obj_file, "test") is None
 
 
-def test_get_geometry_type_str_robustness():
+def test_get_geometry_type_str_robustness() -> None:
     """Hit edge case (Unknown type fallback and Cylinder)."""
     from unittest import mock
 

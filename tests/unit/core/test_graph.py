@@ -9,7 +9,7 @@ from linkforge_core.models import Joint, JointType, Link
 from linkforge_core.models.graph import KinematicGraph
 
 
-def test_graph_simple_chain():
+def test_graph_simple_chain() -> None:
     """Verify linear chain: A -> B -> C."""
     links = [Link(name="A"), Link(name="B"), Link(name="C")]
     joints = [
@@ -24,7 +24,7 @@ def test_graph_simple_chain():
     assert len(graph.find_islands()) == 1
 
 
-def test_graph_cycle_detection():
+def test_graph_cycle_detection() -> None:
     """Verify detection of cyclic dependencies like A -> B -> C -> A."""
     links = [Link(name="A"), Link(name="B"), Link(name="C")]
     joints = [
@@ -39,7 +39,7 @@ def test_graph_cycle_detection():
         graph.get_topological_order()
 
 
-def test_graph_invalid_joint_links():
+def test_graph_invalid_joint_links() -> None:
     """Verify validation of joint links during initialization."""
     links = [Link(name="A"), Link(name="B")]
 
@@ -52,7 +52,7 @@ def test_graph_invalid_joint_links():
         KinematicGraph(links, [Joint(name="j1", parent="A", child="X", type=JointType.FIXED)])
 
 
-def test_graph_isolated_link_root():
+def test_graph_isolated_link_root() -> None:
     """Verify that isolated links are correctly handled as roots."""
     links = [Link(name="A"), Link(name="B")]
     joints = [Joint(name="j1", parent="A", child="B", type=JointType.FIXED)]
@@ -63,7 +63,7 @@ def test_graph_isolated_link_root():
     assert len(graph.find_islands()) == 2
 
 
-def test_graph_islands():
+def test_graph_islands() -> None:
     """Verify discovery of disconnected robot components."""
     links = [Link(name="A"), Link(name="B"), Link(name="C"), Link(name="D")]
     joints = [
@@ -79,7 +79,7 @@ def test_graph_islands():
     assert sorted(graph.get_root_links()) == ["A", "C"]
 
 
-def test_graph_branching():
+def test_graph_branching() -> None:
     """Verify branching structures: A -> B, A -> C."""
     links = [Link(name="A"), Link(name="B"), Link(name="C")]
     joints = [
@@ -95,7 +95,7 @@ def test_graph_branching():
     assert set(order[1:]) == {"B", "C"}
 
 
-def test_graph_empty_input():
+def test_graph_empty_input() -> None:
     """Verify behavior with zero links or joints."""
     graph = KinematicGraph([], [])
     assert not graph.has_cycle()
@@ -104,7 +104,7 @@ def test_graph_empty_input():
     assert graph.find_islands() == []
 
 
-def test_graph_diamond_dag_coverage():
+def test_graph_diamond_dag_coverage() -> None:
     """Verify diamond structure: A -> B, A -> C, B -> D, C -> D (no cycles)."""
     links = [Link(name="A"), Link(name="B"), Link(name="C"), Link(name="D")]
     joints = [

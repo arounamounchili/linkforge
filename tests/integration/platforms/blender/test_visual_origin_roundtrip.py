@@ -11,7 +11,7 @@ from linkforge_core.models import Cylinder, Link, Robot, Visual
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 
-def test_cylinder_no_origin_roundtrip():
+def test_cylinder_no_origin_roundtrip() -> None:
     """Test that cylinder visual with NO origin stays at link frame.
 
     This tests the specific case like arm_base in roundtrip_test_robot.urdf
@@ -86,7 +86,7 @@ def test_cylinder_no_origin_roundtrip():
         temp_path.unlink()
 
 
-def test_arm_base_specific_case(examples_dir: Path):
+def test_arm_base_specific_case(examples_dir: Path) -> None:
     """Test the exact arm_base case from roundtrip_test_robot.urdf."""
     # Load the actual file
     urdf_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"

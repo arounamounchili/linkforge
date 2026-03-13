@@ -8,7 +8,7 @@ from linkforge_core.models import Color, Joint, JointType, Link, Material, Robot
 from linkforge_core.models.geometry import Cylinder, Transform, Vector3
 
 
-def test_split_files_and_reimport_simulated():
+def test_split_files_and_reimport_simulated() -> None:
     """Test that split files are generated correctly and can be parsed."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)

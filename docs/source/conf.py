@@ -5,6 +5,7 @@
 
 import os
 import sys
+import typing
 
 sys.path.insert(0, os.path.abspath("../../core/src"))  # For linkforge_core
 sys.path.insert(0, os.path.abspath("../../platforms/blender"))  # For linkforge (blender)
@@ -76,7 +77,7 @@ html_show_sourcelink = False
 
 
 # Custom CSS
-def setup(app):
+def setup(app: typing.Any) -> None:
     app.add_css_file("css/custom.css")
 
 
