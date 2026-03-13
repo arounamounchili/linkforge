@@ -36,7 +36,7 @@ def resolve_package_path(
     package_name = parts[0]
     relative_path = "/".join(parts[1:])
 
-    # Step 1: Check provided additional search paths first (highest priority for overrides)
+    # Check provided additional search paths first (highest priority for overrides)
     if additional_search_paths:
         for p in additional_search_paths:
             pkg_base = Path(p)
@@ -48,7 +48,7 @@ def resolve_package_path(
             if pkg_base.name == package_name:
                 return pkg_base / relative_path
 
-    # Step 2: Check ROS_PACKAGE_PATH (ROS Mode)
+    # Check ROS_PACKAGE_PATH (ROS Mode)
     ros_path = os.environ.get("ROS_PACKAGE_PATH")
     if ros_path:
         for path in ros_path.split(os.pathsep):
@@ -65,7 +65,7 @@ def resolve_package_path(
             if pkg_base.name == package_name:
                 return pkg_base / relative_path
 
-    # Step 3: Fallback to upward search (Standalone Mode)
+    # Fallback to upward search (Standalone Mode)
     # This searches for a folder matching the package name or a package.xml
     curr = start_dir.resolve()
     if curr.is_file():

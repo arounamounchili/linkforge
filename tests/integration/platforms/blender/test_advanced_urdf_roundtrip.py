@@ -134,7 +134,7 @@ class TestGazeboRoundtrip:
             parameters={"update_rate": "50"},
         )
         element = GazeboElement(reference=None, static=True, plugins=[plugin])
-        robot.gazebo_elements.append(element)
+        robot.add_gazebo_element(element)
 
         # Round-trip
         generator = URDFGenerator()
@@ -163,7 +163,7 @@ class TestGazeboRoundtrip:
             kp=1000.0,
             kd=100.0,
         )
-        robot.gazebo_elements.append(element)
+        robot.add_gazebo_element(element)
 
         # Round-trip
         generator = URDFGenerator()
@@ -202,7 +202,7 @@ class TestGazeboRoundtrip:
             provide_feedback=True,
             implicit_spring_damper=True,
         )
-        robot.gazebo_elements.append(element)
+        robot.add_gazebo_element(element)
 
         # Round-trip
         generator = URDFGenerator()
@@ -304,10 +304,10 @@ class TestComplexRobotRoundtrip:
                 "odometry_topic": "odom",
             },
         )
-        robot.gazebo_elements.append(GazeboElement(reference=None, plugins=[diff_drive_plugin]))
+        robot.add_gazebo_element(GazeboElement(reference=None, plugins=[diff_drive_plugin]))
 
         # Link friction
-        robot.gazebo_elements.append(
+        robot.add_gazebo_element(
             GazeboElement(reference="base_link", mu1=0.5, mu2=0.5, material="Gazebo/Grey")
         )
 

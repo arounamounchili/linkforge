@@ -323,7 +323,12 @@ def test_import_robot_with_ros2_control_and_gazebo():
     )
     gazebo = GazeboElement(plugins=[plugin])
 
-    robot = Robot(name="ctrl_bot", initial_links=[l1], ros2_controls=[rc], gazebo_elements=[gazebo])
+    robot = Robot(
+        name="ctrl_bot",
+        initial_links=[l1],
+        initial_ros2_controls=[rc],
+        initial_gazebo_elements=[gazebo],
+    )
 
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
     assert success is True
@@ -637,7 +642,10 @@ def test_import_robot_with_legacy_transmissions_skipped():
     )
 
     robot = Robot(
-        name="legacy_bot", initial_links=[l1, l2], initial_joints=[j1], transmissions=[trans]
+        name="legacy_bot",
+        initial_links=[l1, l2],
+        initial_joints=[j1],
+        initial_transmissions=[trans],
     )
 
     # Import
@@ -685,8 +693,8 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists():
         name="hybrid_bot",
         initial_links=[l1, l2],
         initial_joints=[j1],
-        ros2_controls=[rc],
-        transmissions=[trans],
+        initial_ros2_controls=[rc],
+        initial_transmissions=[trans],
     )
 
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
@@ -1050,7 +1058,7 @@ def test_import_robot_sensor_creation_failure(clean_scene):
     robot = Robot(
         name="test_robot",
         initial_links=[Link(name="base_link")],
-        sensors=[
+        initial_sensors=[
             Sensor(
                 name="BadSensor",
                 type=SensorType.CAMERA,

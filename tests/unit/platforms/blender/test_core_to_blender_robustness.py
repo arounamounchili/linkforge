@@ -269,7 +269,7 @@ def test_import_robot_with_mimic_and_gazebo(clean_scene):
                 mimic=JointMimic(joint="j1", multiplier=2.0, offset=0.1),
             ),
         ),
-        gazebo_elements=[
+        initial_gazebo_elements=[
             GazeboElement(
                 plugins=[GazeboPlugin(name="p3d_ros2_control", filename="libgazebo_ros_p3d.so")]
             )
@@ -312,9 +312,9 @@ def test_import_robot_with_transmissions(clean_scene):
 
     robot = Robot(
         name="TransBot",
-        initial_links=(Link(name="b"),),
+        initial_links=(Link(name="world"), Link(name="b")),
         initial_joints=(Joint(name="j1", parent="world", child="b", type=JointType.FIXED),),
-        transmissions=[
+        initial_transmissions=[
             Transmission(
                 name="t1",
                 type="simple",
@@ -446,10 +446,10 @@ def test_full_robot_import_integration(clean_scene):
         name="MegaBot",
         initial_links=[l1, l2, l3],
         initial_joints=[j1, j2],
-        sensors=[cam_detailed, imu, gps, lidar],
-        ros2_controls=[rc],
-        gazebo_elements=[gz],
-        transmissions=[tr],
+        initial_sensors=[cam_detailed, imu, gps, lidar],
+        initial_ros2_controls=[rc],
+        initial_gazebo_elements=[gz],
+        initial_transmissions=[tr],
     )
 
     # Mocking OBJ for mesh import

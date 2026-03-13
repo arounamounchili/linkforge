@@ -177,10 +177,12 @@ classDiagram
     class Robot {
         +str name
         +str version
-        +list~Sensor~ sensors
-        +list~Transmission~ transmissions
-        +list~Ros2Control~ ros2_controls
-        +list~GazeboElement~ gazebo_elements
+        +list~Link~ links (read-only)
+        +list~Joint~ joints (read-only)
+        +list~Sensor~ sensors (read-only)
+        +list~Transmission~ transmissions (read-only)
+        +list~Ros2Control~ ros2_controls (read-only)
+        +list~GazeboElement~ gazebo_elements (read-only)
         +dict metadata
         +IResourceResolver resource_resolver
         +add_link(link)
@@ -193,9 +195,11 @@ classDiagram
 
     class Link {
         +str name
-        +list~Visual~ visuals
-        +list~Collision~ collisions
+        +list~Visual~ visuals (read-only)
+        +list~Collision~ collisions (read-only)
         +Inertial inertial
+        +add_visual(visual)
+        +add_collision(collision)
     }
 
     class Inertial {
@@ -387,16 +391,20 @@ classDiagram
 
 ## Key Design Patterns
 
-### 1. **Immutable Data Models**
-All core models use `@dataclass(frozen=True)` for thread safety and predictable behavior.
+### 1. **Encapsulated Data Models**
+Core models use a combination of `InitVar` for initialization and controlled access to internal collections via read-only properties. This pattern ensures that model state remains consistent and changes are properly indexed (especially in the `Robot` model).
 
 ```python
-@dataclass(frozen=True)
+@dataclass
 class Link:
     name: str
-    visuals: list[Visual]
-    collisions: list[Collision]
-    inertial: Inertial | None
+    initial_visuals: InitVar[Sequence[Visual] | None] = None
+    initial_collisions: InitVar[Sequence[Collision] | None] = None
+    inertial: Inertial | None = None
+
+    @property
+    def visuals(self) -> Sequence[Visual]:
+        return tuple(self._visuals)
 ```
 
 ### 2. **Validation Registry**
@@ -409,14 +417,21 @@ The system uses a modular validation registry. `RobotValidator` acts as a thin o
 - **Statelessness**: Checks write results to a shared `ValidationResult` object, ensuring thread safety and clear data flow.
 
 ### 3. **Validation at Construction**
-Models validate themselves in `__post_init__()` to ensure data integrity.
+Models validate their identity and structural integrity in `__post_init__()`. Complex validation (e.g. kinematic tree connectivity) is delegated to the `RobotValidator`.
 
 ```python
-def __post_init__(self) -> None:
+def __post_init__(
+    self,
+    initial_visuals: Sequence[Visual] | None = None,
+    initial_collisions: Sequence[Collision] | None = None,
+) -> None:
     if not self.name:
         raise RobotModelError("Link name cannot be empty")
-    if self.inertial and self.inertial.mass <= 0:
-        raise RobotModelError("Mass must be positive")
+
+    if initial_visuals:
+        self._visuals.extend(initial_visuals)
+    if initial_collisions:
+        self._collisions.extend(initial_collisions)
 ```
 
 ### 4. **Resilient Parsing & Duplicate Resolution**

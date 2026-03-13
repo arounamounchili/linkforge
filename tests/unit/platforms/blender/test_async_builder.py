@@ -107,9 +107,8 @@ def test_builder_timer_start(mocker):
 
 def test_builder_timer_callback_interval(mocker):
     """Test that the callback returns a float interval while running."""
-    robot = Robot(name="test_robot")
     # Add many tasks so it doesn't finish immediately
-    robot.initial_links = [Link(name=f"link{i}") for i in range(10)]
+    robot = Robot(name="test_robot", initial_links=[Link(name=f"link{i}") for i in range(10)])
 
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=1)
 
@@ -129,8 +128,7 @@ def test_builder_timer_callback_interval(mocker):
 
 def test_builder_full_completion(mocker):
     """Test that builder runs all tasks and finishes correctly."""
-    robot = Robot(name="test_robot")
-    robot.initial_links = [Link(name="link1")]
+    robot = Robot(name="test_robot", initial_links=[Link(name="link1")])
 
     # Mock all task executors
     mocker.patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot")
@@ -153,12 +151,14 @@ def test_builder_with_joints_and_sensors(mocker):
     l1 = Link(name="l1")
     l2 = Link(name="l2")
     j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
-    s1 = MagicMock(spec=Joint)  # Mock sensor as it's just a data object for the builder
+    # Mock sensor as it's just a data object for the builder
+    s1 = MagicMock()
     s1.name = "s1"
+    s1.link_name = "l1"
+    # Use mock with proper interface or specify type if needed
+    # Here we just need it in the sensors list
 
-    robot = Robot(name="robot", initial_links=[l1, l2], initial_joints=[j1])
-    # Manually add sensor to robot as Robot model might not have it in initial_sensors
-    robot.sensors = [s1]
+    robot = Robot(name="robot", initial_links=[l1, l2], initial_joints=[j1], initial_sensors=[s1])
 
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
 

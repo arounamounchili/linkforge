@@ -301,7 +301,7 @@ def normalize_and_consolidate_imported_objects(
                 bpy.data.objects.remove(obj, do_unlink=True)
         return None
 
-    # Step 2: Prepare for join
+    # Prepare for join
     mesh_list = list(mesh_objs)
     bpy.ops.object.select_all(action="DESELECT")
     for obj in mesh_list:
@@ -314,12 +314,12 @@ def normalize_and_consolidate_imported_objects(
     # Bake axis/scale
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-    # Step 3: Join
+    # Join
     final_obj = mesh_list[0]
     if len(mesh_list) > 1:
         bpy.ops.object.join()
 
-    # Step 4: Final cleanup
+    # Final cleanup
     final_obj.name = name
     final_obj.rotation_mode = "XYZ"
     final_obj.location = (0, 0, 0)

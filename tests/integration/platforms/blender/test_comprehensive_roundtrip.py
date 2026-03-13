@@ -21,11 +21,11 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 
 def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path):
     """Test that export → re-import preserves robot structure perfectly."""
-    # Step 1: Import original URDF
+    # Categorize scene objects
     original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
     robot1 = URDFParser().parse(original_path)
 
-    # Step 2: Export to temporary file
+    # Export to temporary file
     with tempfile.NamedTemporaryFile(mode="w", suffix=".urdf", delete=False) as f:
         temp_path = Path(f.name)
         generator = URDFGenerator()
@@ -33,7 +33,7 @@ def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path):
         f.write(urdf_content)
 
     try:
-        # Step 3: Re-import the exported URDF
+        # Re-import the exported URDF
         robot2 = URDFParser().parse(temp_path)
 
         # ========== VERIFY STRUCTURE ==========
