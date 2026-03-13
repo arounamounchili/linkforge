@@ -225,6 +225,8 @@ class LINKFORGE_PT_control(Panel):
         col.operator(
             "linkforge.move_ros2_control_joint", icon="TRIA_DOWN", text=""
         ).direction = "DOWN"
+        col.separator()
+        col.operator("linkforge.purge_ros2_control_data", icon="FILE_REFRESH", text="")
 
         # Settings for the selected joint
         if len(props.ros2_control_joints) > 0:

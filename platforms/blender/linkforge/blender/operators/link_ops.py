@@ -407,21 +407,42 @@ def _create_mesh_collision_compound(
     if vl:
         vl.objects.active = merged_obj
 
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.mesh.convex_hull()
-    bpy.ops.object.mode_set(mode="OBJECT")
-
-    # Apply decimation based on collision quality
+    # Determine collision simplification strategy based on link geometry type.
+    # We avoid forcing a convex hull for 'MESH' types to support concave simulation.
     lf = typing.cast(typing.Any, link_obj).linkforge
     quality_ratio = lf.collision_quality / 100.0
-    if quality_ratio < 1.0:
-        decimate_mod = typing.cast(
-            bpy.types.DecimateModifier, merged_obj.modifiers.new(name="Decimate", type="DECIMATE")
-        )
-        decimate_mod.ratio = quality_ratio
-        decimate_mod.decimate_type = "COLLAPSE"
-        bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
+
+    # Primitives (Box, Sphere, Cylinder) are simplified via convex hull to ensure
+    # rigorous mathematical consistency in physics solvers.
+    is_primitive = typing.cast(typing.Any, merged_obj).get("collision_geometry_type", "MESH") in (
+        "BOX",
+        "SPHERE",
+        "CYLINDER",
+    )
+
+    if not is_primitive:
+        # Mesh-based collisions allow for concave shapes at 100% quality.
+        # Sub-100% quality triggers a decimation workflow to reduce polycount.
+        if quality_ratio < 1.0:
+            decimate_mod = typing.cast(
+                bpy.types.DecimateModifier,
+                merged_obj.modifiers.new(name="Decimate", type="DECIMATE"),
+            )
+            decimate_mod.ratio = max(0.01, quality_ratio)  # Clamp to 1% to prevent mesh collapse
+            decimate_mod.decimate_type = "COLLAPSE"
+            bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
+
+        # Merge close vertices to prevent simulation jitter
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.mesh.remove_doubles(threshold=0.0001)
+        bpy.ops.object.mode_set(mode="OBJECT")
+    else:
+        # For primitives detected as meshes (rare fallback), use convex hull for safety
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.mesh.convex_hull()
+        bpy.ops.object.mode_set(mode="OBJECT")
 
     # Restore properties
     if merged_obj:

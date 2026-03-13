@@ -320,6 +320,75 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_purge_ros2_control_data(Operator):
+    """Purge stale or unused data from the ros2_control configuration.
+
+    This operator synchronizes the centralized control list with the actual
+    kinematic tree in the scene. It removes entries linking to deleted objects
+    and updates names for renamed joints.
+    """
+
+    bl_idname = "linkforge.purge_ros2_control_data"
+    bl_label = "Purge Unused Data"
+    bl_description = "Sync control system with kinematic tree (removes stale entries)"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operators can run."""
+        return hasattr(context.scene, "linkforge")
+
+    @safe_execute
+    def execute(self, context: Context) -> set[str]:
+        """Execute the purge operation."""
+        scene = context.scene
+        if not scene:
+            return {"CANCELLED"}
+
+        props = typing.cast(typing.Any, scene).linkforge
+        joints = props.ros2_control_joints
+
+        to_remove = []
+        updated_count = 0
+
+        # Scan for stale or renamed joints
+        for i, item in enumerate(joints):
+            obj = item.joint_obj
+
+            # Check if object still exists and is a robot joint
+            exists = obj is not None and obj.name in scene.objects
+            is_valid = (
+                exists and hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint
+            )
+
+            if not is_valid:
+                to_remove.append(i)
+                continue
+
+            # Check for name mismatch (renamed in scene but not in control system)
+            scene_name = obj.linkforge_joint.joint_name
+            if item.name != scene_name:
+                item.name = scene_name
+                updated_count += 1
+
+        # Remove in reverse order to preserve indices
+        for i in reversed(to_remove):
+            joints.remove(i)
+
+        removed_count = len(to_remove)
+
+        # Reset active index if it's now out of bounds
+        if props.ros2_control_active_joint_index >= len(joints):
+            props.ros2_control_active_joint_index = max(0, len(joints) - 1)
+
+        result_msg = (
+            f"Purge complete: {removed_count} stale removed, {updated_count} names updated."
+        )
+        self.report({"INFO"}, result_msg)
+
+        return {"FINISHED"}
+
+
 # Registration
 classes = [
     LINKFORGE_OT_add_ros2_control_joint,
@@ -327,6 +396,7 @@ classes = [
     LINKFORGE_OT_move_ros2_control_joint,
     LINKFORGE_OT_add_ros2_control_parameter,
     LINKFORGE_OT_remove_ros2_control_parameter,
+    LINKFORGE_OT_purge_ros2_control_data,
 ]
 
 

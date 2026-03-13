@@ -820,15 +820,18 @@ class XacroResolver:
             The serialized URDF string.
         """
 
-        # Recursive cleanup of namespaces and xacro tags
+        # Recursively strip XML namespaces and filter out XACRO-specific elements
         def cleanup(elem: ET.Element) -> None:
-            # Clean attributes
+            # Strip XACRO attributes and any with URI namespaces (e.g., {uri}name)
             for attr in list(elem.attrib.keys()):
-                # Standard URDF parsers often fail if they see xacro prefixes or URI namespaces
                 if "xacro" in attr or attr.startswith("{"):
                     del elem.attrib[attr]
-            # Recurse and filter children
-            # We must iterate over a copy of the list to allow modification during iteration
+
+            # Flatten tag by removing the {namespace} prefix for URDF parser compatibility
+            if isinstance(elem.tag, str) and elem.tag.startswith("{"):
+                elem.tag = elem.tag.split("}", 1)[1]
+
+            # Process children: filter out macros/properties and recurse into standard elements
             for child in list(elem):
                 tag = child.tag
 
@@ -838,10 +841,9 @@ class XacroResolver:
                     continue
 
                 # Aggressive filtering: Remove skip and any tag containing "xacro"
-                # This matches URDFParser's strict detection logic
-                is_xacro = (
-                    tag == "skip" or "xacro:" in tag or (tag.startswith("{") and "xacro" in tag)
-                )
+                # We strip the namespace first to avoid false positives from the URI itself
+                clean_tag = tag.split("}", 1)[1] if tag.startswith("{") else tag
+                is_xacro = clean_tag == "skip" or "xacro" in clean_tag
 
                 if is_xacro:
                     elem.remove(child)
