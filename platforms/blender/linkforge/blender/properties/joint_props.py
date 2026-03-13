@@ -73,6 +73,11 @@ def update_joint_hierarchy(self: typing.Any, context: Context) -> None:
     if parent_obj:
         # Parent the Joint to the Parent Link
         set_parent_keep_transform(joint_obj, parent_obj)
+
+        # Move to parent's collection (organization)
+        from ..utils.scene_utils import sync_object_collections
+
+        sync_object_collections(joint_obj, parent_obj)
     elif joint_obj.parent:
         # Clear parent (unparent joint) while preserving world position
         clear_parent_keep_transform(joint_obj)

@@ -13,7 +13,7 @@ from ...linkforge_core.logging_config import get_logger
 from ..properties.link_props import sanitize_urdf_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
-from ..utils.scene_utils import clear_stats_cache
+from ..utils.scene_utils import clear_stats_cache, sync_object_collections
 
 logger = get_logger(__name__)
 
@@ -163,7 +163,7 @@ def create_collision_for_link(
     lf = typing.cast(typing.Any, link_obj).linkforge
     link_name = lf.link_name or link_obj.name
 
-    # PRO FIX: Wrap all collision operators in a context and mode guard
+    # Wrap all collision operators in a context and mode guard to ensure consistency
     with context_and_mode_guard(context):
         # Remove existing collision objects to prevent duplicates
         existing_collisions = [c for c in link_obj.children if "_collision" in c.name.lower()]
@@ -219,9 +219,9 @@ def create_collision_for_link(
 
         collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
 
-        # IMPORTANT: Ensure collision is actually a child in the collection hierarchy
-        if context.collection and collision_obj.name not in context.collection.objects:
-            context.collection.objects.link(collision_obj)
+        # Ensure collision is linked specifically to the Link's collections
+        # This keeps the Outliner organized and prevents items leaking to Scene Collection
+        sync_object_collections(collision_obj, link_obj)
 
         if collision_obj.data and hasattr(collision_obj.data, "materials"):
             collision_obj.data.materials.clear()
@@ -326,10 +326,6 @@ def _merge_visual_meshes(
 
         # Ensure temporary duplicate is visible for join operation
         dup.hide_viewport = False
-
-        # Link to the same collections as the original
-        for col in visual_obj.users_collection:
-            col.objects.link(dup)
 
         # Apply transforms to bake local position (relative to link) into geometry
         # Vertex_Link = Link_World_Inv @ Vertex_World
@@ -439,7 +435,6 @@ def _create_mesh_collision_compound(
             )
             decimate_mod.ratio = max(0.01, quality_ratio)
             decimate_mod.decimate_type = "COLLAPSE"
-            # PRO FIX: Do NOT apply the modifier here.
             # Keeping it active allows real-time slider updates via the "fast path".
             # Modifiers will be applied by eval_obj.to_mesh() during export.
 
@@ -480,13 +475,9 @@ def _create_mesh_collision_compound(
         # Persist collision type for UI consistency
         merged_obj["collision_geometry_type"] = "MESH"
 
-        # PRO FIX: Ensure collision is linked specifically to the Link's collections
+        # Ensure collision is linked specifically to the Link's collections
         # This keeps the Outliner organized and prevents items leaking to Scene Collection
-        for col in list(merged_obj.users_collection):
-            col.objects.unlink(merged_obj)
-        for col in link_obj.users_collection:
-            if merged_obj.name not in col.objects:
-                col.objects.link(merged_obj)
+        sync_object_collections(merged_obj, link_obj)
 
     bpy.ops.object.select_all(action="DESELECT")
     link_obj.select_set(True)
@@ -645,10 +636,10 @@ class LINKFORGE_OT_add_empty_link(Operator):
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = empty_size
 
-        # Add to scene
-        if context.collection and empty.name not in context.collection.objects:
+        # Add to scene (hierarchy-aware)
+        if context.collection:
             context.collection.objects.link(empty)
-        elif bpy.context.collection and empty.name not in bpy.context.collection.objects:
+        elif bpy.context.collection:
             bpy.context.collection.objects.link(empty)
         empty.rotation_mode = "XYZ"
 
@@ -753,9 +744,8 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         empty = bpy.data.objects.new(link_name, None)
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = empty_size
-        # Add to scene
-        if context.collection and empty.name not in context.collection.objects:
-            context.collection.objects.link(empty)
+        # Add to scene matching original mesh collections
+        sync_object_collections(empty, mesh_obj)
 
         # Position Empty at mesh world pose precisely
         with context_and_mode_guard(context):

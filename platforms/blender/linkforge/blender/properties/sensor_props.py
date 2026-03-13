@@ -74,10 +74,9 @@ def update_sensor_hierarchy(self: typing.Any, context: Context) -> None:
             set_parent_keep_transform(sensor_obj, link_obj)
 
         # Move to same collection
-        for coll in list(sensor_obj.users_collection):
-            coll.objects.unlink(sensor_obj)
-        if link_obj.users_collection:
-            link_obj.users_collection[0].objects.link(sensor_obj)
+        from ..utils.scene_utils import sync_object_collections
+
+        sync_object_collections(sensor_obj, link_obj)
 
     elif sensor_obj.parent:
         # Clear parent while preserving world position

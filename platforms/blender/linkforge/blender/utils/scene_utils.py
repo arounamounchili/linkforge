@@ -352,3 +352,33 @@ def move_to_collection(obj: bpy.types.Object, collection: bpy.types.Collection) 
         # Object might be already linked but not showing in collection.objects lookup yet
         with contextlib.suppress(RuntimeError):
             collection.objects.link(obj)
+
+
+def sync_object_collections(target_obj: bpy.types.Object, source_obj: bpy.types.Object) -> None:
+    """Synchronize a target object's collection membership with a source object.
+
+    This ensures that secondary components (collisions, sensors, etc.) always stay
+    in the same Outliner collections as their parent Link or Robot frame,
+    preventing "leaks" to the scene root.
+
+    Args:
+        target_obj: The object to be moved/linked.
+        source_obj: The reference object whose collections should be matched.
+    """
+    if not target_obj or not source_obj:
+        return
+
+    # 1. Link to all collections where source_obj resides
+    source_cols = list(source_obj.users_collection)
+    if not source_cols:
+        return
+
+    for col in source_cols:
+        if target_obj.name not in col.objects:
+            col.objects.link(target_obj)
+
+    # 2. Unlink from any collections that source_obj is NOT in
+    # This cleans up the default Scene Collection link if it was created there
+    for col in list(target_obj.users_collection):
+        if col not in source_cols:
+            col.objects.unlink(target_obj)

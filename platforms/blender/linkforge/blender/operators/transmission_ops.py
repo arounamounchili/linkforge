@@ -130,13 +130,9 @@ class LINKFORGE_OT_create_transmission(Operator):
             transmission_empty.rotation_euler = (0, 0, 0)
 
         # Move transmission to same collection as parent joint (for clean organization)
-        # Remove from all current collections
-        for coll in list(transmission_empty.users_collection):
-            coll.objects.unlink(transmission_empty)
-        # Add to parent's collection
-        if joint_obj.users_collection:
-            parent_collection = joint_obj.users_collection[0]
-            parent_collection.objects.link(transmission_empty)
+        from ..utils.scene_utils import sync_object_collections
+
+        sync_object_collections(transmission_empty, joint_obj)
 
         # Set display size from preferences
         transmission_empty.empty_display_size = empty_size

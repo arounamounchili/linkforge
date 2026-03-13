@@ -80,13 +80,9 @@ def update_transmission_hierarchy(self: typing.Any, context: Context) -> None:
         transmission_obj.rotation_euler = (0, 0, 0)
 
         # Move transmission to same collection as joint (for clean organization)
-        # Remove from all current collections
-        for coll in list(transmission_obj.users_collection):
-            coll.objects.unlink(transmission_obj)
-        # Add to joint's collection
-        if joint_obj.users_collection:
-            parent_collection = joint_obj.users_collection[0]
-            parent_collection.objects.link(transmission_obj)
+        from ..utils.scene_utils import sync_object_collections
+
+        sync_object_collections(transmission_obj, joint_obj)
     elif transmission_obj.parent:
         # Clear parent (unparent transmission) while preserving world position
         from ..utils.transform_utils import clear_parent_keep_transform

@@ -23,7 +23,7 @@ from ...linkforge_core.models import (
 from ...linkforge_core.utils.kinematics import sort_joints_topological
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
-from ..utils.scene_utils import move_to_collection
+from ..utils.scene_utils import move_to_collection, sync_object_collections
 
 logger = get_logger(__name__)
 
@@ -515,9 +515,8 @@ def create_link_object(
             # Without this, collision meshes degrade with each import-export cycle.
             collision_obj["imported_from_urdf"] = True
 
-            # Add collision mesh to collection
-            if collection:
-                move_to_collection(collision_obj, collection)
+            # Add collision mesh to link's collections
+            sync_object_collections(collision_obj, link_obj)
 
             # Clear materials from collision mesh (collision doesn't need materials)
             # Materials may come from imported mesh files (OBJ, DAE, etc.)
@@ -626,9 +625,11 @@ def create_joint_object(
     empty.rotation_mode = "XYZ"
     empty.location = (0, 0, 0)
 
-    # Add to collection
+    # Add to collection (hierarchy-aware)
     if collection:
-        collection.objects.link(empty)
+        sync_object_collections(empty, collection) if hasattr(
+            collection, "objects"
+        ) else collection.objects.link(empty)
     elif bpy.context.scene and bpy.context.scene.collection:
         bpy.context.scene.collection.objects.link(empty)
 

@@ -93,13 +93,9 @@ class LINKFORGE_OT_create_joint(Operator):
             joint_empty.rotation_euler = rotation
 
         # Move joint to same collection as link (for clean organization)
-        # Remove from all current collections
-        for coll in list(joint_empty.users_collection):
-            coll.objects.unlink(joint_empty)
-        # Add to link's collection
-        if link_obj.users_collection:
-            parent_collection = link_obj.users_collection[0]
-            parent_collection.objects.link(joint_empty)
+        from ..utils.scene_utils import sync_object_collections
+
+        sync_object_collections(joint_empty, link_obj)
 
         # Set display size from preferences
         joint_empty.empty_display_size = empty_size

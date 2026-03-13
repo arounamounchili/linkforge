@@ -98,10 +98,9 @@ class LINKFORGE_OT_create_sensor(Operator):
             sensor_empty.scale = (1, 1, 1)
 
             # Move to parent's collection
-            for coll in list(sensor_empty.users_collection):
-                coll.objects.unlink(sensor_empty)
-            if link_obj and link_obj.users_collection:
-                link_obj.users_collection[0].objects.link(sensor_empty)
+            from ..utils.scene_utils import sync_object_collections
+
+            sync_object_collections(sensor_empty, link_obj)
 
             # Set display size from preferences
             sensor_empty.empty_display_size = empty_size
