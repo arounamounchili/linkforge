@@ -15,6 +15,9 @@ from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
 from ..utils.scene_utils import clear_stats_cache, sync_object_collections
 
+if typing.TYPE_CHECKING:
+    from ..properties.link_props import LinkPropertyGroup
+
 logger = get_logger(__name__)
 
 # Global state for debounced collision preview updates
@@ -44,7 +47,6 @@ def schedule_collision_preview_update(obj: bpy.types.Object) -> None:
         )
 
 
-@typing.no_type_check
 def execute_collision_preview_update() -> None | float:
     """Execute the actual collision mesh update after debounce delay."""
     # pylint: disable=global-statement
@@ -67,7 +69,7 @@ def execute_collision_preview_update() -> None | float:
 
     # FAST PATH: If we have a Decimate modifier, just update the ratio
     # This provides instant feedback without expensive mesh regeneration
-    lf = typing.cast(typing.Any, obj).linkforge
+    lf = typing.cast("LinkPropertyGroup", obj.linkforge)
     quality_ratio = lf.collision_quality / 100.0
 
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
@@ -419,11 +421,9 @@ def _create_mesh_collision_compound(
 
     # Primitives (Box, Sphere, Cylinder) are simplified via convex hull to ensure
     # rigorous mathematical consistency in physics solvers.
-    is_primitive = typing.cast(typing.Any, merged_obj).get("collision_geometry_type", "MESH") in (
-        "BOX",
-        "SPHERE",
-        "CYLINDER",
-    )
+    # Check geometry type for primitive handling
+    geom_type = str(merged_obj.get("collision_geometry_type", "MESH"))
+    is_primitive = geom_type in ("BOX", "CYLINDER", "SPHERE")
 
     if not is_primitive:
         # Mesh-based collisions allow for concave shapes at 100% quality.

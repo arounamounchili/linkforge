@@ -13,6 +13,10 @@ from ..utils.context import context_and_mode_guard
 from ..utils.decorators import safe_execute
 from ..utils.scene_utils import clear_stats_cache
 
+if typing.TYPE_CHECKING:
+    from ..properties.joint_props import JointPropertyGroup
+    from ..properties.link_props import LinkPropertyGroup
+
 
 class LINKFORGE_OT_create_joint(Operator):
     """Create a new robot joint at selected link's location.
@@ -41,11 +45,11 @@ class LINKFORGE_OT_create_joint(Operator):
         # Allow if object is a link or a child of a link (visual mesh)
         return bool(
             hasattr(obj, "linkforge")
-            and typing.cast(typing.Any, obj).linkforge.is_robot_link
+            and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
             or (
                 obj.parent
                 and hasattr(obj.parent, "linkforge")
-                and typing.cast(typing.Any, obj.parent).linkforge.is_robot_link
+                and typing.cast("LinkPropertyGroup", obj.parent.linkforge).is_robot_link
             )
         )
 
@@ -57,7 +61,10 @@ class LINKFORGE_OT_create_joint(Operator):
         # Get the link object (either selected directly or parent of selected visual)
         link_obj = None
         if obj:
-            if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
+            if (
+                hasattr(obj, "linkforge")
+                and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
+            ):
                 link_obj = obj
             elif obj.parent:
                 link_obj = obj.parent
@@ -65,7 +72,7 @@ class LINKFORGE_OT_create_joint(Operator):
             self.report({"ERROR"}, "No valid robot link found")
             return {"CANCELLED"}
 
-        link_props = typing.cast(typing.Any, link_obj).linkforge
+        link_props = typing.cast("LinkPropertyGroup", link_obj.linkforge)
 
         # Get preferred empty size from addon preferences
         from ..preferences import get_addon_prefs
@@ -88,7 +95,9 @@ class LINKFORGE_OT_create_joint(Operator):
             joint_empty = context.active_object
             if not joint_empty:
                 return {"CANCELLED"}
-            joint_empty.name = f"{typing.cast(typing.Any, link_obj).linkforge.link_name}_joint"
+            joint_empty.name = (
+                f"{typing.cast('LinkPropertyGroup', link_obj.linkforge).link_name}_joint"
+            )
             joint_empty.rotation_mode = "XYZ"
             joint_empty.rotation_euler = rotation
 
@@ -101,13 +110,13 @@ class LINKFORGE_OT_create_joint(Operator):
         joint_empty.empty_display_size = empty_size
 
         # Enable joint properties
-        typing.cast(typing.Any, joint_empty).linkforge_joint.is_robot_joint = True
-        typing.cast(typing.Any, joint_empty).linkforge_joint.joint_name = sanitize_urdf_name(
-            joint_empty.name
-        )
+        typing.cast("JointPropertyGroup", joint_empty.linkforge_joint).is_robot_joint = True
+        typing.cast(
+            "JointPropertyGroup", joint_empty.linkforge_joint
+        ).joint_name = sanitize_urdf_name(joint_empty.name)
 
         # Set default joint joint_type
-        joint_props = typing.cast(typing.Any, joint_empty).linkforge_joint
+        joint_props = typing.cast("JointPropertyGroup", joint_empty.linkforge_joint)
         joint_props.joint_type = "REVOLUTE"
 
         # Enable limits by default for REVOLUTE joints (they typically need them)
@@ -152,7 +161,7 @@ class LINKFORGE_OT_delete_joint(Operator):
             obj
             and obj.type == "EMPTY"
             and hasattr(obj, "linkforge_joint")
-            and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
+            and typing.cast("JointPropertyGroup", obj.linkforge_joint).is_robot_joint
         )
 
     @safe_execute
@@ -171,7 +180,9 @@ class LINKFORGE_OT_delete_joint(Operator):
             and hasattr(scene, "linkforge")
             and hasattr(scene.linkforge, "ros2_control_joints")
         ):
-            rc_joints = typing.cast(typing.Any, scene).linkforge.ros2_control_joints
+            from ..properties.robot_props import RobotPropertyGroup
+
+            rc_joints = typing.cast("RobotPropertyGroup", scene.linkforge).ros2_control_joints
             # Find index by name
             idx_to_remove = -1
             for i, item in enumerate(rc_joints):
@@ -216,7 +227,7 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
         return bool(
             obj.type == "EMPTY"
             and hasattr(obj, "linkforge_joint")
-            and typing.cast(typing.Any, obj).linkforge_joint.is_robot_joint
+            and typing.cast("JointPropertyGroup", obj.linkforge_joint).is_robot_joint
         )
 
     @safe_execute
@@ -225,7 +236,7 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
         joint_empty = context.active_object
         if not joint_empty:
             return {"CANCELLED"}
-        props = typing.cast(typing.Any, joint_empty).linkforge_joint
+        props = typing.cast("JointPropertyGroup", joint_empty.linkforge_joint)
 
         # Find nearest links based on distance
         scene = context.scene
@@ -235,7 +246,10 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
         joint_loc = joint_empty.location
         links = []
         for obj in scene.objects:
-            if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
+            if (
+                hasattr(obj, "linkforge")
+                and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
+            ):
                 links.append((obj, (obj.location - joint_loc).length))
 
         if not links:

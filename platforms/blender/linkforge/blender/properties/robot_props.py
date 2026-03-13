@@ -14,7 +14,6 @@ URDF and XACRO generators, including:
 from __future__ import annotations
 
 import contextlib
-import typing
 
 import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
@@ -23,7 +22,7 @@ from bpy.types import PropertyGroup
 from .control_props import Ros2ControlJointProperty, Ros2ControlParameterProperty
 
 
-def update_collision_visibility(self: typing.Any, context: bpy.types.Context) -> None:
+def update_collision_visibility(self: RobotPropertyGroup, context: bpy.types.Context) -> None:
     """Update visibility of all collision meshes in the scene."""
     if not context or not context.scene:
         return
