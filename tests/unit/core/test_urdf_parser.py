@@ -902,7 +902,7 @@ class TestURDFParser:
         xml = '<gazebo><sensor name="s" type="camera"/></gazebo>'  # No reference attr
         assert parser._parse_sensor_from_gazebo(ET.fromstring(xml)) is None
 
-        # 6. Parse String errors (1271)
+        # 6. Parse String errors
         parser = URDFParser()
         with pytest.raises(RobotParserError, match="Failed to parse"):
             parser.parse_string("<robot>unclosed tags")
@@ -1052,29 +1052,38 @@ class TestURDFParserEdgeCoverage:
 
     def test_parse_lidar_sensor_without_range_element(self):
         """Lidar sensor element missing a range sub-element uses default range values."""
-        xml = """<robot name="r"><gazebo reference="base">
-            <sensor type="ray" name="lidar"><ray><horizontal/></ray></sensor>
-        </gazebo></robot>"""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor type="ray" name="lidar"><ray><horizontal/></ray></sensor>
+            </gazebo>
+        </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
         assert len(robot.sensors) == 1
 
     def test_parse_imu_with_empty_angular_and_linear_elements(self):
         """IMU sensor with empty angular_velocity and linear_acceleration elements parses cleanly."""
-        xml = """<robot name="r"><gazebo reference="base">
-            <sensor type="imu" name="imu0">
-                <imu><angular_velocity/><linear_acceleration/></imu>
-            </sensor>
-        </gazebo></robot>"""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor type="imu" name="imu0">
+                    <imu><angular_velocity/><linear_acceleration/></imu>
+                </sensor>
+            </gazebo>
+        </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
         assert len(robot.sensors) == 1
 
     def test_parse_force_torque_without_inner_element(self):
         """Force/torque sensor element without inner force_torque child uses defaults."""
-        xml = """<robot name="r"><gazebo reference="base">
-            <sensor type="force_torque" name="ft0"></sensor>
-        </gazebo></robot>"""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor type="force_torque" name="ft0"></sensor>
+            </gazebo>
+        </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
         assert len(robot.sensors) == 1
@@ -1170,11 +1179,14 @@ class TestURDFParserAdditionalEdgeCoverage:
 
     def test_camera_sensor_without_image_element_uses_defaults(self):
         """Camera sensor missing an <image> child falls back to width=640, height=480."""
-        xml = """<robot name="r"><gazebo reference="base">
-            <sensor type="camera" name="cam0">
-                <camera><clip><near>0.1</near><far>10.0</far></clip></camera>
-            </sensor>
-        </gazebo></robot>"""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor type="camera" name="cam0">
+                    <camera><clip><near>0.1</near><far>10.0</far></clip></camera>
+                </sensor>
+            </gazebo>
+        </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
         assert robot.sensors[0].camera_info.width == 640
@@ -1241,15 +1253,18 @@ class TestURDFParserFileProtectionAndSensorCoverage:
 
     def test_imu_sensor_with_angular_velocity_x_noise(self):
         """IMU angular_velocity with an <x> noise element parses the noise correctly."""
-        xml = """<robot name="r"><gazebo reference="base">
-            <sensor type="imu" name="imu0">
-                <imu>
-                    <angular_velocity>
-                        <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
-                    </angular_velocity>
-                </imu>
-            </sensor>
-        </gazebo></robot>"""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor type="imu" name="imu0">
+                    <imu>
+                        <angular_velocity>
+                            <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+                        </angular_velocity>
+                    </imu>
+                </sensor>
+            </gazebo>
+        </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
         imu = robot.sensors[0].imu_info
@@ -1257,15 +1272,18 @@ class TestURDFParserFileProtectionAndSensorCoverage:
 
     def test_imu_sensor_with_linear_acceleration_x_noise(self):
         """IMU linear_acceleration with an <x> noise element parses the noise correctly."""
-        xml = """<robot name="r"><gazebo reference="base">
-            <sensor type="imu" name="imu0">
-                <imu>
-                    <linear_acceleration>
-                        <x><noise type="gaussian"><mean>0.0</mean><stddev>0.05</stddev></noise></x>
-                    </linear_acceleration>
-                </imu>
-            </sensor>
-        </gazebo></robot>"""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor type="imu" name="imu0">
+                    <imu>
+                        <linear_acceleration>
+                            <x><noise type="gaussian"><mean>0.0</mean><stddev>0.05</stddev></noise></x>
+                        </linear_acceleration>
+                    </imu>
+                </sensor>
+            </gazebo>
+        </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
         imu = robot.sensors[0].imu_info
@@ -1316,3 +1334,50 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         assert "joint1" in robot._joint_index
         assert robot.get_joint("joint1").parent == "link1"
         assert robot.get_joint("joint1").child == "link2"
+
+    def test_urdf_parser_directory_failure_and_file_success(self, tmp_path):
+        """Test file-based parsing edge cases."""
+        parser = URDFParser()
+
+        # Path is a directory
+        with pytest.raises(RobotParserError, match="not a file"):
+            parser.parse(tmp_path)
+
+    def test_urdf_parser_string_invalid_root(self):
+        """Test parse_string with invalid root tag."""
+        parser = URDFParser()
+        with pytest.raises(RobotParserError, match="must be <robot>"):
+            parser.parse_string("<wrong_root></wrong_root>")
+
+    def test_urdf_parser_unexpected_error(self, tmp_path):
+        """Test fallback Exception handler in parse."""
+        parser = URDFParser()
+        p = tmp_path / "test.urdf"
+        p.write_text("<robot></robot>")
+
+        from unittest.mock import patch
+
+        with patch("xml.etree.ElementTree.iterparse") as mock_iter:
+            mock_iter.side_effect = RuntimeError("Mocked crash")
+            with pytest.raises(RobotParserError, match="Unexpected error"):
+                parser.parse(p)
+
+        # Successful file parse
+        f = tmp_path / "simple.urdf"
+        f.write_text("<robot name='ftest'/>")
+        robot = parser.parse(f)
+        assert robot.name == "ftest"
+
+
+def test_urdf_parser_unnamed_gazebo_element_parsing():
+    """Verify that Gazebo elements without a reference attribute are parsed correctly with None reference."""
+    import xml.etree.ElementTree as ET
+
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    xml = "<gazebo><material>Gazebo/Grey</material></gazebo>"
+    elem = ET.fromstring(xml)
+    res = parser._parse_gazebo_element(elem)
+    assert res.reference is None
+    assert res.material == "Gazebo/Grey"

@@ -52,3 +52,17 @@ def test_calculate_inertia_unsupported_geometry_fallback():
         from linkforge_core.physics.inertia import calculate_inertia
 
         calculate_inertia(UnsupportedShape(), mass=1.0)  # type: ignore
+
+
+def test_mesh_inertia_robust_negative_diagonals_handling():
+    """Verify robust handling of negative diagonal inertia elements during mesh calculation."""
+    # Simple tetrahedron with mass
+    vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)]
+    triangles = [(0, 2, 1), (0, 1, 3), (0, 3, 2), (1, 2, 3)]
+
+    from linkforge_core.physics.inertia import calculate_mesh_inertia_from_triangles
+
+    res = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+    assert res.ixx >= 0
+    assert res.iyy >= 0
+    assert res.izz >= 0

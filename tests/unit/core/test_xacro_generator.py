@@ -60,11 +60,11 @@ class TestXACROGenerator:
         # Two links using identical red material
         link1 = Link(name="link1")
         mat = Material(name="BrandRed", color=Color(1, 0, 0, 1))
-        link1.visuals.append(Visual(geometry=Box(Vector3(1, 1, 1)), material=mat))
+        link1.add_visual(Visual(geometry=Box(Vector3(1, 1, 1)), material=mat))
         robot.add_link(link1)
 
         link2 = Link(name="link2")
-        link2.visuals.append(Visual(geometry=Box(Vector3(1, 1, 1)), material=mat))
+        link2.add_visual(Visual(geometry=Box(Vector3(1, 1, 1)), material=mat))
         robot.add_link(link2)
 
         # Enable extraction
@@ -95,14 +95,14 @@ class TestXACROGenerator:
         for i in range(4):
             link = Link(name=f"wheel_{i}")
             cyl = Cylinder(radius=0.3, length=0.1)
-            link.visuals.append(Visual(geometry=cyl))
+            link.add_visual(Visual(geometry=cyl))
             robot.add_link(link)
 
         # Boxes (Legs)
         for i in range(2):
             link = Link(name=f"leg_{i}")
             box = Box(size=Vector3(0.1, 0.2, 1.0))
-            link.visuals.append(Visual(geometry=box))
+            link.add_visual(Visual(geometry=box))
             robot.add_link(link)
 
         generator = XACROGenerator(extract_dimensions=True, advanced_mode=True, pretty_print=False)
@@ -157,8 +157,8 @@ class TestXACROGenerator:
 
         for side in ["left", "right"]:
             leg = Link(name=f"{side}_leg", inertial=inertial)
-            leg.visuals.append(Visual(geometry=Box(Vector3(0.1, 0.1, 1.0))))
-            leg.collisions.append(Collision(geometry=Box(Vector3(0.1, 0.1, 1.0))))
+            leg.add_visual(Visual(geometry=Box(Vector3(0.1, 0.1, 1.0))))
+            leg.add_collision(Collision(geometry=Box(Vector3(0.1, 0.1, 1.0))))
             robot.add_link(leg)
 
             joint = Joint(
@@ -206,7 +206,7 @@ class TestXACROGenerator:
 
         # Add property candidate (material)
         mat = Material(name="red", color=Color(1, 0, 0, 1))
-        link.visuals.append(Visual(geometry=Box(Vector3(1, 1, 1)), material=mat))
+        link.add_visual(Visual(geometry=Box(Vector3(1, 1, 1)), material=mat))
 
         out_file = tmp_path / "robot.xacro"
 
@@ -269,12 +269,12 @@ class TestXACROGenerator:
         robot.add_link(root_link)
 
         # Repeated spheres - tests sphere branch
-        l1 = Link(name="s1", visuals=[Visual(geometry=Sphere(radius=0.1))])
-        l2 = Link(name="s2", visuals=[Visual(geometry=Sphere(radius=0.1))])
+        l1 = Link(name="s1", initial_visuals=[Visual(geometry=Sphere(radius=0.1))])
+        l2 = Link(name="s2", initial_visuals=[Visual(geometry=Sphere(radius=0.1))])
 
         # Repeated boxes with no common prefix
-        l3 = Link(name="alpha", visuals=[Visual(geometry=Box(size=Vector3(2, 2, 2)))])
-        l4 = Link(name="omega", visuals=[Visual(geometry=Box(size=Vector3(2, 2, 2)))])
+        l3 = Link(name="alpha", initial_visuals=[Visual(geometry=Box(size=Vector3(2, 2, 2)))])
+        l4 = Link(name="omega", initial_visuals=[Visual(geometry=Box(size=Vector3(2, 2, 2)))])
 
         robot.add_link(l1)
         robot.add_link(l2)
@@ -299,7 +299,7 @@ class TestXACROGenerator:
         robot = Robot(name="r")
         robot.add_link(Link(name="l"))
         mat = Material(name="m", color=Color(0.1, 0.2, 0.3, 1.0))
-        robot.links[0].visuals.append(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat))
+        robot.links[0].add_visual(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat))
 
         # advanced_mode=True but extract_materials=False
         gen = XACROGenerator(advanced_mode=True, extract_materials=False)
@@ -314,8 +314,8 @@ class TestXACROGenerator:
         robot.add_link(root)
 
         def add_pair(geom: Box | Cylinder | Sphere | Mesh) -> None:
-            l1 = Link(name=f"{geom.type.value}1", visuals=[Visual(geometry=geom)])
-            l2 = Link(name=f"{geom.type.value}2", visuals=[Visual(geometry=geom)])
+            l1 = Link(name=f"{geom.type.value}1", initial_visuals=[Visual(geometry=geom)])
+            l2 = Link(name=f"{geom.type.value}2", initial_visuals=[Visual(geometry=geom)])
             robot.add_link(l1)
             robot.add_link(l2)
             robot.add_joint(
@@ -327,7 +327,7 @@ class TestXACROGenerator:
 
             # Add identical collision to both to maintain identical signature
             for lnk in [l1, l2]:
-                lnk.collisions.append(Collision(name="collision", geometry=geom))
+                lnk.add_collision(Collision(name="collision", geometry=geom))
 
         add_pair(Cylinder(radius=0.1, length=1.0))
         add_pair(Sphere(radius=0.5))
@@ -351,7 +351,7 @@ class TestXACROGenerator:
         robot = Robot(name="r")
         robot.add_link(Link(name="l"))
         mat = Material(name="m", color=Color(0.1, 0.2, 0.3, 1.0))
-        robot.links[0].visuals.append(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat))
+        robot.links[0].add_visual(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat))
 
         gen = XACROGenerator(advanced_mode=True, extract_materials=True)
         # Manually sabotage material_properties to trigger the elif
@@ -371,8 +371,8 @@ class TestXACROGenerator:
         # 1. Properties only
         gen = XACROGenerator(split_files=True, extract_dimensions=True, generate_macros=False)
         # Add repeated geometry to force property
-        robot.links[0].visuals.append(Visual(geometry=Box(size=Vector3(1, 1, 1))))
-        l2 = Link(name="l2", visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))])
+        robot.links[0].add_visual(Visual(geometry=Box(size=Vector3(1, 1, 1))))
+        l2 = Link(name="l2", initial_visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))])
         robot.add_link(l2)
         robot.add_joint(Joint(name="j", type=JointType.FIXED, parent="base", child="l2"))
 
@@ -387,7 +387,7 @@ class TestXACROGenerator:
         mesh_path.parent.mkdir(parents=True)
         mesh_path.write_text("dummy")
 
-        link = Link(name="l", visuals=[Visual(geometry=Mesh(resource=str(mesh_path)))])
+        link = Link(name="l", initial_visuals=[Visual(geometry=Mesh(resource=str(mesh_path)))])
         robot.add_link(link)
 
         gen = XACROGenerator(advanced_mode=True, urdf_path=tmp_path / "urdf" / "robot.xacro")
@@ -401,11 +401,11 @@ class TestXACROGenerator:
         l1 = Link(name="l1")
         # Material with texture only
         mat_tex = Material(name="tex", texture="checkers.png")
-        l1.visuals.append(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat_tex))
+        l1.add_visual(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat_tex))
 
         # Material with no name, but HAS texture (to pass validation)
         mat_empty = Material(name="", texture="empty.png")
-        l1.visuals.append(Visual(geometry=Sphere(radius=0.1), material=mat_empty))
+        l1.add_visual(Visual(geometry=Sphere(radius=0.1), material=mat_empty))
 
         robot.add_link(l1)
 
@@ -418,7 +418,7 @@ class TestXACROGenerator:
         robot = Robot(name="r")
         l1 = Link(name="l")
         mat = Material(name="no_color", texture="dummy.png")  # No color assigned, but has texture
-        l1.visuals.append(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat))
+        l1.add_visual(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat))
         robot.add_link(l1)
 
         gen = XACROGenerator(extract_materials=True)
@@ -435,7 +435,7 @@ class TestXACROGenerator:
 
         def create_link(name: str, parent: str) -> Link:
             link = Link(name=name)
-            link.visuals.append(Visual(geometry=Mesh(resource="mesh.dae"), material=mat))
+            link.add_visual(Visual(geometry=Mesh(resource="mesh.dae"), material=mat))
             robot.add_link(link)
             from linkforge_core.models.joint import JointLimits
 
@@ -523,7 +523,7 @@ class TestXACROGenerator:
         robot = Robot(name="test")
         link = Link(name="l")
         vis = Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), name="my_visual")
-        link.visuals.append(vis)
+        link.add_visual(vis)
         robot.add_link(link)
 
         xml = gen.generate(robot)
@@ -551,13 +551,13 @@ class TestXACROGenerator:
         # Link 1
         l1 = Link(name="l1")
         v1 = Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)))  # Identical box
-        l1.visuals.append(v1)
+        l1.add_visual(v1)
         robot.add_link(l1)
 
         # Link 2
         l2 = Link(name="l2")
         v2 = Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)))  # Identical box
-        l2.visuals.append(v2)
+        l2.add_visual(v2)
         robot.add_link(l2)
 
         # Joints needed for macro grouping
@@ -615,7 +615,7 @@ class TestXACROGenerator:
 
         # Add gazebo plugin
         plugin = GazeboPlugin(name="gz_ros2_control", filename="libgz_ros2_control-system.so")
-        robot.gazebo_elements.append(GazeboElement(plugins=[plugin]))
+        robot.add_gazebo_element(GazeboElement(plugins=[plugin]))
 
         out_file = tmp_path / "robot.xacro"
 
@@ -655,7 +655,7 @@ class TestXACROGeneratorEdgeCoverage:
         """Verify link handles fallthrough when no matching macro group is found."""
         gen = XACROGenerator(generate_macros=True)
         robot = Robot(name="r")
-        link = Link(name="l1", visuals=[Visual(geometry=Box(size=Vector3(x=1, y=1, z=1)))])
+        link = Link(name="l1", initial_visuals=[Visual(geometry=Box(size=Vector3(x=1, y=1, z=1)))])
         robot.add_link(link)
         gen.links_in_macros = {"l1"}
         gen.macro_groups = {}
@@ -670,7 +670,7 @@ class TestXACROGeneratorEdgeCoverage:
         class UnknownGeometry:
             pass
 
-        link = Link(name="l1", visuals=[Visual(geometry=UnknownGeometry())])  # type: ignore
+        link = Link(name="l1", initial_visuals=[Visual(geometry=UnknownGeometry())])  # type: ignore
         robot.add_link(link)
         xml = gen.generate(robot)
         # It should generate an empty geometry container `<geometry />` or `<geometry></geometry>`
@@ -680,7 +680,7 @@ class TestXACROGeneratorEdgeCoverage:
         """Verify signature generation handles non-standard geometry objects."""
         gen = XACROGenerator(generate_macros=True)
         robot = Robot(name="r")
-        link = Link(name="l1", visuals=[Visual(geometry=Sphere(radius=0.5))])
+        link = Link(name="l1", initial_visuals=[Visual(geometry=Sphere(radius=0.5))])
         robot.add_link(link)
         result = gen.generate(robot)
         assert "l1" in result
@@ -731,7 +731,7 @@ class TestXACROGeneratorEdgeCoverage:
         robot.add_link(
             Link(
                 name="l1",
-                visuals=[
+                initial_visuals=[
                     Visual(
                         geometry=Box(size=Vector3(x=1, y=1, z=1)),
                         material=Material(name="m", color=Color(r=1, g=0, b=0)),
@@ -763,7 +763,7 @@ class TestXACROGeneratorEdgeCoverage:
         # Template for repeated link structure
         for side in ["left", "right"]:
             link = Link(name=f"{side}_link")
-            link.visuals.append(Visual(geometry=Box(Vector3(0.1, 0.1, 0.1))))
+            link.add_visual(Visual(geometry=Box(Vector3(0.1, 0.1, 0.1))))
             robot.add_link(link)
 
             joint = Joint(
@@ -831,7 +831,7 @@ class TestXACROGeneratorEdgeCoverage:
         robot = Robot(name="r")
         link = Link(name="l")
         # Origin but no material (partial visual configuration)
-        link.visuals.append(Visual(geometry=Box(Vector3(1, 1, 1)), origin=Transform()))
+        link.add_visual(Visual(geometry=Box(Vector3(1, 1, 1)), origin=Transform()))
         robot.add_link(link)
 
         # advanced_mode=True but extracts=False (partial extraction configuration)
@@ -879,8 +879,8 @@ class TestXACROGeneratorEdgeCoverage:
         geom = Box(Vector3(1, 1, 1))
         # Topological order: add PARENT first
         robot.add_link(Link(name="base"))
-        robot.add_link(Link(name="l1", visuals=[Visual(geometry=geom)]))
-        robot.add_link(Link(name="l2", visuals=[Visual(geometry=geom)]))
+        robot.add_link(Link(name="l1", initial_visuals=[Visual(geometry=geom)]))
+        robot.add_link(Link(name="l2", initial_visuals=[Visual(geometry=geom)]))
 
         # Different joint types should prevent grouping
         robot.add_joint(
@@ -906,9 +906,9 @@ class TestXACROGeneratorEdgeCoverage:
         # Topological order: add PARENT first
         robot.add_link(Link(name="base"))
         mat = Material(name="red", color=Color(1, 0, 0, 1))
-        robot.add_link(Link(name="l1", visuals=[Visual(geometry=geom, material=mat)]))
-        robot.add_link(Link(name="l2", visuals=[Visual(geometry=geom, material=mat)]))
-        robot.add_link(Link(name="l3", visuals=[Visual(geometry=geom, material=mat)]))
+        robot.add_link(Link(name="l1", initial_visuals=[Visual(geometry=geom, material=mat)]))
+        robot.add_link(Link(name="l2", initial_visuals=[Visual(geometry=geom, material=mat)]))
+        robot.add_link(Link(name="l3", initial_visuals=[Visual(geometry=geom, material=mat)]))
 
         # Group 1 (l1, l2)
         robot.add_joint(Joint(name="j1", type=JointType.FIXED, parent="base", child="l1"))
@@ -944,7 +944,7 @@ class TestXACROGeneratorEdgeCoverage:
         robot2 = Robot(name="r2")
         robot2.add_link(Link(name="base"))
         # Gazebo element with no plugins
-        robot2.gazebo_elements.append(GazeboElement(reference="base"))
+        robot2.add_gazebo_element(GazeboElement(reference="base"))
         gen2 = XACROGenerator(split_files=True, advanced_mode=True)
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -963,10 +963,10 @@ class TestXACROGeneratorEdgeCoverage:
         col_c = Collision(geometry=Cylinder(radius=0.1, length=0.2))
         col_s = Collision(geometry=Sphere(radius=0.3))
 
-        robot3.add_link(Link(name="l_cyl1", visuals=[vis_c], collisions=[col_c]))
-        robot3.add_link(Link(name="l_cyl2", visuals=[vis_c], collisions=[col_c]))
-        robot3.add_link(Link(name="l_sph1", visuals=[vis_s], collisions=[col_s]))
-        robot3.add_link(Link(name="l_sph2", visuals=[vis_s], collisions=[col_s]))
+        robot3.add_link(Link(name="l_cyl1", initial_visuals=[vis_c], initial_collisions=[col_c]))
+        robot3.add_link(Link(name="l_cyl2", initial_visuals=[vis_c], initial_collisions=[col_c]))
+        robot3.add_link(Link(name="l_sph1", initial_visuals=[vis_s], initial_collisions=[col_s]))
+        robot3.add_link(Link(name="l_sph2", initial_visuals=[vis_s], initial_collisions=[col_s]))
 
         # Test both upper=None and lower=None in grouping
         lim_upper_none = JointLimits(effort=1.0, velocity=1.0, lower=-1.0, upper=None)
@@ -997,3 +997,58 @@ class TestXACROGeneratorEdgeCoverage:
         gen3 = XACROGenerator(generate_macros=True)
         xml3 = gen3.generate(robot3)
         assert "xacro:macro" in xml3
+
+    def test_xacro_generator_macro_with_mesh_and_disconnected_link(self):
+        """Test macro signatures with meshes and links without joints."""
+        robot = Robot(name="test")
+        link = Link(
+            name="mesh_link",
+            initial_visuals=[Visual(geometry=Mesh(resource="cube.stl"), origin=Transform())],
+            initial_collisions=[Collision(geometry=Mesh(resource="cube.stl"))],
+        )
+        robot.add_link(link)
+
+        gen = XACROGenerator()
+        gen._current_robot = robot
+        gen.links_in_macros = {"mesh_link"}
+        gen.macro_groups = {}  # Missing initialization for unit test
+
+        root = ET.Element("robot")
+        # Verify that links marked for macros but lacking associated joints are correctly ignored
+        gen._add_link_to_xml(root, link)
+        assert len(list(root)) == 0
+
+        # Verify that links with joints but without a defined macro group are also ignored by the generator
+        robot.add_link(Link(name="a"))
+        joint = Joint(name="j", parent="a", child="mesh_link", type=JointType.FIXED)
+        robot.add_joint(joint)
+        gen._add_link_to_xml(root, link)
+        assert len(list(root)) == 0
+
+        # Signature with mesh and origin
+        sig = gen._get_macro_signature(link, joint)
+        assert "cube.stl" in sig
+        assert "p_0.000_0.000_0.000" in sig
+
+
+def test_xacro_macro_signature_robustness():
+    """Verify macro signature generation handles meshes without explicit origin elements."""
+    from linkforge_core.generators.xacro_generator import XACROGenerator
+    from linkforge_core.models.geometry import Mesh
+    from linkforge_core.models.link import Link, Visual
+    from linkforge_core.models.robot import Robot
+
+    robot = Robot(name="r")
+    l1 = Link(name="l1")
+    l1.add_visual(Visual(geometry=Mesh(resource="m.stl")))
+    robot.add_link(l1)
+    # Dummy link for parent reference
+    robot.add_link(Link(name="base"))
+    joint = Joint(name="j1", type=JointType.FIXED, parent="base", child="l1")
+
+    gen = XACROGenerator(generate_macros=True)
+    # Provide the valid dummy joint
+    sig = gen._get_macro_signature(l1, joint)
+    assert "v_" in sig  # prefix for visual
+    assert "m.stl" in sig
+    assert "j_fixed" in sig

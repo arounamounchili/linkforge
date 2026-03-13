@@ -343,13 +343,13 @@ def test_full_robot_import_integration(clean_scene):
     # Base link with inertial properties and collision
     l1 = Link(
         name="base_link",
-        visuals=[
+        initial_visuals=[
             Visual(
                 geometry=Box(size=Vector3(1, 1, 1)),
                 material=Material(name="Blue", color=Color(0, 0, 1, 1)),
             )
         ],
-        collisions=[Collision(name="base_col", geometry=Box(size=Vector3(1, 1, 1)))],
+        initial_collisions=[Collision(name="base_col", geometry=Box(size=Vector3(1, 1, 1)))],
         inertial=Inertial(
             mass=1.0, inertia=InertiaTensor(ixx=0.1, iyy=0.1, izz=0.1, ixy=0.0, ixz=0.0, iyz=0.0)
         ),
@@ -358,18 +358,18 @@ def test_full_robot_import_integration(clean_scene):
     # Tool link with multiple visuals and sphere collision
     l2 = Link(
         name="tool_link",
-        visuals=[
+        initial_visuals=[
             Visual(geometry=Cylinder(radius=0.1, length=0.5)),
             Visual(geometry=Sphere(radius=0.2), origin=Transform(xyz=Vector3(0, 0, 0.5))),
         ],
-        collisions=[Collision(geometry=Sphere(radius=0.2))],
+        initial_collisions=[Collision(geometry=Sphere(radius=0.2))],
     )
 
     # Mesh geometry in 3rd link with mesh collision
     l3 = Link(
         name="mesh_link",
-        visuals=[Visual(geometry=Mesh(resource="package://pkg/mesh.stl"))],
-        collisions=[Collision(geometry=Mesh(resource="package://pkg/mesh.stl"))],
+        initial_visuals=[Visual(geometry=Mesh(resource="package://pkg/mesh.stl"))],
+        initial_collisions=[Collision(geometry=Mesh(resource="package://pkg/mesh.stl"))],
     )
     # Sensors
     Sensor(
@@ -395,7 +395,9 @@ def test_full_robot_import_integration(clean_scene):
     )
 
     # Mesh geometry in 3rd link
-    l3 = Link(name="mesh_link", visuals=[Visual(geometry=Mesh(resource="package://pkg/mesh.stl"))])
+    l3 = Link(
+        name="mesh_link", initial_visuals=[Visual(geometry=Mesh(resource="package://pkg/mesh.stl"))]
+    )
     j2 = Joint(name="j2", type=JointType.FIXED, parent="base_link", child="mesh_link")
 
     # Sensors with more info

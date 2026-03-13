@@ -239,14 +239,14 @@ class TestLink:
         """Test link with visual element."""
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
         visual = Visual(geometry=geom)
-        link = Link(name="link1", visuals=[visual])
+        link = Link(name="link1", initial_visuals=[visual])
         assert link.visuals[0] == visual
 
     def test_link_with_collision(self):
         """Test link with collision element."""
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
         collision = Collision(geometry=geom)
-        link = Link(name="link1", collisions=[collision])
+        link = Link(name="link1", initial_collisions=[collision])
         assert link.collisions[0] == collision
 
     def test_link_with_inertial(self):
@@ -279,8 +279,8 @@ class TestLink:
 
         link = Link(
             name="complete_link",
-            visuals=[visual],
-            collisions=[collision],
+            initial_visuals=[visual],
+            initial_collisions=[collision],
             inertial=inertial,
         )
 

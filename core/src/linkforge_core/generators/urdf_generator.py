@@ -105,8 +105,8 @@ class URDFGenerator(RobotXMLGenerator):
         if validate:
             from ..validation import RobotValidator
 
-            validator = RobotValidator(robot)
-            result = validator.validate()
+            validator = RobotValidator()
+            result = validator.validate(robot)
             if not result.is_valid:
                 error_msgs = [str(issue) for issue in result.errors]
                 raise RobotGeneratorError("Robot validation failed:\n" + "\n".join(error_msgs))

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 try:
-    import numpy as np  # type: ignore[import-not-found]
+    import numpy as np
 except ImportError:
     np = None
 
@@ -665,7 +665,9 @@ def blender_link_to_core_with_origin(
         )
         inertial = Inertial(mass=props.mass, origin=inertial_origin, inertia=inertia_tensor)
 
-    return Link(name=link_name, visuals=visuals, collisions=collisions, inertial=inertial)
+    return Link(
+        name=link_name, initial_visuals=visuals, initial_collisions=collisions, inertial=inertial
+    )
 
 
 def blender_joint_to_core(obj: Any, scene: Any) -> Joint | None:

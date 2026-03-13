@@ -43,13 +43,13 @@ def simple_robot() -> Robot:
     # Create links
     link1 = Link(
         name="base_link",
-        visuals=[
+        initial_visuals=[
             Visual(
                 geometry=Box(size=Vector3(1.0, 1.0, 0.1)),
                 origin=Transform.identity(),
             )
         ],
-        collisions=[
+        initial_collisions=[
             Collision(
                 geometry=Box(size=Vector3(1.0, 1.0, 0.1)),
                 origin=Transform.identity(),
@@ -64,13 +64,13 @@ def simple_robot() -> Robot:
 
     link2 = Link(
         name="link1",
-        visuals=[
+        initial_visuals=[
             Visual(
                 geometry=Box(size=Vector3(0.5, 0.5, 0.5)),
                 origin=Transform.identity(),
             )
         ],
-        collisions=[
+        initial_collisions=[
             Collision(
                 geometry=Box(size=Vector3(0.5, 0.5, 0.5)),
                 origin=Transform.identity(),

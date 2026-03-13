@@ -1180,7 +1180,7 @@ def test_xacro_macro_parent_scope_not_found_raises():
     )
     resolver._handle_macro_def(ET.fromstring(macro_xml))
 
-    with pytest.raises(RobotParserError, match="uses '\^' scope inheritance"):
+    with pytest.raises(RobotParserError, match=r"uses '\^' scope inheritance"):
         resolver.resolve_element(
             ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
         )

@@ -33,7 +33,7 @@ def test_sort_joints_topological():
 
 
 def test_sort_joints_diamond_structure():
-    """Test topological sort with a diamond structure.
+    r"""Test topological sort with a diamond structure.
 
     This ensures that links visited via multiple paths (like link3 below)
     are handled correctly by the visited set check.

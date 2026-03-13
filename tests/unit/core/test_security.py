@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 from linkforge_core.exceptions import RobotModelError
-from linkforge_core.validation.security import find_sandbox_root, validate_mesh_path
+from linkforge_core.validation.security import (
+    find_sandbox_root,
+    validate_mesh_path,
+    validate_package_uri,
+)
 
 
 class TestValidateMeshPath:
@@ -208,3 +212,17 @@ def test_find_sandbox_root_recursion_break():
     # We need to type ignore or ensure it quacks like Path
     res = find_sandbox_root(fake_filepath)
     assert res == fake_root
+
+
+def test_package_uri_security_validation():
+    """Verify security validation for package URIs, including scheme and traversal checks."""
+    with pytest.raises(RobotModelError, match="must start with 'package://'"):
+        validate_package_uri("file://invalid")
+
+    with pytest.raises(RobotModelError, match="missing package name"):
+        validate_package_uri("package://")
+
+    with pytest.raises(RobotModelError, match="contains suspicious path components"):
+        validate_package_uri("package://pkg/./mesh.stl")
+    with pytest.raises(RobotModelError, match="contains suspicious path components"):
+        validate_package_uri("package://pkg//mesh.stl")

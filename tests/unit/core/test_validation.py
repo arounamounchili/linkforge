@@ -85,8 +85,8 @@ def test_valid_robot():
     )
 
     # Validate
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert result.is_valid
     assert result.error_count == 0
@@ -97,8 +97,8 @@ def test_robot_with_no_links():
     """Test validation of robot with no links."""
     robot = Robot(name="empty_robot")
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     assert result.error_count == 1
@@ -113,8 +113,8 @@ def test_duplicate_link_names():
     robot._links.append(Link(name="duplicate", inertial=Inertial(mass=1.0)))
     robot._links.append(Link(name="duplicate", inertial=Inertial(mass=1.0)))
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     errors = [e for e in result.errors if e.title == "Duplicate link name"]
@@ -141,8 +141,8 @@ def test_duplicate_joint_names():
         Joint(name="duplicate", type=JointType.FIXED, parent="base", child="link2")
     )
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     errors = [e for e in result.errors if e.title == "Duplicate joint name"]
@@ -161,8 +161,8 @@ def test_missing_parent_link():
         Joint(name="joint1", type=JointType.FIXED, parent="nonexistent", child="link1")
     )
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     errors = [e for e in result.errors if e.title == "Missing parent link"]
@@ -182,8 +182,8 @@ def test_missing_child_link():
         Joint(name="joint1", type=JointType.FIXED, parent="base", child="nonexistent")
     )
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     errors = [e for e in result.errors if e.title == "Missing child link"]
@@ -205,8 +205,8 @@ def test_disconnected_link():
     # Only connect link1 to base
     robot.add_joint(Joint(name="joint1", type=JointType.FIXED, parent="base", child="link1"))
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     # Disconnected link creates multiple root links
@@ -240,8 +240,8 @@ def test_multiple_parent_joints():
     robot._joints.append(Joint(name="joint2", type=JointType.FIXED, parent="base", child="link2"))
     robot._joints.append(Joint(name="joint3", type=JointType.FIXED, parent="link1", child="link2"))
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     errors = [e for e in result.errors if e.title == "Multiple parent joints"]
@@ -293,8 +293,8 @@ def test_multiple_parent_joints_complex():
     robot._joints.append(Joint(name="joint4a", type=JointType.FIXED, parent="link2", child="link4"))
     robot._joints.append(Joint(name="joint4b", type=JointType.FIXED, parent="link3", child="link4"))
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     errors = [e for e in result.errors if e.title == "Multiple parent joints"]
@@ -318,8 +318,8 @@ def test_low_mass_warning():
     base = Link(name="base", inertial=Inertial(mass=0.001))  # 1 gram
     robot.add_link(base)
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert result.is_valid  # Not an error
     assert result.has_warnings
@@ -336,8 +336,8 @@ def test_missing_inertia_warning():
     base = Link(name="base", inertial=None)
     robot.add_link(base)
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert result.is_valid
     assert result.has_warnings
@@ -353,8 +353,8 @@ def test_missing_geometry_warnings():
     base = Link(name="base", inertial=Inertial(mass=1.0))
     robot.add_link(base)
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert result.is_valid
     assert result.has_warnings
@@ -398,8 +398,8 @@ def test_validator_cycle_detection():
     robot._joints.append(Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2"))
     robot._joints.append(Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1"))
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     assert any(
@@ -420,8 +420,8 @@ def test_validator_no_root_link():
     robot._joints.append(Joint(name="joint1", type=JointType.FIXED, parent="link1", child="link2"))
     robot._joints.append(Joint(name="joint2", type=JointType.FIXED, parent="link2", child="link1"))
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     # Should detect either cycle or no root
@@ -435,11 +435,11 @@ def test_validator_missing_collision():
 
     robot = Robot(name="test_bot")
     # Link with visual but no collision
-    l1 = Link(name="l1", visuals=[Visual(geometry=Box(Vector3(1, 1, 1)))])
+    l1 = Link(name="l1", initial_visuals=[Visual(geometry=Box(Vector3(1, 1, 1)))])
     robot.add_link(l1)
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert result.is_valid
     # Check for warning about missing collision
@@ -459,8 +459,8 @@ def test_validator_unreachable_code_mocks():
     robot.add_link(Link(name="base", inertial=Inertial(mass=1.0)))
 
     with patch.object(robot, "get_root_link", return_value=None):
-        validator = RobotValidator(robot)
-        result = validator.validate()
+        validator = RobotValidator()
+        result = validator.validate(robot)
         # Should trigger "No root link" error
         # Note: logic says if root is None, add error "No root link found"
         # The message is "No root link found. A robot must have exactly one link..."
@@ -481,8 +481,8 @@ def test_validator_unreachable_code_mocks():
 
     # Mock get_root_link to return 'base' explicitly, ignoring the fact that 'disconnected' is also a root
     with patch.object(robot2, "get_root_link", return_value=base):
-        validator2 = RobotValidator(robot2)
-        result2 = validator2.validate()
+        validator2 = RobotValidator()
+        result2 = validator2.validate(robot2)
 
         # Should detect 'disconnected' as a disconnected link
         # Because count for 'disconnected' is 0, and it != base.

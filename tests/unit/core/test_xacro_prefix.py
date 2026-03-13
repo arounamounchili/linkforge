@@ -19,7 +19,8 @@ def test_xacro_namespace_prefix():
     # Create a link with a material to trigger property extraction
     mat = Material(name="3d_printed", color=Color(1, 0.82, 0.12, 1))
     link = Link(
-        name="base_link", visuals=[Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), material=mat)]
+        name="base_link",
+        initial_visuals=[Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), material=mat)],
     )
     robot.add_link(link)
 

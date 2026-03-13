@@ -22,7 +22,9 @@ def test_split_files_and_reimport_simulated():
         joints = []
         for i in range(2):
             name = f"wheel_{i}"
-            link = Link(name=name, visuals=[Visual(geometry=wheel_geom, material=wheel_mat)])
+            link = Link(
+                name=name, initial_visuals=[Visual(geometry=wheel_geom, material=wheel_mat)]
+            )
             links.append(link)
             joint = Joint(
                 name=f"{name}_joint",

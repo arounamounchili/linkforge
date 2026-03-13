@@ -40,7 +40,9 @@ def test_base_link_at_non_origin_preserves_relative_positions():
     base_visual_origin = Transform(xyz=Vector3(5.0, 0.0, 2.0), rpy=Vector3(0.0, 0.0, 0.0))
     base_link = Link(
         name="base_link",
-        visuals=[Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), origin=base_visual_origin)],
+        initial_visuals=[
+            Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), origin=base_visual_origin)
+        ],
         inertial=Inertial(mass=1.0, inertia=InertiaTensor(0.1, 0, 0, 0.1, 0, 0.1)),
     )
 
@@ -48,7 +50,7 @@ def test_base_link_at_non_origin_preserves_relative_positions():
     # Joint origin should be (0, 0, 2) relative to base_link
     link1 = Link(
         name="link1",
-        visuals=[Visual(geometry=Box(size=Vector3(0.5, 0.5, 0.5)))],
+        initial_visuals=[Visual(geometry=Box(size=Vector3(0.5, 0.5, 0.5)))],
         inertial=Inertial(mass=0.5, inertia=InertiaTensor(0.05, 0, 0, 0.05, 0, 0.05)),
     )
 
@@ -56,7 +58,7 @@ def test_base_link_at_non_origin_preserves_relative_positions():
     # Joint origin should be (0, 3, 0) relative to base_link
     link2 = Link(
         name="link2",
-        visuals=[Visual(geometry=Box(size=Vector3(0.5, 0.5, 0.5)))],
+        initial_visuals=[Visual(geometry=Box(size=Vector3(0.5, 0.5, 0.5)))],
         inertial=Inertial(mass=0.5, inertia=InertiaTensor(0.05, 0, 0, 0.05, 0, 0.05)),
     )
 
@@ -133,13 +135,15 @@ def test_base_link_with_rotation_preserves_child_orientations():
 
     base_link = Link(
         name="base_link",
-        visuals=[Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), origin=base_visual_origin)],
+        initial_visuals=[
+            Visual(geometry=Box(size=Vector3(1.0, 1.0, 1.0)), origin=base_visual_origin)
+        ],
         inertial=Inertial(mass=1.0, inertia=InertiaTensor(0.1, 0, 0, 0.1, 0, 0.1)),
     )
 
     child_link = Link(
         name="child_link",
-        visuals=[Visual(geometry=Box(size=Vector3(0.5, 0.5, 0.5)))],
+        initial_visuals=[Visual(geometry=Box(size=Vector3(0.5, 0.5, 0.5)))],
         inertial=Inertial(mass=0.5, inertia=InertiaTensor(0.05, 0, 0, 0.05, 0, 0.05)),
     )
 

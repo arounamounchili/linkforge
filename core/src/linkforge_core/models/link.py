@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+from dataclasses import InitVar, dataclass, field
 
 from ..exceptions import RobotModelError
 from ..utils.string_utils import is_valid_urdf_name
@@ -84,7 +85,7 @@ class Collision:
     name: str | None = None
 
 
-@dataclass(frozen=True)
+@dataclass
 class Link:
     """Robot link (rigid body in the kinematic chain).
 
@@ -93,11 +94,18 @@ class Link:
     """
 
     name: str
-    visuals: list[Visual] = field(default_factory=list)
-    collisions: list[Collision] = field(default_factory=list)
+    initial_visuals: InitVar[Sequence[Visual] | None] = None
+    initial_collisions: InitVar[Sequence[Collision] | None] = None
     inertial: Inertial | None = None
 
-    def __post_init__(self) -> None:
+    _visuals: list[Visual] = field(default_factory=list, init=False)
+    _collisions: list[Collision] = field(default_factory=list, init=False)
+
+    def __post_init__(
+        self,
+        initial_visuals: Sequence[Visual] | None = None,
+        initial_collisions: Sequence[Collision] | None = None,
+    ) -> None:
         """Validate link."""
         if not self.name:
             raise RobotModelError("Link name cannot be empty")
@@ -108,6 +116,29 @@ class Link:
                 f"Link name '{self.name}' contains invalid characters. "
                 "Use only alphanumeric, underscore, or hyphen."
             )
+
+        if initial_visuals:
+            self._visuals.extend(initial_visuals)
+        if initial_collisions:
+            self._collisions.extend(initial_collisions)
+
+    @property
+    def visuals(self) -> Sequence[Visual]:
+        """Get visual representations."""
+        return tuple(self._visuals)
+
+    @property
+    def collisions(self) -> Sequence[Collision]:
+        """Get collision representations."""
+        return tuple(self._collisions)
+
+    def add_visual(self, visual: Visual) -> None:
+        """Add a visual representation."""
+        self._visuals.append(visual)
+
+    def add_collision(self, collision: Collision) -> None:
+        """Add a collision representation."""
+        self._collisions.append(collision)
 
     @property
     def mass(self) -> float:

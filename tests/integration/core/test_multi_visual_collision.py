@@ -18,7 +18,7 @@ class TestMultipleVisualElements:
         v1 = Visual(geometry=geom1, name="box_visual")
         v2 = Visual(geometry=geom2, name="cylinder_visual")
 
-        link = Link(name="multi_visual_link", visuals=[v1, v2])
+        link = Link(name="multi_visual_link", initial_visuals=[v1, v2])
 
         assert len(link.visuals) == 2
         assert link.visuals[0].name == "box_visual"
@@ -29,7 +29,7 @@ class TestMultipleVisualElements:
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
         visual = Visual(geometry=geom)
 
-        link = Link(name="single_visual_link", visuals=[visual])
+        link = Link(name="single_visual_link", initial_visuals=[visual])
 
         assert len(link.visuals) == 1
         assert link.visuals[0] == visual
@@ -52,7 +52,7 @@ class TestMultipleCollisionElements:
         c1 = Collision(geometry=geom1, name="box_collision")
         c2 = Collision(geometry=geom2, name="sphere_collision")
 
-        link = Link(name="multi_collision_link", collisions=[c1, c2])
+        link = Link(name="multi_collision_link", initial_collisions=[c1, c2])
 
         assert len(link.collisions) == 2
         assert link.collisions[0].name == "box_collision"
@@ -63,7 +63,7 @@ class TestMultipleCollisionElements:
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
         collision = Collision(geometry=geom)
 
-        link = Link(name="single_collision_link", collisions=[collision])
+        link = Link(name="single_collision_link", initial_collisions=[collision])
 
         assert len(link.collisions) == 1
         assert link.collisions[0] == collision
@@ -159,7 +159,7 @@ class TestURDFGeneratorMultipleElements:
         v1 = Visual(geometry=geom1, name="visual1")
         v2 = Visual(geometry=geom2, name="visual2")
 
-        link = Link(name="test_link", visuals=[v1, v2])
+        link = Link(name="test_link", initial_visuals=[v1, v2])
         robot.add_link(link)
 
         generator = URDFGenerator()
@@ -182,7 +182,7 @@ class TestURDFGeneratorMultipleElements:
         c1 = Collision(geometry=geom1, name="collision1")
         c2 = Collision(geometry=geom2, name="collision2")
 
-        link = Link(name="test_link", collisions=[c1, c2])
+        link = Link(name="test_link", initial_collisions=[c1, c2])
         robot.add_link(link)
 
         generator = URDFGenerator()
@@ -276,7 +276,7 @@ class TestExportCheckboxBehavior:
         collision = Collision(geometry=geom)
 
         # Link with collision but NO visuals (use_visual_geometry=False case)
-        link = Link(name="test_link", visuals=[], collisions=[collision])
+        link = Link(name="test_link", initial_visuals=[], initial_collisions=[collision])
         robot.add_link(link)
 
         generator = URDFGenerator()
@@ -300,7 +300,7 @@ class TestExportCheckboxBehavior:
         visual = Visual(geometry=geom)
 
         # Link with visual but NO collisions (export_collision=False case)
-        link = Link(name="test_link", visuals=[visual], collisions=[])
+        link = Link(name="test_link", initial_visuals=[visual], initial_collisions=[])
         robot.add_link(link)
 
         generator = URDFGenerator()
@@ -322,7 +322,7 @@ class TestExportCheckboxBehavior:
         robot = Robot(name="test_robot")
 
         # Link with NO visuals and NO collisions (both checkboxes unchecked)
-        link = Link(name="test_link", visuals=[], collisions=[])
+        link = Link(name="test_link", initial_visuals=[], initial_collisions=[])
         robot.add_link(link)
 
         generator = URDFGenerator()

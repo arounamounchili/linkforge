@@ -39,7 +39,8 @@ class RobotValidator:
         >>> from linkforge_core.validation import RobotValidator
         >>> robot = Robot(name="test_robot")
         >>> robot.add_link(Link(name="base_link"))
-        >>> result = RobotValidator(robot).validate()
+        >>> # Validating a robot
+        >>> result = RobotValidator().validate(robot)
         >>> if result.is_valid:
         ...     print("Robot is valid!")
         ... else:
@@ -60,37 +61,38 @@ class RobotValidator:
 
     def __init__(
         self,
-        robot: Robot,
         checks: list[ValidationCheck] | None = None,
     ) -> None:
         """Initialize validator.
 
         Args:
-            robot: Robot model to validate.
             checks: Optional custom list of check instances to run.
                 Defaults to :attr:`DEFAULT_CHECKS` (all standard checks).
         """
-        self.robot = robot
         self._checks: list[ValidationCheck] = checks or [cls() for cls in self.DEFAULT_CHECKS]
 
-    def validate(self) -> ValidationResult:
-        """Run all registered validation checks on the robot model.
+    def validate(self, robot: Robot) -> ValidationResult:
+        """Run all registered validation checks on a robot model.
+
+        Args:
+            robot: The Robot model instance to validate.
 
         Returns:
             ValidationResult containing all errors and warnings.
 
         Example:
-            >>> result = RobotValidator(robot).validate()
+            >>> validator = RobotValidator()
+            >>> result = validator.validate(robot)
             >>> print(f"Valid: {result.is_valid}")
             >>> print(f"Errors: {result.error_count}, Warnings: {result.warning_count}")
             >>> for error in result.errors:
             ...     print(f"  - {error.title}: {error.message}")
 
         Note:
-            Each call creates a fresh :class:`ValidationResult`, so you can
-            call this multiple times after modifying the robot.
+            The validator itself is stateless (aside from its check registry),
+            so a single instance can be reused across multiple robot models.
         """
-        result = ValidationResult(robot_name=self.robot.name)
+        result = ValidationResult(robot_name=robot.name)
         for check in self._checks:
-            check.run(self.robot, result)
+            check.run(robot, result)
         return result

@@ -62,7 +62,7 @@ def test_create_link_object_multi_collisions():
     """Test link creation with multiple collision elements."""
     coll1 = Collision(geometry=Box(size=Vector3(1, 1, 1)), name="c1")
     coll2 = Collision(geometry=Sphere(radius=0.5), name="c2")
-    link = Link(name="multi_coll_link", collisions=[coll1, coll2])
+    link = Link(name="multi_coll_link", initial_collisions=[coll1, coll2])
 
     robot = Robot(name="test")
     obj = create_link_object(link, robot, Path("/tmp"))
@@ -93,7 +93,10 @@ def test_create_link_object_primitives():
     collision = Collision(geometry=sphere_geom, origin=Transform(xyz=Vector3(0, 1, 0)))
 
     link = Link(
-        name="test_link_p", visuals=[visual], collisions=[collision], inertial=Inertial(mass=1.0)
+        name="test_link_p",
+        initial_visuals=[visual],
+        initial_collisions=[collision],
+        inertial=Inertial(mass=1.0),
     )
 
     # 2. Build in Blender
@@ -516,7 +519,7 @@ def test_create_link_object_with_mesh_visual(tmp_path):
     # 2. Model
     mesh_geom = Mesh(resource="v.stl")
     visual = Visual(geometry=mesh_geom)
-    link = Link(name="mesh_link", visuals=[visual])
+    link = Link(name="mesh_link", initial_visuals=[visual])
 
     # 3. Build (providing tmp_path as urdf_dir)
     robot = Robot(name="test")
@@ -701,7 +704,7 @@ def test_create_link_with_material():
     color = Color(r=1.0, g=0.0, b=0.0, a=1.0)
     material = Material(name="RedMat", color=color)
     visual = Visual(geometry=Box(size=Vector3(1, 1, 1)), material=material)
-    link = Link(name="colored_link", visuals=[visual])
+    link = Link(name="colored_link", initial_visuals=[visual])
 
     robot = Robot(name="test")
     obj = create_link_object(link, robot, Path("/tmp"))
@@ -762,7 +765,7 @@ def test_create_link_with_collision_mesh(tmp_path):
     # Model
     mesh_geom = Mesh(resource="collision.stl")
     collision = Collision(geometry=mesh_geom)
-    link = Link(name="mesh_coll_link", collisions=[collision])
+    link = Link(name="mesh_coll_link", initial_collisions=[collision])
 
     # Build
     robot = Robot(name="test")
@@ -1015,8 +1018,8 @@ def test_multi_visual_collision_naming(clean_scene):
 
     link = Link(
         name="multi_link",
-        visuals=[Visual(geometry=box_geom), Visual(geometry=box_geom)],
-        collisions=[Collision(geometry=box_geom), Collision(geometry=box_geom)],
+        initial_visuals=[Visual(geometry=box_geom), Visual(geometry=box_geom)],
+        initial_collisions=[Collision(geometry=box_geom), Collision(geometry=box_geom)],
     )
 
     robot = Robot(name="test")

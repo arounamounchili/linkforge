@@ -181,8 +181,8 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         # Validate robot structure
         from ...linkforge_core.validation import RobotValidator
 
-        validator = RobotValidator(robot)
-        result = validator.validate()
+        validator = RobotValidator()
+        result = validator.validate(robot)
 
         if not result.is_valid:
             # Report the most critical errors via popups/info bar

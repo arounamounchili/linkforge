@@ -50,13 +50,13 @@ def create_stacked_robot() -> Robot:
     # Base link at origin (0, 0, 0)
     base_link = Link(
         name="base_link",
-        visuals=[
+        initial_visuals=[
             Visual(
                 geometry=Box(size=Vector3(2.0, 2.0, 2.0)),
                 origin=Transform.identity(),  # Visual at link origin
             )
         ],
-        collisions=[
+        initial_collisions=[
             Collision(
                 geometry=Box(size=Vector3(2.0, 2.0, 2.0)),
                 origin=Transform.identity(),  # Collision at link origin (NOT world coords!)
@@ -73,13 +73,13 @@ def create_stacked_robot() -> Robot:
     # First cylinder link - link frame should be at (0, 0, 2)
     cylinder_link1 = Link(
         name="cylinder_link1",
-        visuals=[
+        initial_visuals=[
             Visual(
                 geometry=Cylinder(radius=1.0, length=2.0),
                 origin=Transform.identity(),  # Visual at link origin
             )
         ],
-        collisions=[
+        initial_collisions=[
             Collision(
                 geometry=Cylinder(radius=1.0, length=2.0),
                 origin=Transform.identity(),  # Collision at link origin (NOT world 0,0,2!)
@@ -94,13 +94,13 @@ def create_stacked_robot() -> Robot:
     # Second cylinder link - link frame should be at (0, 0, 4)
     cylinder_link2 = Link(
         name="cylinder_link2",
-        visuals=[
+        initial_visuals=[
             Visual(
                 geometry=Cylinder(radius=1.0, length=2.0),
                 origin=Transform.identity(),  # Visual at link origin
             )
         ],
-        collisions=[
+        initial_collisions=[
             Collision(
                 geometry=Cylinder(radius=1.0, length=2.0),
                 origin=Transform.identity(),  # Collision at link origin (NOT world 0,0,4!)

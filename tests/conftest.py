@@ -63,8 +63,8 @@ def simple_link(simple_box: Box, simple_material: Material, simple_inertia: Iner
 
     return Link(
         name="test_link",
-        visuals=[visual],
-        collisions=[collision],
+        initial_visuals=[visual],
+        initial_collisions=[collision],
         inertial=inertial,
     )
 
@@ -87,8 +87,8 @@ def simple_robot(simple_link: Link, simple_joint: Joint) -> Robot:
     robot = Robot(name="test_robot")
 
     # Create two links
-    link1 = Link(name="link1", visuals=simple_link.visuals, inertial=simple_link.inertial)
-    link2 = Link(name="link2", visuals=simple_link.visuals, inertial=simple_link.inertial)
+    link1 = Link(name="link1", initial_visuals=simple_link.visuals, inertial=simple_link.inertial)
+    link2 = Link(name="link2", initial_visuals=simple_link.visuals, inertial=simple_link.inertial)
 
     robot.add_link(link1)
     robot.add_link(link2)

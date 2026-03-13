@@ -233,3 +233,84 @@ def test_get_export_path(tmp_path):
     other.mkdir()
     res_other = f"{other.absolute()}/mesh.stl"
     assert get_export_path(res_other, relative_to=work_dir) == res_other
+
+
+def test_path_utils_search_and_export_edge_cases(tmp_path):
+    """Test additional search paths and export resolution edge cases."""
+    pkg_root = tmp_path / "my_pkg"
+    pkg_root.mkdir()
+    (pkg_root / "mesh.stl").write_text("data")
+
+    # Matching additional path
+    res = resolve_package_path(
+        "package://my_pkg/mesh.stl", tmp_path, additional_search_paths=[tmp_path]
+    )
+    assert res == pkg_root / "mesh.stl"
+
+    # Match where folder name is package name
+    res = resolve_package_path(
+        "package://my_pkg/mesh.stl", tmp_path, additional_search_paths=[pkg_root]
+    )
+    assert res == pkg_root / "mesh.stl"
+
+    res = get_export_path("/root/path.stl", relative_to=Path("/other/path"))
+    assert res == "/root/path.stl"
+
+
+def test_path_utils_ros_and_search_fallbacks(tmp_path):
+    """Test ROS_PACKAGE_PATH and search path priority logic."""
+    import os
+
+    # 1. additional_search_paths with no match
+    pkg_name = "missing_pkg"
+    res = resolve_package_path(
+        f"package://{pkg_name}/x.urdf", tmp_path, additional_search_paths=[tmp_path]
+    )
+    assert res is None
+
+    # 2. ROS_PACKAGE_PATH success and whitespace handling
+    pkg_dir = tmp_path / "ros_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "robot.urdf").write_text("data")
+
+    # Empty entries and actual match
+    old_rpp = os.environ.get("ROS_PACKAGE_PATH")
+    os.environ["ROS_PACKAGE_PATH"] = f"  {os.pathsep}{tmp_path}{os.pathsep} "
+    try:
+        res = resolve_package_path("package://ros_pkg/robot.urdf", tmp_path)
+        assert res == pkg_dir / "robot.urdf"
+
+        # Case where path in RPP is the package itself
+        res = resolve_package_path("package://ros_pkg/robot.urdf", tmp_path)
+        # Re-set RPP to the folder name directly for line 65 coverage
+        os.environ["ROS_PACKAGE_PATH"] = str(pkg_dir)
+        res = resolve_package_path("package://ros_pkg/robot.urdf", tmp_path)
+        assert res == pkg_dir / "robot.urdf"
+
+    finally:
+        if old_rpp:
+            os.environ["ROS_PACKAGE_PATH"] = old_rpp
+        else:
+            del os.environ["ROS_PACKAGE_PATH"]
+
+
+def test_path_utils_export_errors():
+    """Test export path formatting when relativity fails."""
+    # file:// URI absolute but not under relative_to
+    res = "file:///root/mesh.stl"
+    rel = Path("/tmp")
+    assert get_export_path(res, relative_to=rel) == res
+
+
+def test_package_path_resolution_search_failure():
+    """Verify that resolve_package_path returns None when all search paths fail."""
+    from pathlib import Path
+
+    from linkforge_core.utils.path_utils import resolve_package_path
+
+    res = resolve_package_path(
+        "package://non_existent_pkg/model.stl",
+        Path("/tmp"),
+        additional_search_paths=[Path("/dev/null/fake")],
+    )
+    assert res is None

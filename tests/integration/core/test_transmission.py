@@ -51,7 +51,7 @@ def test_simple_transmission():
             )
         ],
     )
-    robot.transmissions.append(trans)
+    robot.add_transmission(trans)
 
     # Export
     generator = URDFGenerator()
@@ -109,7 +109,7 @@ def test_differential_transmission():
             TransmissionActuator(name="right_motor", hardware_interfaces=["velocity"]),
         ],
     )
-    robot.transmissions.append(trans)
+    robot.add_transmission(trans)
 
     # Export
     generator = URDFGenerator()
@@ -169,7 +169,7 @@ def test_four_bar_linkage_transmission():
             )
         ],
     )
-    robot.transmissions.append(trans)
+    robot.add_transmission(trans)
 
     # Export
     generator = URDFGenerator()
@@ -216,7 +216,7 @@ def test_custom_transmission():
         joints=[TransmissionJoint(name="joint1", hardware_interfaces=["effort"])],
         actuators=[TransmissionActuator(name="motor1", hardware_interfaces=["effort"])],
     )
-    robot.transmissions.append(trans)
+    robot.add_transmission(trans)
 
     # Export
     generator = URDFGenerator()
@@ -254,7 +254,7 @@ def test_all_hardware_interfaces():
             joints=[TransmissionJoint(name=f"joint{i}", hardware_interfaces=[interface])],
             actuators=[TransmissionActuator(name=f"motor{i}", hardware_interfaces=[interface])],
         )
-        robot.transmissions.append(trans)
+        robot.add_transmission(trans)
 
     # Export
     generator = URDFGenerator()

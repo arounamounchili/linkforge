@@ -80,10 +80,10 @@ def test_validator_detects_non_existent_ros2_control_joint():
         hardware_plugin="fake_plugin",
         joints=[Ros2ControlJoint(name="joint1", command_interfaces=["position"])],
     )
-    robot.ros2_controls.append(rc)
+    robot.add_ros2_control(rc)
 
-    validator = RobotValidator(robot)
-    result = validator.validate()
+    validator = RobotValidator()
+    result = validator.validate(robot)
 
     assert not result.is_valid
     errors = [e for e in result.issues if e.severity.value == "error"]

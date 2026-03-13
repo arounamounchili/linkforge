@@ -172,3 +172,24 @@ def test_add_geometry_element_unsupported():
     elem = parent.find("geometry")
     assert elem is not None
     assert len(elem) == 0  # No specific geometry child created
+
+
+def test_geometry_parsing_unsupported_mesh_warning():
+    """Verify that malformed mesh geometry triggers a warning during base XML parsing."""
+    from unittest.mock import patch
+
+    from linkforge_core.parsers.xml_base import RobotXMLParser
+
+    class MockParser(RobotXMLParser):
+        def parse(self, *args, **kwargs):
+            pass
+
+    parser = MockParser()
+    elem = ET.Element("geometry")
+    # Add a mesh with invalid scale to trigger the float conversion error
+    ET.SubElement(elem, "mesh", filename="model.stl", scale="invalid_scale_string")
+
+    with patch("linkforge_core.parsers.xml_base.logger") as mock_logger:
+        res = parser._parse_geometry_element(elem)
+        assert res is None
+        mock_logger.warning.assert_called()

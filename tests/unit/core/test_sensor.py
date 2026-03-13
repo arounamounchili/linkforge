@@ -356,3 +356,25 @@ class TestSensor:
                 camera_info=CameraInfo(),
                 update_rate=-10.0,
             )
+
+
+def test_sensor_parsing_pose_robustness():
+    """Verify that malformed or incomplete sensor pose elements are handled gracefully."""
+    import xml.etree.ElementTree as ET
+
+    from linkforge_core.parsers.urdf_parser import URDFParser
+
+    parser = URDFParser()
+    xml = """
+    <gazebo reference="link1">
+        <sensor name="cam" type="camera">
+            <pose>0 0</pose> <!-- Invalid format: not 6 floats -->
+            <camera><image><width>640</width></image></camera>
+        </sensor>
+    </gazebo>
+    """
+    elem = ET.fromstring(xml)
+    sensor = parser._parse_sensor_from_gazebo(elem)
+    # Pose should revert to identity or skip if invalid
+    assert sensor.origin is not None
+    assert sensor.origin.xyz.x == 0

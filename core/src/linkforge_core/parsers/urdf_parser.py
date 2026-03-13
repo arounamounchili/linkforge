@@ -136,7 +136,9 @@ class URDFParser(RobotXMLParser):
                 collisions.append(Collision(geometry=geometry, origin=origin, name=collision_name))
 
         inertial = self._parse_inertial_element(link_elem.find("inertial"))
-        return Link(name=name, visuals=visuals, collisions=collisions, inertial=inertial)
+        return Link(
+            name=name, initial_visuals=visuals, initial_collisions=collisions, inertial=inertial
+        )
 
     def _parse_joint(self, joint_elem: ET.Element) -> Joint:
         """Parse joint element into a Joint object."""
@@ -688,17 +690,17 @@ class URDFParser(RobotXMLParser):
                 elif tag == "transmission":
                     transmission = self._parse_transmission(elem)
                     if transmission:
-                        robot.transmissions.append(transmission)
+                        robot.add_transmission(transmission)
                 elif tag == "ros2_control":
                     ros2_ctrl = self._parse_ros2_control(elem)
                     if ros2_ctrl:
-                        robot.ros2_controls.append(ros2_ctrl)
+                        robot.add_ros2_control(ros2_ctrl)
                 elif tag == "gazebo":
                     sensor = self._parse_sensor_from_gazebo(elem)
                     if sensor:
-                        robot.sensors.append(sensor)
+                        robot.add_sensor(sensor)
                     else:
-                        robot.gazebo_elements.append(self._parse_gazebo_element(elem))
+                        robot.add_gazebo_element(self._parse_gazebo_element(elem))
             except (RobotModelError, ValueError, RobotParserError) as e:
                 logger.warning(f"Skipping invalid {tag} '{elem.get('name')}': {e}")
             finally:
@@ -724,6 +726,9 @@ class URDFParser(RobotXMLParser):
         """
         if not filepath.exists():
             raise FileNotFoundError(f"URDF file not found: {filepath}")
+
+        if filepath.is_dir():
+            raise RobotParserError(f"Target path is a directory, not a file: {filepath}")
 
         # Check if this is a XACRO file by extension (proactive check)
         if filepath.suffix == ".xacro" or filepath.name.endswith(".urdf.xacro"):

@@ -343,7 +343,7 @@ class TestRobotValidatorRegistry:
 
         # Robot with no links AND low mass — only HasLinksCheck should fire
         robot = _empty_robot()
-        result = RobotValidator(robot, checks=[HasLinksCheck()]).validate()
+        result = RobotValidator(checks=[HasLinksCheck()]).validate(robot)
         assert not result.is_valid
         assert len(result.errors) == 1
         assert result.errors[0].title == "No links"
@@ -353,6 +353,6 @@ class TestRobotValidatorRegistry:
     def test_default_registry_runs_all_checks(self) -> None:
         from linkforge_core.validation import RobotValidator
 
-        result = RobotValidator(_simple_robot()).validate()
+        result = RobotValidator().validate(_simple_robot())
         assert result.is_valid  # No errors
         assert result.has_warnings  # Geometry warnings expected

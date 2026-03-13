@@ -23,7 +23,7 @@ def test_macro_generation_wheels():
 
     for i, name in enumerate(["front_left", "front_right", "rear_left", "rear_right"]):
         wheel_link = Link(
-            name=f"{name}_wheel", visuals=[Visual(geometry=wheel_geom, material=wheel_mat)]
+            name=f"{name}_wheel", initial_visuals=[Visual(geometry=wheel_geom, material=wheel_mat)]
         )
         links.append(wheel_link)
 
@@ -79,11 +79,11 @@ def test_macro_generation_mixed():
     base = Link(name="base")
 
     wheel_geom = Cylinder(radius=0.1, length=0.05)
-    wheel1 = Link(name="w1", visuals=[Visual(geometry=wheel_geom)])
-    wheel2 = Link(name="w2", visuals=[Visual(geometry=wheel_geom)])
+    wheel1 = Link(name="w1", initial_visuals=[Visual(geometry=wheel_geom)])
+    wheel2 = Link(name="w2", initial_visuals=[Visual(geometry=wheel_geom)])
 
     arm_geom = Box(size=Vector3(1, 0.1, 0.1))
-    arm = Link(name="arm", visuals=[Visual(geometry=arm_geom)])
+    arm = Link(name="arm", initial_visuals=[Visual(geometry=arm_geom)])
 
     j1 = Joint("j1", JointType.FIXED, "base", "w1")
     j2 = Joint("j2", JointType.FIXED, "base", "w2")

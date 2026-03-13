@@ -355,7 +355,7 @@ def test_geometry_types_roundtrip():
     robot.add_link(
         Link(
             name="box_link",
-            visuals=[
+            initial_visuals=[
                 Visual(
                     geometry=Box(size=Vector3(1.0, 2.0, 3.0)),
                     origin=Transform(xyz=Vector3(0.1, 0.2, 0.3)),
@@ -376,7 +376,7 @@ def test_geometry_types_roundtrip():
     robot.add_link(
         Link(
             name="cylinder_link",
-            visuals=[
+            initial_visuals=[
                 Visual(
                     geometry=Cylinder(radius=0.5, length=2.0),
                     origin=Transform(xyz=Vector3(0.0, 0.0, 1.0)),
@@ -397,7 +397,7 @@ def test_geometry_types_roundtrip():
     robot.add_link(
         Link(
             name="sphere_link",
-            visuals=[
+            initial_visuals=[
                 Visual(
                     geometry=Sphere(radius=0.75),
                     origin=Transform(xyz=Vector3(1.0, 1.0, 1.0)),
@@ -577,7 +577,7 @@ def test_material_preservation_roundtrip():
     robot.add_link(
         Link(
             name="red_link",
-            visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)), material=red_material)],
+            initial_visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)), material=red_material)],
         )
     )
     robot.add_joint(
@@ -592,7 +592,7 @@ def test_material_preservation_roundtrip():
     robot.add_link(
         Link(
             name="blue_link",
-            visuals=[Visual(geometry=Sphere(radius=0.5), material=blue_material)],
+            initial_visuals=[Visual(geometry=Sphere(radius=0.5), material=blue_material)],
         )
     )
     robot.add_joint(
@@ -631,8 +631,8 @@ def test_collision_geometry_roundtrip():
     robot.add_link(
         Link(
             name="test_link",
-            visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))],
-            collisions=[
+            initial_visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))],
+            initial_collisions=[
                 Collision(
                     geometry=Box(size=Vector3(1.1, 1.1, 1.1)),
                     origin=Transform(xyz=Vector3(0, 0, 0.05)),

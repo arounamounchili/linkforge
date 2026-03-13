@@ -116,8 +116,8 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
 
             from ...linkforge_core.validation import RobotValidator
 
-            validator = RobotValidator(robot_dry_run)
-            result = validator.validate()
+            validator = RobotValidator()
+            result = validator.validate(robot_dry_run)
 
             if not result.is_valid:
                 self.report(
@@ -247,8 +247,8 @@ class LINKFORGE_OT_validate_robot(Operator):
             return {"FINISHED"}
 
         # Validate using new validator
-        validator = RobotValidator(robot)
-        result = validator.validate()
+        validator = RobotValidator()
+        result = validator.validate(robot)
 
         # Store results in window manager
         validation_props.has_results = True

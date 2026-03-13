@@ -23,7 +23,7 @@ def test_cylinder_no_origin_roundtrip():
     robot.add_link(
         Link(
             name="test_link",
-            visuals=[
+            initial_visuals=[
                 Visual(
                     geometry=Cylinder(radius=0.08, length=0.15),
                     origin=None,  # NO origin - should be at link frame
