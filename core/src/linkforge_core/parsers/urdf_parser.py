@@ -667,9 +667,13 @@ class URDFParser(RobotXMLParser):
 
                     elif elem.tag == "link":
                         try:
-                            link = self._parse_link(
-                                elem, materials, filepath.parent if filepath else Path(".")
-                            )
+                            # Determine base directory for resolving relative mesh paths.
+                            # When parsing from a string (e.g. after Xacro resolution),
+                            # the filepath may already be the directory.
+                            urdf_dir = (
+                                filepath.parent if filepath and filepath.is_file() else filepath
+                            ) or Path(".")
+                            link = self._parse_link(elem, materials, urdf_dir)
                             self._add_link_robust(robot, link)
                         except (RobotModelError, ValueError, RobotParserError) as e:
                             logger.warning(f"Skipping invalid link '{elem.get('name')}': {e}")

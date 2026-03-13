@@ -387,6 +387,7 @@ def create_link_object(
     if hasattr(link_obj, "linkforge"):
         props = link_obj.linkforge
         props.is_robot_link = True
+        props.urdf_name_stored = link.name
         props.link_name = link.name
 
     # Create all visual geometries (URDF allows multiple <visual> per link)
@@ -635,6 +636,7 @@ def create_joint_object(
     if hasattr(empty, "linkforge_joint"):
         props = empty.linkforge_joint
         props.is_robot_joint = True
+        props.urdf_name_stored = joint.name
         props.joint_name = joint.name
 
         # Set joint type

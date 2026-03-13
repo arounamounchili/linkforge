@@ -12,7 +12,7 @@ from bpy.props import (
     BoolProperty,
     EnumProperty,
     FloatProperty,
-    FloatVectorProperty,  # This was removed in the instruction, but is used later. Re-adding to maintain syntactical correctness.
+    FloatVectorProperty,
     PointerProperty,
     StringProperty,
 )
@@ -21,23 +21,30 @@ from bpy.types import Context, PropertyGroup
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 
 
-def get_link_name(self: bpy.types.PropertyGroup) -> str:
-    """Getter for link_name - mirrors and sanitizes the Blender object name."""
+def get_link_name(self: typing.Any) -> str:
+    """Getter for link_name - returns the persistent URDF identity."""
+    # Prioritize the stored identity to avoid Blender's .001 suffixing
+    if self.urdf_name_stored:
+        return str(self.urdf_name_stored)
+
     if not self.id_data:
         return ""
-    return sanitize_urdf_name(self.id_data.name)
+    return sanitize_urdf_name(str(self.id_data.name))
 
 
-def set_link_name(self: bpy.types.PropertyGroup, value: str) -> None:
-    """Setter for link_name - updates object name and children."""
+def set_link_name(self: typing.Any, value: str) -> None:
+    """Setter for link_name - updates persistent identity and object name."""
     if not value or not self.id_data:
         return
 
     # Sanitize link name for URDF (remove invalid characters)
     sanitized_name = sanitize_urdf_name(value)
 
+    # Store the persistent identity
+    self.urdf_name_stored = sanitized_name
+
     # Update object name to match link name
-    # Note: Blender may append .001, .002 etc if name conflicts exist
+    # Blender will handle collisions by appending suffixes, but our stored name persists
     if self.id_data.name != sanitized_name:
         self.id_data.name = sanitized_name
 
@@ -119,6 +126,14 @@ class LinkPropertyGroup(PropertyGroup):
         name="Is Robot Link",
         description="Mark this object as a robot link",
         default=False,
+    )
+
+    # Persistent URDF Identity
+    # Decouples logical URDF naming from physical Blender object names (resilient to .001 suffixes)
+    urdf_name_stored: StringProperty(  # type: ignore
+        name="URDF Name",
+        description="Persistent URDF name. Prevents mapping breakage if Blender renames the object",
+        default="",
     )
 
     link_name: StringProperty(  # type: ignore

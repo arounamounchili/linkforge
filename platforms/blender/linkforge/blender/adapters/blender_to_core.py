@@ -179,6 +179,8 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
             geom_type = str(obj[tag])
             if geom_type in ("BOX", "CYLINDER", "SPHERE"):
                 return geom_type
+            if geom_type == "MESH":
+                return None
 
     # Count vertices and faces
     vert_count = len(mesh.vertices)

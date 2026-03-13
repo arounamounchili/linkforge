@@ -69,11 +69,16 @@ def execute_collision_preview_update() -> None | float:
     if not bpy.context.view_layer:
         return None
 
-    # Check if it's a primitive (don't regenerate primitives)
-    from ..adapters.blender_to_core import detect_primitive_type
+    # If the intended collision type is a primitive, quality changes are ignored
+    # as primitive parameters (radius/size) are scale-invariant.
+    # We check the property directly to allow mode transitions from Primitive -> Mesh.
+    lf = typing.cast(typing.Any, obj).linkforge
+    intended_type = lf.collision_type
 
-    primitive_type = detect_primitive_type(collision_obj)
-    if primitive_type is not None:
+    if intended_type == "AUTO":
+        intended_type = collision_obj.get("collision_geometry_type", "MESH")
+
+    if intended_type in ("BOX", "SPHERE", "CYLINDER"):
         return None
 
     # Check if it's imported from URDF (don't regenerate imported collisions)

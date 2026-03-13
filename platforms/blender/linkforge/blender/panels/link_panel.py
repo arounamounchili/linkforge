@@ -129,8 +129,12 @@ class LINKFORGE_PT_links(Panel):
 
             is_imported = typing.cast(bool, collision_obj.get("imported_from_urdf"))
 
-            # Show slider for meshes (only relevant for non-primitives)
-            if detected_type == "MESH":
+            # Show quality slider for mesh-based collisions.
+            # If the user explicitly selects MESH mode, we show the slider even if
+            # the current detection is a primitive to allow for mode switching.
+            if props.collision_type == "MESH" or (
+                props.collision_type == "AUTO" and detected_type == "MESH"
+            ):
                 box.separator()
                 row = box.row()
                 # Disable slider if imported from URDF (cannot be simplified via slider)

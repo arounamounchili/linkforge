@@ -18,7 +18,11 @@ from ..utils.property_helpers import find_property_owner
 
 
 def get_joint_name(self: typing.Any) -> str:
-    """Getter for joint_name - mirrors and sanitizes the Blender object name."""
+    """Getter for joint_name - returns the persistent URDF identity."""
+    # Prioritize the stored identity to avoid Blender's .001 suffixing
+    if self.urdf_name_stored:
+        return str(self.urdf_name_stored)
+
     if not self.id_data:
         return ""
 
@@ -28,7 +32,7 @@ def get_joint_name(self: typing.Any) -> str:
 
 
 def set_joint_name(self: typing.Any, value: str) -> None:
-    """Setter for joint_name - updates object name."""
+    """Setter for joint_name - updates persistent identity and object name."""
     if not value or not self.id_data:
         return
 
@@ -36,6 +40,11 @@ def set_joint_name(self: typing.Any, value: str) -> None:
 
     sanitized_name = sanitize_urdf_name(value)
 
+    # Store the persistent identity
+    self.urdf_name_stored = sanitized_name
+
+    # Update object name to match joint name
+    # Blender will handle collisions by appending suffixes, but our stored name persists
     if self.id_data.name != sanitized_name:
         self.id_data.name = sanitized_name
 
@@ -120,6 +129,14 @@ class JointPropertyGroup(PropertyGroup):
         name="Is Robot Joint",
         description="Mark this Empty as a robot joint",
         default=False,
+    )
+
+    # Persistent URDF Identity
+    # Decouples logical URDF naming from physical Blender object names (resilient to .001 suffixes)
+    urdf_name_stored: StringProperty(  # type: ignore
+        name="URDF Name",
+        description="Persistent URDF name. Prevents mapping breakage if Blender renames the object",
+        default="",
     )
 
     joint_name: StringProperty(  # type: ignore
