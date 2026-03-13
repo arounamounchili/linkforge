@@ -416,6 +416,10 @@ As a maintainer-driven project, we aim to be transparent about our availability 
 
 - **Review Cycle**: Expect an initial response or feedback on PRs within **7 business days**.
 - **Issue Triage**: New issues are usually triaged during our weekly maintenance window (typically weekends).
+- **Issue Assignment & Progress**:
+    - If you are interested in an issue, please comment to ask for assignment.
+    - We value momentum. If an assigned issue has no activity (comments or PR) for **14 days**, we will check in.
+    - After **21 days** of inactivity, the issue may be unassigned to allow other contributors to help.
 - **Public Communication**: We prefer all discussions to happen in public issues or GitHub Discussions to ensure the community benefits from the shared knowledge.
 - **Decision Making**: For major architectural changes, we follow a consensus-based approach among core maintainers. If you are proposing a large change, please open a Discussion first to get early feedback.
 
