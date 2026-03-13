@@ -9,6 +9,11 @@ from __future__ import annotations
 import os
 import typing
 from contextlib import contextmanager, suppress
+
+if typing.TYPE_CHECKING:
+    from ..properties.robot_props import RobotPropertyGroup
+    from ..properties.validation_props import ValidationResultProperty
+
 from pathlib import Path
 
 import bpy
@@ -59,7 +64,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
 
-        robot_props = typing.cast(typing.Any, context.scene).linkforge
+        robot_props = typing.cast("RobotPropertyGroup", context.scene.linkforge)
         if robot_props.export_format == "XACRO":
             self.filename_ext = ".xacro"
         else:
@@ -79,7 +84,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
         scene = context.scene
-        robot_props = typing.cast(typing.Any, scene).linkforge
+        robot_props = typing.cast("RobotPropertyGroup", scene.linkforge)
 
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)
@@ -200,7 +205,9 @@ class LINKFORGE_OT_validate_robot(Operator):
             self.report({"ERROR"}, "Validation system not initialized")
             return {"CANCELLED"}
 
-        validation_props = typing.cast(typing.Any, context.window_manager).linkforge_validation
+        validation_props = typing.cast(
+            "ValidationResultProperty", context.window_manager.linkforge_validation
+        )
         validation_props.clear()
 
         # Convert scene to robot

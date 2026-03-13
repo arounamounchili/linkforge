@@ -11,6 +11,9 @@ import bpy
 
 from ..adapters.blender_to_core import detect_primitive_type
 
+if typing.TYPE_CHECKING:
+    from ..properties.joint_props import JointPropertyGroup
+
 
 def is_robot_link(obj: Any) -> bool:
     """Check if blender obj is a robot_link.
@@ -311,7 +314,7 @@ def build_tree_from_stats(
 
     for child_name, (parent_name, joint_obj) in joints_map.items():
         if parent_name in tree:
-            props = typing.cast(typing.Any, joint_obj).linkforge_joint
+            props = typing.cast("JointPropertyGroup", joint_obj.linkforge_joint)
             tree[parent_name].append((child_name, props.joint_name, props.joint_type))
             joints[(parent_name, child_name)] = joint_obj
 

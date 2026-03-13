@@ -219,26 +219,20 @@ def register() -> None:
         bpy.utils.unregister_class(ValidationResultProperty)
         bpy.utils.register_class(ValidationResultProperty)
 
-    import typing
-
-    typing.cast(
-        typing.Any, bpy.types.WindowManager
-    ).linkforge_validation = bpy.props.PointerProperty(  # type: ignore[func-returns-value]
-        type=ValidationResultProperty
-    )
+    # Register window manager property
+    prop = bpy.props.PointerProperty(type=ValidationResultProperty)  # type: ignore[func-returns-value]
+    bpy.types.WindowManager.linkforge_validation = prop  # type: ignore[attr-defined]
 
 
 def unregister() -> None:
     """Unregister property groups."""
-    import typing
 
     with contextlib.suppress(AttributeError):
-        del typing.cast(typing.Any, bpy.types.WindowManager).linkforge_validation
+        delattr(bpy.types.WindowManager, "linkforge_validation")
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(ValidationResultProperty)
 
-    with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(ValidationIssueProperty)
 
 

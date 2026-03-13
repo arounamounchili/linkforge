@@ -51,4 +51,4 @@ def context_and_mode_guard(context: Context) -> typing.Iterator[dict[str, typing
         # Restore original mode if we switched
         if "EDIT" in original_mode:
             with contextlib.suppress(Exception):
-                bpy.ops.object.mode_set(mode=typing.cast(typing.Any, original_mode))
+                bpy.ops.object.mode_set(mode=original_mode)  # type: ignore[arg-type]

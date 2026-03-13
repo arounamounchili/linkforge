@@ -248,19 +248,16 @@ def register() -> None:
         bpy.utils.unregister_class(RobotPropertyGroup)
         bpy.utils.register_class(RobotPropertyGroup)
 
-    import typing
-
-    typing.cast(typing.Any, bpy.types.Scene).linkforge = bpy.props.PointerProperty(
-        type=RobotPropertyGroup
-    )  # type: ignore[func-returns-value]
+    # Register scene property
+    prop = bpy.props.PointerProperty(type=RobotPropertyGroup)  # type: ignore[func-returns-value]
+    bpy.types.Scene.linkforge = prop  # type: ignore[attr-defined]
 
 
 def unregister() -> None:
     """Unregister property group."""
-    import typing
 
     with contextlib.suppress(AttributeError):
-        del typing.cast(typing.Any, bpy.types.Scene).linkforge
+        delattr(bpy.types.Scene, "linkforge")
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(RobotPropertyGroup)

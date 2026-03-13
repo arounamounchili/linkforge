@@ -11,6 +11,9 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
 
+if typing.TYPE_CHECKING:
+    from .link_props import LinkPropertyGroup
+
 from ..utils.property_helpers import find_property_owner
 
 
@@ -77,7 +80,7 @@ def update_joint_hierarchy(self: typing.Any, context: Context) -> None:
                 if (
                     obj.parent == joint_obj
                     and hasattr(obj, "linkforge")
-                    and typing.cast(typing.Any, obj).linkforge.is_robot_link
+                    and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
                 ):
                     # Clear parent while preserving world position
                     clear_parent_keep_transform(obj)
@@ -87,7 +90,9 @@ def update_joint_hierarchy(self: typing.Any, context: Context) -> None:
 def poll_robot_link(self: typing.Any, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
     return bool(
-        obj and hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link
+        obj
+        and hasattr(obj, "linkforge")
+        and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
     )
 
 
