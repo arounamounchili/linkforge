@@ -65,32 +65,36 @@ def execute_collision_preview_update() -> None | float:
     if collision_obj is None:
         return None
 
+    # FAST PATH: If we have a Decimate modifier, just update the ratio
+    # This provides instant feedback without expensive mesh regeneration
+    lf = typing.cast(typing.Any, obj).linkforge
+    quality_ratio = lf.collision_quality / 100.0
+
+    decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
+    if decimate_mod and not collision_obj.get("imported_from_urdf", False):
+        decimate_mod.ratio = max(0.01, quality_ratio)
+        return None
+
+    # SLOW PATH: Full regeneration (only if modifier missing or type changed)
     # Use bpy.context.view_layer reliably
     if not bpy.context.view_layer:
         return None
 
-    # If the intended collision type is a primitive, quality changes are ignored
-    # as primitive parameters (radius/size) are scale-invariant.
-    # We check the property directly to allow mode transitions from Primitive -> Mesh.
-    lf = typing.cast(typing.Any, obj).linkforge
     intended_type = lf.collision_type
-
     if intended_type == "AUTO":
         intended_type = collision_obj.get("collision_geometry_type", "MESH")
 
     if intended_type in ("BOX", "SPHERE", "CYLINDER"):
         return None
 
-    # Check if it's imported from URDF (don't regenerate imported collisions)
     if collision_obj.get("imported_from_urdf", False):
         return None
 
     # Regenerate collision mesh with new quality
-    # The collision_type is stored on the collision_obj itself
     collision_type = collision_obj.get("collision_geometry_type", "MESH")
     regenerate_collision_mesh(obj, str(collision_type), bpy.context)
 
-    return None  # Don't repeat timer
+    return None
 
 
 def regenerate_collision_mesh(
@@ -433,9 +437,11 @@ def _create_mesh_collision_compound(
                 bpy.types.DecimateModifier,
                 merged_obj.modifiers.new(name="Decimate", type="DECIMATE"),
             )
-            decimate_mod.ratio = max(0.01, quality_ratio)  # Clamp to 1% to prevent mesh collapse
+            decimate_mod.ratio = max(0.01, quality_ratio)
             decimate_mod.decimate_type = "COLLAPSE"
-            bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
+            # PRO FIX: Do NOT apply the modifier here.
+            # Keeping it active allows real-time slider updates via the "fast path".
+            # Modifiers will be applied by eval_obj.to_mesh() during export.
 
         # Merge close vertices to prevent simulation jitter
         bpy.ops.object.mode_set(mode="EDIT")
@@ -474,12 +480,13 @@ def _create_mesh_collision_compound(
         # Persist collision type for UI consistency
         merged_obj["collision_geometry_type"] = "MESH"
 
-        # Ensure it's in the same collection
-        for collection in merged_obj.users_collection:
-            collection.objects.unlink(merged_obj)
-        for collection in link_obj.users_collection:
-            if merged_obj.name not in collection.objects:
-                collection.objects.link(merged_obj)
+        # PRO FIX: Ensure collision is linked specifically to the Link's collections
+        # This keeps the Outliner organized and prevents items leaking to Scene Collection
+        for col in list(merged_obj.users_collection):
+            col.objects.unlink(merged_obj)
+        for col in link_obj.users_collection:
+            if merged_obj.name not in col.objects:
+                col.objects.link(merged_obj)
 
     bpy.ops.object.select_all(action="DESELECT")
     link_obj.select_set(True)
