@@ -73,7 +73,14 @@ class LINKFORGE_PT_perceive(Panel):
         # === SENSOR IDENTIFICATION ===
         box = layout.box()
         if box:
-            box.label(text=f"Sensor: {obj.name}", icon="OUTLINER_OB_CAMERA")
+            box.label(text=f"Sensor: {props.sensor_name}", icon="OUTLINER_OB_CAMERA")
+
+            # Professional Transparency: Show Blender object name if different
+            if obj.name != props.sensor_name:
+                sub = box.row()
+                sub.active = False
+                sub.label(text=f"Blender Obj: {obj.name}", icon="INFO")
+
             box.prop(props, "sensor_name")
             box.prop(props, "topic_name")  # Moved here for better UX
             box.prop(props, "sensor_type")
