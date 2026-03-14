@@ -75,7 +75,7 @@ class LINKFORGE_PT_perceive(Panel):
         if box:
             box.label(text=f"Sensor: {props.sensor_name}", icon="OUTLINER_OB_CAMERA")
 
-            # Professional Transparency: Show Blender object name if different
+            # Display Blender object name if it differs from persistent sensor name
             if obj.name != props.sensor_name:
                 sub = box.row()
                 sub.active = False

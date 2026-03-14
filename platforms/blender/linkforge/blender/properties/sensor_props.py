@@ -352,9 +352,12 @@ def register() -> None:
         bpy.utils.unregister_class(SensorPropertyGroup)
         bpy.utils.register_class(SensorPropertyGroup)
 
-    bpy.types.Object.linkforge_sensor = typing.cast(
-        typing.Any, PointerProperty(type=SensorPropertyGroup)
-    )  # noqa: B010
+    prop_name = "linkforge_sensor"
+    setattr(
+        bpy.types.Object,
+        prop_name,
+        typing.cast(typing.Any, PointerProperty(type=SensorPropertyGroup)),
+    )
 
 
 def unregister() -> None:

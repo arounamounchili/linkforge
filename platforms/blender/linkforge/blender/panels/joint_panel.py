@@ -67,7 +67,7 @@ class LINKFORGE_PT_joints(Panel):
         box = layout.box()
         box.label(text=f"Joint: {props.joint_name}", icon="EMPTY_ARROWS")
 
-        # Professional Transparency: Show Blender object name if different
+        # Display Blender object name if it differs from persistent joint name
         if obj.name != props.joint_name:
             sub = box.row()
             sub.active = False

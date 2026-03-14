@@ -87,9 +87,9 @@ class LINKFORGE_PT_links(Panel):
 
         title = f"Link: {props.link_name}"
         icon = "EMPTY_DATA" if is_virtual else "LINKED"
-        box.label(text=title, icon=icon)
+        box.label(text=title, icon=typing.cast(typing.Any, icon))
 
-        # Professional Transparency: Show Blender object name if it differs from URDF name
+        # Display Blender object name if it differs from persistent URDF name
         if obj.name != props.link_name:
             sub = box.row()
             sub.active = False  # Make it subtle
@@ -131,7 +131,9 @@ class LINKFORGE_PT_links(Panel):
         if collision_obj:
             row = box.row()
             icon_name = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
-            row.label(text=f"Detected Collision: {detected_type}", icon=icon_name)
+            row.label(
+                text=f"Detected Collision: {detected_type}", icon=typing.cast(typing.Any, icon_name)
+            )
 
             is_imported = typing.cast(bool, collision_obj.get("imported_from_urdf"))
 
@@ -172,7 +174,11 @@ class LINKFORGE_PT_links(Panel):
                 is_hidden = collision_obj.hide_viewport
                 icon_name = "HIDE_OFF" if is_hidden else "HIDE_ON"
                 text = "Show Collision" if is_hidden else "Hide Collision"
-                col.operator("linkforge.toggle_collision_visibility", icon=icon_name, text=text)
+                col.operator(
+                    "linkforge.toggle_collision_visibility",
+                    icon=typing.cast(typing.Any, icon_name),
+                    text=text,
+                )
 
         # Physics properties
         box.separator()

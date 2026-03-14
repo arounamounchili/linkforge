@@ -306,7 +306,12 @@ def register() -> None:
         bpy.utils.unregister_class(LinkPropertyGroup)
         bpy.utils.register_class(LinkPropertyGroup)
 
-    bpy.types.Object.linkforge = typing.cast(typing.Any, PointerProperty(type=LinkPropertyGroup))  # noqa: B010
+    prop_name = "linkforge"
+    setattr(
+        bpy.types.Object,
+        prop_name,
+        typing.cast(typing.Any, PointerProperty(type=LinkPropertyGroup)),
+    )
 
 
 def unregister() -> None:
