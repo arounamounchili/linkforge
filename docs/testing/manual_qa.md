@@ -39,7 +39,7 @@ This protocol defines the mandatory manual testing steps required before every r
     - *Expected:* The wireframe is **perfectly aligned** with the cylinder, not at `0,0,0`.
 5.  [ ] **Mesh (Simplified) (Complex)**: Use a complex mesh and generate collision.
     - *Expected:* Detected as `MESH`. **Collision Quality** slider is visible.
-    - *Expected:* Moving the slider regenerates the wireframe mesh (decimation).
+    - *Expected:* Moving the slider regenerates the wireframe mesh (decimation) **in real-time** with instant visual feedback in the viewport.
 6.  [ ] **Merged Mesh**: Create a link with **two separate meshes** as children and click `Generate Collision`.
     - *Expected:* LinkForge generates a **single** simplified mesh that encapsulates both meshes.
 
@@ -49,7 +49,7 @@ This protocol defines the mandatory manual testing steps required before every r
 2.  [ ] **Manual Inertia**: Uncheck `Auto-Calculate Inertia`.
     - *Expected:* **CoM Gizmos (Sphere and Axes)** appear at origin.
 3.  [ ] **Inertial Offset**: Change `Inertial Origin XYZ` values.
-    - *Expected:* Gizmos move relative to the link origin in real-time.
+    - *Expected:* Gizmos **move and rotate** relative to the link origin in real-time as you adjust values.
     - *Expected:* Gizmos **stay visible** even if you select a different object.
 
 ---
@@ -132,6 +132,8 @@ This protocol defines the mandatory manual testing steps required before every r
 3.  [ ] **Deletion Cleanup**: Delete a Link object (Empty) in the viewport.
     - *Expected:* Its children (Visuals/Collisions) remain but are no longer locked to the LinkForge system.
     - *Expected:* No "ghost" data remains in the scene properties.
+4.  [ ] **Concurrency/Safety Guard**: While the Forge tab statistics are visible, rapidly add/delete objects or change hierarchies.
+    - *Expected:* The UI and Sidebar remain stable. No **ReferenceError** or **AttributeError** popups (Safety guards in `scene_utils.py` handle these).
 
 ---
 

@@ -420,16 +420,18 @@ def _create_mesh_collision_compound(
     bpy.ops.mesh.convex_hull()
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    # Apply decimation based on collision quality
+    # Add decimation modifier for live quality adjustment
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
     quality_ratio = lf.collision_quality / 100.0
-    if quality_ratio < 1.0:
-        decimate_mod = typing.cast(
-            bpy.types.DecimateModifier, merged_obj.modifiers.new(name="Decimate", type="DECIMATE")
-        )
-        decimate_mod.ratio = quality_ratio
-        decimate_mod.decimate_type = "COLLAPSE"
-        bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
+
+    decimate_mod = typing.cast(
+        bpy.types.DecimateModifier, merged_obj.modifiers.new(name="Decimate", type="DECIMATE")
+    )
+    decimate_mod.ratio = quality_ratio
+    decimate_mod.decimate_type = "COLLAPSE"
+
+    # We do NOT apply the modifier here. Keeping it alive allows the
+    # update_collision_quality_realtime callback to provide instant feedback.
 
     # Restore properties
     if merged_obj:
@@ -1356,6 +1358,10 @@ def update_collision_quality_realtime(
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
     if decimate_mod and isinstance(decimate_mod, bpy.types.DecimateModifier):
         decimate_mod.ratio = quality_ratio
+    else:
+        # FALLBACK: If the modifier was deleted or missing, schedule a full regeneration.
+        # This is safe and ensures the user always sees the correct result.
+        schedule_collision_preview_update(obj)
 
 
 # Registration

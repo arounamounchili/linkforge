@@ -328,6 +328,33 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_purge_ros2_control_data(Operator):
+    """Clear all joints and parameters from the ros2_control configuration."""
+
+    bl_idname = "linkforge.purge_ros2_control_data"
+    bl_label = "Purge Control Data"
+    bl_description = "Clear all joints and parameters from the control system"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operators can run."""
+        return hasattr(context.scene, "linkforge")
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the purge."""
+        scene = context.scene
+        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
+
+        props.ros2_control_joints.clear()
+        props.ros2_control_parameters.clear()
+        props.ros2_control_active_joint_index = 0
+
+        self.report({"INFO"}, "Purged all ROS 2 control data")
+        return {"FINISHED"}
+
+
 # Registration
 classes = [
     LINKFORGE_OT_add_ros2_control_joint,
@@ -335,6 +362,7 @@ classes = [
     LINKFORGE_OT_move_ros2_control_joint,
     LINKFORGE_OT_add_ros2_control_parameter,
     LINKFORGE_OT_remove_ros2_control_parameter,
+    LINKFORGE_OT_purge_ros2_control_data,
 ]
 
 

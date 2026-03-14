@@ -54,10 +54,11 @@ class LINKFORGE_OT_create_sensor(Operator):
         ):
             return True
 
+        # Allow if selection is a child of a link (visual/collision)
         return bool(
             obj.parent
-            and hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            and hasattr(obj.parent, "linkforge")
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
         )
 
     @safe_execute

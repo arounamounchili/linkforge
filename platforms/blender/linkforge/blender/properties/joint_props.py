@@ -21,6 +21,7 @@ if typing.TYPE_CHECKING:
     from .link_props import LinkPropertyGroup
 
 from ..utils.property_helpers import find_property_owner
+from ..utils.scene_utils import clear_stats_cache
 
 
 def get_joint_name(self: JointPropertyGroup) -> str:
@@ -53,6 +54,9 @@ def set_joint_name(self: JointPropertyGroup, value: str) -> None:
     # Blender will handle collisions by appending suffixes, but our stored name persists
     if self.id_data.name != sanitized_name:
         self.id_data.name = sanitized_name
+
+    # Clear statistics cache when name changes
+    clear_stats_cache()
 
 
 def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
@@ -106,14 +110,13 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
                     clear_parent_keep_transform(obj)
                     break  # Only unparent one child
 
+    # Clear statistics cache when hierarchy changes
+    clear_stats_cache(self, context)
+
 
 def poll_robot_link(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
-    return bool(
-        obj
-        and hasattr(obj, "linkforge")
-        and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
-    )
+    return bool(hasattr(obj, "linkforge") and obj.linkforge.is_robot_link)
 
 
 def poll_robot_joint(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
@@ -129,7 +132,7 @@ def poll_robot_joint(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
     # We compare the objects that own the properties
     # find_property_owner is imported at the top
     current_obj = find_property_owner(bpy.context, self, "linkforge_joint")
-    return obj != current_obj
+    return bool(obj != current_obj)
 
 
 class JointPropertyGroup(PropertyGroup):
@@ -156,6 +159,7 @@ class JointPropertyGroup(PropertyGroup):
         maxlen=64,
         get=get_joint_name,
         set=set_joint_name,
+        update=clear_stats_cache,
     )
 
     # Joint type
@@ -171,6 +175,7 @@ class JointPropertyGroup(PropertyGroup):
             ("PLANAR", "Planar", "2D motion in a plane"),
         ],
         default="REVOLUTE",
+        update=clear_stats_cache,
     )
 
     # Parent and child links
@@ -390,7 +395,7 @@ def register() -> None:
         bpy.utils.unregister_class(JointPropertyGroup)
         bpy.utils.register_class(JointPropertyGroup)
 
-    bpy.types.Object.linkforge_joint = PointerProperty(type=JointPropertyGroup)  # type: ignore
+    bpy.types.Object.linkforge_joint = PointerProperty(type=JointPropertyGroup)
 
 
 def unregister() -> None:
@@ -398,7 +403,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge_joint  # type: ignore
+        del bpy.types.Object.linkforge_joint
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(JointPropertyGroup)

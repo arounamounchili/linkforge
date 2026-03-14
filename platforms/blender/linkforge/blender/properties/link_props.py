@@ -19,6 +19,7 @@ from bpy.props import (
 from bpy.types import Context, PropertyGroup
 
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+from ..utils.scene_utils import clear_stats_cache
 
 
 def get_link_name(self: LinkPropertyGroup) -> str:
@@ -47,6 +48,9 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     # Blender will handle collisions by appending suffixes, but our stored name persists
     if self.id_data.name != sanitized_name:
         self.id_data.name = sanitized_name
+
+    # Clear statistics cache when name changes
+    clear_stats_cache()
 
     # Update visual and collision children names to match
     for child in self.id_data.children:
@@ -77,6 +81,9 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
                 if child.name != new_name:
                     child.name = new_name
 
+    # Clear statistics cache when names/structure changes
+    clear_stats_cache()
+
 
 def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context) -> None:
     """Update collision mesh preview when quality changes.
@@ -98,7 +105,7 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
         return
 
     # Skip regeneration for imported URDF models to preserve external data
-    if "imported_from_urdf" in collision_obj:  # type: ignore[operator]
+    if "imported_from_urdf" in collision_obj:
         return
 
     # Update ratio in realtime
@@ -107,12 +114,27 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
     update_collision_quality_realtime(obj, collision_obj)
 
 
+def update_inertia_viz(self: PropertyGroup, context: Context) -> None:
+    """Trigger visual update for inertia gizmos."""
+    from ..utils.scene_utils import clear_stats_cache
+    from ..visualization.inertia_gizmos import tag_redraw
+
+    clear_stats_cache()
+    tag_redraw()
+
+
 def update_auto_inertia_toggle(self: PropertyGroup, context: Context) -> None:
     """Enable visualization when switching to manual inertia."""
     if not hasattr(self, "use_auto_inertia"):
         return
+
+    # Always clear cache to ensure the draw handler sees the update immediately
+    from ..utils.scene_utils import clear_stats_cache
+
+    clear_stats_cache()
+
     if not getattr(self, "use_auto_inertia", True):
-        # User switched to Manual Mode -> Enable visualization
+        # User switched to Manual Mode -> Ensure handler is running
         from ..visualization.inertia_gizmos import ensure_inertia_handler
 
         ensure_inertia_handler()
@@ -142,6 +164,7 @@ class LinkPropertyGroup(PropertyGroup):
         maxlen=64,
         get=get_link_name,
         set=set_link_name,
+        update=clear_stats_cache,
     )
 
     # Inertial properties
@@ -161,6 +184,7 @@ class LinkPropertyGroup(PropertyGroup):
         max=1000000.0,
         unit="MASS",
         precision=3,
+        update=clear_stats_cache,
     )
 
     # Manual inertia tensor (when auto_inertia is disabled)
@@ -216,6 +240,7 @@ class LinkPropertyGroup(PropertyGroup):
         size=3,
         precision=3,
         unit="LENGTH",
+        update=update_inertia_viz,
     )
 
     inertia_origin_rpy: FloatVectorProperty(  # type: ignore
@@ -225,6 +250,7 @@ class LinkPropertyGroup(PropertyGroup):
         size=3,
         precision=3,
         unit="ROTATION",
+        update=update_inertia_viz,
     )
 
     collision_type: EnumProperty(  # type: ignore
@@ -280,7 +306,7 @@ def register() -> None:
         bpy.utils.unregister_class(LinkPropertyGroup)
         bpy.utils.register_class(LinkPropertyGroup)
 
-    bpy.types.Object.linkforge = PointerProperty(type=LinkPropertyGroup)  # type: ignore
+    bpy.types.Object.linkforge = PointerProperty(type=LinkPropertyGroup)
 
 
 def unregister() -> None:
@@ -288,7 +314,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge  # type: ignore
+        del bpy.types.Object.linkforge
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(LinkPropertyGroup)

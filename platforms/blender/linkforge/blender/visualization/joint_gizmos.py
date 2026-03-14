@@ -214,12 +214,16 @@ def _draw_internal() -> None:
     stats = get_robot_statistics(scene)
 
     for obj in stats.joint_objects:
-        # Generate axis geometry for this joint
-        axis_data = generate_axis_geometry(obj, axis_length)
-        all_line_positions.extend(axis_data["lines"])
-        all_line_colors.extend(axis_data["line_colors"])
-        all_tri_positions.extend(axis_data["tris"])
-        all_tri_colors.extend(axis_data["tri_colors"])
+        try:
+            # Generate axis geometry for this joint
+            axis_data = generate_axis_geometry(obj, axis_length)
+            all_line_positions.extend(axis_data["lines"])
+            all_line_colors.extend(axis_data["line_colors"])
+            all_tri_positions.extend(axis_data["tris"])
+            all_tri_colors.extend(axis_data["tri_colors"])
+        except ReferenceError:
+            # Object was deleted mid-draw or mid-frame
+            continue
 
     if not all_line_positions:
         return

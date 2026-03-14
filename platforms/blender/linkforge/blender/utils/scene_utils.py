@@ -110,11 +110,10 @@ class RobotSceneStatistics:
 _stats_cache: dict[tuple[int, int, int], RobotSceneStatistics] = {}
 
 
-def clear_stats_cache() -> None:
+def clear_stats_cache(self: Any = None, context: Any = None) -> None:
     """Clear the global scene statistics cache.
 
-    Should be called when the scene structure changes significantly outside
-     of the standard Blender dependency graph updates (e.g., during tests).
+    Can be used as a direct Blender update callback.
     """
     _stats_cache.clear()
 
@@ -163,12 +162,25 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             # Defensive check: if an operator deleted an object in the same frame,
             # accessing it will raise a ReferenceError. We catch this and invalidate the cache.
             try:
-                # Validate link objects
+                # 1. Validate link objects
                 for link_obj in cached_stats.link_objects.values():
                     _ = link_obj.name
-                # Validate geometry objects
+                # 2. Validate joint objects
+                for joint_obj in cached_stats.joint_objects:
+                    _ = joint_obj.name
+                # 3. Validate sensor objects
+                for sensor_obj in cached_stats.sensor_objects:
+                    _ = sensor_obj.name
+                # 4. Validate transmission objects
+                for trans_obj in cached_stats.transmission_objects:
+                    _ = trans_obj.name
+                # 5. Validate geometry objects
                 for geo_info in cached_stats.geometry_stats.values():
                     _ = geo_info[0].name
+                # 6. Validate manual inertia objects
+                for manual_obj in cached_stats.manual_inertia_objects:
+                    _ = manual_obj.name
+
                 return cached_stats
             except (ReferenceError, KeyError, AttributeError):
                 del _stats_cache[cache_key]
@@ -314,9 +326,12 @@ def build_tree_from_stats(
 
     for child_name, (parent_name, joint_obj) in joints_map.items():
         if parent_name in tree:
-            props = typing.cast("JointPropertyGroup", joint_obj.linkforge_joint)
-            tree[parent_name].append((child_name, props.joint_name, props.joint_type))
-            joints[(parent_name, child_name)] = joint_obj
+            try:
+                props = typing.cast("JointPropertyGroup", joint_obj.linkforge_joint)
+                tree[parent_name].append((child_name, props.joint_name, props.joint_type))
+                joints[(parent_name, child_name)] = joint_obj
+            except (ReferenceError, AttributeError):
+                continue
 
     # find root
     all_children = set(joints_map.keys())

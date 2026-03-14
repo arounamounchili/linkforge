@@ -198,10 +198,14 @@ def draw_inertia_gizmos() -> None:
         stats = get_robot_statistics(context.scene)
 
         for obj in stats.manual_inertia_objects:
-            axis_data = generate_inertia_axes_geometry(obj, axis_length=gizmo_size)
-            if axis_data["lines"]:
-                all_line_positions.extend(axis_data["lines"])
-                all_line_colors.extend(axis_data["line_colors"])
+            try:
+                axis_data = generate_inertia_axes_geometry(obj, axis_length=gizmo_size)
+                if axis_data["lines"]:
+                    all_line_positions.extend(axis_data["lines"])
+                    all_line_colors.extend(axis_data["line_colors"])
+            except ReferenceError:
+                # Object was deleted mid-draw or mid-frame
+                continue
 
         if not all_line_positions:
             return
