@@ -395,7 +395,7 @@ def register() -> None:
         bpy.utils.unregister_class(JointPropertyGroup)
         bpy.utils.register_class(JointPropertyGroup)
 
-    setattr(bpy.types.Object, "linkforge_joint", PointerProperty(type=JointPropertyGroup))  # noqa: B010
+    setattr(bpy.types.Object, "linkforge_joint", typing.cast(typing.Any, PointerProperty(type=JointPropertyGroup)))  # noqa: B010
 
 
 def unregister() -> None:
