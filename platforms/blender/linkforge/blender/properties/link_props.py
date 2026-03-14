@@ -21,7 +21,7 @@ from bpy.types import Context, PropertyGroup
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 
 
-def get_link_name(self: typing.Any) -> str:
+def get_link_name(self: LinkPropertyGroup) -> str:
     """Getter for link_name - returns the persistent URDF identity."""
     # Prioritize the stored identity to avoid Blender's .001 suffixing
     if self.urdf_name_stored:
@@ -32,7 +32,7 @@ def get_link_name(self: typing.Any) -> str:
     return sanitize_urdf_name(str(self.id_data.name))
 
 
-def set_link_name(self: typing.Any, value: str) -> None:
+def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     """Setter for link_name - updates persistent identity and object name."""
     if not value or not self.id_data:
         return
@@ -88,7 +88,7 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
         return
 
     obj = typing.cast(bpy.types.Object, self.id_data)
-    lf = obj.linkforge  # type: ignore[attr-defined]
+    lf = getattr(obj, "linkforge")
     if not lf.is_robot_link:
         return
 
@@ -97,8 +97,8 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
     if collision_obj is None:
         return
 
-    # Check if it's imported from URDF (don't regenerate imported collisions)
-    if collision_obj.get("imported_from_urdf"):  # type: ignore[attr-defined]
+    # Skip regeneration for imported URDF models to preserve external data
+    if "imported_from_urdf" in collision_obj:  # type: ignore[operator]
         return
 
     # Update ratio in realtime

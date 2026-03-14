@@ -6,12 +6,11 @@ import contextlib
 import typing
 
 import bpy
-from bpy.types import Context, Menu, Panel, UIList
 
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
-class LINKFORGE_UL_ros2_control_joints(UIList):
+class LINKFORGE_UL_ros2_control_joints(bpy.types.UIList):
     """UI List representation for ROS 2 control joints.
 
     This class defines how individual joints are displayed in the centralized
@@ -20,7 +19,7 @@ class LINKFORGE_UL_ros2_control_joints(UIList):
 
     def draw_item(
         self,
-        context: Context,
+        context: bpy.types.Context,
         layout: bpy.types.UILayout,
         data: typing.Any,
         item: typing.Any,
@@ -30,13 +29,29 @@ class LINKFORGE_UL_ros2_control_joints(UIList):
         index: int | None = 0,
         flt_flag: int | None = 0,
     ) -> None:
-        """Draw an item in the list."""
+        """Draw an item in the list.
+
+        Args:
+            context: The current Blender context.
+            layout: The current UILayout.
+            data: The property group being displayed.
+            item: The current list item.
+            icon: The icon for the item.
+            active_data: Required by Blender API (pointing to the collection owner).
+            active_propname: Required by Blender API (name of the active property).
+            index: Current item index.
+            flt_flag: Filter flag.
+        """
+        # Note: active_data and active_propname are required by Blender's UIList.draw_item API
+        # signature but are not used in this specific implementation.
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
 
-            # Determine display name dynamically from pointer
+            # Use the joint's custom name if it exists, otherwise fall back to the object name
             display_name = (
-                item.joint_obj.linkforge_joint.joint_name if item.joint_obj else item.name
+                getattr(item.joint_obj, "linkforge_joint").joint_name
+                if item.joint_obj
+                else item.name
             )
 
             row.label(text=display_name, icon="EMPTY_AXIS")
@@ -58,7 +73,7 @@ class LINKFORGE_UL_ros2_control_joints(UIList):
             layout.label(text="", icon="EMPTY_AXIS")
 
 
-class LINKFORGE_PT_control(Panel):
+class LINKFORGE_PT_control(bpy.types.Panel):
     """Panel for configuring motor control and centralized ros2_control."""
 
     bl_label = "Control"
@@ -85,9 +100,9 @@ class LINKFORGE_PT_control(Panel):
         """
         inner = layout.box()
 
-        # Determine display name dynamically from pointer
+        # Use the joint's custom name if it exists, otherwise fall back to the object name
         display_name = (
-            joint_item.joint_obj.linkforge_joint.joint_name
+            getattr(joint_item.joint_obj, "linkforge_joint").joint_name
             if joint_item.joint_obj
             else joint_item.name
         )
@@ -144,14 +159,14 @@ class LINKFORGE_PT_control(Panel):
                     rem_op.target = "JOINT"
                     rem_op.index = i
 
-    def draw(self, context: Context) -> None:
+    def draw(self, context: bpy.types.Context) -> None:
         """Draw the panel."""
         layout = self.layout
         scene = context.scene
         if not (layout and scene):
             return
 
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = getattr(scene, "linkforge")
 
         # Master Toggle
         layout.prop(props, "use_ros2_control", text="Use ROS2 Control", icon="CHECKMARK")
@@ -246,18 +261,18 @@ class LINKFORGE_PT_control(Panel):
         box.prop(props, "controllers_yaml_path")
 
 
-class LINKFORGE_MT_add_control_joint(Menu):
+class LINKFORGE_MT_add_control_joint(bpy.types.Menu):
     """Menu to add joints from the scene to ros2_control."""
 
     bl_label = "Add Joint"
 
-    def draw(self, context: Context) -> None:
+    def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         scene = context.scene
         if not (layout and scene):
             return
 
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = getattr(scene, "linkforge")
 
         # Get all joints from tree using centralized statistics
         stats = get_robot_statistics(scene)
@@ -272,9 +287,9 @@ class LINKFORGE_MT_add_control_joint(Menu):
             if (
                 obj.type == "EMPTY"
                 and hasattr(obj, "linkforge_joint")
-                and obj.linkforge_joint.is_robot_joint  # type: ignore[attr-defined]
+                and getattr(obj, "linkforge_joint").is_robot_joint
             ):
-                name = obj.linkforge_joint.joint_name  # type: ignore[attr-defined]
+                name = getattr(obj, "linkforge_joint").joint_name
                 # Check if the exact object or the exact name was already added
                 if obj not in added_objs and name not in added_names:
                     joint_objs.append((name, obj))

@@ -8,7 +8,13 @@ from __future__ import annotations
 import typing
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
+from bpy.props import (
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
+    PointerProperty,
+    StringProperty,
+)
 from bpy.types import Context, PropertyGroup
 
 if typing.TYPE_CHECKING:
@@ -17,7 +23,7 @@ if typing.TYPE_CHECKING:
 from ..utils.property_helpers import find_property_owner
 
 
-def get_joint_name(self: typing.Any) -> str:
+def get_joint_name(self: JointPropertyGroup) -> str:
     """Getter for joint_name - returns the persistent URDF identity."""
     # Prioritize the stored identity to avoid Blender's .001 suffixing
     if self.urdf_name_stored:
@@ -31,7 +37,7 @@ def get_joint_name(self: typing.Any) -> str:
     return sanitize_urdf_name(str(self.id_data.name))
 
 
-def set_joint_name(self: typing.Any, value: str) -> None:
+def set_joint_name(self: JointPropertyGroup, value: str) -> None:
     """Setter for joint_name - updates persistent identity and object name."""
     if not value or not self.id_data:
         return
@@ -49,7 +55,7 @@ def set_joint_name(self: typing.Any, value: str) -> None:
         self.id_data.name = sanitized_name
 
 
-def update_joint_hierarchy(self: typing.Any, context: Context) -> None:
+def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
     """Update Blender object hierarchy when parent/child links change.
 
     Establishes hierarchy: parent_link → joint → child_link
@@ -101,7 +107,7 @@ def update_joint_hierarchy(self: typing.Any, context: Context) -> None:
                     break  # Only unparent one child
 
 
-def poll_robot_link(self: typing.Any, obj: bpy.types.Object) -> bool:
+def poll_robot_link(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
     return bool(
         obj
@@ -110,7 +116,7 @@ def poll_robot_link(self: typing.Any, obj: bpy.types.Object) -> bool:
     )
 
 
-def poll_robot_joint(self: typing.Any, obj: bpy.types.Object) -> bool:
+def poll_robot_joint(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow other robot joint objects in pointer selection."""
     if not obj or obj.type != "EMPTY":
         return False

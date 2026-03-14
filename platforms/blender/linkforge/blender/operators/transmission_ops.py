@@ -6,15 +6,20 @@ import contextlib
 import typing
 
 import bpy
-from bpy.types import Context, Operator
 
 from ..properties.link_props import sanitize_urdf_name
-from ..utils.decorators import safe_execute
+from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
+    from bpy.types import Context, Operator
+
     from ..properties.joint_props import JointPropertyGroup
     from ..properties.transmission_props import TransmissionPropertyGroup
+else:
+    # Runtime fallback for mock environments where bpy.types might be partially loaded.
+    Context = typing.Any
+    Operator = getattr(getattr(bpy, "types", object), "Operator", object)
 
 
 class LINKFORGE_OT_create_transmission(Operator):
@@ -50,11 +55,11 @@ class LINKFORGE_OT_create_transmission(Operator):
         return bool(
             obj.type == "EMPTY"
             and hasattr(obj, "linkforge_joint")
-            and typing.cast("JointPropertyGroup", obj.linkforge_joint).is_robot_joint  # type: ignore[attr-defined]
+            and typing.cast("JointPropertyGroup", getattr(obj, "linkforge_joint")).is_robot_joint
         )
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator.
 
         Args:
@@ -77,7 +82,7 @@ class LINKFORGE_OT_create_transmission(Operator):
 
         # Get selected joint (guaranteed by poll())
         joint_obj = obj
-        joint_props = typing.cast("JointPropertyGroup", obj.linkforge_joint)  # type: ignore[attr-defined]
+        joint_props = typing.cast("JointPropertyGroup", getattr(obj, "linkforge_joint"))
         joint_name = joint_props.joint_name
         location = obj.matrix_world.translation.copy()
 
@@ -107,7 +112,7 @@ class LINKFORGE_OT_create_transmission(Operator):
 
         # ALIGNMENT: Point arrow along Joint Axis
         if hasattr(joint_obj, "linkforge_joint"):
-            jp = typing.cast("JointPropertyGroup", joint_obj.linkforge_joint)  # type: ignore[attr-defined]
+            jp = typing.cast("JointPropertyGroup", getattr(joint_obj, "linkforge_joint"))
             axis_vec = None
             if jp.axis == "X":
                 axis_vec = (1, 0, 0)
@@ -134,17 +139,20 @@ class LINKFORGE_OT_create_transmission(Operator):
             transmission_empty.rotation_euler = (0, 0, 0)
 
         # Move transmission to same collection as parent joint (for clean organization)
-        from ..utils.scene_utils import sync_object_collections
-
-        sync_object_collections(transmission_empty, joint_obj)
+        # Remove from all current collections
+        for coll in list(transmission_empty.users_collection):
+            coll.objects.unlink(transmission_empty)
+        # Add to parent's collection
+        if joint_obj.users_collection:
+            parent_collection = joint_obj.users_collection[0]
+            parent_collection.objects.link(transmission_empty)
 
         # Set display size from preferences
         transmission_empty.empty_display_size = empty_size
 
         # Enable transmission properties
         trans_props = typing.cast(
-            "TransmissionPropertyGroup",
-            transmission_empty.linkforge_transmission,  # type: ignore[attr-defined]
+            "TransmissionPropertyGroup", getattr(transmission_empty, "linkforge_transmission")
         )
         trans_props.is_robot_transmission = True
         trans_props.transmission_name = sanitize_urdf_name(transmission_empty.name)
@@ -193,13 +201,12 @@ class LINKFORGE_OT_delete_transmission(Operator):
             obj.type == "EMPTY"
             and hasattr(obj, "linkforge_transmission")
             and typing.cast(
-                "TransmissionPropertyGroup",
-                obj.linkforge_transmission,  # type: ignore[attr-defined]
+                "TransmissionPropertyGroup", getattr(obj, "linkforge_transmission")
             ).is_robot_transmission
         )
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator.
 
         Args:
@@ -212,11 +219,12 @@ class LINKFORGE_OT_delete_transmission(Operator):
         if not obj:
             return {"CANCELLED"}
 
-        trans_props = typing.cast(
-            "TransmissionPropertyGroup",
-            obj.linkforge_transmission,  # type: ignore[attr-defined]
+        transmission_name = (
+            typing.cast(
+                "TransmissionPropertyGroup", getattr(obj, "linkforge_transmission")
+            ).transmission_name
+            or obj.name
         )
-        transmission_name = trans_props.transmission_name or obj.name
 
         # Delete the object
         bpy.data.objects.remove(obj, do_unlink=True)

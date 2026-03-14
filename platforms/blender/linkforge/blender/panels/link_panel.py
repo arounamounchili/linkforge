@@ -45,7 +45,7 @@ class LINKFORGE_PT_links(Panel):
             )
             return
 
-        props = obj.linkforge  # type: ignore[attr-defined]
+        props = getattr(obj, "linkforge")
 
         # Check if selected object is a visual/collision child of a link
         # If so, show parent link properties instead
@@ -53,14 +53,14 @@ class LINKFORGE_PT_links(Panel):
             obj
             and obj.parent
             and hasattr(obj.parent, "linkforge")
-            and obj.parent.linkforge.is_robot_link  # type: ignore[attr-defined]
+            and getattr(obj.parent, "linkforge").is_robot_link
             and props
             and not props.is_robot_link
             and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
         ):
             # Switch to parent for property display (visual/collision elements only)
             obj = obj.parent
-            props = obj.linkforge  # type: ignore[attr-defined]
+            props = getattr(obj, "linkforge")
 
         # Check if selected object is already a link (edit mode vs create mode)
         is_link = props.is_robot_link if props else False

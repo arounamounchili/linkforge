@@ -69,7 +69,7 @@ def create_material_from_color(color: Color, name: str) -> bpy.types.Material | 
     return mat
 
 
-def create_primitive_mesh(geometry: typing.Any, name: str) -> bpy.types.Object | None:
+def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.types.Object | None:
     """Create a Blender mesh object from primitive geometry.
 
     This function generates native Blender mesh primitives (Cube, Cylinder,
@@ -336,7 +336,7 @@ def normalize_and_consolidate_imported_objects(
     return final_obj
 
 
-def _get_geometry_type_str(geometry: typing.Any) -> str:
+def _get_geometry_type_str(geometry: Box | Cylinder | Sphere | Mesh) -> str:
     """Get geometry type string from geometry instance."""
     geometry_type_map = {
         Box: "BOX",

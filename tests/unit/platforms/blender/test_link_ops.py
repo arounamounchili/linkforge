@@ -538,17 +538,17 @@ def test_regenerate_collision_logic(mocker) -> None:
     assert any("_collision" in c.name for c in link_obj.children)
 
 
-def test_link_ops_main_entry(mocker) -> None:
+def test_link_ops_main_entry() -> None:
     """Simulate module main entry."""
     from linkforge.blender.operators import link_ops
 
-    mock_reg = mocker.patch.object(link_ops, "register")
-    # Just call register as if it was triggered by __main__
-    link_ops.register()
-    mock_reg.assert_called_once()
+    with patch.object(link_ops, "register") as mock_reg:
+        # Just call register as if it was triggered by __main__
+        link_ops.register()
+        mock_reg.assert_called_once()
 
 
-def test_inertia_mesh_fallback(mocker) -> None:
+def test_inertia_mesh_fallback() -> None:
     """Test inertia calculation falling back to mesh integration."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -563,7 +563,7 @@ def test_inertia_mesh_fallback(mocker) -> None:
     assert link_obj.linkforge.inertia_ixx > 0
 
 
-def test_generate_collision_all_reporting(mocker) -> None:
+def test_generate_collision_all_reporting() -> None:
     """Test collision all with mixed results."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -578,7 +578,7 @@ def test_generate_collision_all_reporting(mocker) -> None:
     bpy.ops.linkforge.generate_collision_all()
 
 
-def test_link_ops_collection_fallback(mocker) -> None:
+def test_link_ops_collection_fallback() -> None:
     """Test fallback to scene collection if context.collection is missing."""
     from linkforge.blender.operators.link_ops import create_collision_for_link
 
@@ -612,7 +612,7 @@ def test_link_ops_collection_fallback(mocker) -> None:
         assert mock_prim.called
 
 
-def test_inertia_extraction_failure(mocker) -> None:
+def test_inertia_extraction_failure() -> None:
     """Hit failed inertia extraction branches using a non-primitive."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -622,14 +622,13 @@ def test_inertia_extraction_failure(mocker) -> None:
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
 
-    # Mock extract_mesh_triangles to return None
-    mocker.patch(
+    with patch(
         "linkforge.blender.adapters.blender_to_core.extract_mesh_triangles", return_value=None
-    )
-    assert calculate_inertia_for_link(link_obj) is False
+    ):
+        assert calculate_inertia_for_link(link_obj) is False
 
 
-def test_link_ops_debounced_preview_logic(mocker) -> None:
+def test_link_ops_debounced_preview_logic() -> None:
     """Hit all error paths in execute_collision_preview_update."""
     with patch("linkforge.blender.operators.link_ops._preview_pending_object", None):
         assert execute_collision_preview_update() is None

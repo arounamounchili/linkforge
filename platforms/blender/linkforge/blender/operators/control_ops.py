@@ -4,12 +4,17 @@ import typing
 
 import bpy
 from bpy.props import IntProperty, StringProperty
-from bpy.types import Context, Operator
 
-from ..utils.decorators import safe_execute
+from ..utils.decorators import OperatorReturn, safe_execute
 
 if typing.TYPE_CHECKING:
-    from ..properties.joint_props import JointPropertyGroup
+    from bpy.types import Context, Operator
+
+    from ..properties.robot_props import RobotPropertyGroup
+else:
+    # Runtime fallback for mock environments where bpy.types might be partially loaded.
+    Context = typing.Any
+    Operator = getattr(getattr(bpy, "types", object), "Operator", object)
 
 
 class LINKFORGE_OT_add_ros2_control_joint(Operator):
@@ -40,7 +45,7 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
         return hasattr(context.scene, "linkforge")
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator.
 
         Args:
@@ -52,7 +57,7 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
 
         # Find the target joint object we intend to add
         target_joint_obj = next(
@@ -61,9 +66,8 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
                 for obj in scene.objects
                 if obj.type == "EMPTY"
                 and hasattr(obj, "linkforge_joint")
-                and typing.cast("JointPropertyGroup", obj.linkforge_joint).is_robot_joint  # type: ignore[attr-defined]
-                and typing.cast("JointPropertyGroup", obj.linkforge_joint).joint_name  # type: ignore[attr-defined]
-                == self.joint_name
+                and obj.linkforge_joint.is_robot_joint
+                and obj.linkforge_joint.joint_name == self.joint_name
             ),
             None,
         )
@@ -127,7 +131,7 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
         return bool(props and len(props.ros2_control_joints) > 0)
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator.
 
         Args:
@@ -138,7 +142,7 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
         """
         if not context.scene:
             return {"CANCELLED"}
-        props = context.scene.linkforge  # type: ignore[attr-defined]
+        props = typing.cast("RobotPropertyGroup", getattr(context.scene, "linkforge"))
         index = props.ros2_control_active_joint_index
 
         if 0 <= index < len(props.ros2_control_joints):
@@ -184,7 +188,7 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         return bool(props and len(props.ros2_control_joints) > 1)
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator.
 
         Args:
@@ -195,7 +199,7 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         """
         if not context.scene:
             return {"CANCELLED"}
-        props = context.scene.linkforge  # type: ignore[attr-defined]
+        props = typing.cast("RobotPropertyGroup", getattr(context.scene, "linkforge"))
         index = props.ros2_control_active_joint_index
         new_index = index
 
@@ -207,7 +211,7 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
             return {"CANCELLED"}
 
         props.ros2_control_joints.move(index, new_index)
-        props.ros2_control_active_joint_index = new_index  # type: ignore[attr-defined]
+        props.ros2_control_active_joint_index = new_index
         return {"FINISHED"}
 
 
@@ -238,7 +242,7 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
         return hasattr(context.scene, "linkforge")
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the addition of a parameter.
 
         Args:
@@ -248,9 +252,7 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
             Set containing the execution state.
         """
         scene = context.scene
-        if not scene:
-            return {"CANCELLED"}
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
 
         if self.target == "GLOBAL":
             param = props.ros2_control_parameters.add()
@@ -296,7 +298,7 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
         return hasattr(context.scene, "linkforge")
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the removal of a parameter.
 
         Args:
@@ -306,9 +308,7 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
             Set containing the execution state.
         """
         scene = context.scene
-        if not scene:
-            return {"CANCELLED"}
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
 
         if self.target == "GLOBAL":
             items = props.ros2_control_parameters
@@ -328,83 +328,6 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
         return {"FINISHED"}
 
 
-class LINKFORGE_OT_purge_ros2_control_data(Operator):
-    """Purge stale or unused data from the ros2_control configuration.
-
-    This operator synchronizes the centralized control list with the actual
-    kinematic tree in the scene. It removes entries linking to deleted objects
-    and updates names for renamed joints.
-    """
-
-    bl_idname = "linkforge.purge_ros2_control_data"
-    bl_label = "Purge Unused Data"
-    bl_description = "Sync control system with kinematic tree (removes stale entries)"
-    bl_options = {"REGISTER", "UNDO"}
-
-    @classmethod
-    def poll(cls, context: Context) -> bool:
-        """Check if operators can run."""
-        return hasattr(context.scene, "linkforge")
-
-    @safe_execute
-    def execute(self, context: Context) -> set[str]:
-        """Execute the purge operation."""
-        scene = context.scene
-        if not scene:
-            return {"CANCELLED"}
-
-        props = scene.linkforge
-        joints = props.ros2_control_joints
-
-        to_remove = []
-        updated_count = 0
-
-        # Scan for stale or renamed joints
-        for i, item in enumerate(joints):
-            obj = item.joint_obj
-
-            # Check if object still exists and is a robot joint
-            exists = obj is not None and obj.name in scene.objects
-            is_valid = (
-                exists
-                and hasattr(obj, "linkforge_joint")
-                and typing.cast(
-                    "JointPropertyGroup",
-                    obj.linkforge_joint,  # type: ignore[attr-defined]
-                ).is_robot_joint
-            )
-
-            if not is_valid:
-                to_remove.append(i)
-                continue
-
-            # Check for name mismatch (renamed in scene but not in control system)
-            scene_name = typing.cast(
-                "JointPropertyGroup",
-                obj.linkforge_joint,  # type: ignore[attr-defined]
-            ).joint_name
-            if item.name != scene_name:
-                item.name = scene_name
-                updated_count += 1
-
-        # Remove in reverse order to preserve indices
-        for i in reversed(to_remove):
-            joints.remove(i)
-
-        removed_count = len(to_remove)
-
-        # Reset active index if it's now out of bounds
-        if props.ros2_control_active_joint_index >= len(joints):
-            props.ros2_control_active_joint_index = max(0, len(joints) - 1)
-
-        result_msg = (
-            f"Purge complete: {removed_count} stale removed, {updated_count} names updated."
-        )
-        self.report({"INFO"}, result_msg)
-
-        return {"FINISHED"}
-
-
 # Registration
 classes = [
     LINKFORGE_OT_add_ros2_control_joint,
@@ -412,7 +335,6 @@ classes = [
     LINKFORGE_OT_move_ros2_control_joint,
     LINKFORGE_OT_add_ros2_control_parameter,
     LINKFORGE_OT_remove_ros2_control_parameter,
-    LINKFORGE_OT_purge_ros2_control_data,
 ]
 
 

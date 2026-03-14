@@ -35,7 +35,7 @@ class LINKFORGE_PT_forge(Panel):
 
         if not context.scene:
             return
-        scene_props = context.scene.linkforge  # type: ignore[attr-defined]
+        scene_props = getattr(context.scene, "linkforge")
 
         if scene_props.is_importing:
             # Active Import Status

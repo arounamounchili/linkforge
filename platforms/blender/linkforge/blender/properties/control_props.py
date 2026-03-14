@@ -7,7 +7,12 @@ robot joints and ros2_control interfaces (command and state).
 from __future__ import annotations
 
 import bpy
-from bpy.props import BoolProperty, CollectionProperty, EnumProperty, StringProperty
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    StringProperty,
+)
 from bpy.types import PropertyGroup
 
 

@@ -9,11 +9,6 @@ from __future__ import annotations
 import os
 import typing
 from contextlib import contextmanager, suppress
-
-if typing.TYPE_CHECKING:
-    from ..properties.robot_props import RobotPropertyGroup
-    from ..properties.validation_props import ValidationResultProperty
-
 from pathlib import Path
 
 import bpy
@@ -21,7 +16,11 @@ from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
 
 from ...linkforge_core.logging_config import get_logger
-from ..utils.decorators import safe_execute
+from ..utils.decorators import OperatorReturn, safe_execute
+
+if typing.TYPE_CHECKING:
+    from ..properties.robot_props import RobotPropertyGroup
+    from ..properties.validation_props import ValidationResultProperty
 
 logger = get_logger(__name__)
 
@@ -64,7 +63,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
 
-        robot_props = typing.cast("RobotPropertyGroup", context.scene.linkforge)  # type: ignore[attr-defined]
+        robot_props = typing.cast(typing.Any, context.scene).linkforge
         if robot_props.export_format == "XACRO":
             self.filename_ext = ".xacro"
         else:
@@ -75,7 +74,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         return ExportHelper.invoke(self, context, event)
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the export."""
         # Import here to avoid circular dependencies
         from ...linkforge_core import URDFGenerator, XACROGenerator
@@ -84,7 +83,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
         scene = context.scene
-        robot_props = typing.cast("RobotPropertyGroup", scene.linkforge)  # type: ignore[attr-defined]
+        robot_props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
 
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)
@@ -193,7 +192,7 @@ class LINKFORGE_OT_validate_robot(Operator):
     bl_description = "Validate the robot structure for errors"
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute validation."""
         from ...linkforge_core.validation import RobotValidator
         from ..adapters.blender_to_core import scene_to_robot
@@ -206,7 +205,7 @@ class LINKFORGE_OT_validate_robot(Operator):
             return {"CANCELLED"}
 
         validation_props = typing.cast(
-            "ValidationResultProperty", context.window_manager.linkforge_validation
+            "ValidationResultProperty", getattr(context.window_manager, "linkforge_validation")
         )
         validation_props.clear()
 

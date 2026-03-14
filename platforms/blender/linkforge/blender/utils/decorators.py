@@ -4,14 +4,23 @@ import functools
 import traceback
 import typing
 from collections.abc import Callable
-from typing import Any
 
 from ...linkforge_core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-def safe_execute(func: Callable[..., Any]) -> Callable[..., Any]:
+P = typing.ParamSpec("P")
+R = typing.TypeVar("R")
+
+
+# Common return types for Blender operators
+OperatorReturn = set[
+    typing.Literal["RUNNING_MODAL", "CANCELLED", "FINISHED", "PASS_THROUGH", "INTERFACE"]
+]
+
+
+def safe_execute(func: Callable[P, OperatorReturn]) -> Callable[P, OperatorReturn]:
     """Decorator to wrap operator execute methods with robust error handling.
 
     This ensures that unhandled exceptions are caught, logged with full tracebacks,
@@ -24,17 +33,21 @@ def safe_execute(func: Callable[..., Any]) -> Callable[..., Any]:
     """
 
     @functools.wraps(func)
-    def wrapper(self: Any, context: Any) -> set[str]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> OperatorReturn:
         try:
-            return typing.cast(set[str], func(self, context))
+            return func(*args, **kwargs)
         except Exception as e:
+            # Determine self for reporting
+            # In Blender operators, 'self' is the first argument of execute
+            self_obj = args[0] if args else None
+
             # Log full traceback for debugging
-            logger.error(f"Generate Error in {self.bl_idname}: {e}")
+            logger.error(f"Generate Error: {e}")
             logger.error(traceback.format_exc())
 
-            # Report clean error to user
-            # We strip the traceback from the UI message to keep it pro
-            self.report({"ERROR"}, f"Operation failed: {str(e)}")
+            if self_obj and hasattr(self_obj, "report"):
+                # Report clean error to user
+                self_obj.report({"ERROR"}, f"Operation failed: {str(e)}")
 
             # Return CANCELLED to signal failure to Blender
             return {"CANCELLED"}

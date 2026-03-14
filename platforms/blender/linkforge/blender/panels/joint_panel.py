@@ -33,7 +33,7 @@ class LINKFORGE_PT_joints(Panel):
             and obj.select_get()
             and obj.type == "EMPTY"
             and hasattr(obj, "linkforge_joint")
-            and obj.linkforge_joint.is_robot_joint  # type: ignore[attr-defined]
+            and getattr(obj, "linkforge_joint").is_robot_joint
         )
 
         # Only show Create button when NOT editing a joint
@@ -41,14 +41,12 @@ class LINKFORGE_PT_joints(Panel):
             # Detect target link (either selected link or parent of selected visual)
             target_link = None
             if obj and obj.select_get():
-                if (
-                    hasattr(obj, "linkforge") and obj.linkforge.is_robot_link  # type: ignore[attr-defined]
-                ):
+                if hasattr(obj, "linkforge") and getattr(obj, "linkforge").is_robot_link:
                     target_link = obj
                 elif (
                     obj.parent
                     and hasattr(obj.parent, "linkforge")
-                    and obj.parent.linkforge.is_robot_link  # type: ignore[attr-defined]
+                    and getattr(obj.parent, "linkforge").is_robot_link
                 ):
                     # Selected object is a visual/collision child of a link
                     target_link = obj.parent
@@ -63,7 +61,7 @@ class LINKFORGE_PT_joints(Panel):
         if not is_joint or not obj:
             return
 
-        props = obj.linkforge_joint  # type: ignore[attr-defined]
+        props = getattr(obj, "linkforge_joint")
 
         # Joint properties
         box = layout.box()

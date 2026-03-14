@@ -8,7 +8,7 @@ import bpy
 from bpy.props import StringProperty
 from bpy.types import Context, Operator
 
-from ..utils.decorators import safe_execute
+from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
@@ -31,7 +31,7 @@ class LINKFORGE_OT_select_tree_object(Operator):
     child_link = StringProperty(name="Child Name")  # type: ignore[func-returns-value]
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator.
 
         Args:
@@ -71,7 +71,7 @@ class LINKFORGE_OT_select_root_link(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator.
 
         Args:
@@ -123,11 +123,11 @@ class LINKFORGE_OT_clear_component_search(Operator):
         """
         if not hasattr(context.scene, "linkforge"):
             return False
-        props = context.scene.linkforge  # type: ignore[attr-defined]
+        props = getattr(context.scene, "linkforge")
         return bool(props.component_browser_search)
 
     @safe_execute
-    def execute(self, context: Context) -> set[str]:
+    def execute(self, context: Context) -> OperatorReturn:
         """Clear the component browser search field.
 
         Args:
@@ -139,7 +139,7 @@ class LINKFORGE_OT_clear_component_search(Operator):
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = getattr(scene, "linkforge")
         props.component_browser_search = ""
         return {"FINISHED"}
 

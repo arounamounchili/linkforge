@@ -24,7 +24,7 @@ if typing.TYPE_CHECKING:
 from ..utils.property_helpers import find_property_owner
 
 
-def get_sensor_name(self: typing.Any) -> str:
+def get_sensor_name(self: SensorPropertyGroup) -> str:
     """Getter for sensor_name - mirrors and sanitizes the Blender object name."""
     if not self.id_data:
         return ""
@@ -35,7 +35,7 @@ def get_sensor_name(self: typing.Any) -> str:
     return sanitize_urdf_name(self.id_data.name)
 
 
-def set_sensor_name(self: typing.Any, value: str) -> None:
+def set_sensor_name(self: SensorPropertyGroup, value: str) -> None:
     """Setter for sensor_name - updates object name."""
     if not value or not self.id_data:
         return
@@ -51,7 +51,7 @@ def set_sensor_name(self: typing.Any, value: str) -> None:
         self.id_data.name = sanitized_name
 
 
-def update_sensor_hierarchy(self: typing.Any, context: Context) -> None:
+def update_sensor_hierarchy(self: SensorPropertyGroup, context: Context) -> None:
     """Update Blender object hierarchy when attached link changes.
 
     Automatically reparents sensor to new link and moves to link's collection.
@@ -83,7 +83,7 @@ def update_sensor_hierarchy(self: typing.Any, context: Context) -> None:
         clear_parent_keep_transform(sensor_obj)
 
 
-def poll_robot_link(self: typing.Any, obj: bpy.types.Object) -> bool:
+def poll_robot_link(self: SensorPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
     return bool(
         obj

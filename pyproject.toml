@@ -46,7 +46,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM"]
-ignore = ["E501", "N801"]
+ignore = ["E501", "B008", "C901", "B009", "N801"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]

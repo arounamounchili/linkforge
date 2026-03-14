@@ -6,8 +6,6 @@ for ros2_control integration.
 
 from __future__ import annotations
 
-import typing
-
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
@@ -15,7 +13,7 @@ from bpy.types import Context, PropertyGroup
 from ..utils.property_helpers import find_property_owner
 
 
-def get_transmission_name(self: typing.Any) -> str:
+def get_transmission_name(self: TransmissionPropertyGroup) -> str:
     """Getter for transmission_name.
 
     Args:
@@ -32,7 +30,7 @@ def get_transmission_name(self: typing.Any) -> str:
     return sanitize_urdf_name(self.id_data.name)
 
 
-def set_transmission_name(self: typing.Any, value: str) -> None:
+def set_transmission_name(self: TransmissionPropertyGroup, value: str) -> None:
     """Setter for transmission_name.
 
     Args:
@@ -50,7 +48,7 @@ def set_transmission_name(self: typing.Any, value: str) -> None:
         self.id_data.name = sanitized_name
 
 
-def update_transmission_hierarchy(self: typing.Any, context: Context) -> None:
+def update_transmission_hierarchy(self: TransmissionPropertyGroup, context: Context) -> None:
     """Update Blender object hierarchy when joint changes.
 
     Automatically reparents transmission to new joint and moves to joint's collection.
@@ -90,7 +88,7 @@ def update_transmission_hierarchy(self: typing.Any, context: Context) -> None:
         clear_parent_keep_transform(transmission_obj)
 
 
-def poll_robot_joint(self: typing.Any, obj: bpy.types.Object) -> bool:
+def poll_robot_joint(self: TransmissionPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot joint objects in pointer selection.
 
     Args:

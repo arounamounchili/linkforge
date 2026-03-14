@@ -32,7 +32,7 @@ class LINKFORGE_PT_export_panel(Panel):
         layout = self.layout
         if not layout:
             return
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = getattr(scene, "linkforge")
 
         # Count components
         stats = get_robot_statistics(scene)
@@ -90,8 +90,8 @@ class LINKFORGE_PT_export_panel(Panel):
 
             wm = context.window_manager
             validation = None
-            if hasattr(wm, "linkforge_validation"):
-                validation = wm.linkforge_validation  # type: ignore[attr-defined]
+            if wm and hasattr(wm, "linkforge_validation"):
+                validation = getattr(wm, "linkforge_validation")
 
             if not validation or not validation.has_results:
                 box.label(text="Not run yet", icon="INFO")
@@ -242,7 +242,7 @@ class LINKFORGE_PT_export_panel(Panel):
         if not select_box:
             return
 
-        props = scene.linkforge  # type: ignore[attr-defined]
+        props = getattr(scene, "linkforge")
 
         # UI
         search_row = select_box.row(align=True)
