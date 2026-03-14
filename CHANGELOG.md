@@ -5,23 +5,6 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.1-rc] - 2026-03-14
-
-### ✨ UX & UI Polish
-- **Panel Title Alignment**: Headers for Links, Joints, and Sensors now use persistent URDF names.
-- **Blender Name Transparency**: Added "Blender Obj" info row to clarify scene-level name collisions.
-- **Live Collision Preview**: The Collision Quality slider now provides immediate visual feedback.
-- **Inertia Live Update**: Center of Mass gizmos now update live during property adjustment.
-
-### 🛡️ Stability & Quality
-- **Blender API Hardening**: Added safety guards in `scene_utils.py` to prevent crashes during rapid edits.
-- **Environment-Safe Typing**: Migrated to `typing.cast` for robust MyPy checks across CI/local setups.
-- **Zero-Hack Audit**: Project-wide sweep confirmed 0 temporary hacks or debt.
-
-### 🧪 Technical Validation
-- **Full Test Suite**: 471/471 unit tests verified green.
-- **Linter Harmony**: Resolved conflicting Ruff/MyPy rules for property registration.
-
 ## [1.3.0](https://github.com/arounamounchili/linkforge/compare/v1.2.3...v1.3.0) (2026-03-01)
 
 
