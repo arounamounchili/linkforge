@@ -36,7 +36,7 @@ def working_directory(path: Path) -> typing.Iterator[Path]:
         os.chdir(old_cwd)
 
 
-class LINKFORGE_OT_export_urdf(Operator, ExportHelper):  # type: ignore[misc]
+class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
     """Export robot to URDF file"""
 
     bl_idname = "linkforge.export_urdf"

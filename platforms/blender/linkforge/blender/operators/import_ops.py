@@ -27,7 +27,7 @@ else:
 logger = get_logger(__name__)
 
 
-class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
+class LINKFORGE_OT_import_urdf(Operator, ImportHelper):
     """Import robot from URDF or XACRO file.
 
     This operator opens a file browser to select a robot description file,
