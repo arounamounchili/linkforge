@@ -33,13 +33,14 @@ def safe_execute(func: Callable[P, OperatorReturn]) -> Callable[P, OperatorRetur
     """
 
     @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> OperatorReturn:
+    def wrapper(
+        self: typing.Any, context: typing.Any, *args: P.args, **kwargs: P.kwargs
+    ) -> OperatorReturn:
         try:
-            return func(*args, **kwargs)
+            return func(self, context, *args, **kwargs)
         except Exception as e:
             # Determine self for reporting
-            # In Blender operators, 'self' is the first argument of execute
-            self_obj = args[0] if args else None
+            self_obj = self
 
             # Log full traceback for debugging
             logger.error(f"Generate Error: {e}")

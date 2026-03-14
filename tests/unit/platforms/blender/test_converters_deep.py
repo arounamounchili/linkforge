@@ -1,5 +1,5 @@
 import typing
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import bpy
 import pytest
@@ -13,10 +13,9 @@ from linkforge_core.models import CameraInfo, Link, Sensor, SensorType
 if typing.TYPE_CHECKING:
     from linkforge.blender.properties.robot_props import RobotPropertyGroup
     from linkforge.blender.properties.sensor_props import SensorPropertyGroup
-    from pytest_mock import MockerFixture
 
 
-def test_scene_to_robot_strict_mode(mocker: MockerFixture) -> None:
+def test_scene_to_robot_strict_mode() -> None:
     """Test that strict mode correctly raises vs collects errors."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     import linkforge.blender
@@ -33,24 +32,22 @@ def test_scene_to_robot_strict_mode(mocker: MockerFixture) -> None:
     obj.linkforge.is_robot_link = True
     obj.linkforge.link_name = "broken_link"
 
-    # Mock blender_link_to_core to throw
-    mocker.patch(
+    with patch(
         "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
         side_effect=RobotModelError("Link error"),
-    )
+    ):
+        # 1. Strict mode = True
+        scene.linkforge.strict_mode = True
+        with pytest.raises(RobotModelError, match="Link error"):
+            scene_to_robot(bpy.context)
 
-    # 1. Strict mode = True
-    scene.linkforge.strict_mode = True
-    with pytest.raises(RobotModelError, match="Link error"):
-        scene_to_robot(bpy.context)
-
-    # 2. Strict mode = False
-    scene.linkforge.strict_mode = False
-    with pytest.raises(RobotModelError, match="Unable to build robot model"):
-        scene_to_robot(bpy.context)
+        # 2. Strict mode = False
+        scene.linkforge.strict_mode = False
+        with pytest.raises(RobotModelError, match="Unable to build robot model"):
+            scene_to_robot(bpy.context)
 
 
-def test_sensor_origin_correction(mocker: MockerFixture) -> None:
+def test_sensor_origin_correction() -> None:
     """Test that sensors correctly calculate world offset relative to links."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     import linkforge.blender
@@ -75,23 +72,23 @@ def test_sensor_origin_correction(mocker: MockerFixture) -> None:
 
     bpy.context.view_layer.update()
 
-    # Scenario: Deep correction in scene_to_robot
-    mocker.patch(
-        "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
-        return_value=Link(name="base_link"),
-    )
-    mocker.patch(
-        "linkforge.blender.adapters.blender_to_core.blender_sensor_to_core",
-        return_value=Sensor(
-            name="cam", type=SensorType.CAMERA, link_name="base_link", camera_info=CameraInfo()
+    with (
+        patch(
+            "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
+            return_value=Link(name="base_link"),
         ),
-    )
-
-    robot, _ = scene_to_robot(bpy.context)
-    assert len(robot.sensors) == 1
-    # Check relative origin: (2-1, 2-1, 2-1) = (1,1,1)
-    vec = robot.sensors[0].origin.xyz
-    assert (vec.x, vec.y, vec.z) == pytest.approx((1.0, 1.0, 1.0))
+        patch(
+            "linkforge.blender.adapters.blender_to_core.blender_sensor_to_core",
+            return_value=Sensor(
+                name="cam", type=SensorType.CAMERA, link_name="base_link", camera_info=CameraInfo()
+            ),
+        ),
+    ):
+        robot, _ = scene_to_robot(bpy.context)
+        assert len(robot.sensors) == 1
+        # Check relative origin: (2-1, 2-1, 2-1) = (1,1,1)
+        vec = robot.sensors[0].origin.xyz
+        assert (vec.x, vec.y, vec.z) == pytest.approx((1.0, 1.0, 1.0))
 
 
 def test_ros2_control_conversion() -> None:
@@ -119,7 +116,7 @@ def test_ros2_control_conversion() -> None:
     assert len(ctrl.joints) == 1
 
 
-def test_gazebo_plugin_extraction(mocker: MockerFixture) -> None:
+def test_gazebo_plugin_extraction() -> None:
     """Test extraction of Gazebo ros2_control plugin when configured."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     import linkforge.blender
@@ -132,16 +129,17 @@ def test_gazebo_plugin_extraction(mocker: MockerFixture) -> None:
     props.gazebo_plugin_name = "gazebo_ros2_control"
     props.controllers_yaml_path = "/config/ctrl.yaml"
 
-    mocker.patch(
-        "linkforge.blender.adapters.blender_to_core._categorize_scene_objects",
-        return_value=({}, [], [], [], {}, None),
-    )
-    mocker.patch(
-        "linkforge.blender.adapters.blender_to_core.blender_ros2_control_to_core",
-        return_value=MagicMock(),
-    )
-
-    robot, _ = scene_to_robot(bpy.context)
+    with (
+        patch(
+            "linkforge.blender.adapters.blender_to_core._categorize_scene_objects",
+            return_value=({}, [], [], [], {}, None),
+        ),
+        patch(
+            "linkforge.blender.adapters.blender_to_core.blender_ros2_control_to_core",
+            return_value=MagicMock(),
+        ),
+    ):
+        robot, _ = scene_to_robot(bpy.context)
 
     assert len(robot.gazebo_elements) == 1
     plugin = robot.gazebo_elements[0].plugins[0]

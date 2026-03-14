@@ -51,10 +51,15 @@ def test_joint_urdf_name_persistence() -> None:
 def test_reimport_name_matching() -> None:
     """Test that the importer correctly sets persistent names using real data."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
-    from linkforge_core.models import Joint, JointType
+    from linkforge_core.models import Joint, JointLimits, JointType, Vector3
 
     joint_model = Joint(
-        name="shoulder_joint", type=JointType.REVOLUTE, parent="base_link", child="shoulder_link"
+        name="shoulder_joint",
+        type=JointType.REVOLUTE,
+        parent="base_link",
+        child="shoulder_link",
+        axis=Vector3(0, 0, 1),
+        limits=JointLimits(lower=-3.14, upper=3.14, effort=10.0, velocity=1.0),
     )
 
     links = {

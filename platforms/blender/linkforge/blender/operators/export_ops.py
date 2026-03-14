@@ -53,7 +53,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
     )
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
-    def check(self, context: Context) -> bool:  # type: ignore
+    def check(self, context: Context) -> bool:
         """Verify if export can proceed based on current scene state."""
         return bool(context.scene and hasattr(context.scene, "linkforge"))
 

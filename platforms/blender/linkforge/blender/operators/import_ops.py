@@ -48,7 +48,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
     )
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
-    def check(self, context: Context) -> bool:  # type: ignore
+    def check(self, context: Context) -> bool:
         """Check if the operator can update its properties.
 
         Args:

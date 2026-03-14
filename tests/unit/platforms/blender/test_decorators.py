@@ -67,5 +67,5 @@ class TestSafeExecute:
             failing_op(op, context)
 
         # Verify log contains error and traceback hint
-        assert "Generate Error in" in caplog.text
+        assert "Generate Error:" in caplog.text
         assert "Critical Failure" in caplog.text

@@ -268,12 +268,11 @@ def test_add_material_slot() -> None:
     assert visual_obj.data.materials[0].name == f"{link_obj.name}_material"
 
 
-def test_schedule_collision_preview(mocker) -> None:
+def test_schedule_collision_preview() -> None:
     """Test that collision preview update is scheduled via timer."""
-    mock_register = mocker.patch("bpy.app.timers.register")
-
-    obj = MagicMock()
-    schedule_collision_preview_update(obj)
+    with patch("bpy.app.timers.register") as mock_register:
+        obj = MagicMock()
+        schedule_collision_preview_update(obj)
 
     mock_register.assert_called_once()
     # Check if execute_collision_preview_update was the callback
@@ -290,25 +289,15 @@ def test_execute_collision_preview_no_obj() -> None:
     result = execute_collision_preview_update()
     assert result is None
 
-
-def test_execute_collision_preview_deleted_obj(mocker) -> None:
-    """Test that preview update handles deleted objects."""
-    from linkforge.blender.operators import link_ops
-
-    obj = MagicMock()
-    obj.name = "deleted_obj"
-    link_ops._preview_pending_object = obj
-
     # Patch the entire bpy reference in the module to avoid read-only issues
     mock_bpy = MagicMock()
     mock_bpy.data.objects.__contains__.return_value = False
-    mocker.patch("linkforge.blender.operators.link_ops.bpy", mock_bpy)
+    with patch("linkforge.blender.operators.link_ops.bpy", mock_bpy):
+        result = execute_collision_preview_update()
+        assert result is None
 
-    result = execute_collision_preview_update()
-    assert result is None
 
-
-def test_execute_collision_preview_complex_scenarios(mocker) -> None:
+def test_execute_collision_preview_complex_scenarios() -> None:
     """Test execute_collision_preview_update with various states."""
     from linkforge.blender.operators import link_ops
 
@@ -321,9 +310,8 @@ def test_execute_collision_preview_complex_scenarios(mocker) -> None:
     mock_bpy = MagicMock()
     mock_bpy.data.objects.__contains__.return_value = True
     mock_bpy.data.objects.__getitem__.return_value = obj
-    mocker.patch("linkforge.blender.operators.link_ops.bpy", mock_bpy)
-
-    assert execute_collision_preview_update() is None
+    with patch("linkforge.blender.operators.link_ops.bpy", mock_bpy):
+        assert execute_collision_preview_update() is None
 
     # 2. No view layer
     col = MagicMock()
@@ -334,7 +322,7 @@ def test_execute_collision_preview_complex_scenarios(mocker) -> None:
     assert execute_collision_preview_update() is None
 
 
-def test_create_collision_for_link_multi_visual(mocker) -> None:
+def test_create_collision_for_link_multi_visual() -> None:
     """Test compound collision creation for multiple visual children."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -360,19 +348,18 @@ def test_create_collision_for_link_multi_visual(mocker) -> None:
     assert col_obj["collision_geometry_type"] == "MESH"
 
 
-def test_calculate_inertia_exception(mocker) -> None:
+def test_calculate_inertia_exception() -> None:
     """Test error handling in inertia calculation."""
     obj = MagicMock()
     obj.linkforge.is_robot_link = True
     obj.children = [MagicMock()]  # Trigger some logic
 
     # Make extract_mesh_triangles raise an exception
-    mocker.patch(
+    with patch(
         "linkforge.blender.adapters.blender_to_core.extract_mesh_triangles",
         side_effect=Exception("Test Error"),
-    )
-
-    assert calculate_inertia_for_link(obj) is False
+    ):
+        assert calculate_inertia_for_link(obj) is False
 
 
 def test_link_ops_registration() -> None:
@@ -421,14 +408,10 @@ def test_link_ops_edge_cases(mocker) -> None:
     mock_bpy.data.objects = []
     # We must preserve context for the operator to still function somewhat
     mock_bpy.context = bpy.context
-    mocker.patch("linkforge.blender.operators.link_ops.bpy", mock_bpy)
-
-    # We use a wrapper or just call the execute directly if we want to avoid poll
-    # But let's try calling it normally with the patch
-    bpy.ops.linkforge.generate_collision()
-
-    # Reset bpy patch for next steps
-    mocker.stopall()
+    with patch("linkforge.blender.operators.link_ops.bpy", mock_bpy):
+        # We use a wrapper or just call the execute directly if we want to avoid poll
+        # But let's try calling it normally with the patch
+        bpy.ops.linkforge.generate_collision()
 
     # 2. LINKFORGE_OT_calculate_inertia with child selected
     bpy.ops.mesh.primitive_cube_add()

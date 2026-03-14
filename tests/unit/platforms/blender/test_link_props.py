@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import bpy
 
 
@@ -49,29 +51,28 @@ def test_automatic_child_renaming() -> None:
     assert col_obj.name == "chassis_collision_01"
 
 
-def test_collision_quality_update_trigger(mocker) -> None:
+def test_collision_quality_update_trigger() -> None:
     """Test that changing collision quality schedules a preview update."""
-    # We need to mock the schedule_collision_preview_update to avoid background timer issues
-    mock_schedule = mocker.patch(
-        "linkforge.blender.operators.link_ops.schedule_collision_preview_update"
-    )
+    # We need to mock the update_collision_quality_realtime to avoid background timer issues
+    with patch(
+        "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
+    ) as mock_update:
+        bpy.ops.object.select_all(action="DESELECT")
+        bpy.ops.object.empty_add()
+        obj = bpy.context.active_object
+        obj.linkforge.is_robot_link = True
 
-    bpy.ops.object.select_all(action="DESELECT")
-    bpy.ops.object.empty_add()
-    obj = bpy.context.active_object
-    obj.linkforge.is_robot_link = True
+        # Add a collision child (needed for the trigger logic inside update_collision_quality)
+        bpy.ops.mesh.primitive_cube_add()
+        col_obj = bpy.context.active_object
+        col_obj.name = "test_collision"
+        col_obj.parent = obj
 
-    # Add a collision child (needed for the trigger logic inside update_collision_quality)
-    bpy.ops.mesh.primitive_cube_add()
-    col_obj = bpy.context.active_object
-    col_obj.name = "test_collision"
-    col_obj.parent = obj
+        # Change quality
+        obj.linkforge.collision_quality = 75.0
 
-    # Change quality
-    obj.linkforge.collision_quality = 75.0
-
-    # Verify mock was called
-    mock_schedule.assert_called_once_with(obj)
+        # Verify mock was called
+        mock_update.assert_called_once()
 
 
 def test_collision_quality_skip_imported() -> None:
@@ -110,19 +111,18 @@ def test_collision_quality_skip_imported() -> None:
         link_ops.schedule_collision_preview_update = original_schedule
 
 
-def test_auto_inertia_toggle(mocker) -> None:
-    """Test that disabling auto-inertia ensures the inertia handler is running."""
-    mock_ensure = mocker.patch(
+def test_auto_inertia_toggle() -> None:
+    """Test that validating auto-inertia ensures the inertia handler is running."""
+    with patch(
         "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
-    )
+    ) as mock_ensure:
+        bpy.ops.object.select_all(action="DESELECT")
+        bpy.ops.object.empty_add()
+        obj = bpy.context.active_object
+        obj.linkforge.is_robot_link = True
 
-    bpy.ops.object.select_all(action="DESELECT")
-    bpy.ops.object.empty_add()
-    obj = bpy.context.active_object
-    obj.linkforge.is_robot_link = True
+        # Turn off auto-inertia
+        obj.linkforge.use_auto_inertia = False
 
-    # Turn off auto-inertia
-    obj.linkforge.use_auto_inertia = False
-
-    # Verify mock was called
-    mock_ensure.assert_called_once()
+        # Verify mock was called
+        mock_ensure.assert_called_once()

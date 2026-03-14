@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import bpy
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
@@ -35,36 +35,39 @@ def test_builder_prepare_tasks() -> None:
     assert "finalize" in task_types
 
 
-def test_builder_execution_flow(mocker) -> None:
+def test_builder_execution_flow() -> None:
     """Test that process_next_chunk executes tasks and updates status."""
     l1 = Link(name="base_link")
     robot = Robot(name="test_robot", initial_links=[l1])
 
-    # Mock scenebuilder functions
-    mocker.patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot")
-    mocker.patch(
-        "linkforge.blender.logic.asynchronous_builder.create_link_object", return_value=MagicMock()
-    )
+    with (
+        patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot"),
+        patch(
+            "linkforge.blender.logic.asynchronous_builder.create_link_object",
+            return_value=MagicMock(),
+        ),
+    ):
+        builder = AsynchronousRobotBuilder(
+            robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=1
+        )
 
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=1)
+        # Manually run chunks
+        # Chunk 1: setup_scene
+        builder.process_next_chunk()
+        assert builder.completed_tasks == 1
 
-    # Manually run chunks
-    # Chunk 1: setup_scene
-    builder.process_next_chunk()
-    assert builder.completed_tasks == 1
+        # Chunk 2: create_collection
+        builder.process_next_chunk()
+        assert builder.completed_tasks == 2
 
-    # Chunk 2: create_collection
-    builder.process_next_chunk()
-    assert builder.completed_tasks == 2
-
-    # Chunk 3: create_link
-    builder.process_next_chunk()
-    assert builder.completed_tasks == 3
-    # Check that status was updated
-    assert bpy.context.scene.linkforge.import_status != ""
+        # Chunk 3: create_link
+        builder.process_next_chunk()
+        assert builder.completed_tasks == 3
+        # Check that status was updated
+        assert bpy.context.scene.linkforge.import_status != ""
 
 
-def test_builder_abort(mocker) -> None:
+def test_builder_abort() -> None:
     """Test that import can be aborted via scene property."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
@@ -77,35 +80,34 @@ def test_builder_abort(mocker) -> None:
     assert "cancelled" in builder.error.lower()
 
 
-def test_builder_error_handling(mocker) -> None:
+def test_builder_error_handling() -> None:
     """Test that exceptions in task execution are caught and reported."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
 
     # Force an error in _execute_task
-    mocker.patch.object(builder, "_execute_task", side_effect=RobotModelError("Boom"))
+    with patch.object(builder, "_execute_task", side_effect=RobotModelError("Boom")):
+        result = builder.process_next_chunk()
+        assert result is None
+        assert builder.error == "Boom"
+        assert builder.is_finished is True
 
-    result = builder.process_next_chunk()
-    assert result is None
-    assert builder.error == "Boom"
-    assert builder.is_finished is True
 
-
-def test_builder_timer_start(mocker) -> None:
+def test_builder_timer_start() -> None:
     """Test that start() registers the timer."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
 
-    mock_register = mocker.patch("bpy.app.timers.register")
-    builder.start()
+    with patch("bpy.app.timers.register") as mock_register:
+        builder.start()
 
-    mock_register.assert_called_once()
-    # Callback should be process_next_chunk
-    args, _ = mock_register.call_args
-    assert args[0] == builder.process_next_chunk
+        mock_register.assert_called_once()
+        # Callback should be process_next_chunk
+        args, _ = mock_register.call_args
+        assert args[0] == builder.process_next_chunk
 
 
-def test_builder_timer_callback_interval(mocker) -> None:
+def test_builder_timer_callback_interval() -> None:
     """Test that the callback returns a float interval while running."""
     # Add many tasks so it doesn't finish immediately
     robot = Robot(name="test_robot", initial_links=[Link(name=f"link{i}") for i in range(10)])
@@ -113,12 +115,11 @@ def test_builder_timer_callback_interval(mocker) -> None:
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=1)
 
     # Mock task execution to avoid real Blender calls
-    mocker.patch.object(builder, "_execute_task")
-
-    result = builder.process_next_chunk()
-    # Should return real-time interval (float)
-    assert isinstance(result, float)
-    assert result > 0
+    with patch.object(builder, "_execute_task"):
+        result = builder.process_next_chunk()
+        # Should return real-time interval (float)
+        assert isinstance(result, float)
+        assert result > 0
 
     # Abort to finish
     bpy.context.scene.linkforge.abort_import = True
@@ -126,27 +127,30 @@ def test_builder_timer_callback_interval(mocker) -> None:
     assert result is None  # Finished
 
 
-def test_builder_full_completion(mocker) -> None:
+def test_builder_full_completion() -> None:
     """Test that builder runs all tasks and finishes correctly."""
     robot = Robot(name="test_robot", initial_links=[Link(name="link1")])
 
     # Mock all task executors
-    mocker.patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot")
-    mocker.patch("linkforge.blender.logic.asynchronous_builder.create_link_object")
-    mocker.patch("linkforge.blender.logic.asynchronous_builder.create_joint_object")
+    with (
+        patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot"),
+        patch("linkforge.blender.logic.asynchronous_builder.create_link_object"),
+        patch("linkforge.blender.logic.asynchronous_builder.create_joint_object"),
+    ):
+        # Chunk size logic: set to 1 to run one by one if desired, or large to finish at once
+        builder = AsynchronousRobotBuilder(
+            robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=100
+        )
 
-    # Chunk size logic: set to 1 to run one by one if desired, or large to finish at once
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=100)
-
-    # Run first chunk (should finish all since chunk_size=100 and only ~6 tasks)
-    result = builder.process_next_chunk()
-    assert result is None
-    assert builder.is_finished is True
-    assert builder.completed_tasks == builder.total_tasks
-    assert builder.error is None
+        # Run first chunk (should finish all since chunk_size=100 and only ~6 tasks)
+        result = builder.process_next_chunk()
+        assert result is None
+        assert builder.is_finished is True
+        assert builder.completed_tasks == builder.total_tasks
+        assert builder.error is None
 
 
-def test_builder_with_joints_and_sensors(mocker) -> None:
+def test_builder_with_joints_and_sensors() -> None:
     """Test that builder correctly queues joints and sensors."""
     l1 = Link(name="l1")
     l2 = Link(name="l2")
