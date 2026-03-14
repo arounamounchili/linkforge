@@ -36,7 +36,7 @@ def working_directory(path: Path) -> typing.Iterator[Path]:
         os.chdir(old_cwd)
 
 
-class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
+class LINKFORGE_OT_export_urdf(Operator, ExportHelper):  # type: ignore[misc]
     """Export robot to URDF file"""
 
     bl_idname = "linkforge.export_urdf"
@@ -53,7 +53,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
     )
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
-    def check(self, context: Context) -> bool:
+    def check(self, context: Context) -> typing.Any:
         """Verify if export can proceed based on current scene state."""
         return bool(context.scene and hasattr(context.scene, "linkforge"))
 

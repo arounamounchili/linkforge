@@ -10,17 +10,13 @@ from ...linkforge_core.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-P = typing.ParamSpec("P")
-R = typing.TypeVar("R")
-
-
 # Common return types for Blender operators
 OperatorReturn = set[
     typing.Literal["RUNNING_MODAL", "CANCELLED", "FINISHED", "PASS_THROUGH", "INTERFACE"]
 ]
 
 
-def safe_execute(func: Callable[P, OperatorReturn]) -> Callable[P, OperatorReturn]:
+def safe_execute(func: Callable[..., OperatorReturn]) -> Callable[..., OperatorReturn]:
     """Decorator to wrap operator execute methods with robust error handling.
 
     This ensures that unhandled exceptions are caught, logged with full tracebacks,
@@ -34,7 +30,7 @@ def safe_execute(func: Callable[P, OperatorReturn]) -> Callable[P, OperatorRetur
 
     @functools.wraps(func)
     def wrapper(
-        self: typing.Any, context: typing.Any, *args: P.args, **kwargs: P.kwargs
+        self: typing.Any, context: typing.Any, *args: typing.Any, **kwargs: typing.Any
     ) -> OperatorReturn:
         try:
             return func(self, context, *args, **kwargs)
