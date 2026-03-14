@@ -85,6 +85,7 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     clear_stats_cache()
 
 
+@typing.no_type_check
 def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context) -> None:
     """Update collision mesh preview when quality changes.
 
@@ -104,8 +105,8 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
     if collision_obj is None:
         return
 
-    # Skip regeneration for imported URDF models to preserve external data
-    if "imported_from_urdf" in collision_obj:  # type: ignore[operator]
+    # Skip regeneration for imported URDF models to preserve ext
+    if collision_obj.get("imported_from_urdf", False):
         return
 
     # Update ratio in realtime

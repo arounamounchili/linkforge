@@ -270,8 +270,13 @@ def test_add_material_slot() -> None:
 
 def test_schedule_collision_preview() -> None:
     """Test that collision preview update is scheduled via timer."""
+    # Setup test scene
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+
     with patch("bpy.app.timers.register") as mock_register:
-        obj = MagicMock()
         schedule_collision_preview_update(obj)
 
     mock_register.assert_called_once()
@@ -285,41 +290,49 @@ def test_execute_collision_preview_no_obj() -> None:
     """Test that preview update handles missing pending object."""
     from linkforge.blender.operators import link_ops
 
+    # 1. Pending object is None
     link_ops._preview_pending_object = None
-    result = execute_collision_preview_update()
-    assert result is None
+    link_ops._preview_last_request_time = 0.0  # Reset
+    assert execute_collision_preview_update() is None
 
-    # Patch the entire bpy reference in the module to avoid read-only issues
-    mock_bpy = MagicMock()
-    mock_bpy.data.objects.__contains__.return_value = False
-    with patch("linkforge.blender.operators.link_ops.bpy", mock_bpy):
-        result = execute_collision_preview_update()
-        assert result is None
+    # 2. Pending object exists but is not in bpy.data.objects (deleted)
+    obj = bpy.data.objects.new("DeletedObj", None)
+    link_ops._preview_pending_object = obj
+    # Object is not linked to any collection, so it won't be in bpy.data.objects.
+    # Note: bpy.data.objects only contains linked/registered objects.
+    assert execute_collision_preview_update() is None
 
 
 def test_execute_collision_preview_complex_scenarios() -> None:
-    """Test execute_collision_preview_update with various states."""
+    """Test execute_collision_preview_update with various real-world states."""
     from linkforge.blender.operators import link_ops
 
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
     # 1. No collision object found
-    obj = MagicMock()
-    obj.name = "test_obj"
-    obj.children = []
+    obj = bpy.data.objects.new("test_obj", None)
+    bpy.context.collection.objects.link(obj)
     link_ops._preview_pending_object = obj
+    link_ops._preview_last_request_time = 0.0  # Force update
 
-    mock_bpy = MagicMock()
-    mock_bpy.data.objects.__contains__.return_value = True
-    mock_bpy.data.objects.__getitem__.return_value = obj
-    with patch("linkforge.blender.operators.link_ops.bpy", mock_bpy):
-        assert execute_collision_preview_update() is None
-
-    # 2. No view layer
-    col = MagicMock()
-    col.name = "test_collision"
-    obj.children = [col]
-    # Re-patch bpy but without view_layer
-    mock_bpy.context.view_layer = None
     assert execute_collision_preview_update() is None
+
+    # 2. No view layer (Simulation of missing context)
+    mesh = bpy.data.meshes.new("col_mesh")
+    col = bpy.data.objects.new("test_obj_collision", mesh)
+    bpy.context.collection.objects.link(col)
+    col.parent = obj
+
+    with patch("linkforge.blender.operators.link_ops.bpy") as mock_bpy:
+        # Simulate missing view_layer context
+        mock_bpy.data = bpy.data
+        mock_bpy.context = MagicMock()
+        mock_bpy.context.view_layer = None
+
+        link_ops._preview_pending_object = obj
+        link_ops._preview_last_request_time = 0.0
+        assert execute_collision_preview_update() is None
 
 
 def test_create_collision_for_link_multi_visual() -> None:
@@ -613,20 +626,38 @@ def test_inertia_extraction_failure() -> None:
 
 def test_link_ops_debounced_preview_logic() -> None:
     """Hit all error paths in execute_collision_preview_update."""
-    with patch("linkforge.blender.operators.link_ops._preview_pending_object", None):
-        assert execute_collision_preview_update() is None
+    with (
+        patch("linkforge.blender.operators.link_ops._preview_pending_object", None),
+        patch("linkforge.blender.operators.link_ops.time.time", return_value=1234567890.0),
+        patch("linkforge.blender.operators.link_ops._preview_last_request_time", 0.0),
+    ):
+        from linkforge.blender.operators import link_ops
+
+        assert link_ops.execute_collision_preview_update() is None
 
     link_obj = bpy.data.objects.new("TestLink_Preview", None)
     bpy.context.collection.objects.link(link_obj)
     link_obj.linkforge.is_robot_link = True
 
-    with patch("linkforge.blender.operators.link_ops._preview_pending_object", link_obj):
-        assert execute_collision_preview_update() is None
+    with (
+        patch("linkforge.blender.operators.link_ops._preview_pending_object", link_obj),
+        patch("linkforge.blender.operators.link_ops.time.time", return_value=1234567890.0),
+        patch("linkforge.blender.operators.link_ops._preview_last_request_time", 0.0),
+    ):
+        from linkforge.blender.operators import link_ops
+
+        assert link_ops.execute_collision_preview_update() is None
 
     mock_obj = MagicMock()
     mock_obj.name = "DeletedObject"
-    with patch("linkforge.blender.operators.link_ops._preview_pending_object", mock_obj):
-        assert execute_collision_preview_update() is None
+    with (
+        patch("linkforge.blender.operators.link_ops._preview_pending_object", mock_obj),
+        patch("linkforge.blender.operators.link_ops.time.time", return_value=1234567890.0),
+        patch("linkforge.blender.operators.link_ops._preview_last_request_time", 0.0),
+    ):
+        from linkforge.blender.operators import link_ops
+
+        assert link_ops.execute_collision_preview_update() is None
 
     mesh = bpy.data.meshes.new("sphere_mesh")
     sphere_obj = bpy.data.objects.new("TestLink_Preview_collision", mesh)
@@ -783,3 +814,46 @@ def test_link_ops_low_level_edge_cases_extended() -> None:
     bad_vis.parent = link_obj
 
     assert _merge_visual_meshes([bad_vis], link_obj, bpy.context) is None
+
+
+def test_update_collision_quality_realtime() -> None:
+    """Test the realtime collision quality update (fast path)."""
+    from linkforge.blender.operators.link_ops import update_collision_quality_realtime
+
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    # Setup: Link and Collision Object
+    bpy.ops.linkforge.add_empty_link()
+    link_obj = bpy.context.active_object
+    link_obj.linkforge.collision_quality = 50.0
+
+    mesh = bpy.data.meshes.new("sphere_mesh")
+    collision_obj = bpy.data.objects.new("Link_collision", mesh)
+    bpy.context.collection.objects.link(collision_obj)
+    collision_obj.parent = link_obj
+
+    # 1. Test Fallback (No modifier, type MESH -> Should add modifier)
+    assert len(collision_obj.modifiers) == 0
+    update_collision_quality_realtime(link_obj, collision_obj)
+
+    decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
+    assert decimate_mod is not None
+    assert decimate_mod.ratio == 0.5
+
+    # 2. Test Fast Path (Update existing modifier)
+    link_obj.linkforge.collision_quality = 25.0
+    update_collision_quality_realtime(link_obj, collision_obj)
+    assert decimate_mod.ratio == 0.25
+
+    # 3. Test Fallback (Non-mesh -> Should schedule full update)
+    # Use an Empty object as the collision object (type is EMPTY)
+    empty_col = bpy.data.objects.new("Empty_collision", None)
+    bpy.context.collection.objects.link(empty_col)
+    empty_col.parent = link_obj
+
+    with patch(
+        "linkforge.blender.operators.link_ops.schedule_collision_preview_update"
+    ) as mock_schedule:
+        update_collision_quality_realtime(link_obj, empty_col)
+        mock_schedule.assert_called_once_with(link_obj)

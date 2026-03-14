@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import bpy
 import pytest
@@ -22,17 +22,22 @@ def test_execute_collision_preview_update_branches(clean_scene) -> None:
 
     # No view_layer
     with patch("linkforge.blender.operators.link_ops.bpy") as mock_bpy:
-        mock_bpy.data.objects = {"Link": link_obj}
+        # Simulate missing view_layer context
+        mock_bpy.data = bpy.data
+        mock_bpy.context = MagicMock()
         mock_bpy.context.view_layer = None
+
         # We need to set the global _preview_pending_object
         import linkforge.blender.operators.link_ops as link_ops
 
         link_ops._preview_pending_object = link_obj
+        link_ops._preview_last_request_time = 0.0
         assert execute_collision_preview_update() is None
 
     # imported_from_urdf
     col_obj["imported_from_urdf"] = True
     link_ops._preview_pending_object = link_obj
+    link_ops._preview_last_request_time = 0.0
     assert execute_collision_preview_update() is None
     col_obj["imported_from_urdf"] = False
 

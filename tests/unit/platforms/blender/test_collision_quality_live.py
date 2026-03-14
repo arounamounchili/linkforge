@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import bpy
 import pytest
 from linkforge.blender.operators.link_ops import (
@@ -63,10 +61,11 @@ def test_update_collision_quality_realtime_fallback() -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    # Setup link and collision but DELETE the modifier manually
+    # Setup link and collision without modifier
     bpy.ops.mesh.primitive_monkey_add()
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
+    link_obj.linkforge.collision_quality = 20.0
 
     create_collision_for_link(link_obj, "MESH", bpy.context)
     collision_obj = next(c for c in link_obj.children if "_collision" in c.name)
@@ -74,10 +73,9 @@ def test_update_collision_quality_realtime_fallback() -> None:
     # Remove all modifiers
     collision_obj.modifiers.clear()
 
-    with patch(
-        "linkforge.blender.operators.link_ops.schedule_collision_preview_update"
-    ) as mock_schedule:
-        update_collision_quality_realtime(link_obj, collision_obj)
+    update_collision_quality_realtime(link_obj, collision_obj)
 
-        # VERIFY: Scheduled a full update since modifier was missing
-        mock_schedule.assert_called_once_with(link_obj)
+    # Verify modifier restoration (Fast Path)
+    decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
+    assert decimate_mod is not None
+    assert decimate_mod.ratio == pytest.approx(0.2)

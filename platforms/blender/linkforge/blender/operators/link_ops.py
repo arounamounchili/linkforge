@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import contextlib
+import time
 import typing
-
-import bpy
-import mathutils
 
 from ...linkforge_core.logging_config import get_logger
 from ..properties.link_props import sanitize_urdf_name
@@ -17,8 +15,16 @@ from ..utils.scene_utils import clear_stats_cache
 if typing.TYPE_CHECKING:
     from bpy.types import Context, Operator
 
+    bpy: typing.Any
+    bmesh: typing.Any
+    mathutils: typing.Any
+
     from ..properties.link_props import LinkPropertyGroup
 else:
+    import bmesh
+    import bpy
+    import mathutils
+
     # Runtime fallback for mock environments where bpy.types might be partially loaded.
     Context = typing.Any
     Operator = getattr(getattr(bpy, "types", object), "Operator", object)
@@ -26,8 +32,8 @@ else:
 logger = get_logger(__name__)
 
 # Global state for debounced collision preview updates
-_preview_update_timer = None
 _preview_pending_object = None
+_preview_last_request_time = 0.0
 
 # Debounce delay for collision preview updates (in seconds)
 COLLISION_PREVIEW_DEBOUNCE_DELAY = 0.3
@@ -37,15 +43,14 @@ def schedule_collision_preview_update(obj: bpy.types.Object) -> None:
     """Schedule a debounced collision preview update.
 
     This prevents excessive regeneration during slider interaction by
-    waiting 0.3 seconds after the last change before updating.
+    waiting 0.3 seconds after the LAST change before updating.
     """
     # pylint: disable=global-statement
-    global _preview_pending_object
+    global _preview_pending_object, _preview_last_request_time
     _preview_pending_object = obj
+    _preview_last_request_time = time.time()
 
     # Register new timer with debounce delay
-    # Note: Multiple timers may be registered, but only the first one to find
-    # _preview_pending_object as not None will execute the update.
     if not bpy.app.timers.is_registered(execute_collision_preview_update):
         bpy.app.timers.register(
             execute_collision_preview_update, first_interval=COLLISION_PREVIEW_DEBOUNCE_DELAY
@@ -56,16 +61,22 @@ def schedule_collision_preview_update(obj: bpy.types.Object) -> None:
 def execute_collision_preview_update() -> None | float:
     """Execute the actual collision mesh update after debounce delay."""
     # pylint: disable=global-statement
-    global _preview_pending_object
+    global _preview_pending_object, _preview_last_request_time
 
     if _preview_pending_object is None:
         return None
 
+    # Implement TRUE debounce: if a new request happened recently, reschedule
+    time_since_last = time.time() - _preview_last_request_time
+    if time_since_last < COLLISION_PREVIEW_DEBOUNCE_DELAY:
+        # Return remaining time to wait
+        return COLLISION_PREVIEW_DEBOUNCE_DELAY - time_since_last
+
     obj = _preview_pending_object
     _preview_pending_object = None
 
-    # Check if object still exists
-    if obj.name not in bpy.data.objects:
+    # Check if object still exists and is in the scene
+    if not obj or obj.name not in bpy.data.objects:
         return None
 
     # Find collision object
@@ -93,7 +104,7 @@ def execute_collision_preview_update() -> None | float:
     collision_type = collision_obj.get("collision_geometry_type", "MESH")
     regenerate_collision_mesh(obj, str(collision_type), bpy.context)
 
-    return None  # Don't repeat timer
+    return None  # All caught up
 
 
 def regenerate_collision_mesh(
@@ -411,14 +422,18 @@ def _create_mesh_collision_compound(
     merged_obj.hide_render = False
 
     # Apply mesh simplification to the merged mesh
-    vl = context.view_layer
-    if vl:
-        vl.objects.active = merged_obj
+    # ensures that BMesh processing is robust regardless of viewport mode.
+    # We use high-performance BMesh API to avoid Object/Edit mode flickering.
+    bm = bmesh.new()
+    bm.from_mesh(typing.cast(bpy.types.Mesh, merged_obj.data))
 
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.mesh.convex_hull()
-    bpy.ops.object.mode_set(mode="OBJECT")
+    # Convex Hull operation (native BMesh API)
+    bmesh.ops.convex_hull(bm, input=bm.verts)
+
+    # Clear original data and load new hull back to mesh data
+    bm.to_mesh(typing.cast(bpy.types.Mesh, merged_obj.data))
+    bm.free()
+    merged_obj.data.update()
 
     # Add decimation modifier for live quality adjustment
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
@@ -1358,9 +1373,17 @@ def update_collision_quality_realtime(
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
     if decimate_mod and isinstance(decimate_mod, bpy.types.DecimateModifier):
         decimate_mod.ratio = quality_ratio
+    elif collision_obj.type == "MESH":
+        # FALLBACK IMPROVEMENT: If modifier is missing but object exists, try adding it first
+        # This is much faster than full _regenerate_ and avoids one potential "jump".
+        decimate_mod = typing.cast(
+            bpy.types.DecimateModifier,
+            collision_obj.modifiers.new(name="Decimate", type="DECIMATE"),
+        )
+        decimate_mod.ratio = quality_ratio
+        decimate_mod.decimate_type = "COLLAPSE"
     else:
-        # FALLBACK: If the modifier was deleted or missing, schedule a full regeneration.
-        # This is safe and ensures the user always sees the correct result.
+        # ABSOLUTE FALLBACK: schedule a full regeneration for primitives or missing objects.
         schedule_collision_preview_update(obj)
 
 
