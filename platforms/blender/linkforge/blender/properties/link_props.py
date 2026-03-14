@@ -105,7 +105,7 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
         return
 
     # Skip regeneration for imported URDF models to preserve external data
-    if "imported_from_urdf" in collision_obj:
+    if "imported_from_urdf" in collision_obj:  # type: ignore[operator]
         return
 
     # Update ratio in realtime
@@ -306,7 +306,7 @@ def register() -> None:
         bpy.utils.unregister_class(LinkPropertyGroup)
         bpy.utils.register_class(LinkPropertyGroup)
 
-    bpy.types.Object.linkforge = PointerProperty(type=LinkPropertyGroup)
+    setattr(bpy.types.Object, "linkforge", PointerProperty(type=LinkPropertyGroup))  # noqa: B010
 
 
 def unregister() -> None:
@@ -314,7 +314,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge
+        delattr(bpy.types.Object, "linkforge")
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(LinkPropertyGroup)

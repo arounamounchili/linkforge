@@ -352,7 +352,7 @@ def register() -> None:
         bpy.utils.unregister_class(SensorPropertyGroup)
         bpy.utils.register_class(SensorPropertyGroup)
 
-    bpy.types.Object.linkforge_sensor = PointerProperty(type=SensorPropertyGroup)  # type: ignore
+    setattr(bpy.types.Object, "linkforge_sensor", PointerProperty(type=SensorPropertyGroup))  # noqa: B010
 
 
 def unregister() -> None:
@@ -360,7 +360,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge_sensor  # type: ignore
+        delattr(bpy.types.Object, "linkforge_sensor")
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(SensorPropertyGroup)

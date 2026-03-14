@@ -922,7 +922,7 @@ def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
     # Since LinkForge manages a single centralized configuration per scene,
     # Populate centralized ROS2 Control
     if robot.ros2_controls:
-        lp = scene.linkforge
+        lp = getattr(scene, "linkforge")
         lp.use_ros2_control = True
         control = robot.ros2_controls[0]
         lp.ros2_control_name = control.name
