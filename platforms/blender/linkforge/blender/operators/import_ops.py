@@ -185,6 +185,15 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
             logger.exception("Import process crashed")
             return {"CANCELLED"}
 
+        # Detect macro-only files (empty robots)
+        if not robot.links and not robot.joints:
+            self.report(
+                {"WARNING"},
+                f"The file '{urdf_path.name}' contains no links or joints. "
+                "It may be a macro-only XACRO file. Please import the top-level robot description instead.",
+            )
+            return {"CANCELLED"}
+
         # Validate robot structure
         from ...linkforge_core.validation import RobotValidator
 

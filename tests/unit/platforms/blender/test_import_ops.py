@@ -15,7 +15,7 @@ def test_import_urdf_logic_paths(tmp_path) -> None:
     mock_self.report = MagicMock()
 
     urdf_file = tmp_path / "test.urdf"
-    urdf_file.write_text("<robot name='test'/>")
+    urdf_file.write_text("<robot name='test'><link name='base_link'/></robot>")
     mock_self.filepath = str(urdf_file)
 
     context = MagicMock()
@@ -90,7 +90,7 @@ def test_import_urdf_directory_handling_more(tmp_path) -> None:
 
     # Case 1: Exactly one valid file
     robot_file = subdir / "one.urdf"
-    robot_file.write_text("<robot name='one'/>")
+    robot_file.write_text("<robot name='one'><link name='base_link'/></robot>")
     mock_self.filepath = str(subdir)
 
     with (
@@ -115,7 +115,7 @@ def test_import_urdf_directory_candidates(tmp_path) -> None:
     subdir.mkdir()
     # Create a candidate file (matching robot.urdf pattern)
     robot_file = subdir / "robot.urdf"
-    robot_file.write_text("<robot name='pkg'/>")
+    robot_file.write_text("<robot name='pkg'><link name='base_link'/></robot>")
     mock_self.filepath = str(subdir)
 
     with (

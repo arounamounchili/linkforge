@@ -236,12 +236,13 @@ class TestParseGeometry:
         assert geom is None
         assert "Invalid mesh geometry ignored" in caplog.text
 
-    def test_parse_mesh_negative_scale(self, parser, caplog) -> None:
-        """Test that mesh with negative scale returns None and logs warning."""
+    def test_parse_mesh_negative_scale(self, parser) -> None:
+        """Test that mesh with negative scale (mirroring) is accepted."""
         elem = ET.fromstring('<geometry><mesh filename="test.stl" scale="1 -1 1"/></geometry>')
         geom = parser._parse_geometry_element(elem)
-        assert geom is None
-        assert "Invalid mesh geometry ignored" in caplog.text
+
+        assert isinstance(geom, Mesh)
+        assert geom.scale.y == pytest.approx(-1.0)
 
     def test_parse_cylinder_invalid_radius(self, parser, caplog) -> None:
         """Test that cylinder with invalid radius format returns None and logs warning."""
