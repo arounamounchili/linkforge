@@ -67,6 +67,15 @@
         "bug",
         "ideas"
       ]
+    },
+    {
+      "login": "lionelfung7",
+      "name": "lionelfung7",
+      "avatar_url": "https://avatars.githubusercontent.com/u/50703745?v=4",
+      "profile": "https://github.com/lionelfung7",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
