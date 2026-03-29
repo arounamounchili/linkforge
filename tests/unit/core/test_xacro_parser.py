@@ -58,6 +58,30 @@ def test_substitute_resolves_arguments() -> None:
     assert resolver._substitute("package://$(arg pkg_name)/meshes") == "package://my_robot/meshes"
 
 
+def test_xacro_eval_arg_function() -> None:
+    """Verify that arg('name') function is available in evaluations."""
+    resolver = XacroResolver()
+    resolver.args["pkg_name"] = "my_robot"
+    assert resolver._evaluate("arg('pkg_name')") == "my_robot"
+    assert resolver._evaluate("arg('nonexistent')") == ""
+
+
+def test_xacro_substitute_eval() -> None:
+    """Verify that $(eval ...) is supported as an alias for ${...}."""
+    resolver = XacroResolver()
+    resolver.args["mode"] = "fast"
+    resolver.properties["mass"] = 10.0
+
+    # Basic eval
+    assert resolver._substitute("$(eval 1 + 1)") == 2
+    # Eval with args
+    assert resolver._substitute("$(eval mode == 'fast')") is True
+    # Eval with properties
+    assert resolver._substitute("$(eval mass * 2)") == 20.0
+    # Nested in string
+    assert resolver._substitute("Value is $(eval 10 + 5) units") == "Value is 15 units"
+
+
 def test_resolve_elements_with_conditionals() -> None:
     resolver = XacroResolver()
 
@@ -506,6 +530,26 @@ def test_xacro_load_yaml(tmp_path) -> None:
     link = next(c for c in resolved if c.tag == "link")
     assert link.get("name") == "bot"
     assert link.get("mass") == "10.5"
+
+
+def test_xacro_load_yaml_with_dot_access(tmp_path) -> None:
+    """Verify that YAML data supports dot notation for property access."""
+    yaml_path = tmp_path / "config.yaml"
+    yaml_path.write_text("links:\n  base:\n    mass: 5.0\n    name: robot_base")
+
+    main_xml = ET.fromstring(f"""
+        <root xmlns:xacro="http://www.ros.org/wiki/xacro">
+            <xacro:property name="config" value="${{load_yaml('{str(yaml_path)}')}}"/>
+            <link name="${{config.links.base.name}}" mass="${{config.links.base.mass}}"/>
+        </root>
+    """)
+
+    resolver = XacroResolver()
+    resolved = resolver.resolve_element(main_xml)
+
+    link = next(c for c in resolved if c.tag == "link")
+    assert link.get("name") == "robot_base"
+    assert link.get("mass") == "5.0"
 
 
 def test_xacro_load_json(tmp_path) -> None:

@@ -45,7 +45,7 @@ DEP_CONFIG: dict[str, dict[str, typing.Any]] = {
             "macosx_10_13_x86_64",
             "manylinux2014_x86_64",
         ],
-        "py_versions": ["311"],  # Blender 4.2+
+        "py_versions": ["311", "312", "313"],  # Blender 4.2, 5.0, 5.1+
     }
 }
 
@@ -86,8 +86,10 @@ def sync_dependencies() -> None:
             # Download pure-python universal wheel
             subprocess.run(
                 [
-                    sys.executable,
-                    "-m",
+                    "uv",
+                    "run",
+                    "--with",
+                    "pip",
                     "pip",
                     "download",
                     req,
@@ -103,8 +105,10 @@ def sync_dependencies() -> None:
                 for py_ver in config["py_versions"]:
                     subprocess.run(
                         [
-                            sys.executable,
-                            "-m",
+                            "uv",
+                            "run",
+                            "--with",
+                            "pip",
                             "pip",
                             "download",
                             req,

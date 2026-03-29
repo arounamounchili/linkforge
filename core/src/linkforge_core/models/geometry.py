@@ -140,9 +140,9 @@ class Mesh:
 
     def __post_init__(self) -> None:
         """Validate mesh scale."""
-        if self.scale.x <= 0 or self.scale.y <= 0 or self.scale.z <= 0:
+        if self.scale.x == 0 or self.scale.y == 0 or self.scale.z == 0:
             raise RobotModelError(
-                f"Mesh scale must be positive, got scale=({self.scale.x}, {self.scale.y}, {self.scale.z})"
+                f"Mesh scale components must be non-zero, got scale=({self.scale.x}, {self.scale.y}, {self.scale.z})"
             )
 
     @property

@@ -17,11 +17,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-import yaml  # type: ignore
+try:
+    import yaml  # type: ignore[import-untyped]
+except ImportError:
+    yaml = None
 
 from ..base import RobotParser, RobotParserError
 from ..logging_config import get_logger
 from ..models.robot import Robot
+from ..utils.dict_utils import AttrDict
 from ..utils.path_utils import resolve_package_path
 
 logger = get_logger(__name__)
@@ -53,6 +57,9 @@ MATH_CONTEXT["__builtins__"] = {
     "dict": dict,
     "bool": bool,
 }
+# Standard XACRO booleans
+MATH_CONTEXT["true"] = True
+MATH_CONTEXT["false"] = False
 
 
 class XacroResolver:
@@ -84,16 +91,17 @@ class XacroResolver:
             set()
         )  # Track active block insertions to prevent infinite recursion
 
-        # Per-instance evaluation context to allow file-aware data loading
+        # Shared evaluation context (load functions and standard arg)
         self.eval_context = MATH_CONTEXT.copy()
-        # Add 'load_yaml' and 'load_json' for top-level use
         self.eval_context["load_yaml"] = self._handle_load_yaml
         self.eval_context["load_json"] = self._handle_load_json
+        self.eval_context["arg"] = self._handle_arg_eval
 
-        # Add 'xacro' namespace for ROS-standard compliance (e.g. xacro.load_yaml)
+        # ROS-standard 'xacro' namespace
         xacro_ns = SimpleNamespace()
         xacro_ns.load_yaml = self._handle_load_yaml
         xacro_ns.load_json = self._handle_load_json
+        xacro_ns.arg = self._handle_arg_eval
         xacro_ns.warning = logger.warning
         xacro_ns.error = logger.error
         xacro_ns.fatal = logger.critical
@@ -595,7 +603,7 @@ class XacroResolver:
             return False
         else:
             try:
-                # Basic string/bool comparison with math/data support
+                # Standard expression evaluation
                 if _DUNDER_PATTERN.search(condition_str):
                     raise RobotParserError(
                         f"Condition '{condition_str}' contains forbidden dunder attributes."
@@ -618,14 +626,15 @@ class XacroResolver:
             return value
 
         # Try YAML (most robust and standard compliant)
-        try:
-            # safe_load handles ints, floats, bools (true/false), nulls, lists, dicts
-            parsed = yaml.safe_load(value)
-            # If it's a primitive type or collection, use it.
-            if isinstance(parsed, (int, float, bool, list, dict)) or parsed is None:
-                return parsed
-        except Exception:
-            pass
+        if yaml is not None:
+            try:
+                # safe_load handles ints, floats, bools (true/false), nulls, lists, dicts
+                parsed = yaml.safe_load(value)
+                # If it's a primitive type or collection, use it.
+                if isinstance(parsed, (int, float, bool, list, dict)) or parsed is None:
+                    return AttrDict._wrap(parsed)
+            except Exception:
+                pass
 
         # Fallback manual parsing (in case yaml fails or returns string for number)
         try:
@@ -668,7 +677,11 @@ class XacroResolver:
 
         text = re.sub(r"\$\(arg (.*?)\)", _resolve_arg, text)
 
-        # 2. Handle environment variable substitution, matching roslaunch behaviour.
+        # 2. Handle evaluation: $(eval expression) - Standard ROS XACRO feature
+        # We treat it as an alias for ${...} since our evaluation engine is Python-based.
+        text = re.sub(r"\$\(eval (.*?)\)", r"${\1}", text)
+
+        # 3. Handle environment variable substitution, matching roslaunch behaviour.
         # $(env VAR) raises if unset; $(optenv VAR) returns ""; $(optenv VAR default) returns default.
         def _resolve_env(m: re.Match[str]) -> str:
             parts = m.group(1).split(None, 1)
@@ -763,6 +776,17 @@ class XacroResolver:
             # we must tell the user immediately rather than producing a corrupt URDF.
             raise RobotParserError(f"Failed to evaluate expression '${{{expr}}}': {e}") from e
 
+    def _handle_arg_eval(self, name: str) -> Any:
+        """Access XACRO arguments in evaluation context.
+
+        Args:
+            name: Name of the argument to retrieve.
+
+        Returns:
+            The argument value if found, otherwise an empty string.
+        """
+        return self.args.get(name, "")
+
     def _handle_load_yaml(self, filename: str) -> Any:
         """Helper to load YAML file in XACRO context.
 
@@ -782,10 +806,11 @@ class XacroResolver:
             return {}
         try:
             with open(path) as f:
-                return yaml.safe_load(f)
+                data = yaml.safe_load(f)
+                return AttrDict._wrap(data)
         except Exception as e:  # pragma: no cover
             logger.error(f"XACRO: Failed to load YAML {filename}: {e}")
-            return {}
+            return AttrDict()
 
     def _handle_load_json(self, filename: str) -> Any:
         """Helper to load JSON file in XACRO context.
@@ -805,10 +830,11 @@ class XacroResolver:
             return {}
         try:
             with open(path) as f:
-                return json.load(f)
+                data = json.load(f)
+                return AttrDict._wrap(data)
         except Exception as e:  # pragma: no cover
             logger.error(f"XACRO: Failed to load JSON {filename}: {e}")
-            return {}
+            return AttrDict()
 
     def _finalize_urdf(self, root: ET.Element) -> str:
         """Strip XACRO artifacts and format the final XML.

@@ -52,22 +52,34 @@ ignore = ["E501", "B008", "C901", "B009", "N801"]
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+mypy_path = ["core/src", "platforms/blender"]
 
 # Blender (bpy) stubs use Python 3.12 syntax.
-# We set the parser to 3.12 above and skip deep inspection here.
 [[tool.mypy.overrides]]
-module = "bpy.*"
+module = [
+    "bpy",
+    "bpy.*",
+    "mathutils",
+    "mathutils.*",
+    "gpu",
+    "gpu.*",
+    "gpu_extras",
+    "gpu_extras.*",
+    "bpy_extras",
+    "bpy_extras.*",
+]
 ignore_errors = true
 ignore_missing_imports = true
-
 # Enable full type checking for all LinkForge Blender modules
 [[tool.mypy.overrides]]
 module = "linkforge.blender.*"
 ignore_errors = false
+disallow_subclassing_any = false
+warn_unused_ignores = false
 
 # Tiered Quality Control: Strict enforcement for production core, optimized for developer velocity in test suites.
 [[tool.mypy.overrides]]

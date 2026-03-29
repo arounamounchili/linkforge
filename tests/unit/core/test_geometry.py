@@ -179,12 +179,12 @@ class TestMesh:
         mesh = Mesh(resource="model.stl")
         assert mesh.type == GeometryType.MESH
 
-    def test_negative_scale_validation(self) -> None:
-        """Test that negative scale is rejected."""
-        with pytest.raises(RobotModelError, match="Mesh scale must be positive"):
-            Mesh(resource="model.stl", scale=Vector3(-1.0, 1.0, 1.0))
+    def test_negative_scale_support(self) -> None:
+        """Test that negative scale is now accepted for mirroring."""
+        mesh = Mesh(resource="model.stl", scale=Vector3(-1.0, 1.0, 1.0))
+        assert mesh.scale.x == -1.0
 
     def test_zero_scale_validation(self) -> None:
         """Test that zero scale is rejected."""
-        with pytest.raises(RobotModelError, match="Mesh scale must be positive"):
+        with pytest.raises(RobotModelError, match="Mesh scale components must be non-zero"):
             Mesh(resource="model.stl", scale=Vector3(1.0, 0.0, 1.0))

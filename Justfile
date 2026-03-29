@@ -14,6 +14,10 @@ build: build-blender
 build-blender:
     uv run python platforms/blender/scripts/build.py
 
+# Sync Blender dependencies (downloads platform-specific wheels)
+sync:
+    uv run python platforms/blender/scripts/build.py sync
+
 # --- Test ---
 
 # Run all tests (Core + Blender)

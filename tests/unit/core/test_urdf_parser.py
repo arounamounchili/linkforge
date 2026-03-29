@@ -862,11 +862,6 @@ class TestURDFParser:
         elem = ET.fromstring(xml)
         assert parser._parse_geometry_element(elem) is None
 
-        # Negative scale
-        xml = '<geometry><mesh filename="test.stl" scale="-1 1 1" /></geometry>'
-        elem = ET.fromstring(xml)
-        assert parser._parse_geometry_element(elem) is None
-
         # Cylinder invalid length
         xml = '<geometry><cylinder radius="1" length="-1"/></geometry>'
         assert parser._parse_geometry_element(ET.fromstring(xml)) is None
@@ -875,9 +870,11 @@ class TestURDFParser:
         xml = "<geometry><mesh/></geometry>"
         assert parser._parse_geometry_element(ET.fromstring(xml)) is None
 
-        # Mesh negative scale
+        # Mesh negative scale (Mirroring support)
         xml = '<geometry><mesh filename="f.stl" scale="-1 1 1"/></geometry>'
-        assert parser._parse_geometry_element(ET.fromstring(xml)) is None
+        geom = parser._parse_geometry_element(ET.fromstring(xml))
+        assert isinstance(geom, Mesh)
+        assert geom.scale.x == -1.0
 
         # 3. Material Errors
         # Invalid RGBA length
