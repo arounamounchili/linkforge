@@ -10,10 +10,22 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+from .. import __version__
+from ..logging_config import get_logger
+from ..models import (
+    DisabledCollision,
+    EndEffector,
+    GroupState,
+    PassiveJoint,
+    PlanningGroup,
+    VirtualJoint,
+)
 from ..models.robot import Robot
 from ..utils.math_utils import format_float
 from ..utils.xml_utils import serialize_xml
 from .xml_base import RobotXMLGenerator
+
+logger = get_logger(__name__)
 
 
 class SRDFGenerator(RobotXMLGenerator):
@@ -33,16 +45,17 @@ class SRDFGenerator(RobotXMLGenerator):
 
         Args:
             robot: Robot model with semantic description.
-            validate: Whether to validate robot structure before generation (not implemented for SRDF yet)
-            **kwargs: Additional generation options
+            validate: Whether to validate robot structure before generation.
+            **kwargs: Additional generation options (passed to serializer).
 
         Returns:
             SRDF XML as formatted string with proper indentation
         """
-        from .. import __version__
+        if validate and robot.semantic is None:
+            logger.warning(f"Robot '{robot.name}' has no semantic description to generate.")
 
         root = self.generate_robot_element(robot)
-        return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)
+        return serialize_xml(root, pretty_print=self.pretty_print, version=__version__, **kwargs)
 
     def generate_robot_element(self, robot: Robot) -> ET.Element:
         """Generate SRDF XML Element tree from robot."""
@@ -52,9 +65,18 @@ class SRDFGenerator(RobotXMLGenerator):
             return root
 
         semantic = robot.semantic
+        self._add_virtual_joints(root, semantic.virtual_joints)
+        self._add_groups(root, semantic.groups)
+        self._add_group_states(root, semantic.group_states)
+        self._add_end_effectors(root, semantic.end_effectors)
+        self._add_passive_joints(root, semantic.passive_joints)
+        self._add_disabled_collisions(root, semantic.disabled_collisions)
 
-        # 1. Virtual Joints
-        for vj in semantic.virtual_joints:
+        return root
+
+    def _add_virtual_joints(self, root: ET.Element, virtual_joints: list[VirtualJoint]) -> None:
+        """Add virtual joint elements to root."""
+        for vj in virtual_joints:
             ET.SubElement(
                 root,
                 "virtual_joint",
@@ -64,51 +86,45 @@ class SRDFGenerator(RobotXMLGenerator):
                 child_link=vj.child_link,
             )
 
-        # 2. Planning Groups
-        for group in semantic.groups:
+    def _add_groups(self, root: ET.Element, groups: list[PlanningGroup]) -> None:
+        """Add planning group elements to root."""
+        for group in groups:
             group_elem = ET.SubElement(root, "group", name=group.name)
-
             for link_name in group.links:
                 ET.SubElement(group_elem, "link", name=link_name)
-
             for joint_name in group.joints:
                 ET.SubElement(group_elem, "joint", name=joint_name)
-
             for base, tip in group.chains:
                 ET.SubElement(group_elem, "chain", base_link=base, tip_link=tip)
-
             for subgroup in group.subgroups:
                 ET.SubElement(group_elem, "group", name=subgroup)
 
-        # 3. Group States
-        for state in semantic.group_states:
+    def _add_group_states(self, root: ET.Element, states: list[GroupState]) -> None:
+        """Add group state elements to root."""
+        for state in states:
             state_elem = ET.SubElement(root, "group_state", name=state.name, group=state.group)
             for j_name, j_val in state.joint_values.items():
                 ET.SubElement(state_elem, "joint", name=j_name, value=format_float(j_val))
 
-        # 4. End Effectors
-        for ee in semantic.end_effectors:
-            attrib = {
-                "name": ee.name,
-                "group": ee.group,
-                "parent_link": ee.parent_link,
-            }
+    def _add_end_effectors(self, root: ET.Element, end_effectors: list[EndEffector]) -> None:
+        """Add end effector elements to root."""
+        for ee in end_effectors:
+            attrib = {"name": ee.name, "group": ee.group, "parent_link": ee.parent_link}
             if ee.parent_group:
                 attrib["parent_group"] = ee.parent_group
             ET.SubElement(root, "end_effector", **attrib)  # type: ignore[arg-type]
 
-        # 5. Passive Joints
-        for pj in semantic.passive_joints:
+    def _add_passive_joints(self, root: ET.Element, passive_joints: list[PassiveJoint]) -> None:
+        """Add passive joint elements to root."""
+        for pj in passive_joints:
             ET.SubElement(root, "passive_joint", name=pj.name)
 
-        # 6. Disabled Collisions
-        for dc in semantic.disabled_collisions:
-            attrib = {
-                "link1": dc.link1,
-                "link2": dc.link2,
-            }
+    def _add_disabled_collisions(
+        self, root: ET.Element, disabled_collisions: list[DisabledCollision]
+    ) -> None:
+        """Add disabled collision elements to root."""
+        for dc in disabled_collisions:
+            attrib = {"link1": dc.link1, "link2": dc.link2}
             if dc.reason:
                 attrib["reason"] = dc.reason
             ET.SubElement(root, "disable_collisions", **attrib)  # type: ignore[arg-type]
-
-        return root

@@ -86,3 +86,14 @@ def test_srdf_generator_empty_semantic():
     xml_out = generator.generate(robot)
     assert '<robot name="empty_robot"' in xml_out
     assert "<virtual_joint" not in xml_out
+
+
+def test_srdf_generator_no_reason_collision():
+    """Test generating SRDF with a disabled collision that has no reason."""
+    robot = Robot(name="test")
+    robot.semantic = SemanticRobotDescription(disabled_collisions=[DisabledCollision("l1", "l2")])
+    generator = SRDFGenerator()
+    xml_out = generator.generate(robot)
+    assert 'link1="l1"' in xml_out
+    assert 'link2="l2"' in xml_out
+    assert "reason" not in xml_out

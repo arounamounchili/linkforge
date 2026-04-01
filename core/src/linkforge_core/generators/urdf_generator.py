@@ -16,7 +16,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+from .. import __version__
 from ..base import RobotGeneratorError
+from ..logging_config import get_logger
 from ..models.gazebo import GazeboElement, GazeboPlugin
 from ..models.geometry import Transform
 from ..models.joint import Joint, JointType
@@ -38,7 +40,10 @@ from ..models.sensor import (
 from ..models.transmission import Transmission
 from ..utils.math_utils import format_float, format_vector
 from ..utils.xml_utils import serialize_xml
+from ..validation import RobotValidator
 from .xml_base import RobotXMLGenerator
+
+logger = get_logger(__name__)
 
 
 class URDFGenerator(RobotXMLGenerator):
@@ -57,8 +62,8 @@ class URDFGenerator(RobotXMLGenerator):
             urdf_path: Path where URDF will be saved. Used to calculate relative mesh paths.
                       If None, mesh paths will be absolute or package:// URIs.
             use_ros2_control: Whether to generate ros2_control blocks from transmissions.
-                            Set to False if you don't use ROS2 Control or prefer manual configuration.
-                            (default: True)
+                             Set to False if you don't use ROS2 Control or prefer
+                             manual configuration. (default: True)
 
         Example:
             >>> from pathlib import Path
@@ -78,7 +83,7 @@ class URDFGenerator(RobotXMLGenerator):
         Args:
             robot: Robot model with links, joints, sensors, etc.
             validate: Whether to validate robot structure before generation (default: True)
-            **kwargs: Additional generation options
+            **kwargs: Additional generation options (e.g. 'compact' to avoid comments)
 
         Returns:
             URDF XML as formatted string with proper indentation
@@ -86,7 +91,8 @@ class URDFGenerator(RobotXMLGenerator):
         Raises:
             RobotGeneratorError: If robot validation fails (checks for cycles, missing links, etc.)
         """
-        from .. import __version__
+        if kwargs:
+            logger.debug(f"URDFGenerator: unused generation options: {list(kwargs.keys())}")
 
         root = self.generate_robot_element(robot, validate=validate)
         return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)
@@ -103,8 +109,6 @@ class URDFGenerator(RobotXMLGenerator):
         """
         # Validate robot structure
         if validate:
-            from ..validation import RobotValidator
-
             validator = RobotValidator()
             result = validator.validate(robot)
             if not result.is_valid:
@@ -339,12 +343,17 @@ class URDFGenerator(RobotXMLGenerator):
         self._add_joint_properties(joint_elem, joint)
 
     def _add_joint_properties(self, joint_elem: ET.Element, joint: Joint) -> None:
-        """Add functional properties to joint element.
-
-        Shared between standard joints and XACRO macro definitions.
-        Includes axis, limits, dynamics, mimic, safety controller and calibration.
-        """
+        """Add functional properties to joint element."""
         # Axis (only for revolute, continuous, prismatic, planar)
+        self._add_joint_axis(joint_elem, joint)
+        self._add_joint_limits(joint_elem, joint)
+        self._add_joint_dynamics(joint_elem, joint)
+        self._add_joint_mimic(joint_elem, joint)
+        self._add_joint_safety(joint_elem, joint)
+        self._add_joint_calibration(joint_elem, joint)
+
+    def _add_joint_axis(self, joint_elem: ET.Element, joint: Joint) -> None:
+        """Add joint axis if applicable."""
         if (
             joint.type
             in (
@@ -358,7 +367,8 @@ class URDFGenerator(RobotXMLGenerator):
             axis_str = format_vector(joint.axis.x, joint.axis.y, joint.axis.z)
             ET.SubElement(joint_elem, "axis", xyz=axis_str)
 
-        # Limits
+    def _add_joint_limits(self, joint_elem: ET.Element, joint: Joint) -> None:
+        """Add joint mechanical limits."""
         if joint.limits:
             attrib: dict[str, str] = {
                 "effort": format_float(joint.limits.effort),
@@ -371,7 +381,8 @@ class URDFGenerator(RobotXMLGenerator):
                 attrib["upper"] = format_float(joint.limits.upper)
             ET.SubElement(joint_elem, "limit", **attrib)  # type: ignore[arg-type]
 
-        # Dynamics
+    def _add_joint_dynamics(self, joint_elem: ET.Element, joint: Joint) -> None:
+        """Add joint dynamics like damping and friction."""
         if joint.dynamics:
             ET.SubElement(
                 joint_elem,
@@ -380,7 +391,8 @@ class URDFGenerator(RobotXMLGenerator):
                 friction=format_float(joint.dynamics.friction),
             )
 
-        # Mimic
+    def _add_joint_mimic(self, joint_elem: ET.Element, joint: Joint) -> None:
+        """Add joint mimic information if applicable."""
         if joint.mimic:
             mimic_attrib: dict[str, str] = {"joint": joint.mimic.joint}
             if joint.mimic.multiplier != 1.0:
@@ -389,7 +401,8 @@ class URDFGenerator(RobotXMLGenerator):
                 mimic_attrib["offset"] = format_float(joint.mimic.offset)
             ET.SubElement(joint_elem, "mimic", **mimic_attrib)  # type: ignore[arg-type]
 
-        # Safety Controller
+    def _add_joint_safety(self, joint_elem: ET.Element, joint: Joint) -> None:
+        """Add safety controller limits."""
         if joint.safety_controller:
             safety_attrib: dict[str, str] = {
                 "soft_lower_limit": format_float(joint.safety_controller.soft_lower_limit),
@@ -399,7 +412,8 @@ class URDFGenerator(RobotXMLGenerator):
             }
             ET.SubElement(joint_elem, "safety_controller", **safety_attrib)  # type: ignore[arg-type]
 
-        # Calibration
+    def _add_joint_calibration(self, joint_elem: ET.Element, joint: Joint) -> None:
+        """Add joint calibration offsets."""
         if joint.calibration:
             calib_attrib: dict[str, str] = {}
             if joint.calibration.rising is not None:

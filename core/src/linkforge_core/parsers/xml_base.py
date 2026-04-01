@@ -24,6 +24,7 @@ from ..models import (
     Sphere,
     Transform,
 )
+from ..utils.path_utils import normalize_uri_to_path
 from ..utils.xml_utils import (
     parse_float,
     parse_vector3,
@@ -83,85 +84,76 @@ class RobotXMLParser(RobotParser):
         geom_elem: ET.Element,
         base_directory: Path | None = None,
     ) -> Box | Cylinder | Sphere | Mesh | None:
-        """Parse geometry element (box, cylinder, sphere, mesh).
-
-        Args:
-            geom_elem: Parent element containing geometry definitions.
-            base_directory: Directory for relative path validation.
-
-        Returns:
-            A Geometry object or None if invalid.
-        """
+        """Parse geometry element (box, cylinder, sphere, mesh)."""
         try:
-            # Box
-            box = geom_elem.find("box")
-            if box is not None:
-                size_text = box.get("size")
-                if size_text is None:
-                    logger.warning("Invalid box geometry ignored: missing size")
-                    return None
-                return Box(size=parse_vector3(size_text))
-
-            # Cylinder
-            cylinder = geom_elem.find("cylinder")
-            if cylinder is not None:
-                radius = parse_float(cylinder.get("radius"), "cylinder radius", default=0.5)
-                length = parse_float(cylinder.get("length"), "cylinder length", default=1.0)
-                return Cylinder(radius=radius, length=length)
-
-            # Sphere
-            sphere = geom_elem.find("sphere")
-            if sphere is not None:
-                radius = parse_float(sphere.get("radius"), "sphere radius", default=0.5)
-                return Sphere(radius=radius)
-
-            # Mesh
-            mesh = geom_elem.find("mesh")
-            if mesh is not None:
-                filename = mesh.get("filename", mesh.get("file", ""))
-                if not filename:
-                    logger.warning("Invalid mesh geometry ignored: missing filename")
-                    return None
-
-                # Path Security Validation
-                validation_path: Path | None = None
-                if filename.startswith("file://"):
-                    from ..utils.path_utils import normalize_uri_to_path
-
-                    validation_path = normalize_uri_to_path(filename)
-                elif not filename.startswith("package://"):
-                    validation_path = Path(filename)
-
-                if validation_path is not None and base_directory is not None:
-                    validate_mesh_path(
-                        validation_path,
-                        base_directory,
-                        sandbox_root=self.sandbox_root,
-                        allow_absolute=validation_path.is_absolute(),
-                    )
-                elif filename.startswith("package://"):
-                    validate_package_uri(filename)
-
-                scale_text = mesh.get("scale", "1 1 1")
-                # Return normalized path for file:// URIs, raw filename for package://
-                resource = str(validation_path) if validation_path else filename
-                return Mesh(resource=resource, scale=parse_vector3(scale_text))
-
-            return None
-        except (RobotModelError, ValueError, RobotParserError) as e:
-            # Determine geometry type for better logging if possible
-            geom_type = "geometry"
             if geom_elem.find("box") is not None:
-                geom_type = "box geometry"
-            elif geom_elem.find("cylinder") is not None:
-                geom_type = "cylinder geometry"
-            elif geom_elem.find("sphere") is not None:
-                geom_type = "sphere geometry"
-            elif geom_elem.find("mesh") is not None:
-                geom_type = "mesh geometry"
-
-            logger.warning(f"Invalid {geom_type} ignored: {e}")
+                return self._parse_box(geom_elem.find("box"))
+            if geom_elem.find("cylinder") is not None:
+                return self._parse_cylinder(geom_elem.find("cylinder"))
+            if geom_elem.find("sphere") is not None:
+                return self._parse_sphere(geom_elem.find("sphere"))
+            if geom_elem.find("mesh") is not None:
+                return self._parse_mesh(geom_elem.find("mesh"), base_directory)
+        except (RobotModelError, ValueError, RobotParserError) as e:
+            logger.warning(f"Invalid geometry ignored: {e}")
             return None
+
+        return None
+
+    def _parse_box(self, box: ET.Element | None) -> Box | None:
+        """Parse box geometry."""
+        if box is None:
+            return None
+        size_text = box.get("size")
+        if size_text is None:
+            logger.warning("Invalid box geometry ignored: missing size")
+            return None
+        return Box(size=parse_vector3(size_text))
+
+    def _parse_cylinder(self, cylinder: ET.Element | None) -> Cylinder | None:
+        """Parse cylinder geometry."""
+        if cylinder is None:
+            return None
+        radius = parse_float(cylinder.get("radius"), "cylinder radius", default=0.5)
+        length = parse_float(cylinder.get("length"), "cylinder length", default=1.0)
+        return Cylinder(radius=radius, length=length)
+
+    def _parse_sphere(self, sphere: ET.Element | None) -> Sphere | None:
+        """Parse sphere geometry."""
+        if sphere is None:
+            return None
+        radius = parse_float(sphere.get("radius"), "sphere radius", default=0.5)
+        return Sphere(radius=radius)
+
+    def _parse_mesh(self, mesh: ET.Element | None, base_dir: Path | None) -> Mesh | None:
+        """Parse mesh geometry with security validation."""
+        if mesh is None:
+            return None
+        filename = mesh.get("filename", mesh.get("file", ""))
+        if not filename:
+            logger.warning("Invalid mesh geometry ignored: missing filename")
+            return None
+
+        # Path Security Validation
+        validation_path: Path | None = None
+        if filename.startswith("file://"):
+            validation_path = normalize_uri_to_path(filename)
+        elif not filename.startswith("package://"):
+            validation_path = Path(filename)
+
+        if validation_path is not None and base_dir is not None:
+            validate_mesh_path(
+                validation_path,
+                base_dir,
+                sandbox_root=self.sandbox_root,
+                allow_absolute=validation_path.is_absolute(),
+            )
+        elif filename.startswith("package://"):
+            validate_package_uri(filename)
+
+        scale_text = mesh.get("scale", "1 1 1")
+        resource = str(validation_path) if validation_path else filename
+        return Mesh(resource=resource, scale=parse_vector3(scale_text))
 
     def _parse_material_element(
         self, mat_elem: ET.Element | None, materials: dict[str, Material]
@@ -184,13 +176,16 @@ class RobotXMLParser(RobotParser):
 
         color = None
         color_elem = mat_elem.find("color")
+        num_rgb = 3
+        num_rgba = 4
         if color_elem is not None:
             rgba_text = color_elem.get("rgba", "0.8 0.8 0.8 1.0")
             parts = rgba_text.strip().split()
             try:
-                if len(parts) == 3:
+                num_parts = len(parts)
+                if num_parts == num_rgb:
                     color = Color(r=float(parts[0]), g=float(parts[1]), b=float(parts[2]), a=1.0)
-                elif len(parts) == 4:
+                elif num_parts == num_rgba:
                     color = Color(
                         r=float(parts[0]), g=float(parts[1]), b=float(parts[2]), a=float(parts[3])
                     )
@@ -299,9 +294,8 @@ class RobotXMLParser(RobotParser):
                             break
                         except RobotModelError as inner_e:
                             if "not found" in str(inner_e):
-                                logger.warning(
-                                    f"Skipping duplicate joint '{original_name}' due to broken reference: {inner_e}"
-                                )
+                                msg = f"Skipping duplicate joint '{original_name}': {inner_e}"
+                                logger.warning(msg)
                                 break
                             counter += 1
                     else:
