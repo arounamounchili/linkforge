@@ -166,6 +166,33 @@ class XacroResolver:
             if sys.getrecursionlimit() != old_limit:
                 sys.setrecursionlimit(old_limit)
 
+    def resolve_string(self, xml_string: str) -> str:
+        """Resolve a XACRO string and return the final XML string.
+
+        Args:
+            xml_string: The XACRO XML content as a string.
+
+        Returns:
+            The fully resolved XML as a string.
+        """
+        old_limit = sys.getrecursionlimit()
+        if old_limit < RECURSION_LIMIT_BOOST:
+            sys.setrecursionlimit(RECURSION_LIMIT_BOOST)
+
+        try:
+            root = ET.fromstring(xml_string)
+            resolved_root = self.resolve_element(root)
+
+            # finalize_urdf expects an ET.Element and handles cleanup of xacro artifacts
+            return self._finalize_urdf(resolved_root)
+        except Exception as e:
+            if isinstance(e, RobotParserError):
+                raise
+            raise RobotParserError(f"XACRO string resolution failed: {e}") from e
+        finally:
+            if sys.getrecursionlimit() != old_limit:
+                sys.setrecursionlimit(old_limit)
+
     def _process_include_file(
         self, filepath: Path, ns: str | None = None
     ) -> tuple[ET.Element, str, dict[str, str]]:
