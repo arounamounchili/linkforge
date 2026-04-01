@@ -57,5 +57,5 @@ class TestXacroEvalSandbox:
         ]
 
         for payload in malicious_payloads:
-            with pytest.raises(RobotParserError, match="dunder attributes.*are not allowed"):
+            with pytest.raises(RobotParserError, match="Forbidden dunder attributes"):
                 resolver._evaluate(payload)

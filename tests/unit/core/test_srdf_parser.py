@@ -1,7 +1,11 @@
 from pathlib import Path
 
 import pytest
-from linkforge_core.base import RobotParserError
+from linkforge_core.exceptions import (
+    RobotParserIOError,
+    RobotParserUnexpectedError,
+    RobotParserXMLRootError,
+)
 from linkforge_core.models.robot import Robot
 from linkforge_core.parsers.srdf_parser import SRDFParser
 
@@ -84,14 +88,14 @@ def test_srdf_parser_robot_integration():
 def test_srdf_parser_invalid_xml():
     """Test that malformed XML raises RobotParserError."""
     parser = SRDFParser()
-    with pytest.raises(RobotParserError):
+    with pytest.raises(RobotParserUnexpectedError, match="SRDF parse"):
         parser.parse_string("<robot><unclosed_tag></robot>")
 
 
 def test_srdf_parser_wrong_root():
     """Test that non-<robot> root raises RobotParserError."""
     parser = SRDFParser()
-    with pytest.raises(RobotParserError, match="Bad root"):
+    with pytest.raises(RobotParserXMLRootError, match="Invalid XML root: <not_a_robot>"):
         parser.parse_string("<not_a_robot></not_a_robot>")
 
 
@@ -120,7 +124,7 @@ def test_srdf_parser_xacro_file_parsing(tmp_path):
 def test_srdf_parser_file_not_found():
     """Test error when SRDF file does not exist."""
     parser = SRDFParser()
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(RobotParserIOError, match="Missing file"):
         parser.parse(Path("non_existent.srdf"))
 
 
@@ -130,14 +134,14 @@ def test_srdf_parser_file_too_large(tmp_path):
     srdf_file.write_text("a" * 100)
 
     parser = SRDFParser(max_file_size=10)
-    with pytest.raises(RobotParserError, match="too large"):
+    with pytest.raises(RobotParserIOError, match="File too large"):
         parser.parse(srdf_file)
 
 
 def test_srdf_parser_malformed_xml():
     """Test error when SRDF XML is malformed."""
     parser = SRDFParser()
-    with pytest.raises(RobotParserError, match="SRDF parse error"):
+    with pytest.raises(RobotParserUnexpectedError, match="Unexpected error in SRDF parse"):
         parser.parse_string("<robot><unclosed>")
 
 
@@ -152,7 +156,9 @@ def test_srdf_parser_unexpected_exception(monkeypatch):
 
     monkeypatch.setattr(ET, "fromstring", mock_fromstring)
 
-    with pytest.raises(RobotParserError, match="SRDF unexpected error"):
+    with pytest.raises(
+        RobotParserUnexpectedError, match="Unexpected error in Unexpected SRDF parse"
+    ):
         parser.parse_string("<robot/>")
 
 
@@ -229,7 +235,7 @@ def test_srdf_parser_generic_exception_in_parse(tmp_path, monkeypatch):
         raise RuntimeError("Disk failure")
 
     monkeypatch.setattr("pathlib.Path.read_text", mock_read)
-    with pytest.raises(RobotParserError, match="SRDF file error"):
+    with pytest.raises(RobotParserIOError, match="Parser IO error: Disk failure"):
         parser.parse(srdf_file)
 
 
@@ -238,7 +244,7 @@ def test_srdf_parser_rethrown_exceptions(tmp_path):
     parser = SRDFParser()
     srdf_file = tmp_path / "bad_root.srdf"
     srdf_file.write_text("<not_robot/>")
-    with pytest.raises(RobotParserError, match="Bad root"):
+    with pytest.raises(RobotParserXMLRootError, match="Invalid XML root: <not_robot>"):
         parser.parse(srdf_file)
 
 

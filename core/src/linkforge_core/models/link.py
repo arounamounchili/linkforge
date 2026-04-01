@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotModelError, RobotPhysicsError, RobotValidationError
 from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Geometry, Transform
 from .material import Material
@@ -32,7 +32,7 @@ class InertiaTensor:
         """Validate inertia tensor values."""
         # All diagonal elements must be positive
         if self.ixx <= 0 or self.iyy <= 0 or self.izz <= 0:
-            raise RobotModelError("Diagonal inertia elements must be positive")
+            raise RobotPhysicsError("DiagonalInertia", self.ixx, "Must be positive (ixx, iyy, izz)")
 
         # Triangle inequality for principal moments
         # https://en.wikipedia.org/wiki/Moment_of_inertia#Principal_axes
@@ -43,7 +43,9 @@ class InertiaTensor:
             and self.iyy + self.izz >= self.ixx - epsilon
             and self.izz + self.ixx >= self.iyy - epsilon
         ):
-            raise RobotModelError("Inertia tensor violates triangle inequality")
+            raise RobotPhysicsError(
+                "InertiaTriangleInequality", self.ixx, "Violates physical bounds"
+            )
 
     @classmethod
     def zero(cls) -> InertiaTensor:
@@ -63,7 +65,7 @@ class Inertial:
     def __post_init__(self) -> None:
         """Validate mass is non-negative."""
         if self.mass < 0:
-            raise RobotModelError(f"Mass must be non-negative, got {self.mass}")
+            raise RobotPhysicsError("Mass", self.mass, "Must be non-negative")
 
 
 @dataclass(frozen=True)
@@ -112,10 +114,7 @@ class Link:
 
         # URDF naming convention: lowercase with underscores
         if not is_valid_urdf_name(self.name):
-            raise RobotModelError(
-                f"Link name '{self.name}' contains invalid characters. "
-                "Use only alphanumeric, underscore, or hyphen."
-            )
+            raise RobotValidationError("LinkName", self.name, "Invalid characters")
 
         if initial_visuals:
             self._visuals.extend(initial_visuals)

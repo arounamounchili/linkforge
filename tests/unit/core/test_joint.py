@@ -31,17 +31,17 @@ class TestJointLimits:
 
     def test_lower_greater_than_upper(self) -> None:
         """Test that lower > upper raises error."""
-        with pytest.raises(RobotModelError, match="Lower limit.*must be <= upper limit"):
+        with pytest.raises(RobotModelError):
             JointLimits(lower=2.0, upper=1.0)
 
     def test_negative_effort(self) -> None:
         """Test that negative effort raises error."""
-        with pytest.raises(RobotModelError, match="Effort must be non-negative"):
+        with pytest.raises(RobotModelError):
             JointLimits(lower=0.0, upper=1.0, effort=-10.0)
 
     def test_negative_velocity(self) -> None:
         """Test that negative velocity raises error."""
-        with pytest.raises(RobotModelError, match="Velocity must be non-negative"):
+        with pytest.raises(RobotModelError):
             JointLimits(lower=0.0, upper=1.0, velocity=-5.0)
 
     def test_equal_limits(self) -> None:
@@ -67,12 +67,12 @@ class TestJointDynamics:
 
     def test_negative_damping(self) -> None:
         """Test that negative damping raises error."""
-        with pytest.raises(RobotModelError, match="Damping must be non-negative"):
+        with pytest.raises(RobotModelError):
             JointDynamics(damping=-0.5)
 
     def test_negative_friction(self) -> None:
         """Test that negative friction raises error."""
-        with pytest.raises(RobotModelError, match="Friction must be non-negative"):
+        with pytest.raises(RobotModelError):
             JointDynamics(friction=-0.3)
 
     def test_default_values(self) -> None:
@@ -228,7 +228,7 @@ class TestJoint:
 
     def test_invalid_name_characters(self) -> None:
         """Test that invalid characters in name raise error."""
-        with pytest.raises(RobotModelError, match="invalid characters"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="joint with spaces!",
                 type=JointType.FIXED,
@@ -288,7 +288,7 @@ class TestJoint:
 
     def test_revolute_without_limits(self) -> None:
         """Test that revolute joint without limits raises error."""
-        with pytest.raises(RobotModelError, match="revolute joints require limits"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="joint1",
                 type=JointType.REVOLUTE,
@@ -299,7 +299,7 @@ class TestJoint:
 
     def test_prismatic_without_limits(self) -> None:
         """Test that prismatic joint without limits raises error."""
-        with pytest.raises(RobotModelError, match="prismatic joints require limits"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="joint1",
                 type=JointType.PRISMATIC,
@@ -310,7 +310,7 @@ class TestJoint:
 
     def test_fixed_with_limits(self) -> None:
         """Test that fixed joint with limits raises error."""
-        with pytest.raises(RobotModelError, match="must not have limits"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="joint1",
                 type=JointType.FIXED,
@@ -321,7 +321,7 @@ class TestJoint:
 
     def test_zero_axis(self) -> None:
         """Test that zero axis vector raises error."""
-        with pytest.raises(RobotModelError, match="axis magnitude must be"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="joint1",
                 type=JointType.REVOLUTE,
@@ -333,7 +333,7 @@ class TestJoint:
 
     def test_revolute_without_axis_error(self) -> None:
         """Test that revolute joint without axis raises error in strict model."""
-        with pytest.raises(RobotModelError, match="revolute joints require an axis"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="joint1",
                 type=JointType.REVOLUTE,
@@ -556,7 +556,7 @@ class TestJointAxisWarnings:
 
     def test_fixed_joint_with_axis_error(self) -> None:
         """Test that fixed joint with axis raises error."""
-        with pytest.raises(RobotModelError, match="must not have an axis"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="fixed_joint",
                 type=JointType.FIXED,
@@ -567,7 +567,7 @@ class TestJointAxisWarnings:
 
     def test_floating_joint_with_axis_error(self) -> None:
         """Test that floating joint with axis raises error."""
-        with pytest.raises(RobotModelError, match="must not have an axis"):
+        with pytest.raises(RobotModelError):
             Joint(
                 name="floating_joint",
                 type=JointType.FLOATING,

@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotMathError, RobotValidationError
 from ..models import Vector3
 
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
@@ -22,13 +22,10 @@ def validate_xml_depth(element: ET.Element, depth: int = 0) -> None:
         depth: Current nesting depth
 
     Raises:
-        RobotModelError: If depth exceeds MAX_XML_DEPTH
+        RobotValidationError: If depth exceeds MAX_XML_DEPTH
     """
     if depth > MAX_XML_DEPTH:
-        raise RobotModelError(
-            f"XML nesting too deep: {depth} levels (maximum {MAX_XML_DEPTH}). "
-            "This may indicate a malicious or corrupted XML file."
-        )
+        raise RobotValidationError(check_name="XMLDepth", value=depth, reason="Nesting too deep")
 
     for child in element:
         validate_xml_depth(child, depth + 1)
@@ -102,7 +99,10 @@ def serialize_xml(
 
 
 def parse_float(
-    text: str | None, attribute_name: str = "value", default: float | None = None
+    text: str | None,
+    attribute_name: str = "value",
+    default: float | None = None,
+    check_name: str | None = None,
 ) -> float:
     """Parse float value from XML with comprehensive validation.
 
@@ -110,69 +110,87 @@ def parse_float(
         text: String to parse
         attribute_name: Context for error messages
         default: Default value if text is None
+        check_name: Alias for attribute_name used in some parsers
 
     Returns:
         Parsed float
 
     Raises:
-        RobotModelError: If input is invalid
+        RobotMathError: If input is invalid
+        RobotValidationError: If attribute is missing
     """
     import math
 
+    # Alias check_name if provided
+    report_name = check_name or attribute_name
+
     if text is not None and not text.strip():
         text = None
 
     if text is None:
         if default is not None:
             return default
-        raise RobotModelError(f"Missing required attribute '{attribute_name}'")
+        raise RobotValidationError(check_name=report_name, reason="Missing required attribute")
 
     try:
         value = float(text)
-        if math.isnan(value):
-            raise RobotModelError("NaN (Not a Number) values are not allowed")
-        if math.isinf(value):
-            raise RobotModelError("Infinite values are not allowed")
+        if math.isnan(value) or math.isinf(value):
+            raise RobotMathError(value=value, check_name=report_name)
+
         # Sanity check for reasonable values (Standard LinkForge limit)
         if not (-1e10 < value < 1e10):
-            raise RobotModelError(f"Value {value} is outside reasonable range (-1e10 to 1e10)")
+            raise RobotMathError(
+                value=value, check_name=report_name, reason="outside reasonable range"
+            )
+
         return value
-    except ValueError as e:
-        raise RobotModelError(f"Invalid {attribute_name} value '{text}': {e}") from e
+    except ValueError:
+        raise RobotMathError(value=text, check_name=report_name) from None
 
 
-def parse_int(text: str | None, attribute_name: str = "value", default: int | None = None) -> int:
+def parse_int(
+    text: str | None,
+    attribute_name: str = "value",
+    default: int | None = None,
+    check_name: str | None = None,
+) -> int:
     """Parse integer value from XML with comprehensive validation."""
+    report_name = check_name or attribute_name
+
     if text is not None and not text.strip():
         text = None
 
     if text is None:
         if default is not None:
             return default
-        raise RobotModelError(f"Missing required attribute '{attribute_name}'")
+        raise RobotValidationError(check_name=report_name, reason="Missing required attribute")
 
     try:
         value = int(text)
         # Sanity check for reasonable values (standard LinkForge limit)
         if not (-1000000 < value < 1000000):
-            raise RobotModelError(f"Value {value} is outside reasonable range")
+            raise RobotMathError(
+                value=value, check_name=report_name, reason="outside reasonable range"
+            )
         return value
-    except ValueError as e:
-        raise RobotModelError(f"Invalid {attribute_name} value '{text}': {e}") from e
+    except ValueError:
+        raise RobotMathError(value=text, check_name=report_name, reason="invalid format") from None
 
 
 def parse_vector3(text: str) -> Vector3:
     """Parse space-separated vector3 string."""
     parts = text.strip().split()
     if len(parts) != 3:
-        raise RobotModelError(f"Expected 3 values for Vector3, got {len(parts)}: '{text}'")
+        raise RobotValidationError(check_name="Vector3", value=text, reason="Expected 3 values")
     try:
         x = parse_float(parts[0], "x")
         y = parse_float(parts[1], "y")
         z = parse_float(parts[2], "z")
         return Vector3(x, y, z)
-    except (RobotModelError, ValueError, IndexError) as e:
-        raise RobotModelError(f"Invalid Vector3 format '{text}': {e}") from e
+    except (RobotMathError, RobotValidationError, ValueError, IndexError) as e:
+        if isinstance(e, (RobotMathError, RobotValidationError)):
+            raise
+        raise RobotValidationError(check_name="Vector3", value=text, reason=str(e)) from e
 
 
 def parse_optional_bool(elem: ET.Element, tag: str, default: str = "false") -> bool | None:

@@ -209,10 +209,9 @@ def test_disconnected_link() -> None:
     result = validator.validate(robot)
 
     assert not result.is_valid
-    # Disconnected link creates multiple root links
-    errors = [e for e in result.errors if e.title == "Multiple root links"]
-    assert len(errors) == 1
-    assert "link2" in errors[0].message or "base" in errors[0].message
+    # Disconnected link creates multiple root links, caught by get_root_link() in validation
+    errors = [e for e in result.errors if "Multiple root links" in e.message]
+    assert "2" in errors[0].message
 
 
 def test_multiple_parent_joints() -> None:

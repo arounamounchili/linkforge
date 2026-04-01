@@ -22,7 +22,13 @@ try:
 except ImportError:
     yaml = None
 
-from ..base import RobotParser, RobotParserError
+from ..base import RobotParser
+from ..exceptions import (
+    RobotParserError,
+    RobotXacroError,
+    RobotXacroExpressionError,
+    RobotXacroRecursionError,
+)
 from ..logging_config import get_logger
 from ..models.robot import Robot
 from ..utils.dict_utils import AttrDict
@@ -161,7 +167,7 @@ class XacroResolver:
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise
-            raise RobotParserError(f"XACRO resolution failed for {filepath}: {e}") from e
+            raise RobotXacroError(str(e), context=str(filepath)) from e
         finally:
             if sys.getrecursionlimit() != old_limit:
                 sys.setrecursionlimit(old_limit)
@@ -188,7 +194,7 @@ class XacroResolver:
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise
-            raise RobotParserError(f"XACRO string resolution failed: {e}") from e
+            raise RobotXacroError(str(e), context="string resolution") from e
         finally:
             if sys.getrecursionlimit() != old_limit:
                 sys.setrecursionlimit(old_limit)
@@ -211,8 +217,7 @@ class XacroResolver:
         filepath = filepath.resolve()
 
         if filepath in self._file_stack:
-            chain = " -> ".join([f.name for f in self._file_stack] + [filepath.name])
-            raise RobotParserError(f"Circular XACRO include detected: {chain}")
+            raise RobotXacroRecursionError(str(filepath.name))
 
         self._file_stack.append(filepath)
 
@@ -251,11 +256,11 @@ class XacroResolver:
             return container, root.tag, clean_attrib
 
         except ET.ParseError as e:
-            raise RobotParserError(f"Malformed XACRO XML in {filepath}: {e}") from e
+            raise RobotXacroError(str(e), context=str(filepath)) from e
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise
-            raise RobotParserError(f"Failed to process XACRO file {filepath}: {e}") from e
+            raise RobotXacroError(str(e), context=str(filepath)) from e
         finally:
             self._file_stack.pop()
 
@@ -273,18 +278,7 @@ class XacroResolver:
         """
         self._current_depth += 1
         if self._current_depth > self.max_depth:
-            stack_info = ""
-            if self._file_stack:
-                stack_info = f" (File stack: {' -> '.join([f.name for f in self._file_stack])})"
-
-            elem_info = f"Element: <{element.tag}"
-            if "name" in element.attrib:
-                elem_info += f" name='{element.get('name')}'"
-            elem_info += ">"
-
-            raise RobotParserError(
-                f"Maximum XACRO recursion depth ({self.max_depth}) exceeded at {elem_info}{stack_info}. This usually indicates a circular include or infinite macro loop."
-            )
+            raise RobotXacroRecursionError(self.max_depth)
 
         try:
             return self._resolve_element_impl(element)
@@ -468,9 +462,7 @@ class XacroResolver:
         if name and name in self.properties:
             # Cycle detection for blocks
             if name in self._block_stack:
-                raise RobotParserError(
-                    f"Circular block insertion detected: {name}. This causes infinite recursion."
-                )
+                raise RobotXacroRecursionError(name)
 
             self._block_stack.add(name)
             try:
@@ -550,9 +542,8 @@ class XacroResolver:
                         # Fallback value should be substituted too
                         default = self._try_parse_typed_value(self._substitute(fallback_str))
                     else:
-                        raise RobotParserError(
-                            f"Macro param '{p_name}' uses '^' scope inheritance "
-                            f"but no outer-scope property '{p_name}' exists"
+                        raise RobotXacroExpressionError(
+                            p_name, "Outer-scope property not found for '^' inheritance"
                         )
                 elif default_str is not None:
                     default = self._try_parse_typed_value(self._substitute(default_str))
@@ -632,9 +623,7 @@ class XacroResolver:
             try:
                 # Standard expression evaluation
                 if _DUNDER_PATTERN.search(condition_str):
-                    raise RobotParserError(
-                        f"Condition '{condition_str}' contains forbidden dunder attributes."
-                    )
+                    raise RobotXacroExpressionError(condition_str, "Forbidden dunder attributes")
                 ctx = {**self.eval_context, **self.properties, **self.args}
                 return bool(eval(condition_str, ctx, {}))
             except Exception as e:
@@ -699,7 +688,7 @@ class XacroResolver:
         def _resolve_arg(m: re.Match[str]) -> str:
             name = m.group(1).strip()
             if name not in self.args:
-                raise RobotParserError(f"Undefined substitution argument '{name}'")
+                raise RobotXacroExpressionError(name, "Undefined substitution argument")
             return str(self.args[name])
 
         text = re.sub(r"\$\(arg (.*?)\)", _resolve_arg, text)
@@ -715,7 +704,7 @@ class XacroResolver:
             var = parts[0]
             value = os.environ.get(var)
             if value is None:
-                raise RobotParserError(f"Required environment variable '{var}' is not set")
+                raise RobotXacroExpressionError(var, "Required environment variable not set")
             return value
 
         def _resolve_optenv(m: re.Match[str]) -> str:
@@ -774,11 +763,7 @@ class XacroResolver:
             RobotParserError: If the expression contains malicious dunder attributes.
         """
         if _DUNDER_PATTERN.search(expr):
-            raise RobotParserError(
-                f"Expression '{expr}' is not a valid xacro math expression: "
-                "dunder attributes (__class__, __mro__, etc.) are not allowed "
-                "for security reasons."
-            )
+            raise RobotXacroExpressionError(expr, "Forbidden dunder attributes")
 
         try:
             # Build nested context for hierarchical namespaces (e.g. arm.mass)
@@ -801,7 +786,7 @@ class XacroResolver:
         except Exception as e:
             # CRITICAL: Do not silent-fail! If math fails (e.g. missing variable),
             # we must tell the user immediately rather than producing a corrupt URDF.
-            raise RobotParserError(f"Failed to evaluate expression '${{{expr}}}': {e}") from e
+            raise RobotXacroExpressionError(expr, str(e)) from e
 
     def _handle_arg_eval(self, name: str) -> Any:
         """Access XACRO arguments in evaluation context.

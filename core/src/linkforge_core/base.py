@@ -14,8 +14,13 @@ from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_check
 from .exceptions import (  # noqa: F401
     LinkForgeError,
     RobotGeneratorError,
+    RobotMathError,
     RobotModelError,
     RobotParserError,
+    RobotParserIOError,
+    RobotParserUnexpectedError,
+    RobotParserXMLRootError,
+    RobotValidationError,
     XacroDetectedError,
 )
 
@@ -74,7 +79,7 @@ class RobotGenerator(ABC, Generic[T]):  # noqa: UP046
         except Exception as e:
             if isinstance(e, LinkForgeError):
                 raise
-            raise RobotGeneratorError(f"Failed to write robot to {filepath}: {e}") from e
+            raise RobotGeneratorError(str(filepath), str(e)) from e
 
     def _save_to_file(self, content: T, filepath: Path, **kwargs: Any) -> None:
         """Default I/O hook for saving content.
@@ -92,10 +97,7 @@ class RobotGenerator(ABC, Generic[T]):  # noqa: UP046
         elif isinstance(content, bytes):
             filepath.write_bytes(content)
         else:
-            raise RobotGeneratorError(
-                f"Default _save_to_file does not support {type(content)}. "
-                f"Generator {self.__class__.__name__} must override this method."
-            )
+            raise RobotGeneratorError(self.__class__.__name__, type(content))
 
 
 class RobotParser(ABC):
@@ -159,7 +161,7 @@ class FileSystemResolver:
             )
             if resolved and resolved.exists():
                 return resolved.absolute()
-            raise FileNotFoundError(f"Could not resolve package resource: {uri}")
+            raise FileNotFoundError(uri)
 
         # 2. Handle file:// URIs
         if uri.startswith("file://"):
@@ -168,7 +170,7 @@ class FileSystemResolver:
             path = normalize_uri_to_path(uri)
             if path.exists():
                 return path.absolute()
-            raise FileNotFoundError(f"Could not resolve file URI: {uri}")
+            raise FileNotFoundError(uri)
 
         # 3. Handle standard paths (absolute or relative)
         path = Path(uri)
@@ -185,7 +187,7 @@ class FileSystemResolver:
         if path.exists():
             return path.absolute()
 
-        raise FileNotFoundError(f"Could not resolve resource: {uri} (relative_to={relative_to})")
+        raise FileNotFoundError(uri)
 
 
 class NetworkResolver:
@@ -199,11 +201,7 @@ class NetworkResolver:
         """Simulate network resolution."""
         if any(uri.startswith(p) for p in ("http://", "https://", "s3://")):
             # In a real implementation, this would download to a /tmp cache
-            raise NotImplementedError(
-                f"Network translation for '{uri}' is not yet implemented. "
-                "The core IR supports the model, but the NetworkResolver requires a "
-                "caching backend (planned for v1.5.0)."
-            )
+            raise NotImplementedError(uri)
 
         # Fallback to standard filesystem if it's a local path
         return FileSystemResolver().resolve(uri, relative_to=relative_to)

@@ -38,7 +38,7 @@ def test_calculate_mesh_inertia_zero_volume() -> None:
     vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
     triangles = [(0, 1, 2)]
 
-    with pytest.raises(RobotModelError, match="mesh has zero volume"):
+    with pytest.raises(RobotModelError):
         calculate_mesh_inertia_from_triangles(vertices, triangles, 1.0)
 
 

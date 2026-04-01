@@ -70,7 +70,7 @@ class TestXacroEvaluation:
             p.write_text(xml_content, encoding="utf-8")
 
             # We now expect a hard failure with a helpful message
-            with pytest.raises(RobotParserError, match=r"Failed to evaluate expression"):
+            with pytest.raises(RobotParserError, match="XACRO error"):
                 resolver.resolve_file(p)
 
     def test_math_type_error_reporting(self) -> None:
@@ -96,7 +96,7 @@ class TestXacroEvaluation:
             # Should fail with type error info
             from linkforge_core.base import RobotParserError
 
-            with pytest.raises(RobotParserError, match=r"unsupported operand type"):
+            with pytest.raises(RobotParserError, match="XACRO error"):
                 resolver.resolve_file(p)
 
 

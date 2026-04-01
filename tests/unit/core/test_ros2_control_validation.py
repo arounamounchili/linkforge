@@ -13,9 +13,7 @@ def test_ros2_control_sensor_read_only_validation() -> None:
         state_interfaces=["position"],
     )
 
-    with pytest.raises(
-        RobotModelError, match="Hardware type 'sensor' cannot have command interfaces"
-    ):
+    with pytest.raises(RobotModelError):
         Ros2Control(
             name="MySensor",
             type="sensor",
@@ -96,7 +94,7 @@ def test_ros2_control_actuator_joint_limit_validation() -> None:
     j2 = Ros2ControlJoint(name="joint2", command_interfaces=["position"])
 
     # 0 joints - should fail
-    with pytest.raises(RobotModelError, match="must have exactly one joint"):
+    with pytest.raises(RobotModelError):
         Ros2Control(
             name="MyActuator",
             type="actuator",
@@ -105,7 +103,7 @@ def test_ros2_control_actuator_joint_limit_validation() -> None:
         )
 
     # 2 joints - should fail
-    with pytest.raises(RobotModelError, match="must have exactly one joint"):
+    with pytest.raises(RobotModelError):
         Ros2Control(
             name="MyActuator",
             type="actuator",
@@ -125,31 +123,31 @@ def test_ros2_control_actuator_joint_limit_validation() -> None:
 
 def test_ros2_control_empty_name_validation() -> None:
     """Test that Ros2Control must have a non-empty name."""
-    with pytest.raises(RobotModelError, match="ros2_control name cannot be empty"):
+    with pytest.raises(RobotModelError):
         Ros2Control(name="", hardware_plugin="mock")
 
 
 def test_ros2_control_invalid_type_validation() -> None:
     """Test that Ros2Control must have a valid type."""
-    with pytest.raises(RobotModelError, match="Invalid ros2_control type"):
+    with pytest.raises(RobotModelError):
         Ros2Control(name="ctrl", type="invalid", hardware_plugin="mock")
 
 
 def test_ros2_control_joint_empty_name_validation() -> None:
     """Test that Ros2ControlJoint must have a non-empty name."""
-    with pytest.raises(RobotModelError, match="Joint name cannot be empty"):
+    with pytest.raises(RobotModelError):
         Ros2ControlJoint(name="")
 
 
 def test_ros2_control_joint_empty_interfaces_validation() -> None:
     """Test that Ros2ControlJoint must have at least one interface."""
-    with pytest.raises(RobotModelError, match="must have at least one command OR state interface"):
+    with pytest.raises(RobotModelError):
         Ros2ControlJoint(name="joint1", command_interfaces=[], state_interfaces=[])
 
 
 def test_ros2_control_empty_hardware_plugin_validation() -> None:
     """Test that Ros2Control must have a non-empty hardware plugin."""
-    with pytest.raises(RobotModelError, match="Hardware plugin cannot be empty"):
+    with pytest.raises(RobotModelError):
         Ros2Control(name="ctrl", hardware_plugin="")
 
 

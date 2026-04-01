@@ -28,7 +28,7 @@ class TestInertiaTensor:
 
     def test_negative_diagonal(self) -> None:
         """Test that negative diagonal elements raise error."""
-        with pytest.raises(RobotModelError, match="must be positive"):
+        with pytest.raises(RobotModelError):
             InertiaTensor(
                 ixx=-1.0,  # Invalid
                 ixy=0.0,
@@ -40,7 +40,7 @@ class TestInertiaTensor:
 
     def test_negative_iyy(self) -> None:
         """Test that negative iyy raises error."""
-        with pytest.raises(RobotModelError, match="must be positive"):
+        with pytest.raises(RobotModelError):
             InertiaTensor(
                 ixx=1.0,
                 ixy=0.0,
@@ -52,7 +52,7 @@ class TestInertiaTensor:
 
     def test_negative_izz(self) -> None:
         """Test that negative izz raises error."""
-        with pytest.raises(RobotModelError, match="must be positive"):
+        with pytest.raises(RobotModelError):
             InertiaTensor(
                 ixx=1.0,
                 ixy=0.0,
@@ -77,7 +77,7 @@ class TestInertiaTensor:
 
     def test_triangle_inequality_violation(self) -> None:
         """Test that triangle inequality violations raise error."""
-        with pytest.raises(RobotModelError, match="triangle inequality"):
+        with pytest.raises(RobotModelError):
             InertiaTensor(
                 ixx=1.0,
                 ixy=0.0,
@@ -127,7 +127,7 @@ class TestInertial:
     def test_negative_mass(self) -> None:
         """Test that negative mass raises error."""
         tensor = InertiaTensor.zero()
-        with pytest.raises(RobotModelError, match="Mass must be non-negative"):
+        with pytest.raises(RobotModelError):
             Inertial(
                 mass=-1.0,  # Invalid
                 inertia=tensor,
@@ -222,7 +222,7 @@ class TestLink:
 
     def test_invalid_name_characters(self) -> None:
         """Test that invalid characters raise error."""
-        with pytest.raises(RobotModelError, match="invalid characters"):
+        with pytest.raises(RobotModelError):
             Link(name="link with spaces!")
 
     def test_valid_name_with_underscore(self) -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotModelError, RobotValidationError
 from .gazebo import GazeboPlugin
 from .geometry import Transform
 
@@ -53,17 +53,23 @@ class CameraInfo:
         # For FOV > 180°, use wideanglecamera sensor type instead
         # Use small tolerance (1e-6) to handle floating-point precision from UI conversions
         if self.horizontal_fov <= 0 or self.horizontal_fov > (math.pi + 1e-6):
-            raise RobotModelError(
-                f"Horizontal FOV must be between 0 and 180° (π radians). "
-                f"Got {self.horizontal_fov:.6f} rad ({math.degrees(self.horizontal_fov):.1f}°). "
-                f"For fisheye cameras >180°, use wideanglecamera sensor type."
+            raise RobotValidationError(
+                check_name="CameraFOV", value=self.horizontal_fov, reason="Must be 0-180 deg"
             )
         if self.width <= 0 or self.height <= 0:
-            raise RobotModelError("Image dimensions must be positive")
+            raise RobotValidationError(
+                check_name="ImageDimensions",
+                value=(self.width, self.height),
+                reason="Must be positive",
+            )
         if self.near_clip <= 0:
-            raise RobotModelError("Near clip must be positive")
+            raise RobotValidationError(
+                check_name="NearClip", value=self.near_clip, reason="Must be positive"
+            )
         if self.far_clip <= self.near_clip:
-            raise RobotModelError("Far clip must be greater than near clip")
+            raise RobotValidationError(
+                check_name="FarClip", value=self.far_clip, reason="Must be > near clip"
+            )
 
 
 @dataclass(frozen=True)
@@ -93,13 +99,23 @@ class LidarInfo:
     def __post_init__(self) -> None:
         """Validate LIDAR parameters."""
         if self.horizontal_samples <= 0:
-            raise RobotModelError("Horizontal samples must be positive")
+            raise RobotValidationError(
+                check_name="LidarSamples", value=self.horizontal_samples, reason="Must be positive"
+            )
         if self.range_min <= 0:
-            raise RobotModelError("Range min must be positive")
+            raise RobotValidationError(
+                check_name="LidarRangeMin", value=self.range_min, reason="Must be positive"
+            )
         if self.range_max <= self.range_min:
-            raise RobotModelError("Range max must be greater than range min")
+            raise RobotValidationError(
+                check_name="LidarRangeMax", value=self.range_max, reason="Must be > min"
+            )
         if self.horizontal_min_angle >= self.horizontal_max_angle:
-            raise RobotModelError("Horizontal min angle must be less than max angle")
+            raise RobotValidationError(
+                check_name="LidarAngleRange",
+                value=(self.horizontal_min_angle, self.horizontal_max_angle),
+                reason="Min must be < Max",
+            )
 
 
 @dataclass(frozen=True)
@@ -191,21 +207,31 @@ class Sensor:
     def __post_init__(self) -> None:
         """Validate sensor configuration."""
         if not self.name:
-            raise RobotModelError("Sensor name cannot be empty")
+            raise RobotModelError()
         if not self.link_name:
-            raise RobotModelError("Sensor must be attached to a link")
+            raise RobotModelError()
         if self.update_rate <= 0:
-            raise RobotModelError("Update rate must be positive")
+            raise RobotValidationError(
+                check_name="UpdateRate", value=self.update_rate, reason="Must be positive"
+            )
 
         # Validate that appropriate info is set for sensor type
         if self.type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA):
             if self.camera_info is None:
-                raise RobotModelError(f"Camera sensor '{self.name}' requires camera_info")
+                raise RobotValidationError(
+                    check_name="SensorInfo", value=self.name, reason="Requires camera_info"
+                )
         elif self.type == SensorType.LIDAR:
             if self.lidar_info is None:
-                raise RobotModelError(f"LIDAR sensor '{self.name}' requires lidar_info")
+                raise RobotValidationError(
+                    check_name="SensorInfo", value=self.name, reason="Requires lidar_info"
+                )
         elif self.type == SensorType.IMU:
             if self.imu_info is None:
-                raise RobotModelError(f"IMU sensor '{self.name}' requires imu_info")
+                raise RobotValidationError(
+                    check_name="SensorInfo", value=self.name, reason="Requires imu_info"
+                )
         elif self.type == SensorType.GPS and self.gps_info is None:
-            raise RobotModelError(f"GPS sensor '{self.name}' requires gps_info")
+            raise RobotValidationError(
+                check_name="SensorInfo", value=self.name, reason="Requires gps_info"
+            )

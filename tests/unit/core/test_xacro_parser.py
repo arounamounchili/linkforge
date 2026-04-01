@@ -134,7 +134,7 @@ def test_resolver_enforces_recursion_limit() -> None:
     resolver.resolve_element(macro_xml)
 
     call_xml = ET.fromstring("<xacro:loop xmlns:xacro='http://www.ros.org/wiki/xacro'/>")
-    with pytest.raises(RobotParserError, match="Maximum XACRO recursion depth"):
+    with pytest.raises(RobotParserError, match="Recursion depth exceeded"):
         resolver.resolve_element(call_xml)
 
 
@@ -180,7 +180,7 @@ def test_macro_expansion_with_block_parameters() -> None:
 def test_resolve_file_raises_error_on_missing_file() -> None:
     resolver = XacroResolver()
     # Test non-existent file
-    with pytest.raises(RobotParserError, match="Failed to process XACRO file"):
+    with pytest.raises(RobotParserError, match="XACRO error"):
         resolver.resolve_file(Path("/non/existent/path.xacro"))
 
 
@@ -214,7 +214,7 @@ def test_resolve_file_raises_error_on_malformed_xml(tmp_path) -> None:
     # Malformed XML (unclosed tag)
     bad_xml = tmp_path / "bad.xacro"
     bad_xml.write_text("<root>")
-    with pytest.raises(RobotParserError, match="Malformed XACRO XML"):
+    with pytest.raises(RobotParserError, match="XACRO error"):
         resolver.resolve_file(bad_xml)
 
 
@@ -318,7 +318,7 @@ def test_resolve_file_raises_generic_error(monkeypatch) -> None:
     monkeypatch.setattr(ET, "parse", mock_parse)
 
     resolver = XacroResolver()
-    with pytest.raises(RobotParserError, match="Failed to process XACRO file"):
+    with pytest.raises(RobotParserError, match="XACRO error"):
         resolver.resolve_file(Path("any.xacro"))
 
 
@@ -412,7 +412,7 @@ def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch) 
 
     resolver = XacroResolver()
     # _process_include_file wrapping catches it first, so message changes
-    with pytest.raises(RobotParserError, match="Failed to process XACRO file"):
+    with pytest.raises(RobotParserError, match="XACRO error"):
         resolver.resolve_file(robot_xml)
 
 
@@ -609,7 +609,7 @@ def test_xacro_circular_include(tmp_path) -> None:
     )
 
     resolver = XacroResolver()
-    with pytest.raises(RobotParserError, match="Circular XACRO include detected"):
+    with pytest.raises(RobotParserError, match="Recursion depth exceeded"):
         resolver.resolve_file(file1)
 
 
@@ -623,7 +623,7 @@ def test_xacro_resolve_file_exception(tmp_path) -> None:
         mock.patch.object(
             resolver, "_process_include_file", side_effect=RuntimeError("Generic Error")
         ),
-        pytest.raises(RobotParserError, match="XACRO resolution failed"),
+        pytest.raises(RobotParserError, match="XACRO error"),
     ):
         resolver.resolve_file(Path("some.xacro"))
 
@@ -632,7 +632,7 @@ def test_xacro_parser_math_eval_error() -> None:
     """Test that math evaluation errors raise RobotParserError."""
     resolver = XacroResolver()
     # Undefined variable
-    with pytest.raises(RobotParserError, match="Failed to evaluate expression"):
+    with pytest.raises(RobotParserError, match="Expression evaluation failed"):
         resolver._evaluate("undefined_var + 1")
 
 
@@ -671,7 +671,7 @@ def test_xacro_circular_block(tmp_path) -> None:
     xacro_file.write_text(content)
 
     resolver = XacroResolver()
-    with pytest.raises(RobotParserError, match="Circular block insertion detected"):
+    with pytest.raises(RobotParserError, match="Recursion depth exceeded"):
         resolver.resolve_file(xacro_file)
 
 
@@ -1171,7 +1171,7 @@ def test_substitute_env(monkeypatch) -> None:
 def test_xacro_substitute_undefined_arg_raises() -> None:
     """Undefined $(arg) must raise RobotParserError."""
     resolver = XacroResolver()
-    with pytest.raises(RobotParserError, match="Undefined substitution argument 'nonexistent'"):
+    with pytest.raises(RobotParserError, match="Undefined substitution argument"):
         resolver._substitute("$(arg nonexistent)")
 
 
@@ -1224,7 +1224,7 @@ def test_xacro_macro_parent_scope_not_found_raises() -> None:
     )
     resolver._handle_macro_def(ET.fromstring(macro_xml))
 
-    with pytest.raises(RobotParserError, match=r"uses '\^' scope inheritance"):
+    with pytest.raises(RobotParserError, match="Outer-scope property not found"):
         resolver.resolve_element(
             ET.fromstring('<xacro:test xmlns:xacro="http://www.ros.org/wiki/xacro"/>')
         )

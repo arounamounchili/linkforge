@@ -52,9 +52,7 @@ class AttrDict(dict[str, Any]):
         try:
             return self[name]
         except KeyError:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{name}'"
-            ) from None
+            raise AttributeError(name) from None
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Set dictionary keys as attributes.
@@ -77,6 +75,4 @@ class AttrDict(dict[str, Any]):
         try:
             del self[name]
         except KeyError:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{name}'"
-            ) from None
+            raise AttributeError(name) from None

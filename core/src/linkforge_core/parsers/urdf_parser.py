@@ -24,8 +24,15 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from ..base import IResourceResolver, RobotParserError, XacroDetectedError
-from ..exceptions import RobotModelError
+from ..base import IResourceResolver
+from ..exceptions import (
+    RobotModelError,
+    RobotParserIOError,
+    RobotParserUnexpectedError,
+    RobotParserXMLRootError,
+    RobotValidationError,
+    XacroDetectedError,
+)
 from ..logging_config import get_logger
 from ..models import (
     CameraInfo,
@@ -99,7 +106,6 @@ class URDFParser(RobotXMLParser):
         link_elem: ET.Element,
         materials: dict[str, Material],
         urdf_directory: Path | None = None,
-        sandbox_root: Path | None = None,
     ) -> Link:
         """Parse link element with support for multiple visual/collision elements."""
         name = link_elem.get("name", "unnamed_link")
@@ -190,8 +196,10 @@ class URDFParser(RobotXMLParser):
                 limits = JointLimits(
                     lower=float(lower_str) if lower_str is not None else None,
                     upper=float(upper_str) if upper_str is not None else None,
-                    effort=parse_float(limits_elem.get("effort"), "effort", default=0.0),
-                    velocity=parse_float(limits_elem.get("velocity"), "velocity", default=0.0),
+                    effort=parse_float(limits_elem.get("effort"), check_name="effort", default=0.0),
+                    velocity=parse_float(
+                        limits_elem.get("velocity"), check_name="velocity", default=0.0
+                    ),
                 )
             elif joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
                 limits = JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
@@ -200,8 +208,12 @@ class URDFParser(RobotXMLParser):
         dynamics_elem = joint_elem.find("dynamics")
         if dynamics_elem is not None:
             dynamics = JointDynamics(
-                damping=parse_float(dynamics_elem.get("damping"), "damping", default=0.0),
-                friction=parse_float(dynamics_elem.get("friction"), "friction", default=0.0),
+                damping=parse_float(
+                    dynamics_elem.get("damping"), check_name="damping", default=0.0
+                ),
+                friction=parse_float(
+                    dynamics_elem.get("friction"), check_name="friction", default=0.0
+                ),
             )
 
         mimic = None
@@ -209,18 +221,28 @@ class URDFParser(RobotXMLParser):
         if mimic_elem is not None:
             mimic = JointMimic(
                 joint=mimic_elem.get("joint", ""),
-                multiplier=parse_float(mimic_elem.get("multiplier"), "multiplier", default=1.0),
-                offset=parse_float(mimic_elem.get("offset"), "offset", default=0.0),
+                multiplier=parse_float(
+                    mimic_elem.get("multiplier"), check_name="multiplier", default=1.0
+                ),
+                offset=parse_float(mimic_elem.get("offset"), check_name="offset", default=0.0),
             )
 
         safety_controller = None
         safety_elem = joint_elem.find("safety_controller")
         if safety_elem is not None:
             safety_controller = JointSafetyController(
-                soft_lower_limit=parse_float(safety_elem.get("soft_lower_limit"), default=0.0),
-                soft_upper_limit=parse_float(safety_elem.get("soft_upper_limit"), default=0.0),
-                k_position=parse_float(safety_elem.get("k_position"), "k_position", default=0.0),
-                k_velocity=parse_float(safety_elem.get("k_velocity"), "k_velocity", default=0.0),
+                soft_lower_limit=parse_float(
+                    safety_elem.get("soft_lower_limit"), check_name="soft_lower_limit", default=0.0
+                ),
+                soft_upper_limit=parse_float(
+                    safety_elem.get("soft_upper_limit"), check_name="soft_upper_limit", default=0.0
+                ),
+                k_position=parse_float(
+                    safety_elem.get("k_position"), check_name="k_position", default=0.0
+                ),
+                k_velocity=parse_float(
+                    safety_elem.get("k_velocity"), check_name="k_velocity", default=0.0
+                ),
             )
 
         calibration = None
@@ -229,8 +251,12 @@ class URDFParser(RobotXMLParser):
             rising_str = calib_elem.get("rising")
             falling_str = calib_elem.get("falling")
             calibration = JointCalibration(
-                rising=parse_float(rising_str, "rising") if rising_str is not None else None,
-                falling=parse_float(falling_str, "falling") if falling_str is not None else None,
+                rising=parse_float(rising_str, check_name="rising")
+                if rising_str is not None
+                else None,
+                falling=parse_float(falling_str, check_name="falling")
+                if falling_str is not None
+                else None,
             )
 
         return Joint(
@@ -329,9 +355,10 @@ class URDFParser(RobotXMLParser):
 
         reduction = parse_float(
             elem.findtext("mechanicalReduction") or elem.findtext("mechanical_reduction"),
+            check_name="mechanicalReduction",
             default=1.0,
         )
-        offset = parse_float(elem.findtext("offset"), default=0.0)
+        offset = parse_float(elem.findtext("offset"), check_name="offset", default=0.0)
 
         if tag == "joint":
             return TransmissionJoint(
@@ -380,8 +407,12 @@ class URDFParser(RobotXMLParser):
             return None
         return SensorNoise(
             type=actual_noise_elem.findtext("type", "gaussian"),
-            mean=parse_float(actual_noise_elem.findtext("mean", "0.0"), default=0.0),
-            stddev=parse_float(actual_noise_elem.findtext("stddev", "0.0"), default=0.0),
+            mean=parse_float(
+                actual_noise_elem.findtext("mean", "0.0"), check_name="mean", default=0.0
+            ),
+            stddev=parse_float(
+                actual_noise_elem.findtext("stddev", "0.0"), check_name="stddev", default=0.0
+            ),
         )
 
     def _parse_sensor_from_gazebo(self, gazebo_elem: ET.Element) -> Sensor | None:
@@ -410,7 +441,9 @@ class URDFParser(RobotXMLParser):
             "force_torque": SensorType.FORCE_TORQUE,
         }
         sensor_type = type_map.get(sensor_type_str.lower(), SensorType.CAMERA)
-        update_rate = parse_float(sensor_elem.findtext("update_rate", "30.0"), default=30.0)
+        update_rate = parse_float(
+            sensor_elem.findtext("update_rate", "30.0"), check_name="updateRate", default=30.0
+        )
 
         origin = Transform.identity()
         pose_elem = sensor_elem.find("pose")
@@ -436,13 +469,19 @@ class URDFParser(RobotXMLParser):
             if camera_elem is not None:
                 camera_info = CameraInfo(
                     horizontal_fov=parse_float(
-                        camera_elem.findtext("horizontal_fov"), default=1.047
+                        camera_elem.findtext("horizontal_fov"),
+                        check_name="horizontal_fov",
+                        default=1.047,
                     ),
                     width=parse_int(camera_elem.findtext("image/width"), default=640),
                     height=parse_int(camera_elem.findtext("image/height"), default=480),
                     format=camera_elem.findtext("image/format", "R8G8B8"),
-                    near_clip=parse_float(camera_elem.findtext("clip/near"), default=0.1),
-                    far_clip=parse_float(camera_elem.findtext("clip/far"), default=100.0),
+                    near_clip=parse_float(
+                        camera_elem.findtext("clip/near"), check_name="near", default=0.1
+                    ),
+                    far_clip=parse_float(
+                        camera_elem.findtext("clip/far"), check_name="far", default=100.0
+                    ),
                     noise=self._parse_sensor_noise(camera_elem),
                 )
             else:
@@ -456,13 +495,21 @@ class URDFParser(RobotXMLParser):
                         ray_elem.findtext("scan/horizontal/samples"), default=640
                     ),
                     horizontal_min_angle=parse_float(
-                        ray_elem.findtext("scan/horizontal/min_angle"), default=-1.570796
+                        ray_elem.findtext("scan/horizontal/min_angle"),
+                        check_name="min_angle",
+                        default=-1.570796,
                     ),
                     horizontal_max_angle=parse_float(
-                        ray_elem.findtext("scan/horizontal/max_angle"), default=1.570796
+                        ray_elem.findtext("scan/horizontal/max_angle"),
+                        check_name="max_angle",
+                        default=1.570796,
                     ),
-                    range_min=parse_float(ray_elem.findtext("range/min"), default=0.1),
-                    range_max=parse_float(ray_elem.findtext("range/max"), default=10.0),
+                    range_min=parse_float(
+                        ray_elem.findtext("range/min"), check_name="range_min", default=0.1
+                    ),
+                    range_max=parse_float(
+                        ray_elem.findtext("range/max"), check_name="range_max", default=10.0
+                    ),
                     noise=self._parse_sensor_noise(ray_elem),
                 )
             else:
@@ -507,12 +554,12 @@ class URDFParser(RobotXMLParser):
             if contact_elem is not None:
                 collision = contact_elem.findtext("collision")
                 if not collision:
-                    raise RobotModelError(f"Contact sensor '{sensor_name}' missing <collision>")
+                    raise RobotValidationError(check_name="SensorCollision", value=sensor_name)
                 contact_info = ContactInfo(
                     collision=collision, noise=self._parse_sensor_noise(contact_elem)
                 )
             else:
-                raise RobotModelError(f"Contact sensor '{sensor_name}' missing <contact>")
+                raise RobotValidationError(check_name="SensorCollision", value=sensor_name)
 
         elif sensor_type == SensorType.FORCE_TORQUE:
             ft_elem = sensor_elem.find("force_torque")
@@ -632,9 +679,7 @@ class URDFParser(RobotXMLParser):
 
         if is_xacro:
             filename = filepath.name if filepath else "URDF String"
-            raise XacroDetectedError(
-                f"XACRO file detected: {filename}\nUse the XACROParser or Blender importer."
-            )
+            raise XacroDetectedError(filename)
 
     def _parse_from_context(
         self, context: Any, root: ET.Element, filepath: Path | None = None
@@ -656,7 +701,9 @@ class URDFParser(RobotXMLParser):
             if event == "start":
                 depth += 1
                 if depth > MAX_XML_DEPTH:
-                    raise RobotParserError(f"XML nesting too deep: {depth}")
+                    raise RobotParserUnexpectedError(
+                        source_area="XML nesting", original_error=depth
+                    )
             elif event == "end":
                 if depth == 1:
                     if elem.tag == "material":
@@ -675,7 +722,13 @@ class URDFParser(RobotXMLParser):
                             ) or Path(".")
                             link = self._parse_link(elem, materials, urdf_dir)
                             self._add_link_robust(robot, link)
-                        except (RobotModelError, ValueError, RobotParserError) as e:
+                        except (
+                            RobotModelError,
+                            ValueError,
+                            RobotParserUnexpectedError,
+                            RobotParserIOError,
+                            RobotParserXMLRootError,
+                        ) as e:
                             logger.warning(f"Skipping invalid link '{elem.get('name')}': {e}")
 
                     elif elem.tag in ("joint", "transmission", "ros2_control", "gazebo"):
@@ -705,7 +758,13 @@ class URDFParser(RobotXMLParser):
                         robot.add_sensor(sensor)
                     else:
                         robot.add_gazebo_element(self._parse_gazebo_element(elem))
-            except (RobotModelError, ValueError, RobotParserError) as e:
+            except (
+                RobotModelError,
+                ValueError,
+                RobotParserUnexpectedError,
+                RobotParserIOError,
+                RobotParserXMLRootError,
+            ) as e:
                 logger.warning(f"Skipping invalid {tag} '{elem.get('name')}': {e}")
             finally:
                 elem.clear()
@@ -729,26 +788,19 @@ class URDFParser(RobotXMLParser):
             RobotParserError: If parsing fails
         """
         if not filepath.exists():
-            raise FileNotFoundError(f"URDF file not found: {filepath}")
+            raise RobotParserIOError(filepath=filepath, reason="File not found")
 
         if filepath.is_dir():
-            raise RobotParserError(f"Target path is a directory, not a file: {filepath}")
+            raise RobotParserIOError(filepath=filepath, reason="Target path is a directory")
 
         # Check if this is a XACRO file by extension (proactive check)
         if filepath.suffix == ".xacro" or filepath.name.endswith(".urdf.xacro"):
-            raise XacroDetectedError(
-                f"XACRO file detected: {filepath}. Please convert to URDF "
-                f"(e.g., 'xacro {filepath.name} > {filepath.with_suffix('')}') "
-                "or use the Blender XACRO resolver."
-            )
+            raise XacroDetectedError(filepath.name)
 
         # Security check: File size
         file_size = filepath.stat().st_size
         if file_size > self.max_file_size:
-            raise RobotParserError(
-                f"URDF file too large: {file_size / (1024 * 1024):.1f} MB "
-                f"(maximum {self.max_file_size / (1024 * 1024):.1f} MB)."
-            )
+            raise RobotParserIOError(filepath=filepath, reason="File too large")
 
         try:
             # We use iterparse to process elements as they are closed
@@ -756,16 +808,26 @@ class URDFParser(RobotXMLParser):
             event, root = next(context)
 
             if root.tag != "robot":
-                raise RobotParserError(f"Root element must be <robot>, found <{root.tag}>")
+                raise RobotParserXMLRootError(actual_tag=root.tag)
 
             return self._parse_from_context(context, root, filepath)
 
         except ET.ParseError as e:
-            raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
+            raise RobotParserUnexpectedError(source_area="URDF XML", original_error=e) from e
         except Exception as e:
-            if isinstance(e, RobotParserError):
+            if isinstance(
+                e,
+                (
+                    RobotParserUnexpectedError,
+                    RobotParserIOError,
+                    RobotParserXMLRootError,
+                    XacroDetectedError,
+                ),
+            ):
                 raise
-            raise RobotParserError(f"Unexpected error: {e}") from e
+            raise RobotParserUnexpectedError(
+                source_area="Unexpected URDF parse", original_error=e
+            ) from e
 
     def parse_string(
         self,
@@ -776,10 +838,10 @@ class URDFParser(RobotXMLParser):
         """Parse URDF from string."""
         string_size = len(urdf_string.encode("utf-8"))
         if string_size > self.max_file_size:
-            raise RobotParserError("URDF string too large")
+            raise RobotParserIOError(filepath=Path("string"), reason="URDF string too large")
 
         if "<xacro:" in urdf_string:
-            raise XacroDetectedError("XACRO file detected in URDF string.")
+            raise XacroDetectedError(message="URDF String contains XACRO")
 
         try:
             stream = io.BytesIO(urdf_string.encode("utf-8"))
@@ -787,13 +849,23 @@ class URDFParser(RobotXMLParser):
             event, root = next(context)
 
             if root.tag != "robot":
-                raise RobotParserError(f"Root element must be <robot>, found <{root.tag}>")
+                raise RobotParserXMLRootError(actual_tag=root.tag)
 
             return self._parse_from_context(context, root, urdf_directory)
 
         except ET.ParseError as e:
-            raise RobotParserError(f"Failed to parse URDF XML: {e}") from e
+            raise RobotParserUnexpectedError(source_area="URDF XML", original_error=e) from e
         except Exception as e:
-            if isinstance(e, RobotParserError):
+            if isinstance(
+                e,
+                (
+                    RobotParserUnexpectedError,
+                    RobotParserIOError,
+                    RobotParserXMLRootError,
+                    XacroDetectedError,
+                ),
+            ):
                 raise
-            raise RobotParserError(f"Unexpected error: {e}") from e
+            raise RobotParserUnexpectedError(
+                source_area="Unexpected URDF parse", original_error=e
+            ) from e

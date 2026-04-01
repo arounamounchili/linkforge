@@ -128,8 +128,8 @@ def test_xacro_circular_include(tmp_path) -> None:
     with pytest.raises(RobotParserError) as excinfo:
         resolver.resolve_file(file_a)
 
-    assert "Circular XACRO include detected" in str(excinfo.value)
-    assert "a.xacro -> b.xacro -> a.xacro" in str(excinfo.value)
+    assert "XACRO error: Recursion depth exceeded:" in str(excinfo.value)
+    assert "a.xacro" in str(excinfo.value)
 
 
 def test_xacro_recursion_limit() -> None:
@@ -152,5 +152,5 @@ def test_xacro_recursion_limit() -> None:
         root = ET.fromstring(xacro_content)
         resolver.resolve_element(root)
 
-    assert "Maximum XACRO recursion depth (10) exceeded" in str(excinfo.value)
-    assert "infinite macro loop" in str(excinfo.value)
+    assert "XACRO error: Recursion depth exceeded: 10" in str(excinfo.value)
+    assert "10" in str(excinfo.value)

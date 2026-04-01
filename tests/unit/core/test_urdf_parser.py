@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from linkforge_core.base import RobotParserError, XacroDetectedError
+from linkforge_core.base import RobotParserError, RobotParserIOError, XacroDetectedError
 from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     Box,
@@ -404,7 +404,7 @@ class TestURDFParser:
 
         # Test max file size
         parser = URDFParser(max_file_size=10)
-        with pytest.raises(RobotParserError, match="too large"):
+        with pytest.raises(RobotParserError, match="URDF string too large"):
             parser.parse_string("<robot>..............</robot>")
 
     def test_urdf_parser_robustness(self) -> None:
@@ -787,7 +787,7 @@ class TestURDFParser:
         from linkforge_core.parsers.urdf_parser import URDFParser
 
         parser = URDFParser()
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(RobotParserIOError, match="File not found"):
             parser.parse(Path("non_existent_file.urdf"))
 
     def test_parse_invalid_root(self, tmp_path) -> None:
@@ -799,7 +799,7 @@ class TestURDFParser:
 
         parser = URDFParser()
         # Parser now wraps standard errors into RobotParserError
-        with pytest.raises(RobotParserError, match="Root element must be <robot>"):
+        with pytest.raises(RobotParserError, match="Invalid XML root"):
             parser.parse(invalid_urdf)
 
     def test_parse_string_unexpected_error(self) -> None:
@@ -860,7 +860,7 @@ class TestURDFParser:
         # Missing filename
         xml = "<geometry><mesh /></geometry>"
         elem = ET.fromstring(xml)
-        assert parser._parse_geometry_element(elem) is None
+        assert parser._parse_geometry_element(elem) is None  # Warns instead of raising out
 
         # Cylinder invalid length
         xml = '<geometry><cylinder radius="1" length="-1"/></geometry>'
@@ -892,7 +892,7 @@ class TestURDFParser:
         # Invalid mechanicalReduction
         xml = '<joint name="j1"><mechanicalReduction>not_number</mechanicalReduction></joint>'
         # parse_float raises RobotModelError for non-numeric strings
-        with pytest.raises(RobotModelError, match="could not convert string to float"):
+        with pytest.raises(RobotModelError, match="Invalid value 'not_number'"):
             parser._parse_transmission_component(ET.fromstring(xml), "joint")
 
         # 5. Gazebo Sensor missing reference
@@ -901,7 +901,7 @@ class TestURDFParser:
 
         # 6. Parse String errors
         parser = URDFParser()
-        with pytest.raises(RobotParserError, match="Failed to parse"):
+        with pytest.raises(RobotParserError, match="Unexpected error in URDF XML"):
             parser.parse_string("<robot>unclosed tags")
 
         # 7. Joint with explicit Axis
@@ -986,7 +986,7 @@ class TestURDFParser:
         # Mock ET.iterparse to raise ParseError
         with (
             mock.patch("xml.etree.ElementTree.iterparse", side_effect=ET.ParseError("Bad XML")),
-            pytest.raises(RobotParserError, match="Failed to parse URDF XML"),
+            pytest.raises(RobotParserError, match="URDF XML"),
         ):
             parser.parse(path)
 
@@ -1294,7 +1294,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         urdf_file.write_text("<robot name='r'><link name='l1'/></robot>")
         parser = URDFParser()
         parser.max_file_size = 1  # 1 byte — will trip on any content
-        with pytest.raises(RobotParserError, match="too large"):
+        with pytest.raises(RobotParserError, match="File too large"):
             parser.parse(urdf_file)
 
     def test_parse_file_xacro_string_too_large_raises_error(self) -> None:
@@ -1304,7 +1304,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         content = "<robot name='r'>" + "<link name='l1'/>" * 10 + "</robot>"
         parser = URDFParser()
         parser.max_file_size = 1  # 1 byte — will trip immediately
-        with pytest.raises(RobotParserError, match="too large"):
+        with pytest.raises(RobotParserError, match="URDF string too large"):
             parser.parse_string(content)
 
     def test_parse_iterative_out_of_order(self, tmp_path) -> None:
@@ -1337,13 +1337,13 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         parser = URDFParser()
 
         # Path is a directory
-        with pytest.raises(RobotParserError, match="not a file"):
+        with pytest.raises(RobotParserError, match="Target path is a directory"):
             parser.parse(tmp_path)
 
     def test_urdf_parser_string_invalid_root(self) -> None:
         """Test parse_string with invalid root tag."""
         parser = URDFParser()
-        with pytest.raises(RobotParserError, match="must be <robot>"):
+        with pytest.raises(RobotParserError, match="Invalid XML root"):
             parser.parse_string("<wrong_root></wrong_root>")
 
     def test_urdf_parser_unexpected_error(self, tmp_path) -> None:
@@ -1356,7 +1356,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
 
         with patch("xml.etree.ElementTree.iterparse") as mock_iter:
             mock_iter.side_effect = RuntimeError("Mocked crash")
-            with pytest.raises(RobotParserError, match="Unexpected error"):
+            with pytest.raises(RobotParserError, match="Unexpected URDF parse"):
                 parser.parse(p)
 
         # Successful file parse

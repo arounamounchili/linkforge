@@ -103,7 +103,7 @@ def test_unsupported_content_type(tmp_path) -> None:
     with pytest.raises(RobotGeneratorError) as excinfo:
         generator.write(robot, tmp_path / "test.txt")
 
-    assert "does not support" in str(excinfo.value)
+    assert "<class 'dict'>" in str(excinfo.value)
     assert "TestUnsupportedTypeGenerator" in str(excinfo.value)
 
 

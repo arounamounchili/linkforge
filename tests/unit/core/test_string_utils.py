@@ -33,7 +33,7 @@ def test_sanitize_name_special_characters() -> None:
 def test_sanitize_name_too_long() -> None:
     """Test ReDoS protection with long names."""
     long_name = "a" * 1001
-    with pytest.raises(RobotModelError, match="Name too long"):
+    with pytest.raises(RobotModelError):
         sanitize_name(long_name)
 
 

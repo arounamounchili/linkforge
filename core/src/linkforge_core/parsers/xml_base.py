@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ..base import IResourceResolver, RobotParser, RobotParserError
-from ..exceptions import RobotModelError
+from ..exceptions import RobotModelError, RobotValidationError
 from ..logging_config import get_logger
 from ..models import (
     Box,
@@ -131,8 +131,7 @@ class RobotXMLParser(RobotParser):
             return None
         filename = mesh.get("filename", mesh.get("file", ""))
         if not filename:
-            logger.warning("Invalid mesh geometry ignored: missing filename")
-            return None
+            raise RobotValidationError(check_name="Mesh", reason="Missing filename")
 
         # Path Security Validation
         validation_path: Path | None = None
@@ -251,21 +250,26 @@ class RobotXMLParser(RobotParser):
         """
         try:
             robot.add_link(link)
-        except RobotModelError:
+        except RobotModelError as e:
             original_name = link.name
             counter = 1
-            while True:
-                new_name = f"{original_name}_duplicate_{counter}"
-                if new_name not in robot._link_index:
-                    link = replace(link, name=new_name)
-                    try:
-                        robot.add_link(link)
-                        logger.warning(f"Renamed duplicate link '{original_name}' to '{new_name}'")
-                        break
-                    except RobotModelError:
+            if "already exists" in str(e).lower():
+                while True:
+                    new_name = f"{original_name}_duplicate_{counter}"
+                    if new_name not in robot._link_index:
+                        link = replace(link, name=new_name)
+                        try:
+                            robot.add_link(link)
+                            logger.warning(
+                                f"Renamed duplicate link '{original_name}' to '{new_name}'"
+                            )
+                            break
+                        except RobotModelError:
+                            counter += 1
+                    else:
                         counter += 1
-                else:
-                    counter += 1
+            else:
+                logger.warning(f"Skipping invalid link '{original_name}': {e}")
 
     def _add_joint_robust(self, robot: Robot, joint: Any, joint_elem: ET.Element) -> None:
         """Add joint to robot, handling duplicates and broken references.
@@ -279,7 +283,7 @@ class RobotXMLParser(RobotParser):
             robot.add_joint(joint)
         except RobotModelError as e:
             joint_name = joint_elem.get("name", "unnamed_joint")
-            if "already exists" in str(e):
+            if "already exists" in str(e).lower():
                 original_name = joint_name
                 counter = 1
                 while True:

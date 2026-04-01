@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotValidationError
 
 
 def sanitize_name(name: str, allow_hyphen: bool = True) -> str:
@@ -23,7 +23,7 @@ def sanitize_name(name: str, allow_hyphen: bool = True) -> str:
 
     # Prevent ReDoS: limit input length before processing
     if len(name) > 1000:
-        raise RobotModelError(f"Name too long: {len(name)} characters (maximum 1000)")
+        raise RobotValidationError("NameLength", f"Length {len(name)} exceeds 1000")
 
     # Replace spaces with underscores
     name = name.replace(" ", "_")

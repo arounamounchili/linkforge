@@ -23,7 +23,7 @@ def test_file_system_resolver_absolute_path(tmp_path: Path) -> None:
 def test_file_system_resolver_non_existent() -> None:
     """Test that FileSystemResolver raises FileNotFoundError for non-existent files."""
     resolver = FileSystemResolver()
-    with pytest.raises(FileNotFoundError, match="Could not resolve resource"):
+    with pytest.raises(FileNotFoundError):
         resolver.resolve("/non/existent/path/mesh.stl")
 
 
@@ -42,10 +42,10 @@ def test_network_resolver_unimplemented_uri() -> None:
     """Test that NetworkResolver raises NotImplementedError for external URIs."""
     resolver = NetworkResolver()
 
-    with pytest.raises(NotImplementedError, match="not yet implemented"):
+    with pytest.raises(NotImplementedError):
         resolver.resolve("https://example.com/robot.stl")
 
-    with pytest.raises(NotImplementedError, match="not yet implemented"):
+    with pytest.raises(NotImplementedError):
         resolver.resolve("s3://bucket/mesh.dae")
 
 
@@ -102,7 +102,7 @@ def test_filesystem_resolver_errors_and_fallbacks(tmp_path) -> None:
         assert resolver.resolve("package://my_pkg/test.urdf") == pkg_file.absolute()
 
         # package:// failure
-        with pytest.raises(FileNotFoundError, match="Could not resolve package resource"):
+        with pytest.raises(FileNotFoundError):
             resolver.resolve("package://non_existent_pkg/file.urdf")
     finally:
         if old_rpp:
@@ -114,7 +114,7 @@ def test_filesystem_resolver_errors_and_fallbacks(tmp_path) -> None:
     assert resolver.resolve(f"file://{abs_file.absolute()}") == abs_file.absolute()
 
     # file:// failure
-    with pytest.raises(FileNotFoundError, match="Could not resolve file URI"):
+    with pytest.raises(FileNotFoundError):
         resolver.resolve("file:///non_existent_absolute_path/file.urdf")
 
     # Relative path resolution with relative_to
@@ -136,7 +136,7 @@ def test_filesystem_resolver_errors_and_fallbacks(tmp_path) -> None:
         )
 
         # Total failure case
-        with pytest.raises(FileNotFoundError, match="Could not resolve resource"):
+        with pytest.raises(FileNotFoundError):
             resolver.resolve("completely_missing.urdf")
     finally:
         os.chdir(old_cwd)

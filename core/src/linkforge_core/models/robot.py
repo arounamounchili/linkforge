@@ -11,7 +11,8 @@ from dataclasses import InitVar, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..base import FileSystemResolver, IResourceResolver, RobotModelError
+from ..base import FileSystemResolver, IResourceResolver
+from ..exceptions import RobotModelError, RobotValidationError
 from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
 from .graph import KinematicGraph
@@ -76,14 +77,11 @@ class Robot:
     ) -> None:
         """Initialize and index the robot structure."""
         if not self.name:
-            raise RobotModelError("Robot name cannot be empty")
+            raise RobotModelError()
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
-            raise RobotModelError(
-                f"Robot name '{self.name}' contains invalid characters. "
-                "Use only alphanumeric, underscore, or hyphen."
-            )
+            raise RobotValidationError("RobotName", self.name, "Invalid characters")
 
         # Initialize storage
         if initial_links:
@@ -111,13 +109,13 @@ class Robot:
         self._link_index = {}
         for link in self._links:
             if link.name in self._link_index:
-                raise RobotModelError(f"Duplicate link name: {link.name}")
+                raise RobotValidationError("LinkName", link.name, "Duplicate found in index")
             self._link_index[link.name] = link
 
         self._joint_index = {}
         for joint in self._joints:
             if joint.name in self._joint_index:
-                raise RobotModelError(f"Duplicate joint name: {joint.name}")
+                raise RobotValidationError("JointName", joint.name, "Duplicate found in index")
             self._joint_index[joint.name] = joint
 
         self._sensor_index = {sensor.name: sensor for sensor in self._sensors}
@@ -126,7 +124,7 @@ class Robot:
     def add_link(self, link: Link) -> None:
         """Add a link to the robot and update indices."""
         if link.name in self._link_index:
-            raise RobotModelError(f"Link '{link.name}' already exists")
+            raise RobotValidationError("LinkName", link.name, "Already exists")
         self._links.append(link)
         self._link_index[link.name] = link
         self._graph_cache = None
@@ -134,13 +132,13 @@ class Robot:
     def add_joint(self, joint: Joint) -> None:
         """Add a joint to the robot and update indices."""
         if joint.name in self._joint_index:
-            raise RobotModelError(f"Joint '{joint.name}' already exists")
+            raise RobotValidationError("JointName", joint.name, "Already exists")
 
         # Validate parent and child links exist
         if joint.parent not in self._link_index:
-            raise RobotModelError(f"Parent link '{joint.parent}' not found")
+            raise RobotValidationError("ParentLink", joint.parent, "Not found")
         if joint.child not in self._link_index:
-            raise RobotModelError(f"Child link '{joint.child}' not found")
+            raise RobotValidationError("ChildLink", joint.child, "Not found")
 
         self._joints.append(joint)
         self._joint_index[joint.name] = joint
@@ -185,11 +183,15 @@ class Robot:
     def add_sensor(self, sensor: Sensor) -> None:
         """Add a sensor to the robot and update indices."""
         if sensor.name in self._sensor_index:
-            raise RobotModelError(f"Sensor '{sensor.name}' already exists")
+            raise RobotValidationError(
+                check_name="DuplicateSensor", value=sensor.name, reason="Already exists"
+            )
 
         # Validate that the link exists
         if sensor.link_name not in self._link_index:
-            raise RobotModelError(f"Sensor '{sensor.name}': link '{sensor.link_name}' not found")
+            raise RobotValidationError(
+                check_name="LinkName", value=sensor.link_name, reason=sensor.name
+            )
 
         self._sensors.append(sensor)
         self._sensor_index[sensor.name] = sensor
@@ -197,13 +199,15 @@ class Robot:
     def add_transmission(self, transmission: Transmission) -> None:
         """Add a transmission to the robot."""
         if any(t.name == transmission.name for t in self._transmissions):
-            raise RobotModelError(f"Transmission '{transmission.name}' already exists")
+            raise RobotValidationError(
+                check_name="DuplicateTransmission", value=transmission.name, reason="Already exists"
+            )
 
         # Validate that all referenced joints exist
         for trans_joint in transmission.joints:
             if trans_joint.name not in self._joint_index:
-                raise RobotModelError(
-                    f"Transmission '{transmission.name}': joint '{trans_joint.name}' not found"
+                raise RobotValidationError(
+                    check_name="JointName", value=trans_joint.name, reason=transmission.name
                 )
 
         self._transmissions.append(transmission)
@@ -216,8 +220,10 @@ class Robot:
             and self.get_link(element.reference) is None
             and self.get_joint(element.reference) is None
         ):
-            raise RobotModelError(
-                f"Gazebo element reference '{element.reference}' does not match any link or joint"
+            raise RobotValidationError(
+                check_name="GazeboReference",
+                value=element.reference,
+                reason="No matching link or joint",
             )
 
         self._gazebo_elements.append(element)
@@ -226,7 +232,7 @@ class Robot:
         """Add a ROS2 Control configuration to the robot."""
         # Check for duplicate names
         if any(rc.name == ros2_control.name for rc in self._ros2_controls):
-            raise RobotModelError(f"ROS2 Control '{ros2_control.name}' already exists")
+            raise RobotValidationError("Ros2ControlName", ros2_control.name, "Already exists")
 
         self._ros2_controls.append(ros2_control)
 
@@ -251,9 +257,11 @@ class Robot:
 
         roots = self.graph.get_root_links()
         if not roots:
-            raise RobotModelError("No root link found (circular dependency detected)")
+            raise RobotValidationError(check_name="Roots", value=0, reason="No root link found")
         if len(roots) > 1:
-            raise RobotModelError(f"Multiple root links found: {roots}")
+            raise RobotValidationError(
+                check_name="Roots", value=len(roots), reason="Multiple root links found"
+            )
 
         return self.get_link(roots[0])
 

@@ -6,7 +6,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotModelError, RobotValidationError
 from ..utils.string_utils import is_valid_urdf_name
 
 
@@ -51,11 +51,17 @@ class TransmissionJoint:
     def __post_init__(self) -> None:
         """Validate transmission joint."""
         if not self.name:
-            raise RobotModelError("Transmission joint name cannot be empty")
+            raise RobotModelError()
         if not self.hardware_interfaces:
-            raise RobotModelError(f"Joint '{self.name}' must have at least one hardware interface")
+            raise RobotValidationError(
+                check_name="HardwareInterfaces",
+                value=self.name,
+                reason="Must have at least one interface",
+            )
         if self.mechanical_reduction == 0:
-            raise RobotModelError(f"Joint '{self.name}' mechanical reduction cannot be zero")
+            raise RobotValidationError(
+                check_name="MechanicalReduction", value=self.name, reason="Cannot be zero"
+            )
 
 
 @dataclass(frozen=True)
@@ -73,13 +79,17 @@ class TransmissionActuator:
     def __post_init__(self) -> None:
         """Validate transmission actuator."""
         if not self.name:
-            raise RobotModelError("Transmission actuator name cannot be empty")
+            raise RobotModelError()
         if not self.hardware_interfaces:
-            raise RobotModelError(
-                f"Actuator '{self.name}' must have at least one hardware interface"
+            raise RobotValidationError(
+                check_name="HardwareInterfaces",
+                value=self.name,
+                reason="Must have at least one interface",
             )
         if self.mechanical_reduction == 0:
-            raise RobotModelError(f"Actuator '{self.name}' mechanical reduction cannot be zero")
+            raise RobotValidationError(
+                check_name="MechanicalReduction", value=self.name, reason="Cannot be zero"
+            )
 
 
 @dataclass(frozen=True)
@@ -101,37 +111,32 @@ class Transmission:
     def __post_init__(self) -> None:
         """Validate transmission configuration."""
         if not self.name:
-            raise RobotModelError("Transmission name cannot be empty")
+            raise RobotModelError()
         if not self.type:
-            raise RobotModelError("Transmission type cannot be empty")
+            raise RobotModelError()
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
-            raise RobotModelError(
-                f"Transmission name '{self.name}' contains invalid characters. "
-                "Use only alphanumeric, underscore, or hyphen."
-            )
+            raise RobotValidationError("TransmissionName", self.name, "Invalid characters")
 
         # Must have at least one joint
         if not self.joints:
-            raise RobotModelError(f"Transmission '{self.name}' must have at least one joint")
+            raise RobotValidationError(
+                "TransmissionJoints", self.name, "Must have at least one joint"
+            )
 
         # Check for duplicate joint names
         joint_names = [j.name for j in self.joints]
         duplicates = {name for name, count in Counter(joint_names).items() if count > 1}
         if duplicates:
-            raise RobotModelError(
-                f"Transmission '{self.name}' has duplicate joint names: {duplicates}"
-            )
+            raise RobotValidationError("DuplicateJoints", self.name, str(duplicates))
 
         # Check for duplicate actuator names
         if self.actuators:
             actuator_names = [a.name for a in self.actuators]
             duplicates = {name for name, count in Counter(actuator_names).items() if count > 1}
             if duplicates:
-                raise RobotModelError(
-                    f"Transmission '{self.name}' has duplicate actuator names: {duplicates}"
-                )
+                raise RobotValidationError("DuplicateActuators", self.name, str(duplicates))
 
     @classmethod
     def create_simple(

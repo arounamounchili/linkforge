@@ -10,7 +10,13 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from ..base import IResourceResolver, RobotParserError
+from ..base import IResourceResolver
+from ..exceptions import (
+    RobotParserError,
+    RobotParserIOError,
+    RobotParserUnexpectedError,
+    RobotParserXMLRootError,
+)
 from ..logging_config import get_logger
 from ..models import Robot
 from ..models.srdf import (
@@ -119,12 +125,14 @@ class SRDFParser(RobotXMLParser):
         try:
             root = ET.fromstring(xml_string)
         except ET.ParseError as e:
-            raise RobotParserError("SRDF parse error") from e  # noqa: TRY003
+            raise RobotParserUnexpectedError(source_area="SRDF parse", original_error=e) from e
         except Exception as e:
-            raise RobotParserError("SRDF unexpected error") from e  # noqa: TRY003
+            raise RobotParserUnexpectedError(
+                source_area="Unexpected SRDF parse", original_error=e
+            ) from e
 
         if root.tag != "robot":
-            raise RobotParserError(f"Bad root: <{root.tag}>")  # noqa: TRY003
+            raise RobotParserXMLRootError(root.tag)
 
         robot_name = root.get("name", "unnamed_robot")
         if robot is None:
@@ -199,12 +207,12 @@ class SRDFParser(RobotXMLParser):
     def parse(self, filepath: Path, robot: Robot | None = None, **kwargs: Any) -> Robot:
         """Parse SRDF from file."""
         if not filepath.exists():
-            raise FileNotFoundError(f"Missing: {filepath}")  # noqa: TRY003
+            raise RobotParserIOError(filepath=filepath, reason="Missing file")
 
         # Security check: File size
         file_size = filepath.stat().st_size
         if file_size > self.max_file_size:
-            raise RobotParserError(f"File too large: {filepath.name}")  # noqa: TRY003
+            raise RobotParserIOError(filepath=filepath, reason="File too large")
 
         try:
             # If it's a XACRO file, resolve it using XacroResolver
@@ -220,6 +228,6 @@ class SRDFParser(RobotXMLParser):
             return self.parse_string(content, robot=robot, base_directory=filepath.parent, **kwargs)
 
         except Exception as e:
-            if isinstance(e, (RobotParserError, FileNotFoundError)):
+            if isinstance(e, RobotParserError):
                 raise
-            raise RobotParserError(f"SRDF file error: {filepath.name}") from e  # noqa: TRY003
+            raise RobotParserIOError(filepath=filepath, reason=str(e)) from e
