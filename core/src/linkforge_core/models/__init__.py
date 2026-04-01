@@ -41,6 +41,15 @@ from .sensor import (
     SensorNoise,
     SensorType,
 )
+from .srdf import (
+    DisabledCollision,
+    EndEffector,
+    GroupState,
+    PassiveJoint,
+    PlanningGroup,
+    SemanticRobotDescription,
+    VirtualJoint,
+)
 from .transmission import (
     HardwareInterface,
     Transmission,
@@ -100,4 +109,12 @@ __all__ = [
     # Gazebo
     "GazeboPlugin",
     "GazeboElement",
+    # SRDF
+    "VirtualJoint",
+    "PlanningGroup",
+    "GroupState",
+    "EndEffector",
+    "PassiveJoint",
+    "DisabledCollision",
+    "SemanticRobotDescription",
 ]

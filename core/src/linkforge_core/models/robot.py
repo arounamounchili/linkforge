@@ -20,6 +20,7 @@ from .link import Link
 from .material import Material
 from .ros2_control import Ros2Control
 from .sensor import Sensor
+from .srdf import SemanticRobotDescription
 from .transmission import Transmission
 
 
@@ -45,6 +46,7 @@ class Robot:
     _transmissions: list[Transmission] = field(default_factory=list, init=False)
     _ros2_controls: list[Ros2Control] = field(default_factory=list, init=False)
     _gazebo_elements: list[GazeboElement] = field(default_factory=list, init=False)
+    _semantic: SemanticRobotDescription | None = field(default=None, init=False)
 
     # Fast lookup indices (name -> object)
     _link_index: dict[str, Link] = field(default_factory=dict, init=False)
@@ -60,6 +62,7 @@ class Robot:
     initial_transmissions: InitVar[Sequence[Transmission] | None] = None
     initial_ros2_controls: InitVar[Sequence[Ros2Control] | None] = None
     initial_gazebo_elements: InitVar[Sequence[GazeboElement] | None] = None
+    initial_semantic: InitVar[SemanticRobotDescription | None] = None
 
     def __post_init__(
         self,
@@ -69,6 +72,7 @@ class Robot:
         initial_transmissions: Sequence[Transmission] | None = None,
         initial_ros2_controls: Sequence[Ros2Control] | None = None,
         initial_gazebo_elements: Sequence[GazeboElement] | None = None,
+        initial_semantic: SemanticRobotDescription | None = None,
     ) -> None:
         """Initialize and index the robot structure."""
         if not self.name:
@@ -100,6 +104,8 @@ class Robot:
         if initial_gazebo_elements:
             for gz in initial_gazebo_elements:
                 self.add_gazebo_element(gz)
+        if initial_semantic:
+            self._semantic = initial_semantic
 
         # Build indices
         self._link_index = {}
@@ -300,6 +306,16 @@ class Robot:
     def gazebo_elements(self) -> tuple[GazeboElement, ...]:
         """Get read-only view of Gazebo elements."""
         return tuple(self._gazebo_elements)
+
+    @property
+    def semantic(self) -> SemanticRobotDescription | None:
+        """Get semantic description (SRDF metadata) of the robot."""
+        return self._semantic
+
+    @semantic.setter
+    def semantic(self, value: SemanticRobotDescription | None) -> None:
+        """Set semantic description of the robot."""
+        self._semantic = value
 
     def __str__(self) -> str:
         """String representation."""
