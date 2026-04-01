@@ -86,7 +86,7 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
 
 
 @typing.no_type_check
-def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context) -> None:
+def on_collision_quality_update(self: bpy.types.PropertyGroup, _context: Context) -> None:
     """Update collision mesh preview when quality changes.
 
     This provides live feedback to the user as they adjust the quality slider,
@@ -115,7 +115,7 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, context: Context)
     update_collision_quality_realtime(obj, collision_obj)
 
 
-def update_inertia_viz(self: PropertyGroup, context: Context) -> None:
+def update_inertia_viz(_self: PropertyGroup, _context: Context) -> None:
     """Trigger visual update for inertia gizmos."""
     from ..utils.scene_utils import clear_stats_cache
     from ..visualization.inertia_gizmos import tag_redraw
@@ -124,7 +124,7 @@ def update_inertia_viz(self: PropertyGroup, context: Context) -> None:
     tag_redraw()
 
 
-def update_auto_inertia_toggle(self: PropertyGroup, context: Context) -> None:
+def update_auto_inertia_toggle(self: PropertyGroup, _context: Context) -> None:
     """Enable visualization when switching to manual inertia."""
     if not hasattr(self, "use_auto_inertia"):
         return

@@ -342,7 +342,7 @@ def _merge_visual_meshes(
             col.objects.link(dup)
 
         # Apply transforms to bake local position (relative to link) into geometry
-        # Vertex_Link = Link_World_Inv @ Vertex_World
+        # Vertex_Link = Link_World_Inv @ Vertex_World  # noqa: ERA001
         # We unparent first to ensure matrix_world correctly represents the local space
         dup.parent = None
         dup.matrix_world = link_obj.matrix_world.inverted() @ visual_obj.matrix_world

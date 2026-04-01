@@ -15,25 +15,25 @@ from bpy.types import PropertyGroup
 class ValidationIssueProperty(PropertyGroup):
     """A single validation issue (error or warning)."""
 
-    title: StringProperty(  # type: ignore
+    title: StringProperty(  # type: ignore[valid-type]
         name="Title",
         description="Short title of the issue",
         default="",
     )
 
-    message: StringProperty(  # type: ignore
+    message: StringProperty(  # type: ignore[valid-type]
         name="Message",
         description="Detailed message",
         default="",
     )
 
-    suggestion: StringProperty(  # type: ignore
+    suggestion: StringProperty(  # type: ignore[valid-type]
         name="Suggestion",
         description="How to fix this issue",
         default="",
     )
 
-    affected_objects: StringProperty(  # type: ignore
+    affected_objects: StringProperty(  # type: ignore[valid-type]
         name="Affected Objects",
         description="Comma-separated list of affected object names",
         default="",
@@ -111,67 +111,67 @@ class ValidationIssueProperty(PropertyGroup):
 class ValidationResultProperty(PropertyGroup):
     """Validation result stored in window manager."""
 
-    has_results: BoolProperty(  # type: ignore
+    has_results: BoolProperty(  # type: ignore[valid-type]
         name="Has Results",
         description="Whether validation has been run",
         default=False,
     )
 
-    is_valid: BoolProperty(  # type: ignore
+    is_valid: BoolProperty(  # type: ignore[valid-type]
         name="Is Valid",
         description="Whether robot passed validation (no errors)",
         default=False,
     )
 
-    error_count: IntProperty(  # type: ignore
+    error_count: IntProperty(  # type: ignore[valid-type]
         name="Error Count",
         description="Number of errors",
         default=0,
     )
 
-    warning_count: IntProperty(  # type: ignore
+    warning_count: IntProperty(  # type: ignore[valid-type]
         name="Warning Count",
         description="Number of warnings",
         default=0,
     )
 
-    link_count: IntProperty(  # type: ignore
+    link_count: IntProperty(  # type: ignore[valid-type]
         name="Link Count",
         description="Number of links in robot",
         default=0,
     )
 
-    joint_count: IntProperty(  # type: ignore
+    joint_count: IntProperty(  # type: ignore[valid-type]
         name="Joint Count",
         description="Number of joints in robot",
         default=0,
     )
 
-    dof_count: IntProperty(  # type: ignore
+    dof_count: IntProperty(  # type: ignore[valid-type]
         name="DOF Count",
         description="Degrees of freedom",
         default=0,
     )
 
-    errors: CollectionProperty(  # type: ignore
+    errors: CollectionProperty(  # type: ignore[valid-type]
         type=ValidationIssueProperty,
         name="Errors",
         description="List of validation errors",
     )
 
-    warnings: CollectionProperty(  # type: ignore
+    warnings: CollectionProperty(  # type: ignore[valid-type]
         type=ValidationIssueProperty,
         name="Warnings",
         description="List of validation warnings",
     )
 
-    show_errors: BoolProperty(  # type: ignore
+    show_errors: BoolProperty(  # type: ignore[valid-type]
         name="Show Errors",
         description="Expand errors section",
         default=True,
     )
 
-    show_warnings: BoolProperty(  # type: ignore
+    show_warnings: BoolProperty(  # type: ignore[valid-type]
         name="Show Warnings",
         description="Expand warnings section",
         default=False,
@@ -220,8 +220,8 @@ def register() -> None:
         bpy.utils.register_class(ValidationResultProperty)
 
     # Register window manager property
-    prop = bpy.props.PointerProperty(type=ValidationResultProperty)  # type: ignore[func-returns-value]
-    bpy.types.WindowManager.linkforge_validation = prop  # type: ignore[attr-defined]
+    prop = bpy.props.PointerProperty(type=ValidationResultProperty)  # type: ignore[valid-type][func-returns-value]
+    bpy.types.WindowManager.linkforge_validation = prop  # type: ignore[valid-type][attr-defined]
 
 
 def unregister() -> None:

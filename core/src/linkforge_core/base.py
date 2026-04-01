@@ -81,7 +81,7 @@ class RobotGenerator(ABC, Generic[T]):  # noqa: UP046
                 raise
             raise RobotGeneratorError(str(filepath), str(e)) from e
 
-    def _save_to_file(self, content: T, filepath: Path, **kwargs: Any) -> None:
+    def _save_to_file(self, content: T, filepath: Path, **_kwargs: Any) -> None:
         """Default I/O hook for saving content.
 
         Supports string-based content by default. Binary generators or formats

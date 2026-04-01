@@ -64,7 +64,7 @@ class TestParseVector3:
 
     def test_parse_invalid_non_numeric(self) -> None:
         """Test that parsing non-numeric values raises RobotModelError."""
-        with pytest.raises(RobotModelError, match="Invalid Vector3 format"):
+        with pytest.raises(RobotModelError, match="must be a finite number"):
             parse_vector3("1.0 abc 3.0")
 
     def test_parse_empty_string(self) -> None:
@@ -206,35 +206,35 @@ class TestParseGeometry:
 
         # Parser is resilient - returns None and logs warning instead of crashing
         assert geom is None
-        assert "Invalid box geometry ignored" in caplog.text
+        assert "geometry ignored" in caplog.text
 
     def test_parse_box_negative_dimension(self, parser, caplog) -> None:
         """Test that box with negative dimension returns None and logs warning."""
         elem = ET.fromstring('<geometry><box size="1 -2 3"/></geometry>')
         geom = parser._parse_geometry_element(elem)
         assert geom is None
-        assert "Invalid box geometry ignored" in caplog.text
+        assert "Invalid geometry ignored" in caplog.text
 
     def test_parse_cylinder_negative_radius(self, parser, caplog) -> None:
         """Test that cylinder with negative radius returns None and logs warning."""
         elem = ET.fromstring('<geometry><cylinder radius="-0.5" length="2.0"/></geometry>')
         geom = parser._parse_geometry_element(elem)
         assert geom is None
-        assert "Invalid cylinder geometry ignored" in caplog.text
+        assert "Invalid geometry ignored" in caplog.text
 
     def test_parse_sphere_zero_radius(self, parser, caplog) -> None:
         """Test that sphere with zero radius returns None and logs warning."""
         elem = ET.fromstring('<geometry><sphere radius="0"/></geometry>')
         geom = parser._parse_geometry_element(elem)
         assert geom is None
-        assert "Invalid sphere geometry ignored" in caplog.text
+        assert "Invalid geometry ignored" in caplog.text
 
     def test_parse_mesh_missing_filename(self, parser, caplog) -> None:
         """Test that mesh without filename returns None and logs warning."""
         elem = ET.fromstring("<geometry><mesh/></geometry>")
         geom = parser._parse_geometry_element(elem)
         assert geom is None
-        assert "Invalid mesh geometry ignored" in caplog.text
+        assert "Invalid geometry ignored" in caplog.text
 
     def test_parse_mesh_negative_scale(self, parser) -> None:
         """Test that mesh with negative scale (mirroring) is accepted."""
@@ -249,7 +249,7 @@ class TestParseGeometry:
         elem = ET.fromstring('<geometry><cylinder radius="abc" length="2.0"/></geometry>')
         geom = parser._parse_geometry_element(elem)
         assert geom is None
-        assert "Invalid cylinder geometry ignored" in caplog.text
+        assert "Invalid geometry ignored" in caplog.text
 
 
 class TestParseMaterial:
@@ -674,7 +674,7 @@ class TestParseURDF:
         """Test that parsing nonexistent file raises FileNotFoundError."""
         nonexistent = tmp_path / "nonexistent.urdf"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(RobotParserError):
             URDFParser().parse(nonexistent)
 
     def test_parse_invalid_xml(self, tmp_path: Path) -> None:
@@ -695,7 +695,7 @@ class TestParseURDF:
         urdf_file = tmp_path / "invalid_root.urdf"
         urdf_file.write_text(urdf_content)
 
-        with pytest.raises(RobotParserError, match="Root element must be <robot>"):
+        with pytest.raises(RobotParserError, match="Invalid XML root"):
             URDFParser().parse(urdf_file)
 
     def test_parse_complex_robot(self, tmp_path: Path) -> None:

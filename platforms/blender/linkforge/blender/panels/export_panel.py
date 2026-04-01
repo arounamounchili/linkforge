@@ -234,7 +234,7 @@ class LINKFORGE_PT_export_panel(Panel):
         scene: Scene,
         links_dict: dict[str, typing.Any],
         num_links: int,
-        num_dof: int,
+        _num_dof: int,
         stats: typing.Any,
     ) -> None:
         """Draw the component browser section with search filtering."""

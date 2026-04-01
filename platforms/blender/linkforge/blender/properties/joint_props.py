@@ -114,7 +114,7 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
     clear_stats_cache(self, context)
 
 
-def poll_robot_link(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
+def poll_robot_link(_self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
     return bool(hasattr(obj, "linkforge") and obj.linkforge.is_robot_link)
 

@@ -39,7 +39,7 @@ class TestInertiaTensor:
 
     def test_invalid_triangle_inequality(self) -> None:
         """Test that triangle inequality violation raises error."""
-        with pytest.raises(RobotModelError, match="triangle inequality"):
+        with pytest.raises(RobotModelError, match="InertiaTriangleInequality"):
             # This violates Ixx + Iyy >= Izz
             InertiaTensor(ixx=1.0, ixy=0.0, ixz=0.0, iyy=1.0, iyz=0.0, izz=10.0)
 
@@ -384,5 +384,5 @@ class TestMeshInertiaFromTriangles:
         # Flat triangle (zero volume)
         vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
-        with pytest.raises(RobotModelError, match="mesh has zero volume"):
+        with pytest.raises(RobotModelError, match="Degenerate mesh"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)

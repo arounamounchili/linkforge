@@ -48,11 +48,11 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
     )
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
-    def check(self, context: Context) -> typing.Any:
+    def check(self, _context: Context) -> typing.Any:
         """Check if the operator can update its properties.
 
         Args:
-            context: The current Blender context.
+            _context: The current Blender context (unused, required by API).
 
         Returns:
             True to indicate the properties have changed and the UI needs update.

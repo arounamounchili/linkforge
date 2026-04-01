@@ -97,7 +97,7 @@ class RobotXMLGenerator(RobotGenerator[str]):
 
     @singledispatchmethod
     def _add_geometry_element(
-        self, geometry: Any, parent: ET.Element, tag: str = "geometry"
+        self, _geometry: Any, parent: ET.Element, tag: str = "geometry"
     ) -> None:
         """Add geometry element to parent. Overridden for specific types."""
         # Fallback for unsupported geometry: creates empty container

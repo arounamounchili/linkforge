@@ -83,7 +83,7 @@ def update_sensor_hierarchy(self: SensorPropertyGroup, context: Context) -> None
         clear_parent_keep_transform(sensor_obj)
 
 
-def poll_robot_link(self: SensorPropertyGroup, obj: bpy.types.Object) -> bool:
+def poll_robot_link(_self: SensorPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
     return bool(
         obj
@@ -96,13 +96,13 @@ class SensorPropertyGroup(PropertyGroup):
     """Properties for a robot sensor stored on an Empty object."""
 
     # Sensor identification
-    is_robot_sensor: BoolProperty(  # type: ignore
+    is_robot_sensor: BoolProperty(  # type: ignore[valid-type]
         name="Is Robot Sensor",
         description="Mark this Empty as a robot sensor",
         default=False,
     )
 
-    sensor_name: StringProperty(  # type: ignore
+    sensor_name: StringProperty(  # type: ignore[valid-type]
         name="Sensor Name",
         description="Name of the sensor in URDF (must be unique)",
         maxlen=64,
@@ -111,7 +111,7 @@ class SensorPropertyGroup(PropertyGroup):
     )
 
     # Sensor type
-    sensor_type: EnumProperty(  # type: ignore
+    sensor_type: EnumProperty(  # type: ignore[valid-type]
         name="Sensor Type",
         description="Type of sensor",
         items=[
@@ -127,7 +127,7 @@ class SensorPropertyGroup(PropertyGroup):
     )
 
     # Attached link
-    attached_link: PointerProperty(  # type: ignore
+    attached_link: PointerProperty(  # type: ignore[valid-type]
         name="Attached Link",
         description="Select the link this sensor is attached to",
         type=bpy.types.Object,
@@ -136,7 +136,7 @@ class SensorPropertyGroup(PropertyGroup):
     )
 
     # Common sensor properties
-    update_rate: FloatProperty(  # type: ignore
+    update_rate: FloatProperty(  # type: ignore[valid-type]
         name="Update Rate",
         description="Sensor update rate in Hz",
         default=30.0,
@@ -145,19 +145,19 @@ class SensorPropertyGroup(PropertyGroup):
         precision=1,
     )
 
-    always_on: BoolProperty(  # type: ignore
+    always_on: BoolProperty(  # type: ignore[valid-type]
         name="Always On",
         description="Whether the sensor is always active",
         default=False,
     )
 
-    visualize: BoolProperty(  # type: ignore
+    visualize: BoolProperty(  # type: ignore[valid-type]
         name="Visualize",
         description="Enable visualization in the simulator",
         default=False,
     )
 
-    topic_name: StringProperty(  # type: ignore
+    topic_name: StringProperty(  # type: ignore[valid-type]
         name="Topic Name",
         description="ROS topic name for sensor data",
         default="",
@@ -165,7 +165,7 @@ class SensorPropertyGroup(PropertyGroup):
     )
 
     # Camera-specific properties
-    camera_horizontal_fov: FloatProperty(  # type: ignore
+    camera_horizontal_fov: FloatProperty(  # type: ignore[valid-type]
         name="Horizontal FOV",
         description="Camera horizontal field of view (displayed in degrees, stored as radians). Standard cameras support up to 180°",
         default=1.047,  # ~60 degrees in radians
@@ -175,7 +175,7 @@ class SensorPropertyGroup(PropertyGroup):
         subtype="ANGLE",  # Blender displays this in degrees
     )
 
-    camera_width: IntProperty(  # type: ignore
+    camera_width: IntProperty(  # type: ignore[valid-type]
         name="Image Width",
         description="Camera image width in pixels",
         default=640,
@@ -183,7 +183,7 @@ class SensorPropertyGroup(PropertyGroup):
         soft_max=1920,
     )
 
-    camera_height: IntProperty(  # type: ignore
+    camera_height: IntProperty(  # type: ignore[valid-type]
         name="Image Height",
         description="Camera image height in pixels",
         default=480,
@@ -191,7 +191,7 @@ class SensorPropertyGroup(PropertyGroup):
         soft_max=1080,
     )
 
-    camera_near_clip: FloatProperty(  # type: ignore
+    camera_near_clip: FloatProperty(  # type: ignore[valid-type]
         name="Near Clip",
         description="Camera near clipping plane distance (meters)",
         default=0.1,
@@ -200,7 +200,7 @@ class SensorPropertyGroup(PropertyGroup):
         precision=3,
     )
 
-    camera_far_clip: FloatProperty(  # type: ignore
+    camera_far_clip: FloatProperty(  # type: ignore[valid-type]
         name="Far Clip",
         description="Camera far clipping plane distance (meters)",
         default=100.0,
@@ -209,7 +209,7 @@ class SensorPropertyGroup(PropertyGroup):
         precision=1,
     )
 
-    camera_format: EnumProperty(  # type: ignore
+    camera_format: EnumProperty(  # type: ignore[valid-type]
         name="Image Format",
         description="Camera image pixel format",
         items=[
@@ -224,7 +224,7 @@ class SensorPropertyGroup(PropertyGroup):
     )
 
     # LIDAR-specific properties
-    lidar_horizontal_samples: IntProperty(  # type: ignore
+    lidar_horizontal_samples: IntProperty(  # type: ignore[valid-type]
         name="Horizontal Samples",
         description="Number of horizontal scan samples",
         default=640,
@@ -232,7 +232,7 @@ class SensorPropertyGroup(PropertyGroup):
         soft_max=2048,
     )
 
-    lidar_horizontal_min_angle: FloatProperty(  # type: ignore
+    lidar_horizontal_min_angle: FloatProperty(  # type: ignore[valid-type]
         name="Horizontal Min Angle",
         description="Minimum horizontal scan angle (displayed in degrees, stored as radians)",
         default=-1.5707963267948966,  # -90 degrees
@@ -242,7 +242,7 @@ class SensorPropertyGroup(PropertyGroup):
         subtype="ANGLE",  # Blender displays this in degrees
     )
 
-    lidar_horizontal_max_angle: FloatProperty(  # type: ignore
+    lidar_horizontal_max_angle: FloatProperty(  # type: ignore[valid-type]
         name="Horizontal Max Angle",
         description="Maximum horizontal scan angle (displayed in degrees, stored as radians)",
         default=1.5707963267948966,  # 90 degrees
@@ -252,7 +252,7 @@ class SensorPropertyGroup(PropertyGroup):
         subtype="ANGLE",  # Blender displays this in degrees
     )
 
-    lidar_vertical_samples: IntProperty(  # type: ignore
+    lidar_vertical_samples: IntProperty(  # type: ignore[valid-type]
         name="Vertical Samples",
         description="Number of vertical scan samples (1 for 2D LIDAR)",
         default=1,
@@ -260,7 +260,7 @@ class SensorPropertyGroup(PropertyGroup):
         soft_max=128,
     )
 
-    lidar_range_min: FloatProperty(  # type: ignore
+    lidar_range_min: FloatProperty(  # type: ignore[valid-type]
         name="Range Min",
         description="Minimum detection range in meters",
         default=0.1,
@@ -269,7 +269,7 @@ class SensorPropertyGroup(PropertyGroup):
         precision=3,
     )
 
-    lidar_range_max: FloatProperty(  # type: ignore
+    lidar_range_max: FloatProperty(  # type: ignore[valid-type]
         name="Range Max",
         description="Maximum detection range in meters",
         default=10.0,
@@ -279,7 +279,7 @@ class SensorPropertyGroup(PropertyGroup):
     )
 
     # Contact-specific properties
-    contact_collision: StringProperty(  # type: ignore
+    contact_collision: StringProperty(  # type: ignore[valid-type]
         name="Collision Name",
         description="Name of the collision element to monitor (defaults to linkname_collision if empty)",
         default="",
@@ -290,13 +290,13 @@ class SensorPropertyGroup(PropertyGroup):
     # Gravity is handled by World settings in Gazebo
 
     # Noise properties
-    use_noise: BoolProperty(  # type: ignore
+    use_noise: BoolProperty(  # type: ignore[valid-type]
         name="Use Noise",
         description="Add realistic noise to sensor measurements",
         default=False,
     )
 
-    noise_type: EnumProperty(  # type: ignore
+    noise_type: EnumProperty(  # type: ignore[valid-type]
         name="Noise Type",
         description="Type of noise model",
         items=[
@@ -306,14 +306,14 @@ class SensorPropertyGroup(PropertyGroup):
         default="gaussian",
     )
 
-    noise_mean: FloatProperty(  # type: ignore
+    noise_mean: FloatProperty(  # type: ignore[valid-type]
         name="Noise Mean",
         description="Mean of the noise distribution",
         default=0.0,
         precision=5,
     )
 
-    noise_stddev: FloatProperty(  # type: ignore
+    noise_stddev: FloatProperty(  # type: ignore[valid-type]
         name="Noise Std Dev",
         description="Standard deviation of the noise",
         default=0.0,
@@ -322,20 +322,20 @@ class SensorPropertyGroup(PropertyGroup):
     )
 
     # Gazebo plugin settings
-    use_gazebo_plugin: BoolProperty(  # type: ignore
+    use_gazebo_plugin: BoolProperty(  # type: ignore[valid-type]
         name="Gazebo Plugin",
         description="Enable Gazebo plugin for this sensor",
         default=False,
     )
 
-    plugin_filename: StringProperty(  # type: ignore
+    plugin_filename: StringProperty(  # type: ignore[valid-type]
         name="Plugin Filename",
         description="Gazebo plugin library filename (e.g., libgazebo_ros_camera.so)",
         default="",
         maxlen=128,
     )
 
-    plugin_raw_xml: StringProperty(  # type: ignore
+    plugin_raw_xml: StringProperty(  # type: ignore[valid-type]
         name="Plugin Raw XML",
         description="Raw XML content of plugin (for round-trip fidelity)",
         default="",

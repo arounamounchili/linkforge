@@ -77,7 +77,7 @@ class XACROGenerator(URDFGenerator):
         self.dimension_properties: dict[str, str] = {}
         self.generated_macros: list[dict[str, Any]] = []
 
-    def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
+    def generate(self, robot: Robot, validate: bool = True, **_kwargs: Any) -> str:
         """Generate XACRO XML string from robot."""
         from .. import __version__
 
@@ -263,7 +263,7 @@ class XACROGenerator(URDFGenerator):
             properties: List to append (name, value) tuples to
         """
         # Collect all dimensions from visual geometries
-        # Format: {dimension_key: [(link_name, value), ...]}
+        # Format: {dimension_key: [(link_name, value), ...]}  # noqa: ERA001
         dimensions: dict[str, list[tuple[str, float]]] = defaultdict(list)
 
         for link in robot.links:

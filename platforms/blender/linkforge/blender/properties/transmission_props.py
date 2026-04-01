@@ -88,7 +88,7 @@ def update_transmission_hierarchy(self: TransmissionPropertyGroup, context: Cont
         clear_parent_keep_transform(transmission_obj)
 
 
-def poll_robot_joint(self: TransmissionPropertyGroup, obj: bpy.types.Object) -> bool:
+def poll_robot_joint(_self: TransmissionPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot joint objects in pointer selection.
 
     Args:

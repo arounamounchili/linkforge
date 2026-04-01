@@ -12,11 +12,11 @@ from bpy.props import BoolProperty, FloatProperty, StringProperty
 from bpy.types import AddonPreferences, Context
 
 
-def update_joint_axes_visibility(self: LinkForgePreferences, context: Context) -> None:
+def update_joint_axes_visibility(_self: LinkForgePreferences, _context: Context) -> None:
     """Callback when show_joint_axes changes - manage draw handler and force viewport redraw."""
     from .visualization import joint_gizmos
 
-    joint_gizmos.update_viz_handle(context)
+    joint_gizmos.update_viz_handle(_context)
 
 
 def update_joint_empty_size(self: LinkForgePreferences, context: Context) -> None:
@@ -89,17 +89,17 @@ def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None
                     area.tag_redraw()
 
 
-def update_inertia_visibility(self: LinkForgePreferences, context: Context) -> None:
+def update_inertia_visibility(_self: LinkForgePreferences, _context: Context) -> None:
     """Callback when show_inertia_gizmos changes."""
     from .visualization import inertia_gizmos
 
     inertia_gizmos.tag_redraw()
     # If the user just enabled it, make sure the handler is registered
-    if self.show_inertia_gizmos:
+    if _self.show_inertia_gizmos:
         inertia_gizmos.ensure_inertia_handler()
 
 
-def update_inertia_size(self: LinkForgePreferences, context: Context) -> None:
+def update_inertia_size(_self: LinkForgePreferences, _context: Context) -> None:
     """Callback when inertia_gizmo_size changes."""
     from .visualization import inertia_gizmos
 
@@ -217,7 +217,7 @@ class LinkForgePreferences(AddonPreferences):
         default="",
     )
 
-    def draw(self, context: Context) -> None:
+    def draw(self, _context: Context) -> None:
         """Draw the preferences UI."""
         layout = self.layout
 

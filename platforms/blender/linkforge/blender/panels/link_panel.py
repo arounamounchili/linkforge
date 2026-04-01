@@ -216,12 +216,12 @@ class LINKFORGE_PT_links(Panel):
             inertia_box.separator()
             inertia_box.label(text="Center of Mass")
 
-            # Position (XYZ)
+            # Position (XYZ)  # noqa: ERA001
             row = inertia_box.row(align=True)
             row.label(text="Position:", icon="EMPTY_AXIS")
             row.prop(props, "inertia_origin_xyz", text="")
 
-            # Rotation (RPY)
+            # Rotation (RPY)  # noqa: ERA001
             row = inertia_box.row(align=True)
             row.label(text="Rotation:", icon="ORIENTATION_GIMBAL")
             row.prop(props, "inertia_origin_rpy", text="")

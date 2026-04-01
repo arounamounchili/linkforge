@@ -269,7 +269,7 @@ def _draw_internal() -> None:
     gpu.state.depth_test_set("NONE")
 
 
-def fix_existing_joints(dummy: typing.Any = None) -> None:
+def fix_existing_joints(_dummy: typing.Any = None) -> None:
     """Fix display type for existing joints.
 
     Args:

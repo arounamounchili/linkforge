@@ -672,12 +672,12 @@ def blender_link_to_core_with_origin(
     )
 
 
-def blender_joint_to_core(obj: Any, scene: Any) -> Joint | None:
+def blender_joint_to_core(obj: Any, _scene: Any) -> Joint | None:
     """Convert Blender Empty with JointPropertyGroup to Core Joint.
 
     Args:
         obj: Blender Empty object with linkforge_joint property group
-        scene: Blender scene to find parent link object
+        _scene: Blender scene (unused, kept for API compatibility).
 
     Returns:
         Core Joint model or None

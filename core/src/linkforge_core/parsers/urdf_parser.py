@@ -771,7 +771,7 @@ class URDFParser(RobotXMLParser):
 
         return robot
 
-    def parse(self, filepath: Path, **kwargs: Any) -> Robot:
+    def parse(self, filepath: Path, **_kwargs: Any) -> Robot:
         """Parse URDF file into a Robot model using iterative parsing.
 
         This implementation uses iterparse to maintain O(1) memory complexity
@@ -833,7 +833,7 @@ class URDFParser(RobotXMLParser):
         self,
         urdf_string: str,
         urdf_directory: Path | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Robot:
         """Parse URDF from string."""
         string_size = len(urdf_string.encode("utf-8"))

@@ -264,7 +264,7 @@ def ensure_inertia_handler() -> None:
         tag_redraw()
 
 
-def check_manual_inertia_on_load(arg1: Any = None, arg2: Any = None) -> Any:
+def check_manual_inertia_on_load(_arg1: Any = None, _arg2: Any = None) -> Any:
     """Check if any link has Manual Inertia on file load or registration."""
     try:
         scene = bpy.context.scene

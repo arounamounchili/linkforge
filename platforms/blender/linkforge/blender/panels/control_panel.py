@@ -19,30 +19,30 @@ class LINKFORGE_UL_ros2_control_joints(bpy.types.UIList):
 
     def draw_item(
         self,
-        context: bpy.types.Context,
+        _context: bpy.types.Context,
         layout: bpy.types.UILayout,
-        data: typing.Any,
+        _data: typing.Any,
         item: typing.Any,
-        icon: int | None,
-        active_data: typing.Any,
-        active_propname: str | None,
-        index: int | None = 0,
-        flt_flag: int | None = 0,
+        _icon: int | None,
+        _active_data: typing.Any,
+        _active_propname: str | None,
+        _index: int | None = 0,
+        _flt_flag: int | None = 0,
     ) -> None:
         """Draw an item in the list.
 
         Args:
-            context: The current Blender context.
+            _context: The current Blender context (unused, required by API).
             layout: The current UILayout.
-            data: The property group being displayed.
+            _data: The property group being displayed (unused, required by API).
             item: The current list item.
-            icon: The icon for the item.
-            active_data: Required by Blender API (pointing to the collection owner).
-            active_propname: Required by Blender API (name of the active property).
-            index: Current item index.
-            flt_flag: Filter flag.
+            _icon: The icon for the item (unused, required by API).
+            _active_data: Required by Blender API (pointing to the collection owner).
+            _active_propname: Required by Blender API (name of the active property).
+            _index: Current item index (unused, required by API).
+            _flt_flag: Filter flag (unused, required by API).
         """
-        # Note: active_data and active_propname are required by Blender's UIList.draw_item API
+        # Note: _active_data and _active_propname are required by Blender's UIList.draw_item API
         # signature but are not used in this specific implementation.
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
