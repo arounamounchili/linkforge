@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -66,6 +67,26 @@ MATH_CONTEXT["__builtins__"] = {
 # Standard XACRO booleans
 MATH_CONTEXT["true"] = True
 MATH_CONTEXT["false"] = False
+
+
+@dataclass
+class XacroTemplate:
+    """A pre-parsed structural template of a XACRO file.
+
+    This represents the 'Structural Phase' of XACRO resolution where all
+    includes are expanded and files are parsed into memory, but no
+    substitutions or macro calls have been evaluated yet.
+    """
+
+    filepath: Path
+    root_tag: str
+    root_attrib: dict[str, str]
+    container: ET.Element  # Container of pre-resolved elements
+    macros: dict[str, tuple[list[str], ET.Element]]
+
+
+# Global cache for structural templates to speed up repeated assembly of identical robots.
+TEMPLATE_CACHE: dict[Path, XacroTemplate] = {}
 
 
 class XacroResolver:
@@ -140,28 +161,33 @@ class XacroResolver:
             self.start_dir = filepath.parent
 
         try:
-            container, root_tag, root_attrib = self._process_include_file(filepath)
+            template = self._get_structural_template(filepath)
 
-            # Create a new robot root from the processed elements
             # Standard URDF requires a <robot> root tag
+            # Create URDF root preserving original name and attributes from the template
+            out_root = ET.Element(template.root_tag, template.root_attrib)
 
-            # Create URDF root preserving original name and attributes
-            out_root = ET.Element(root_tag, root_attrib)
+            # Copy template macros into our active resolver
+            self.macros.update(copy.deepcopy(template.macros))
+
+            # Evaluation Phase: Process the structural container
+            # We deepcopy the container to ensure this evaluation doesn't mutate the cache.
+            resolved_container = self.resolve_element(copy.deepcopy(template.container))
 
             # Helper to flatten container and filter items
             def _append_filtered(parent: ET.Element, items: list[ET.Element] | ET.Element) -> None:
                 if isinstance(items, ET.Element):
-                    items = [items]  # pragma: no cover
+                    items = [items]
 
                 for item in items:
                     if item.tag == "container":
                         # Flatten container
-                        _append_filtered(parent, list(item))  # pragma: no cover
+                        _append_filtered(parent, list(item))
                     elif item.tag != "skip" and not item.tag.startswith("xacro:"):
                         # Add valid element
                         parent.append(item)
 
-            _append_filtered(out_root, list(container))
+            _append_filtered(out_root, list(resolved_container))
 
             return self._finalize_urdf(out_root)
         except Exception as e:
@@ -199,52 +225,83 @@ class XacroResolver:
             if sys.getrecursionlimit() != old_limit:
                 sys.setrecursionlimit(old_limit)
 
-    def _process_include_file(
-        self, filepath: Path, ns: str | None = None
-    ) -> tuple[ET.Element, str, dict[str, str]]:
-        """Process a file path, handling includes and circular detection.
+    def _get_structural_template(self, filepath: Path) -> XacroTemplate:
+        """Retrieve or build a structural template for a file.
 
         Args:
-            filepath: Path to the file to process.
-            ns: Optional namespace for the included content.
+            filepath: Path to the XACRO file.
 
         Returns:
-            A tuple containing (container_element, root_tag, clean_attributes).
-
-        Raises:
-            RobotParserError: If circular includes are detected or parsing fails.
+            The cached or newly built structural template.
         """
         filepath = filepath.resolve()
+        if filepath in TEMPLATE_CACHE:
+            return TEMPLATE_CACHE[filepath]
 
+        logger.debug(f"XACRO: Building structural template for {filepath.name}")
+
+        # Cycle detection for includes during template build
         if filepath in self._file_stack:
             raise RobotXacroRecursionError(str(filepath.name))
 
         self._file_stack.append(filepath)
-
         try:
             tree = ET.parse(filepath)
             root = tree.getroot()
-
-            if ns:
-                self._ns_stack.append(ns)
 
             # Store search path for relative includes within this file
             old_paths = self.search_paths[:]
             if filepath.parent not in self.search_paths:
                 self.search_paths.insert(0, filepath.parent)
 
+            structural_macros: dict[str, tuple[list[str], ET.Element]] = {}
             container = ET.Element("container")
+
             for child in root:
-                resolved_child = self.resolve_element(child)
-                if resolved_child.tag == "container":
-                    for sc in resolved_child:
-                        container.append(sc)
-                elif resolved_child.tag != "skip":
-                    container.append(resolved_child)
+                # Basic tagging of XACRO elements
+                tag = child.tag
+                for uri in XACRO_URIS:
+                    prefix = f"{{{uri}}}"
+                    if tag.startswith(prefix):
+                        tag = tag.replace(prefix, "xacro:")
+                        break
+
+                if tag == "xacro:include":
+                    # Handle structural inclusion
+                    # filename may depend on $(arg) or ${}, so we substitute using current context
+                    filename = str(self._substitute(child.get("filename") or ""))
+                    ns = child.get("ns")
+                    inc_path = self._find_file(filename)
+
+                    if inc_path:
+                        inc_template = self._get_structural_template(inc_path)
+                        structural_macros.update(inc_template.macros)
+
+                        # If namespaced, we wrap the included elements but keep them structural
+                        if ns:
+                            ns_container = ET.Element("container", ns=ns)
+                            for sc in inc_template.container:
+                                ns_container.append(sc)
+                            container.append(ns_container)
+                        else:
+                            for sc in inc_template.container:
+                                container.append(sc)
+                    else:
+                        logger.warning(f"XACRO: Could not find included file: '{filename}'")
+                elif tag == "xacro:macro":
+                    # Collect macro definition but do not expand
+                    name = child.get("name")
+                    params_str = child.get("params") or ""
+                    # Quick split (the resolver will do the full smart split during evaluation)
+                    params = [p.strip() for p in params_str.split(",") if p.strip()]
+                    if name:
+                        structural_macros[name] = (params, child)
+                    container.append(child)
+                else:
+                    # Keep all other elements (properties, conditionals, URDF tags) as is
+                    container.append(child)
 
             self.search_paths = old_paths
-            if ns:
-                self._ns_stack.pop()
 
             # Clean root attributes (remove xacro namespace)
             clean_attrib = {
@@ -253,13 +310,18 @@ class XacroResolver:
                 if not k.startswith("{http://www.ros.org/wiki/xacro}")
             }
 
-            return container, root.tag, clean_attrib
+            template = XacroTemplate(
+                filepath=filepath,
+                root_tag=root.tag,
+                root_attrib=clean_attrib,
+                container=container,
+                macros=structural_macros,
+            )
+
+            TEMPLATE_CACHE[filepath] = template
+            return template
 
         except ET.ParseError as e:
-            raise RobotXacroError(str(e), context=str(filepath)) from e
-        except Exception as e:
-            if isinstance(e, RobotParserError):
-                raise
             raise RobotXacroError(str(e), context=str(filepath)) from e
         finally:
             self._file_stack.pop()
@@ -315,6 +377,24 @@ class XacroResolver:
 
         if tag in dispatch:
             return dispatch[tag](element)
+
+        if tag == "container":
+            ns = element.get("ns")
+            if ns:
+                self._ns_stack.append(ns)
+
+            new_container = ET.Element("container")
+            for child in element:
+                resolved_child = self.resolve_element(child)
+                if resolved_child.tag == "container":
+                    for sc in resolved_child:
+                        new_container.append(sc)
+                elif resolved_child.tag != "skip":
+                    new_container.append(resolved_child)
+
+            if ns:
+                self._ns_stack.pop()
+            return new_container
 
         if tag.startswith("xacro:"):
             return self._handle_macro_call(tag, element)
@@ -373,13 +453,30 @@ class XacroResolver:
         filename = str(self._substitute(element.get("filename") or ""))
         ns = element.get("ns")
         included_path = self._find_file(filename)
+
         if not included_path:
             logger.warning(
                 f"XACRO: Could not find included file: '{filename}'. Check your paths and $(find ...) usage."
             )
             return ET.Element("skip")
 
-        container, _, _ = self._process_include_file(included_path, ns=ns)
+        template = self._get_structural_template(included_path)
+
+        # Merge template macros into current context
+        # Skip namespaced macros here; they will be handled by the container evaluation phase
+        if not ns:
+            self.macros.update(copy.deepcopy(template.macros))
+
+        if ns:
+            self._ns_stack.append(ns)
+
+        # Evaluate the template container in current context
+        # We use resolve_element on a deepcopy to prevent per-instance pollution of the cache.
+        container = self.resolve_element(copy.deepcopy(template.container))
+
+        if ns:
+            self._ns_stack.pop()
+
         return container
 
     def _handle_macro_def(self, element: ET.Element) -> ET.Element:

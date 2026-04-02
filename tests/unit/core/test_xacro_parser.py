@@ -621,7 +621,7 @@ def test_xacro_resolve_file_exception(tmp_path) -> None:
 
     with (
         mock.patch.object(
-            resolver, "_process_include_file", side_effect=RuntimeError("Generic Error")
+            resolver, "_get_structural_template", side_effect=RuntimeError("Generic Error")
         ),
         pytest.raises(RobotParserError, match="XACRO error"),
     ):
