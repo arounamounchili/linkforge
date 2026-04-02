@@ -225,7 +225,7 @@ class LINKFORGE_PT_export_panel(Panel):
 
             if props.show_kinematic_tree:
                 self.draw_component_browser(
-                    layout, scene, links_dict, num_links, num_dof=total_dof, stats=stats
+                    layout, scene, links_dict, num_links, _num_dof=total_dof, stats=stats
                 )
 
     def draw_component_browser(

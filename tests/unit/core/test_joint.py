@@ -218,7 +218,7 @@ class TestJoint:
 
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
-        with pytest.raises(RobotModelError, match="name cannot be empty"):
+        with pytest.raises(RobotModelError, match="cannot be empty"):
             Joint(
                 name="",
                 type=JointType.FIXED,
@@ -258,7 +258,7 @@ class TestJoint:
 
     def test_empty_parent(self) -> None:
         """Test that empty parent name raises error."""
-        with pytest.raises(RobotModelError, match="Parent link name cannot be empty"):
+        with pytest.raises(RobotModelError, match="cannot be empty"):
             Joint(
                 name="joint1",
                 type=JointType.FIXED,
@@ -268,7 +268,7 @@ class TestJoint:
 
     def test_empty_child(self) -> None:
         """Test that empty child name raises error."""
-        with pytest.raises(RobotModelError, match="Child link name cannot be empty"):
+        with pytest.raises(RobotModelError, match="cannot be empty"):
             Joint(
                 name="joint1",
                 type=JointType.FIXED,
@@ -278,7 +278,7 @@ class TestJoint:
 
     def test_same_parent_and_child(self) -> None:
         """Test that same parent and child raises error."""
-        with pytest.raises(RobotModelError, match="Parent and child cannot be the same"):
+        with pytest.raises(RobotModelError, match="cannot be the same"):
             Joint(
                 name="joint1",
                 type=JointType.FIXED,

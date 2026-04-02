@@ -26,7 +26,7 @@ else:
 
 from dataclasses import dataclass
 
-from ...linkforge_core.exceptions import RobotModelError
+from ...linkforge_core.exceptions import RobotValidationError
 from ...linkforge_core.logging_config import get_logger
 from ...linkforge_core.models import (
     Box,
@@ -777,12 +777,12 @@ def blender_joint_to_core(obj: Any, _scene: Any) -> Joint | None:
     child = child_obj.linkforge.link_name if child_obj else ""
 
     if not parent:
-        raise RobotModelError(
-            f"Joint '{joint_name}' has no parent link. Please select a Parent Link."
+        raise RobotValidationError(
+            "ParentLink", joint_name, "Joint has no parent link. Please select a Parent Link."
         )
     if not child:
-        raise RobotModelError(
-            f"Joint '{joint_name}' has no child link. Please select a Child Link."
+        raise RobotValidationError(
+            "ChildLink", joint_name, "Joint has no child link. Please select a Child Link."
         )
 
     return Joint(
@@ -1195,9 +1195,8 @@ def scene_to_robot(
     if conversion_errors:
         error_summary = "\n".join(f"  - {err}" for err in conversion_errors)
         # In non-strict mode, always raise with all collected errors
-        raise RobotModelError(
-            f"Unable to build robot model. The following configuration errors were found:\n"
-            f"{error_summary}"
+        raise RobotValidationError(
+            "RobotConversion", robot_name, f"Multiple configuration errors found:\n{error_summary}"
         )
 
     return robot, conversion_errors
@@ -1230,8 +1229,10 @@ def blender_sensor_to_core(obj: Any) -> Sensor | None:
     link_name = link_obj.linkforge.link_name if link_obj else ""
 
     if not link_name:
-        raise RobotModelError(
-            f"Sensor '{sensor_name}' is not attached to any link. Please select a parent link in the Sensor settings."
+        raise RobotValidationError(
+            "SensorAttachment",
+            sensor_name,
+            "Sensor is not attached to any link. Please select a parent link.",
         )
 
     # Build sensor origin from object transform

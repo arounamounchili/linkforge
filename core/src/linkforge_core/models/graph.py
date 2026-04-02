@@ -10,7 +10,7 @@ import collections
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotValidationError
 
 if TYPE_CHECKING:
     from .joint import Joint
@@ -43,12 +43,12 @@ class KinematicGraph:
 
         for joint in self.joints:
             if joint.parent not in self.link_names:
-                raise RobotModelError(
-                    f"Joint '{joint.name}' references unknown parent link '{joint.parent}'"
+                raise RobotValidationError(
+                    "ParentLink", joint.parent, f"referenced by joint '{joint.name}' is unknown"
                 )
             if joint.child not in self.link_names:
-                raise RobotModelError(
-                    f"Joint '{joint.name}' references unknown child link '{joint.child}'"
+                raise RobotValidationError(
+                    "ChildLink", joint.child, f"referenced by joint '{joint.name}' is unknown"
                 )
 
             self.adj[joint.parent].append((joint.child, joint.name))
@@ -152,7 +152,7 @@ class KinematicGraph:
             RobotModelError: If a cycle is detected
         """
         if self.has_cycle():
-            raise RobotModelError("Cannot provide topological order for a graph with cycles")
+            raise RobotValidationError("CyclicGraph", None, "Graph contains cycles")
 
         order: list[str] = []
         # Implement Kahn's algorithm for topological sorting.

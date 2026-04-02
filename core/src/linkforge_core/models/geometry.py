@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotPhysicsError
 
 
 class GeometryType(Enum):
@@ -71,9 +71,7 @@ class Box:
     def __post_init__(self) -> None:
         """Validate box dimensions."""
         if self.size.x <= 0 or self.size.y <= 0 or self.size.z <= 0:
-            raise RobotModelError(
-                f"Box dimensions must be positive, got size=({self.size.x}, {self.size.y}, {self.size.z})"
-            )
+            raise RobotPhysicsError("BoxSize", self.size, "dimensions must be positive")
 
     @property
     def type(self) -> GeometryType:
@@ -94,9 +92,9 @@ class Cylinder:
     def __post_init__(self) -> None:
         """Validate cylinder dimensions."""
         if self.radius <= 0:
-            raise RobotModelError(f"Cylinder radius must be positive, got radius={self.radius}")
+            raise RobotPhysicsError("CylinderRadius", self.radius, "radius must be positive")
         if self.length <= 0:
-            raise RobotModelError(f"Cylinder length must be positive, got length={self.length}")
+            raise RobotPhysicsError("CylinderLength", self.length, "length must be positive")
 
     @property
     def type(self) -> GeometryType:
@@ -118,7 +116,7 @@ class Sphere:
     def __post_init__(self) -> None:
         """Validate sphere dimensions."""
         if self.radius <= 0:
-            raise RobotModelError(f"Sphere radius must be positive, got radius={self.radius}")
+            raise RobotPhysicsError("SphereRadius", self.radius, "radius must be positive")
 
     @property
     def type(self) -> GeometryType:
@@ -141,9 +139,7 @@ class Mesh:
     def __post_init__(self) -> None:
         """Validate mesh scale."""
         if self.scale.x == 0 or self.scale.y == 0 or self.scale.z == 0:
-            raise RobotModelError(
-                f"Mesh scale components must be non-zero, got scale=({self.scale.x}, {self.scale.y}, {self.scale.z})"
-            )
+            raise RobotPhysicsError("MeshScale", self.scale, "scale components must be non-zero")
 
     @property
     def type(self) -> GeometryType:

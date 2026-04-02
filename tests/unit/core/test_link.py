@@ -217,7 +217,7 @@ class TestLink:
 
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
-        with pytest.raises(RobotModelError, match="name cannot be empty"):
+        with pytest.raises(RobotModelError, match="cannot be empty"):
             Link(name="")
 
     def test_invalid_name_characters(self) -> None:

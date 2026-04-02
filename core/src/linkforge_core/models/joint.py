@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from ..exceptions import RobotModelError, RobotValidationError
+from ..exceptions import RobotValidationError
 from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Transform, Vector3
 
@@ -122,17 +122,17 @@ class Joint:
     def __post_init__(self) -> None:
         """Validate joint configuration."""
         if not self.name:
-            raise RobotModelError("Joint name cannot be empty")
+            raise RobotValidationError("JointName", self.name, "cannot be empty")
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
             raise RobotValidationError("JointName", self.name, "Invalid characters")
 
         if not self.parent:
-            raise RobotModelError("Parent link name cannot be empty")
+            raise RobotValidationError("ParentLink", self.parent, "cannot be empty")
 
         if not self.child:
-            raise RobotModelError("Child link name cannot be empty")
+            raise RobotValidationError("ChildLink", self.child, "cannot be empty")
 
         if self.parent == self.child:
             raise RobotValidationError(

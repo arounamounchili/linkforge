@@ -35,7 +35,7 @@ def test_graph_cycle_detection() -> None:
     graph = KinematicGraph(links, joints)
 
     assert graph.has_cycle()
-    with pytest.raises(RobotModelError, match="cycle"):
+    with pytest.raises(RobotModelError, match="cycles"):
         graph.get_topological_order()
 
 
@@ -44,11 +44,11 @@ def test_graph_invalid_joint_links() -> None:
     links = [Link(name="A"), Link(name="B")]
 
     # Joint referencing unknown parent
-    with pytest.raises(RobotModelError, match="references unknown parent"):
+    with pytest.raises(RobotModelError, match="unknown"):
         KinematicGraph(links, [Joint(name="j1", parent="X", child="A", type=JointType.FIXED)])
 
     # Joint referencing unknown child
-    with pytest.raises(RobotModelError, match="references unknown child"):
+    with pytest.raises(RobotModelError, match="unknown"):
         KinematicGraph(links, [Joint(name="j1", parent="A", child="X", type=JointType.FIXED)])
 
 

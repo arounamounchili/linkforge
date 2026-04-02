@@ -35,12 +35,12 @@ class TestGazeboPlugin:
 
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
-        with pytest.raises(RobotModelError, match="Plugin name cannot be empty"):
+        with pytest.raises(RobotModelError, match="cannot be empty"):
             GazeboPlugin(name="", filename="lib.so")
 
     def test_empty_filename(self) -> None:
         """Test that empty filename raises error."""
-        with pytest.raises(RobotModelError, match="Plugin filename cannot be empty"):
+        with pytest.raises(RobotModelError, match="cannot be empty"):
             GazeboPlugin(name="test", filename="")
 
 
@@ -112,5 +112,5 @@ class TestGazeboElement:
 
     def test_empty_reference_string(self) -> None:
         """Test that empty string reference raises error."""
-        with pytest.raises(RobotModelError, match="Gazebo reference cannot be empty string"):
+        with pytest.raises(RobotModelError, match="cannot be empty string"):
             GazeboElement(reference="")

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
 
-from ..exceptions import RobotModelError, RobotPhysicsError, RobotValidationError
+from ..exceptions import RobotPhysicsError, RobotValidationError
 from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Geometry, Transform
 from .material import Material
@@ -110,7 +110,7 @@ class Link:
     ) -> None:
         """Validate link."""
         if not self.name:
-            raise RobotModelError("Link name cannot be empty")
+            raise RobotValidationError("LinkName", self.name, "cannot be empty")
 
         # URDF naming convention: lowercase with underscores
         if not is_valid_urdf_name(self.name):

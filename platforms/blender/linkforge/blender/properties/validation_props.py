@@ -220,8 +220,10 @@ def register() -> None:
         bpy.utils.register_class(ValidationResultProperty)
 
     # Register window manager property
-    prop = bpy.props.PointerProperty(type=ValidationResultProperty)  # type: ignore[valid-type][func-returns-value]
-    bpy.types.WindowManager.linkforge_validation = prop  # type: ignore[valid-type][attr-defined]
+    from typing import Any
+
+    prop: Any = bpy.props.PointerProperty(type=ValidationResultProperty)  # type: ignore[func-returns-value]
+    bpy.types.WindowManager.linkforge_validation = prop  # type: ignore[attr-defined]
 
 
 def unregister() -> None:
