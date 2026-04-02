@@ -43,7 +43,7 @@ def test_scene_to_robot_strict_mode() -> None:
 
         # 2. Strict mode = False
         scene.linkforge.strict_mode = False
-        with pytest.raises(RobotModelError, match="Unable to build robot model"):
+        with pytest.raises(RobotModelError, match=r"Multiple configuration errors found"):
             scene_to_robot(bpy.context)
 
 

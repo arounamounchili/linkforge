@@ -1210,7 +1210,7 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene) -> None:
             "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
             side_effect=Exception("Failed link"),
         ),
-        pytest.raises(RobotModelError, match="The following configuration errors were found"),
+        pytest.raises(RobotModelError, match=r"Multiple configuration errors found"),
     ):
         scene_to_robot(bpy.context)
 

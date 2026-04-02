@@ -194,9 +194,7 @@ def test_scene_to_robot_non_strict_errors(clean_scene) -> None:
                 context = MagicMock()
                 context.scene = scene
                 # It always raises RobotModelError at the end if errors exist
-                with pytest.raises(
-                    RobotModelError, match="The following configuration errors were found"
-                ):
+                with pytest.raises(RobotModelError, match=r"Multiple configuration errors found"):
                     scene_to_robot(context)
 
 
