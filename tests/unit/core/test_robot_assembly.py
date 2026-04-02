@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 from linkforge_core.composer.robot_assembly import RobotAssembly
 from linkforge_core.exceptions import RobotValidationError
@@ -9,10 +11,11 @@ from linkforge_core.models.robot import Robot
 from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
 from linkforge_core.models.sensor import LidarInfo, Sensor, SensorType
 from linkforge_core.models.srdf import (
-    EndEffector,
     GroupState,
+    PassiveJoint,
     PlanningGroup,
     SemanticRobotDescription,
+    VirtualJoint,
 )
 from linkforge_core.models.transmission import (
     Transmission,
@@ -92,6 +95,26 @@ class TestRobotAssembly:
         # Verify isolation (original gripper should not be modified)
         assert gripper.get_link("left_palm") is None
         assert gripper.get_link("palm") is not None
+
+    def test_assembly_init_with_existing_semantic(self) -> None:
+        """Test that assembly syncs with existing semantic data in the robot."""
+        robot = Robot(name="test")
+        semantic = SemanticRobotDescription(virtual_joints=[])
+        robot.semantic = semantic
+        assembly = RobotAssembly(robot=robot)
+        assert assembly.srdf is semantic
+
+    def test_link_builder_with_existing_inertial(self) -> None:
+        """Test LinkBuilder.with_mass on a link that already has inertial data."""
+        from linkforge_core.models.link import Inertial, InertiaTensor
+
+        assembly = RobotAssembly.create("test")
+        init_inertial = Inertial(mass=1.0, inertia=InertiaTensor.zero())
+        builder = assembly.add_link("link1")
+        builder._link = replace(builder._link, inertial=init_inertial)
+
+        builder.with_mass(5.0)
+        assert builder._link.inertial.mass == 5.0
 
     def test_srdf_helpers(self) -> None:
         """Test SRDF semantic data helpers."""
@@ -204,32 +227,27 @@ class TestRobotAssembly:
 
     def test_prefix_all_semantic_merging(self) -> None:
         """Test that SRDF groups and states are correctly prefixed and merged."""
-        comp = Robot(name="arm")
-        comp.add_link(Link(name="base"))
-        comp.add_link(Link(name="tip"))
-        comp.add_joint(Joint(name="j1", parent="base", child="tip", type=JointType.FIXED))
+        sub = Robot(name="sub")
+        sub.add_link(Link(name="l1"))  # Add root link
+        sub._semantic = SemanticRobotDescription(
+            groups=[PlanningGroup(name="grp", links=["l1"])],
+            group_states=[GroupState(name="st", group="grp", joint_values={"j1": 0.0})],
+            virtual_joints=[
+                VirtualJoint(name="vj", child_link="l1", parent_frame="world", type="fixed")
+            ],
+            passive_joints=[PassiveJoint(name="pj")],
+        )
 
-        srdf = SemanticRobotDescription()
-        srdf.groups.append(PlanningGroup(name="grp", links=["base", "tip"]))
-        srdf.group_states.append(GroupState(name="folded", group="grp", joint_values={"j1": 0.0}))
-        srdf.end_effectors.append(EndEffector(name="ee", group="grp", parent_link="tip"))
-        comp.semantic = srdf
+        assembly = RobotAssembly.create("main")
+        assembly.robot.add_link(Link(name="root"))
+        assembly.attach(sub, at_link="root", joint_name="conn", prefix="p_")
 
-        assembly = RobotAssembly.create("full")
-        assembly.robot.add_link(Link(name="world"))
-
-        assembly.attach(comp, at_link="world", joint_name="mount", prefix="robot1_")
-
-        # Check SRDF
         assert len(assembly.srdf.groups) == 1
-        assert assembly.srdf.groups[0].name == "robot1_grp"
-        assert "robot1_base" in assembly.srdf.groups[0].links
-
-        assert len(assembly.srdf.group_states) == 1
-        assert assembly.srdf.group_states[0].name == "robot1_folded"
-        assert assembly.srdf.group_states[0].group == "robot1_grp"
-        assert "robot1_j1" in assembly.srdf.group_states[0].joint_values
-
-        assert len(assembly.srdf.end_effectors) == 1
-        assert assembly.srdf.end_effectors[0].name == "robot1_ee"
-        assert assembly.srdf.end_effectors[0].parent_link == "robot1_tip"
+        assert assembly.srdf.groups[0].name == "p_grp"
+        assert assembly.srdf.groups[0].links == ["p_l1"]
+        assert assembly.srdf.group_states[0].name == "p_st"
+        assert assembly.srdf.group_states[0].group == "p_grp"
+        assert assembly.srdf.group_states[0].joint_values == {"p_j1": 0.0}
+        assert assembly.srdf.virtual_joints[0].name == "p_vj"
+        assert assembly.srdf.virtual_joints[0].child_link == "p_l1"
+        assert assembly.srdf.passive_joints[0].name == "p_pj"
