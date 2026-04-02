@@ -379,7 +379,7 @@ class URDFGenerator(RobotXMLGenerator):
                 attrib["lower"] = format_float(joint.limits.lower)
             if joint.limits.upper is not None:
                 attrib["upper"] = format_float(joint.limits.upper)
-            ET.SubElement(joint_elem, "limit", **attrib)  # type: ignore[arg-type]
+            self._create_element(joint_elem, "limit", **attrib)
 
     def _add_joint_dynamics(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add joint dynamics like damping and friction."""
@@ -399,7 +399,7 @@ class URDFGenerator(RobotXMLGenerator):
                 mimic_attrib["multiplier"] = format_float(joint.mimic.multiplier)
             if joint.mimic.offset != 0.0:
                 mimic_attrib["offset"] = format_float(joint.mimic.offset)
-            ET.SubElement(joint_elem, "mimic", **mimic_attrib)  # type: ignore[arg-type]
+            self._create_element(joint_elem, "mimic", **mimic_attrib)
 
     def _add_joint_safety(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add safety controller limits."""
@@ -410,7 +410,7 @@ class URDFGenerator(RobotXMLGenerator):
                 "k_position": format_float(joint.safety_controller.k_position),
                 "k_velocity": format_float(joint.safety_controller.k_velocity),
             }
-            ET.SubElement(joint_elem, "safety_controller", **safety_attrib)  # type: ignore[arg-type]
+            self._create_element(joint_elem, "safety_controller", **safety_attrib)
 
     def _add_joint_calibration(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add joint calibration offsets."""
@@ -422,7 +422,7 @@ class URDFGenerator(RobotXMLGenerator):
                 calib_attrib["falling"] = format_float(joint.calibration.falling)
 
             if calib_attrib:
-                ET.SubElement(joint_elem, "calibration", **calib_attrib)  # type: ignore[arg-type]
+                self._create_element(joint_elem, "calibration", **calib_attrib)
 
     def _add_transmission_element(self, parent: ET.Element, transmission: Transmission) -> None:
         """Add transmission element to parent.
@@ -771,7 +771,7 @@ class URDFGenerator(RobotXMLGenerator):
         if gazebo_elem.reference is not None:
             attrib["reference"] = gazebo_elem.reference
 
-        gz_elem = ET.SubElement(parent, "gazebo", **attrib)  # type: ignore[arg-type]
+        gz_elem = self._create_element(parent, "gazebo", **attrib)
 
         # Add material if specified
         if gazebo_elem.material is not None:

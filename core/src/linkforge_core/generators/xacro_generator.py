@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ..base import RobotGeneratorError
 from ..models.geometry import Box, Cylinder, Mesh, Sphere
@@ -77,17 +77,19 @@ class XACROGenerator(URDFGenerator):
         self.dimension_properties: dict[str, str] = {}
         self.generated_macros: list[dict[str, Any]] = []
 
-    def generate(self, robot: Robot, validate: bool = True, **_kwargs: Any) -> str:
+    def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
         """Generate XACRO XML string from robot."""
         from .. import __version__
 
-        root = self.generate_robot_element(robot, validate=validate)
+        root = self.generate_robot_element(robot, validate=validate, **kwargs)
         ns = {"xacro": XACRO_URI}
         return serialize_xml(
             root, pretty_print=self.pretty_print, version=__version__, namespaces=ns
         )
 
-    def generate_robot_element(self, robot: Robot, validate: bool = True) -> ET.Element:
+    def generate_robot_element(
+        self, robot: Robot, validate: bool = True, **_kwargs: Any
+    ) -> ET.Element:
         """Generate XACRO XML Element tree from robot.
 
         This is used internally by generate() and for multi-file exports
@@ -830,8 +832,9 @@ class XACROGenerator(URDFGenerator):
         # Clean up remaining comments in root that are no longer relevant
         # (e.g. if we moved all properties, remove the "Properties" comment space, Gazebo, etc.)
         for child in list(root):
+            is_comment = cast(Any, child.tag) is ET.Comment
             if (
-                child.tag is ET.Comment  # type: ignore[comparison-overlap]
+                is_comment
                 and child.text
                 and child.text.strip()
                 in ("Properties", "Macros", "ROS2 Control", "Gazebo", "Sensors", "Transmissions")

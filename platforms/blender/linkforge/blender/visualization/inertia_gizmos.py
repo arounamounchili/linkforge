@@ -278,7 +278,7 @@ def check_manual_inertia_on_load(_arg1: Any = None, _arg2: Any = None) -> Any:
     if stats.manual_inertia_objects:
         ensure_inertia_handler()
 
-    return None  # For timer compliance
+    return None
 
 
 def register() -> None:

@@ -111,10 +111,7 @@ _stats_cache: dict[tuple[int, int, int], RobotSceneStatistics] = {}
 
 
 def clear_stats_cache(_self: Any = None, _context: Any = None) -> None:
-    """Clear the global scene statistics cache.
-
-    Can be used as a direct Blender update callback.
-    """
+    """Clear the global scene statistics cache."""
     _stats_cache.clear()
 
 

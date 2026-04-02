@@ -131,12 +131,29 @@ class RobotXMLGenerator(RobotGenerator[str]):
         output_dir = self.output_path.parent if self.output_path else None
         export_path = get_export_path(geometry.resource, relative_to=output_dir)
 
-        attrib: dict[str, str] = {"filename": export_path}
+        attrib: dict[str, str | None] = {"filename": export_path}
 
         # Check if scale is not default (1.0, 1.0, 1.0)
         if geometry.scale.x != 1.0 or geometry.scale.y != 1.0 or geometry.scale.z != 1.0:
             attrib["scale"] = self._format_vector(
                 geometry.scale.x, geometry.scale.y, geometry.scale.z
             )
-        # Type ignore because **attrib sends string kwargs to ET.SubElement which is fine.
-        ET.SubElement(geom_elem, "mesh", **attrib)  # type: ignore[arg-type]
+
+        self._create_element(geom_elem, "mesh", **attrib)
+
+    def _create_element(
+        self, parent: ET.Element, tag: str, **kwargs: str | float | int | bool | None
+    ) -> ET.Element:
+        """Create an XML element, stripping None values and converting types to str.
+
+        Args:
+            parent: Parent XML element
+            tag: Tag name for the new element
+            **kwargs: Attributes for the new element
+
+        Returns:
+            The newly created XML element
+        """
+        # Convert all values to strings and strip None values
+        attrib = {k: self._format_value(v) for k, v in kwargs.items() if v is not None}
+        return ET.SubElement(parent, tag, attrib)

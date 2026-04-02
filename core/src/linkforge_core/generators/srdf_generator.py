@@ -74,11 +74,6 @@ class SRDFGenerator(RobotXMLGenerator):
 
         return root
 
-    def _create_element(self, parent: ET.Element, tag: str, **kwargs: Any) -> ET.Element:
-        """Helper to create ET.SubElement while stripping None values and converting to strings."""
-        attrib = {k: str(v) for k, v in kwargs.items() if v is not None}
-        return ET.SubElement(parent, tag, attrib)
-
     def _add_virtual_joints(self, root: ET.Element, virtual_joints: list[VirtualJoint]) -> None:
         """Add virtual joint elements to root."""
         for vj in virtual_joints:

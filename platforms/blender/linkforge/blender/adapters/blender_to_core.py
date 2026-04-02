@@ -672,12 +672,11 @@ def blender_link_to_core_with_origin(
     )
 
 
-def blender_joint_to_core(obj: Any, _scene: Any) -> Joint | None:
+def blender_joint_to_core(obj: Any) -> Joint | None:
     """Convert Blender Empty with JointPropertyGroup to Core Joint.
 
     Args:
         obj: Blender Empty object with linkforge_joint property group
-        _scene: Blender scene (unused, kept for API compatibility).
 
     Returns:
         Core Joint model or None
@@ -1100,7 +1099,7 @@ def scene_to_robot(
     # Process Joints
     for obj in joint_objects:
         try:
-            joint = blender_joint_to_core(obj, scene)
+            joint = blender_joint_to_core(obj)
             if joint:
                 # Calculate joint origin relative to parent link frame
                 # IMPORTANT: Joint origin should represent where the CHILD LINK's frame is,
