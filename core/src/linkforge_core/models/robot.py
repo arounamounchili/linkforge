@@ -147,14 +147,6 @@ class Robot:
         if not prefix:
             return
 
-        """Add a prefix to all links, joints, and other robotic elements.
-
-        This is critical for preventing name collisions when assembling
-        multiple modular robots.
-
-        Args:
-            prefix: The prefix string to prepend.
-        """
         from dataclasses import replace
 
         # 1. Update Links (Mutable)
@@ -239,10 +231,13 @@ class Robot:
                     replace(
                         g,
                         name=f"{prefix}{g.name}",
-                        links=[f"{prefix}{ln}" for ln in g.links],
-                        joints=[f"{prefix}{jn}" for jn in g.joints],
-                        chains=[(f"{prefix}{bn}", f"{prefix}{tn}") for bn, tn in g.chains],
-                        subgroups=[f"{prefix}{sgn}" for sgn in g.subgroups],
+                        links=[f"{prefix}{link_name}" for link_name in g.links],
+                        joints=[f"{prefix}{joint_name}" for joint_name in g.joints],
+                        chains=[
+                            (f"{prefix}{base_name}", f"{prefix}{tip_name}")
+                            for base_name, tip_name in g.chains
+                        ],
+                        subgroups=[f"{prefix}{subgroup_name}" for subgroup_name in g.subgroups],
                     )
                     for g in s.groups
                 ],
