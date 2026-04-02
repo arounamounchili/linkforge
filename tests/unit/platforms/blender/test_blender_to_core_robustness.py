@@ -114,7 +114,7 @@ def test_joint_to_core_advanced_properties(clean_scene) -> None:
     props.custom_axis_x = 0.0
     props.custom_axis_y = 0.0
     props.custom_axis_z = 0.0
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.axis.x == 0.0
     assert core.axis.y == 0.0
     assert core.axis.z == 1.0  # Fallback
@@ -123,7 +123,7 @@ def test_joint_to_core_advanced_properties(clean_scene) -> None:
     props.use_dynamics = True
     props.dynamics_damping = 0.5
     props.dynamics_friction = 0.1
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.dynamics.damping == pytest.approx(0.5)
     assert core.dynamics.friction == pytest.approx(0.1)
 
@@ -132,7 +132,7 @@ def test_joint_to_core_advanced_properties(clean_scene) -> None:
     props.use_limits = True
     props.limit_effort = 100.0
     props.limit_velocity = 1.0
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.type == JointType.CONTINUOUS
     assert core.limits.effort == 100.0
     assert core.limits.lower is None

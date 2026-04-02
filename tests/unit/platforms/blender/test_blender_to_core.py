@@ -133,7 +133,7 @@ def test_blender_joint_to_core_conversion() -> None:
         props.limit_upper = 1.0
 
     # 4. Convert
-    joint = blender_joint_to_core(joint_obj, bpy.context.scene)
+    joint = blender_joint_to_core(joint_obj)
 
     # 5. Verify
     assert joint is not None
@@ -430,7 +430,7 @@ def test_blender_joint_to_core_types() -> None:
     joint_obj.linkforge_joint.limit_effort = 100.0
     joint_obj.linkforge_joint.limit_velocity = 5.0
 
-    joint = blender_joint_to_core(joint_obj, bpy.context.scene)
+    joint = blender_joint_to_core(joint_obj)
 
     assert joint.type == JointType.PRISMATIC
     assert joint.axis.x == 1.0
@@ -439,7 +439,7 @@ def test_blender_joint_to_core_types() -> None:
 
     # 2. Continuous
     joint_obj.linkforge_joint.joint_type = "CONTINUOUS"
-    joint = blender_joint_to_core(joint_obj, bpy.context.scene)
+    joint = blender_joint_to_core(joint_obj)
     assert joint.type == JointType.CONTINUOUS
     # Continuous joints shouldn't have lower/upper limits in standard URDF but our model handles it.
 
@@ -483,7 +483,7 @@ def test_blender_joint_to_core_advanced_props() -> None:
     props.use_calibration_falling = False
 
     # 3. Convert
-    joint = blender_joint_to_core(joint_obj, bpy.context.scene)
+    joint = blender_joint_to_core(joint_obj)
 
     # 4. Verify
     assert joint.safety_controller is not None
@@ -981,7 +981,7 @@ def test_blender_joint_mimic_and_limits_advanced() -> None:
     j.linkforge_joint.mimic_multiplier = 2.0
     j.linkforge_joint.mimic_offset = 0.5
 
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.mimic is not None
     assert core.mimic.joint == "master_j"
     assert core.mimic.multiplier == 2.0
@@ -1114,7 +1114,7 @@ def test_blender_joint_dynamics(clean_scene) -> None:
 
     from linkforge.blender.adapters.blender_to_core import blender_joint_to_core
 
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core is not None
     assert pytest.approx(core.dynamics.damping) == 1.5
     assert pytest.approx(core.dynamics.friction) == 0.8
@@ -1329,12 +1329,12 @@ def test_blender_joint_advanced_cases(clean_scene) -> None:
     j.linkforge_joint.custom_axis_x = 2.0
     j.linkforge_joint.custom_axis_y = 0.0
     j.linkforge_joint.custom_axis_z = 0.0
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.axis.x == 1.0  # Normalized
 
     # Zero axis fallback
     j.linkforge_joint.custom_axis_x = 0.0
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.axis.z == 1.0  # Fallback
 
     # 1. Safety Controller
@@ -1343,7 +1343,7 @@ def test_blender_joint_advanced_cases(clean_scene) -> None:
     j.linkforge_joint.safety_soft_upper_limit = 1.23
     j.linkforge_joint.safety_k_position = 100.0
     j.linkforge_joint.safety_k_velocity = 10.0
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.safety_controller is not None
     assert pytest.approx(core.safety_controller.soft_lower_limit) == -1.23
     assert pytest.approx(core.safety_controller.k_position) == 100.0
@@ -1353,27 +1353,27 @@ def test_blender_joint_advanced_cases(clean_scene) -> None:
     j.linkforge_joint.use_calibration_rising = True
     j.linkforge_joint.calibration_rising = 0.55
     j.linkforge_joint.use_calibration_falling = False
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.calibration is not None
     assert pytest.approx(core.calibration.rising) == 0.55
     assert core.calibration.falling is None
 
     # Fixed joint axis (should be None)
     j.linkforge_joint.joint_type = "FIXED"
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.axis is None
 
     # Continuous joint with limits
     j.linkforge_joint.joint_type = "CONTINUOUS"
     j.linkforge_joint.use_limits = True
     j.linkforge_joint.limit_effort = 10.0
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.limits.effort == 10.0
 
     # Missing parent error
     j.linkforge_joint.parent_link = None
     with pytest.raises(RobotModelError, match="no parent link"):
-        blender_joint_to_core(j, bpy.context.scene)
+        blender_joint_to_core(j)
 
 
 def test_blender_transmission_advanced(clean_scene) -> None:
@@ -1669,9 +1669,9 @@ def test_blender_to_core_missing_errors(clean_scene) -> None:
     assert blender_link_to_core_with_origin(None) is None
 
     # blender_joint_to_core None/non-robot
-    assert blender_joint_to_core(None, bpy.context.scene) is None
+    assert blender_joint_to_core(None) is None
     empty = bpy.data.objects.new("EmptyNone", None)
-    assert blender_joint_to_core(empty, bpy.context.scene) is None
+    assert blender_joint_to_core(empty) is None
 
     # blender_sensor_to_core None/non-robot
     assert blender_sensor_to_core(None) is None
@@ -1726,7 +1726,7 @@ def test_blender_to_core_missing_errors(clean_scene) -> None:
     j.linkforge_joint.parent_link = p_link
     j.linkforge_joint.child_link = None
     with pytest.raises(RobotModelError, match="no child link"):
-        blender_joint_to_core(j, bpy.context.scene)
+        blender_joint_to_core(j)
 
     # Empty transmission
     t = bpy.data.objects.new("T", None)
@@ -1739,7 +1739,7 @@ def test_blender_to_core_missing_errors(clean_scene) -> None:
     j.linkforge_joint.child_link = c_link
     j.linkforge_joint.use_mimic = True
     j.linkforge_joint.mimic_joint = mimic_target
-    core = blender_joint_to_core(j, bpy.context.scene)
+    core = blender_joint_to_core(j)
     assert core.mimic.joint == "MimicTarget"
 
 

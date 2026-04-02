@@ -43,7 +43,7 @@ def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     j.linkforge_joint.calibration_falling = -0.75
 
     # 3. Convert to Core
-    core_joint = blender_joint_to_core(j, bpy.context.scene)
+    core_joint = blender_joint_to_core(j)
 
     # 4. Verify
     assert core_joint.safety_controller is not None
