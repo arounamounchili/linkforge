@@ -970,7 +970,7 @@ class TestURDFParserErrorHandling:
         robot = URDFParser().parse(urdf_file)
         assert len(robot.joints) == 0
         assert "Skipping invalid joint 'joint1'" in caplog.text
-        assert "Parent link name cannot be empty" in caplog.text
+        assert "Validation failed [ParentLink]" in caplog.text
 
     def test_missing_joint_child(self, tmp_path: Path, caplog) -> None:
         """Test that joint without child link is skipped gracefully."""
@@ -992,7 +992,7 @@ class TestURDFParserErrorHandling:
         robot = URDFParser().parse(urdf_file)
         assert len(robot.joints) == 0
         assert "Skipping invalid joint 'joint1'" in caplog.text
-        assert "Child link name cannot be empty" in caplog.text
+        assert "Validation failed [ChildLink]" in caplog.text
 
     def test_invalid_geometry_values(self, tmp_path: Path) -> None:
         """Test that invalid geometry dimensions are handled gracefully."""
