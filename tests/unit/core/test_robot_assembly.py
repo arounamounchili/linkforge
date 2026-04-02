@@ -1,10 +1,25 @@
 import pytest
 from linkforge_core.composer.robot_assembly import RobotAssembly
 from linkforge_core.exceptions import RobotValidationError
+from linkforge_core.models.gazebo import GazeboElement
 from linkforge_core.models.geometry import Vector3
 from linkforge_core.models.joint import Joint, JointLimits, JointType
 from linkforge_core.models.link import Link
 from linkforge_core.models.robot import Robot
+from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
+from linkforge_core.models.sensor import LidarInfo, Sensor, SensorType
+from linkforge_core.models.srdf import (
+    EndEffector,
+    GroupState,
+    PlanningGroup,
+    SemanticRobotDescription,
+)
+from linkforge_core.models.transmission import (
+    Transmission,
+    TransmissionActuator,
+    TransmissionJoint,
+    TransmissionType,
+)
 
 
 class TestRobotAssembly:
@@ -113,10 +128,108 @@ class TestRobotAssembly:
         assembly = RobotAssembly.create("error_bot")
         assembly.robot.add_link(Link(name="base"))
 
-        bad_component = Robot(name="bad")
-        bad_component.add_link(Link(name="only_link"))
-        # This will create a cycle if we connect base -> only_link -> base
-
-        # We'll mock a cycle or just test a basic validation failure
-        with pytest.raises(RobotValidationError):
+        # 1. Test missing parent link in assembly
+        bad_component = Robot(name="comp")
+        bad_component.add_link(Link(name="l1"))
+        with pytest.raises(RobotValidationError, match="Attachment link not found"):
             assembly.attach(bad_component, at_link="non_existent", joint_name="j")
+
+        # 2. Test component with no root (empty)
+        empty_comp = Robot(name="empty")
+        with pytest.raises(RobotValidationError, match="No root link found"):
+            assembly.attach(empty_comp, at_link="base", joint_name="j")
+
+    def test_complex_component_merge(self) -> None:
+        """Test merging a component with sensors, gazebo, and ros2_control."""
+        # Create a complex sub-robot
+        comp = Robot(name="sub")
+        comp.add_link(Link(name="sub_base"))
+        comp.add_link(Link(name="sub_link"))
+        comp.add_joint(
+            Joint(
+                name="sub_joint",
+                parent="sub_base",
+                child="sub_link",
+                type=JointType.REVOLUTE,
+                axis=Vector3(0, 0, 1),
+                limits=JointLimits(lower=-1, upper=1),
+            )
+        )
+
+        # Add a sensor
+        comp.add_sensor(
+            Sensor(
+                name="lidar",
+                type=SensorType.LIDAR,
+                link_name="sub_link",
+                lidar_info=LidarInfo(),
+            )
+        )
+
+        # Add a gazebo element
+        comp.add_gazebo_element(GazeboElement(reference="sub_link"))
+
+        # Add a transmission
+        trans = Transmission(
+            name="trans1",
+            type=TransmissionType.SIMPLE,
+            joints=[TransmissionJoint(name="sub_joint")],
+            actuators=[TransmissionActuator(name="act1")],
+        )
+        comp.add_transmission(trans)
+
+        # Add ROS2 Control
+        rc = Ros2Control(name="sub_ctrl", hardware_plugin="mock_hw")
+        rc.joints.append(Ros2ControlJoint(name="sub_joint", state_interfaces=["position"]))
+        comp.add_ros2_control(rc)
+
+        # Create assembly
+        assembly = RobotAssembly.create("main")
+        assembly.robot.add_link(Link(name="root"))
+
+        # Attach (using sub_base as the root of the component)
+        assembly.attach(comp, at_link="root", joint_name="conn", prefix="p_")
+
+        # Verify
+        assert assembly.robot._sensor_index.get("p_lidar") is not None
+        assert assembly.robot._sensor_index.get("p_lidar").link_name == "p_sub_link"
+        assert len(assembly.robot.gazebo_elements) == 1
+        assert assembly.robot.gazebo_elements[0].reference == "p_sub_link"
+        assert len(assembly.robot.transmissions) == 1
+        assert assembly.robot.transmissions[0].name == "p_trans1"
+        assert assembly.robot.transmissions[0].joints[0].name == "p_sub_joint"
+        assert len(assembly.robot.ros2_controls) == 1
+        assert assembly.robot.ros2_controls[0].name == "p_sub_ctrl"
+        assert assembly.robot.ros2_controls[0].joints[0].name == "p_sub_joint"
+
+    def test_prefix_all_semantic_merging(self) -> None:
+        """Test that SRDF groups and states are correctly prefixed and merged."""
+        comp = Robot(name="arm")
+        comp.add_link(Link(name="base"))
+        comp.add_link(Link(name="tip"))
+        comp.add_joint(Joint(name="j1", parent="base", child="tip", type=JointType.FIXED))
+
+        srdf = SemanticRobotDescription()
+        srdf.groups.append(PlanningGroup(name="grp", links=["base", "tip"]))
+        srdf.group_states.append(GroupState(name="folded", group="grp", joint_values={"j1": 0.0}))
+        srdf.end_effectors.append(EndEffector(name="ee", group="grp", parent_link="tip"))
+        comp.semantic = srdf
+
+        assembly = RobotAssembly.create("full")
+        assembly.robot.add_link(Link(name="world"))
+
+        assembly.attach(comp, at_link="world", joint_name="mount", prefix="robot1_")
+
+        # Check SRDF
+        assert len(assembly.srdf.groups) == 1
+        assert assembly.srdf.groups[0].name == "robot1_grp"
+        assert "robot1_base" in assembly.srdf.groups[0].links
+
+        assert len(assembly.srdf.group_states) == 1
+        assert assembly.srdf.group_states[0].name == "robot1_folded"
+        assert assembly.srdf.group_states[0].group == "robot1_grp"
+        assert "robot1_j1" in assembly.srdf.group_states[0].joint_values
+
+        assert len(assembly.srdf.end_effectors) == 1
+        assert assembly.srdf.end_effectors[0].name == "robot1_ee"
+        assert assembly.srdf.end_effectors[0].parent_link == "robot1_tip"
