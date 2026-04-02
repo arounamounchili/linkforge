@@ -106,6 +106,10 @@ class RobotAssembly:
         Returns:
             The assembly instance for chaining.
         """
+        # 0. Early validation of attachment point
+        if not self.robot.get_link(at_link):
+            raise RobotValidationError("Attach", at_link, "Attachment link not found in assembly")
+
         # 1. Deep copy the component to ensure isolation
         sub_robot = component.clone()
 
