@@ -1,10 +1,10 @@
 from dataclasses import replace
 
 import pytest
-from linkforge_core.composer.robot_assembly import RobotAssembly
+from linkforge_core.composer import RobotAssembly, fixed_joint, origin, revolute_joint
 from linkforge_core.exceptions import RobotValidationError
 from linkforge_core.models.gazebo import GazeboElement
-from linkforge_core.models.geometry import Vector3
+from linkforge_core.models.geometry import Transform, Vector3
 from linkforge_core.models.joint import Joint, JointLimits, JointType
 from linkforge_core.models.link import Link
 from linkforge_core.models.robot import Robot
@@ -251,3 +251,59 @@ class TestRobotAssembly:
         assert assembly.srdf.virtual_joints[0].name == "p_vj"
         assert assembly.srdf.virtual_joints[0].child_link == "p_l1"
         assert assembly.srdf.passive_joints[0].name == "p_pj"
+
+    def test_export_shortcuts(self) -> None:
+        """Test the shortcut methods for URDF and SRDF export."""
+        assembly = RobotAssembly.create("export_bot")
+        assembly.robot.add_link(Link(name="base"))
+        assembly.add_link("root").as_fixed("base", "joint")
+
+        urdf = assembly.export_urdf(validate=True)
+        assert '<robot name="export_bot"' in urdf
+        assert '<link name="root"' in urdf
+
+        srdf = assembly.export_srdf(validate=False)
+        assert '<robot name="export_bot"' in srdf
+
+    def test_batch_collision_disable(self) -> None:
+        """Test the batch collision disable helper."""
+        assembly = RobotAssembly.create("coll_bot")
+        links = ["l1", "l2", "l3"]
+        for link_name in links:
+            assembly.robot.add_link(Link(name=link_name))
+
+        assembly.disable_all_collisions(links, reason="BatchDisable")
+
+        # Combinations of 3 are (l1,l2), (l1,l3), (l2,l3)
+        assert len(assembly.srdf.disabled_collisions) == 3
+        found_pairs = {(dc.link1, dc.link2) for dc in assembly.srdf.disabled_collisions}
+        assert ("l1", "l2") in found_pairs
+        assert ("l1", "l3") in found_pairs
+        assert ("l2", "l3") in found_pairs
+
+    def test_factory_aliases(self) -> None:
+        """Test the ergonomic factory aliases from the composer package."""
+        assert fixed_joint() == JointType.FIXED
+        assert revolute_joint() == JointType.REVOLUTE
+
+        o = origin(xyz=(1, 2, 3), rpy=(0.1, 0.2, 0.3))
+        assert isinstance(o, Transform)
+        assert o.xyz.x == 1.0
+        assert o.rpy.z == 0.3
+
+    def test_fluent_joint_builders(self) -> None:
+        """Test as_fixed and as_revolute fluent builders."""
+        assembly = RobotAssembly.create("fluent_bot")
+        assembly.robot.add_link(Link(name="parent"))
+
+        # Test as_fixed
+        assembly.add_link("child_fixed").as_fixed("parent", "j_fixed")
+        assert assembly.robot.get_joint("j_fixed").type == JointType.FIXED
+
+        # Test as_revolute
+        axis = Vector3(0, 0, 1)
+        limits = JointLimits(effort=10, velocity=1)
+        assembly.add_link("child_rev").as_revolute("parent", "j_rev", axis=axis, limits=limits)
+        joint = assembly.robot.get_joint("j_rev")
+        assert joint.type == JointType.REVOLUTE
+        assert joint.axis == axis
