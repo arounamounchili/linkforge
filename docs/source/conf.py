@@ -37,6 +37,7 @@ extensions = [
 
 templates_path = ["_templates"]
 exclude_patterns = ["examples"]
+suppress_warnings = ["autodoc.typehints"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -138,4 +139,4 @@ myst_heading_anchors = 3
 myst_fence_as_directive = ["mermaid"]
 
 # Mock imports for Blender-specific modules
-autodoc_mock_imports = ["bpy", "bpy_extras", "mathutils", "gpu", "gpu_extras"]
+autodoc_mock_imports = ["bpy", "bpy_extras", "mathutils", "gpu", "gpu_extras", "numpy"]
