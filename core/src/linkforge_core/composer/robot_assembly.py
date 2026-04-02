@@ -7,10 +7,10 @@ This module implements the 'Composer' which allows for both macro-assembly
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from ..exceptions import RobotValidationError
-from ..models.joint import Joint, JointAxis, JointLimit, JointType
+from ..models.geometry import Transform, Vector3
+from ..models.joint import Joint, JointLimits, JointType
 from ..models.link import Link
 from ..models.robot import Robot
 from ..models.srdf import DisabledCollision, PlanningGroup, SemanticRobotDescription
@@ -47,6 +47,39 @@ class RobotAssembly:
         """
         return cls(robot=Robot(name=name))
 
+    def _add_link_with_joint(
+        self,
+        link: Link,
+        parent: str,
+        joint_name: str,
+        joint_type: JointType,
+        origin: Transform | None = None,
+        axis: Vector3 | None = None,
+        limits: JointLimits | None = None,
+    ) -> None:
+        """Internal helper to add a link and its connecting joint.
+
+        Args:
+            link: The link to add.
+            parent: Name of the parent link.
+            joint_name: Name of the joint connecting them.
+            joint_type: Type of the joint.
+            origin: Optional transform.
+            axis: Optional joint axis.
+            limits: Optional joint limits.
+        """
+        self.robot.add_link(link)
+        joint = Joint(
+            name=joint_name,
+            type=joint_type,
+            parent=parent,
+            child=link.name,
+            origin=origin or Transform.identity(),
+            axis=axis,
+            limits=limits,
+        )
+        self.robot.add_joint(joint)
+
     def attach(
         self,
         component: Robot,
@@ -54,9 +87,9 @@ class RobotAssembly:
         joint_name: str,
         prefix: str = "",
         joint_type: JointType = JointType.FIXED,
-        origin: Any | None = None,
-        axis: JointAxis | None = None,
-        limit: JointLimit | None = None,
+        origin: Transform | None = None,
+        axis: Vector3 | None = None,
+        limits: JointLimits | None = None,
     ) -> RobotAssembly:
         """Attach a sub-robot component to the current assembly.
 
@@ -68,7 +101,7 @@ class RobotAssembly:
             joint_type: Type of the connecting joint (default: FIXED).
             origin: Optional transform for the joint.
             axis: Optional joint axis.
-            limit: Optional joint limits.
+            limits: Optional joint limits.
 
         Returns:
             The assembly instance for chaining.
@@ -100,9 +133,9 @@ class RobotAssembly:
             type=joint_type,
             parent=at_link,
             child=root_link.name,
-            origin=origin,
+            origin=origin or Transform.identity(),
             axis=axis,
-            limit=limit,
+            limits=limits,
         )
         self.robot.add_joint(connection)
 
@@ -202,8 +235,23 @@ class LinkBuilder:
         self._link = link
 
     def with_mass(self, value: float) -> LinkBuilder:
-        """Set link mass."""
-        self._link.mass = value
+        """Set link mass.
+
+        Since the Link model is frozen for stability, this creates a new
+        modified Link instance.
+        """
+        from dataclasses import replace
+
+        from ..models.link import Inertial, InertiaTensor
+
+        # For robots to be valid, we usually need at least a minimal inertia
+        # if mass is provided.
+        if self._link.inertial:
+            new_inertial = replace(self._link.inertial, mass=value)
+        else:
+            new_inertial = Inertial(mass=value, inertia=InertiaTensor.zero())
+
+        self._link = replace(self._link, inertial=new_inertial)
         return self
 
     def connect_to(
@@ -211,7 +259,9 @@ class LinkBuilder:
         parent: str,
         joint_name: str,
         joint_type: JointType = JointType.FIXED,
-        origin: Any | None = None,
+        origin: Transform | None = None,
+        axis: Vector3 | None = None,
+        limits: JointLimits | None = None,
     ) -> RobotAssembly:
         """Finish link construction and connect it to a parent.
 
@@ -220,17 +270,19 @@ class LinkBuilder:
             joint_name: Name of the joint.
             joint_type: Type of the joint.
             origin: Optional transform.
+            axis: Optional joint axis.
+            limits: Optional joint limits.
 
         Returns:
             The parent RobotAssembly instance.
         """
-        self._assembly.robot.add_link(self._link)
-        joint = Joint(
-            name=joint_name,
-            type=joint_type,
+        self._assembly._add_link_with_joint(
+            link=self._link,
             parent=parent,
-            child=self._link.name,
+            joint_name=joint_name,
+            joint_type=joint_type,
             origin=origin,
+            axis=axis,
+            limits=limits,
         )
-        self._assembly.robot.add_joint(joint)
         return self._assembly

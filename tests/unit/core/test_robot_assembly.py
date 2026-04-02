@@ -1,7 +1,8 @@
 import pytest
 from linkforge_core.composer.robot_assembly import RobotAssembly
 from linkforge_core.exceptions import RobotValidationError
-from linkforge_core.models.joint import Joint, JointType
+from linkforge_core.models.geometry import Vector3
+from linkforge_core.models.joint import Joint, JointLimits, JointType
 from linkforge_core.models.link import Link
 from linkforge_core.models.robot import Robot
 
@@ -21,15 +22,20 @@ class TestRobotAssembly:
         # Build base
         assembly.robot.add_link(Link(name="base_link"))
 
-        # Build arm link using fluent API
+        # Build arm link using fluent API with full validation parameters
         assembly.add_link("link1").with_mass(1.5).connect_to(
-            parent="base_link", joint_name="joint1", type=JointType.REVOLUTE
+            parent="base_link",
+            joint_name="joint1",
+            joint_type=JointType.REVOLUTE,
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(lower=-1, upper=1),
         )
 
         assert len(assembly.robot.links) == 2
         assert len(assembly.robot.joints) == 1
         assert assembly.robot.get_link("link1").mass == 1.5
         assert assembly.robot.get_joint("joint1").parent == "base_link"
+        assert assembly.robot.get_joint("joint1").axis.z == 1.0
 
     def test_macro_assembly_attach(self) -> None:
         """Test attaching a sub-robot component."""
@@ -38,7 +44,14 @@ class TestRobotAssembly:
         gripper.add_link(Link(name="palm"))
         gripper.add_link(Link(name="finger"))
         gripper.add_joint(
-            Joint(name="f_joint", parent="palm", child="finger", type=JointType.REVOLUTE)
+            Joint(
+                name="f_joint",
+                parent="palm",
+                child="finger",
+                type=JointType.REVOLUTE,
+                axis=Vector3(0, 0, 1),
+                limits=JointLimits(lower=0, upper=0.5),
+            )
         )
 
         # Create base robot
