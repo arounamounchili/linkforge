@@ -6,6 +6,7 @@ of truth for all kinematic, physical, and sensor data.
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
 from pathlib import Path
@@ -120,6 +121,105 @@ class Robot:
 
         self._sensor_index = {sensor.name: sensor for sensor in self._sensors}
         self._graph_cache = None
+
+    def clone(self) -> Robot:
+        """Create a deep copy of the robot.
+
+        Returns:
+            A new Robot instance with identical links, joints, and metadata.
+        """
+        return copy.deepcopy(self)
+
+    def prefix_all(self, prefix: str) -> None:
+        """Add a prefix to all links, joints, sensors, and related elements.
+
+        This is used when merging robots into an assembly to prevent
+        name collisions.
+
+        Args:
+            prefix: The string to prepend to all names.
+        """
+        if not prefix:
+            return
+
+        # Update materials
+        new_materials = {
+            f"{prefix}{k}": v.clone(name=f"{prefix}{k}") for k, v in self.materials.items()
+        }
+        self.materials = new_materials
+
+        # Update links
+        for link in self._links:
+            link.name = f"{prefix}{link.name}"
+            # Also update visuals/collisions if they refer to materials
+            # (In URDF, materials can be shared or local. Link-level materials
+            # might need prefixing if they refer to global ones)
+
+        # Update joints
+        for joint in self._joints:
+            joint.name = f"{prefix}{joint.name}"
+            joint.parent = f"{prefix}{joint.parent}"
+            joint.child = f"{prefix}{joint.child}"
+
+        # Update sensors
+        for sensor in self._sensors:
+            sensor.name = f"{prefix}{sensor.name}"
+            sensor.link_name = f"{prefix}{sensor.link_name}"
+
+        # Update transmissions
+        for trans in self._transmissions:
+            trans.name = f"{prefix}{trans.name}"
+            for tj in trans.joints:
+                tj.name = f"{prefix}{tj.name}"
+
+        # Update ros2_control
+        for rc in self._ros2_controls:
+            rc.name = f"{prefix}{rc.name}"
+
+        # Update Gazebo elements
+        for ge in self._gazebo_elements:
+            if ge.reference:
+                ge.reference = f"{prefix}{ge.reference}"
+
+        # Update semantic description if it exists
+        if self._semantic:
+            semantic = self._semantic
+            for v_joint in semantic.virtual_joints:
+                v_joint.child_link = f"{prefix}{v_joint.child_link}"
+            for group in semantic.groups:
+                group.name = f"{prefix}{group.name}"
+                group.links = [f"{prefix}{link_name}" for link_name in group.links]
+                group.joints = [f"{prefix}{joint_name}" for joint_name in group.joints]
+                group.chains = [(f"{prefix}{base}", f"{prefix}{tip}") for base, tip in group.chains]
+                group.subgroups = [f"{prefix}{sub}" for sub in group.subgroups]
+            for state in semantic.group_states:
+                state.name = f"{prefix}{state.name}"
+                state.group = f"{prefix}{state.group}"
+                state.joint_values = {
+                    f"{prefix}{j_name}": j_val for j_name, j_val in state.joint_values.items()
+                }
+            for e_effector in semantic.end_effectors:
+                e_effector.name = f"{prefix}{e_effector.name}"
+                e_effector.group = f"{prefix}{e_effector.group}"
+                e_effector.parent_link = f"{prefix}{e_effector.parent_link}"
+                if e_effector.parent_group:
+                    e_effector.parent_group = f"{prefix}{e_effector.parent_group}"
+            for p_joint in semantic.passive_joints:
+                p_joint.name = f"{prefix}{p_joint.name}"
+            for d_collision in semantic.disabled_collisions:
+                d_collision.link1 = f"{prefix}{d_collision.link1}"
+                d_collision.link2 = f"{prefix}{d_collision.link2}"
+
+        # Rebuild indices
+        self.__post_init__(
+            initial_links=self._links,
+            initial_joints=self._joints,
+            initial_sensors=self._sensors,
+            initial_transmissions=self._transmissions,
+            initial_ros2_controls=self._ros2_controls,
+            initial_gazebo_elements=self._gazebo_elements,
+            initial_semantic=self._semantic,
+        )
 
     def add_link(self, link: Link) -> None:
         """Add a link to the robot and update indices."""
