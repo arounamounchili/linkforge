@@ -73,6 +73,7 @@ from ...linkforge_core.models.transmission import (
 from ...linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
 from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
 from ...linkforge_core.utils.string_utils import sanitize_name
+from ..utils.physics import calculate_mesh_inertia_numpy
 
 # Constants
 logger = get_logger(__name__)
@@ -338,7 +339,8 @@ def get_object_geometry(
 def extract_mesh_triangles(
     obj: Any,
     depsgraph: Any | None = None,
-) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]] | None:
+    as_numpy: bool = False,
+) -> tuple[Any, Any] | None:
     """Extract triangle mesh data from Blender object.
 
     Args:
@@ -370,30 +372,37 @@ def extract_mesh_triangles(
     # The inertia tensor is always computed relative to the object's center of mass
     scale_matrix = obj.matrix_world.to_scale()
 
-    # NumPy-accelerated extraction for O(N) mesh processing (avoids Python loop overhead)
+    # Fast O(N) extraction via NumPy
     if np is not None:
         # Fast vertex extraction via foreach_get
         num_verts = len(mesh.vertices)
         verts = np.empty(num_verts * 3, dtype=np.float32)
         mesh.vertices.foreach_get("co", verts)
         vertices_array = verts.reshape((-1, 3))
+
+        # Fast face index extraction (triangles)
+        num_tris = len(mesh.loop_triangles)
+        tris = np.empty(num_tris * 3, dtype=np.int32)
+        mesh.loop_triangles.foreach_get("vertices", tris)
+        triangles_array = tris.reshape((-1, 3))
+
         # Apply scale
         vertices_array[:, 0] *= scale_matrix.x
         vertices_array[:, 1] *= scale_matrix.y
         vertices_array[:, 2] *= scale_matrix.z
+
+        # Optional: Return arrays directly
+        if as_numpy:
+            eval_obj.to_mesh_clear()
+            return vertices_array, triangles_array
+
         vertices_list = vertices_array.tolist()
+        triangles_list = triangles_array.tolist()
 
-        # Fast triangle extraction via loop_triangles
-        num_tris = len(mesh.loop_triangles)
-        tris = np.empty(num_tris * 3, dtype=np.int32)
-        mesh.loop_triangles.foreach_get("vertices", tris)
-        triangles_list = tris.reshape((-1, 3)).tolist()
-
-        # Cleanup memory
         eval_obj.to_mesh_clear()
         return vertices_list, triangles_list
 
-    # Pure Python Fallback (if NumPy is missing)
+    # Python fallback
     vertices = [
         (v.co.x * scale_matrix.x, v.co.y * scale_matrix.y, v.co.z * scale_matrix.z)
         for v in mesh.vertices
@@ -593,8 +602,8 @@ def blender_link_to_core_with_origin(
     inertial = None
     if props.mass > 0:
         if props.use_auto_inertia:
-            # Auto-calculate inertia from geometry
-            # Prefer collision geometry, fallback to visual if no collision exists
+            # Automated inertia calculation from geometry
+            # Priority order: Collision then Visual
             geom_obj = None
             geom = None
 
@@ -616,12 +625,24 @@ def blender_link_to_core_with_origin(
             if geom and geom_obj:
                 # Calculate inertia based on geometry type
                 if isinstance(geom, Mesh) and geom_obj.type == "MESH":
-                    mesh_data = extract_mesh_triangles(geom_obj, depsgraph=depsgraph)
+                    # Optimized NumPy implementation
+                    use_numpy = np is not None
+                    mesh_data = extract_mesh_triangles(
+                        geom_obj, depsgraph=depsgraph, as_numpy=use_numpy
+                    )
+
                     if mesh_data:
                         vertices, triangles = mesh_data
-                        inertia_tensor = calculate_mesh_inertia_from_triangles(
-                            vertices, triangles, props.mass
-                        )
+                        if use_numpy:
+                            # Vectorized implementation
+                            inertia_tensor = calculate_mesh_inertia_numpy(
+                                vertices, triangles, props.mass
+                            )
+                        else:
+                            # Fallback to pure-Python core implementation
+                            inertia_tensor = calculate_mesh_inertia_from_triangles(
+                                vertices, triangles, props.mass
+                            )
                     else:
                         # Fallback to bounding box if mesh extraction fails
                         dimensions = geom_obj.dimensions
@@ -651,6 +672,11 @@ def blender_link_to_core_with_origin(
                 izz=props.inertia_izz,
             )
 
+        # Final safety check for type-checker (ensure not None)
+        final_inertia: InertiaTensor = (
+            inertia_tensor if inertia_tensor is not None else InertiaTensor.zero()
+        )
+
         # Inertial properties (mass and inertia tensor)
         # Use stored inertia origin from link properties
         inertial_origin = Transform(
@@ -665,7 +691,7 @@ def blender_link_to_core_with_origin(
                 clean_float(props.inertia_origin_rpy[2]),
             ),
         )
-        inertial = Inertial(mass=props.mass, origin=inertial_origin, inertia=inertia_tensor)
+        inertial = Inertial(mass=props.mass, origin=inertial_origin, inertia=final_inertia)
 
     return Link(
         name=link_name, initial_visuals=visuals, initial_collisions=collisions, inertial=inertial

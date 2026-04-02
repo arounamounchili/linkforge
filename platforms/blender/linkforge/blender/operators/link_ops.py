@@ -7,6 +7,7 @@ import time
 import typing
 
 from ...linkforge_core.logging_config import get_logger
+from ...linkforge_core.models.link import InertiaTensor
 from ..properties.link_props import sanitize_urdf_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
@@ -511,6 +512,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     from ...linkforge_core.models.geometry import Box, Cylinder, Sphere
     from ...linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
     from ..adapters.blender_to_core import extract_mesh_triangles
+    from ..utils.physics import calculate_mesh_inertia_numpy
 
     # Calculate inertia from child meshes (new architecture: link Empty + children)
     try:
@@ -552,9 +554,6 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
         if prim_type:
             # Use primitive calculation
             dims = target_obj.dimensions
-            # Scale dimensions by object scale
-            # dims are already in world space if applied, but here we want local dimensions
-            # Actually dimensions property includes scale.
 
             # Primitive calculation expects dimensions
             if prim_type == "BOX":
@@ -571,31 +570,54 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
                 length = dims[2]
                 tensor = calculate_inertia(Cylinder(radius=radius, length=length), mass)
             else:
-                # Fallback to mesh
-                res = extract_mesh_triangles(target_obj)
+                # Mesh fallback
+                # Use optimized NumPy path
+                try:
+                    res = extract_mesh_triangles(target_obj, as_numpy=True)
+                    if res:
+                        verts_np, faces_np = res
+                        calc_tensor = calculate_mesh_inertia_numpy(verts_np, faces_np, mass)
+                        if calc_tensor:
+                            tensor = calc_tensor
+                except (ImportError, AttributeError, NameError):
+                    # Fallback to core Python if NumPy fails
+                    res = extract_mesh_triangles(target_obj, as_numpy=False)
+                    if res:
+                        verts, faces = res
+                        calc_tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
+                        if calc_tensor:
+                            tensor = calc_tensor
+
+                if not tensor:
+                    return False
+        else:
+            # Mesh-only geometry
+            tensor = None
+            try:
+                res = extract_mesh_triangles(target_obj, as_numpy=True)
+                if res:
+                    verts_np, faces_np = res
+                    tensor = calculate_mesh_inertia_numpy(verts_np, faces_np, mass)
+            except (ImportError, AttributeError, NameError):
+                # Fallback to core integration
+                res = extract_mesh_triangles(target_obj, as_numpy=False)
                 if res:
                     verts, faces = res
                     tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
-                else:
-                    return False
-        else:
-            # Use mesh integration
-            res = extract_mesh_triangles(target_obj)
-            if res:
-                verts, faces = res
-                tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
-            else:
-                return False
 
-        # Update properties
-        lf.inertia_ixx = tensor.ixx
-        lf.inertia_iyy = tensor.iyy
-        lf.inertia_izz = tensor.izz
-        lf.inertia_ixy = tensor.ixy
-        lf.inertia_ixz = tensor.ixz
-        lf.inertia_iyz = tensor.iyz
+        if tensor is not None:
+            # Final validation for type-checker
+            t: InertiaTensor = tensor
+            # Update Link properties
+            lf.inertia_ixx = t.ixx
+            lf.inertia_iyy = t.iyy
+            lf.inertia_izz = t.izz
+            lf.inertia_ixy = t.ixy
+            lf.inertia_ixz = t.ixz
+            lf.inertia_iyz = t.iyz
+            return True
 
-        return True
+        return False
 
     except Exception as e:
         logger.error(f"Error calculating inertia for {link_obj.name}: {e}", exc_info=True)
