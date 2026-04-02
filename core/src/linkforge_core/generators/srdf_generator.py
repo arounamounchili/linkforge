@@ -74,10 +74,15 @@ class SRDFGenerator(RobotXMLGenerator):
 
         return root
 
+    def _create_element(self, parent: ET.Element, tag: str, **kwargs: Any) -> ET.Element:
+        """Helper to create ET.SubElement while stripping None values and converting to strings."""
+        attrib = {k: str(v) for k, v in kwargs.items() if v is not None}
+        return ET.SubElement(parent, tag, attrib)
+
     def _add_virtual_joints(self, root: ET.Element, virtual_joints: list[VirtualJoint]) -> None:
         """Add virtual joint elements to root."""
         for vj in virtual_joints:
-            ET.SubElement(
+            self._create_element(
                 root,
                 "virtual_joint",
                 name=vj.name,
@@ -109,10 +114,14 @@ class SRDFGenerator(RobotXMLGenerator):
     def _add_end_effectors(self, root: ET.Element, end_effectors: list[EndEffector]) -> None:
         """Add end effector elements to root."""
         for ee in end_effectors:
-            attrib = {"name": ee.name, "group": ee.group, "parent_link": ee.parent_link}
-            if ee.parent_group:
-                attrib["parent_group"] = ee.parent_group
-            ET.SubElement(root, "end_effector", **attrib)  # type: ignore[arg-type]
+            self._create_element(
+                root,
+                "end_effector",
+                name=ee.name,
+                group=ee.group,
+                parent_link=ee.parent_link,
+                parent_group=ee.parent_group,
+            )
 
     def _add_passive_joints(self, root: ET.Element, passive_joints: list[PassiveJoint]) -> None:
         """Add passive joint elements to root."""
@@ -124,7 +133,10 @@ class SRDFGenerator(RobotXMLGenerator):
     ) -> None:
         """Add disabled collision elements to root."""
         for dc in disabled_collisions:
-            attrib = {"link1": dc.link1, "link2": dc.link2}
-            if dc.reason:
-                attrib["reason"] = dc.reason
-            ET.SubElement(root, "disable_collisions", **attrib)  # type: ignore[arg-type]
+            self._create_element(
+                root,
+                "disable_collisions",
+                link1=dc.link1,
+                link2=dc.link2,
+                reason=dc.reason,
+            )

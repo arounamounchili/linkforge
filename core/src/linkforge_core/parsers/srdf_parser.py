@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from ..base import IResourceResolver
 from ..exceptions import (
@@ -35,6 +35,15 @@ from .xml_base import MAX_FILE_SIZE, RobotXMLParser
 logger = get_logger(__name__)
 
 
+@runtime_checkable
+class ITemplateResolver(Protocol):
+    """Protocol for resolving templated XML strings (e.g., XACRO, Jinja)."""
+
+    def resolve_string(self, xml_string: str) -> str:
+        """Resolve a templated string into plain XML."""
+        ...
+
+
 class SRDFParser(RobotXMLParser):
     """Refined SRDF Parser with XACRO and MoveIt support."""
 
@@ -44,6 +53,7 @@ class SRDFParser(RobotXMLParser):
         sandbox_root: Path | None = None,
         resource_resolver: IResourceResolver | None = None,
         search_paths: list[Path] | None = None,
+        template_resolver: ITemplateResolver | None = None,
     ) -> None:
         """Initialize SRDF parser.
 
@@ -52,6 +62,7 @@ class SRDFParser(RobotXMLParser):
             sandbox_root: Optional root directory for security sandbox.
             resource_resolver: Optional resolver for URIs.
             search_paths: Optional search paths for XACRO includes.
+            template_resolver: Optional template resolver for preprocessing the SRDF content.
         """
         super().__init__(
             max_file_size=max_file_size,
@@ -59,6 +70,7 @@ class SRDFParser(RobotXMLParser):
             resource_resolver=resource_resolver,
         )
         self.search_paths = search_paths or []
+        self.template_resolver = template_resolver
 
     def _detect_xacro(self, xml_string: str) -> bool:
         """Detect if the string contains XACRO tags."""
@@ -117,8 +129,10 @@ class SRDFParser(RobotXMLParser):
         **kwargs: Any,
     ) -> Robot:
         """Parse SRDF from string and update or create a Robot model."""
-        # Handle XACRO resolution if needed
-        if self._detect_xacro(xml_string):
+        # Handle templating resolution
+        if self.template_resolver is not None:
+            xml_string = self.template_resolver.resolve_string(xml_string)
+        elif self._detect_xacro(xml_string):
             resolver = XacroResolver(search_paths=self.search_paths, start_dir=base_directory)
             xml_string = resolver.resolve_string(xml_string)
 
