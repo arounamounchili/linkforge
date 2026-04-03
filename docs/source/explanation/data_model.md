@@ -45,3 +45,43 @@ Modern robotics (ROS 2) separates the *description* of the robot from its *contr
 :::{tip}
 For a technical breakdown of naming conventions and object types, see the [Robot Structure Reference](../reference/robot_structure.md).
 :::
+
+---
+
+### 5. The Assembly Layer
+
+While the Blender UI covers the most common workflow, LinkForge also provides a
+programmatic assembly API for engineers who need to build robots dynamically in Python.
+
+The `RobotAssembly` class wraps two objects into one coordinated interface:
+
+- **`Robot`** — the kinematic description (links, joints, sensors, physics)
+- **`SemanticRobotDescription`** — the semantic overlay (planning groups, named
+  poses, collision filters for MoveIt)
+
+This separation mirrors the real-world split between a URDF file (what the robot
+looks like) and an SRDF file (how the planner should think about it).
+
+Two assembly patterns are supported:
+
+**Macro-Assembly**: Merging complete pre-built robots together at a named flange.
+This is how you would attach a gripper to an arm, or build a factory cell with
+multiple robot arms sharing a common world frame.
+
+**Micro-Construction**: Building links and joints one at a time using the fluent
+`LinkBuilder` API. This is useful for procedurally generated robots or when you
+need precise, programmatic control over every joint parameter.
+
+```python
+from linkforge_core.composer.robot_assembly import RobotAssembly
+
+# Both patterns produce the same output: a validated Robot + SRDF ready for
+# export to URDF, SRDF, or any future format (MJCF, SDF).
+assembly = RobotAssembly("my_robot", ...)
+urdf_str = assembly.export_urdf()
+srdf_str = assembly.export_srdf()
+```
+
+:::{tip}
+See the [Composer API reference](../reference/api/composer) for the full API documentation.
+:::

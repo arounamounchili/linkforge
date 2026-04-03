@@ -55,6 +55,13 @@ Solutions for common import/export issues and validation errors.
 Configure mass, inertia tensors, and manual Center of Mass offsets.
 :::
 
+:::{grid-item-card} 🤖 Build Robots in Python
+:link: ../reference/api/composer
+:link-type: doc
+
+Programmatically assemble robots, attach sub-models, and export URDF and SRDF using the Composer API.
+:::
+
 ::::
 
 ```{toctree}

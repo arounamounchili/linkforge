@@ -51,3 +51,33 @@ If your robot explodes or flies away immediately upon spawning:
 1. **Check for Negative/Zero Inertia**: Run the LinkForge **Validator**. It will catch zero-mass links or invalid tensors.
 2. **Check Collisions**: Ensure adjacent links have collisions that don't overlap in the "Zero Configuration". LinkForge automatically displays generated collision meshes in "X-Ray" mode (Visible In Front) to help you inspect internal overlaps.
 3. **Inertia Too Small**: Very small inertia values (like `1e-9`) can cause numerical instability in physics engines. Try increasing the mass or size slightly if possible, or bundle small parts into a larger parent link.
+
+---
+
+## Programmatic Usage
+
+When building robots with the `RobotAssembly` Composer, inertia is calculated
+automatically when you call `.with_mass()` on the `LinkBuilder`. This is the
+Python equivalent of enabling **Auto-Calculate Inertia** in Blender.
+
+```python
+from linkforge_core.composer.robot_assembly import RobotAssembly
+from linkforge_core.models import Robot
+from linkforge_core.models.geometry import Box, Vector3
+
+assembly = RobotAssembly("my_robot", Robot(name="my_robot"))
+
+# with_mass() on a box geometry will compute the full inertia tensor
+# using the same solid-body dynamics formulas used in Blender.
+assembly.add_link("chassis") \
+    .with_mass(5.0) \
+    .connect_to("world", "world_joint") \
+    .as_fixed()
+```
+
+:::{note}
+**Performance (v1.4.0)**: When running inside Blender, inertia calculation for
+complex meshes (100k+ triangles) uses a NumPy-vectorized tetrahedral integrator.
+All triangle volumes and inertia components are computed simultaneously, making
+it significantly faster than the pure-Python loop for high-fidelity mesh exports.
+:::

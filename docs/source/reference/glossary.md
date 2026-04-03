@@ -35,3 +35,15 @@ An XML macro language used to simplify URDF files by allowing variables, math, a
 
 ## Actuation Vector
 The visual representation in Blender showing the direction of force or movement for a specific joint interface.
+
+## SRDF (Semantic Robot Description Format)
+An XML format used alongside URDF to provide semantic information for motion planning. It defines planning groups, named poses, end effectors, virtual joints, and collision filters. Used primarily by MoveIt and MoveIt 2. LinkForge can generate SRDF files programmatically via `SRDFGenerator` or the `RobotAssembly.export_srdf()` helper.
+
+## Planning Group
+A named subset of links and joints used by MoveIt to plan motion for one part of the robot (e.g., `arm`, `hand`). Planning groups are defined in the SRDF and managed through `RobotAssembly.add_group()` in LinkForge.
+
+## Composer (RobotAssembly)
+The programmatic Python API for building robots without Blender. `RobotAssembly` supports two workflows: **Macro-Assembly** (attaching complete sub-robots) and **Micro-Construction** (adding individual links and joints with the `LinkBuilder` fluent API). Produces validated `Robot` and `SemanticRobotDescription` objects ready for URDF and SRDF export.
+
+## Kinematic Graph
+An internal graph representation of the robot's link-joint topology. `KinematicGraph` is used by the validator to detect cycles, find the root link, and perform topological traversal. Available as a public API for advanced users who need custom graph analysis.

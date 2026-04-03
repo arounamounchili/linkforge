@@ -5,11 +5,15 @@ Complete API documentation for LinkForge.
 ```{toctree}
 :maxdepth: 2
 
+composer
 models
+srdf
 parsers
 generators
 physics
 validation
+checks
+graph
 blender
 ```
 
@@ -21,11 +25,13 @@ LinkForge is organized into two main layers:
 
 Platform-independent robot modeling and URDF/XACRO processing.
 
-- **Models**: Data structures (`Robot`, `Link`, `Joint`, `Sensor`, etc.)
-- **Parsers**: URDF/XACRO → Python objects
-- **Generators**: Python objects → URDF/XACRO
+- **Composer**: `RobotAssembly` and `LinkBuilder` — the programmatic robot building API
+- **Models**: Data structures (`Robot`, `Link`, `Joint`, `Sensor`, `SemanticRobotDescription`, etc.)
+- **Parsers**: URDF/XACRO/SRDF → Python objects
+- **Generators**: Python objects → URDF/XACRO/SRDF
 - **Physics**: Inertia calculations
-- **Validation**: Error checking and security
+- **Validation**: Modular check registry and security
+- **Graph**: Kinematic tree utilities
 
 ### Blender Layer (`linkforge.blender`)
 
@@ -38,43 +44,30 @@ Blender-specific integration.
 
 ## Quick Reference
 
-### Creating a Robot Programmatically
+### Building a Robot Programmatically
+
+The `RobotAssembly` Composer is the recommended way to build robots in Python.
+It handles validation, prefixing, and SRDF generation automatically.
 
 ```python
-from linkforge_core.models import Robot, Link, Joint, JointType, Inertial, InertiaTensor
-from linkforge_core import URDFGenerator
+from linkforge_core.composer.robot_assembly import RobotAssembly
+from linkforge_core.models import Robot
+from linkforge_core.models.geometry import Vector3
+from linkforge_core.models.joint import JointLimits
 
-# Create robot
-robot = Robot(
-    name="my_robot",
-    links=[
-        Link(
-            name="base_link",
-            inertial=Inertial(
-                mass=10.0,
-                inertia=InertiaTensor(ixx=1.0, ixy=0.0, ixz=0.0, iyy=1.0, iyz=0.0, izz=1.0)
-            )
-        ),
-        Link(name="link1", inertial=...)
-    ],
-    joints=[
-        Joint(
-            name="joint1",
-            type=JointType.REVOLUTE,
-            parent="base_link",
-            child="link1"
-        )
-    ]
+assembly = RobotAssembly("my_robot", Robot(name="my_robot"))
+
+assembly.add_link("base_link").with_mass(5.0).connect_to("world", "world_joint").as_fixed()
+assembly.add_link("arm").with_mass(2.0).connect_to("base_link", "shoulder").as_revolute(
+    axis=Vector3(0, 0, 1),
+    limits=JointLimits(lower=-1.57, upper=1.57, effort=10, velocity=1),
 )
 
-# Generate URDF
-generator = URDFGenerator()
-urdf_string = generator.generate(robot)
-
-# Save to file
-with open("robot.urdf", "w") as f:
-    f.write(urdf_string)
+urdf = assembly.export_urdf()
 ```
+
+See the [Composer reference](composer) for the full API, including macro-assembly
+and SRDF export.
 
 ### Parsing URDF
 

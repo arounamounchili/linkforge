@@ -1,6 +1,6 @@
 # Parsers
 
-URDF and XACRO parsers for converting files to Python objects.
+URDF, XACRO, and SRDF parsers for converting files into Python objects.
 
 ## URDF Parser
 
@@ -36,6 +36,22 @@ The internal engine used by `XACROParser` for hierarchical property resolution a
    :members:
    :undoc-members:
 ```
+
+:::{note}
+**Structural Caching (v1.4.0)**: `XacroResolver` implements a two-phase approach for
+large modular robot cascades. In the **Structural Phase**, all `xacro:include` tags are
+resolved once into an in-memory template tree. In the **Evaluation Phase**, arguments and
+conditional blocks are injected into the cached tree. This means a single Xacro file can
+be evaluated many times with different parameters (e.g., different `prefix=` values for
+two arms) without re-reading or re-parsing any files.
+:::
+
+---
+
+## SRDF Parser
+
+The SRDF parser is documented with the rest of the SRDF layer (models, parser, generator)
+on the dedicated [SRDF reference page](reference/api/srdf).
 
 ## Usage Examples
 
