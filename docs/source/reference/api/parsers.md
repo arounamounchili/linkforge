@@ -51,7 +51,7 @@ two arms) without re-reading or re-parsing any files.
 ## SRDF Parser
 
 The SRDF parser is documented with the rest of the SRDF layer (models, parser, generator)
-on the dedicated [SRDF reference page](reference/api/srdf).
+on the dedicated [SRDF reference page](srdf.md).
 
 ## Usage Examples
 

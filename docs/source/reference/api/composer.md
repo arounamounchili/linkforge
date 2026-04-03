@@ -10,6 +10,7 @@ without Blender. It supports two complementary workflows that can be freely comb
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: robot, srdf
 ```
 
 ## Link Builder

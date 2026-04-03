@@ -34,7 +34,7 @@ All XML-based generators in LinkForge inherit from a shared base engine that han
 ## SRDF Generator
 
 The SRDF generator is documented with the rest of the SRDF layer (models, parser, generator)
-on the dedicated [SRDF reference page](reference/api/srdf).
+on the dedicated [SRDF reference page](srdf.md).
 
 ## Usage Examples
 

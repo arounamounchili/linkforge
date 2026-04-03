@@ -354,7 +354,7 @@ class LinkBuilder:
         """Stage the joint's topology (parent and name).
 
         This is a configuration step. You must call one of the terminal
-        'as_' methods afterwards to finalize the connection.
+        ``as_*`` methods afterwards to finalize the connection.
 
         Args:
             parent: Name of the parent link in the assembly.

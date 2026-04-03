@@ -98,12 +98,12 @@ napoleon_include_special_with_doc = True
 napoleon_use_admonition_for_examples = True
 napoleon_use_admonition_for_notes = True
 napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
+napoleon_use_ivar = True
 napoleon_use_param = True
 napoleon_use_rtype = True
 napoleon_preprocess_types = True
 napoleon_type_aliases = None
-napoleon_attr_annotations = True
+napoleon_attr_annotations = False
 
 # Autodoc settings
 autodoc_default_options = {

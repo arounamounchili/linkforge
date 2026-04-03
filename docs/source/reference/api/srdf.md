@@ -6,66 +6,8 @@ planning groups, named poses, and collision filters.
 
 ## Data Models
 
-### SemanticRobotDescription
-
-The top-level container for all semantic data.
-
 ```{eval-rst}
-.. autoclass:: linkforge_core.models.srdf.SemanticRobotDescription
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
-### PlanningGroup
-
-```{eval-rst}
-.. autoclass:: linkforge_core.models.srdf.PlanningGroup
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
-### GroupState
-
-```{eval-rst}
-.. autoclass:: linkforge_core.models.srdf.GroupState
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
-### EndEffector
-
-```{eval-rst}
-.. autoclass:: linkforge_core.models.srdf.EndEffector
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
-### VirtualJoint
-
-```{eval-rst}
-.. autoclass:: linkforge_core.models.srdf.VirtualJoint
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
-### PassiveJoint
-
-```{eval-rst}
-.. autoclass:: linkforge_core.models.srdf.PassiveJoint
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
-### DisabledCollision
-
-```{eval-rst}
-.. autoclass:: linkforge_core.models.srdf.DisabledCollision
+.. automodule:: linkforge_core.models.srdf
    :members:
    :undoc-members:
    :show-inheritance:
