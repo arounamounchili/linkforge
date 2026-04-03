@@ -44,7 +44,7 @@ class TestRobotAssembly:
         assembly.add_link("link1").with_mass(1.5).connect_to(
             parent="base_link",
             joint_name="joint1",
-            joint_type=JointType.REVOLUTE,
+        ).as_revolute(
             axis=Vector3(0, 0, 1),
             limits=JointLimits(lower=-1, upper=1),
         )
@@ -256,7 +256,7 @@ class TestRobotAssembly:
         """Test the shortcut methods for URDF and SRDF export."""
         assembly = RobotAssembly.create("export_bot")
         assembly.robot.add_link(Link(name="base"))
-        assembly.add_link("root").as_fixed("base", "joint")
+        assembly.add_link("root").connect_to("base", "joint").as_fixed()
 
         urdf = assembly.export_urdf(validate=True)
         assert '<robot name="export_bot"' in urdf
@@ -297,13 +297,80 @@ class TestRobotAssembly:
         assembly.robot.add_link(Link(name="parent"))
 
         # Test as_fixed
-        assembly.add_link("child_fixed").as_fixed("parent", "j_fixed")
+        assembly.add_link("child_fixed").connect_to("parent", "j_fixed").as_fixed()
         assert assembly.robot.get_joint("j_fixed").type == JointType.FIXED
 
         # Test as_revolute
         axis = Vector3(0, 0, 1)
         limits = JointLimits(effort=10, velocity=1)
-        assembly.add_link("child_rev").as_revolute("parent", "j_rev", axis=axis, limits=limits)
+        assembly.add_link("child_rev").connect_to("parent", "j_rev").as_revolute(
+            axis=axis, limits=limits
+        )
         joint = assembly.robot.get_joint("j_rev")
         assert joint.type == JointType.REVOLUTE
         assert joint.axis == axis
+
+    def test_at_origin_sets_joint_transform(self) -> None:
+        """Verify that at_origin() correctly sets the joint transform."""
+        assembly = RobotAssembly.create("origin_test")
+        assembly.robot.add_link(Link(name="base"))
+
+        assembly.add_link("l1").at_origin(xyz=(1, 2, 3), rpy=(0, 0.5, 0)).connect_to(
+            "base", "j1"
+        ).as_fixed()
+
+        joint = assembly.robot.get_joint("j1")
+        assert joint.origin.xyz.x == 1.0
+        assert joint.origin.xyz.y == 2.0
+        assert joint.origin.xyz.z == 3.0
+        assert joint.origin.rpy.y == 0.5
+
+    def test_explicit_origin_overrides_at_origin(self) -> None:
+        """Verify that explicit origin takes precedence over at_origin()."""
+        assembly = RobotAssembly.create("override_test")
+        assembly.robot.add_link(Link(name="base"))
+
+        explicit_origin = Transform(xyz=Vector3(10, 0, 0))
+
+        assembly.add_link("l1").at_origin(xyz=(1, 1, 1)).connect_to("base", "j1").as_fixed(
+            origin=explicit_origin
+        )
+
+        joint = assembly.robot.get_joint("j1")
+        assert joint.origin.xyz.x == 10.0
+        assert joint.origin.xyz.y == 0.0
+
+    def test_as_prismatic_creates_correct_joint(self) -> None:
+        """Verify the prismatic joint shortcut."""
+        assembly = RobotAssembly.create("prismatic_test")
+        assembly.robot.add_link(Link(name="base"))
+
+        axis = Vector3(1, 0, 0)
+        limits = JointLimits(lower=0, upper=1, effort=10, velocity=1)
+        assembly.add_link("l1").connect_to("base", "j1").as_prismatic(axis=axis, limits=limits)
+
+        joint = assembly.robot.get_joint("j1")
+        assert joint.type == JointType.PRISMATIC
+        assert joint.axis == axis
+        assert joint.limits == limits
+
+    def test_as_continuous_creates_correct_joint(self) -> None:
+        """Verify the continuous joint shortcut."""
+        assembly = RobotAssembly.create("continuous_test")
+        assembly.robot.add_link(Link(name="base"))
+
+        axis = Vector3(0, 0, 1)
+        assembly.add_link("l1").connect_to("base", "j1").as_continuous(axis=axis)
+
+        joint = assembly.robot.get_joint("j1")
+        assert joint.type == JointType.CONTINUOUS
+        assert joint.axis == axis
+        assert joint.limits is None
+
+    def test_missing_connect_to_raises_error(self) -> None:
+        """Verify that finalizing without connect_to raises an error."""
+        assembly = RobotAssembly.create("error_test")
+        builder = assembly.add_link("l1")
+
+        with pytest.raises(RobotValidationError, match="connect_to\(\) must be called"):
+            builder.as_fixed()

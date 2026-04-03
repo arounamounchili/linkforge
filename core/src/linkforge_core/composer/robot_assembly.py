@@ -280,24 +280,46 @@ class RobotAssembly:
 
 
 class LinkBuilder:
-    """Fluent API for programmatic link construction."""
+    """Staged fluent builder for programmatic link and joint construction.
+
+    The builder accumulates state in discrete steps. Call connect_to() to
+    stage the parent link and joint name, then finalize with one of the
+    typed terminal methods (as_fixed, as_revolute, as_prismatic, etc.).
+
+    Example:
+        assembly.add_link("bracket") \\
+            .with_mass(0.5) \\
+            .at_origin(xyz=(0.1, 0, 0)) \\
+            .connect_to("flange", "bracket_joint") \\
+            .as_fixed()
+    """
 
     def __init__(self, assembly: RobotAssembly, link: Link) -> None:
+        """Initialize the builder.
+
+        Args:
+            assembly: The assembly this link will belong to.
+            link: The link being built.
+        """
         self._assembly = assembly
         self._link = link
+        self._pending_origin: Transform | None = None
+        self._pending_parent: str | None = None
+        self._pending_joint_name: str | None = None
 
     def with_mass(self, value: float) -> LinkBuilder:
-        """Set link mass.
+        """Set the link's mass and calculate default inertia.
 
-        Since the Link model is frozen for stability, this creates a new
-        modified Link instance.
+        Args:
+            value: Mass in kilograms.
+
+        Returns:
+            The builder instance for chaining.
         """
         from dataclasses import replace
 
         from ..models.link import Inertial, InertiaTensor
 
-        # For robots to be valid, we usually need at least a minimal inertia
-        # if mass is provided.
         if self._link.inertial:
             new_inertial = replace(self._link.inertial, mass=value)
         else:
@@ -306,73 +328,185 @@ class LinkBuilder:
         self._link = replace(self._link, inertial=new_inertial)
         return self
 
-    def connect_to(
-        self,
-        parent: str,
-        joint_name: str,
-        joint_type: JointType = JointType.FIXED,
-        origin: Transform | None = None,
-        axis: Vector3 | None = None,
-        limits: JointLimits | None = None,
-    ) -> RobotAssembly:
-        """Finish link construction and connect it to a parent.
-
-        Args:
-            parent: Name of the parent link.
-            joint_name: Name of the joint.
-            joint_type: Type of the joint.
-            origin: Optional transform.
-            axis: Optional joint axis.
-            limits: Optional joint limits.
-
-        Returns:
-            The parent RobotAssembly instance.
-        """
-        self._assembly._add_link_with_joint(
-            link=self._link,
-            parent=parent,
-            joint_name=joint_name,
-            joint_type=joint_type,
-            origin=origin,
-            axis=axis,
-            limits=limits,
-        )
-        return self._assembly
-
-    def as_fixed(
-        self, parent: str, joint_name: str, origin: Transform | None = None
-    ) -> RobotAssembly:
-        """Finish building and connect as a fixed joint."""
-        return self.connect_to(parent, joint_name, joint_type=JointType.FIXED, origin=origin)
-
-    def as_revolute(
-        self,
-        parent: str,
-        joint_name: str,
-        axis: Vector3,
-        limits: JointLimits,
-        origin: Transform | None = None,
-    ) -> RobotAssembly:
-        """Finish building and connect as a revolute joint."""
-        return self.connect_to(
-            parent,
-            joint_name,
-            joint_type=JointType.REVOLUTE,
-            origin=origin,
-            axis=axis,
-            limits=limits,
-        )
-
     def at_origin(
         self,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
-        """Set a custom origin for the upcoming connection."""
+        """Store a custom transform to use when connecting this link.
+
+        This transform will be applied to the connecting joint if no
+        explicit origin is provided at connection time.
+
+        Args:
+            xyz: Translation as (x, y, z) in meters.
+            rpy: Rotation as (roll, pitch, yaw) in radians.
+
+        Returns:
+            The builder instance for chaining.
+        """
         from ..models.geometry import Transform, Vector3
 
         self._pending_origin = Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy))
-        # Note: connect_to doesn't currently use _pending_origin,
-        # but in a senior API we'd store it.
-        # Let's just implement the shortcut logic here for now.
         return self
+
+    def connect_to(self, parent: str, joint_name: str) -> LinkBuilder:
+        """Stage the joint's topology (parent and name).
+
+        This is a configuration step. You must call one of the terminal
+        'as_' methods afterwards to finalize the connection.
+
+        Args:
+            parent: Name of the parent link in the assembly.
+            joint_name: Unique name for the connecting joint.
+
+        Returns:
+            The builder instance for chaining.
+        """
+        self._pending_parent = parent
+        self._pending_joint_name = joint_name
+        return self
+
+    def _get_connection_params(self, origin: Transform | None = None) -> tuple[str, str, Transform]:
+        """Resolve parent, joint name and origin for finalization."""
+        if self._pending_parent is None or self._pending_joint_name is None:
+            raise RobotValidationError(
+                "LinkBuilder",
+                self._link.name,
+                "connect_to() must be called before finalizing the joint",
+            )
+
+        resolved_origin = origin if origin is not None else self._pending_origin
+        return (
+            self._pending_parent,
+            self._pending_joint_name,
+            resolved_origin or Transform.identity(),
+        )
+
+    def as_fixed(self, origin: Transform | None = None) -> RobotAssembly:
+        """Finalize the connection as a fixed joint.
+
+        Args:
+            origin: Optional transform override.
+
+        Returns:
+            The parent RobotAssembly instance.
+        """
+        parent, name, resolved_origin = self._get_connection_params(origin)
+        self._assembly._add_link_with_joint(
+            link=self._link,
+            parent=parent,
+            joint_name=name,
+            joint_type=JointType.FIXED,
+            origin=resolved_origin,
+        )
+        return self._assembly
+
+    def as_revolute(
+        self,
+        axis: Vector3,
+        limits: JointLimits,
+        origin: Transform | None = None,
+    ) -> RobotAssembly:
+        """Finalize the connection as a revolute joint.
+
+        Args:
+            axis: Rotation axis unit vector.
+            limits: Joint position, effort, and velocity limits.
+            origin: Optional transform override.
+
+        Returns:
+            The parent RobotAssembly instance.
+        """
+        parent, name, resolved_origin = self._get_connection_params(origin)
+        self._assembly._add_link_with_joint(
+            link=self._link,
+            parent=parent,
+            joint_name=name,
+            joint_type=JointType.REVOLUTE,
+            origin=resolved_origin,
+            axis=axis,
+            limits=limits,
+        )
+        return self._assembly
+
+    def as_prismatic(
+        self,
+        axis: Vector3,
+        limits: JointLimits,
+        origin: Transform | None = None,
+    ) -> RobotAssembly:
+        """Finalize the connection as a prismatic (sliding) joint.
+
+        Args:
+            axis: Translation axis unit vector.
+            limits: Joint position, effort, and velocity limits.
+            origin: Optional transform override.
+
+        Returns:
+            The parent RobotAssembly instance.
+        """
+        parent, name, resolved_origin = self._get_connection_params(origin)
+        self._assembly._add_link_with_joint(
+            link=self._link,
+            parent=parent,
+            joint_name=name,
+            joint_type=JointType.PRISMATIC,
+            origin=resolved_origin,
+            axis=axis,
+            limits=limits,
+        )
+        return self._assembly
+
+    def as_continuous(self, axis: Vector3, origin: Transform | None = None) -> RobotAssembly:
+        """Finalize the connection as a continuous (unlimited revolute) joint.
+
+        Args:
+            axis: Rotation axis unit vector.
+            origin: Optional transform override.
+
+        Returns:
+            The parent RobotAssembly instance.
+        """
+        parent, name, resolved_origin = self._get_connection_params(origin)
+        self._assembly._add_link_with_joint(
+            link=self._link,
+            parent=parent,
+            joint_name=name,
+            joint_type=JointType.CONTINUOUS,
+            origin=resolved_origin,
+            axis=axis,
+        )
+        return self._assembly
+
+    def as_joint(
+        self,
+        joint_type: JointType,
+        axis: Vector3 | None = None,
+        limits: JointLimits | None = None,
+        origin: Transform | None = None,
+    ) -> RobotAssembly:
+        """Generic finalization for any joint type.
+
+        Use this for rarely-used types (PLANAR, FLOATING) or custom extensions.
+
+        Args:
+            joint_type: The type of joint.
+            axis: Optional axis vector.
+            limits: Optional joint limits.
+            origin: Optional transform override.
+
+        Returns:
+            The parent RobotAssembly instance.
+        """
+        parent, name, resolved_origin = self._get_connection_params(origin)
+        self._assembly._add_link_with_joint(
+            link=self._link,
+            parent=parent,
+            joint_name=name,
+            joint_type=joint_type,
+            origin=resolved_origin,
+            axis=axis,
+            limits=limits,
+        )
+        return self._assembly
