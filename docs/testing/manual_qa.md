@@ -1,165 +1,81 @@
 # 🧪 LinkForge Manual QA Protocol
 
-This protocol defines the mandatory manual testing steps required before every release of LinkForge. It complements the automated unit tests by verifying UI responsiveness, visual markers, and end-to-end integration within Blender.
+This protocol defines the **Unified Flight Plan** required before every release. It ensures that the build is stable, the UI is responsive, and the synchronization logic is bulletproof.
 
 ---
 
-## 🏗 Phase 1: Installation & Setup (The Smoke Test)
-**Goal:** Ensure the extension installs cleanly and the UI is discoverable.
+## 📝 Test Session Metadata
+*This section is filled out by the maintainer at the start of each release cycle.*
 
-1.  [ ] **Clean Install**: Remove any existing LinkForge version and install the new `.zip` package.
-    - *Expected:* No Python tracebacks in the console. LinkForge appears in the `Addons/Extensions` list.
-2.  [ ] **Panel Visibility**: Check the `N-Panel` (Sidebar) in the 3D Viewport.
-    - *Expected:* The **LinkForge** tab exists with panels: *Forge*, *Perceive*, *Control*, and *Validate & Export*.
-3.  [ ] **Preferences**: Open `Edit > Preferences > Extensions > LinkForge`.
-    - *Expected:* Settings for **Joint Visualization** (Unified Size) and **Inertia Visualization** are visible and functional.
-
----
-
-## 📦 Phase 2: Link & Physics Workflow
-**Goal:** Verify geometry processing and mass property configuration.
-
-### 2.1 Creation & Setup
-1.  [ ] **Create Link from Mesh**: Select a Mesh and click `Create Link from Mesh`.
-    - *Expected:* The object **keeps its name**. A child mesh `[Object]_visual` is created.
-2.  [ ] **Add Empty Link Frame**: Click `Add Empty Link Frame` (with nothing or a non-mesh selected).
-    - *Expected:* An **Empty (Plain Axes)** is created at the cursor. It is marked as a link but has 0 visuals and 0 collisions.
-3.  [ ] **Status Visualization**: Select an Empty Link.
-    - *Expected:* The Link Panel shows properties but **Mass** is the only physics option. **Collision tools** are disabled until geometry is added.
-
-### 2.2 Collision Handling
-1.  [ ] **Generation**: Click `Generate Collision`.
-    - *Expected:* A wireframe child named `[Object]_collision` is created.
-2.  [ ] **Alignment (Offset Mesh)**: Move the `_visual` object away from the link origin (e.g., G X 1) and click `Regenerate Collision`.
-    - *Expected:* The collision mesh is **perfectly aligned** with the visual mesh, not doubled or shifted.
-3.  [ ] **Primitive Detection**: Create a Cube, Sphere, or Cylinder link and generate collision.
-    - *Expected:* Detected as `BOX/SPHERE/CYLINDER`. **Collision Quality** slider is hidden.
-4.  [ ] **Mesh (Simplified) (Forced)**: Create a Cylinder. Set `Collision Type` to `Mesh (Simplified)` and click `Regenerate`.
-    - *Expected:* Heuristic shows **"Type: MESH"** (not Cylinder).
-    - *Expected:* The wireframe is **perfectly aligned** with the cylinder, not at `0,0,0`.
-5.  [ ] **Mesh (Simplified) (Complex)**: Use a complex mesh and generate collision.
-    - *Expected:* Detected as `MESH`. **Collision Quality** slider is visible.
-    - *Expected:* Moving the slider regenerates the wireframe mesh (decimation) **in real-time** with instant visual feedback in the viewport.
-6.  [ ] **Merged Mesh**: Create a link with **two separate meshes** as children and click `Generate Collision`.
-    - *Expected:* LinkForge generates a **single** simplified mesh that encapsulates both meshes.
-
-### 2.3 Mass Properties (Physics)
-1.  [ ] **Auto-Inertia**: Change `Mass` value with `Auto-Calculate` ON.
-    - *Expected:* No visual markers appear (LinkForge handles this behind the scenes).
-2.  [ ] **Manual Inertia**: Uncheck `Auto-Calculate Inertia`.
-    - *Expected:* **CoM Gizmos (Sphere and Axes)** appear at origin.
-3.  [ ] **Inertial Offset**: Change `Inertial Origin XYZ` values.
-    - *Expected:* Gizmos **move and rotate** relative to the link origin in real-time as you adjust values.
-    - *Expected:* Gizmos **stay visible** even if you select a different object.
+| Field | Value |
+| :--- | :--- |
+| **Maintainer Name** | (e.g., @arounamounchili) |
+| **Date** | 2026-04-04 |
+| **Blender / OS** | (e.g., Blender 4.2 LTS / macOS Sonoma 14.4) |
+| **LinkForge Version** | (e.g., v1.3.0) |
+| **Build Artifact** | (e.g., linkforge-blender-1.3.0-macos_arm64.zip) |
 
 ---
 
-## 🔗 Phase 3: Joint & Kinematics Workflow
-**Goal:** Validate robot assembly and hierarchy detection.
+## 🚀 Scenario: The Lifecycle of a Robot
+*Goal: Build a functional, synchronized robot from a single mesh to a verified URDF in 20 minutes.*
 
-### 3.1 Joint Creation & Setup
-1.  [ ] **Joint Creation**: Select a Link and click `Create Joint` in the **Forge** or **Joints** panel.
-    - *Expected:* A `Joint Empty` (Arrows) is created at the link's location.
-2.  [ ] **Auto-Detect Parents**: Select a Joint and click the **Auto (Auto)** icon next to "Connection".
-    - *Expected:* The nearest link becomes the **Child Link** (since joint origin = child origin).
-    - *Expected:* The second-nearest link becomes the **Parent Link**.
-    - *Note:* If you already manually set a Child, the tool is smart enough to keep it and only find the nearest **Parent**.
-3.  [ ] **Manual Override**: Verify you can still manually change the `Parent/Child Link` in the dropdowns.
-4.  [ ] **Joint Limits**: Set joint to `REVOLUTE` or `PRISMATIC`.
-    - *Expected:* Limit fields (Lower, Upper, Effort, Velocity) appear **immediately**.
-    - *Note:* There is no "Use Limits" checkbox for these types as URDF requires them.
-5.  [ ] **Optional Limits**: Set joint to `CONTINUOUS`.
-    - *Expected:* A `Use Limits` checkbox appears. Enabling it shows Effort/Velocity fields only.
-6.  [ ] **Mimic Joints**: Set a joint to `Mimic` another joint.
-    - *Expected:* Fields for `Multiplier` and `Offset` appear.
-7.  [ ] **Joint Dynamics**: Enable `Use Dynamics`.
-    - *Expected:* Fields for `Damping` and `Friction` appear.
-8.  [ ] **Joint Safety Controller**: Enable `Use Safety Controller`.
-    - *Expected:* Fields for `Soft Lower Limit`, `Soft Upper Limit`, `k_position`, and `k_velocity` appear.
-9.  [ ] **Joint Calibration**: Enable `Use Calibration`.
-    - *Expected:* Toggles and fields for `Rising` and `Falling` edges appear.
-10. [ ] **Enhanced Viz**: Enable `Show Joint Frames` in Preferences and move the `Frame Size` slider.
-    - *Expected:* Large RGB arrows appear and scale smoothly in the viewport.
+### 🛠 Step 1: Smoke & Installation
+1.  [ ] **Clean Install**: Install the `.zip`. LinkForge appears in the `N-Panel`. Preferences are accessible.
+2.  [ ] **First Link**: Create a Cube. Click `Create Link from Mesh`.
+    - *Expected:* Hierarchy is automated (`[Name]_visual` is child of Link Empty). LinkForge tab is active.
 
----
+### 🔗 Step 2: The Core Assembly (Kinematics & Sync)
+1.  [ ] **Create Bridge**: Add a second `Empty Link`. Add a `Joint` object to the scene.
+2.  [ ] **Automatic Detection**: Select the Joint. Use the **Auto (A)** picker for Parent/Child connection.
+    - *Expected:* One link is assigned as `Parent` and the other as `Child`.
+3.  [ ] **Kinematic Limits**: Set joint to `REVOLUTE`. Set `Lower` and `Upper` limits (e.g., -1.57 to 1.57).
+4.  [ ] **Integrated Sync Test**: Rename the "Child" Link in the Outliner (e.g., `Arm_Link`).
+    - *Expected:* **Joint properties**, **Sensor Attachments**, and **Control Dashboard** entries all update instantly to the new name.
+4.  [ ] **Undo/Redo Resilience**: Press `Ctrl+Z` (Undo rename). Verify properties reverted. `Ctrl+Shift+Z` (Redo).
 
-## 📡 Phase 4: Hardware (Perceive & Control)
-**Goal:** Verify complex ROS 2 component metadata.
+### 🧬 Step 3: Physics & Intelligence
+1.  [ ] **Collision Generation**: Set `Collision Type` to `Mesh (Simplified)`. Click `Generate Collision`.
+    - *Expected:* Wireframe appears. Moving the decimation slider updates the mesh **live** in the viewport.
+2.  [ ] **Inertia Visualization**: Disable `Auto-Calculate Inertia`. Move the `Inertial Origin` sliders.
+    - *Expected:* Viewport Gizmos (Sphere/Axes) move in real-time as values change.
+3.  [ ] **Control Intelligence**: Enable `Use ROS2 Control`. Add the joint to the dashboard. Rename the joint.
+    - *Expected:* The dashboard joint list reflects the new name instantly.
+4.  [ ] **Perception**: Select a Link and click `Create Sensor`. Change type to `Camera`.
+    - *Expected:* A Sensor Empty is created. Renaming the parent link updates the `Link Attachment` field.
 
-1.  [ ] **Sensor Attachment**: Select a Link and click `Create Sensor` in the **Perceive** panel.
-    - *Expected:* Sensor empty is created. Type-specific settings (e.g., Camera resolution) appear when switching `Sensor Type`.
-2.  [ ] **ROS 2 Control Config**: Go to the **Control** panel and enable `Use ROS2 Control`.
-    - *Expected:* "Joint Interfaces" list appears.
-    - *Action:* Click `+` (Add Joint) and select a joint.
-    - *Expected:* The joint is added to the list. Clicking it reveals checkboxes for `Command Interfaces` (Position/Velocity/Effort) and `State Interfaces`. Verify you can toggle them.
+### 🔍 Step 4: Validation & The Export Cycle
+1.  [ ] **Live Hub**: Search for a component name in the **Component Browser**. Filter works.
+2.  [ ] **Run Validation**: Run the validator.
+    - *Expected:* The Component Browser shows all Links, Joints, and Sensors with green "OK" status (no error icons).
+3.  [ ] **Export & Inspect**: Export to `URDF/XACRO` with `Split Files` enabled.
+    - *Expected:* Folder structure is populated. XML contains the correct `xyz/rpy` and `mass/inertia` tags for your construction.
+4.  [ ] **The "Cycle of Life"**: Import the exported file back into a NEW Blender file.
+    - *Expected:* Hierarchy, Sensors, and Physics match the original 1:1. All links are **Locked** 🔒.
 
 ---
 
-## 🚀 Phase 5: Export & Validation
-**Goal:** Ensure the exported output is valid and compliant.
-
-1.  [ ] **Validation Hub**: Go to `Validate & Export` and click `Validate Robot`.
-    - *Expected:* The Component Browser lists all Links, Joints, Sensors. No "Generic Error" icons.
-2.  [ ] **Component Browser Search**: Type a partial name in the Component Browser search bar.
-    - *Expected:* The list filters in real-time.
-    - *Action:* Click the **Clear (X)** icon.
-    - *Expected:* The search field is cleared and all components return.
-3.  [ ] **URDF Export**: Click `Export URDF/XACRO`.
-    - *Expected:* Successful file generation. Check the text file:
-        - `xyz` and `rpy` values match Blender's transforms.
-        - `mass` and `inertia` are non-zero.
-        - Mesh paths are relative to the URDF folder.
-4.  [ ] **XACRO Advanced**: Switch to XACRO format and enable **Extract Materials**, **Extract Dimensions**, and **Generate Macros**.
-    - *Expected:* The output file uses `<xacro:macro>` and `<xacro:property>`.
-    - *Expected:* Property names starting with digits (e.g., `001`) are automatically sanitized (e.g., `_001`).
-4.  [ ] **XACRO Split Files**: Enable **Split Files**.
-    - *Expected:* Generation completes successfully.
-    - *Expected:* `*_robot.xacro` contains `<!-- Properties -->` and `<!-- Macros -->` comments above the corresponding `<xacro:include>` tags.
-    - *Expected:* Split files (`*_properties.xacro`, `*_macros.xacro`) are created and contain their own `<robot>` root tags.
-5.  [ ] **Mesh Staging**: Verify the `meshes/` folder is created next to the URDF if `Export Meshes` was checked.
-
----
-
-## 🛟 Phase 6: Data Resilience
-**Goal:** Verify round-trip integrity and data resilience.
-
-1.  [ ] **Round-Trip Import**: Export your robot, then use `File > Import > LinkForge URDF (.urdf/.xacro)` to import it back into a clean scene.
-    - *Expected:* The robot hierarchy is recreated exactly. Sensors are attached to the correct links.
-    - *Expected:* Physics properties (Mass, Inertia) match the original values.
-    - *Expected:* All links show the 🔒 **Locked** status for collision and inertia.
-2.  [ ] **Undo/Redo Stress Test**: Create a Joint, move it, then press `Ctrl+Z` (Undo) and `Ctrl+Shift+Z` (Redo) multiple times.
-    - *Expected:* The object disappears and reappears cleanly without Python errors.
-3.  [ ] **Deletion Cleanup**: Delete a Link object (Empty) in the viewport.
-    - *Expected:* Its children (Visuals/Collisions) remain but are no longer locked to the LinkForge system.
-    - *Expected:* No "ghost" data remains in the scene properties.
-4.  [ ] **Concurrency/Safety Guard**: While the Forge tab statistics are visible, rapidly add/delete objects or change hierarchies.
-    - *Expected:* The UI and Sidebar remain stable. No **ReferenceError** or **AttributeError** popups (Safety guards in `scene_utils.py` handle these).
-
----
-
-## 🔐 Phase 7: Security & XACRO Advanced Features
-**Goal:** Verify sandbox security and XACRO property substitution.
-
-### 7.1 Sandbox Root & Sibling Folder Access
-1.  [ ] **Standard URDF Structure**: Create a test URDF in `/my_robot/urdf/robot.urdf` with mesh paths like `../meshes/part.stl`.
-    - *Expected:* Import succeeds. LinkForge auto-detects `/my_robot` as the sandbox root.
-    - *Expected:* Meshes from the sibling `meshes/` folder load correctly.
-2.  [ ] **Package.xml Detection**: Create a `package.xml` file in `/my_robot/` and a URDF in `/my_robot/config/deep/robot.urdf`.
-    - *Expected:* LinkForge finds the package root by detecting `package.xml` up to 5 levels up.
-    - *Expected:* Sibling folder access works from the package root.
-3.  [ ] **Path Traversal Prevention**: Manually edit a URDF to include a mesh path like `../../../../etc/passwd`.
-    - *Expected:* Import fails with a security error: "attempts to escape the sandbox root".
-
-### 7.2 XACRO Property Substitution & Math
-1.  [ ] **Property Substitution**: Create a XACRO file with `<xacro:property name="arm_length" value="2.0"/>` and use `${arm_length}` in an origin tag.
-    - *Expected:* Import succeeds. The link origin uses the exact value `2.0`.
-2.  [ ] **Math Expressions**: Use `${arm_length * 2}` in a XACRO origin tag.
-    - *Expected:* Import succeeds. The value is correctly evaluated to `4.0`.
-3.  [ ] **Nested Properties**: Define `<xacro:property name="base" value="1.0"/>` and `<xacro:property name="derived" value="${base * 3}"/>`.
-    - *Expected:* Both properties are correctly substituted and evaluated.
+## 🛡️ Resilience & Security (Pre-Flight)
+1.  [ ] **Sandbox Security**: Attempt to import a URDF with a mesh path escaping the package (e.g., `../../etc/passwd`).
+    - *Expected:* LinkForge blocks the import with a security warning.
+2.  [ ] **XACRO Math**: Import a file with `${prop * 2}` math expressions.
+    - *Expected:* Values are correctly evaluated during the import process.
 
 ---
 
 ## 🏁 Final Verification
+- [ ] No Python tracebacks in the **System Console**.
 - [ ] Robot survives a **File Save & Reload**.
-- [ ] No errors in the **System Console** (`Window > Toggle System Console` on Windows/Linux or Terminal on Mac).
+
+---
+
+## 💡 Known Anomalies
+*The following are intended architectural behaviors:*
+- **Selection Flash**: Viewport may flash a selection outline during a property synchronization move.
+- **Gizmo Delay**: Minor lag (>50ms) possible in extremely high-poly scenes (>5M tris).
+- **Search Case**: Component Browser search is intentionally case-insensitive.
+
+---
+
+> [!IMPORTANT]
+> If any step in the **Lifecycle Scenario** fails, the release IS BLOCKED. Manual verification is the final "Layer of Truth."

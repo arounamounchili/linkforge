@@ -47,9 +47,9 @@ def test_parse_optional_float() -> None:
 
 def test_serialize_xml() -> None:
     root = ET.Element("robot", name="test")
-    xml_str = serialize_xml(root, version="1.2.0")
+    xml_str = serialize_xml(root, version="1.3.0")
     assert "Robot: test" in xml_str
-    assert "v1.2.0" in xml_str
+    assert "v1.3.0" in xml_str
     assert '<robot name="test"' in xml_str
 
 

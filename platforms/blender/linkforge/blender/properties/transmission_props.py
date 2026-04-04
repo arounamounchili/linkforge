@@ -10,41 +10,49 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
 
+from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 from ..utils.property_helpers import find_property_owner
+from ..utils.scene_utils import clear_stats_cache
 
 
 def get_transmission_name(self: TransmissionPropertyGroup) -> str:
-    """Getter for transmission_name.
+    """Getter for transmission_name - returns the persistent URDF identity.
 
     Args:
-        self: The property group instance.
+        self: The TransmissionPropertyGroup instance.
 
     Returns:
-        The sanitized Blender object name.
+        The sanitized URDF name.
     """
+    # Prioritize the stored identity to avoid Blender's .001 suffixing
+    if self.urdf_name_stored:
+        return str(self.urdf_name_stored)
+
     if not self.id_data:
         return ""
 
-    from .link_props import sanitize_urdf_name
-
-    return sanitize_urdf_name(self.id_data.name)
+    return sanitize_urdf_name(str(self.id_data.name))
 
 
 def set_transmission_name(self: TransmissionPropertyGroup, value: str) -> None:
-    """Setter for transmission_name.
+    """Setter for transmission_name - updates persistent identity and object name.
 
     Args:
-        self: The property group instance.
-        value: The new name to set.
+        self: The TransmissionPropertyGroup instance.
+        value: The new name value to set.
     """
     if not value or not self.id_data:
         return
 
-    from .link_props import sanitize_urdf_name
-
+    # Sanitize transmission name for URDF
     sanitized_name = sanitize_urdf_name(value)
 
+    # Store the persistent identity
+    self.urdf_name_stored = sanitized_name
+
+    # Update object name to match transmission name
     if self.id_data.name != sanitized_name:
+        # Block handler loop: We only update if they differ already
         self.id_data.name = sanitized_name
 
 
@@ -107,8 +115,16 @@ class TransmissionPropertyGroup(PropertyGroup):
     # Transmission identification
     is_robot_transmission: BoolProperty(  # type: ignore
         name="Is Robot Transmission",
-        description="Mark this Empty as a robot transmission",
+        description="Mark this object as a robot transmission",
         default=False,
+    )
+
+    # Persistent URDF Identity
+    # Decouples logical URDF naming from physical Blender object names (resilient to .001 suffixes)
+    urdf_name_stored: StringProperty(  # type: ignore
+        name="URDF Name",
+        description="Persistent URDF name. Prevents mapping breakage if Blender renames the object",
+        default="",
     )
 
     transmission_name: StringProperty(  # type: ignore
@@ -117,6 +133,7 @@ class TransmissionPropertyGroup(PropertyGroup):
         maxlen=64,
         get=get_transmission_name,
         set=set_transmission_name,
+        update=clear_stats_cache,
     )
 
     # Transmission type

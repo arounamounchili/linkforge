@@ -18,7 +18,15 @@ if typing.TYPE_CHECKING:
 
 @persistent  # type: ignore[misc]
 def on_depsgraph_update_post(_scene: bpy.types.Scene, _depsgraph: bpy.types.Depsgraph) -> None:
-    """Detect name changes and duplication during depsgraph update."""
+    """Synchronize LinkForge identities when objects are renamed in the Outliner.
+
+    This ensures that internal robot properties (link_name, joint_name) stay in
+    sync with the Blender object names.
+
+    Args:
+        scene: The current Blender scene.
+        _depsgraph: The dependency graph that triggered the update.
+    """
     for obj in bpy.data.objects:
         # Check Links
         if hasattr(obj, "linkforge"):
@@ -31,6 +39,18 @@ def on_depsgraph_update_post(_scene: bpy.types.Scene, _depsgraph: bpy.types.Deps
             jf: JointPropertyGroup = obj.linkforge_joint
             if jf.is_robot_joint and obj.name != jf.joint_name:
                 jf.joint_name = obj.name
+
+        # Check Sensors
+        if hasattr(obj, "linkforge_sensor"):
+            sf = obj.linkforge_sensor
+            if sf.is_robot_sensor and obj.name != sf.sensor_name:
+                sf.sensor_name = obj.name
+
+        # Check Transmissions
+        if hasattr(obj, "linkforge_transmission"):
+            tf = obj.linkforge_transmission
+            if tf.is_robot_transmission and obj.name != tf.transmission_name:
+                tf.transmission_name = obj.name
 
 
 def register() -> None:

@@ -799,7 +799,24 @@ def test_link_ops_create_link_from_mesh_advanced() -> None:
     obj.select_set(True)
 
     bpy.ops.linkforge.create_link_from_mesh()
-    assert "source_mesh_with_spaces" in bpy.data.objects
+    link_obj = bpy.context.active_object
+    assert link_obj.name == "source_mesh_with_spaces"
+
+
+def test_generate_collision_empty_frame_error() -> None:
+    """Test generating collision on an empty frame (no visuals) should fail with clear error."""
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete()
+
+    # 1. Create an empty link frame (no visual child)
+    bpy.ops.linkforge.add_empty_link()
+    link_obj = bpy.context.active_object
+    assert link_obj.linkforge.is_robot_link is True
+    assert len(link_obj.children) == 0
+
+    # 2. Run the operator (should raise RuntimeError with our specific message)
+    with pytest.raises(RuntimeError, match="No visual meshes found"):
+        bpy.ops.linkforge.generate_collision()
 
 
 def test_link_ops_low_level_edge_cases_extended() -> None:

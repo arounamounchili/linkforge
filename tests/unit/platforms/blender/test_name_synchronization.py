@@ -8,15 +8,18 @@ def test_link_urdf_name_persistence() -> None:
     obj1 = bpy.context.active_object
 
     # 1. Set name
+    obj1.linkforge.is_robot_link = True
     obj1.linkforge.link_name = "base_link"
     assert obj1.name == "base_link"
     assert obj1.linkforge.link_name == "base_link"
     assert obj1.linkforge.urdf_name_stored == "base_link"
 
     # 2. Simulate Blender renaming (e.g. by manual rename or suffixing)
-    obj1.name = "base_link_manual"
-    # Getter should still return the stored URDF name
-    assert obj1.linkforge.link_name == "base_link"
+    obj1.name = "chassis"
+    bpy.context.view_layer.update()
+
+    # Getter should now return the SYNCED name
+    assert obj1.linkforge.link_name == "chassis"
 
     # 3. Conflict resolution simulation
     bpy.ops.object.empty_add()
@@ -44,8 +47,11 @@ def test_joint_urdf_name_persistence() -> None:
 
     # 2. Simulate Blender suffixing
     obj.name = "elbow_joint.001"
-    # Getter MUST return the persistent "elbow_joint" for ROS 2 Control mapping
-    assert obj.linkforge_joint.joint_name == "elbow_joint"
+    bpy.context.view_layer.update()
+
+    # Sync should have sanitized and updated both
+    assert obj.linkforge_joint.joint_name == "elbow_joint_001"
+    assert obj.name == "elbow_joint_001"
 
 
 def test_reimport_name_matching() -> None:
@@ -117,8 +123,12 @@ def test_auto_linking_integration() -> None:
     # Verify re-linking by URDF Identity (casting to Any to avoid dynamic property errors)
     lp_final = scene.linkforge  # type: ignore[attr-defined]
     rc_joint = lp_final.ros2_control_joints[0]
+
+    # Trigger one more update to ensure synchronization has finished
+    bpy.context.view_layer.update()
+
     assert rc_joint.joint_obj == joint_obj
-    assert rc_joint.joint_obj.name == "j1.001"  # Linked despite suffix
+    assert rc_joint.joint_obj.name == "j1_001"  # Name was sanitized and synced
 
     # Cleanup
     bpy.data.objects.remove(joint_obj)

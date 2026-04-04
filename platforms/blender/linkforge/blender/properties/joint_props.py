@@ -20,12 +20,20 @@ from bpy.types import Context, PropertyGroup
 if typing.TYPE_CHECKING:
     from .link_props import LinkPropertyGroup
 
+from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 from ..utils.property_helpers import find_property_owner
 from ..utils.scene_utils import clear_stats_cache
 
 
 def get_joint_name(self: JointPropertyGroup) -> str:
-    """Getter for joint_name - returns the persistent URDF identity."""
+    """Getter for joint_name - returns the persistent URDF identity.
+
+    Args:
+        self: The JointPropertyGroup instance.
+
+    Returns:
+        The sanitized URDF name.
+    """
     # Prioritize the stored identity to avoid Blender's .001 suffixing
     if self.urdf_name_stored:
         return str(self.urdf_name_stored)
@@ -33,18 +41,20 @@ def get_joint_name(self: JointPropertyGroup) -> str:
     if not self.id_data:
         return ""
 
-    from .link_props import sanitize_urdf_name
-
     return sanitize_urdf_name(str(self.id_data.name))
 
 
 def set_joint_name(self: JointPropertyGroup, value: str) -> None:
-    """Setter for joint_name - updates persistent identity and object name."""
+    """Setter for joint_name - updates persistent identity and object name.
+
+    Args:
+        self: The JointPropertyGroup instance.
+        value: The new name value to set.
+    """
     if not value or not self.id_data:
         return
 
-    from .link_props import sanitize_urdf_name
-
+    # Sanitize joint name for URDF
     sanitized_name = sanitize_urdf_name(value)
 
     # Store the persistent identity

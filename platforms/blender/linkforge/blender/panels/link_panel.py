@@ -157,12 +157,16 @@ class LINKFORGE_PT_links(Panel):
 
         if collision_count == 0:
             # No collision - offer to generate
-            col.operator(
+            row = col.row()
+            row.enabled = visual_count > 0
+            row.operator(
                 "linkforge.generate_collision", icon="MOD_PHYSICS", text="Generate Collision"
             )
         else:
             # Has collision - offer regenerate AND visibility toggle
-            col.operator(
+            row = col.row()
+            row.enabled = visual_count > 0
+            row.operator(
                 "linkforge.generate_collision", icon="FILE_REFRESH", text="Regenerate Collision"
             )
 

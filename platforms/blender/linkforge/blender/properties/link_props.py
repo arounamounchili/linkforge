@@ -19,11 +19,20 @@ from bpy.props import (
 from bpy.types import Context, PropertyGroup
 
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+from ..utils.link_utils import should_rename_child
 from ..utils.scene_utils import clear_stats_cache
+from ..visualization.inertia_gizmos import tag_redraw
 
 
 def get_link_name(self: LinkPropertyGroup) -> str:
-    """Getter for link_name - returns the persistent URDF identity."""
+    """Getter for link_name - returns the persistent URDF identity.
+
+    Args:
+        self: The LinkPropertyGroup instance.
+
+    Returns:
+        The sanitized URDF name.
+    """
     # Prioritize the stored identity to avoid Blender's .001 suffixing
     if self.urdf_name_stored:
         return str(self.urdf_name_stored)
@@ -33,28 +42,13 @@ def get_link_name(self: LinkPropertyGroup) -> str:
     return sanitize_urdf_name(str(self.id_data.name))
 
 
-def should_rename_child(child_name: str, parent_old_name: str) -> bool:
-    """Check if a child object was auto-named by LinkForge and should be synced.
-
-    Only renames if the child follows the exact [parent_old_name]_visual or
-    [parent_old_name]_collision convention. Custom names are preserved.
-    """
-    prefix_v = f"{parent_old_name}_visual"
-    prefix_c = f"{parent_old_name}_collision"
-
-    # Case 1: Perfect match (e.g., "base_link_visual")
-    # Case 2: Suffix match (e.g., "base_link_visual.001")
-    return bool(
-        child_name.startswith(prefix_v)
-        and (len(child_name) == len(prefix_v) or child_name[len(prefix_v)] in "._")
-    ) or bool(
-        child_name.startswith(prefix_c)
-        and (len(child_name) == len(prefix_c) or child_name[len(prefix_c)] in "._")
-    )
-
-
 def set_link_name(self: LinkPropertyGroup, value: str) -> None:
-    """Setter for link_name - updates persistent identity and object name."""
+    """Setter for link_name - updates persistent identity and object name.
+
+    Args:
+        self: The LinkPropertyGroup instance.
+        value: The new name value to set.
+    """
     if not value or not self.id_data:
         return
 
@@ -91,19 +85,22 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     clear_stats_cache()
 
 
-@typing.no_type_check
-def on_collision_quality_update(self: bpy.types.PropertyGroup, _context: Context) -> None:
+def on_collision_quality_update(self: PropertyGroup, _context: Context) -> None:
     """Update collision mesh preview when quality changes.
 
     This provides live feedback to the user as they adjust the quality slider,
     showing them exactly how the exported collision mesh will look.
-    """
-    if not self.id_data:
-        return
 
-    obj = typing.cast(bpy.types.Object, self.id_data)
-    lf = getattr(obj, "linkforge")
-    if not lf.is_robot_link:
+    Args:
+        self: The LinkPropertyGroup instance owning the quality property.
+        _context: The current Blender context.
+    """
+    # Use id_data to access the object this property is attached to
+    obj = getattr(self, "id_data", None)
+    if not obj:
+        return
+    lf = getattr(obj, "linkforge", None)
+    if not lf or not lf.is_robot_link:
         return
 
     # Find collision object
@@ -111,9 +108,14 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, _context: Context
     if collision_obj is None:
         return
 
-    # Skip regeneration for imported URDF models to preserve ext
-    if collision_obj.get("imported_from_urdf", False):
-        return
+    # Skip regeneration for imported URDF models to preserve external data
+    try:
+        # Use dictionary access for Blender ID properties
+        if collision_obj["imported_from_urdf"]:
+            return
+    except (KeyError, TypeError):
+        # Property doesn't exist, proceed with regeneration
+        pass
 
     # Update ratio in realtime
     from ..operators.link_ops import update_collision_quality_realtime
@@ -123,9 +125,6 @@ def on_collision_quality_update(self: bpy.types.PropertyGroup, _context: Context
 
 def update_inertia_viz(_self: PropertyGroup, _context: Context) -> None:
     """Trigger visual update for inertia gizmos."""
-    from ..utils.scene_utils import clear_stats_cache
-    from ..visualization.inertia_gizmos import tag_redraw
-
     clear_stats_cache()
     tag_redraw()
 
@@ -136,8 +135,6 @@ def update_auto_inertia_toggle(self: PropertyGroup, _context: Context) -> None:
         return
 
     # Always clear cache to ensure the draw handler sees the update immediately
-    from ..utils.scene_utils import clear_stats_cache
-
     clear_stats_cache()
 
     if not getattr(self, "use_auto_inertia", True):

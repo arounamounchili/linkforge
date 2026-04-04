@@ -379,8 +379,8 @@ LinkForge uses **Release Please** to automate versioning and changelogs.
 ### Release Standards
 
 To maintain a professional and consistent appearance:
-- **Tagging**: Always use simple `v` prefixed tags (e.g., `v1.2.0`). This is handled automatically by the configuration.
-- **Release Titles**: Follow the format `v1.x.x: [Major Highlight]`. For example: `v1.2.0: Enhanced Sensor Suite & UI Refinement`.
+- **Tagging**: Always use simple `v` prefixed tags (e.g., `v1.3.0`). This is handled automatically by the configuration.
+- **Release Titles**: Follow the format `v1.x.x: [Major Highlight]`. For example: `v1.3.0: Performance & Control Refinement`.
 - **Changelog**: Use the project's custom sections (🚀 Features, 🐞 Bug Fixes, etc.) to keep notes organized.
 
 > [!NOTE]

@@ -844,7 +844,8 @@ class LINKFORGE_OT_generate_collision(Operator):
     bl_idname = "linkforge.generate_collision"
     bl_label = "Generate Collision"
     bl_description = (
-        "Auto-generate collision geometry from visual mesh (uses primitives when possible)"
+        "Auto-generate collision geometry from visual mesh. "
+        "Requires at least one child mesh with '_visual' suffix."
     )
     bl_options = {"REGISTER", "UNDO"}
 
@@ -939,7 +940,14 @@ class LINKFORGE_OT_generate_collision(Operator):
         collision_obj = create_collision_for_link(link_obj, collision_type, context)
 
         if collision_obj is None:
-            self.report({"ERROR"}, "Failed to generate collision geometry")
+            # Check if it failed because of missing visuals
+            visual_children = [
+                c for c in link_obj.children if "_visual" in c.name.lower() and c.type == "MESH"
+            ]
+            if not visual_children:
+                self.report({"ERROR"}, "No visual meshes found. Cannot generate collision.")
+            else:
+                self.report({"ERROR"}, "Failed to generate collision geometry")
             return {"CANCELLED"}
 
         # Restore selection (fall back to link if original object was deleted)
