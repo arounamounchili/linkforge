@@ -8,7 +8,7 @@ This module contains all Blender-specific code:
 
 from __future__ import annotations
 
-from . import operators, panels, preferences, properties
+from . import handlers, operators, panels, preferences, properties
 from .visualization import inertia_gizmos, joint_gizmos
 
 # Registration order matters: properties first, then operators, then panels, then gizmos
@@ -19,6 +19,7 @@ modules = [
     panels,
     joint_gizmos,
     inertia_gizmos,
+    handlers,
 ]
 
 

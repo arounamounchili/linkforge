@@ -33,6 +33,26 @@ def get_link_name(self: LinkPropertyGroup) -> str:
     return sanitize_urdf_name(str(self.id_data.name))
 
 
+def should_rename_child(child_name: str, parent_old_name: str) -> bool:
+    """Check if a child object was auto-named by LinkForge and should be synced.
+
+    Only renames if the child follows the exact [parent_old_name]_visual or
+    [parent_old_name]_collision convention. Custom names are preserved.
+    """
+    prefix_v = f"{parent_old_name}_visual"
+    prefix_c = f"{parent_old_name}_collision"
+
+    # Case 1: Perfect match (e.g., "base_link_visual")
+    # Case 2: Suffix match (e.g., "base_link_visual.001")
+    return bool(
+        child_name.startswith(prefix_v)
+        and (len(child_name) == len(prefix_v) or child_name[len(prefix_v)] in "._")
+    ) or bool(
+        child_name.startswith(prefix_c)
+        and (len(child_name) == len(prefix_c) or child_name[len(prefix_c)] in "._")
+    )
+
+
 def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     """Setter for link_name - updates persistent identity and object name."""
     if not value or not self.id_data:
@@ -41,45 +61,31 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     # Sanitize link name for URDF (remove invalid characters)
     sanitized_name = sanitize_urdf_name(value)
 
+    # Store the old name before updating for child renaming logic
+    old_urdf_name = self.urdf_name_stored or sanitize_urdf_name(self.id_data.name)
+
     # Store the persistent identity
     self.urdf_name_stored = sanitized_name
 
     # Update object name to match link name
     # Blender will handle collisions by appending suffixes, but our stored name persists
     if self.id_data.name != sanitized_name:
+        # Block handler loop: We only update if they differ already
         self.id_data.name = sanitized_name
 
-    # Clear statistics cache when name changes
-    clear_stats_cache()
-
-    # Update visual and collision children names to match
+    # Update visual and collision children names IF they followed the standard naming pattern
     for child in self.id_data.children:
-        child_lower = child.name.lower()
-        if "_visual" in child_lower:
-            # Preserve any suffix like _visual_02
-            if "_visual_" in child_lower:
-                # Extract suffix (e.g., "_02")
-                parts = child.name.split("_visual_")
-                if len(parts) == 2:
-                    new_name = f"{sanitized_name}_visual_{parts[1]}"
-                    if child.name != new_name:
-                        child.name = new_name
-            else:
-                new_name = f"{sanitized_name}_visual"
-                if child.name != new_name:
-                    child.name = new_name
-        elif "_collision" in child_lower:
-            # Preserve any suffix like _collision_02
-            if "_collision_" in child_lower:
-                parts = child.name.split("_collision_")
-                if len(parts) == 2:
-                    new_name = f"{sanitized_name}_collision_{parts[1]}"
-                    if child.name != new_name:
-                        child.name = new_name
-            else:
-                new_name = f"{sanitized_name}_collision"
-                if child.name != new_name:
-                    child.name = new_name
+        if should_rename_child(child.name, old_urdf_name):
+            # Surgical replacement
+            if "_visual" in child.name:
+                suffix = child.name[len(old_urdf_name) + len("_visual") :]
+                new_name = f"{sanitized_name}_visual{suffix}"
+            else:  # _collision
+                suffix = child.name[len(old_urdf_name) + len("_collision") :]
+                new_name = f"{sanitized_name}_collision{suffix}"
+
+            if child.name != new_name:
+                child.name = new_name
 
     # Clear statistics cache when names/structure changes
     clear_stats_cache()
