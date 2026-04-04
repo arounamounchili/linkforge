@@ -52,5 +52,6 @@ jobs:
 
       - name: Run Blender Tests
         run: |
-          export BLENDER_PATH=$(pwd)/blender/blender
+          BLENDER_PATH="$(pwd)/blender/blender"
+          export BLENDER_PATH
           xvfb-run python blender_launcher.py

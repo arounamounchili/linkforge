@@ -372,5 +372,5 @@ class TestRobotAssembly:
         assembly = RobotAssembly.create("error_test")
         builder = assembly.add_link("l1")
 
-        with pytest.raises(RobotValidationError, match="connect_to\(\) must be called"):
+        with pytest.raises(RobotValidationError, match=r"connect_to\(\) must be called"):
             builder.as_fixed()

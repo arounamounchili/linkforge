@@ -38,7 +38,7 @@ jobs:
         run: just check
 
       - name: Action Quality (actionlint)
-        uses: rhysd/action-actionlint@v1
+        uses: reviewdog/action-actionlint@v1
 
   tests:
     name: Tests (${{ matrix.python-version }})
@@ -121,7 +121,7 @@ jobs:
           args: >-
             --verbose --no-progress
             --exclude ".*\.local"
-            --exclude "https://www.mec.ed.tum.de/.*"
+            --exclude "https://www.mec.ed.tum.de/en/iwb/.*"
             --exclude "https://www.gnu.org/licenses/gpl-3.0"
             --exclude-path "docs/source/.*[a-z0-9]$"
             README.md docs/

@@ -327,8 +327,8 @@ def test_get_object_geometry_mesh_simplified(tmp_path) -> None:
     assert isinstance(geom, (Box, Mesh))
 
 
-def test_get_object_material_logic_no_nodes() -> None:
-    """Verify material extraction from Blender object (No Nodes)."""
+def test_get_object_material_logic_nodes() -> None:
+    """Verify material extraction from Blender object using Nodes (Modern)."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
 
@@ -336,10 +336,19 @@ def test_get_object_material_logic_no_nodes() -> None:
     obj.linkforge.use_material = True
 
     mat = bpy.data.materials.new(name="Test-Mat")
-    mat.use_nodes = False
-    mat.diffuse_color = (1, 0, 0, 1)
-    # Explicitly assign to active material to ensure slot creation in Blender 5.1
-    obj.active_material = mat
+    mat.use_nodes = True
+
+    # Set color via Principled BSDF (standard for Blender 4.2+)
+    nodes = mat.node_tree.nodes
+    bsdf = nodes.get("Principled BSDF")
+    if bsdf:
+        # Use "Base Color" input for standard Principled BSDF
+        bsdf.inputs["Base Color"].default_value = (1.0, 0.0, 0.0, 1.0)
+
+    # Clear and assign explicitly
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+    bpy.context.view_layer.update()
 
     core_mat = get_object_material(obj, obj.linkforge)
     assert core_mat is not None
