@@ -104,3 +104,6 @@ site/
 # Distribution cleanup
 dist/*.zip
 !dist/.gitkeep
+
+# Linting Tools
+actionlint
