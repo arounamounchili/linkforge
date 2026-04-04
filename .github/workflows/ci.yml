@@ -37,6 +37,9 @@ jobs:
       - name: Code Quality
         run: just check
 
+      - name: Action Quality (actionlint)
+        uses: rhysd/action-actionlint@v1
+
   tests:
     name: Tests (${{ matrix.python-version }})
     needs: lint-and-type
@@ -94,13 +97,32 @@ jobs:
 
   check-and-build:
     name: Check & Build
-    needs: [lint-and-type, tests]
+    needs: [lint-and-type, tests, link-checker]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Pass if all jobs succeeded
-        if: needs.lint-and-type.result == 'success' && needs.tests.result == 'success'
+        if: needs.lint-and-type.result == 'success' && needs.tests.result == 'success' && needs.link-checker.result == 'success'
         run: exit 0
       - name: Fail if jobs failed
-        if: needs.lint-and-type.result != 'success' || needs.tests.result != 'success'
+        if: needs.lint-and-type.result != 'success' || needs.tests.result != 'success' || needs.link-checker.result != 'success'
         run: exit 1
+
+  link-checker:
+    name: Link Checker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Link Checker (lychee)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --verbose --no-progress
+            --exclude ".*\.local"
+            --exclude "https://www.mec.ed.tum.de/.*"
+            --exclude "https://www.gnu.org/licenses/gpl-3.0"
+            --exclude-path "docs/source/.*[a-z0-9]$"
+            README.md docs/
+          fail: true

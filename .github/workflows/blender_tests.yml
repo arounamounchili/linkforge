@@ -16,8 +16,18 @@ on:
 
 jobs:
   blender-tests:
-    name: Blender Unit Tests
+    name: Blender Unit Tests (Blender ${{ matrix.blender-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - blender-version: '4.2.0'
+            python-version: '3.11'
+          - blender-version: '4.5.8'
+            python-version: '3.11'
+          - blender-version: '5.1.0'
+            python-version: '3.13'
 
     steps:
       - name: Checkout code
@@ -26,7 +36,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
           enable-cache: true
 
       - name: Install dependencies
@@ -36,7 +46,8 @@ jobs:
       - name: Setup Blender
         uses: ./.github/actions/setup-blender
         with:
-          version: '4.2.0'
+          version: ${{ matrix.blender-version }}
+          python-version: ${{ matrix.python-version }}
           headless: 'true'
 
       - name: Run Blender Tests

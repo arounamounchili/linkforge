@@ -338,7 +338,8 @@ def test_get_object_material_logic_no_nodes() -> None:
     mat = bpy.data.materials.new(name="Test-Mat")
     mat.use_nodes = False
     mat.diffuse_color = (1, 0, 0, 1)
-    obj.data.materials.append(mat)
+    # Explicitly assign to active material to ensure slot creation in Blender 5.1
+    obj.active_material = mat
 
     core_mat = get_object_material(obj, obj.linkforge)
     assert core_mat is not None

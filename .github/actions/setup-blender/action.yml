@@ -9,6 +9,9 @@ inputs:
     description: 'Install X virtual framebuffer for headless testing'
     required: false
     default: 'false'
+  python-version:
+    description: 'Python version to match Blender internal'
+    required: false
 outputs:
   blender-path:
     description: 'Path to Blender executable'
@@ -16,6 +19,12 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Setup Python
+      if: inputs.python-version != ''
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+
     - name: Cache Blender
       uses: actions/cache@v4
       id: cache-blender

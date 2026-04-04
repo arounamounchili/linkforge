@@ -1,6 +1,7 @@
 # LinkForge Developer Commands
 # Standardizes workflows across macOS, Linux, and Windows
 
+
 # Default: List available commands
 default:
     @just --list
@@ -39,8 +40,6 @@ coverage:
 	uv run coverage combine
 	uv run coverage html
 	uv run coverage report
-
-# --- Quality ---
 
 # Run all quality checks
 check: lint type-check
