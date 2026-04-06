@@ -1,6 +1,9 @@
-"""Blender Operators for LinkForge.
+"""Blender Operators for LinkForge actions.
 
-Operators are user actions/commands in Blender.
+This package provide commands for:
+- Link & Joint Management: Marking objects and resetting properties.
+- Component Setup: Adding sensors, transmissions, and hardware interfaces.
+- Data Processing: Importing and exporting URDF, XACRO, and meshes.
 """
 
 from __future__ import annotations

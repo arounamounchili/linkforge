@@ -1,9 +1,9 @@
 """Blender Property Groups for LinkForge.
 
 Property groups store data on Blender objects and scenes:
-- LinkPropertyGroup: Stored on Objects (link properties)
-- JointPropertyGroup: Stored on Empty objects (joint properties)
-- RobotPropertyGroup: Stored on Scene (global robot settings)
+- Robot & Validation: Global settings and diagnostic results.
+- Link & Joint: Core kinematic and physical properties.
+- Sensor, Transmission, & Control: Component-specific hardware settings.
 """
 
 from __future__ import annotations

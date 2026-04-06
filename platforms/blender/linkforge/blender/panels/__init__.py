@@ -1,6 +1,10 @@
 """Blender UI Panels for LinkForge.
 
-Panels provide the user interface in the 3D Viewport sidebar.
+This package provides the 3D Viewport sidebar panels for:
+- Forge: Project management and URDF/XACRO import.
+- Link & Joint: Physical and kinematic property configuration.
+- Sensor, Control, & Transmission: Component and hardware settings.
+- Robot & Export: Global metadata and unified export commands.
 """
 
 from __future__ import annotations

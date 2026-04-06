@@ -1,9 +1,10 @@
 """Blender integration layer for LinkForge.
 
-This module contains all Blender-specific code:
-- Property Groups: Store data on Blender objects
-- Operators: User actions/commands
-- Panels: User interface
+This module contains all Blender-specific logic and UI integration:
+- Property Groups: Stored data for robot, link, joint, and sensor settings.
+- Operators & Panels: User actions and 3D Viewport sidebar interface.
+- Preferences & Handlers: Global configuration and scene-level update logic.
+- Visualization: 3D gizmos for physical and kinematic property inspection.
 """
 
 from __future__ import annotations

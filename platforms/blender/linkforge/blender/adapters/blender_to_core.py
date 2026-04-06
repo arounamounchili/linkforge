@@ -345,12 +345,13 @@ def extract_mesh_triangles(
 
     Args:
         obj: Blender mesh object
+        depsgraph: Optional evaluated dependency graph
+        as_numpy: If True, return NumPy arrays instead of Python lists
 
     Returns:
-        Tuple of (vertices, triangles) or None if not a mesh
-        vertices: List of (x, y, z) coordinates
-        triangles: List of (v0, v1, v2) triangle vertex indices
-
+        Tuple of (vertices, triangles) or None if not a mesh:
+            - vertices: List of (x, y, z) coordinates or (N, 3) NumPy array
+            - triangles: List of (v0, v1, v2) vertex indices or (M, 3) NumPy array
     """
     if obj is None or obj.type != "MESH":
         return None
