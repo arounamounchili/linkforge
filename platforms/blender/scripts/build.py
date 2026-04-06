@@ -191,6 +191,8 @@ def build_extension() -> Path:
         sys.exit(1)
 
     shutil.copytree(CORE_DIR, staging_dir / "linkforge_core")
+    if (REPO_ROOT / "core" / "LICENSE").exists():
+        shutil.copy2(REPO_ROOT / "core" / "LICENSE", staging_dir / "linkforge_core")
     print(f"  Bundled linkforge_core -> {staging_dir / 'linkforge_core'}")
 
     # 3. Copy dependencies (if any)

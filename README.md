@@ -199,7 +199,12 @@ We welcome contributions! LinkForge is a community-driven project.
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+LinkForge follows a **Split-License Model** designed for both community-driven innovation and industrial-scale integration:
+
+- **`linkforge-core` (The Engine)**: Licensed under the **Apache License 2.0**. This permissive license allows industrial partners to integrate the core engine into proprietary pipelines and commercial products.
+- **`platforms/blender` (The UI)**: Licensed under the **GNU General Public License v3.0**. This ensures the visual modeling experience and its community-driven improvements remain open-source.
+
+For more details, see the [LICENSE](LICENSE) (GPL) and [core/LICENSE](core/LICENSE) (Apache) files.
 For third-party component licenses, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## ✨ Our Contributors
