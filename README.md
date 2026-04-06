@@ -30,6 +30,10 @@ It allows you to model your robot as naturally as sculpting a 3D scene, while ac
 | **Physics** | "Close Enough" Mesh Export | **Scientific Inertia & Mass Sanity** |
 | **Control** | Manual `ros2_control` XML | **Centralized Dashboard with auto-generation** |
 | **Fidelity** | One-way export | **Round-Trip Precision (Import → Edit → Export)** |
+| **Sim-to-Real** | Post-Simulation Testing | **Early-Phase Validation & Noise Injection** |
+
+> [!TIP]
+> For a deep dive into our long-term technical strategy and the "Digital Twin" philosophy, see **[VISION.md](VISION.md)**.
 
 ### 🛠️ Technical Specifications
 
