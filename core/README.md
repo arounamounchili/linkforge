@@ -3,17 +3,19 @@
 Universal Robotics Interoperability Library.
 This package contains the core logic for LinkForge, independent of any platform (Blender, etc.).
 
-It provides robust, dependency-minimized parsing and generation of robot descriptions (URDF, Xacro, MJCF), physics engine utilities, and validation models.
+It provides robust, dependency-minimized parsing and generation of robot descriptions (URDF, Xacro, SRDF), physics engine utilities, and validation models.
 
 ## Structure
 
 - `src/linkforge_core/`: The main source code.
-  - `models/`: Data structures representing robots, joints, links, and physics.
-  - `parsers/`: Parsers for URDF, XACRO, and other robotic formats.
-  - `generators/`: Exporters back to XML formats.
+  - `models/`: Data structures representing robots, joints, links, and semantic info (SRDF).
+  - `parsers/`: Parsers for URDF, XACRO, and SRDF formats.
+  - `generators/`: Exporters back to XML formats (URDF, Xacro, SRDF).
+  - `composer/`: Robot assembly logic and factory patterns.
   - `physics/`: Math and kinematics utilities for inertia and joint dynamics.
   - `validation/`: Robust schema validation for robot data.
   - `utils/`: Common helpers and mathematical operations.
+  - `base.py`, `exceptions.py`, `logging_config.py`: Core interfaces, error handling, and logging.
 
 ## Development
 
