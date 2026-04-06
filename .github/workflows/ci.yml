@@ -123,6 +123,7 @@ jobs:
             --exclude ".*\.local"
             --exclude "https://www.mec.ed.tum.de/en/iwb/.*"
             --exclude "https://www.gnu.org/licenses/gpl-3.0"
+            --exclude "https://monorepo.tools/"
             --exclude-path "docs/source/.*[a-z0-9]$"
             README.md docs/
           fail: true

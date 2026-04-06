@@ -200,7 +200,7 @@ uv add --dev sphinx-multiversion
 
 ## Resources
 
-- [Sphinx Documentation](https://www.sphinx-doc.org/)
-- [MyST Parser](https://myst-parser.readthedocs.io/)
-- [Read the Docs Theme](https://sphinx-rtd-theme.readthedocs.io/)
+- [Sphinx Documentation](https://www.sphinx-doc.org/en/master/)
+- [MyST Parser](https://myst-parser.readthedocs.io/en/latest/)
+- [Read the Docs Theme](https://sphinx-rtd-theme.readthedocs.io/en/stable/)
 - [Mermaid Diagrams](https://mermaid.js.org/)
