@@ -145,7 +145,8 @@ class XacroResolver:
             The fully resolved URDF XML as a string.
 
         Raises:
-            RobotParserError: If resolution fails or circular dependencies are found.
+            RobotXacroError: If resolution fails or internal error occurs
+            RobotXacroRecursionError: If circular dependencies are found
         """
         # Deeply nested XACRO files can exceed Python's default recursion limit (usually 1000)
         # We temporarily boost it to ensure we can handle complex industrial robots
@@ -206,6 +207,9 @@ class XacroResolver:
 
         Returns:
             The fully resolved XML as a string.
+
+        Raises:
+            RobotXacroError: If XML is malformed or resolution fails
         """
         old_limit = sys.getrecursionlimit()
         if old_limit < RECURSION_LIMIT_BOOST:
@@ -233,6 +237,10 @@ class XacroResolver:
 
         Returns:
             The cached or newly built structural template.
+
+        Raises:
+            RobotXacroRecursionError: If circular includes are detected
+            RobotXacroError: If XML parsing fails or files cannot be located
         """
         filepath = filepath.resolve()
         if filepath in TEMPLATE_CACHE:
@@ -336,7 +344,7 @@ class XacroResolver:
             The resolved XML element or a container.
 
         Raises:
-            RobotParserError: If maximum recursion depth is exceeded.
+            RobotXacroRecursionError: If maximum recursion depth is exceeded
         """
         self._current_depth += 1
         if self._current_depth > self.max_depth:

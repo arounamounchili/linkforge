@@ -2,7 +2,8 @@
 
 This sub-package provides the logic for ensuring robot models are structurally
 sound and safe for export. It includes checks for kinematic connectivity,
-physics validity, and security validation for external assets.
+physics validity, and semantic validation (e.g. SRDF collision matrices),
+as well as security validation for external assets.
 """
 
 from __future__ import annotations

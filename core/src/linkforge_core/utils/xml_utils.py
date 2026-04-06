@@ -154,7 +154,21 @@ def parse_int(
     default: int | None = None,
     check_name: str | None = None,
 ) -> int:
-    """Parse integer value from XML with comprehensive validation."""
+    """Parse integer value from XML with comprehensive validation.
+
+    Args:
+        text: String to parse
+        attribute_name: Context for error messages
+        default: Default value if text is None
+        check_name: Alias for attribute_name for consistent reporting
+
+    Returns:
+        Parsed integer
+
+    Raises:
+        RobotMathError: If input format is invalid or value is out of range
+        RobotValidationError: If attribute is missing and no default is provided
+    """
     report_name = check_name or attribute_name
 
     if text is not None and not text.strip():
@@ -178,7 +192,18 @@ def parse_int(
 
 
 def parse_vector3(text: str) -> Vector3:
-    """Parse space-separated vector3 string."""
+    """Parse space-separated vector3 string.
+
+    Args:
+        text: Space-separated string (e.g. "1.0 2.0 3.0")
+
+    Returns:
+        Vector3 model
+
+    Raises:
+        RobotValidationError: If vector format is invalid or components are missing
+        RobotMathError: If component values are invalid
+    """
     parts = text.strip().split()
     if len(parts) != 3:
         raise RobotValidationError(check_name="Vector3", value=text, reason="Expected 3 values")
@@ -194,14 +219,36 @@ def parse_vector3(text: str) -> Vector3:
 
 
 def parse_optional_bool(elem: ET.Element, tag: str, default: str = "false") -> bool | None:
-    """Parse optional boolean element."""
+    """Parse optional boolean element.
+
+    Args:
+        elem: Parent XML element
+        tag: Sub-element tag to find
+        default: Default string value if tag is found but content is empty
+
+    Returns:
+        Boolean value if tag exists, else None
+    """
     if elem.find(tag) is not None:
         return elem.findtext(tag, default).lower() == "true"
     return None
 
 
 def parse_optional_float(elem: ET.Element, tag: str, default: float | None = 0.0) -> float | None:
-    """Parse optional float element."""
+    """Parse optional float element.
+
+    Args:
+        elem: Parent XML element
+        tag: Sub-element tag to find
+        default: Default float value if tag content is missing
+
+    Returns:
+        Parsed float if tag exists, else None
+
+    Raises:
+        RobotMathError: If input value is invalid or out of range
+        RobotValidationError: If parsing logic fails
+    """
     if elem.find(tag) is not None:
         text = elem.findtext(tag)
         return parse_float(text, tag, default=default)

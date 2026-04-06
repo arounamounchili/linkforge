@@ -1,4 +1,4 @@
-"""URDF and XACRO generators for converting robot models to file formats."""
+"""URDF, XACRO, and SRDF generators for converting robot models to file formats."""
 
 from .srdf_generator import SRDFGenerator
 from .urdf_generator import URDFGenerator

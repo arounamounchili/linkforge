@@ -1,4 +1,4 @@
-"""URDF/XACRO parsers for importing robot models."""
+"""URDF, XACRO, and SRDF parsers for importing robot models."""
 
 from __future__ import annotations
 

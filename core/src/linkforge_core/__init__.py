@@ -4,10 +4,10 @@ This is a multi-platform core library for robot URDF/XACRO generation.
 It can be used standalone or integrated into various platforms (Blender, Unity, Web, etc.).
 
 Modules:
-    models: Data structures for robots, links, joints, geometry
+    models: Data structures for robots, links, joints, geometry, and SRDF
     physics: Inertia and mass calculations
-    parsers: URDF and XACRO file parsing
-    generators: URDF and XACRO file generation
+    parsers: URDF, XACRO, and SRDF file parsing
+    generators: URDF, XACRO, and SRDF file generation
 """
 
 from __future__ import annotations

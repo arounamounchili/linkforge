@@ -785,7 +785,10 @@ class URDFParser(RobotXMLParser):
             The generic Robot model (Intermediate Representation)
 
         Raises:
-            RobotParserError: If parsing fails
+            RobotParserIOError: If file cannot be read or exceeds size limit
+            XacroDetectedError: If a XACRO file is passed instead of URDF
+            RobotParserXMLRootError: If root tag is not <robot>
+            RobotParserUnexpectedError: If XML is malformed or internal error occurs
         """
         if not filepath.exists():
             raise RobotParserIOError(filepath=filepath, reason="File not found")
@@ -835,7 +838,22 @@ class URDFParser(RobotXMLParser):
         urdf_directory: Path | None = None,
         **_kwargs: Any,
     ) -> Robot:
-        """Parse URDF from string."""
+        """Parse URDF from string.
+
+        Args:
+            urdf_string: URDF XML content as string
+            urdf_directory: Base directory for relative mesh path resolution
+            **kwargs: Additional parsing options
+
+        Returns:
+            The generic Robot model (Intermediate Representation)
+
+        Raises:
+            RobotParserIOError: If string exceeds size limit
+            XacroDetectedError: If string contains XACRO markers
+            RobotParserXMLRootError: If root tag is not <robot>
+            RobotParserUnexpectedError: If XML parsing fails
+        """
         string_size = len(urdf_string.encode("utf-8"))
         if string_size > self.max_file_size:
             raise RobotParserIOError(filepath=Path("string"), reason="URDF string too large")
