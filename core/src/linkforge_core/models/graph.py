@@ -31,7 +31,7 @@ class KinematicGraph:
             joints: Collection of Joint objects forming the edges of the graph.
 
         Raises:
-            RobotModelError: If a joint references a link not present in the links collection.
+            RobotValidationError: If a joint references a link not present in the links collection.
         """
         self.link_names = {link.name for link in links}
         self.joints = list(joints)
@@ -149,7 +149,7 @@ class KinematicGraph:
             List of link names
 
         Raises:
-            RobotModelError: If a cycle is detected
+            RobotValidationError: If a cycle is detected
         """
         if self.has_cycle():
             raise RobotValidationError("CyclicGraph", None, "Graph contains cycles")

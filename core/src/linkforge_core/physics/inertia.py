@@ -425,7 +425,7 @@ def calculate_inertia(geometry: Geometry, mass: float) -> InertiaTensor:
         Inertia tensor about the center of mass
 
     Raises:
-        RobotModelError: If geometry type is not supported
+        RobotPhysicsError: If geometry type is not supported
 
     """
     if mass <= 0:
