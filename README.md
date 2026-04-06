@@ -45,14 +45,15 @@ It allows you to model your robot as naturally as sculpting a 3D scene, while ac
 
 ## 🚀 Key Features
 
-- **Bidirectional Workflow**: Import existing URDF/XACRO files for editing or build complex robot models from scratch using Blender native tools.
-- **Production-Ready Export**: Generates strictly compliant URDF/XACRO files optimized for ROS, ROS 2, and Gazebo. Includes **ROS-Agnostic Asset Resolution**, allowing complex robots to be imported and edited on any platform without requiring a ROS installation.
+- **Bidirectional Workflow**: Import existing URDF, XACRO, or **SRDF** files for editing or build complex robot models from scratch using Blender native tools.
+- **Production-Ready Export**: Generates strictly compliant URDF, XACRO, and **SRDF** files optimized for ROS, ROS 2, and Gazebo. Includes **ROS-Agnostic Asset Resolution**, allowing complex robots to be imported and edited on any platform without requiring a ROS installation.
 - **Linter for Robotics**: Built-in integrity checker inspects robot topology, physics data, and joint limits. It catches simulation-breaking errors (negative inertias, detached links, circular chains) *before* you export.
 - **ROS2 Control Support**: Automatically generates hardware interface configurations for `ros2_control` via a centralized dashboard, compatible with Gazebo and physical hardware.
 - **Complete Sensor Suite**: Integrated support for Camera, Depth Camera, LiDAR, IMU, GPS, **Force/Torque**, and **Contact** sensors with configurable noise models.
 - **Automatic Physics**: Scientifically accurate calculation of mass properties and inertia tensors for both primitive shapes and complex arbitrary meshes.
 - **Advanced XACRO Support**: Intelligent extraction of repeated geometry into macros and shared materials, producing maintainable and modular code.
 - **Round-Trip Fidelity**: The Import → Edit → Export cycle preserves all data with **absolute precision**, including sensor origins, transmission interfaces, and custom user properties.
+- **Modular Robot Assembly**: High-level **Composer API** for assembling robots from modular sub-components, enabling rapid prototyping of complex multi-part systems.
 
 ## 📦 Installation
 
