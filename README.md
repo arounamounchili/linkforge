@@ -41,7 +41,7 @@ It allows you to model your robot as naturally as sculpting a 3D scene, while ac
 | **Control** | ✅ Full | `ros2_control` Dashboard & Gazebo Plugin Integration |
 | **Validation** | ✅ Pro | **Linter for Robotics** catches structural errors before export |
 | **Fidelity** | ✅ Pro | **Round-Trip Precision** for lossless Import/Export |
-| **Formats** | ✅ Full | URDF 1.0, XACRO (Macros, Properties, Multi-file) |
+| **Formats** | ✅ Full | URDF 1.0, XACRO (Macros, Properties, Multi-file), **SRDF** |
 
 ## 🚀 Key Features
 
@@ -176,7 +176,7 @@ The package will be created in the `dist/` directory.
 - [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
 - [x] **v1.2.0**: **Architectural Stability** (Hexagonal Core, Numerical Precision).
 - [x] **v1.3.0**: **Performance & Control** (NumPy Acceleration, Depsgraph, & ROS2 Control).
-- [ ] **v1.4.0**: **Modular Assembly** (SRDF, Composer API, `linkforge_ros`).
+- [/] **v1.4.0**: **Modular Assembly** (SRDF, Composer API, `linkforge_ros`).
 - [ ] **v1.5.0**: **High-Fidelity Expansion pt.1** (MJCF/MuJoCo support).
 - [ ] **v1.6.0**: **High-Fidelity Expansion pt.2** (SDF/Gazebo support).
 - [ ] **v1.7.0**: **Mechanical Debugging** (Real-time IK & Collision Interference Validation).
