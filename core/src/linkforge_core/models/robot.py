@@ -1,7 +1,7 @@
-"""Robot model representing a complete description in LinkForge.
+"""Central Robot model representing the LinkForge Intermediate Representation (IR).
 
-This module provides the central `Robot` class, which serves as the source
-of truth for all kinematic, physical, and sensor data.
+This module provides the core `Robot` class, which serves as the central
+hub for all kinematic, physical, and sensor data within the LinkForge ecosystem.
 """
 
 from __future__ import annotations

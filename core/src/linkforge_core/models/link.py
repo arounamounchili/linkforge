@@ -1,4 +1,4 @@
-"""Link model representing a robot link in URDF."""
+"""Link model representing a rigid body within the LinkForge Intermediate Representation (IR)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Joint model representing connections between links."""
+"""Joint model representing kinematic connections within the LinkForge Intermediate Representation (IR)."""
 
 from __future__ import annotations
 
