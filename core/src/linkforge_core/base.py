@@ -1,8 +1,8 @@
 """Base classes for Robot Generators and Parsers.
 
 This module defines the abstract base classes that all specific format generators
-(URDF, XACRO, MJCF, etc.) and parsers should inherit from. This ensures a consistent
-API for the LinkForge ecosystem.
+(URDF, XACRO, etc.) and parsers should inherit from. This ensures a consistent
+API for the LinkForge ecosystem. Support for MJCF and SDF is planned.
 """
 
 from __future__ import annotations
@@ -11,16 +11,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_checkable
 
-from .exceptions import (  # noqa: F401
+from .exceptions import (
     LinkForgeError,
     RobotGeneratorError,
-    RobotMathError,
     RobotModelError,
     RobotParserError,
-    RobotParserIOError,
-    RobotParserUnexpectedError,
-    RobotParserXMLRootError,
-    RobotValidationError,
     XacroDetectedError,
 )
 
@@ -31,6 +26,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 __all__ = [
+    "RobotGenerator",
     "RobotParser",
     "IResourceResolver",
     "FileSystemResolver",

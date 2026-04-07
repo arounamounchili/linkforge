@@ -193,3 +193,37 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
         res = parser._parse_geometry_element(elem)
         assert res is None
         mock_logger.warning.assert_called()
+
+
+def test_xml_base_format_value_bool_coverage() -> None:
+    """Test boolean formatting logic in RobotXMLGenerator."""
+    import xml.etree.ElementTree as ET
+
+    from linkforge_core.generators.xml_base import RobotXMLGenerator
+
+    class MockGen(RobotXMLGenerator):
+        def generate(self, r, **k):
+            return ""
+
+        def generate_robot_element(self, r):
+            return ET.Element("r")
+
+    gen = MockGen()
+    assert gen._format_value(True) == "true"
+    assert gen._format_value(False) == "false"
+    assert gen._format_value("string") == "string"
+
+
+def test_xml_base_parser_geometry_nones() -> None:
+    """Test geometry parsing fallback when elements are None."""
+    from linkforge_core.parsers.xml_base import RobotXMLParser
+
+    class MockParser(RobotXMLParser):
+        def parse(self, p, **k):
+            pass
+
+    parser = MockParser()
+    assert parser._parse_box(None) is None
+    assert parser._parse_cylinder(None) is None
+    assert parser._parse_sphere(None) is None
+    assert parser._parse_mesh(None, Path(".")) is None

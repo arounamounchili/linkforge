@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from linkforge_core.composer.naming import add_joint_with_renaming, add_link_with_renaming
 from linkforge_core.exceptions import RobotModelError, RobotParserError, XacroDetectedError
 from linkforge_core.models import Joint, Link, Robot
 from linkforge_core.parsers.urdf_parser import URDFParser
@@ -76,10 +77,10 @@ def test_xml_base_robust_joint_addition_errors() -> None:
     joint.name = "unstable_joint"
 
     with (
-        patch("linkforge_core.parsers.xml_base.logger") as mock_logger,
+        patch("linkforge_core.composer.naming.logger") as mock_logger,
         patch.object(robot, "add_joint", side_effect=RobotModelError("invalid parent link")),
     ):
-        parser._add_joint_robust(robot, joint, ET.fromstring('<joint name="unstable_joint"/>'))
+        add_joint_with_renaming(robot, joint, fallback_name="unstable_joint")
         assert mock_logger.warning.called
         assert "invalid parent link" in mock_logger.warning.call_args[0][0]
 
@@ -223,7 +224,7 @@ def test_urdf_parser_link_renaming_recursive() -> None:
     robot.add_link(Link(name="l_duplicate_1"))
 
     # Adding 'l' again should result in 'l_duplicate_2'
-    parser._add_link_robust(robot, Link(name="l"))
+    add_link_with_renaming(robot, Link(name="l"))
     assert "l_duplicate_2" in robot._link_index
 
 

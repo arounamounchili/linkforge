@@ -200,3 +200,30 @@ def test_xml_add_vector() -> None:
     assert elem.tag == "origin"
     assert elem.text == "1.12 2.00 -3.50"
     assert parent.find("origin") is not None
+
+
+def test_create_xml_element_no_formatter() -> None:
+    """Test XML element creation when no specific formatter is provided."""
+    from linkforge_core.utils.xml_utils import create_xml_element
+
+    parent = ET.Element("p")
+    create_xml_element(parent, "child", a=1, b=True)
+    child = parent.find("child")
+    assert child.get("a") == "1"
+    assert child.get("b") == "True"
+
+
+def test_parse_vector3_exception_fallback() -> None:
+    """Test Vector3 parsing fallback and error handling."""
+    import pytest
+    from linkforge_core.exceptions import RobotMathError, RobotValidationError
+    from linkforge_core.utils.xml_utils import parse_vector3
+
+    # Hit RobotMathError (re-raised)
+    with pytest.raises(RobotMathError):
+        parse_vector3("1.0 2.0 invalid")
+
+    # Hit RobotValidationError via IndexError
+    with pytest.raises(RobotValidationError) as exc:
+        parse_vector3("1.0 2.0")
+    assert "Vector3" in str(exc.value)

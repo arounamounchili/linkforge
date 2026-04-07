@@ -39,7 +39,7 @@ from ..models.sensor import (
 )
 from ..models.transmission import Transmission
 from ..utils.math_utils import format_float, format_vector
-from ..utils.xml_utils import serialize_xml
+from ..utils.xml_utils import create_xml_element, serialize_xml
 from ..validation import RobotValidator
 from .xml_base import RobotXMLGenerator
 
@@ -244,10 +244,12 @@ class URDFGenerator(RobotXMLGenerator):
                 f"{format_float(material.color.b)} "
                 f"{format_float(material.color.a)}"
             )
-            ET.SubElement(mat_elem, "color", rgba=rgba_str)
+            create_xml_element(mat_elem, "color", formatter=self._format_value, rgba=rgba_str)
 
         if material.texture:
-            ET.SubElement(mat_elem, "texture", filename=material.texture)
+            create_xml_element(
+                mat_elem, "texture", formatter=self._format_value, filename=material.texture
+            )
 
     def _add_link_element(self, parent: ET.Element, link: Link) -> None:
         """Add link element to parent."""
@@ -370,16 +372,16 @@ class URDFGenerator(RobotXMLGenerator):
     def _add_joint_limits(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add joint mechanical limits."""
         if joint.limits:
-            attrib: dict[str, str] = {
-                "effort": format_float(joint.limits.effort),
-                "velocity": format_float(joint.limits.velocity),
+            attrib = {
+                "effort": joint.limits.effort,
+                "velocity": joint.limits.velocity,
             }
             # Only add lower/upper if they are specified (not for CONTINUOUS joints)
             if joint.limits.lower is not None:
-                attrib["lower"] = format_float(joint.limits.lower)
+                attrib["lower"] = joint.limits.lower
             if joint.limits.upper is not None:
-                attrib["upper"] = format_float(joint.limits.upper)
-            self._create_element(joint_elem, "limit", **attrib)
+                attrib["upper"] = joint.limits.upper
+            create_xml_element(joint_elem, "limit", formatter=self._format_value, **attrib)
 
     def _add_joint_dynamics(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add joint dynamics like damping and friction."""
@@ -394,35 +396,38 @@ class URDFGenerator(RobotXMLGenerator):
     def _add_joint_mimic(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add joint mimic information if applicable."""
         if joint.mimic:
-            mimic_attrib: dict[str, str] = {"joint": joint.mimic.joint}
+            mimic_attrib: dict[str, str | float] = {"joint": joint.mimic.joint}
             if joint.mimic.multiplier != 1.0:
-                mimic_attrib["multiplier"] = format_float(joint.mimic.multiplier)
+                mimic_attrib["multiplier"] = joint.mimic.multiplier
             if joint.mimic.offset != 0.0:
-                mimic_attrib["offset"] = format_float(joint.mimic.offset)
-            self._create_element(joint_elem, "mimic", **mimic_attrib)
+                mimic_attrib["offset"] = joint.mimic.offset
+
+            create_xml_element(joint_elem, "mimic", formatter=self._format_value, **mimic_attrib)
 
     def _add_joint_safety(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add safety controller limits."""
         if joint.safety_controller:
-            safety_attrib: dict[str, str] = {
-                "soft_lower_limit": format_float(joint.safety_controller.soft_lower_limit),
-                "soft_upper_limit": format_float(joint.safety_controller.soft_upper_limit),
-                "k_position": format_float(joint.safety_controller.k_position),
-                "k_velocity": format_float(joint.safety_controller.k_velocity),
+            s = joint.safety_controller
+            safety_attrib = {
+                "soft_lower_limit": s.soft_lower_limit,
+                "soft_upper_limit": s.soft_upper_limit,
+                "k_position": s.k_position,
+                "k_velocity": s.k_velocity,
             }
-            self._create_element(joint_elem, "safety_controller", **safety_attrib)
+            create_xml_element(
+                joint_elem, "safety_controller", formatter=self._format_value, **safety_attrib
+            )
 
     def _add_joint_calibration(self, joint_elem: ET.Element, joint: Joint) -> None:
         """Add joint calibration offsets."""
         if joint.calibration:
-            calib_attrib: dict[str, str] = {}
-            if joint.calibration.rising is not None:
-                calib_attrib["rising"] = format_float(joint.calibration.rising)
-            if joint.calibration.falling is not None:
-                calib_attrib["falling"] = format_float(joint.calibration.falling)
-
-            if calib_attrib:
-                self._create_element(joint_elem, "calibration", **calib_attrib)
+            c = joint.calibration
+            calib_attrib = {"rising": c.rising, "falling": c.falling}
+            # Only add if at least one value is not None
+            if any(v is not None for v in calib_attrib.values()):
+                create_xml_element(
+                    joint_elem, "calibration", formatter=self._format_value, **calib_attrib
+                )
 
     def _add_transmission_element(self, parent: ET.Element, transmission: Transmission) -> None:
         """Add transmission element to parent.
@@ -742,22 +747,6 @@ class URDFGenerator(RobotXMLGenerator):
             bias_stddev_elem = ET.SubElement(noise_elem, "bias_stddev")
             bias_stddev_elem.text = format_float(noise.bias_stddev)
 
-    @staticmethod
-    def _add_optional_bool_element(parent: ET.Element, tag: str, value: bool | None) -> None:
-        """Add optional boolean XML element if value is not None."""
-        if value is not None:
-            elem = ET.SubElement(parent, tag)
-            elem.text = "true" if value else "false"
-
-    @staticmethod
-    def _add_optional_numeric_element(
-        parent: ET.Element, tag: str, value: float | int | None
-    ) -> None:
-        """Add optional numeric XML element if value is not None."""
-        if value is not None:
-            elem = ET.SubElement(parent, tag)
-            elem.text = format_float(float(value))
-
     def _add_gazebo_element(self, parent: ET.Element, gazebo_elem: GazeboElement) -> None:
         """Add Gazebo extension element to parent.
 
@@ -771,12 +760,13 @@ class URDFGenerator(RobotXMLGenerator):
         if gazebo_elem.reference is not None:
             attrib["reference"] = gazebo_elem.reference
 
-        gz_elem = self._create_element(parent, "gazebo", **attrib)
+        gz_elem = create_xml_element(parent, "gazebo", formatter=self._format_value, **attrib)
 
         # Add material if specified
         if gazebo_elem.material is not None:
-            material_elem = ET.SubElement(gz_elem, "material")
-            material_elem.text = gazebo_elem.material
+            from ..utils.xml_utils import xml_add_text
+
+            xml_add_text(gz_elem, "material", gazebo_elem.material)
 
         # Add boolean properties
         self._add_optional_bool_element(gz_elem, "selfCollide", gazebo_elem.self_collide)
