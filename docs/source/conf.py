@@ -51,7 +51,7 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static", "../assets"]
 html_logo = "../assets/linkforge_logo.png"
 
-# -- Options for HTML output -------------------------------------------------
+# -- HTML Theme Options ------------------------------------------------------
 
 html_theme_options = {
     "collapse_navigation": False,
@@ -124,6 +124,14 @@ typehints_document_rtype = True
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
 }
+
+# Resolve ambiguous cross-references for 'type' which is used across many models
+nitpick_ignore = [
+    ("py:obj", "type"),
+    ("py:attr", "type"),
+]
+
+# -- Quality checks & Warning resolution --------------------------------------
 
 # Resolve ambiguous cross-references for 'type' which is used across many models
 nitpick_ignore = [
