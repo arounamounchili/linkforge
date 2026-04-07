@@ -1,16 +1,15 @@
-"""Base XML parser shared across URDF, XACRO, SDF, MJCF."""
+"""Base XML parser shared across URDF, XACRO, etc. Support for MJCF and SDF is planned."""
 
 from __future__ import annotations
 
 __all__ = ["RobotXMLParser"]
 
 import xml.etree.ElementTree as ET
-from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from ..base import IResourceResolver, RobotParser, RobotParserError
-from ..exceptions import RobotModelError, RobotValidationError
+from ..base import IResourceResolver, RobotParser
+from ..exceptions import RobotModelError, RobotParserError, RobotValidationError
 from ..logging_config import get_logger
 from ..models import (
     Box,
@@ -20,7 +19,6 @@ from ..models import (
     InertiaTensor,
     Material,
     Mesh,
-    Robot,
     Sphere,
     Transform,
 )
@@ -32,7 +30,7 @@ from ..utils.xml_utils import (
 from ..validation import validate_mesh_path, validate_package_uri
 
 if TYPE_CHECKING:
-    from ..models.link import Link
+    pass
 
 logger = get_logger(__name__)
 
@@ -240,69 +238,3 @@ class RobotXMLParser(RobotParser):
             inertia = InertiaTensor.zero()
 
         return Inertial(mass=mass, origin=origin, inertia=inertia)
-
-    def _add_link_robust(self, robot: Robot, link: Link) -> None:
-        """Add link to robot, handling duplicates via renaming.
-
-        Args:
-            robot: Target robot model.
-            link: Link to add.
-        """
-        try:
-            robot.add_link(link)
-        except RobotModelError as e:
-            original_name = link.name
-            counter = 1
-            if "already exists" in str(e).lower():
-                while True:
-                    new_name = f"{original_name}_duplicate_{counter}"
-                    if new_name not in robot._link_index:
-                        link = replace(link, name=new_name)
-                        try:
-                            robot.add_link(link)
-                            logger.warning(
-                                f"Renamed duplicate link '{original_name}' to '{new_name}'"
-                            )
-                            break
-                        except RobotModelError:
-                            counter += 1
-                    else:
-                        counter += 1
-            else:
-                logger.warning(f"Skipping invalid link '{original_name}': {e}")
-
-    def _add_joint_robust(self, robot: Robot, joint: Any, joint_elem: ET.Element) -> None:
-        """Add joint to robot, handling duplicates and broken references.
-
-        Args:
-            robot: Target robot model.
-            joint: Joint object to add.
-            joint_elem: XML element for backup naming.
-        """
-        try:
-            robot.add_joint(joint)
-        except RobotModelError as e:
-            joint_name = joint_elem.get("name", "unnamed_joint")
-            if "already exists" in str(e).lower():
-                original_name = joint_name
-                counter = 1
-                while True:
-                    new_name = f"{original_name}_duplicate_{counter}"
-                    if new_name not in robot._joint_index:
-                        joint = replace(joint, name=new_name)
-                        try:
-                            robot.add_joint(joint)
-                            logger.warning(
-                                f"Renamed duplicate joint '{original_name}' to '{new_name}'"
-                            )
-                            break
-                        except RobotModelError as inner_e:
-                            if "not found" in str(inner_e):
-                                msg = f"Skipping duplicate joint '{original_name}': {inner_e}"
-                                logger.warning(msg)
-                                break
-                            counter += 1
-                    else:
-                        counter += 1
-            else:
-                logger.warning(f"Skipping invalid joint '{joint_name}': {e}")

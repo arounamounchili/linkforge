@@ -1,4 +1,4 @@
-"""Base XML generator shared across URDF, XACRO, SDF, MJCF."""
+"""Base XML generator shared across URDF, XACRO, etc. Support for MJCF and SDF is planned."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from ..models.geometry import Box, Cylinder, Mesh, Sphere, Transform
 from ..models.link import Inertial
 from ..utils.math_utils import format_float
 from ..utils.path_utils import get_export_path
+from ..utils.xml_utils import create_xml_element
 
 
 class RobotXMLGenerator(RobotGenerator[str]):
@@ -44,6 +45,8 @@ class RobotXMLGenerator(RobotGenerator[str]):
         """
         if isinstance(value, (float, int)) and not isinstance(value, bool):
             return format_float(float(value))
+        if isinstance(value, bool):
+            return "true" if value else "false"
         return str(value)
 
     def _format_vector(self, x: float, y: float, z: float) -> str:
@@ -139,21 +142,20 @@ class RobotXMLGenerator(RobotGenerator[str]):
                 geometry.scale.x, geometry.scale.y, geometry.scale.z
             )
 
-        self._create_element(geom_elem, "mesh", **attrib)
+        create_xml_element(geom_elem, "mesh", formatter=self._format_value, **attrib)
 
-    def _create_element(
-        self, parent: ET.Element, tag: str, **kwargs: str | float | int | bool | None
-    ) -> ET.Element:
-        """Create an XML element, stripping None values and converting types to str.
+    def _add_optional_bool_element(self, parent: ET.Element, tag: str, value: bool | None) -> None:
+        """Add optional boolean XML element if value is not None."""
+        if value is not None:
+            elem = ET.SubElement(parent, tag)
+            elem.text = "true" if value else "false"
 
-        Args:
-            parent: Parent XML element
-            tag: Tag name for the new element
-            **kwargs: Attributes for the new element
+    def _add_optional_numeric_element(
+        self, parent: ET.Element, tag: str, value: float | int | None
+    ) -> None:
+        """Add optional numeric XML element if value is not None."""
+        if value is not None:
+            from ..utils.math_utils import format_float
 
-        Returns:
-            The newly created XML element
-        """
-        # Convert all values to strings and strip None values
-        attrib = {k: self._format_value(v) for k, v in kwargs.items() if v is not None}
-        return ET.SubElement(parent, tag, attrib)
+            elem = ET.SubElement(parent, tag)
+            elem.text = format_float(float(value))

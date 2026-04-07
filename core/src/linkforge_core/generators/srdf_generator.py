@@ -22,7 +22,7 @@ from ..models import (
 )
 from ..models.robot import Robot
 from ..utils.math_utils import format_float
-from ..utils.xml_utils import serialize_xml
+from ..utils.xml_utils import create_xml_element, serialize_xml
 from .xml_base import RobotXMLGenerator
 
 logger = get_logger(__name__)
@@ -77,9 +77,10 @@ class SRDFGenerator(RobotXMLGenerator):
     def _add_virtual_joints(self, root: ET.Element, virtual_joints: list[VirtualJoint]) -> None:
         """Add virtual joint elements to root."""
         for vj in virtual_joints:
-            self._create_element(
+            create_xml_element(
                 root,
                 "virtual_joint",
+                formatter=self._format_value,
                 name=vj.name,
                 type=vj.type,
                 parent_frame=vj.parent_frame,
@@ -109,9 +110,10 @@ class SRDFGenerator(RobotXMLGenerator):
     def _add_end_effectors(self, root: ET.Element, end_effectors: list[EndEffector]) -> None:
         """Add end effector elements to root."""
         for ee in end_effectors:
-            self._create_element(
+            create_xml_element(
                 root,
                 "end_effector",
+                formatter=self._format_value,
                 name=ee.name,
                 group=ee.group,
                 parent_link=ee.parent_link,
@@ -128,9 +130,10 @@ class SRDFGenerator(RobotXMLGenerator):
     ) -> None:
         """Add disabled collision elements to root."""
         for dc in disabled_collisions:
-            self._create_element(
+            create_xml_element(
                 root,
                 "disable_collisions",
+                formatter=self._format_value,
                 link1=dc.link1,
                 link2=dc.link2,
                 reason=dc.reason,

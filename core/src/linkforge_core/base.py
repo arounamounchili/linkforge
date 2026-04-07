@@ -1,8 +1,9 @@
 """Base classes for Robot Generators and Parsers.
 
-This module defines the abstract base classes that all specific format generators
-(URDF, XACRO, MJCF, etc.) and parsers should inherit from. This ensures a consistent
-API for the LinkForge ecosystem.
+This module defines the abstract base classes that all format-specific generators
+(URDF, SRDF, etc.) and parsers should inherit from. These classes facilitate
+translation between the LinkForge Intermediate Representation (IR) and various
+external robot description formats. Support for MJCF and SDF is planned.
 """
 
 from __future__ import annotations
@@ -11,16 +12,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_checkable
 
-from .exceptions import (  # noqa: F401
+from .exceptions import (
     LinkForgeError,
     RobotGeneratorError,
-    RobotMathError,
     RobotModelError,
     RobotParserError,
-    RobotParserIOError,
-    RobotParserUnexpectedError,
-    RobotParserXMLRootError,
-    RobotValidationError,
     XacroDetectedError,
 )
 
@@ -31,6 +27,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 __all__ = [
+    "RobotGenerator",
     "RobotParser",
     "IResourceResolver",
     "FileSystemResolver",
@@ -43,7 +40,7 @@ __all__ = [
 ]
 
 
-class RobotGenerator(ABC, Generic[T]):  # noqa: UP046
+class RobotGenerator(ABC, Generic[T]):
     """Abstract base class for all Robot Generators."""
 
     @abstractmethod
@@ -84,8 +81,8 @@ class RobotGenerator(ABC, Generic[T]):  # noqa: UP046
     def _save_to_file(self, content: T, filepath: Path, **_kwargs: Any) -> None:
         """Default I/O hook for saving content.
 
-        Supports string-based content by default. Binary generators or formats
-        requiring special handling should override this.
+        Supports both string (text) and binary (bytes) content by default.
+        Formats requiring specialized serialization should override this.
 
         Args:
             content: Generated content from generate()
@@ -138,7 +135,7 @@ class IResourceResolver(Protocol):
 
 
 class FileSystemResolver:
-    """Default resolver that handles standard file paths and package:// URIs."""
+    """Default resolver for local file paths, file://, and package:// URIs."""
 
     def __init__(self, additional_search_paths: list[Path] | None = None) -> None:
         """Initialize the resolver.

@@ -8,7 +8,7 @@ instances against a robot model and returns a unified
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Type  # noqa: UP035
+from typing import TYPE_CHECKING
 
 from .checks import (
     DuplicateNameCheck,
@@ -48,7 +48,7 @@ class RobotValidator:
 
     """
 
-    DEFAULT_CHECKS: list[Type[ValidationCheck]] = [  # noqa: UP006
+    DEFAULT_CHECKS: list[type[ValidationCheck]] = [
         HasLinksCheck,
         DuplicateNameCheck,
         JointReferenceCheck,

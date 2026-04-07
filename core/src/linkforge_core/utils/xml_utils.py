@@ -212,10 +212,8 @@ def parse_vector3(text: str) -> Vector3:
         y = parse_float(parts[1], "y")
         z = parse_float(parts[2], "z")
         return Vector3(x, y, z)
-    except (RobotMathError, RobotValidationError, ValueError, IndexError) as e:
-        if isinstance(e, (RobotMathError, RobotValidationError)):
-            raise
-        raise RobotValidationError(check_name="Vector3", value=text, reason=str(e)) from e
+    except (RobotMathError, RobotValidationError):
+        raise
 
 
 def parse_optional_bool(elem: ET.Element, tag: str, default: str = "false") -> bool | None:
@@ -292,3 +290,27 @@ def xml_add_vector(
     # Create text from formatted components
     text_val = f"{formatter(vector.x)} {formatter(vector.y)} {formatter(vector.z)}"
     return xml_add_text(parent, tag, text_val)
+
+
+def create_xml_element(
+    parent: ET.Element,
+    tag: str,
+    formatter: Callable[[Any], str] | None = None,
+    **kwargs: Any,
+) -> ET.Element:
+    """Create an XML element, stripping None values and converting types to str.
+
+    Args:
+        parent: Parent XML element
+        tag: Tag name for the new element
+        formatter: Optional callable to format values before string conversion
+        **kwargs: Attributes for the new element
+
+    Returns:
+        The newly created XML element
+    """
+    if formatter:
+        attrib = {k: formatter(v) for k, v in kwargs.items() if v is not None}
+    else:
+        attrib = {k: str(v) for k, v in kwargs.items() if v is not None}
+    return ET.SubElement(parent, tag, attrib)

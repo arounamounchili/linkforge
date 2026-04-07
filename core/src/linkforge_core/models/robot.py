@@ -1,7 +1,7 @@
-"""Robot model representing a complete description in LinkForge.
+"""Central Robot model representing the LinkForge Intermediate Representation (IR).
 
-This module provides the central `Robot` class, which serves as the source
-of truth for all kinematic, physical, and sensor data.
+This module provides the core `Robot` class, which serves as the central
+hub for all kinematic, physical, and sensor data within the LinkForge ecosystem.
 """
 
 from __future__ import annotations
@@ -30,9 +30,22 @@ from .transmission import Transmission
 class Robot:
     """Complete robot description containing links, joints, and metadata.
 
-    Performance Note:
-        Uses O(1) hash map lookups for links and joints. The kinematic structure
-        is externally managed via the `KinematicGraph` property.
+    The Robot class acts as the central hub of the LinkForge Intermediate
+    Representation (IR). It maintains a collection of rigid bodies (Links)
+    connected by kinematic constraints (Joints), along with sensors,
+    transmissions, and format-specific metadata.
+
+    Attributes:
+        name: Unique identifier for the robot.
+        version: LinkForge IR schema version (e.g., '1.1').
+        materials: Global material library shared across links.
+        metadata: Arbitrary dictionary for format-specific extensions.
+        resource_resolver: Strategy for locating meshes and external files.
+
+    Note:
+        Uses O(1) hash map lookups for links and joints via internal indices.
+        The kinematic structure (parent-child tree) is managed via the
+        `graph` property.
     """
 
     name: str
@@ -270,7 +283,15 @@ class Robot:
         self._reindex()
 
     def add_link(self, link: Link) -> None:
-        """Add a link to the robot and update indices."""
+        """Add a link to the robot and update indices.
+
+        Args:
+            link: The Link object to add.
+
+        Raises:
+            RobotValidationError: If a link with the same name already exists
+                or if naming conventions are violated.
+        """
         if link.name in self._link_index:
             raise RobotValidationError("LinkName", link.name, "Already exists")
         self._links.append(link)
@@ -278,7 +299,15 @@ class Robot:
         self._graph_cache = None
 
     def add_joint(self, joint: Joint) -> None:
-        """Add a joint to the robot and update indices."""
+        """Add a joint to the robot and update indices.
+
+        Args:
+            joint: The Joint object to add.
+
+        Raises:
+            RobotValidationError: If the joint name is a duplicate or if the
+                referenced parent/child links do not exist.
+        """
         if joint.name in self._joint_index:
             raise RobotValidationError("JointName", joint.name, "Already exists")
 
@@ -320,8 +349,7 @@ class Robot:
             as_parent: If True, get joints where link is parent; if False, where link is child
 
         Returns:
-            List of matching joints
-
+            List of matching joints.
         """
         if as_parent:
             return [joint for joint in self.joints if joint.parent == link_name]
@@ -474,7 +502,7 @@ class Robot:
         self._semantic = value
 
     def __str__(self) -> str:
-        """String representation."""
+        """Return a human-readable summary of the robot structure."""
         parts = [
             f"Robot(name={self.name}",
             f"links={len(self.links)}",

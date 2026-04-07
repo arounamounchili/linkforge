@@ -42,7 +42,7 @@ extensions = [
 
 templates_path = ["_templates"]
 exclude_patterns = ["examples"]
-suppress_warnings = ["autodoc.typehints"]
+suppress_warnings = ["autodoc.typehints", "ref.python"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -51,7 +51,7 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static", "../assets"]
 html_logo = "../assets/linkforge_logo.png"
 
-# -- Options for HTML output -------------------------------------------------
+# -- HTML Theme Options ------------------------------------------------------
 
 html_theme_options = {
     "collapse_navigation": False,
@@ -123,6 +123,20 @@ typehints_document_rtype = True
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
 }
+
+# Resolve ambiguous cross-references for 'type' which is used across many models
+nitpick_ignore = [
+    ("py:obj", "type"),
+    ("py:attr", "type"),
+]
+
+# -- Quality checks & Warning resolution --------------------------------------
+
+# Resolve ambiguous cross-references for 'type' which is used across many models
+nitpick_ignore = [
+    ("py:obj", "type"),
+    ("py:attr", "type"),
+]
 
 # MyST parser settings
 myst_enable_extensions = [

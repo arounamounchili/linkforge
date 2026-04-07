@@ -1,4 +1,4 @@
-"""Joint model representing connections between links."""
+"""Joint model representing kinematic connections within the LinkForge Intermediate Representation (IR)."""
 
 from __future__ import annotations
 
@@ -105,6 +105,14 @@ class Joint:
     """Robot joint (connection between two links).
 
     Defines the kinematic relationship between parent and child links.
+    The joint type determines whether an axis and limits are required or
+    allowed.
+
+    Note:
+        - Revolute/Prismatic: Requires both `axis` and `limits`.
+        - Continuous: Requires `axis`, limits are optional (no range).
+        - Fixed: No axis or limits allowed.
+        - Planar: Requires `axis`.
     """
 
     name: str
@@ -120,7 +128,12 @@ class Joint:
     calibration: JointCalibration | None = None
 
     def __post_init__(self) -> None:
-        """Validate joint configuration."""
+        """Validate joint configuration and kinematic constraints.
+
+        Raises:
+            RobotValidationError: If naming conventions, topology (parent==child),
+                axis, or limit requirements for the joint type are violated.
+        """
         if not self.name:
             raise RobotValidationError("JointName", self.name, "cannot be empty")
 

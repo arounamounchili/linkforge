@@ -1,4 +1,4 @@
-"""Link model representing a robot link in URDF."""
+"""Link model representing a rigid body within the LinkForge Intermediate Representation (IR)."""
 
 from __future__ import annotations
 
@@ -19,6 +19,10 @@ class InertiaTensor:
     [ ixx  ixy  ixz ]
     [ ixy  iyy  iyz ]
     [ ixz  iyz  izz ]
+
+    The tensor must be physically plausible. Diagonals must be non-zero
+    positive values, and the principal moments must satisfy the triangle
+    inequality.
     """
 
     ixx: float
@@ -56,14 +60,18 @@ class InertiaTensor:
 
 @dataclass(frozen=True)
 class Inertial:
-    """Inertial properties of a link."""
+    """Inertial properties of a robot link."""
 
     mass: float
     origin: Transform = Transform.identity()
     inertia: InertiaTensor = field(default_factory=InertiaTensor.zero)
 
     def __post_init__(self) -> None:
-        """Validate mass is non-negative."""
+        """Validate inertial properties.
+
+        Raises:
+            RobotPhysicsError: If mass is negative.
+        """
         if self.mass < 0:
             raise RobotPhysicsError("Mass", self.mass, "Must be non-negative")
 
@@ -141,5 +149,5 @@ class Link:
 
     @property
     def mass(self) -> float:
-        """Get link mass (0.0 if no inertial properties)."""
+        """Get link mass (0.0 if no inertial properties are defined)."""
         return self.inertial.mass if self.inertial else 0.0

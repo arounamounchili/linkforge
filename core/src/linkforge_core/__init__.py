@@ -23,7 +23,7 @@ from .exceptions import (
     XacroDetectedError,
 )
 from .generators import URDFGenerator, XACROGenerator
-from .generators.urdf_generator import format_float, format_vector
+from .utils.math_utils import format_float, format_vector
 
 __all__ = [
     "models",

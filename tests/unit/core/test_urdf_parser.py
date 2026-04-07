@@ -3,8 +3,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from linkforge_core.base import RobotParserError, RobotParserIOError, XacroDetectedError
-from linkforge_core.exceptions import RobotModelError
+from linkforge_core.base import RobotParserError, XacroDetectedError
+from linkforge_core.composer.naming import add_joint_with_renaming, add_link_with_renaming
+from linkforge_core.exceptions import RobotModelError, RobotParserIOError
 from linkforge_core.models import (
     Box,
     CameraInfo,
@@ -826,7 +827,7 @@ class TestURDFParser:
         joint = Joint(name="fixed_joint", type=JointType.FIXED, parent="p", child="c")
 
         # We need to simulate the exact conditions to hit the nested exception handler
-        # in _add_joint_robust.
+        # in _add_joint_with_renaming.
         # This requires add_joint to fail with "already exists" first (to enter rename loop),
         # then fail with "not found" (to hit the break).
 
@@ -836,7 +837,7 @@ class TestURDFParser:
                 RobotModelError("Link 'missing' not found"),
             ]
 
-            parser._add_joint_robust(robot, joint, elem)
+            add_joint_with_renaming(robot, joint, fallback_name=elem.get("name"))
 
             # Should have attempted twice
             assert mock_add.call_count == 2
@@ -990,7 +991,7 @@ class TestURDFParser:
         ):
             parser.parse(path)
 
-    def test_add_joint_robust_renaming(self) -> None:
+    def test_add_joint_with_renaming_renaming(self) -> None:
         """Test robust joint addition with duplicate names."""
         from unittest.mock import MagicMock
 
@@ -1012,11 +1013,11 @@ class TestURDFParser:
             None,  # Success for j_duplicate_2
         ]
 
-        parser._add_joint_robust(robot, joint, joint_elem)
+        add_joint_with_renaming(robot, joint, fallback_name=joint_elem.get("name"))
 
         assert robot.add_joint.call_count == 3
 
-    def test_add_link_robust_renaming(self) -> None:
+    def test_add_link_with_renaming_renaming(self) -> None:
         """Test robust link addition with duplicate names."""
         from unittest.mock import patch
 
@@ -1037,8 +1038,8 @@ class TestURDFParser:
                 None,  # Succeeds for l_duplicate_2
             ]
 
-            with patch("linkforge_core.parsers.xml_base.logger") as mock_logger:
-                parser._add_link_robust(robot, link)
+            with patch("linkforge_core.composer.naming.logger") as mock_logger:
+                add_link_with_renaming(robot, link)
                 assert mock_add_link.call_count == 3
                 assert mock_logger.warning.called
                 assert "Renamed duplicate link" in mock_logger.warning.call_args[0][0]
