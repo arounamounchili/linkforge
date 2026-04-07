@@ -265,7 +265,7 @@ class XACROGenerator(URDFGenerator):
             properties: List to append (name, value) tuples to
         """
         # Collect all dimensions from visual geometries
-        # Format: {dimension_key: [(link_name, value), ...]}  # noqa: ERA001
+        # The dimensions dictionary maps keys to lists of (link_name, value) tuples
         dimensions: dict[str, list[tuple[str, float]]] = defaultdict(list)
 
         for link in robot.links:
