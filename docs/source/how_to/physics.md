@@ -48,7 +48,7 @@ To make a mobile robot more stable, you often want the center of mass to be low.
 ### "Exploding" Robot in Gazebo
 If your robot explodes or flies away immediately upon spawning:
 
-1. **Check for Negative/Zero Inertia**: Run the LinkForge **Validator**. It will catch zero-mass links or invalid tensors.
+1. **Check for Negative/Zero Inertia**: Run the LinkForge **Validator**. It will catch zero-mass links or invalid tensors. LinkForge enforces the **Triangle Inequality** for principal moments to ensure every tensor is physically plausible.
 2. **Check Collisions**: Ensure adjacent links have collisions that don't overlap in the "Zero Configuration". LinkForge automatically displays generated collision meshes in "X-Ray" mode (Visible In Front) to help you inspect internal overlaps.
 3. **Inertia Too Small**: Very small inertia values (like `1e-9`) can cause numerical instability in physics engines. Try increasing the mass or size slightly if possible, or bundle small parts into a larger parent link.
 
@@ -75,8 +75,8 @@ assembly.add_link("chassis") \
     .as_fixed()
 ```
 
-:::{note}
-**Performance (v1.4.0)**: When running inside Blender, inertia calculation for
+::: {note}
+**Performance (v1.3.0)**: When running inside Blender, inertia calculation for
 complex meshes (100k+ triangles) uses a NumPy-vectorized tetrahedral integrator.
 All triangle volumes and inertia components are computed simultaneously, making
 it significantly faster than the pure-Python loop for high-fidelity mesh exports.

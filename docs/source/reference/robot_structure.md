@@ -12,6 +12,26 @@ This document provides a technical specification of how LinkForge maps Blender o
 | **Joint** | `Empty` | Arrows | Colored axes (RGB for XYZ). |
 | **Sensor** | `Empty` | Sphere | Wireframe sphere. Must be a child of a Link Empty. |
 
+## Supported Joint Types
+
+| Type | Axis Required | Limits Allowed | Description |
+| :--- | :--- | :--- | :--- |
+| **revolute** | Yes | Yes | Hinge joint with range limits (rad). |
+| **continuous** | Yes | No | Continuous rotation (e.g., wheels). |
+| **prismatic** | Yes | Yes | Sliding joint with range limits (m). |
+| **fixed** | No | No | Rigid connection, no motion allowed. |
+| **floating** | No | No | 6-DOF unconstrained movement. |
+| **planar** | Yes | No | 2D motion in a plane normal to the axis. |
+
+## Supported Geometry Primitives
+
+| Primitive | Parameters | Notes |
+| :--- | :--- | :--- |
+| **Box** | `size: (x, y, z)` | Defined as half-extents or full size based on export. |
+| **Cylinder** | `radius, length` | Axis of rotation is aligned with Z (standard URDF). |
+| **Sphere** | `radius` | Pure mathematical sphere. |
+| **Mesh** | `filename, scale` | Supports `.stl`, `.obj`, and `.dae`. |
+
 
 ## Naming Conventions
 
@@ -58,6 +78,12 @@ Both Blender and URDF use **Z-up, right-handed** coordinate systems. LinkForge u
 When working with imported robots, LinkForge displays status labels on the Link Empty to communicate data safety:
 - 🔒 **Imported collision: Geometry preserved**: Indicates the collision mesh is locked to the original URDF source.
 - **Auto-Calculate Inertia (Locked)**: Physics properties are preserved from the original `<inertial>` tags.
+
+## Performance & Scalability
+
+LinkForge uses an **O(1) hash-based indexing** system for robot components. Large-scale robots (100+ links) maintain interactive performance during selection and property editing.
+- **Lazy Kinematic Tree**: The parent-child graph (used for IK and gravity compensation) is computed lazily and cached.
+- **Validation**: Real-time linting of 90+ physical and kinematic constraints happens in the background without blocking the UI.
 
 **Coordinate Conventions:**
 - **Blender Default:** Z-up, Y-forward, X-right
