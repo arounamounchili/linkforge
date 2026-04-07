@@ -29,7 +29,7 @@ jobs:
           enable-cache: true
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Install dependencies
         run: just install
@@ -60,7 +60,7 @@ jobs:
           enable-cache: true
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Install dependencies
         run: just install
