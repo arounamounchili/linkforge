@@ -102,15 +102,13 @@ class JointCalibration:
 
 @dataclass(frozen=True)
 class Joint:
-    """
-    Robot joint (connection between two links).
+    """Robot joint (connection between two links).
 
     Defines the kinematic relationship between parent and child links.
     The joint type determines whether an axis and limits are required or
     allowed.
 
-    Constraints:
-
+    Note:
         - Revolute/Prismatic: Requires both `axis` and `limits`.
         - Continuous: Requires `axis`, limits are optional (no range).
         - Fixed: No axis or limits allowed.

@@ -13,8 +13,7 @@ from .material import Material
 
 @dataclass(frozen=True)
 class InertiaTensor:
-    """
-    3x3 inertia tensor representation.
+    """3x3 inertia tensor representation.
 
     Symmetric tensor with 6 unique components:
     [ ixx  ixy  ixz ]
@@ -61,9 +60,7 @@ class InertiaTensor:
 
 @dataclass(frozen=True)
 class Inertial:
-    """
-    Inertial properties of a robot link.
-    """
+    """Inertial properties of a robot link."""
 
     mass: float
     origin: Transform = Transform.identity()
@@ -100,8 +97,7 @@ class Collision:
 
 @dataclass
 class Link:
-    """
-    Robot link (rigid body in the kinematic chain).
+    """Robot link (rigid body in the kinematic chain).
 
     A link is a rigid body with visual, collision, and inertial properties.
     URDF allows multiple <visual> and <collision> elements per link.

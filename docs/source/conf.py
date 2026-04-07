@@ -42,7 +42,7 @@ extensions = [
 
 templates_path = ["_templates"]
 exclude_patterns = ["examples"]
-suppress_warnings = ["autodoc.typehints"]
+suppress_warnings = ["autodoc.typehints", "ref.python"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -104,7 +104,6 @@ napoleon_use_rtype = True
 napoleon_preprocess_types = True
 napoleon_type_aliases = None
 napoleon_attr_annotations = False
-napoleon_custom_sections = ["Constraints", "Performance Note"]
 
 # Autodoc settings
 autodoc_default_options = {
