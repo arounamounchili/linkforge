@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
 
-from ..exceptions import RobotPhysicsError, RobotValidationError
+from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Geometry, Transform
 from .material import Material
@@ -36,7 +36,12 @@ class InertiaTensor:
         """Validate inertia tensor values."""
         # All diagonal elements must be positive
         if self.ixx <= 0 or self.iyy <= 0 or self.izz <= 0:
-            raise RobotPhysicsError("DiagonalInertia", self.ixx, "Must be positive (ixx, iyy, izz)")
+            raise RobotPhysicsError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Diagonal inertia components must be positive",
+                target="DiagonalInertia",
+                value=(self.ixx, self.iyy, self.izz),
+            )
 
         # Triangle inequality for principal moments
         # https://en.wikipedia.org/wiki/Moment_of_inertia#Principal_axes
@@ -48,7 +53,10 @@ class InertiaTensor:
             and self.izz + self.ixx >= self.iyy - epsilon
         ):
             raise RobotPhysicsError(
-                "InertiaTriangleInequality", self.ixx, "Violates physical bounds"
+                ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
+                "Inertia tensor violates triangle inequality (unphysical)",
+                target="InertiaTriangleInequality",
+                value=(self.ixx, self.iyy, self.izz),
             )
 
     @classmethod
@@ -73,7 +81,12 @@ class Inertial:
             RobotPhysicsError: If mass is negative.
         """
         if self.mass < 0:
-            raise RobotPhysicsError("Mass", self.mass, "Must be non-negative")
+            raise RobotPhysicsError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Mass must be non-negative",
+                target="Mass",
+                value=self.mass,
+            )
 
 
 @dataclass(frozen=True)
@@ -118,11 +131,18 @@ class Link:
     ) -> None:
         """Validate link."""
         if not self.name:
-            raise RobotValidationError("LinkName", self.name, "cannot be empty")
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY, "Link name cannot be empty", target="LinkName"
+            )
 
         # URDF naming convention: lowercase with underscores
         if not is_valid_urdf_name(self.name):
-            raise RobotValidationError("LinkName", self.name, "Invalid characters")
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_NAME,
+                "Invalid characters in link name",
+                target="LinkName",
+                value=self.name,
+            )
 
         if initial_visuals:
             self._visuals.extend(initial_visuals)

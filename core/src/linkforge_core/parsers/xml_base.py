@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..base import IResourceResolver, RobotParser
-from ..exceptions import RobotModelError, RobotParserError, RobotValidationError
+from ..exceptions import (
+    RobotModelError,
+    RobotParserError,
+    RobotValidationError,
+    ValidationErrorCode,
+)
 from ..logging_config import get_logger
 from ..models import (
     Box,
@@ -129,7 +134,12 @@ class RobotXMLParser(RobotParser):
             return None
         filename = mesh.get("filename", mesh.get("file", ""))
         if not filename:
-            raise RobotValidationError(check_name="Mesh", reason="Missing filename")
+            raise RobotValidationError(
+                ValidationErrorCode.VALUE_EMPTY,
+                "Mesh filename is missing",
+                target="Mesh",
+                value=filename,
+            )
 
         # Path Security Validation
         validation_path: Path | None = None

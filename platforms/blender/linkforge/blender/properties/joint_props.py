@@ -20,9 +20,10 @@ from bpy.types import Context, PropertyGroup
 if typing.TYPE_CHECKING:
     from .link_props import LinkPropertyGroup
 
-from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
-from ..utils.property_helpers import find_property_owner
-from ..utils.scene_utils import clear_stats_cache
+from linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+
+from linkforge.blender.utils.property_helpers import find_property_owner
+from linkforge.blender.utils.scene_utils import clear_stats_cache
 
 
 def get_joint_name(self: JointPropertyGroup) -> str:
@@ -83,7 +84,10 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
     if joint_obj is None or not self.is_robot_joint:
         return
 
-    from ..utils.transform_utils import clear_parent_keep_transform, set_parent_keep_transform
+    from linkforge.blender.utils.transform_utils import (
+        clear_parent_keep_transform,
+        set_parent_keep_transform,
+    )
 
     # Parent-child objects directly from pointers
     parent_obj = self.parent_link
@@ -95,7 +99,7 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
         set_parent_keep_transform(joint_obj, parent_obj)
 
         # Move to parent's collection (organization)
-        from ..utils.scene_utils import sync_object_collections
+        from linkforge.blender.utils.scene_utils import sync_object_collections
 
         sync_object_collections(joint_obj, parent_obj)
     elif joint_obj.parent:

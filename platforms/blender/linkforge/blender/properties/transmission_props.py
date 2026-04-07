@@ -9,10 +9,10 @@ from __future__ import annotations
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
+from linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
 
-from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
-from ..utils.property_helpers import find_property_owner
-from ..utils.scene_utils import clear_stats_cache
+from linkforge.blender.utils.property_helpers import find_property_owner
+from linkforge.blender.utils.scene_utils import clear_stats_cache
 
 
 def get_transmission_name(self: TransmissionPropertyGroup) -> str:

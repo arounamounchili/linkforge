@@ -154,7 +154,9 @@ class TestRobotAssembly:
         # 1. Test missing parent link in assembly
         bad_component = Robot(name="comp")
         bad_component.add_link(Link(name="l1"))
-        with pytest.raises(RobotValidationError, match="Attachment link not found"):
+        with pytest.raises(
+            RobotValidationError, match=r"\[NOT_FOUND\] Attachment link 'non_existent' not found"
+        ):
             assembly.attach(bad_component, at_link="non_existent", joint_name="j")
 
         # 2. Test component with no root (empty)

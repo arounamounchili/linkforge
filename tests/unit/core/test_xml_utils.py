@@ -80,19 +80,19 @@ def test_parsing_fallbacks() -> None:
     import pytest
 
     # Invalid floats
-    with pytest.raises(RobotModelError, match="must be a finite number"):
+    with pytest.raises(RobotModelError, match="Non-finite float value"):
         parse_float("NaN")
-    with pytest.raises(RobotModelError, match="must be a finite number"):
+    with pytest.raises(RobotModelError, match="Non-finite float value"):
         parse_float("inf")
     with pytest.raises(RobotModelError, match="outside reasonable range"):
         parse_float("1e11")
-    with pytest.raises(RobotModelError, match="must be a finite number"):
+    with pytest.raises(RobotModelError, match="Invalid float format"):
         parse_float("not-a-float")
 
     # Invalid ints
     with pytest.raises(RobotModelError, match="outside reasonable range"):
         parse_int("2000000")
-    with pytest.raises(RobotModelError, match="invalid format"):
+    with pytest.raises(RobotModelError, match="Invalid integer format"):
         parse_int("not-an-int")
 
     # Optional bool
@@ -110,7 +110,7 @@ def test_parse_vector3_errors() -> None:
         parse_vector3("1 2")
     with pytest.raises(RobotModelError, match="Expected 3 values"):
         parse_vector3("1 2 3 4")
-    with pytest.raises(RobotModelError, match="must be a finite number"):
+    with pytest.raises(RobotModelError, match="Invalid float format"):
         parse_vector3("1 2 a")
 
 
@@ -124,7 +124,7 @@ def test_validate_xml_depth_exceeded() -> None:
     for _ in range(MAX_XML_DEPTH + 1):
         curr = ET.SubElement(curr, "a")
 
-    with pytest.raises(RobotModelError, match="Nesting too deep"):
+    with pytest.raises(RobotModelError, match="exceeds limit"):
         validate_xml_depth(root)
 
 

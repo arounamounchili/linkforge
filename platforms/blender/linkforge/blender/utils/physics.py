@@ -6,16 +6,15 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import numpy as np  # type: ignore[import-not-found]
-
-    from ...linkforge_core.models.link import InertiaTensor
+    from linkforge_core.models.link import InertiaTensor
 else:
     try:
         import numpy as np  # type: ignore[import-not-found]
     except ImportError:
         np = None
 
-from ...linkforge_core.logging_config import get_logger
-from ...linkforge_core.models.link import InertiaTensor
+from linkforge_core.logging_config import get_logger
+from linkforge_core.models.link import InertiaTensor
 
 logger = get_logger(__name__)
 

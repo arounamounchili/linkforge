@@ -26,9 +26,9 @@ else:
 
 from dataclasses import dataclass
 
-from ...linkforge_core.exceptions import RobotValidationError
-from ...linkforge_core.logging_config import get_logger
-from ...linkforge_core.models import (
+from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+from linkforge_core.logging_config import get_logger
+from linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -64,16 +64,17 @@ from ...linkforge_core.models import (
     Vector3,
     Visual,
 )
-from ...linkforge_core.models.transmission import (
+from linkforge_core.models.transmission import (
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
     TransmissionType,
 )
-from ...linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
-from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
-from ...linkforge_core.utils.string_utils import sanitize_name
-from ..utils.physics import calculate_mesh_inertia_numpy
+from linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
+from linkforge_core.utils.math_utils import clean_float, normalize_vector
+from linkforge_core.utils.string_utils import sanitize_name
+
+from linkforge.blender.utils.physics import calculate_mesh_inertia_numpy
 
 # Constants
 logger = get_logger(__name__)
@@ -799,16 +800,38 @@ def blender_joint_to_core(obj: Any) -> Joint | None:
     parent_obj = props.parent_link
     child_obj = props.child_link
 
-    parent = parent_obj.linkforge.link_name if parent_obj else ""
-    child = child_obj.linkforge.link_name if child_obj else ""
+    parent = (
+        (
+            parent_obj.linkforge.link_name
+            if parent_obj and parent_obj.linkforge.link_name
+            else parent_obj.name
+        )
+        if parent_obj
+        else ""
+    )
+    child = (
+        (
+            child_obj.linkforge.link_name
+            if child_obj and child_obj.linkforge.link_name
+            else child_obj.name
+        )
+        if child_obj
+        else ""
+    )
 
     if not parent:
         raise RobotValidationError(
-            "ParentLink", joint_name, "Joint has no parent link. Please select a Parent Link."
+            ValidationErrorCode.NOT_FOUND,
+            "Joint has no parent link. Please select a Parent Link.",
+            target="ParentLink",
+            value=joint_name,
         )
     if not child:
         raise RobotValidationError(
-            "ChildLink", joint_name, "Joint has no child link. Please select a Child Link."
+            ValidationErrorCode.NOT_FOUND,
+            "Joint has no child link. Please select a Child Link.",
+            target="ChildLink",
+            value=joint_name,
         )
 
     return Joint(
@@ -906,10 +929,14 @@ def blender_transmission_to_core(obj: Any) -> Transmission | None:
         j2_obj = props.joint2_name
         if j1_obj and j2_obj:
             j1_name = (
-                j1_obj.linkforge_joint.joint_name if hasattr(j1_obj, "linkforge_joint") else ""
+                j1_obj.linkforge_joint.joint_name
+                if hasattr(j1_obj, "linkforge_joint") and j1_obj.linkforge_joint.joint_name
+                else ""
             ) or j1_obj.name
             j2_name = (
-                j2_obj.linkforge_joint.joint_name if hasattr(j2_obj, "linkforge_joint") else ""
+                j2_obj.linkforge_joint.joint_name
+                if hasattr(j2_obj, "linkforge_joint") and j2_obj.linkforge_joint.joint_name
+                else ""
             ) or j2_obj.name
 
             joints.append(
@@ -1209,7 +1236,7 @@ def scene_to_robot(
                         parameters=params,
                     )
                     # Note: We wrap the plugin in a GazeboElement without a reference (global)
-                    from ...linkforge_core.models.gazebo import GazeboElement
+                    from linkforge_core.models.gazebo import GazeboElement
 
                     robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
         except Exception as e:
@@ -1222,7 +1249,10 @@ def scene_to_robot(
         error_summary = "\n".join(f"  - {err}" for err in conversion_errors)
         # In non-strict mode, always raise with all collected errors
         raise RobotValidationError(
-            "RobotConversion", robot_name, f"Multiple configuration errors found:\n{error_summary}"
+            ValidationErrorCode.INVALID_VALUE,
+            f"Multiple configuration errors found:\n{error_summary}",
+            target="RobotConversion",
+            value=robot_name,
         )
 
     return robot, conversion_errors
@@ -1252,13 +1282,22 @@ def blender_sensor_to_core(obj: Any) -> Sensor | None:
     sensor_name = props.sensor_name if props.sensor_name else obj.name
     sensor_type = SensorType(props.sensor_type.lower())
     link_obj = props.attached_link
-    link_name = link_obj.linkforge.link_name if link_obj else ""
+    link_name = (
+        (
+            link_obj.linkforge.link_name
+            if link_obj and link_obj.linkforge.link_name
+            else link_obj.name
+        )
+        if link_obj
+        else ""
+    )
 
     if not link_name:
         raise RobotValidationError(
-            "SensorAttachment",
-            sensor_name,
+            ValidationErrorCode.NOT_FOUND,
             "Sensor is not attached to any link. Please select a parent link.",
+            target="SensorAttachment",
+            value=sensor_name,
         )
 
     # Build sensor origin from object transform

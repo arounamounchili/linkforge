@@ -64,7 +64,7 @@ class TestParseVector3:
 
     def test_parse_invalid_non_numeric(self) -> None:
         """Test that parsing non-numeric values raises RobotModelError."""
-        with pytest.raises(RobotModelError, match="must be a finite number"):
+        with pytest.raises(RobotModelError, match="Invalid float format"):
             parse_vector3("1.0 abc 3.0")
 
     def test_parse_empty_string(self) -> None:
@@ -970,7 +970,7 @@ class TestURDFParserErrorHandling:
         robot = URDFParser().parse(urdf_file)
         assert len(robot.joints) == 0
         assert "Skipping invalid joint 'joint1'" in caplog.text
-        assert "Validation failed [ParentLink]" in caplog.text
+        assert "Parent link name cannot be empty" in caplog.text
 
     def test_missing_joint_child(self, tmp_path: Path, caplog) -> None:
         """Test that joint without child link is skipped gracefully."""
@@ -992,7 +992,7 @@ class TestURDFParserErrorHandling:
         robot = URDFParser().parse(urdf_file)
         assert len(robot.joints) == 0
         assert "Skipping invalid joint 'joint1'" in caplog.text
-        assert "Validation failed [ChildLink]" in caplog.text
+        assert "Child link name cannot be empty" in caplog.text
 
     def test_invalid_geometry_values(self, tmp_path: Path) -> None:
         """Test that invalid geometry dimensions are handled gracefully."""

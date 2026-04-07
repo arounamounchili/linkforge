@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from ..exceptions import RobotValidationError
+from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_urdf_name
 from .geometry import Transform, Vector3
 
@@ -38,12 +38,25 @@ class JointLimits:
         # Only validate lower/upper relationship if both are provided
         if self.lower is not None and self.upper is not None and self.lower > self.upper:
             raise RobotValidationError(
-                "JointLimitRange", f"{self.lower} > {self.upper}", "Lower must be <= Upper"
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Lower limit must be <= Upper limit",
+                target="JointLimitRange",
+                value=(self.lower, self.upper),
             )
         if self.effort < 0:
-            raise RobotValidationError("JointEffort", self.effort, "Must be non-negative")
+            raise RobotValidationError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Effort must be non-negative",
+                target="JointEffort",
+                value=self.effort,
+            )
         if self.velocity < 0:
-            raise RobotValidationError("JointVelocity", self.velocity, "Must be non-negative")
+            raise RobotValidationError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Velocity must be non-negative",
+                target="JointVelocity",
+                value=self.velocity,
+            )
 
 
 @dataclass(frozen=True)
@@ -56,9 +69,19 @@ class JointDynamics:
     def __post_init__(self) -> None:
         """Validate dynamics."""
         if self.damping < 0:
-            raise RobotValidationError("JointDamping", self.damping, "Must be non-negative")
+            raise RobotValidationError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Damping must be non-negative",
+                target="JointDamping",
+                value=self.damping,
+            )
         if self.friction < 0:
-            raise RobotValidationError("JointFriction", self.friction, "Must be non-negative")
+            raise RobotValidationError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Friction must be non-negative",
+                target="JointFriction",
+                value=self.friction,
+            )
 
 
 @dataclass(frozen=True)
@@ -135,21 +158,39 @@ class Joint:
                 axis, or limit requirements for the joint type are violated.
         """
         if not self.name:
-            raise RobotValidationError("JointName", self.name, "cannot be empty")
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY, "Joint name cannot be empty", target="JointName"
+            )
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
-            raise RobotValidationError("JointName", self.name, "Invalid characters")
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_NAME,
+                "Invalid characters in joint name",
+                target="JointName",
+                value=self.name,
+            )
 
         if not self.parent:
-            raise RobotValidationError("ParentLink", self.parent, "cannot be empty")
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY,
+                "Parent link name cannot be empty",
+                target="ParentLink",
+            )
 
         if not self.child:
-            raise RobotValidationError("ChildLink", self.child, "cannot be empty")
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY,
+                "Child link name cannot be empty",
+                target="ChildLink",
+            )
 
         if self.parent == self.child:
             raise RobotValidationError(
-                "JointTopology", self.parent, "Parent and child cannot be the same"
+                ValidationErrorCode.INVALID_VALUE,
+                "Parent and child links cannot be the same",
+                target="JointTopology",
+                value=self.parent,
             )
 
         # Validate Axis requirements
@@ -162,23 +203,35 @@ class Joint:
         ):
             if self.axis is None:
                 raise RobotValidationError(
-                    "JointAxis", self.type.value, "Axis required for this type"
+                    ValidationErrorCode.INVALID_VALUE,
+                    f"Axis required for joint type '{self.type.value}'",
+                    target="JointAxis",
+                    value=self.type.value,
                 )
         elif self.type in (JointType.FIXED, JointType.FLOATING) and self.axis is not None:
             raise RobotValidationError(
-                "JointAxis", self.type.value, "Axis not allowed for this type"
+                ValidationErrorCode.INVALID_VALUE,
+                f"Axis not allowed for joint type '{self.type.value}'",
+                target="JointAxis",
+                value=self.type.value,
             )
 
         # Validate Limits
         if self.type in (JointType.REVOLUTE, JointType.PRISMATIC):
             if self.limits is None:
                 raise RobotValidationError(
-                    "JointLimits", self.type.value, "Limits required for this type"
+                    ValidationErrorCode.INVALID_VALUE,
+                    f"Limits required for joint type '{self.type.value}'",
+                    target="JointLimits",
+                    value=self.type.value,
                 )
             # Limit validity is already checked in JointLimits.__post_init__ (RobotModelError)
         elif self.type == JointType.FIXED and self.limits is not None:
             raise RobotValidationError(
-                "JointLimits", self.type.value, "Limits not allowed for this type"
+                ValidationErrorCode.INVALID_VALUE,
+                f"Limits not allowed for joint type '{self.type.value}'",
+                target="JointLimits",
+                value=self.type.value,
             )
 
         # Validate and normalize axis if present
@@ -187,12 +240,20 @@ class Joint:
 
             axis_magnitude = math.sqrt(self.axis.x**2 + self.axis.y**2 + self.axis.z**2)
             if axis_magnitude < 1e-10:
-                raise RobotValidationError("JointAxisMagnitude", axis_magnitude, "Too small")
+                raise RobotValidationError(
+                    ValidationErrorCode.OUT_OF_RANGE,
+                    "Joint axis magnitude is too small",
+                    target="JointAxisMagnitude",
+                    value=axis_magnitude,
+                )
 
             # Enforce normalized axis in model
             if abs(axis_magnitude - 1.0) > 1e-6:
                 raise RobotValidationError(
-                    "JointAxisNormalization", axis_magnitude, "Must be unit vector"
+                    ValidationErrorCode.INVALID_VALUE,
+                    "Joint axis must be a unit vector",
+                    target="JointAxisNormalization",
+                    value=axis_magnitude,
                 )
 
     @property

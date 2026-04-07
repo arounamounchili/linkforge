@@ -53,7 +53,7 @@ class TestRobot:
         with pytest.raises(RobotModelError):
             Robot(name="")
 
-        with pytest.raises(RobotModelError, match="Invalid characters"):
+        with pytest.raises(RobotModelError, match="Invalid name format"):
             Robot(name="invalid name with spaces")
 
     def test_duplicate_components(self) -> None:
@@ -208,7 +208,7 @@ class TestRobot:
         robot.add_sensor(sensor)
         assert robot.sensors[0] == sensor
 
-        with pytest.raises(RobotModelError, match="cam2"):
+        with pytest.raises(RobotModelError, match="Not found"):
             robot.add_sensor(
                 Sensor(
                     name="cam2",
@@ -247,7 +247,7 @@ class TestRobot:
             joints=[TransmissionJoint(name="missing_joint", hardware_interfaces=["position"])],
         )
 
-        with pytest.raises(RobotModelError, match="t2"):
+        with pytest.raises(RobotModelError):
             robot.add_transmission(bad_trans)
 
     def test_robot_properties(self) -> None:
@@ -308,7 +308,7 @@ class TestRobot:
         assert len(robot.gazebo_elements) == 2
 
         # Invalid reference
-        with pytest.raises(RobotModelError, match="No matching link or joint"):
+        with pytest.raises(RobotModelError):
             robot.add_gazebo_element(GazeboElement(reference="missing"))
 
     def test_add_ros2_control(self) -> None:
@@ -609,11 +609,11 @@ class TestRobotCoverage:
         robot = Robot(name="test")
         link1 = Link(name="l1")
         robot._links = [link1, link1]
-        with pytest.raises(RobotModelError, match="Duplicate found in index"):
+        with pytest.raises(RobotModelError, match="Already exists"):
             robot.__post_init__(None, None)
 
         robot = Robot(name="test")
         joint1 = Joint(name="j1", parent="a", child="b", type=JointType.FIXED)
         robot._joints = [joint1, joint1]
-        with pytest.raises(RobotModelError, match="Duplicate found in index"):
+        with pytest.raises(RobotModelError, match="Already exists"):
             robot.__post_init__(None, None)

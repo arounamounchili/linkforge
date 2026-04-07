@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from ..exceptions import RobotMathError, RobotValidationError
+from ..exceptions import RobotMathError, RobotValidationError, ValidationErrorCode
 from ..models import Vector3
 
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
@@ -25,7 +25,12 @@ def validate_xml_depth(element: ET.Element, depth: int = 0) -> None:
         RobotValidationError: If depth exceeds MAX_XML_DEPTH
     """
     if depth > MAX_XML_DEPTH:
-        raise RobotValidationError(check_name="XMLDepth", value=depth, reason="Nesting too deep")
+        raise RobotValidationError(
+            ValidationErrorCode.OUT_OF_RANGE,
+            f"XML nesting depth {depth} exceeds limit {MAX_XML_DEPTH}",
+            target="XMLDepth",
+            value=depth,
+        )
 
     for child in element:
         validate_xml_depth(child, depth + 1)
@@ -130,22 +135,39 @@ def parse_float(
     if text is None:
         if default is not None:
             return default
-        raise RobotValidationError(check_name=report_name, reason="Missing required attribute")
+        raise RobotValidationError(
+            ValidationErrorCode.VALUE_EMPTY,
+            f"Missing required attribute: {report_name}",
+            target=report_name,
+        )
 
     try:
         value = float(text)
         if math.isnan(value) or math.isinf(value):
-            raise RobotMathError(value=value, check_name=report_name)
+            raise RobotMathError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Non-finite float value '{value}' in {report_name}",
+                target=report_name,
+                value=value,
+            )
 
         # Sanity check for reasonable values (Standard LinkForge limit)
         if not (-1e10 < value < 1e10):
             raise RobotMathError(
-                value=value, check_name=report_name, reason="outside reasonable range"
+                ValidationErrorCode.OUT_OF_RANGE,
+                f"Float value '{value}' in {report_name} is outside reasonable range",
+                target=report_name,
+                value=value,
             )
 
         return value
     except ValueError:
-        raise RobotMathError(value=text, check_name=report_name) from None
+        raise RobotMathError(
+            ValidationErrorCode.INVALID_VALUE,
+            f"Invalid float format '{text}' in {report_name}",
+            target=report_name,
+            value=text,
+        ) from None
 
 
 def parse_int(
@@ -177,18 +199,30 @@ def parse_int(
     if text is None:
         if default is not None:
             return default
-        raise RobotValidationError(check_name=report_name, reason="Missing required attribute")
+        raise RobotValidationError(
+            ValidationErrorCode.VALUE_EMPTY,
+            f"Missing required attribute: {report_name}",
+            target=report_name,
+        )
 
     try:
         value = int(text)
         # Sanity check for reasonable values (standard LinkForge limit)
         if not (-1000000 < value < 1000000):
             raise RobotMathError(
-                value=value, check_name=report_name, reason="outside reasonable range"
+                ValidationErrorCode.OUT_OF_RANGE,
+                f"Integer value '{value}' in {report_name} is outside reasonable range",
+                target=report_name,
+                value=value,
             )
         return value
     except ValueError:
-        raise RobotMathError(value=text, check_name=report_name, reason="invalid format") from None
+        raise RobotMathError(
+            ValidationErrorCode.INVALID_VALUE,
+            f"Invalid integer format '{text}' in {report_name}",
+            target=report_name,
+            value=text,
+        ) from None
 
 
 def parse_vector3(text: str) -> Vector3:
@@ -206,7 +240,12 @@ def parse_vector3(text: str) -> Vector3:
     """
     parts = text.strip().split()
     if len(parts) != 3:
-        raise RobotValidationError(check_name="Vector3", value=text, reason="Expected 3 values")
+        raise RobotValidationError(
+            ValidationErrorCode.INVALID_VALUE,
+            f"Expected 3 values for Vector3, got {len(parts)}",
+            target="Vector3",
+            value=text,
+        )
     try:
         x = parse_float(parts[0], "x")
         y = parse_float(parts[1], "y")

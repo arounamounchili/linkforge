@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
 from ..logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ def add_link_with_renaming(robot: Robot, link: Link) -> None:
     except RobotModelError as e:
         original_name = link.name
         counter = 1
-        if "already exists" in str(e).lower():
+        if isinstance(e, RobotValidationError) and e.code == ValidationErrorCode.DUPLICATE_NAME:
             while True:
                 new_name = f"{original_name}_duplicate_{counter}"
                 if new_name not in robot._link_index:
@@ -67,9 +67,7 @@ def add_joint_with_renaming(robot: Robot, joint: Joint, fallback_name: str | Non
         robot.add_joint(joint)
     except RobotModelError as e:
         joint_name = joint.name or fallback_name or "unnamed_joint"
-        error_msg = str(e).lower()
-
-        if "already exists" in error_msg:
+        if isinstance(e, RobotValidationError) and e.code == ValidationErrorCode.DUPLICATE_NAME:
             original_name = joint_name
             counter = 1
             while True:
@@ -81,8 +79,10 @@ def add_joint_with_renaming(robot: Robot, joint: Joint, fallback_name: str | Non
                         logger.warning(f"Renamed duplicate joint '{original_name}' to '{new_name}'")
                         break
                     except RobotModelError as inner_e:
-                        inner_msg = str(inner_e).lower()
-                        if "not found" in inner_msg:
+                        if (
+                            isinstance(inner_e, RobotValidationError)
+                            and inner_e.code == ValidationErrorCode.NOT_FOUND
+                        ):
                             logger.warning(f"Skipping duplicate joint '{original_name}': {inner_e}")
                             break
                         counter += 1

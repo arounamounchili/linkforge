@@ -4,8 +4,37 @@ This module defines the exception hierarchy used across models, parsers,
 and generators to provide granular error handling.
 """
 
+from enum import Enum
 from pathlib import Path
 from typing import Any
+
+
+class ValidationErrorCode(Enum):
+    """Categorized error codes for robot validation failures."""
+
+    # Naming and Identity
+    INVALID_NAME = "invalid_name"
+    DUPLICATE_NAME = "duplicate_name"
+    NAME_EMPTY = "name_empty"
+
+    # Kinematic Structure
+    NOT_FOUND = "not_found"
+    HAS_CYCLE = "has_cycle"
+    NO_ROOT = "no_root"
+    MULTIPLE_ROOTS = "multiple_roots"
+    DISCONNECTED = "disconnected"
+
+    # Physics and Values
+    OUT_OF_RANGE = "out_of_range"
+    VALUE_EMPTY = "value_empty"
+    INVALID_VALUE = "invalid_value"
+    PHYSICS_VIOLATION = "physics_violation"
+    MATH_ERROR = "math_error"
+    INERTIA_TRIANGLE_INEQUALITY = "inertia_triangle_inequality"
+
+    # Configuration and Misc
+    MISMATCH = "mismatch"
+    GENERIC_FAILURE = "generic_failure"
 
 
 class LinkForgeError(Exception):
@@ -60,22 +89,51 @@ class RobotPhysicsError(RobotModelError):
     """Exception raised for unphysical properties (e.g. negative mass or volume)."""
 
     def __init__(
-        self, property_name: str = "unknown", value: Any = None, reason: str | None = None
+        self,
+        code: ValidationErrorCode,
+        message: str,
+        target: str | None = None,
+        value: Any = None,
     ):
-        msg = f"Invalid physics property '{property_name}': {value}"
-        if reason:
-            msg += f" ({reason})"
-        super().__init__(msg)
+        self.code = code
+        self.target = target
+        self.value = value
+        self.raw_message = message
+
+        full_msg = f"[PHYSICS_{code.name}] {message}"
+        if target:
+            full_msg += f" (target: {target})"
+        if value is not None:
+            full_msg += f" (value: {value})"
+
+        super().__init__(full_msg)
 
 
 class RobotValidationError(RobotModelError):
-    """Exception raised for structural or logic validation failures."""
+    """Exception raised for structural or logic validation failures.
 
-    def __init__(self, check_name: str = "unknown", value: Any = None, reason: str | None = None):
-        msg = f"Validation failed [{check_name}]: {value}"
-        if reason:
-            msg += f" ({reason})"
-        super().__init__(msg)
+    Now structured using ValidationErrorCode for robust error handling.
+    """
+
+    def __init__(
+        self,
+        code: ValidationErrorCode,
+        message: str,
+        target: str | None = None,
+        value: Any = None,
+    ):
+        self.code = code
+        self.target = target
+        self.value = value
+        self.raw_message = message
+
+        full_msg = f"[{code.name}] {message}"
+        if target:
+            full_msg += f" (target: {target})"
+        if value is not None:
+            full_msg += f" (value: {value})"
+
+        super().__init__(full_msg)
 
 
 class RobotSecurityError(RobotModelError):
@@ -89,12 +147,24 @@ class RobotMathError(RobotModelError):
     """Exception raised for invalid numerical values (NaN, Inf, or Out of Range)."""
 
     def __init__(
-        self, value: float | str | None = None, check_name: str = "value", reason: str | None = None
+        self,
+        code: ValidationErrorCode,
+        message: str,
+        target: str | None = None,
+        value: Any = None,
     ):
-        msg = f"Invalid value '{value}' in {check_name}: must be a finite number"
-        if reason:
-            msg += f" ({reason})"
-        super().__init__(msg)
+        self.code = code
+        self.target = target
+        self.value = value
+        self.raw_message = message
+
+        full_msg = f"[MATH_{code.name}] {message}"
+        if target:
+            full_msg += f" (target: {target})"
+        if value is not None:
+            full_msg += f" (value: {value})"
+
+        super().__init__(full_msg)
 
 
 class RobotXacroError(RobotParserError):

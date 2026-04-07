@@ -64,9 +64,9 @@ def test_binary_write_support(tmp_path) -> None:
 
 
 def test_robot_metadata_and_version() -> None:
-    robot = Robot(name="test_bot", version="2.0", metadata={"author": "Antigravity"})
+    robot = Robot(name="test_bot", version="2.0", metadata={"author": "LinkForge"})
     assert robot.version == "2.0"
-    assert robot.metadata["author"] == "Antigravity"
+    assert robot.metadata["author"] == "LinkForge"
 
 
 def test_custom_exception_wrapping(tmp_path) -> None:

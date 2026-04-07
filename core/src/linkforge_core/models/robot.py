@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from ..base import FileSystemResolver, IResourceResolver
-from ..exceptions import RobotModelError, RobotValidationError
+from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
 from .graph import KinematicGraph
@@ -91,11 +91,21 @@ class Robot:
     ) -> None:
         """Initialize and index the robot structure."""
         if not self.name:
-            raise RobotModelError()
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY,
+                "Robot name cannot be empty",
+                target="RobotName",
+                value=self.name,
+            )
 
         # Validate naming convention
         if not is_valid_urdf_name(self.name):
-            raise RobotValidationError("RobotName", self.name, "Invalid characters")
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_NAME,
+                "Invalid name format",
+                target="RobotName",
+                value=self.name,
+            )
 
         # Initialize storage
         if initial_links:
@@ -127,14 +137,24 @@ class Robot:
         self._link_index = {}
         for link in self._links:
             if link.name in self._link_index:
-                raise RobotValidationError("LinkName", link.name, "Duplicate found in index")
+                raise RobotValidationError(
+                    ValidationErrorCode.DUPLICATE_NAME,
+                    f"Already exists: Link '{link.name}'",
+                    target="Link",
+                    value=link.name,
+                )
             self._link_index[link.name] = link
 
         # Validate joint names and build index
         self._joint_index = {}
         for joint in self._joints:
             if joint.name in self._joint_index:
-                raise RobotValidationError("JointName", joint.name, "Duplicate found in index")
+                raise RobotValidationError(
+                    ValidationErrorCode.DUPLICATE_NAME,
+                    f"Already exists: Joint '{joint.name}'",
+                    target="Joint",
+                    value=joint.name,
+                )
             self._joint_index[joint.name] = joint
 
         self._sensor_index = {sensor.name: sensor for sensor in self._sensors}
@@ -293,7 +313,12 @@ class Robot:
                 or if naming conventions are violated.
         """
         if link.name in self._link_index:
-            raise RobotValidationError("LinkName", link.name, "Already exists")
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Link '{link.name}'",
+                target="Link",
+                value=link.name,
+            )
         self._links.append(link)
         self._link_index[link.name] = link
         self._graph_cache = None
@@ -309,13 +334,28 @@ class Robot:
                 referenced parent/child links do not exist.
         """
         if joint.name in self._joint_index:
-            raise RobotValidationError("JointName", joint.name, "Already exists")
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Joint '{joint.name}'",
+                target="Joint",
+                value=joint.name,
+            )
 
         # Validate parent and child links exist
         if joint.parent not in self._link_index:
-            raise RobotValidationError("ParentLink", joint.parent, "Not found")
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Parent link '{joint.parent}'",
+                target="ParentLink",
+                value=joint.parent,
+            )
         if joint.child not in self._link_index:
-            raise RobotValidationError("ChildLink", joint.child, "Not found")
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Child link '{joint.child}'",
+                target="ChildLink",
+                value=joint.child,
+            )
 
         self._joints.append(joint)
         self._joint_index[joint.name] = joint
@@ -360,13 +400,19 @@ class Robot:
         """Add a sensor to the robot and update indices."""
         if sensor.name in self._sensor_index:
             raise RobotValidationError(
-                check_name="DuplicateSensor", value=sensor.name, reason="Already exists"
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Sensor '{sensor.name}'",
+                target="Sensor",
+                value=sensor.name,
             )
 
         # Validate that the link exists
         if sensor.link_name not in self._link_index:
             raise RobotValidationError(
-                check_name="LinkName", value=sensor.link_name, reason=sensor.name
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Link '{sensor.link_name}'",
+                target="LinkName",
+                value=sensor.link_name,
             )
 
         self._sensors.append(sensor)
@@ -376,14 +422,20 @@ class Robot:
         """Add a transmission to the robot."""
         if any(t.name == transmission.name for t in self._transmissions):
             raise RobotValidationError(
-                check_name="DuplicateTransmission", value=transmission.name, reason="Already exists"
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Transmission '{transmission.name}'",
+                target="Transmission",
+                value=transmission.name,
             )
 
         # Validate that all referenced joints exist
         for trans_joint in transmission.joints:
             if trans_joint.name not in self._joint_index:
                 raise RobotValidationError(
-                    check_name="JointName", value=trans_joint.name, reason=transmission.name
+                    ValidationErrorCode.NOT_FOUND,
+                    f"Not found: Joint '{trans_joint.name}'",
+                    target="JointName",
+                    value=trans_joint.name,
                 )
 
         self._transmissions.append(transmission)
@@ -397,9 +449,10 @@ class Robot:
             and self.get_joint(element.reference) is None
         ):
             raise RobotValidationError(
-                check_name="GazeboReference",
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Gazebo reference '{element.reference}'",
+                target="GazeboReference",
                 value=element.reference,
-                reason="No matching link or joint",
             )
 
         self._gazebo_elements.append(element)
@@ -408,7 +461,12 @@ class Robot:
         """Add a ROS2 Control configuration to the robot."""
         # Check for duplicate names
         if any(rc.name == ros2_control.name for rc in self._ros2_controls):
-            raise RobotValidationError("Ros2ControlName", ros2_control.name, "Already exists")
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: ROS2 control '{ros2_control.name}'",
+                target="Ros2Control",
+                value=ros2_control.name,
+            )
 
         self._ros2_controls.append(ros2_control)
 
@@ -433,10 +491,18 @@ class Robot:
 
         roots = self.graph.get_root_links()
         if not roots:
-            raise RobotValidationError(check_name="Roots", value=0, reason="No root link found")
+            raise RobotValidationError(
+                ValidationErrorCode.NO_ROOT,
+                "No root link found in the kinematic tree",
+                target="Roots",
+                value=0,
+            )
         if len(roots) > 1:
             raise RobotValidationError(
-                check_name="Roots", value=len(roots), reason="Multiple root links found"
+                ValidationErrorCode.MULTIPLE_ROOTS,
+                f"Multiple root links found ({len(roots)}): {roots}",
+                target="Roots",
+                value=len(roots),
             )
 
         return self.get_link(roots[0])

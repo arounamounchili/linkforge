@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..exceptions import RobotValidationError
+from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,11 @@ class GazeboElement:
         """Validate Gazebo element."""
         # If reference is specified, it must be non-empty
         if self.reference is not None and not self.reference:
-            raise RobotValidationError("GazeboReference", self.reference, "cannot be empty string")
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY,
+                "Gazebo reference cannot be empty",
+                target="GazeboReference",
+            )
 
 
 @dataclass(frozen=True)
@@ -59,6 +63,12 @@ class GazeboPlugin:
     def __post_init__(self) -> None:
         """Validate plugin configuration."""
         if not self.name:
-            raise RobotValidationError("PluginName", self.name, "cannot be empty")
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY, "Plugin name cannot be empty", target="PluginName"
+            )
         if not self.filename:
-            raise RobotValidationError("PluginFilename", self.filename, "cannot be empty")
+            raise RobotValidationError(
+                ValidationErrorCode.VALUE_EMPTY,
+                "Plugin filename cannot be empty",
+                target="PluginFilename",
+            )

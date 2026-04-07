@@ -11,7 +11,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from ..exceptions import RobotModelError
+from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
 from .result import ValidationResult
 
 if TYPE_CHECKING:
@@ -167,17 +167,29 @@ class TreeStructureCheck(ValidationCheck):
                 )
             return root
         except RobotModelError as e:
-            error_msg = str(e)
-            if "Multiple root links" in error_msg:
-                result.add_error(
-                    title="Multiple root links",
-                    message=error_msg,
-                    suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
-                )
+            if isinstance(e, RobotValidationError):
+                if e.code == ValidationErrorCode.MULTIPLE_ROOTS:
+                    result.add_error(
+                        title="Multiple root links",
+                        message=str(e),
+                        suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
+                    )
+                elif e.code == ValidationErrorCode.NO_ROOT:
+                    result.add_error(
+                        title="No root link",
+                        message=str(e),
+                        suggestion="Ensure exactly one link has no parent joint (the base/root link)",
+                    )
+                else:
+                    result.add_error(
+                        title="Root link error",
+                        message=str(e),
+                        suggestion="Check the joint connections in your robot tree",
+                    )
             else:
                 result.add_error(
                     title="Root link error",
-                    message=error_msg,
+                    message=str(e),
                     suggestion="Check the joint connections in your robot tree",
                 )
             return None

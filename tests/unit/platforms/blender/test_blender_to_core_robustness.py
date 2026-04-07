@@ -12,8 +12,8 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
     scene_to_robot,
 )
-from linkforge.linkforge_core.exceptions import RobotModelError
-from linkforge.linkforge_core.models import (
+from linkforge_core.exceptions import RobotModelError
+from linkforge_core.models import (
     JointType,
 )
 from mathutils import Matrix
@@ -151,7 +151,7 @@ def test_ros2_control_gazebo_plugin(clean_scene) -> None:
     p.linkforge.is_robot_link = True
 
     # Mock ros2_control conversion to return something valid
-    from linkforge.linkforge_core.models.ros2_control import Ros2Control
+    from linkforge_core.models.ros2_control import Ros2Control
 
     with patch(
         "linkforge.blender.adapters.blender_to_core.blender_ros2_control_to_core",
@@ -211,7 +211,7 @@ def test_sensor_origin_custom_mount(clean_scene) -> None:
     robot, _ = scene_to_robot(bpy.context)
     assert len(robot.sensors) == 1
     # Compare with Vector3
-    from linkforge.linkforge_core.models import Vector3
+    from linkforge_core.models import Vector3
 
     assert robot.sensors[0].origin.xyz == Vector3(1.0, 1.0, 1.0)
 

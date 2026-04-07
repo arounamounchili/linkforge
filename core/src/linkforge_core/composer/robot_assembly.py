@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..exceptions import RobotValidationError
+from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..generators.srdf_generator import SRDFGenerator
 from ..generators.urdf_generator import URDFGenerator
 from ..models.geometry import Transform, Vector3
@@ -114,7 +114,12 @@ class RobotAssembly:
         """
         # 0. Early validation of attachment point
         if not self.robot.get_link(at_link):
-            raise RobotValidationError("Attach", at_link, "Attachment link not found in assembly")
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Attachment link '{at_link}' not found in assembly",
+                target="Attach",
+                value=at_link,
+            )
 
         # 1. Deep copy the component to ensure isolation
         sub_robot = component.clone()
@@ -127,7 +132,12 @@ class RobotAssembly:
         # 3. Identify the root link of the sub-robot
         root_link = sub_robot.get_root_link()
         if not root_link:
-            raise RobotValidationError("Attach", component.name, "No root link found in component")
+            raise RobotValidationError(
+                ValidationErrorCode.NO_ROOT,
+                f"No root link found in component '{component.name}'",
+                target="Attach",
+                value=component.name,
+            )
 
         # 4. Merge links
         for link in sub_robot.links:
@@ -371,9 +381,10 @@ class LinkBuilder:
         """Resolve parent, joint name and origin for finalization."""
         if self._pending_parent is None or self._pending_joint_name is None:
             raise RobotValidationError(
-                "LinkBuilder",
-                self._link.name,
+                ValidationErrorCode.GENERIC_FAILURE,
                 "connect_to() must be called before finalizing the joint",
+                target="LinkBuilder",
+                value=self._link.name,
             )
 
         resolved_origin = origin if origin is not None else self._pending_origin

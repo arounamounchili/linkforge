@@ -13,7 +13,7 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
-from linkforge.linkforge_core.models import (
+from linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -187,7 +187,7 @@ def test_create_joint_object_complex() -> None:
 
 def test_create_joint_object_advanced_props() -> None:
     """Verify that safety controller and calibration are correctly synced to Blender properties."""
-    from linkforge.linkforge_core.models import JointCalibration, JointSafetyController
+    from linkforge_core.models import JointCalibration, JointSafetyController
 
     # 1. Setup Links
     bpy.ops.object.empty_add()
@@ -928,7 +928,7 @@ def test_normalize_and_consolidate_imported_objects() -> None:
 def test_create_joint_object_mimic_logic() -> None:
     """Test that mimics are correctly resolved even if created out of order."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
-    from linkforge.linkforge_core.models import Joint, JointMimic, JointType
+    from linkforge_core.models import Joint, JointMimic, JointType
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     import linkforge.blender
@@ -952,7 +952,7 @@ def test_create_joint_object_mimic_logic() -> None:
     # Mocking the discovery of the driver joint in scene
     # The actual implementation looks for objects by name
 
-    from linkforge.linkforge_core.models import JointLimits
+    from linkforge_core.models import JointLimits
 
     joint = Joint(
         name="follower",

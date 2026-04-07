@@ -32,6 +32,7 @@ from ..exceptions import (
     RobotParserUnexpectedError,
     RobotParserXMLRootError,
     RobotValidationError,
+    ValidationErrorCode,
     XacroDetectedError,
 )
 from ..logging_config import get_logger
@@ -555,12 +556,22 @@ class URDFParser(RobotXMLParser):
             if contact_elem is not None:
                 collision = contact_elem.findtext("collision")
                 if not collision:
-                    raise RobotValidationError(check_name="SensorCollision", value=sensor_name)
+                    raise RobotValidationError(
+                        ValidationErrorCode.VALUE_EMPTY,
+                        f"Sensor '{sensor_name}' is missing collision reference",
+                        target="SensorCollision",
+                        value=sensor_name,
+                    )
                 contact_info = ContactInfo(
                     collision=collision, noise=self._parse_sensor_noise(contact_elem)
                 )
             else:
-                raise RobotValidationError(check_name="SensorCollision", value=sensor_name)
+                raise RobotValidationError(
+                    ValidationErrorCode.VALUE_EMPTY,
+                    f"Sensor '{sensor_name}' expects contact info but none found",
+                    target="SensorCollision",
+                    value=sensor_name,
+                )
 
         elif sensor_type == SensorType.FORCE_TORQUE:
             ft_elem = sensor_elem.find("force_torque")

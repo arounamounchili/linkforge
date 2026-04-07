@@ -112,5 +112,5 @@ class TestGazeboElement:
 
     def test_empty_reference_string(self) -> None:
         """Test that empty string reference raises error."""
-        with pytest.raises(RobotModelError, match="cannot be empty string"):
+        with pytest.raises(RobotModelError, match="cannot be empty"):
             GazeboElement(reference="")

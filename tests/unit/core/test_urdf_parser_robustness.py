@@ -66,7 +66,8 @@ def test_xml_base_geometry_error_handling() -> None:
     elem = ET.fromstring('<geometry><box size="invalid"/></geometry>')
     with patch("linkforge_core.parsers.xml_base.logger") as mock_logger:
         assert parser._parse_geometry_element(elem) is None
-        assert "Validation failed [Vector3]" in mock_logger.warning.call_args[0][0]
+        assert "[INVALID_VALUE]" in mock_logger.warning.call_args[0][0]
+        assert "(target: Vector3)" in mock_logger.warning.call_args[0][0]
 
 
 def test_xml_base_robust_joint_addition_errors() -> None:

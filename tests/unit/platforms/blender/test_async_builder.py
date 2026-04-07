@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import bpy
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
-from linkforge.linkforge_core.exceptions import RobotModelError
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Joint, JointType, Link, Robot
 
 

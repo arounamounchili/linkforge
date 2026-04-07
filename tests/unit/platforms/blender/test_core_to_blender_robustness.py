@@ -13,7 +13,8 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
-from linkforge.linkforge_core.models import (
+from linkforge_core.base import FileSystemResolver
+from linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -39,8 +40,7 @@ from linkforge.linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge.linkforge_core.models.sensor import GPSInfo, IMUInfo
-from linkforge_core.base import FileSystemResolver
+from linkforge_core.models.sensor import GPSInfo, IMUInfo
 from mathutils import Vector
 
 
@@ -246,8 +246,8 @@ def test_create_sensor_object(clean_scene) -> None:
 
 def test_import_robot_with_mimic_and_gazebo(clean_scene) -> None:
     """Test import of robot with mimic joints and gazebo plugins."""
-    from linkforge.linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
-    from linkforge.linkforge_core.models.joint import JointMimic
+    from linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
+    from linkforge_core.models.joint import JointMimic
 
     robot = Robot(
         name="MimicBot",
@@ -304,7 +304,7 @@ def test_create_material_no_tree(clean_scene) -> None:
 
 def test_import_robot_with_transmissions(clean_scene) -> None:
     """Test importing robot with transmissions."""
-    from linkforge.linkforge_core.models.transmission import (
+    from linkforge_core.models.transmission import (
         Transmission,
         TransmissionActuator,
         TransmissionJoint,
@@ -329,7 +329,7 @@ def test_import_robot_with_transmissions(clean_scene) -> None:
 
 def test_full_robot_import_integration(clean_scene) -> None:
     """A 'MegaBot' test to hit as many code paths as possible in core_to_blender."""
-    from linkforge.linkforge_core.models.transmission import (
+    from linkforge_core.models.transmission import (
         Transmission,
         TransmissionActuator,
         TransmissionJoint,
@@ -412,7 +412,7 @@ def test_full_robot_import_integration(clean_scene) -> None:
         ),
     )
 
-    from linkforge.linkforge_core.models.sensor import LidarInfo
+    from linkforge_core.models.sensor import LidarInfo
 
     lidar = Sensor(
         name="lidar_sensor",

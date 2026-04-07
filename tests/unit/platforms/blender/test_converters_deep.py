@@ -7,7 +7,7 @@ from linkforge.blender.adapters.blender_to_core import (
     blender_ros2_control_to_core,
     scene_to_robot,
 )
-from linkforge.linkforge_core.exceptions import RobotModelError
+from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import CameraInfo, Link, Sensor, SensorType
 
 if typing.TYPE_CHECKING:

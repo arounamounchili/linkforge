@@ -5,7 +5,12 @@ from unittest.mock import patch
 import pytest
 from linkforge_core.base import RobotParserError, XacroDetectedError
 from linkforge_core.composer.naming import add_joint_with_renaming, add_link_with_renaming
-from linkforge_core.exceptions import RobotModelError, RobotParserIOError
+from linkforge_core.exceptions import (
+    RobotModelError,
+    RobotParserIOError,
+    RobotValidationError,
+    ValidationErrorCode,
+)
 from linkforge_core.models import (
     Box,
     CameraInfo,
@@ -833,8 +838,8 @@ class TestURDFParser:
 
         with patch.object(robot, "add_joint") as mock_add:
             mock_add.side_effect = [
-                RobotModelError("Joint 'fixed_joint' already exists"),
-                RobotModelError("Link 'missing' not found"),
+                RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "Already exists"),
+                RobotValidationError(ValidationErrorCode.NOT_FOUND, "Link not found"),
             ]
 
             add_joint_with_renaming(robot, joint, fallback_name=elem.get("name"))
@@ -892,8 +897,8 @@ class TestURDFParser:
         # 4. Transmission Errors
         # Invalid mechanicalReduction
         xml = '<joint name="j1"><mechanicalReduction>not_number</mechanicalReduction></joint>'
-        # parse_float raises RobotModelError for non-numeric strings
-        with pytest.raises(RobotModelError, match="Invalid value 'not_number'"):
+        # parse_float raises RobotMathError for non-numeric strings
+        with pytest.raises(RobotModelError, match="Invalid float format 'not_number'"):
             parser._parse_transmission_component(ET.fromstring(xml), "joint")
 
         # 5. Gazebo Sensor missing reference
@@ -1008,8 +1013,10 @@ class TestURDFParser:
         # First two names already exist in _joint_index
         # Third name 'j_duplicate_2' is free
         robot.add_joint.side_effect = [
-            RobotModelError("already exists"),  # j exists
-            RobotModelError("already exists"),  # j_duplicate_1 exists
+            RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "already exists"),  # j exists
+            RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME, "already exists"
+            ),  # j_duplicate_1 exists
             None,  # Success for j_duplicate_2
         ]
 
@@ -1033,8 +1040,10 @@ class TestURDFParser:
 
         with patch.object(robot, "add_link") as mock_add_link:
             mock_add_link.side_effect = [
-                RobotModelError("Link 'l' already exists"),
-                RobotModelError("Link 'l_duplicate_1' failed"),  # Trigger exception inside loop
+                RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "Link 'l' already exists"),
+                RobotValidationError(
+                    ValidationErrorCode.DUPLICATE_NAME, "Link 'l_duplicate_1' failed"
+                ),  # Trigger exception inside loop
                 None,  # Succeeds for l_duplicate_2
             ]
 

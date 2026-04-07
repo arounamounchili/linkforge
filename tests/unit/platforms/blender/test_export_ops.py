@@ -29,8 +29,8 @@ def test_export_urdf_execute(mocker, clean_scene, export_format) -> None:
 
     # Use real scene translation to exercise adapter logic without mocking scene_to_robot.
     # Generators are mocked to prevent file system operations.
-    mocker.patch("linkforge.linkforge_core.URDFGenerator")
-    mocker.patch("linkforge.linkforge_core.XACROGenerator")
+    mocker.patch("linkforge_core.URDFGenerator")
+    mocker.patch("linkforge_core.XACROGenerator")
 
     # Add a root object to make scene_to_robot succeed
     root = bpy.data.objects.new("root", None)
@@ -114,9 +114,7 @@ def test_validate_robot_operator(mocker, clean_scene) -> None:
     val_res.errors = []
     val_res.warnings = [warn]
 
-    mocker.patch(
-        "linkforge.linkforge_core.validation.RobotValidator.validate", return_value=val_res
-    )
+    mocker.patch("linkforge_core.validation.RobotValidator.validate", return_value=val_res)
 
     result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
     assert result == {"FINISHED"}
@@ -286,7 +284,7 @@ def test_export_urdf_extension_correction(mocker, clean_scene) -> None:
     mocker.patch(
         "linkforge.blender.adapters.blender_to_core.scene_to_robot", return_value=(MagicMock(), {})
     )
-    mocker.patch("linkforge.linkforge_core.URDFGenerator")
+    mocker.patch("linkforge_core.URDFGenerator")
 
     LINKFORGE_OT_export_urdf.execute(mock_self, bpy.context)
     assert mock_self.filepath.endswith(".urdf")
@@ -294,7 +292,7 @@ def test_export_urdf_extension_correction(mocker, clean_scene) -> None:
     # Case 2: XACRO format but .urdf extension
     props.export_format = "XACRO"
     mock_self.filepath = "/tmp/fake.urdf"
-    mocker.patch("linkforge.linkforge_core.XACROGenerator")
+    mocker.patch("linkforge_core.XACROGenerator")
 
     LINKFORGE_OT_export_urdf.execute(mock_self, bpy.context)
     assert mock_self.filepath.endswith(".xacro")

@@ -58,6 +58,7 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 mypy_path = ["core/src", "platforms/blender"]
+exclude = ["platforms/blender/linkforge/linkforge_core"]
 
 # Blender (bpy) stubs use Python 3.12 syntax.
 [[tool.mypy.overrides]]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..exceptions import RobotModelError, RobotValidationError
+from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
 @dataclass
@@ -22,14 +22,20 @@ class Ros2ControlJoint:
     def __post_init__(self) -> None:
         """Validate joint configuration."""
         if not self.name:
-            raise RobotModelError()
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY,
+                "ROS2 control joint name cannot be empty",
+                target="JointName",
+                value=self.name,
+            )
         # For sensors, both can be empty initially, but at least one state interface is usually required.
         # However, we'll allow empty for now to support incremental building.
         if not self.command_interfaces and not self.state_interfaces:
             raise RobotValidationError(
-                check_name="Ros2ControlInterfaces",
+                ValidationErrorCode.VALUE_EMPTY,
+                f"ROS2 control joint '{self.name}' must have at least one command or state interface",
+                target="Ros2ControlInterfaces",
                 value=self.name,
-                reason="Must have command or state interface",
             )
 
 
@@ -50,30 +56,43 @@ class Ros2Control:
     def __post_init__(self) -> None:
         """Validate ros2_control configuration."""
         if not self.name:
-            raise RobotModelError()
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY,
+                "ROS2 control name cannot be empty",
+                target="Ros2ControlName",
+                value=self.name,
+            )
         if self.type not in ("system", "actuator", "sensor"):
             raise RobotValidationError(
-                check_name="Ros2ControlType",
+                ValidationErrorCode.INVALID_VALUE,
+                f"Invalid ROS2 control type '{self.type}' (must be system, actuator, or sensor)",
+                target="Ros2ControlType",
                 value=self.type,
-                reason="Must be system, actuator, or sensor",
             )
         if not self.hardware_plugin:
-            raise RobotModelError()
+            raise RobotValidationError(
+                ValidationErrorCode.VALUE_EMPTY,
+                "Hardware plugin cannot be empty",
+                target="HardwarePlugin",
+                value=self.hardware_plugin,
+            )
 
         # Hardware sensors are read-only and do not accept command interfaces
         if self.type == "sensor":
             for joint in self.joints:
                 if joint.command_interfaces:
                     raise RobotValidationError(
-                        check_name="Ros2ControlMode",
+                        ValidationErrorCode.INVALID_VALUE,
+                        "Hardware sensors cannot have command interfaces",
+                        target="Ros2ControlMode",
                         value=self.type,
-                        reason="Cannot have command interfaces",
                     )
 
         # Hardware actuators are designed for exactly one joint
         if self.type == "actuator" and len(self.joints) != 1:
             raise RobotValidationError(
-                check_name="Ros2ControlJoints",
+                ValidationErrorCode.INVALID_VALUE,
+                "Actuator type must have exactly one joint",
+                target="Ros2ControlJoints",
                 value=len(self.joints),
-                reason="Actuator must have exactly one joint",
             )
