@@ -104,6 +104,7 @@ napoleon_use_rtype = True
 napoleon_preprocess_types = True
 napoleon_type_aliases = None
 napoleon_attr_annotations = False
+napoleon_custom_sections = ["Constraints", "Performance Note"]
 
 # Autodoc settings
 autodoc_default_options = {
@@ -123,6 +124,12 @@ typehints_document_rtype = True
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
 }
+
+# Resolve ambiguous cross-references for 'type' which is used across many models
+nitpick_ignore = [
+    ("py:obj", "type"),
+    ("py:attr", "type"),
+]
 
 # MyST parser settings
 myst_enable_extensions = [

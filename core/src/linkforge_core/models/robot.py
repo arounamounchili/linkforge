@@ -28,7 +28,8 @@ from .transmission import Transmission
 
 @dataclass
 class Robot:
-    """Complete robot description containing links, joints, and metadata.
+    """
+    Complete robot description containing links, joints, and metadata.
 
     The Robot class acts as the central hub of the LinkForge Intermediate
     Representation (IR). It maintains a collection of rigid bodies (Links)
@@ -43,6 +44,7 @@ class Robot:
         resource_resolver: Strategy for locating meshes and external files.
 
     Performance Note:
+
         Uses O(1) hash map lookups for links and joints via internal indices.
         The kinematic structure (parent-child tree) is managed via the
         `graph` property.
