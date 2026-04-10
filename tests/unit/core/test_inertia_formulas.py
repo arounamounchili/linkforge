@@ -414,23 +414,24 @@ class TestInertiaEdgeCases:
         assert inertia.izz == pytest.approx(1e-06)
 
     def test_calculate_mesh_inertia_zero_mass(self) -> None:
-        """Test calculate_mesh_inertia (approximation) with zero mass."""
-        from linkforge_core.physics.inertia import calculate_mesh_inertia
+        """Test calculate_mesh_inertia_approximation with zero mass."""
+        from linkforge_core.physics.inertia import calculate_mesh_inertia_approximation
 
-        mesh = Mesh(resource="package://test/meshes/test.stl", scale=Vector3(1.0, 1.0, 1.0))
-        inertia = calculate_mesh_inertia(mesh, mass=0.0)
+        mesh = Mesh(resource="robot.stl", scale=Vector3(1.0, 1.0, 1.0))
+        inertia = calculate_mesh_inertia_approximation(mesh, mass=0.0)
 
+        # Returns minimal inertia for numerical stability
         assert inertia.ixx == pytest.approx(1e-06)
         assert inertia.iyy == pytest.approx(1e-06)
         assert inertia.izz == pytest.approx(1e-06)
 
     def test_calculate_mesh_inertia_approximation(self) -> None:
-        """Test that calculate_mesh_inertia uses bounding box approximation."""
-        from linkforge_core.physics.inertia import calculate_mesh_inertia
+        """Test that calculate_mesh_inertia_approximation uses bounding box approximation."""
+        from linkforge_core.physics.inertia import calculate_mesh_inertia_approximation
 
         # Mesh with scale 2x3x4
         mesh = Mesh(resource="package://test/meshes/test.stl", scale=Vector3(2.0, 3.0, 4.0))
-        inertia = calculate_mesh_inertia(mesh, mass=10.0)
+        inertia = calculate_mesh_inertia_approximation(mesh, mass=10.0)
 
         # Should approximate as a box with the same scale
         box = Box(size=Vector3(2.0, 3.0, 4.0))

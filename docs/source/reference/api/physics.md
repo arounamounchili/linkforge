@@ -47,16 +47,25 @@ sphere = Sphere(radius=0.2)
 inertia = calculate_sphere_inertia(sphere, mass=3.0)
 ```
 
-### Mesh Inertia
+### Mesh Inertia Approximation
 
 ```python
-from linkforge_core.physics.inertia import calculate_mesh_inertia
-from linkforge_core.models.geometry import Mesh
-from pathlib import Path
+from linkforge_core.physics.inertia import calculate_mesh_inertia_approximation
+from linkforge_core.models.geometry import Mesh, Vector3
 
-mesh = Mesh(filepath=Path("robot_part.stl"))
-inertia = calculate_mesh_inertia(mesh, mass=2.5)
-# Calculates inertia from mesh triangles
+# Uses bounding box approximation (no triangle data required)
+mesh = Mesh(resource="robot_part.stl", scale=Vector3(1.0, 1.0, 1.0))
+inertia = calculate_mesh_inertia_approximation(mesh, mass=2.5)
+```
+
+### Precise Mesh Inertia (Tetrahedral Integration)
+
+```python
+from linkforge_core.physics.inertia import calculate_mesh_inertia_from_triangles
+
+# Requires raw vertex and triangle data
+# vertices: list of (x,y,z) tuples, triangles: list of (i,j,k) index tuples
+inertia = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=2.5)
 ```
 
 ## Formulas

@@ -271,15 +271,18 @@ def _validate_mesh_inputs(
             raise RobotPhysicsError(ValidationErrorCode.OUT_OF_RANGE, f"Invalid triangle at {i}")
 
 
-def calculate_mesh_inertia(mesh: Mesh, mass: float) -> InertiaTensor:
+def calculate_mesh_inertia_approximation(mesh: Mesh, mass: float) -> InertiaTensor:
     """Calculate approximate (bounding box) inertia for a mesh.
+
+    This is a lightweight fallback that treats the mesh as an axis-aligned
+    bounding box based on its scale. It does not require triangle data.
 
     Args:
         mesh: Mesh geometry with scale
         mass: Total mass in kg
 
     Returns:
-        Approximate inertia tensor
+        Approximate inertia tensor using bounding box approximation
     """
     if mass < MIN_MASS_STABILITY_THRESHOLD:
         return _get_stability_fallback()
@@ -299,7 +302,7 @@ def calculate_inertia(geometry: Geometry, mass: float) -> InertiaTensor:
     if isinstance(geometry, Sphere):
         return calculate_sphere_inertia(geometry, mass)
     if isinstance(geometry, Mesh):
-        return calculate_mesh_inertia(geometry, mass)
+        return calculate_mesh_inertia_approximation(geometry, mass)
 
     raise RobotPhysicsError(
         ValidationErrorCode.INVALID_VALUE,
