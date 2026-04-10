@@ -13,7 +13,7 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
-from linkforge_core.models import (
+from linkforge.linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -187,7 +187,7 @@ def test_create_joint_object_complex() -> None:
 
 def test_create_joint_object_advanced_props() -> None:
     """Verify that safety controller and calibration are correctly synced to Blender properties."""
-    from linkforge_core.models import JointCalibration, JointSafetyController
+    from linkforge.linkforge_core.models import JointCalibration, JointSafetyController
 
     # 1. Setup Links
     bpy.ops.object.empty_add()
@@ -612,7 +612,11 @@ def test_create_sensor_with_custom_plugin() -> None:
 
 def test_import_robot_with_legacy_transmissions_skipped() -> None:
     """Test that legacy transmissions are skipped (no auto-conversion)."""
-    from linkforge_core.models import Transmission, TransmissionActuator, TransmissionJoint
+    from linkforge.linkforge_core.models import (
+        Transmission,
+        TransmissionActuator,
+        TransmissionJoint,
+    )
 
     l1 = Link(name="base")
     l2 = Link(name="arm")
@@ -660,7 +664,7 @@ def test_import_robot_with_legacy_transmissions_skipped() -> None:
 
 def test_import_robot_skips_transmissions_when_ros2_control_exists() -> None:
     """Test that transmissions are skipped when ros2_control is present."""
-    from linkforge_core.models import Transmission, TransmissionJoint
+    from linkforge.linkforge_core.models import Transmission, TransmissionJoint
 
     l1 = Link(name="base")
     l2 = Link(name="arm")
@@ -707,7 +711,7 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists() -> None:
 
 def test_create_link_with_material() -> None:
     """Test link creation with visual material."""
-    from linkforge_core.models import Material
+    from linkforge.linkforge_core.models import Material
 
     color = Color(r=1.0, g=0.0, b=0.0, a=1.0)
     material = Material(name="RedMat", color=color)
@@ -928,7 +932,7 @@ def test_normalize_and_consolidate_imported_objects() -> None:
 def test_create_joint_object_mimic_logic() -> None:
     """Test that mimics are correctly resolved even if created out of order."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
-    from linkforge_core.models import Joint, JointMimic, JointType
+    from linkforge.linkforge_core.models import Joint, JointMimic, JointType
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     import linkforge.blender
@@ -952,7 +956,7 @@ def test_create_joint_object_mimic_logic() -> None:
     # Mocking the discovery of the driver joint in scene
     # The actual implementation looks for objects by name
 
-    from linkforge_core.models import JointLimits
+    from linkforge.linkforge_core.models import JointLimits
 
     joint = Joint(
         name="follower",

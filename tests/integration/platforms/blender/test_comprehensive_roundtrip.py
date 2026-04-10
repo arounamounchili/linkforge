@@ -15,8 +15,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from linkforge_core import URDFGenerator
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path) -> None:

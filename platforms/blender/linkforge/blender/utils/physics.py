@@ -6,17 +6,18 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import numpy as np  # type: ignore[import-not-found]
-    from linkforge_core.models.link import InertiaTensor
+
+    from ...linkforge_core.models.link import InertiaTensor
 else:
     try:
         import numpy as np  # type: ignore[import-not-found]
     except ImportError:
         np = None
 
-from linkforge_core.exceptions import RobotMathError, RobotPhysicsError, ValidationErrorCode
-from linkforge_core.logging_config import get_logger
-from linkforge_core.models.link import InertiaTensor
-from linkforge_core.physics.inertia import (
+from ...linkforge_core.exceptions import RobotMathError, RobotPhysicsError, ValidationErrorCode
+from ...linkforge_core.logging_config import get_logger
+from ...linkforge_core.models.link import InertiaTensor
+from ...linkforge_core.physics.inertia import (
     DEGENERATE_VOL_THRESHOLD,
     MIN_INERTIA_STABILITY_VALUE,
     MIN_MASS_STABILITY_THRESHOLD,

@@ -57,7 +57,7 @@ def test_joint_urdf_name_persistence() -> None:
 def test_reimport_name_matching() -> None:
     """Test that the importer correctly sets persistent names using real data."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
-    from linkforge_core.models import Joint, JointLimits, JointType, Vector3
+    from linkforge.linkforge_core.models import Joint, JointLimits, JointType, Vector3
 
     joint_model = Joint(
         name="shoulder_joint",
@@ -92,7 +92,7 @@ def test_auto_linking_integration() -> None:
     from pathlib import Path
 
     from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
-    from linkforge_core.models import Joint, JointType, Link, Robot
+    from linkforge.linkforge_core.models import Joint, JointType, Link, Robot
 
     # Setup robot and links
     l1 = Link(name="l1")

@@ -16,8 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from linkforge_core import URDFGenerator
-from linkforge_core.models import (
+from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.models import (
     Box,
     Collision,
     Cylinder,
@@ -32,7 +32,7 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def create_stacked_robot() -> Robot:

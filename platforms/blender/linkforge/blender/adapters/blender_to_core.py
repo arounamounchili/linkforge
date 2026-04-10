@@ -26,9 +26,11 @@ else:
 
 from dataclasses import dataclass
 
-from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
-from linkforge_core.logging_config import get_logger
-from linkforge_core.models import (
+from linkforge.blender.utils.physics import calculate_mesh_inertia_numpy
+
+from ...linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+from ...linkforge_core.logging_config import get_logger
+from ...linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -64,21 +66,19 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.models.transmission import (
+from ...linkforge_core.models.transmission import (
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
     TransmissionType,
 )
-from linkforge_core.physics import (
+from ...linkforge_core.physics import (
     calculate_inertia,
     calculate_mesh_inertia_from_triangles,
     validate_mesh_topology,
 )
-from linkforge_core.utils.math_utils import clean_float, normalize_vector
-from linkforge_core.utils.string_utils import sanitize_name
-
-from linkforge.blender.utils.physics import calculate_mesh_inertia_numpy
+from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
+from ...linkforge_core.utils.string_utils import sanitize_name
 
 # Constants
 logger = get_logger(__name__)
@@ -1242,7 +1242,7 @@ def scene_to_robot(
                         parameters=params,
                     )
                     # Note: We wrap the plugin in a GazeboElement without a reference (global)
-                    from linkforge_core.models.gazebo import GazeboElement
+                    from ...linkforge_core.models.gazebo import GazeboElement
 
                     robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
         except Exception as e:

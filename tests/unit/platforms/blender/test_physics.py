@@ -3,8 +3,8 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from linkforge.blender.utils.physics import calculate_mesh_inertia_numpy
-from linkforge_core.exceptions import RobotMathError, RobotPhysicsError
-from linkforge_core.physics.inertia import MIN_INERTIA_STABILITY_VALUE
+from linkforge.linkforge_core.exceptions import RobotMathError, RobotPhysicsError
+from linkforge.linkforge_core.physics.inertia import MIN_INERTIA_STABILITY_VALUE
 
 
 def get_cube_mesh(side=1.0, offset=(0, 0, 0), inverted=False):

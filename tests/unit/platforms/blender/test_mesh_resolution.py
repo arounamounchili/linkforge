@@ -4,8 +4,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from linkforge_core.base import FileSystemResolver
-from linkforge_core.utils.path_utils import resolve_package_path
+from linkforge.linkforge_core.base import FileSystemResolver
+from linkforge.linkforge_core.utils.path_utils import resolve_package_path
 
 
 @pytest.fixture

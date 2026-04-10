@@ -2,7 +2,7 @@
 
 import bpy
 from linkforge.blender.utils.joint_utils import resolve_mimic_joints
-from linkforge_core.models import Joint, JointLimits, JointMimic, JointType, Vector3
+from linkforge.linkforge_core.models import Joint, JointLimits, JointMimic, JointType, Vector3
 
 
 def test_resolve_mimic_joints_basic() -> None:

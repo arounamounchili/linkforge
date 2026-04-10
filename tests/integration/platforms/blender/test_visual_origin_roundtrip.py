@@ -6,9 +6,9 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from linkforge_core import URDFGenerator
-from linkforge_core.models import Cylinder, Link, Robot, Visual
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.models import Cylinder, Link, Robot, Visual
+from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_cylinder_no_origin_roundtrip() -> None:

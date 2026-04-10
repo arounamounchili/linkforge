@@ -10,8 +10,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from linkforge_core import URDFGenerator
-from linkforge_core.models import (
+from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.models import (
     Box,
     Collision,
     Color,
@@ -29,7 +29,7 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def compare_robots(robot1: Robot, robot2: Robot, context: str = "") -> list[str]:

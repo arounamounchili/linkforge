@@ -22,8 +22,8 @@ from linkforge.blender.adapters.blender_to_core import (
     sanitize_name,
     scene_to_robot,
 )
-from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
-from linkforge_core.models import (
+from linkforge.linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+from linkforge.linkforge_core.models import (
     Box,
     Cylinder,
     JointType,
@@ -755,7 +755,7 @@ def test_blender_link_to_core_complex() -> None:
 def test_blender_link_to_core_geometry_and_material() -> None:
     """Verify detailed geometry and material conversion."""
     from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
-    from linkforge_core.models import GeometryType
+    from linkforge.linkforge_core.models import GeometryType
 
     # 1. Link Setup
     bpy.ops.object.empty_add()
@@ -1674,7 +1674,7 @@ def test_blender_to_core_missing_errors(clean_scene) -> None:
         blender_transmission_to_core,
         get_object_geometry,
     )
-    from linkforge_core.models.geometry import Box
+    from linkforge.linkforge_core.models.geometry import Box
 
     # blender_link_to_core_with_origin None
     assert blender_link_to_core_with_origin(None) is None

@@ -18,7 +18,7 @@ def test_operator_empty_xacro_naming(tmp_path) -> None:
     # We can't easily capture the builder from the operator call,
     # so we'll instantiate the builder manually to test the naming logic in the Blender context.
     from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
-    from linkforge_core.parsers import XACROParser
+    from linkforge.linkforge_core.parsers import XACROParser
 
     parser = XACROParser()
     robot = parser.parse(xacro_file)

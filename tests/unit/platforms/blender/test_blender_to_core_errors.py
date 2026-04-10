@@ -8,7 +8,7 @@ from linkforge.blender.adapters.blender_to_core import (
     blender_sensor_to_core,
     scene_to_robot,
 )
-from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+from linkforge.linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 
 
 def test_scene_to_robot_strict_mode_links(clean_scene) -> None:

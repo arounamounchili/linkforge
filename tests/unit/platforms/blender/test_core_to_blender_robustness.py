@@ -13,8 +13,8 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
-from linkforge_core.base import FileSystemResolver
-from linkforge_core.models import (
+from linkforge.linkforge_core.base import FileSystemResolver
+from linkforge.linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -40,7 +40,7 @@ from linkforge_core.models import (
     Vector3,
     Visual,
 )
-from linkforge_core.models.sensor import GPSInfo, IMUInfo
+from linkforge.linkforge_core.models.sensor import GPSInfo, IMUInfo
 from mathutils import Vector
 
 
@@ -71,7 +71,7 @@ def test_resolve_mesh_path(tmp_path) -> None:
     assert resolver.resolve("mesh.stl", relative_to=urdf_dir) == mesh_file.absolute()
 
     # 2. Package URI (requires mock of resolve_package_path)
-    with patch("linkforge_core.utils.path_utils.resolve_package_path") as mock_resolve:
+    with patch("linkforge.linkforge_core.utils.path_utils.resolve_package_path") as mock_resolve:
         mock_resolve.return_value = mesh_file
         # Note: resolve_package_path mock needs to return a Path that exists
         assert (
@@ -246,8 +246,8 @@ def test_create_sensor_object(clean_scene) -> None:
 
 def test_import_robot_with_mimic_and_gazebo(clean_scene) -> None:
     """Test import of robot with mimic joints and gazebo plugins."""
-    from linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
-    from linkforge_core.models.joint import JointMimic
+    from linkforge.linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
+    from linkforge.linkforge_core.models.joint import JointMimic
 
     robot = Robot(
         name="MimicBot",
@@ -276,7 +276,7 @@ def test_import_robot_with_mimic_and_gazebo(clean_scene) -> None:
         ],
     )
 
-    with patch("linkforge_core.models.robot.Robot.resolve_resource") as mock_resolve:
+    with patch("linkforge.linkforge_core.models.robot.Robot.resolve_resource") as mock_resolve:
         mock_resolve.return_value = Path("dummy.stl")
         import_robot_to_scene(robot, Path("robot.urdf"), bpy.context)
 
@@ -304,7 +304,7 @@ def test_create_material_no_tree(clean_scene) -> None:
 
 def test_import_robot_with_transmissions(clean_scene) -> None:
     """Test importing robot with transmissions."""
-    from linkforge_core.models.transmission import (
+    from linkforge.linkforge_core.models.transmission import (
         Transmission,
         TransmissionActuator,
         TransmissionJoint,
@@ -329,7 +329,7 @@ def test_import_robot_with_transmissions(clean_scene) -> None:
 
 def test_full_robot_import_integration(clean_scene) -> None:
     """A 'MegaBot' test to hit as many code paths as possible in core_to_blender."""
-    from linkforge_core.models.transmission import (
+    from linkforge.linkforge_core.models.transmission import (
         Transmission,
         TransmissionActuator,
         TransmissionJoint,
@@ -381,7 +381,7 @@ def test_full_robot_import_integration(clean_scene) -> None:
     imu = Sensor(name="imu_sensor", type=SensorType.IMU, link_name="base_link", imu_info=IMUInfo())
     gps = Sensor(name="gps_sensor", type=SensorType.GPS, link_name="base_link", gps_info=GPSInfo())
 
-    from linkforge_core.models.joint import JointDynamics
+    from linkforge.linkforge_core.models.joint import JointDynamics
 
     # Joint with dynamics and limits
     j1 = Joint(
@@ -412,7 +412,7 @@ def test_full_robot_import_integration(clean_scene) -> None:
         ),
     )
 
-    from linkforge_core.models.sensor import LidarInfo
+    from linkforge.linkforge_core.models.sensor import LidarInfo
 
     lidar = Sensor(
         name="lidar_sensor",
@@ -455,7 +455,7 @@ def test_full_robot_import_integration(clean_scene) -> None:
     # Mocking OBJ for mesh import
     with (
         patch("linkforge.blender.adapters.core_to_blender.import_mesh_file") as mock_io,
-        patch("linkforge_core.utils.path_utils.resolve_package_path") as mock_pkg,
+        patch("linkforge.linkforge_core.utils.path_utils.resolve_package_path") as mock_pkg,
     ):
         mock_io.return_value = bpy.data.objects.new("MeshObj", None)
         mock_pkg.return_value = Path("/tmp/mesh.stl")

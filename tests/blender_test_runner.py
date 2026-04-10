@@ -20,11 +20,6 @@ def setup_environment():
     if blender_path not in sys.path:
         sys.path.insert(0, blender_path)
 
-    # Add core/src to sys.path (required for linkforge_core dependency)
-    core_path = os.path.join(project_root, "core", "src")
-    if core_path not in sys.path:
-        sys.path.insert(0, core_path)
-
     # Ensure pytest is available in Blender's Python
     if importlib.util.find_spec("pytest") is None:
         print("pytest not found in Blender's Python. Attempting to install...")

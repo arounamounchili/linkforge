@@ -6,7 +6,7 @@ from linkforge.blender.operators.import_ops import (
     register,
     unregister,
 )
-from linkforge_core.exceptions import RobotModelError
+from linkforge.linkforge_core.exceptions import RobotModelError
 
 
 def test_import_urdf_logic_paths(tmp_path) -> None:
@@ -22,7 +22,9 @@ def test_import_urdf_logic_paths(tmp_path) -> None:
     # Mock the asynchronous builder to avoid side effects during logic verification.
     with (
         patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
-        patch("linkforge_core.validation.security.find_sandbox_root", return_value=tmp_path),
+        patch(
+            "linkforge.linkforge_core.validation.security.find_sandbox_root", return_value=tmp_path
+        ),
     ):
         # Call execute directly to test the logic
         result = LINKFORGE_OT_import_urdf.execute(mock_self, context)
@@ -54,7 +56,7 @@ def test_import_urdf_xacro_fallback(tmp_path) -> None:
     mock_self.filepath = str(urdf_file)
 
     context = MagicMock()
-    from linkforge_core import XacroDetectedError
+    from linkforge.linkforge_core import XacroDetectedError
 
     with (
         patch(
@@ -65,9 +67,11 @@ def test_import_urdf_xacro_fallback(tmp_path) -> None:
             "linkforge_core.parsers.XacroResolver.resolve_file",
             return_value="<robot name='resolved'/>",
         ),
-        patch("linkforge_core.parsers.URDFParser.parse_string", return_value=MagicMock()),
+        patch("linkforge.linkforge_core.parsers.URDFParser.parse_string", return_value=MagicMock()),
         patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
-        patch("linkforge_core.validation.security.find_sandbox_root", return_value=tmp_path),
+        patch(
+            "linkforge.linkforge_core.validation.security.find_sandbox_root", return_value=tmp_path
+        ),
     ):
         result = LINKFORGE_OT_import_urdf.execute(mock_self, context)
         assert result == {"FINISHED"}
@@ -91,7 +95,9 @@ def test_import_urdf_directory_handling_more(tmp_path) -> None:
 
     with (
         patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
-        patch("linkforge_core.validation.security.find_sandbox_root", return_value=subdir),
+        patch(
+            "linkforge.linkforge_core.validation.security.find_sandbox_root", return_value=subdir
+        ),
     ):
         result = LINKFORGE_OT_import_urdf.execute(mock_self, bpy.context)
         assert result == {"FINISHED"}
@@ -114,7 +120,9 @@ def test_import_urdf_directory_candidates(tmp_path) -> None:
 
     with (
         patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
-        patch("linkforge_core.validation.security.find_sandbox_root", return_value=subdir),
+        patch(
+            "linkforge.linkforge_core.validation.security.find_sandbox_root", return_value=subdir
+        ),
     ):
         result = LINKFORGE_OT_import_urdf.execute(mock_self, bpy.context)
         assert result == {"FINISHED"}
@@ -170,7 +178,7 @@ def test_import_xacro_resolution_error(tmp_path) -> None:
 
     # Simulate a Xacro resolution error (e.g., PackageNotFoundError).
     with patch(
-        "linkforge_core.parsers.XacroResolver.resolve_file",
+        "linkforge.linkforge_core.parsers.XacroResolver.resolve_file",
         side_effect=Exception("PackageNotFoundError: my_pkg"),
     ):
         result = LINKFORGE_OT_import_urdf.execute(mock_self, bpy.context)

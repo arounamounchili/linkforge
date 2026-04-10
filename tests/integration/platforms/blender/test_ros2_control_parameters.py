@@ -1,7 +1,7 @@
 """Integration test for ros2_control hardware parameters and sensor type."""
 
 import bpy
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
@@ -59,7 +59,7 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
 
     robot, _ = scene_to_robot(bpy.context, Path("/tmp"), dry_run=True)
 
-    from linkforge_core import URDFGenerator
+    from linkforge.linkforge_core import URDFGenerator
 
     exported_urdf = URDFGenerator().generate(robot)
 

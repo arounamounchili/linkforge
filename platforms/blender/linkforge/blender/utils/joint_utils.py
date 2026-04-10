@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import bpy
-from linkforge_core.models import Joint
+
+from ...linkforge_core.models import Joint
 
 
 def resolve_mimic_joints(joints: list[Joint], joint_objects: dict[str, bpy.types.Object]) -> None:
