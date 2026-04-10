@@ -9,19 +9,16 @@ A valid mesh for inertia calculation must be:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any
 
 from ..exceptions import RobotPhysicsError, ValidationErrorCode
 from ..logging_config import get_logger
-
-if TYPE_CHECKING:
-    import numpy as np  # type: ignore[import-not-found]
 
 logger = get_logger(__name__)
 
 
 def validate_mesh_topology(
-    triangles: list[tuple[int, int, int]] | np.ndarray,
+    triangles: list[tuple[int, int, int]] | Any,
     *,
     strict: bool = False,
     name: str | None = None,
