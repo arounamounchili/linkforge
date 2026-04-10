@@ -14,6 +14,14 @@ from ..logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# Validation message templates
+WATERTIGHT_WARNING_TEMPLATE = (
+    "Mesh has {count} boundary edge(s) — not watertight. Inertia calculation may be inaccurate."
+)
+NON_MANIFOLD_WARNING_TEMPLATE = (
+    "Mesh has {count} non-manifold edge(s) (shared by >2 triangles). Mesh may be self-intersecting."
+)
+
 
 def validate_mesh_topology(
     triangles: list[tuple[int, int, int]],
@@ -46,15 +54,12 @@ def validate_mesh_topology(
         for edge in edges:
             edge_map.setdefault(edge, []).append(tri_idx)
 
-    # Check 1: Every edge must be shared by exactly 2 triangles (watertight)
+    # Every edge must be shared by exactly 2 triangles (watertight)
     boundary_edges = [e for e, tris in edge_map.items() if len(tris) == 1]
     non_manifold_edges = [e for e, tris in edge_map.items() if len(tris) > 2]
 
     if boundary_edges:
-        msg = (
-            f"Mesh has {len(boundary_edges)} boundary edge(s) — not watertight. "
-            f"Inertia calculation may be inaccurate."
-        )
+        msg = WATERTIGHT_WARNING_TEMPLATE.format(count=len(boundary_edges))
         warnings.append(msg)
         if strict:
             raise RobotPhysicsError(
@@ -66,10 +71,7 @@ def validate_mesh_topology(
         logger.warning(msg)
 
     if non_manifold_edges:
-        msg = (
-            f"Mesh has {len(non_manifold_edges)} non-manifold edge(s) "
-            f"(shared by >2 triangles). Mesh may be self-intersecting."
-        )
+        msg = NON_MANIFOLD_WARNING_TEMPLATE.format(count=len(non_manifold_edges))
         warnings.append(msg)
         if strict:
             raise RobotPhysicsError(
