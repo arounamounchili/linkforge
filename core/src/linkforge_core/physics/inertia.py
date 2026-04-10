@@ -44,7 +44,15 @@ def _calculate_box_inertia_cached(x: float, y: float, z: float, mass: float) -> 
 
 
 def calculate_box_inertia(box: Box, mass: float) -> InertiaTensor:
-    """Calculate inertia tensor for a box (rectangular cuboid)."""
+    """Calculate inertia tensor for a box (rectangular cuboid).
+
+    Args:
+        box: Box geometry with size (x, y, z)
+        mass: Total mass in kg
+
+    Returns:
+        Inertia tensor about center of mass
+    """
     if mass < MIN_MASS_STABILITY_THRESHOLD:
         return _get_stability_fallback()
 
@@ -60,7 +68,15 @@ def _calculate_cylinder_inertia_cached(radius: float, length: float, mass: float
 
 
 def calculate_cylinder_inertia(cylinder: Cylinder, mass: float) -> InertiaTensor:
-    """Calculate inertia tensor for a cylinder (axis along Z)."""
+    """Calculate inertia tensor for a cylinder (axis along Z).
+
+    Args:
+        cylinder: Cylinder geometry with radius and length
+        mass: Total mass in kg
+
+    Returns:
+        Inertia tensor about center of mass
+    """
     if mass < MIN_MASS_STABILITY_THRESHOLD:
         return _get_stability_fallback()
 
@@ -75,7 +91,15 @@ def _calculate_sphere_inertia_cached(radius: float, mass: float) -> InertiaTenso
 
 
 def calculate_sphere_inertia(sphere: Sphere, mass: float) -> InertiaTensor:
-    """Calculate inertia tensor for a sphere."""
+    """Calculate inertia tensor for a sphere.
+
+    Args:
+        sphere: Sphere geometry with radius
+        mass: Total mass in kg
+
+    Returns:
+        Inertia tensor about center of mass
+    """
     if mass < MIN_MASS_STABILITY_THRESHOLD:
         return _get_stability_fallback()
 
@@ -248,7 +272,15 @@ def _validate_mesh_inputs(
 
 
 def calculate_mesh_inertia(mesh: Mesh, mass: float) -> InertiaTensor:
-    """Calculate approximate (bounding box) inertia for a mesh."""
+    """Calculate approximate (bounding box) inertia for a mesh.
+
+    Args:
+        mesh: Mesh geometry with scale
+        mass: Total mass in kg
+
+    Returns:
+        Approximate inertia tensor
+    """
     if mass < MIN_MASS_STABILITY_THRESHOLD:
         return _get_stability_fallback()
 
