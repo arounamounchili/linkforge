@@ -3,7 +3,8 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from linkforge.blender.utils.physics import calculate_mesh_inertia_numpy
-from linkforge_core.models.link import InertiaTensor
+from linkforge_core.exceptions import RobotMathError, RobotPhysicsError
+from linkforge_core.physics.inertia import MIN_INERTIA_STABILITY_VALUE
 
 
 def get_cube_mesh(side=1.0, offset=(0, 0, 0), inverted=False):
@@ -84,14 +85,13 @@ def test_calculate_mesh_inertia_numpy_cube():
 
 
 def test_calculate_mesh_inertia_numpy_inverted_cube():
-    """Test that inverted normals (negative volume) still yield correct positive inertia."""
+    """Test that inverted normals (negative volume) raise RobotPhysicsError."""
     vertices, triangles = get_cube_mesh(side=1.0, inverted=True)
     mass = 1.0
-    inertia = calculate_mesh_inertia_numpy(vertices, triangles, mass)
 
-    assert inertia is not None
-    expected = 1.0 / 6.0
-    assert pytest.approx(inertia.ixx, abs=1e-5) == expected
+    # Inverted cube used to be silently fixed with abs(). Now it raises an error.
+    with pytest.raises(RobotPhysicsError, match="Negative diagonal inertia"):
+        calculate_mesh_inertia_numpy(vertices, triangles, mass)
 
 
 def test_calculate_mesh_inertia_numpy_offset_cube():
@@ -106,16 +106,16 @@ def test_calculate_mesh_inertia_numpy_offset_cube():
 
 
 def test_calculate_mesh_inertia_numpy_zero_mass():
-    """Test that zero mass returns a zero inertia tensor."""
+    """Test that zero mass returns a minimal stable inertia tensor."""
     vertices, triangles = get_cube_mesh(side=1.0)
     result = calculate_mesh_inertia_numpy(vertices, triangles, 0.0)
-    expected = InertiaTensor.zero()
-    assert result.ixx == expected.ixx
-    assert result.iyy == expected.iyy
-    assert result.izz == expected.izz
-    assert result.ixy == expected.ixy
-    assert result.ixz == expected.ixz
-    assert result.iyz == expected.iyz
+
+    # Hardened implementation returns minimal stable values instead of zero
+    expected_val = MIN_INERTIA_STABILITY_VALUE
+    assert result.ixx == expected_val
+    assert result.iyy == expected_val
+    assert result.izz == expected_val
+    assert result.ixy == 0.0
 
 
 def test_calculate_mesh_inertia_numpy_empty_mesh():
@@ -133,6 +133,15 @@ def test_calculate_mesh_inertia_numpy_degenerate_mesh():
     triangles = np.array([(0, 1, 2)], dtype=np.int32)
     inertia = calculate_mesh_inertia_numpy(vertices, triangles, 1.0)
     assert inertia is None
+
+
+def test_calculate_mesh_inertia_numpy_nan_vertices():
+    """Test that NaN/Inf vertices raise RobotMathError."""
+    vertices, triangles = get_cube_mesh()
+    vertices[0, 0] = np.nan
+
+    with pytest.raises(RobotMathError, match="contains non-finite"):
+        calculate_mesh_inertia_numpy(vertices, triangles, 1.0)
 
 
 def test_calculate_mesh_inertia_numpy_no_numpy():

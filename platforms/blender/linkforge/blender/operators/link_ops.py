@@ -510,8 +510,13 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
 
     # Import here to avoid circular dependency
+    from linkforge_core.exceptions import RobotPhysicsError
     from linkforge_core.models.geometry import Box, Cylinder, Sphere
-    from linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
+    from linkforge_core.physics import (
+        calculate_inertia,
+        calculate_mesh_inertia_from_triangles,
+        validate_mesh_topology,
+    )
 
     from ..adapters.blender_to_core import extract_mesh_triangles
     from ..utils.physics import calculate_mesh_inertia_numpy
@@ -552,6 +557,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
         from ..adapters.blender_to_core import detect_primitive_type
 
         prim_type = detect_primitive_type(target_obj)
+        tensor = None
 
         if prim_type:
             # Use primitive calculation
@@ -571,40 +577,23 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
                 radius = max(dims[0], dims[1]) / 2.0
                 length = dims[2]
                 tensor = calculate_inertia(Cylinder(radius=radius, length=length), mass)
-            else:
-                # Mesh fallback
-                # Use optimized NumPy path
-                try:
-                    res = extract_mesh_triangles(target_obj, as_numpy=True)
-                    if res:
-                        verts_np, faces_np = res
-                        calc_tensor = calculate_mesh_inertia_numpy(verts_np, faces_np, mass)
-                        if calc_tensor:
-                            tensor = calc_tensor
-                except (ImportError, AttributeError, NameError):
-                    # Fallback to core Python if NumPy fails
-                    res = extract_mesh_triangles(target_obj, as_numpy=False)
-                    if res:
-                        verts, faces = res
-                        calc_tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
-                        if calc_tensor:
-                            tensor = calc_tensor
-
-                if not tensor:
-                    return False
         else:
-            # Mesh-only geometry
-            tensor = None
+            # Mesh fallback
+            # Use optimized NumPy path
             try:
                 res = extract_mesh_triangles(target_obj, as_numpy=True)
                 if res:
                     verts_np, faces_np = res
+                    # Mandatory topology validation for mesh inertia (informs user of bad CAD data)
+                    validate_mesh_topology(verts_np, faces_np, name=target_obj.name)
                     tensor = calculate_mesh_inertia_numpy(verts_np, faces_np, mass)
-            except (ImportError, AttributeError, NameError):
-                # Fallback to core integration
+            except (ImportError, AttributeError, NameError, RobotPhysicsError):
+                # Fallback to core Python if NumPy fails or calculation error
                 res = extract_mesh_triangles(target_obj, as_numpy=False)
                 if res:
                     verts, faces = res
+                    # Mandatory topology validation for mesh inertia
+                    validate_mesh_topology(verts, faces, name=target_obj.name)
                     tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
 
         if tensor is not None:

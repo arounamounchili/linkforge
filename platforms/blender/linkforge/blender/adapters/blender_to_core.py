@@ -70,7 +70,11 @@ from linkforge_core.models.transmission import (
     TransmissionJoint,
     TransmissionType,
 )
-from linkforge_core.physics import calculate_inertia, calculate_mesh_inertia_from_triangles
+from linkforge_core.physics import (
+    calculate_inertia,
+    calculate_mesh_inertia_from_triangles,
+    validate_mesh_topology,
+)
 from linkforge_core.utils.math_utils import clean_float, normalize_vector
 from linkforge_core.utils.string_utils import sanitize_name
 
@@ -635,6 +639,8 @@ def blender_link_to_core_with_origin(
 
                     if mesh_data:
                         vertices, triangles = mesh_data
+                        # Mandatory topology validation for mesh inertia
+                        validate_mesh_topology(vertices, triangles, name=geom_obj.name)
                         if use_numpy:
                             # Vectorized implementation
                             inertia_tensor = calculate_mesh_inertia_numpy(
