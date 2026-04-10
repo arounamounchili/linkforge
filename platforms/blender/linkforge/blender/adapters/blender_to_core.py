@@ -26,8 +26,6 @@ else:
 
 from dataclasses import dataclass
 
-from linkforge.blender.utils.physics import calculate_mesh_inertia_numpy
-
 from ...linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from ...linkforge_core.logging_config import get_logger
 from ...linkforge_core.models import (
@@ -79,6 +77,7 @@ from ...linkforge_core.physics import (
 )
 from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
 from ...linkforge_core.utils.string_utils import sanitize_name
+from ..utils.physics import calculate_mesh_inertia_numpy
 
 # Constants
 logger = get_logger(__name__)

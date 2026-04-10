@@ -18,14 +18,13 @@ from bpy.props import (
 )
 from bpy.types import Context, PropertyGroup
 
-from linkforge.blender.utils.scene_utils import clear_stats_cache
+from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
     from .link_props import LinkPropertyGroup
 
-from linkforge.blender.utils.property_helpers import find_property_owner
-
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+from ..utils.property_helpers import find_property_owner
 
 
 def get_sensor_name(self: SensorPropertyGroup) -> str:

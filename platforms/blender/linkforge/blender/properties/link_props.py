@@ -18,11 +18,10 @@ from bpy.props import (
 )
 from bpy.types import Context, PropertyGroup
 
-from linkforge.blender.utils.link_utils import should_rename_child
-from linkforge.blender.utils.scene_utils import clear_stats_cache
-from linkforge.blender.visualization.inertia_gizmos import tag_redraw
-
 from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+from ..utils.link_utils import should_rename_child
+from ..utils.scene_utils import clear_stats_cache
+from ..visualization.inertia_gizmos import tag_redraw
 
 
 def get_link_name(self: LinkPropertyGroup) -> str:
