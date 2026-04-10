@@ -640,7 +640,7 @@ def blender_link_to_core_with_origin(
                     if mesh_data:
                         vertices, triangles = mesh_data
                         # Mandatory topology validation for mesh inertia
-                        validate_mesh_topology(vertices, triangles, name=geom_obj.name)
+                        validate_mesh_topology(triangles, name=geom_obj.name)
                         if use_numpy:
                             # Vectorized implementation
                             inertia_tensor = calculate_mesh_inertia_numpy(

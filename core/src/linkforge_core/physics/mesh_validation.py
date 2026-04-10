@@ -9,22 +9,29 @@ A valid mesh for inertia calculation must be:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ..exceptions import RobotPhysicsError, ValidationErrorCode
 from ..logging_config import get_logger
+
+if TYPE_CHECKING:
+    import numpy as np
 
 logger = get_logger(__name__)
 
 
 def validate_mesh_topology(
-    triangles: list[tuple[int, int, int]],
+    triangles: list[tuple[int, int, int]] | np.ndarray,
     *,
     strict: bool = False,
+    name: str | None = None,
 ) -> list[str]:
     """Check mesh topology for non-manifold issues.
 
     Args:
-        triangles: Triangle index list
+        triangles: Triangle index list or (M, 3) array
         strict: If True, raise on first issue. If False, collect all warnings.
+        name: Optional mesh name for logging context.
 
     Returns:
         List of warning messages (empty = clean mesh)
@@ -51,7 +58,8 @@ def validate_mesh_topology(
     non_manifold_edges = [e for e, tris in edge_map.items() if len(tris) > 2]
 
     if boundary_edges:
-        msg = f"Mesh has {len(boundary_edges)} boundary edge(s) — not watertight. Inertia calculation may be inaccurate."
+        prefix = f"Mesh '{name}'" if name else "Mesh"
+        msg = f"{prefix} has {len(boundary_edges)} boundary edge(s) — not watertight. Inertia calculation may be inaccurate."
         warnings.append(msg)
         if strict:
             raise RobotPhysicsError(
@@ -63,7 +71,8 @@ def validate_mesh_topology(
         logger.warning(msg)
 
     if non_manifold_edges:
-        msg = f"Mesh has {len(non_manifold_edges)} non-manifold edge(s) (shared by >2 triangles). Mesh may be self-intersecting."
+        prefix = f"Mesh '{name}'" if name else "Mesh"
+        msg = f"{prefix} has {len(non_manifold_edges)} non-manifold edge(s) (shared by >2 triangles). Mesh may be self-intersecting."
         warnings.append(msg)
         if strict:
             raise RobotPhysicsError(
