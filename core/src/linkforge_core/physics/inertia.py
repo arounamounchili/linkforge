@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from math import isfinite
 
-from ..exceptions import RobotPhysicsError, ValidationErrorCode
+from ..exceptions import RobotMathError, RobotPhysicsError, ValidationErrorCode
 from ..logging_config import get_logger
 from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
 from ..models.link import InertiaTensor
@@ -145,18 +146,21 @@ def calculate_mesh_inertia_from_triangles(
 ) -> InertiaTensor:
     """Calculate inertia tensor for a triangle mesh using tetrahedralization.
 
-    Uses the canonical tetrahedral inertia integration formula from:
-    "Fast and Accurate Computation of Polyhedral Mass Properties" by Brian Mirtich (1996)
-    https://www.cs.berkeley.edu/~jfc/mirtich/massProps.html
+    This implementation uses the **tetrahedral decomposition** method:
+    each triangle (A, B, C) forms a signed tetrahedron with apex at the origin.
+    The volume integrals are computed analytically per tetrahedron using
+    the closed-form formulas from Mirtich (1996), then accumulated over all triangles.
 
-    The algorithm decomposes the mesh into tetrahedra with apex at origin,
-    integrates their inertia contributions, then transforms to center of mass.
+    This is different from the projection integral approach in the original
+    reference C code — both methods derive from the divergence theorem and
+    produce identical results for valid meshes.
 
     Algorithm steps:
-    1. Decompose mesh into tetrahedra (origin + each triangle)
-    2. Compute volume-weighted center of mass
-    3. Integrate inertia tensor components about origin
-    4. Apply parallel axis theorem to shift to center of mass
+    1. Validate input consistency and numerical finiteness
+    2. Decompose mesh into tetrahedra (origin + each triangle)
+    3. Compute volume-weighted center of mass
+    4. Integrate inertia tensor components about origin
+    5. Apply parallel axis theorem to shift to center of mass
 
     Args:
         vertices: List of (x, y, z) vertex coordinates in meters
@@ -192,29 +196,19 @@ def calculate_mesh_inertia_from_triangles(
         >>> # Result will be approximately I = (1/6) for a 1kg 1m cube
 
     Note:
-        - Mesh must be closed (watertight) for accurate results
-        - Algorithm uses signed volumes, so triangle winding order matters
-        - For open meshes or inconsistent winding, results may be inaccurate
+        - Mesh MUST be closed (watertight) with consistent outward-facing
+          triangle winding for accurate results. This is guaranteed by Blender
+          when using evaluated/triangulated meshes.
+        - The signed volume method assumes consistent winding. If triangles
+          are inconsistently wound, density and inertia integrals become
+          mathematically inconsistent. The negative diagonal check below
+          is the safety net for this case.
 
     """
     if mass <= 0:
         return InertiaTensor.zero()
 
-    if not vertices:
-        raise RobotPhysicsError(
-            ValidationErrorCode.VALUE_EMPTY,
-            "Cannot calculate inertia for empty mesh vertices",
-            target="Vertices",
-            value=0,
-        )
-
-    if not triangles:
-        raise RobotPhysicsError(
-            ValidationErrorCode.VALUE_EMPTY,
-            "Cannot calculate inertia for empty mesh triangles",
-            target="Triangles",
-            value=0,
-        )
+    _validate_mesh_inputs(vertices, triangles)
 
     # Accumulators for volume-weighted properties
     total_volume = 0.0
@@ -231,24 +225,6 @@ def calculate_mesh_inertia_from_triangles(
 
     # Process each triangle as a tetrahedron with apex at origin
     for tri in triangles:
-        # Validate triangle indices
-        if len(tri) != 3:
-            raise RobotPhysicsError(
-                ValidationErrorCode.INVALID_VALUE,
-                "Expected exactly 3 indices for triangle",
-                target="TriangleIndices",
-                value=len(tri),
-            )
-
-        for idx in tri:
-            if not (0 <= idx < len(vertices)):
-                raise RobotPhysicsError(
-                    ValidationErrorCode.OUT_OF_RANGE,
-                    f"Triangle index out of range (0-{len(vertices) - 1})",
-                    target="TriangleIndex",
-                    value=idx,
-                )
-
         # Get vertices
         a = vertices[tri[0]]
         b = vertices[tri[1]]
@@ -274,73 +250,63 @@ def calculate_mesh_inertia_from_triangles(
         # Canonical inertia tensor integrals for tetrahedron with one vertex at origin
         # Based on "Polyhedral Mass Properties" formulas
         # For a tetrahedron with vertices at origin, a, b, c:
-        # ∫∫∫ x² dV = (V/20) * (a_x² + b_x² + c_x² + a_x*b_x + a_x*c_x + b_x*c_x)
+        # ∫∫∫ x² dV = (V/10) * (ax² + bx² + cx² + ax·bx + ax·cx + bx·cx)
 
         ax, ay, az = a[0], a[1], a[2]
         bx, by, bz = b[0], b[1], b[2]
         cx, cy, cz = c[0], c[1], c[2]
 
-        # Coefficient for integration
+        # Coefficients for integration
         # For a tetrahedron with one vertex at origin, the second moment integrals are:
         # ∫∫∫ x² dV = (V/10) * (sum of squared coords + pairwise products)
-        coeff = tet_vol / 10.0
+        # ∫∫∫ xy dV = (V/20) * (sum of pairwise products)
+        coeff_x2 = tet_vol / 10.0
+        coeff_xy = tet_vol / 20.0
 
         # Compute second moment integrals
         # ∫∫∫ x² dV
-        x2 = coeff * (ax * ax + bx * bx + cx * cx + ax * bx + ax * cx + bx * cx)
+        x2 = coeff_x2 * (ax * ax + bx * bx + cx * cx + ax * bx + ax * cx + bx * cx)
         # ∫∫∫ y² dV
-        y2 = coeff * (ay * ay + by * by + cy * cy + ay * by + ay * cy + by * cy)
+        y2 = coeff_x2 * (ay * ay + by * by + cy * cy + ay * by + ay * cy + by * cy)
         # ∫∫∫ z² dV
-        z2 = coeff * (az * az + bz * bz + cz * cz + az * bz + az * cz + bz * cz)
+        z2 = coeff_x2 * (az * az + bz * bz + cz * cz + az * bz + az * cz + bz * cz)
 
         # Compute product moment integrals
         # ∫∫∫ xy dV
-        xy = (
-            coeff
-            * (
-                2 * ax * ay
-                + 2 * bx * by
-                + 2 * cx * cy
-                + ax * by
-                + ax * cy
-                + bx * ay
-                + bx * cy
-                + cx * ay
-                + cx * by
-            )
-            / 2.0
+        xy = coeff_xy * (
+            2 * ax * ay
+            + 2 * bx * by
+            + 2 * cx * cy
+            + ax * by
+            + ax * cy
+            + bx * ay
+            + bx * cy
+            + cx * ay
+            + cx * by
         )
         # ∫∫∫ xz dV
-        xz = (
-            coeff
-            * (
-                2 * ax * az
-                + 2 * bx * bz
-                + 2 * cx * cz
-                + ax * bz
-                + ax * cz
-                + bx * az
-                + bx * cz
-                + cx * az
-                + cx * bz
-            )
-            / 2.0
+        xz = coeff_xy * (
+            2 * ax * az
+            + 2 * bx * bz
+            + 2 * cx * cz
+            + ax * bz
+            + ax * cz
+            + bx * az
+            + bx * cz
+            + cx * az
+            + cx * bz
         )
         # ∫∫∫ yz dV
-        yz = (
-            coeff
-            * (
-                2 * ay * az
-                + 2 * by * bz
-                + 2 * cy * cz
-                + ay * bz
-                + ay * cz
-                + by * az
-                + by * cz
-                + cy * az
-                + cy * bz
-            )
-            / 2.0
+        yz = coeff_xy * (
+            2 * ay * az
+            + 2 * by * bz
+            + 2 * cy * cz
+            + ay * bz
+            + ay * cz
+            + by * az
+            + by * cz
+            + cy * az
+            + cy * bz
         )
 
         # Accumulate inertia tensor components
@@ -350,7 +316,7 @@ def calculate_mesh_inertia_from_triangles(
         i_yy += x2 + z2
         # I_zz = ∫∫∫ (x² + y²) dV
         i_zz += x2 + y2
-        # I_xy = -∫∫∫ xy dV
+        # I_xz = -∫∫∫ xz dV
         i_xz -= xz
         # I_yz = -∫∫∫ yz dV
         i_yz -= yz
@@ -358,7 +324,7 @@ def calculate_mesh_inertia_from_triangles(
         i_xy -= xy
 
     # Check for degenerate mesh (all triangles are coplanar or have zero area)
-    if abs(total_volume) < 1e-10:
+    if abs(total_volume) < 1e-12:
         raise RobotPhysicsError(
             ValidationErrorCode.PHYSICS_VIOLATION,
             "Degenerate mesh forms zero volume",
@@ -393,22 +359,96 @@ def calculate_mesh_inertia_from_triangles(
 
     # Validate diagonal elements (must be positive for physical correctness)
     # Negative values indicate mesh winding issues or calculation errors
-    if i_xx < 0 or i_yy < 0 or i_zz < 0:
-        logger.warning(
-            f"Negative diagonal inertia detected "
-            f"(Ixx={i_xx:.6f}, Iyy={i_yy:.6f}, Izz={i_zz:.6f}). "
-            f"This may indicate inverted mesh normals or inconsistent triangle winding. "
-            f"Using absolute values, but please check your mesh geometry."
+    negative_inertia_threshold = -1e-6
+    if (
+        i_xx < negative_inertia_threshold
+        or i_yy < negative_inertia_threshold
+        or i_zz < negative_inertia_threshold
+    ):
+        raise RobotPhysicsError(
+            ValidationErrorCode.PHYSICS_VIOLATION,
+            f"Negative diagonal inertia indicates incorrect mesh winding "
+            f"or a non-manifold mesh: Ixx={i_xx:.6f}, Iyy={i_yy:.6f}, Izz={i_zz:.6f}",
+            target="InertiaDiagonal",
+            value=(i_xx, i_yy, i_zz),
         )
 
     return InertiaTensor(
-        ixx=abs(i_xx),
+        ixx=max(i_xx, 0.0),  # clamp tiny floating-point noise
         ixy=i_xy,
         ixz=i_xz,
-        iyy=abs(i_yy),
+        iyy=max(i_yy, 0.0),
         iyz=i_yz,
-        izz=abs(i_zz),
+        izz=max(i_zz, 0.0),
     )
+
+
+def _validate_mesh_inputs(
+    vertices: list[tuple[float, float, float]],
+    triangles: list[tuple[int, int, int]],
+) -> None:
+    """Validate mesh topology and numerical finiteness before computation."""
+    if not vertices:
+        raise RobotPhysicsError(
+            ValidationErrorCode.VALUE_EMPTY,
+            "Cannot calculate inertia for empty mesh vertices",
+            target="Vertices",
+            value=0,
+        )
+
+    if not triangles:
+        raise RobotPhysicsError(
+            ValidationErrorCode.VALUE_EMPTY,
+            "Cannot calculate inertia for empty mesh triangles",
+            target="Triangles",
+            value=0,
+        )
+
+    for i, v in enumerate(vertices):
+        if any(not isfinite(c) for c in v):
+            raise RobotMathError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Vertex {i} contains non-finite value (NaN or Inf)",
+                target="Vertices",
+                value=v,
+            )
+
+    n_verts = len(vertices)
+    for i, tri in enumerate(triangles):
+        # Validate triangle indices
+        if len(tri) != 3:
+            raise RobotPhysicsError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Expected exactly 3 indices for triangle at index {i}",
+                target="TriangleIndices",
+                value=len(tri),
+            )
+
+        for idx in tri:
+            if not (0 <= idx < n_verts):
+                raise RobotPhysicsError(
+                    ValidationErrorCode.OUT_OF_RANGE,
+                    f"Triangle index {idx} at triangle {i} out of range (0-{n_verts - 1})",
+                    target="TriangleIndex",
+                    value=idx,
+                )
+
+        # Check for degenerate (zero-area) triangles
+        v0, v1, v2 = vertices[tri[0]], vertices[tri[1]], vertices[tri[2]]
+        # Edges
+        e1 = (v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2])
+        e2 = (v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2])
+        # Cross product: magnitude squared = 4 * area squared
+        cross_mag_sq = (
+            (e1[1] * e2[2] - e1[2] * e2[1]) ** 2
+            + (e1[2] * e2[0] - e1[0] * e2[2]) ** 2
+            + (e1[0] * e2[1] - e1[1] * e2[0]) ** 2
+        )
+        if cross_mag_sq < 1e-24:
+            logger.warning(
+                f"Degenerate triangle at index {i} (zero area): {tri}. "
+                f"This triangle contributes nothing and may indicate a mesh export error."
+            )
 
 
 def calculate_mesh_inertia(mesh: Mesh, mass: float) -> InertiaTensor:
@@ -427,6 +467,13 @@ def calculate_mesh_inertia(mesh: Mesh, mass: float) -> InertiaTensor:
         with actual mesh data for accurate results.
 
         For now, we approximate using bounding box (scaled by mesh.scale).
+
+    Warning:
+        This is a PLACEHOLDER approximation using a bounding box proxy.
+        It is physically inaccurate for any non-box mesh shape.
+        For accurate results, use calculate_mesh_inertia_from_triangles()
+        with actual vertex and triangle data from the platform adapter.
+        Inertia errors from this function can cause unstable simulation dynamics.
 
     """
     if mass <= 0:
