@@ -15,7 +15,7 @@ from ..exceptions import RobotPhysicsError, ValidationErrorCode
 from ..logging_config import get_logger
 
 if TYPE_CHECKING:
-    import numpy as np
+    import numpy as np  # type: ignore[import-not-found]
 
 logger = get_logger(__name__)
 

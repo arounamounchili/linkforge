@@ -225,6 +225,8 @@ def build_extension() -> Path:
         subprocess.run(
             [
                 blender_path,
+                "--background",
+                "--factory-startup",
                 "--command",
                 "extension",
                 "build",

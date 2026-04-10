@@ -9,6 +9,42 @@ Metadata is defined in blender_manifest.toml at the root of the extension.
 from __future__ import annotations
 
 # Blender Extension Entry Point
+import sys
+from pathlib import Path
+
+# Add the extension root and wheels to sys.path
+# This ensures bundled linkforge_core and dependencies are found both
+# in packaged extensions and when running from source.
+EXT_ROOT = Path(__file__).parent.resolve()
+if str(EXT_ROOT) not in sys.path:
+    # Insert at index 1 to respect priority but stay below the primary script path
+    sys.path.insert(1, str(EXT_ROOT))
+
+WHEELS_DIR = EXT_ROOT / "wheels"
+if WHEELS_DIR.exists() and str(WHEELS_DIR) not in sys.path:
+    sys.path.append(str(WHEELS_DIR))
+
+# --- Namespace Bridge ---
+# Blender Extensions use the 'bl_ext' namespace. To support project-wide
+# interoperability and legacy scripts, we bridge the 'linkforge' alias.
+if "linkforge" not in sys.modules:
+    sys.modules["linkforge"] = sys.modules[__name__]
+
+
+# --- Health Checks ---
+def _check_health() -> bool:
+    """Verify the extension environment and dependencies."""
+    try:
+        import linkforge_core  # noqa: F401
+
+        return True
+    except ImportError as e:
+        print(f"LinkForge Initialization Warning: Core dependencies not found ({e}).")
+        print("If this is a fresh install, please ensure the extension is correctly enabled.")
+        return False
+
+
+_check_health()
 
 # Import blender module if bpy is available (inside Blender)
 try:
