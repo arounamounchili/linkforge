@@ -308,8 +308,8 @@ class TestMeshInertiaFromTriangles:
             (4, 6, 7),  # Top
             (0, 1, 5),
             (0, 5, 4),  # Front
-            (3, 2, 6),
-            (3, 6, 7),  # Back
+            (3, 7, 6),
+            (3, 6, 2),  # Back
             (0, 4, 7),
             (0, 7, 3),  # Left
             (1, 2, 6),
@@ -377,5 +377,5 @@ class TestMeshInertiaFromTriangles:
         vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
         # This will be caught by volume check or topology check
-        with pytest.raises(RobotPhysicsError, match="Degenerate mesh"):
+        with pytest.raises(RobotPhysicsError, match="not watertight|Degenerate mesh"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)

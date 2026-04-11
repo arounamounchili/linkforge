@@ -27,7 +27,9 @@ def test_calculate_mesh_inertia_negative_diagonal() -> None:
         (1, 3, 5),
         (1, 5, 2),
     ]
-    with pytest.raises(RobotPhysicsError, match="Negative diagonal inertia"):
+    with pytest.raises(
+        RobotPhysicsError, match="inward or inconsistent winding|Negative diagonal inertia"
+    ):
         calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
 
@@ -36,7 +38,7 @@ def test_calculate_mesh_inertia_zero_volume() -> None:
     vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
     triangles = [(0, 1, 2)]
 
-    with pytest.raises(RobotPhysicsError, match="Degenerate mesh"):
+    with pytest.raises(RobotPhysicsError, match="not watertight|Degenerate mesh"):
         calculate_mesh_inertia_from_triangles(vertices, triangles, 1.0)
 
 

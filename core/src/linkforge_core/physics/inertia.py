@@ -126,10 +126,15 @@ def calculate_mesh_inertia_from_triangles(
 
     # 1. Topology and numerical validation
     _validate_mesh_inputs(vertices, triangles)
-    validate_mesh_topology(triangles)
+    validate_mesh_topology(triangles, strict=True)
+
+    # Translate mesh to local origin to improve numerical conditioning
+    mean = [sum(v[i] for v in vertices) / len(vertices) for i in range(3)]
+    vertices = [(v[0] - mean[0], v[1] - mean[1], v[2] - mean[2]) for v in vertices]
 
     # 2. Accumulate signed volume and volume-weighted center of mass
     total_volume = 0.0
+    abs_volume = 0.0
     weighted_com = [0.0, 0.0, 0.0]
 
     # Canonical inertia integrals (about origin)
@@ -146,7 +151,13 @@ def calculate_mesh_inertia_from_triangles(
             + a[2] * (b[0] * c[1] - b[1] * c[0])
         )
         tet_vol = det / 6.0
+
+        # Skip purely numerical noise from slivers or degenerate triangles
+        if abs(tet_vol) < DEGENERATE_VOL_THRESHOLD:
+            continue
+
         total_volume += tet_vol
+        abs_volume += abs(tet_vol)
 
         # Centroid of tetrahedron
         tet_com = [(a[i] + b[i] + c[i]) / 4.0 for i in range(3)]
@@ -213,9 +224,39 @@ def calculate_mesh_inertia_from_triangles(
             value=total_volume,
         )
 
+    if total_volume < 0:
+        raise RobotPhysicsError(
+            ValidationErrorCode.PHYSICS_VIOLATION,
+            "Mesh has inward or inconsistent winding (negative total volume).",
+            target="MeshVolume",
+            value=total_volume,
+        )
+
+    # Detect high-cancellation meshes (mixed winding/internal intersections)
+    if abs_volume > 0 and abs(total_volume) / abs_volume < 0.5:
+        raise RobotPhysicsError(
+            ValidationErrorCode.PHYSICS_VIOLATION,
+            "Mesh has inconsistent global winding (severe volume cancellation detected).",
+            target="MeshVolume",
+        )
+
     # Center of mass and density
+    if not all(isfinite(w) for w in weighted_com):
+        raise RobotPhysicsError(
+            ValidationErrorCode.PHYSICS_VIOLATION,
+            "Mesh weighted center of mass is non-finite.",
+            target="MeshCOM",
+        )
+
     cx, cy, cz = (w / total_volume for w in weighted_com)
-    density = mass / abs(total_volume)
+    if not all(isfinite(c) for c in (cx, cy, cz)):
+        raise RobotPhysicsError(
+            ValidationErrorCode.PHYSICS_VIOLATION,
+            "Computed center of mass is non-finite.",
+            target="MeshCOM",
+        )
+
+    density = mass / total_volume
 
     i_xx, i_yy, i_zz = (i * density for i in (i_xx, i_yy, i_zz))
     i_xy, i_xz, i_yz = (i * density for i in (i_xy, i_xz, i_yz))
@@ -229,22 +270,34 @@ def calculate_mesh_inertia_from_triangles(
     i_yz += mass * cy * cz
 
     # 4. Physicality check
-    if any(i < NEGATIVE_INERTIA_THRESHOLD for i in (i_xx, i_yy, i_zz)):
+    # Check positive semi-definiteness using Sylvester's criterion (principal minors)
+    # This avoids adding a heavy dependency on numpy just for an eigenvalue check.
+    delta1 = i_xx
+    delta2 = i_xx * i_yy - i_xy**2
+    delta3 = (
+        i_xx * (i_yy * i_zz - i_yz**2)
+        - i_xy * (i_xy * i_zz - i_xz * i_yz)
+        + i_xz * (i_xy * i_yz - i_yy * i_xz)
+    )
+
+    eps = 1e-9 * max(i_xx, i_yy, i_zz, 1.0)
+    if delta1 < -eps or delta2 < -eps or delta3 < -eps:
         raise RobotPhysicsError(
             ValidationErrorCode.PHYSICS_VIOLATION,
-            f"Negative diagonal inertia indicates incorrect mesh winding "
-            f"or a non-manifold mesh: Ixx={i_xx:.6f}, Iyy={i_yy:.6f}, Izz={i_zz:.6f}",
-            target="InertiaDiagonal",
-            value=(i_xx, i_yy, i_zz),
+            f"Inertia tensor is not positive semi-definite (fails Sylvester criterion). "
+            f"Often indicates numerical corruption or extreme non-manifold shapes. "
+            f"Minors: D1={delta1:.6f}, D2={delta2:.6f}, D3={delta3:.6f}",
+            target="InertiaTensor",
+            value=(delta1, delta2, delta3),
         )
 
     return InertiaTensor(
-        ixx=max(i_xx, 0.0),
+        ixx=max(i_xx, MIN_INERTIA_STABILITY_VALUE),
         ixy=i_xy,
         ixz=i_xz,
-        iyy=max(i_yy, 0.0),
+        iyy=max(i_yy, MIN_INERTIA_STABILITY_VALUE),
         iyz=i_yz,
-        izz=max(i_zz, 0.0),
+        izz=max(i_zz, MIN_INERTIA_STABILITY_VALUE),
     )
 
 

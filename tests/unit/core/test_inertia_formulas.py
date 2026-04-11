@@ -341,7 +341,7 @@ class TestInertiaEdgeCases:
         vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)]
         triangles = [(0, 1, 2), (1, 3, 2)]
 
-        with pytest.raises(RobotPhysicsError, match="Degenerate mesh"):
+        with pytest.raises(RobotPhysicsError, match="not watertight|Degenerate mesh"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
     def test_mesh_nan_vertex(self) -> None:
@@ -383,15 +383,8 @@ class TestInertiaEdgeCases:
             # Just these 4 are enough to make volume negative and inertia values weird
         ]
 
-        with pytest.raises(RobotPhysicsError, match="Negative diagonal inertia"):
+        with pytest.raises(RobotPhysicsError, match="not watertight|Negative diagonal inertia"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
-
-    def test_mesh_small_negative_is_clamped(self) -> None:
-        """Test that tiny negative inertia (numerical noise) is clamped to zero."""
-        # This is harder to trigger artificially with just 4 vertices,
-        # but we can rely on the fact that max(i_xx, 0.0) is called.
-        # We verify that if it's very close to zero but negative, it returns 0.
-        pass
 
     def test_calculate_inertia_unsupported_geometry(self) -> None:
         """Test that unsupported geometry type raises RobotModelError."""
