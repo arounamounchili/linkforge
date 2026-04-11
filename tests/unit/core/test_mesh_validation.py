@@ -110,7 +110,19 @@ class TestMeshTopologyValidation:
     def test_failing_iterator_and_short_faces(self) -> None:
         """Test fallback type casting and short length faces at level 1."""
         warnings = validate_mesh_topology(None, level=1)
-        assert len(warnings) == 0
+        assert len(warnings) == 1
+        assert "iterable" in warnings[0]
 
+        with pytest.raises(RobotPhysicsError, match="iterable"):
+            validate_mesh_topology(None, strict=True)
+
+        # Short faces cause IndexError, which trips invalid_count
         warnings = validate_mesh_topology([(0, 1)], level=1)
-        assert len(warnings) == 0
+        assert len(warnings) == 1
+
+        with pytest.raises(RobotPhysicsError, match="invalid"):
+            validate_mesh_topology([(0, 1)], strict=True, level=1)
+
+        # Test string characters trip ValueError -> invalid_count
+        warnings = validate_mesh_topology([("a", "b", "c")], level=1)
+        assert len(warnings) == 1

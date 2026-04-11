@@ -43,28 +43,75 @@ def validate_mesh_topology(
     warnings: list[str] = []
     prefix = f"Mesh '{name}'" if name else "Mesh"
 
-    # Normalize generic iterators or numpy arrays to list form if needed
+    # Strict normalization and type checking
     try:
         triangles_list = list(triangles)
-    except TypeError:
-        triangles_list = []
+    except TypeError as e:
+        msg = f"{prefix} failed validation: Triangle array must be iterable."
+        if strict:
+            raise RobotPhysicsError(
+                ValidationErrorCode.INVALID_VALUE, msg, target="MeshTopology"
+            ) from e
+        warnings.append(msg)
+        return warnings
 
-    # Level 2 pre-checks
-    if level >= 2:
-        seen_faces = set()
-        duplicate_count = 0
-        degenerate_count = 0
+    seen_faces = set()
+    duplicate_count = 0
+    degenerate_count = 0
+    invalid_count = 0
 
-        for tri in triangles_list:
-            if len(tri) < 3 or len(set(tri[:3])) < 3:
+    edge_counts: dict[tuple[int, int], int] = {}
+    edge_directions: dict[tuple[int, int], list[tuple[int, int]]] = {}
+
+    for tri in triangles_list:
+        try:
+            a, b, c = int(tri[0]), int(tri[1]), int(tri[2])
+        except Exception:
+            invalid_count += 1
+            continue
+
+        # Degenerate check (skipped from all edge mapping)
+        if a == b or b == c or c == a:
+            if level >= 2:
                 degenerate_count += 1
-                continue
+            continue
 
-            sorted_tri = tuple(sorted(list(tri)[:3]))
+        # Duplicate check (skipped from all edge mapping)
+        if level >= 2:
+            sorted_tri = tuple(sorted((a, b, c)))
             if sorted_tri in seen_faces:
                 duplicate_count += 1
+                continue
             seen_faces.add(sorted_tri)
 
+        # Edge registration
+        undirected_edges = [
+            (min(a, b), max(a, b)),
+            (min(b, c), max(b, c)),
+            (min(c, a), max(c, a)),
+        ]
+        directed_edges = [(a, b), (b, c), (c, a)]
+
+        for i in range(3):
+            undirected_edge = undirected_edges[i]
+            edge_counts[undirected_edge] = edge_counts.get(undirected_edge, 0) + 1
+
+            if level >= 2:
+                edge_directions.setdefault(undirected_edge, []).append(directed_edges[i])
+
+    if invalid_count > 0:
+        msg = f"{prefix} has {invalid_count} invalid triangle(s) (unparsable or missing indices)."
+        warnings.append(msg)
+        if strict:
+            raise RobotPhysicsError(
+                ValidationErrorCode.INVALID_VALUE,
+                msg,
+                target="MeshTopology",
+                value=invalid_count,
+            )
+        logger.warning(msg)
+
+    if level >= 2:
         if degenerate_count > 0:
             msg = f"{prefix} has {degenerate_count} degenerate triangle(s) (missing or identical vertices)."
             warnings.append(msg)
@@ -89,36 +136,30 @@ def validate_mesh_topology(
                 )
             logger.warning(msg)
 
-    # Edge tracking
-    edge_map: dict[tuple[int, int], list[int]] = {}
-    directed_edges: set[tuple[int, int]] = set()
+    # Topology Evaluation
+    boundary_edges = []
+    non_manifold_edges = []
     inconsistent_edges_count = 0
 
-    for tri_idx, tri in enumerate(triangles_list):
-        if len(tri) < 3:
-            continue
-        u, v, w = int(tri[0]), int(tri[1]), int(tri[2])
+    for undirected_edge, count in edge_counts.items():
+        if count == 1:
+            boundary_edges.append(undirected_edge)
+        elif count > 2:
+            non_manifold_edges.append(undirected_edge)
 
-        # Undirected edges
-        undirected_edges = [
-            (min(u, v), max(u, v)),
-            (min(v, w), max(v, w)),
-            (min(w, u), max(w, u)),
-        ]
-        for edge in undirected_edges:
-            edge_map.setdefault(edge, []).append(tri_idx)
-
-        # Directed edges for orientation consistency
-        if level >= 2:
-            dir_edges = [(u, v), (v, w), (w, u)]
-            for de in dir_edges:
-                if de in directed_edges:
+        # Orientation evaluation (Level 2)
+        # We only evaluate orientation for manifold edges (exactly 2 faces).
+        # Non-manifold edges fail validation independently.
+        if level >= 2 and count == 2:
+            dirs = edge_directions[undirected_edge]
+            # Consistent winding yields two unique directed edges (len == 2).
+            # Identical (invalid) winding overwrites the same directed edge in the set (len == 1).
+            if len(dirs) != 2:
+                inconsistent_edges_count += 1
+            else:
+                (a, b), (c, d) = tuple(dirs)
+                if not (a == d and b == c):
                     inconsistent_edges_count += 1
-                directed_edges.add(de)
-
-    # Watertight / Manifold checks
-    boundary_edges = [e for e, tris in edge_map.items() if len(tris) == 1]
-    non_manifold_edges = [e for e, tris in edge_map.items() if len(tris) > 2]
 
     if boundary_edges:
         msg = f"{prefix} has {len(boundary_edges)} boundary edge(s) — not watertight. Inertia calculation may be inaccurate."
