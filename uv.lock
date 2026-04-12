@@ -337,9 +337,11 @@ dependencies = [
     { name = "pyyaml" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "fake-bpy-module-4-2" },
+    { name = "linkforge-blender" },
+    { name = "linkforge-core" },
     { name = "mypy" },
     { name = "myst-parser" },
     { name = "pre-commit" },
@@ -352,28 +354,30 @@ dev = [
     { name = "sphinx-design" },
     { name = "sphinx-rtd-theme" },
     { name = "sphinxcontrib-mermaid" },
+    { name = "types-pyyaml" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "fake-bpy-module-4-2", marker = "extra == 'dev'" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
-    { name = "myst-parser", marker = "extra == 'dev'", specifier = ">=2.0.0" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.6.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3.0" },
-    { name = "sphinx", marker = "extra == 'dev'", specifier = ">=7.2.6" },
-    { name = "sphinx-autodoc-typehints", marker = "extra == 'dev'", specifier = ">=2.0.0" },
-    { name = "sphinx-design", marker = "extra == 'dev'", specifier = ">=0.5.0" },
-    { name = "sphinx-rtd-theme", marker = "extra == 'dev'", specifier = ">=2.0.0" },
-    { name = "sphinxcontrib-mermaid", marker = "extra == 'dev'", specifier = ">=0.9.2" },
-]
-provides-extras = ["dev"]
+requires-dist = [{ name = "pyyaml", specifier = ">=6.0.3" }]
 
 [package.metadata.requires-dev]
-dev = []
+dev = [
+    { name = "fake-bpy-module-4-2" },
+    { name = "linkforge-blender", editable = "platforms/blender" },
+    { name = "linkforge-core", editable = "core" },
+    { name = "mypy", specifier = ">=1.9.0" },
+    { name = "myst-parser", specifier = ">=2.0.0" },
+    { name = "pre-commit", specifier = ">=3.6.0" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "ruff", specifier = ">=0.3.0" },
+    { name = "sphinx", specifier = ">=7.2.6" },
+    { name = "sphinx-autodoc-typehints", specifier = ">=2.0.0" },
+    { name = "sphinx-design", specifier = ">=0.5.0" },
+    { name = "sphinx-rtd-theme", specifier = ">=2.0.0" },
+    { name = "sphinxcontrib-mermaid", specifier = ">=0.9.2" },
+    { name = "types-pyyaml" },
+]
 
 [[package]]
 name = "markdown-it-py"
@@ -992,6 +996,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/46/cc36c679f09f27ded940281c38607716c86cf8ba4a518d524e349c8b4874/tomli-2.3.0-cp314-cp314t-win32.whl", hash = "sha256:a1f7f282fe248311650081faafa5f4732bdbfef5d45fe3f2e702fbc6f2d496e0", size = 107563, upload-time = "2025-10-08T22:01:44.233Z" },
     { url = "https://files.pythonhosted.org/packages/84/ff/426ca8683cf7b753614480484f6437f568fd2fda2edbdf57a2d3d8b27a0b/tomli-2.3.0-cp314-cp314t-win_amd64.whl", hash = "sha256:70a251f8d4ba2d9ac2542eecf008b3c8a9fc5c3f9f02c56a9d7952612be2fdba", size = 119756, upload-time = "2025-10-08T22:01:45.234Z" },
     { url = "https://files.pythonhosted.org/packages/77/b8/0135fadc89e73be292b473cb820b4f5a08197779206b33191e801feeae40/tomli-2.3.0-py3-none-any.whl", hash = "sha256:e95b1af3c5b07d9e643909b5abbec77cd9f1217e6d0bca72b0234736b9fb1f1b", size = 14408, upload-time = "2025-10-08T22:01:46.04Z" },
+]
+
+[[package]]
+name = "types-pyyaml"
+version = "6.0.12.20260408"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/74/73/b759b1e413c31034cc01ecdfb96b38115d0ab4db55a752a3929f0cd449fd/types_pyyaml-6.0.12.20260408.tar.gz", hash = "sha256:92a73f2b8d7f39ef392a38131f76b970f8c66e4c42b3125ae872b7c93b556307", size = 17735, upload-time = "2026-04-08T04:30:50.974Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/f0/c391068b86abb708882c6d75a08cd7d25b2c7227dab527b3a3685a3c635b/types_pyyaml-6.0.12.20260408-py3-none-any.whl", hash = "sha256:fbc42037d12159d9c801ebfcc79ebd28335a7c13b08a4cfbc6916df78fee9384", size = 20339, upload-time = "2026-04-08T04:30:50.113Z" },
 ]
 
 [[package]]

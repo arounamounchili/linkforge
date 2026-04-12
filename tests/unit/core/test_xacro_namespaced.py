@@ -84,6 +84,7 @@ def test_xacro_namespaced_load_json(tmp_path) -> None:
     resolved_root = resolver.resolve_element(root)
 
     cyl = resolved_root.find(".//cylinder")
+    assert cyl is not None
     assert cyl.get("length") == "0.5"
     assert cyl.get("radius") == "0.1"
 
@@ -102,6 +103,7 @@ def test_xacro_nested_property_evaluation() -> None:
     resolved_root = resolver.resolve_element(root)
 
     link = resolved_root.find(".//link")
+    assert link is not None
     assert link.get("length") == "2.0"
 
 

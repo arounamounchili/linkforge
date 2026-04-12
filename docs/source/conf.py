@@ -3,8 +3,6 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os
-import sys
 import typing
 import warnings
 
@@ -12,8 +10,7 @@ import warnings
 # that break the build when Sphinx is run with the -W (warnings-as-errors) flag.
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="sphinx_autodoc_typehints")
 
-sys.path.insert(0, os.path.abspath("../../core/src"))  # For linkforge_core
-sys.path.insert(0, os.path.abspath("../../platforms/blender"))  # For linkforge (blender)
+# sys.path is handled by the virtual environment (uv sync)
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information

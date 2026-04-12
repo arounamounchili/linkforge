@@ -19,9 +19,9 @@ from types import SimpleNamespace
 from typing import Any
 
 try:
-    import yaml  # type: ignore[import-untyped]
+    import yaml
 except ImportError:
-    yaml = None
+    yaml = None  # type: ignore[assignment]
 
 from ..base import RobotParser
 from ..exceptions import (
