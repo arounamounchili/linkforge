@@ -1,5 +1,6 @@
 """XML utility functions for LinkForge."""
 
+import math
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from datetime import datetime
@@ -124,8 +125,6 @@ def parse_float(
         RobotMathError: If input is invalid
         RobotValidationError: If attribute is missing
     """
-    import math
-
     # Alias check_name if provided
     report_name = check_name or attribute_name
 
