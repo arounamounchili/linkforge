@@ -1,6 +1,7 @@
 """Path and resource resolution utilities for LinkForge."""
 
 import os
+import re
 from pathlib import Path
 
 
@@ -78,12 +79,8 @@ def resolve_package_path(
             return curr / relative_path
 
         # Case B: Current folder contains package.xml
-        # In standalone mode, we treat any folder with package.xml as a potential package root
-        # if Case A missed it (e.g. folder was renamed to 'franka_description-main')
-        if (curr / "package.xml").exists():
-            # Heuristic: If we are looking for a package and find A package.xml,
-            # it's very likely the root we want in a standalone directory structure.
-            # (Ideally we'd parse the name from XML, but this is a robust pro fallback)
+        pkg_xml = curr / "package.xml"
+        if pkg_xml.exists() and _extract_package_name(pkg_xml) == package_name:
             return curr / relative_path
 
         if curr.parent == curr:
@@ -91,6 +88,18 @@ def resolve_package_path(
         curr = curr.parent
 
     return None
+
+
+def _extract_package_name(xml_path: Path) -> str | None:
+    """Extract <name> from package.xml using regex for performance."""
+    try:
+        # Lightweight scan of the beginning of the file
+        with open(xml_path, encoding="utf-8") as f:
+            content = f.read(1024)
+            match = re.search(r"<name>(.*?)</name>", content)
+            return match.group(1).strip() if match else None
+    except Exception:
+        return None
 
 
 def normalize_uri_to_path(uri: str) -> Path:
