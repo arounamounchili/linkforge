@@ -46,11 +46,6 @@ class CameraInfo:
     far_clip: float = 100.0
     noise: SensorNoise | None = None
 
-    def calculate_foo(self) -> float:
-        """Placeholder for a calculation using math."""
-        # Generic example of math usage
-        return math.sqrt(2.0)
-
     def __post_init__(self) -> None:
         """Validate camera parameters."""
 
