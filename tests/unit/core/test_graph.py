@@ -20,7 +20,7 @@ def test_graph_simple_chain() -> None:
 
     assert not graph.has_cycle()
     assert graph.get_root_links() == ["A"]
-    assert graph.get_topological_order() == ["A", "B", "C"]
+    assert graph.get_topological_link_names() == ["A", "B", "C"]
     assert len(graph.find_islands()) == 1
 
 
@@ -36,7 +36,7 @@ def test_graph_cycle_detection() -> None:
 
     assert graph.has_cycle()
     with pytest.raises(RobotModelError, match="cycles"):
-        graph.get_topological_order()
+        graph.get_topological_link_names()
 
 
 def test_graph_invalid_joint_links() -> None:
@@ -90,7 +90,7 @@ def test_graph_branching() -> None:
 
     assert not graph.has_cycle()
     assert graph.get_root_links() == ["A"]
-    order = graph.get_topological_order()
+    order = graph.get_topological_link_names()
     assert order[0] == "A"
     assert set(order[1:]) == {"B", "C"}
 
@@ -100,7 +100,7 @@ def test_graph_empty_input() -> None:
     graph = KinematicGraph([], [])
     assert not graph.has_cycle()
     assert graph.get_root_links() == []
-    assert graph.get_topological_order() == []
+    assert graph.get_topological_link_names() == []
     assert graph.find_islands() == []
 
 
@@ -119,6 +119,6 @@ def test_graph_diamond_dag_coverage() -> None:
     assert not graph.has_cycle()
     assert graph.get_root_links() == ["A"]
 
-    # This hits the in_degree[child] != 0 branch in get_topological_order
-    order = graph.get_topological_order()
+    # This hits the in_degree[child] != 0 branch in get_topological_link_names
+    order = graph.get_topological_link_names()
     assert order == ["A", "B", "C", "D"]

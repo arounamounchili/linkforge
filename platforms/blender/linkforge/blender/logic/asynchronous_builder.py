@@ -14,7 +14,6 @@ import bpy
 
 from ...linkforge_core.logging_config import get_logger
 from ...linkforge_core.models import Robot
-from ...linkforge_core.utils.kinematics import sort_joints_topological
 from ..adapters.core_to_blender import (
     create_joint_object,
     create_link_object,
@@ -73,10 +72,7 @@ class AsynchronousRobotBuilder:
             self.tasks.append(("create_link", link))
 
         # 4. Create sorted joint tasks
-        # Convert tuples to lists for MyPy compatibility with topological sort
-        joints_list = list(self.robot.joints)
-        links_list = list(self.robot.links)
-        sorted_joints = sort_joints_topological(joints_list, links_list)
+        sorted_joints = self.robot.graph.get_topological_joints()
         for joint in sorted_joints:
             self.tasks.append(("create_joint", joint))
 

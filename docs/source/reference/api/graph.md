@@ -29,8 +29,8 @@ robot = URDFParser().parse(Path("my_robot.urdf"))
 graph = KinematicGraph(robot.links, robot.joints)
 
 try:
-    root = graph.root_link()
-    print(f"Root link: {root.name}")
+    roots = graph.get_root_links()
+    print(f"Root links found: {len(roots)}")
     print("No cycles detected.")
 except Exception as e:
     print(f"Topology error: {e}")
@@ -43,9 +43,13 @@ from linkforge_core.models.graph import KinematicGraph
 
 graph = KinematicGraph(robot.links, robot.joints)
 
-# Traverse links in depth-first order from the root
-for link in graph.topological_sort():
-    print(link.name)
+# 1. Get ordered link names (Strings)
+for link_name in graph.get_topological_link_names():
+    print(f"Processing link: {link_name}")
+
+# 2. Get ordered joint objects (Models)
+for joint in graph.get_topological_joints():
+    print(f"Configuring joint: {joint.name} ({joint.type.name})")
 ```
 
 :::{note}

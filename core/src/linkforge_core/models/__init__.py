@@ -17,6 +17,7 @@ from .geometry import (
     Transform,
     Vector3,
 )
+from .graph import KinematicGraph
 from .joint import (
     Joint,
     JointCalibration,
@@ -117,4 +118,5 @@ __all__ = [
     "PassiveJoint",
     "DisabledCollision",
     "SemanticRobotDescription",
+    "KinematicGraph",
 ]

@@ -148,7 +148,7 @@ class KinematicGraph:
 
         return islands
 
-    def get_topological_order(self) -> list[str]:
+    def get_topological_link_names(self) -> list[str]:
         """Return links in topological order (parents before children).
 
         Returns:
@@ -182,3 +182,48 @@ class KinematicGraph:
                     queue.append(child)
 
         return order
+
+    def get_topological_joints(self) -> list[Joint]:
+        """Return joints in topological order (parents before children).
+
+        This ensures that when building a hierarchy, the parent structure
+        always exists before the child is attached.
+
+        Returns:
+            Sorted list of Joint models
+
+        Raises:
+            RobotValidationError: If a cycle is detected
+        """
+        if self.has_cycle():
+            raise RobotValidationError(
+                ValidationErrorCode.HAS_CYCLE,
+                "Kinematic graph contains cycles",
+                target="CyclicGraph",
+            )
+
+        # Build a map for O(1) joint lookup during traversal
+        joint_registry = {j.name: j for j in self.joints}
+
+        root_links = self.get_root_links()
+        sorted_joints: list[Joint] = []
+        visited: set[str] = set()
+
+        def visit(link_name: str) -> None:
+            if link_name in visited:
+                return
+            visited.add(link_name)
+
+            # Traverse child joints
+            if link_name in self.adj:
+                # Iterate through outgoing edges (child_name, joint_name)
+                for child_name, joint_name in self.adj[link_name]:
+                    joint = joint_registry.get(joint_name)
+                    if joint:
+                        sorted_joints.append(joint)
+                        visit(child_name)
+
+        for root in root_links:
+            visit(root)
+
+        return sorted_joints

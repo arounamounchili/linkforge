@@ -20,7 +20,6 @@ from ...linkforge_core.models import (
     Robot,
     Sphere,
 )
-from ...linkforge_core.utils.kinematics import sort_joints_topological
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.scene_utils import move_to_collection, sync_object_collections
@@ -1018,10 +1017,8 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context: bpy.types.Cont
         if obj:
             link_objects[link.name] = obj
 
-    # Convert tuples to lists for MyPy compatibility with topological sort
-    joints_list = list(robot.joints)
-    links_list = list(robot.links)
-    sorted_joints = sort_joints_topological(joints_list, links_list)
+    # Create joint objects in topological order
+    sorted_joints = robot.graph.get_topological_joints()
 
     # Create joint objects in topological order
     joint_objects = {}
