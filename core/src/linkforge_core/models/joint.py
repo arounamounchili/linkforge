@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 
@@ -225,7 +226,6 @@ class Joint:
                     target="JointLimits",
                     value=self.type.value,
                 )
-            # Limit validity is already checked in JointLimits.__post_init__ (RobotModelError)
         elif self.type == JointType.FIXED and self.limits is not None:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
@@ -236,8 +236,6 @@ class Joint:
 
         # Validate and normalize axis if present
         if self.axis is not None:
-            import math
-
             axis_magnitude = math.sqrt(self.axis.x**2 + self.axis.y**2 + self.axis.z**2)
             if axis_magnitude < 1e-10:
                 raise RobotValidationError(

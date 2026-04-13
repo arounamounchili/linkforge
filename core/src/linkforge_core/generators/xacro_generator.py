@@ -7,12 +7,14 @@ and file splitting for maintainability.
 
 from __future__ import annotations
 
+import hashlib
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from functools import singledispatchmethod
 from pathlib import Path
 from typing import Any, cast
 
+from .. import __version__
 from ..base import RobotGeneratorError
 from ..models.geometry import Box, Cylinder, Mesh, Sphere
 from ..models.joint import Joint
@@ -23,6 +25,7 @@ from ..utils.math_utils import format_float, format_vector
 from ..utils.path_utils import get_export_path
 from ..utils.string_utils import sanitize_name
 from ..utils.xml_utils import serialize_xml
+from ..validation import RobotValidator
 from .urdf_generator import URDFGenerator
 
 # XACRO Namespace URI
@@ -79,7 +82,6 @@ class XACROGenerator(URDFGenerator):
 
     def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
         """Generate XACRO XML string from robot."""
-        from .. import __version__
 
         root = self.generate_robot_element(robot, validate=validate, **kwargs)
         ns = {"xacro": XACRO_URI}
@@ -104,8 +106,6 @@ class XACROGenerator(URDFGenerator):
         """
         # Validate robot structure
         if validate:
-            from ..validation import RobotValidator
-
             validator = RobotValidator()
             result = validator.validate(robot)
             if not result.is_valid:
@@ -537,8 +537,6 @@ class XACROGenerator(URDFGenerator):
         Returns:
             Descriptive macro name (valid XML tag name)
         """
-        import hashlib
-
         # Extract geometry type from signature (e.g., "v_cylinder_..." -> "cylinder")
         parts = signature.split("_")
         geom_type = parts[1] if len(parts) >= 2 and parts[0] in ("v", "c") else parts[0]

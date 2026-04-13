@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
@@ -117,8 +118,6 @@ class Cylinder:
 
     def volume(self) -> float:
         """Calculate volume."""
-        import math
-
         return math.pi * self.radius**2 * self.length
 
 
@@ -144,8 +143,6 @@ class Sphere:
 
     def volume(self) -> float:
         """Calculate volume."""
-        import math
-
         return (4.0 / 3.0) * math.pi * self.radius**3
 
 
