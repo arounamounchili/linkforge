@@ -1005,7 +1005,8 @@ class TestURDFParser:
 
         parser = URDFParser()
         robot = MagicMock(spec=Robot)
-        robot._joint_index = {"j": MagicMock(), "j_duplicate_1": MagicMock()}
+        # Mock existence check for 'j' and 'j_duplicate_1'
+        robot.has_joint.side_effect = lambda name: name in ("j", "j_duplicate_1")
 
         joint = Joint(name="j", type=JointType.FIXED, parent="p", child="c")
         joint_elem = ET.Element("joint", name="j")
@@ -1336,9 +1337,9 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         # This should succeed even though joint is before links
         robot = parser.parse(urdf_file)
 
-        assert "link1" in robot._link_index
-        assert "link2" in robot._link_index
-        assert "joint1" in robot._joint_index
+        assert robot.has_link("link1")
+        assert robot.has_link("link2")
+        assert robot.has_joint("joint1")
         assert robot.get_joint("joint1").parent == "link1"
         assert robot.get_joint("joint1").child == "link2"
 

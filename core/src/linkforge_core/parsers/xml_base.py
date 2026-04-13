@@ -229,12 +229,10 @@ class RobotXMLParser(RobotParser):
 
         inertia_elem = inertial_elem.find("inertia")
         if inertia_elem is not None:
-            # Robustness: sanitize negative or zero diagonal inertia to 1e-6
-            # as expected by some unit tests for "safety net" behavior.
-            ixx = max(1e-6, parse_float(inertia_elem.get("ixx"), default=1e-6))
-            iyy = max(1e-6, parse_float(inertia_elem.get("iyy"), default=1e-6))
-            izz = max(1e-6, parse_float(inertia_elem.get("izz"), default=1e-6))
-
+            # Delegate physical validity entirely to the InertiaTensor model
+            ixx = parse_float(inertia_elem.get("ixx"), default=0.0)
+            iyy = parse_float(inertia_elem.get("iyy"), default=0.0)
+            izz = parse_float(inertia_elem.get("izz"), default=0.0)
             ixy = parse_float(inertia_elem.get("ixy"), default=0.0)
             ixz = parse_float(inertia_elem.get("ixz"), default=0.0)
             iyz = parse_float(inertia_elem.get("iyz"), default=0.0)

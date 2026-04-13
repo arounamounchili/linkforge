@@ -381,6 +381,14 @@ class Robot:
         """Get joint by name - O(1) lookup."""
         return self._joint_index.get(name)
 
+    def has_link(self, name: str) -> bool:
+        """Check if a link with the given name exists in the robot."""
+        return name in self._link_index
+
+    def has_joint(self, name: str) -> bool:
+        """Check if a joint with the given name exists in the robot."""
+        return name in self._joint_index
+
     def get_joints_for_link(self, link_name: str, as_parent: bool = True) -> list[Joint]:
         """Get all joints where the link is parent or child.
 
@@ -507,7 +515,8 @@ class Robot:
 
         return self.get_link(roots[0])
 
-    def _has_cycle(self) -> bool:
+    @property
+    def has_cycle(self) -> bool:
         """Check for cycles in the kinematic tree."""
         return self.graph.has_cycle()
 

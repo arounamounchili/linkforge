@@ -131,7 +131,7 @@ class TreeStructureCheck(ValidationCheck):
     @staticmethod
     def _check_cycles(robot: Robot, result: ValidationResult) -> None:
         try:
-            if robot._has_cycle():
+            if robot.has_cycle:
                 result.add_error(
                     title="Circular dependency",
                     message=(

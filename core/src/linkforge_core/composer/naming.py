@@ -38,14 +38,21 @@ def add_link_with_renaming(robot: Robot, link: Link) -> None:
         if isinstance(e, RobotValidationError) and e.code == ValidationErrorCode.DUPLICATE_NAME:
             while True:
                 new_name = f"{original_name}_duplicate_{counter}"
-                if new_name not in robot._link_index:
+                if not robot.has_link(new_name):
                     link = replace(link, name=new_name)
                     try:
                         robot.add_link(link)
                         logger.warning(f"Renamed duplicate link '{original_name}' to '{new_name}'")
                         break
-                    except RobotModelError:
-                        counter += 1
+                    except RobotModelError as inner_e:
+                        if (
+                            isinstance(inner_e, RobotValidationError)
+                            and inner_e.code == ValidationErrorCode.DUPLICATE_NAME
+                        ):
+                            counter += 1
+                            continue
+                        logger.warning(f"Skipping invalid link '{original_name}': {inner_e}")
+                        break
                 else:
                     counter += 1
         else:
@@ -72,7 +79,7 @@ def add_joint_with_renaming(robot: Robot, joint: Joint, fallback_name: str | Non
             counter = 1
             while True:
                 new_name = f"{original_name}_duplicate_{counter}"
-                if new_name not in robot._joint_index:
+                if not robot.has_joint(new_name):
                     joint = replace(joint, name=new_name)
                     try:
                         robot.add_joint(joint)
@@ -81,11 +88,12 @@ def add_joint_with_renaming(robot: Robot, joint: Joint, fallback_name: str | Non
                     except RobotModelError as inner_e:
                         if (
                             isinstance(inner_e, RobotValidationError)
-                            and inner_e.code == ValidationErrorCode.NOT_FOUND
+                            and inner_e.code == ValidationErrorCode.DUPLICATE_NAME
                         ):
-                            logger.warning(f"Skipping duplicate joint '{original_name}': {inner_e}")
-                            break
-                        counter += 1
+                            counter += 1
+                            continue
+                        logger.warning(f"Skipping invalid joint '{original_name}': {inner_e}")
+                        break
                 else:
                     counter += 1
         else:

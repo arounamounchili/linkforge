@@ -226,7 +226,7 @@ def test_urdf_parser_link_renaming_recursive() -> None:
 
     # Adding 'l' again should result in 'l_duplicate_2'
     add_link_with_renaming(robot, Link(name="l"))
-    assert "l_duplicate_2" in robot._link_index
+    assert robot.has_link("l_duplicate_2")
 
 
 def test_urdf_parser_material_naming() -> None:

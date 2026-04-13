@@ -15,7 +15,7 @@ class TestNamingUtilities:
         link = Link(name="base_link")
 
         add_link_with_renaming(robot, link)
-        assert "base_link" in robot._link_index
+        assert robot.has_link("base_link")
 
     def test_add_link_with_renaming_collision(self) -> None:
         """Test renaming a link on collision."""
@@ -24,7 +24,7 @@ class TestNamingUtilities:
 
         # Should rename link_1 to link_1_duplicate_1
         add_link_with_renaming(robot, Link(name="link_1"))
-        assert "link_1_duplicate_1" in robot._link_index
+        assert robot.has_link("link_1_duplicate_1")
 
     def test_add_link_unexpected_error(self) -> None:
         """Test handling unexpected RobotModelError (non-collision)."""
@@ -48,7 +48,7 @@ class TestNamingUtilities:
         # Test collision on joint name
         new_joint = Joint(name="j1", parent="l1", child="l2", type=JointType.FIXED)
         add_joint_with_renaming(robot, new_joint)
-        assert "j1_duplicate_1" in robot._joint_index
+        assert robot.has_joint("j1_duplicate_1")
 
     def test_add_joint_fallback_name(self) -> None:
         """Test add_joint_with_renaming using fallback name in logs."""

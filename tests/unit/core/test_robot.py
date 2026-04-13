@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 from linkforge_core.exceptions import RobotModelError
@@ -118,7 +118,7 @@ class TestRobot:
         result = RobotValidator().validate(robot)
 
         assert any("cycle" in e.message.lower() for e in result.errors)
-        assert robot._has_cycle() is True
+        assert robot.has_cycle is True
 
     def test_mimic_cycle_detection(self) -> None:
         """Test detection of circular mimic dependencies."""
@@ -478,7 +478,10 @@ class TestRobotCoverage:
         robot.add_link(Link(name="l1"))
 
         with patch.object(
-            robot, "_has_cycle", side_effect=RobotModelError("Unexpected graph error")
+            Robot,
+            "has_cycle",
+            new_callable=PropertyMock,
+            side_effect=RobotModelError("Unexpected graph error"),
         ):
             result = RobotValidator().validate(robot)
             assert any("Kinematic graph error" in e.title for e in result.errors)
