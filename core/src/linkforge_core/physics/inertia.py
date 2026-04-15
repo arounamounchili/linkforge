@@ -141,7 +141,7 @@ def calculate_mesh_inertia_from_triangles(
 
     # --- 1. Topology & Numerical Validation ---
     _validate_mesh_inputs(vertices, triangles)
-    validate_mesh_topology(vertices, triangles, strict=True)
+    validate_mesh_topology(vertices, triangles, strict=False)
 
     # --- 2. Numerical Conditioning ---
     # Translate mesh to local mean origin to improve integration precision
