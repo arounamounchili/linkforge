@@ -111,7 +111,18 @@ def calculate_mesh_inertia_from_triangles(
     triangles: list[tuple[int, int, int]],
     mass: float,
 ) -> InertiaTensor:
-    """Calculate inertia tensor for a triangle mesh using tetrahedralization.
+    """Calculate inertia tensor for a triangle mesh using the Mirtich algorithm.
+
+    Based on: Brian Mirtich, "Fast and Accurate Computation of Polyhedral Mass Properties,"
+    Journal of Graphics Tools, volume 1, number 2, pages 31-50, 1996.
+
+    This implementation uses the Divergence Theorem to convert volume integrals into
+    surface integrals across triangles. The calculation follows 4 phases:
+      1. Validation: Ensures mesh topology and numerical integrity.
+      2. Conditioning: Translates mesh to a local mean origin to preserve floating-point precision.
+      3. Integration: Accumulates signed volume and moments across all tetrahedra.
+      4. Normalization: Applies Parallel Axis Theorem and density scaling to produce
+         the final tensor about the Center of Mass (CoM).
 
     Args:
         vertices: List of (x, y, z) vertex coordinates in meters
@@ -119,25 +130,29 @@ def calculate_mesh_inertia_from_triangles(
         mass: Total mass in kg
 
     Returns:
-        Inertia tensor about center of mass in kg⋅m²
+        Inertia tensor about center of mass in kg·m²
+
+    Raises:
+        RobotPhysicsError: If mesh is non-manifold, zero-volume, or physically unstable
     """
     if mass < MIN_MASS_STABILITY_THRESHOLD:
         return _get_stability_fallback()
 
-    # 1. Topology and numerical validation
+    # --- 1. Topology & Numerical Validation ---
     _validate_mesh_inputs(vertices, triangles)
     validate_mesh_topology(vertices, triangles, strict=True)
 
-    # Translate mesh to local origin to improve numerical conditioning
+    # --- 2. Numerical Conditioning ---
+    # Translate mesh to local mean origin to improve integration precision
     mean = [sum(v[i] for v in vertices) / len(vertices) for i in range(3)]
     vertices = [(v[0] - mean[0], v[1] - mean[1], v[2] - mean[2]) for v in vertices]
 
-    # 2. Accumulate signed volume and volume-weighted center of mass
+    # --- 3. Geometric Integration (Divergence Theorem) ---
     total_volume = 0.0
     abs_volume = 0.0
     weighted_com = [0.0, 0.0, 0.0]
 
-    # Canonical inertia integrals (about origin)
+    # Canonical inertia integrals (about local origin)
     i_xx = i_yy = i_zz = 0.0
     i_xy = i_xz = i_yz = 0.0
 
@@ -215,7 +230,7 @@ def calculate_mesh_inertia_from_triangles(
         i_xz -= xz
         i_yz -= yz
 
-    # 3. Final normalization and parallel axis theorem
+    # --- 4. Normalization & Stability Checks ---
     if abs(total_volume) < DEGENERATE_VOL_THRESHOLD:
         raise RobotPhysicsError(
             ValidationErrorCode.INVALID_VALUE,
