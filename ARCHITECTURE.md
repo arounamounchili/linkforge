@@ -1,536 +1,85 @@
-# LinkForge Architecture
+# LinkForge Architecture: The Universal Robotics Bridge
 
-This document provides a comprehensive overview of LinkForge's architecture, module organization, and data flow.
+This document provides a high-level map of LinkForge's architecture. It is designed to help contributors understand the "Hexagonal" philosophy and the flow of data between Design and Robotics.
 
-## System Overview
+## 🔭 Architectural Philosophy: Hexagonal Core
+LinkForge is built on the **Ports & Adapters (Hexagonal)** pattern. The goal is to keep the "Robotics Intelligence" (Core) completely isolated from the "Design Tool" (Blender/FreeCAD).
 
-LinkForge is **The Linter & Bridge for Robotics**. Its internal architecture is organized into **two primary layers**, which together interface with the broader robotics ecosystem.
+1.  **The Core**: Zero-dependency Python logic. Contains the "Truth" about physics, URDF, and robot topology.
+2.  **The Platform Layer**: Adapters that translate Host data (like Blender Mesh/Objects) into Core models.
 
-## Module Structure
+---
 
-### 1. Blender Integration Layer (`platforms/blender/`)
+## 🏗️ Module Structure
 
-Handles all Blender-specific functionality and UI.
+### 1. Platform Layer (`platforms/blender/`)
+Handles UI, Viewport visualization, and user interaction.
 
 ```mermaid
 graph LR
-    subgraph "Blender Layer"
-        Panels[Panels<br/>UI Display]
-        Operators[Operators<br/>User Actions]
-        Properties[Properties<br/>Data Storage]
-        Adapters[Adapters<br/>Bridge & Mesh Export]
-        Logic[Logic<br/>Async Import]
-        Visualization[Visualization<br/>Gizmos & Overlays]
-        Preferences[Preferences<br/>Addon Settings]
-        Utils[Utils<br/>Low-level Helpers]
+    subgraph "Blender Platform"
+        UI[Panels & Operators]
+        Adapters[Adapters<br/>Bridge to Core]
+        Viz[Visualization<br/>Gizmos & Overlays]
     end
-
-    Panels --> Utils
-    Panels --> Adapters
-    Operators --> Properties
-    Operators --> Utils
-    Logic --> Adapters
-    Logic --> Utils
-    Visualization --> Preferences
-
-    style Panels fill:#4fc3f7
-    style Operators fill:#4fc3f7
-    style Properties fill:#81c784
-    style Adapters fill:#ce93d8
-    style Logic fill:#ffb74d
-    style Visualization fill:#a1887f
-    style Preferences fill:#ef9a9a
-    style Utils fill:#ba68c8
+    UI --> Adapters
+    Adapters --> Viz
 ```
 
-#### Components
-
-| Module | Purpose |
-|--------|----------|
-| **Adapters** | Conversion between Blender ↔ Core (Directional) |
-| **Logic** | Async robot import orchestration |
-| **Visualization** | Viewport overlays and gizmos |
-| **UI** | Panels and Operators |
-| **Preferences** | Addon settings and toggle callbacks |
-| **Properties** | Blender-side property definitions |
-| **Utils** | Shared helpers (decorators, context guards) |
-
-### Adapters Layer
-
-Located in `linkforge/blender/adapters/`, these files follow a **directional naming pattern** to make data flow explicit:
-
-1.  **`blender_to_core.py`**: Handles the "Export" flow (converting Blender objects to Core models).
-2.  **`core_to_blender.py`**: Handles the "Import" flow (converting Core models into Blender objects).
-3.  **`mesh_io.py`**: Manages mesh file reading/writing and sanitization.
-
-This structure allows LinkForge to remain "Orthogonal"—new 3D hosts (like FreeCAD) can be added by creating a corresponding `adapters/` package without touching the Core.
-
 ### 2. Core Logic Layer (`core/src/linkforge_core/`)
-
-Platform-independent robot modeling and URDF/XACRO processing.
+The platform-independent heart of the project. **Strictly Zero-Dependency.**
 
 ```mermaid
 graph TB
     subgraph "Core Layer"
-        Models[Models<br/>Data Structures]
-        Parsers[Parsers<br/>URDF → Models]
-        Generators[Generators<br/>Models → URDF/XACRO]
-        Physics[Physics<br/>Inertia Calculations]
-        Validation[Validation<br/>Checks & Security]
-        Utils[Utils<br/>Shared Internal Logic]
+        Models[Data Models<br/>Robot/Link/Joint]
+        Physics[Physics Engine<br/>Inertia/Validation]
+        IO[Parsers & Generators<br/>URDF/XACRO]
     end
-
-    Parsers --> Models
-    Parsers --> Utils
-    Parsers --> Validation
-    Generators --> Models
-    Generators --> Utils
+    IO --> Models
     Physics --> Models
-    Validation --> Models
-    Models --> Utils
-    Utils --> Models
-
-    style Models fill:#4fc3f7
-    style Parsers fill:#81c784
-    style Generators fill:#ffb74d
-    style Physics fill:#ba68c8
-    style Validation fill:#e57373
-    style Utils fill:#ce93d8
 ```
 
-#### Components
+---
 
-| Module | Purpose |
-|--------|----------|
-| **Models** | Core data structures (`Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`) |
-| **Parsers** | URDF/XACRO parsing |
-| **Generators** | Shared XML engine & format-specific generation (URDF, XACRO, etc.) |
-| **Physics** | Inertia & dynamics (Mirtich algorithm & physicality audits) |
-| **Validation** | Modular checks (Topology, Kinematic, & Security) |
-| **Utils** | Shared internal logic (math, strings, XML, kinematics) |
+## 🌊 Data Workflows
 
-## Data Flow
-
-### Import Workflow (URDF → Blender)
+### The "Bridge" Flow (Blender ➜ Robot Model)
+This is how LinkForge converts design intent into physical parameters.
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant UI as Blender UI
-    participant Op as Import Operator
-    participant Parser as URDF Parser
-    participant Models as Core Models
-    participant Importer as URDF Importer
-    participant Blender as Blender Scene
+    participant Blender as Blender Viewport
+    participant Adapter as blender_to_core
+    participant Core as Physics Core
+    participant File as URDF Export
 
-    User->>UI: Select URDF file
-    UI->>Op: Invoke Import
-    Op->>Parser: parse_urdf(file)
-    Parser->>Parser: Validate XML & Depth
-    Parser->>Parser: Resolve Duplicates (Robustness)
-    Parser->>Models: Create Robot model
-    Op->>Validator: validate(robot)
-    Validator-->>Op: Validation result
-    Op->>Importer: import_robot(robot)
-    Importer->>Blender: Create objects
-    Importer->>Blender: Normalize & Bake Transforms
-    Importer->>Blender: Set properties
-    Importer->>Blender: Create hierarchy
-    Blender-->>User: Robot in viewport
+    User->>Blender: Click Export
+    Blender->>Adapter: Extract geometry & props
+    Adapter->>Core: Run Hardened Validation (Phases 1-5)
+    Core->>Core: Calculate Mirtich Inertia
+    Core-->>Adapter: Validated Robot Model
+    Adapter->>File: Write Sanitized URDF/XACRO
 ```
 
-### Export Workflow (Blender → URDF/XACRO)
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant UI as Blender UI
-    participant Adapter as Adapters (blender_to_core)
-    participant Models as Core Models
-    participant Validator as Validator
-    participant Generator as URDF/XACRO Generator
-    participant File as Output File
-
-    User->>UI: Click Export
-    UI->>Adapter: scene_to_robot(context)
-    Adapter->>Adapter: Extract links
-    Adapter->>Adapter: Sanitize & Export Meshes
-    Adapter->>Adapter: Extract joints
-    Adapter->>Models: Create Robot model
-    Adapter->>Validator: validate(robot)
-    Validator-->>Adapter: Validation result
-    Adapter-->>UI: Robot object
-    UI->>Validator: validate(robot)
-    Validator-->>UI: Validation result
-    UI->>Generator: generate(robot)
-    Generator->>Generator: Build XML tree
-    Generator->>File: Write URDF/XACRO
-    File-->>User: Success message
-```
-
-## Core Data Models
-
-### Robot Model Hierarchy
-
-```mermaid
-classDiagram
-    class Robot {
-        +str name
-        +str version
-        +list~Link~ links (read-only)
-        +list~Joint~ joints (read-only)
-        +list~Sensor~ sensors (read-only)
-        +list~Transmission~ transmissions (read-only)
-        +list~Ros2Control~ ros2_controls (read-only)
-        +list~GazeboElement~ gazebo_elements (read-only)
-        +dict metadata
-        +IResourceResolver resource_resolver
-        +add_link(link)
-        +add_joint(joint)
-        +add_sensor(sensor)
-        +add_transmission(transmission)
-        +add_gazebo_element(element)
-        +add_ros2_control(ros2_control)
-    }
-
-    class Link {
-        +str name
-        +list~Visual~ visuals (read-only)
-        +list~Collision~ collisions (read-only)
-        +Inertial inertial
-        +add_visual(visual)
-        +add_collision(collision)
-    }
-
-    class Inertial {
-        +float mass
-        +Transform origin
-        +InertiaTensor inertia
-    }
-
-    class InertiaTensor {
-        +float ixx
-        +float ixy
-        +float ixz
-        +float iyy
-        +float iyz
-        +float izz
-    }
-
-    class Joint {
-        +str name
-        +JointType type
-        +str parent
-        +str child
-        +Transform origin
-        +Vector3 axis
-        +JointLimits limits
-        +JointDynamics dynamics
-        +JointMimic mimic
-    }
-
-    class JointLimits {
-        +float lower
-        +float upper
-        +float effort
-        +float velocity
-    }
-
-    class JointDynamics {
-        +float damping
-        +float friction
-    }
-
-    class JointMimic {
-        +str joint
-        +float multiplier
-        +float offset
-    }
-
-    class Sensor {
-        +str name
-        +SensorType type
-        +str link_name
-        +float update_rate
-        +bool always_on
-        +bool visualize
-        +str topic
-        +Transform origin
-        +GazeboPlugin plugin
-        +CameraInfo camera_info
-        +LidarInfo lidar_info
-    }
-
-    class GazeboElement {
-        +str reference
-        +str material
-        +bool self_collide
-        +bool static
-        +bool gravity
-        +float mu1
-        +float mu2
-        +float kp
-        +float kd
-        +float stop_cfm
-        +float stop_erp
-        +bool provide_feedback
-        +bool implicit_spring_damper
-        +list~GazeboPlugin~ plugins
-    }
-
-    class GazeboPlugin {
-        +str name
-        +str filename
-        +dict parameters
-    }
-
-    class Ros2Control {
-        +str name
-        +str type
-        +str hardware_plugin
-        +list~Ros2ControlJoint~ joints
-        +dict parameters
-    }
-
-    class Ros2ControlJoint {
-        +str name
-        +list~str~ command_interfaces
-        +list~str~ state_interfaces
-    }
-
-    class Transmission {
-        +str name
-        +str type
-        +list~TransmissionJoint~ joints
-        +list~TransmissionActuator~ actuators
-        +dict parameters
-    }
-
-    class TransmissionJoint {
-        +str name
-        +list~str~ hardware_interfaces
-        +float mechanical_reduction
-        +float offset
-    }
-
-    class TransmissionActuator {
-        +str name
-        +list~str~ hardware_interfaces
-        +float mechanical_reduction
-        +float offset
-    }
-
-    Robot "1" *-- "many" Link
-    Robot "1" *-- "many" Joint
-    Robot "1" *-- "many" Sensor
-    Robot "1" *-- "many" GazeboElement
-    Robot "1" *-- "many" Ros2Control
-    Link "1" *-- "many" Visual
-    Link "1" *-- "many" Collision
-    Link "1" *-- "0..1" Inertial
-    Inertial "1" *-- "1" InertiaTensor
-    Joint "1" *-- "0..1" JointLimits
-    Joint "1" *-- "0..1" JointDynamics
-    Joint "1" *-- "0..1" JointMimic
-    GazeboElement "1" *-- "many" GazeboPlugin
-    Sensor "1" *-- "0..1" GazeboPlugin
-    Ros2Control "1" *-- "many" Ros2ControlJoint
-    Transmission "1" *-- "many" TransmissionJoint
-    Transmission "1" *-- "many" TransmissionActuator
-```
-
-### Geometry Models
-
-```mermaid
-classDiagram
-    class Geometry {
-        <<interface>>
-    }
-
-    class Box {
-        +Vector3 size
-    }
-
-    class Cylinder {
-        +float radius
-        +float length
-    }
-
-    class Sphere {
-        +float radius
-    }
-
-    class Mesh {
-        +str resource
-        +Vector3 scale
-    }
-
-    class Transform {
-        +Vector3 xyz
-        +Vector3 rpy
-        +identity()
-    }
-
-    Geometry <|-- Box
-    Geometry <|-- Cylinder
-    Geometry <|-- Sphere
-    Geometry <|-- Mesh
-
-    class IResourceResolver {
-        <<interface>>
-        +resolve(uri, relative_to) Path
-    }
-
-    class FileSystemResolver {
-        +resolve(uri, relative_to) Path
-    }
-
-    IResourceResolver <|-- FileSystemResolver
-    Robot "1" *-- "1" IResourceResolver
-```
-
-## Key Design Patterns
-
-### 1. **Encapsulated Data Models**
-Core models use a combination of `InitVar` for initialization and controlled access to internal collections via read-only properties. This pattern ensures that model state remains consistent and changes are properly indexed (especially in the `Robot` model).
-
-```python
-@dataclass
-class Link:
-    name: str
-    initial_visuals: InitVar[Sequence[Visual] | None] = None
-    initial_collisions: InitVar[Sequence[Collision] | None] = None
-    inertial: Inertial | None = None
-
-    @property
-    def visuals(self) -> Sequence[Visual]:
-        return tuple(self._visuals)
-```
-
-### 2. **Validation Registry**
-
-The system uses a modular validation registry. `RobotValidator` acts as a thin orchestrator that runs a configurable list of `ValidationCheck` instances.
-
-**Design Principles:**
-- **Encapsulation**: Each check (e.g., `MimicChainCheck`, `TreeStructureCheck`) is isolated and focus on one specific rule.
-- **Injectability**: Callers can inject a custom list of checks for targeted validation (e.g., during interactive modeling).
-- **Statelessness**: Checks write results to a shared `ValidationResult` object, ensuring thread safety and clear data flow.
-
-### 3. **Validation at Construction**
-Models validate their identity and structural integrity in `__post_init__()`. Complex validation (e.g. kinematic tree connectivity) is delegated to the `RobotValidator`.
-
-```python
-def __post_init__(
-    self,
-    initial_visuals: Sequence[Visual] | None = None,
-    initial_collisions: Sequence[Collision] | None = None,
-) -> None:
-    if not self.name:
-        raise RobotModelError("Link name cannot be empty")
-
-    if initial_visuals:
-        self._visuals.extend(initial_visuals)
-    if initial_collisions:
-        self._collisions.extend(initial_collisions)
-```
-
-### 4. **Resilient Parsing & Duplicate Resolution**
-Parser logic is designed to be highly resilient to malformed or non-compliant URDFs.
-- **Graceful Failure**: Individual invalid elements (e.g., malformed joints) are skipped with warnings rather than halting the process.
-- **Duplicate Resolution**: If duplicate link or joint names are detected, LinkForge automatically renames them (e.g., `link_duplicate_1`) to preserve kinematic integrity while maintaining compliance with Blender/Core unique naming requirements.
-
-### 4. **Recursive Normalization**
-To handle "dirty" mesh hierarchies (common in CAD imports), the Builder employs a recursive normalization strategy:
-- **Unparenting**: Detaches objects while preserving world transforms.
-- **Baking**: Applies rotation and scale to the mesh data.
-- **Resetting**: Snaps the object origin to `(0,0,0)` to prevent "Double Offset" drift during round-trips.
-
-### 5. **Atomic Sanitization**
-All user input (names, file paths) is sanitized at the edge of the system (during Export) to ensure OS and URDF compatibility without restricting the user's Blender naming conventions.
-
-### 6. **Data Integrity & Preservation**
-LinkForge distinguishes between user-created assets and imported "Source of Truth" assets. Imported assets are locked to prevent accidental modification during the Blender iterative workflow.
-
-## Extension Points
-
-As an extensible framework, LinkForge is designed with clear "hooks" for adding new robotics features.
-
-### Adding New Sensor Types
-To support a new sensor (e.g., a custom LiDAR or Depth Camera variant):
-1. **Model**: Add enum to `SensorType` and create a metadata dataclass in `linkforge_core/models/sensor.py`.
-2. **Parser**: Update `URDFParser._parse_sensor` in `linkforge_core/parsers/urdf_parser.py`.
-3. **Generator**: Add XML mapping in `linkforge_core/generators/xml_base.py` for shared logic or in `urdf_generator.py` for format-specific tags.
-4. **UI**: Add property group and panel logic in `blender/properties/sensor_props.py` and `blender/panels/sensor_panel.py`.
-
-### Adding New Joint Types
-To implement experimental joint types (e.g., screw joints or custom bushings):
-1. **Model**: Add enum to `JointType` in `linkforge_core/models/joint.py`.
-2. **Validation**: Update `Joint.__post_init__` for type-specific constraints.
-3. **Parser/Generator**: Update parsing in `urdf_parser.py` and generation in `xml_base.py` (shared) or `urdf_generator.py` (URDF-specific tags).
-4. **Gizmos**: Add custom drawing logic in `blender/visualization/joint_gizmos.py`.
-
-### Adding New Mesh Formats
-To support additional 3D formats (e.g., USD or PLY):
-1. **Core**: Ensure `Mesh` model handles paths correctly in `linkforge_core/models/geometry.py`.
-2. **Blender Logic**: Implement the export wrapper in `blender/adapters/mesh_io.py`.
-3. **UI/Export**: Add the format option to the global `RobotPropertyGroup` in `blender/properties/robot_props.py`.
-
-### Adding New Robotics Formats (SDF, MuJoCo, etc.)
-To support a completely new robotics format:
-1. **Inheritance**: Create a new class (e.g., `MJCFGenerator`) inheriting from `RobotXMLGenerator` in `linkforge_core/generators/`.
-2. **Formatting Hooks**: Override `_format_value` and `_format_vector` if the format uses non-standard numeric representations (e.g., MuJoCo's space-separated attributes).
-3. **Tag Overrides**: Implement `_add_geometry_element` or other XML hooks to match the target format's schema (e.g., `<geom>` for MuJoCo instead of `<geometry>`).
-4. **Implementation**: Define the top-level `generate` method to orchestrate the robot element and section creation.
-
-## Performance Considerations
-
-### Core Optimizations
-- **Inertia calculation**: $O(V + T)$ where $V$ = vertices (shashing) and $T$ = triangles (integration).
-- **Topology Audit**: Multi-phase pipeline covering boundary, manifold, and winding consistency.
-- **Physicality Check**: $O(1)$ post-integration verification via Sylvester's Criterion.
-- **Numerical Conditioning**: Local mean origin translation to preserve floating-point precision on large CAD assets.
-- **Viewport interaction**: Debounced (0.3s delay) for responsive UI during property manipulation.
-- **Lookup efficiency**: O(1) hash-map indexing for links and joints.
-
-### Scalability
-- **Complex Robots**: Supports multi-link chains, branched trees, and multi-sensor configurations.
-- **Large Files**: Tested with URDF/XACRO assets up to 100 MB.
-- **Headless Mode**: Fully optimized for automated CI and background processing.
-
-### Testing Strategy
-
-```mermaid
-graph TB
-    subgraph "Test Pyramid"
-        Integration[Integration Tests<br/>Inertia, Roundtrips, Features]
-        Blender[Blender Unit Tests<br/>Headless API Validation]
-        Core[Core Unit Tests<br/>Pure Pure Math & Models]
-    end
-
-    Integration --> Blender
-    Blender --> Core
-
-    style Integration fill:#4fc3f7
-    style Blender fill:#ba68c8
-    style Core fill:#81c784
-```
-
-Comprehensive execution instructions and setup details for each layer are maintained in the **[CONTRIBUTING.md](https://github.com/arounamounchili/linkforge/blob/main/CONTRIBUTING.md#testing)** guide.
-
-### 7. Unified Resource Resolution
-LinkForge uses a unified resolver architecture to handle external assets (`package://`, `file://`, and relative paths). This ensures that robot models remain portable between different environments (ROS, local filesystem, or future cloud storage).
-
-## Security by Design
-
-LinkForge implements a multi-layered security architecture to protect against malicious URDF/XACRO inputs:
-
-1. **Sandboxed I/O**: The **FileSystemResolver** implements sandbox protection by restricting access to a validated root directory (usually the robot's package or URDF folder).
-2. **URI Validation**: Standardized security helpers validate `package://` and `file://` URIs to prevent path traversal attacks before resolution occurs.
-3. **Resource Throttling**: Hard limits on file size (100MB), XML nesting depth (100), and numeric ranges (±1e10) protect against "Billion Laughs" attacks and system resource exhaustion.
-4. **Atomic Sanitization**: All incoming strings (links, joints, meshes) are sanitized at the engine's edge to ensure validity for both URDF XML and cross-platform filesystems.
-5. **Validation Pass**: The `RobotValidator` runs a comprehensive suite of modular `ValidationChecks` to ensure kinematic connectivity, cycle-free mimic chains, and physical property validity.
-
-
+---
+
+## 💎 Core Engineering Principles
+
+| Principle | Description |
+| :--- | :--- |
+| **Physics is Truth** | We prioritize numerical accuracy. If a mesh is broken, the linter "Fails in Editor" rather than "Fails in Sim." |
+| **Zero-Dependency** | The Core must remain lightweight and portable. No NumPy or C++ dependencies in the simulation logic. |
+| **Bake the Transforms** | To prevent "Origin Drift" between tools, we automatically normalize and bake transforms during import/export. |
+| **Resilient Parsing** | Our URDF parser is "Lossless"—it preserves unknown tags and handles malformed XML gracefully. |
+
+---
+
+## ⚡ Performance & Security
+*   **Numerical Stability**: We use local origin-shifting (numerical conditioning) for all inertia integrals.
+*   **Linear Scaling**: Inertia and Topology checks scale linearly with vertex/triangle count ($O(V+T)$).
+*   **Resource Guards**: Hard limits on XML nesting (100 levels) and file sizes (100MB) to prevent resource exhaustion attacks.
 
 ---
 
