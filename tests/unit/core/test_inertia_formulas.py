@@ -383,7 +383,7 @@ class TestInertiaEdgeCases:
             # Just these 4 are enough to make volume negative and inertia values weird
         ]
 
-        with pytest.raises(RobotPhysicsError, match="not watertight|Negative diagonal inertia"):
+        with pytest.raises(RobotPhysicsError, match="not watertight|inconsistent winding"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
     def test_calculate_inertia_unsupported_geometry(self) -> None:
@@ -393,8 +393,8 @@ class TestInertiaEdgeCases:
         class UnsupportedGeometry:
             pass
 
-        with pytest.raises(RobotModelError, match="Unsupported geometry type"):
-            calculate_inertia(UnsupportedGeometry(), mass=1.0)
+        with pytest.raises(RobotPhysicsError, match="Unsupported geometry type"):
+            calculate_inertia(UnsupportedGeometry(), mass=1.0)  # type: ignore
 
     def test_calculate_inertia_zero_mass(self) -> None:
         """Test that calculate_inertia with zero mass returns minimal inertia."""
