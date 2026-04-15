@@ -73,11 +73,9 @@ from ...linkforge_core.models.transmission import (
 from ...linkforge_core.physics import (
     calculate_inertia,
     calculate_mesh_inertia_from_triangles,
-    validate_mesh_topology,
 )
 from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
 from ...linkforge_core.utils.string_utils import sanitize_name
-from ..utils.physics import calculate_mesh_inertia_numpy
 
 # Constants
 logger = get_logger(__name__)
@@ -638,18 +636,10 @@ def blender_link_to_core_with_origin(
 
                     if mesh_data:
                         vertices, triangles = mesh_data
-                        # Mandatory topology validation for mesh inertia
-                        validate_mesh_topology(vertices, triangles, name=geom_obj.name)
-                        if use_numpy:
-                            # Vectorized implementation
-                            inertia_tensor = calculate_mesh_inertia_numpy(
-                                vertices, triangles, props.mass
-                            )
-                        else:
-                            # Fallback to pure-Python core implementation
-                            inertia_tensor = calculate_mesh_inertia_from_triangles(
-                                vertices, triangles, props.mass
-                            )
+                        # Uniform core implementation (Pure Python)
+                        inertia_tensor = calculate_mesh_inertia_from_triangles(
+                            vertices, triangles, props.mass
+                        )
                     else:
                         # Fallback to bounding box if mesh extraction fails
                         dimensions = geom_obj.dimensions

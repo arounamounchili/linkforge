@@ -5,7 +5,7 @@ This document provides a high-level map of LinkForge's architecture. It is desig
 ## 🔭 Architectural Philosophy: Hexagonal Core
 LinkForge is built on the **Ports & Adapters (Hexagonal)** pattern. The goal is to keep the "Robotics Intelligence" (Core) completely isolated from the "Design Tool" (Blender/FreeCAD).
 
-1.  **The Core**: Zero-dependency Python logic. Contains the "Truth" about physics, URDF, and robot topology.
+1.  **The Core**: Zero-dependency Python logic. Contains the "Truth" about physics (Mirtich/Sylvester), URDF structure, and robot topology.
 2.  **The Platform Layer**: Adapters that translate Host data (like Blender Mesh/Objects) into Core models.
 
 ---

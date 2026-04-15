@@ -509,7 +509,6 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
 
     # Import here to avoid circular dependency
-    from ...linkforge_core.exceptions import RobotPhysicsError
     from ...linkforge_core.models.geometry import Box, Cylinder, Sphere
     from ...linkforge_core.physics import (
         calculate_inertia,
@@ -517,7 +516,6 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
         validate_mesh_topology,
     )
     from ..adapters.blender_to_core import extract_mesh_triangles
-    from ..utils.physics import calculate_mesh_inertia_numpy
 
     # Calculate inertia from child meshes (new architecture: link Empty + children)
     try:
@@ -577,22 +575,12 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
                 tensor = calculate_inertia(Cylinder(radius=radius, length=length), mass)
         else:
             # Mesh fallback
-            # Use optimized NumPy path
-            try:
-                res = extract_mesh_triangles(target_obj, as_numpy=True)
-                if res:
-                    verts_np, faces_np = res
-                    # Mandatory topology validation for mesh inertia (informs user of bad CAD data)
-                    validate_mesh_topology(verts_np, faces_np, name=target_obj.name)
-                    tensor = calculate_mesh_inertia_numpy(verts_np, faces_np, mass)
-            except (ImportError, AttributeError, NameError, RobotPhysicsError):
-                # Fallback to core Python if NumPy fails or calculation error
-                res = extract_mesh_triangles(target_obj, as_numpy=False)
-                if res:
-                    verts, faces = res
-                    # Mandatory topology validation for mesh inertia
-                    validate_mesh_topology(verts, faces, name=target_obj.name)
-                    tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
+            res = extract_mesh_triangles(target_obj, as_numpy=False)
+            if res:
+                verts, faces = res
+                # Mandatory topology validation for mesh inertia
+                validate_mesh_topology(verts, faces, name=target_obj.name)
+                tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
 
         if tensor is not None:
             # Final validation for type-checker
