@@ -1,4 +1,4 @@
-# ⚖️ Configuring Physics & Inertia
+# Configuring Physics & Inertia
 
 LinkForge provides tools to configure stable and accurate physics simulations matching real-world counterparts.
 

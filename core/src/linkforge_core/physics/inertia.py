@@ -118,11 +118,12 @@ def calculate_mesh_inertia_from_triangles(
 
     This implementation uses the Divergence Theorem to convert volume integrals into
     surface integrals across triangles. The calculation follows 4 phases:
-      1. Validation: Ensures mesh topology and numerical integrity.
-      2. Conditioning: Translates mesh to a local mean origin to preserve floating-point precision.
-      3. Integration: Accumulates signed volume and moments across all tetrahedra.
-      4. Normalization: Applies Parallel Axis Theorem and density scaling to produce
-         the final tensor about the Center of Mass (CoM).
+
+    1. Validation: Ensures mesh topology and numerical integrity.
+    2. Conditioning: Translates mesh to a local mean origin to preserve floating-point precision.
+    3. Integration: Accumulates signed volume and moments across all tetrahedra.
+    4. Normalization: Applies Parallel Axis Theorem and density scaling to produce
+       the final tensor about the Center of Mass (CoM).
 
     Args:
         vertices: List of (x, y, z) vertex coordinates in meters

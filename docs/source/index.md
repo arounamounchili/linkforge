@@ -2,9 +2,9 @@
 
 Welcome to the official LinkForge documentation. LinkForge is **The Linter & Bridge for Robotics**, designed to provide professional validation for URDF, XACRO, and beyond.
 
-## 🔄 Workflow at a Glance
+## Workflow at a Glance
 
-```mermaid
+```{mermaid}
 graph LR
     A[3D Modeling in Blender] --> B[LinkForge: Setup Robot]
     B --> C{Validation}
