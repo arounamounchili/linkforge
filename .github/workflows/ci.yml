@@ -125,6 +125,7 @@ jobs:
             --exclude "https://cmp.felk.cvut.cz/~peckama2/"
             --exclude "https://www.gnu.org/licenses/gpl-3.0"
             --exclude "https://monorepo.tools/"
+            --exclude "https://www.conventionalcommits.org/"
             --exclude "https://github.com/[^/]+$"
             --exclude-path "docs/source/.*[a-z0-9]$"
             README.md docs/
