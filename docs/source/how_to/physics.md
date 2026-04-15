@@ -75,9 +75,14 @@ assembly.add_link("chassis") \
     .as_fixed()
 ```
 
-::: {note}
-**Performance (v1.3.0)**: When running inside Blender, inertia calculation for
-complex meshes (100k+ triangles) uses a NumPy-vectorized tetrahedral integrator.
-All triangle volumes and inertia components are computed simultaneously, making
-it significantly faster than the pure-Python loop for high-fidelity mesh exports.
+::: {important}
+**Hardened Physics (v1.6.0)**: In this version, LinkForge has been upgraded with
+production-grade numerical hardening. The mesh inertia pipeline now uses the
+**Mirtich algorithm** (Divergence Theorem) combined with:
+- **Numerical Conditioning**: Automatically translates meshes to a local origin
+  during integration to preserve floating-point precision on large assets.
+- **Physicality Audits**: Uses **Sylvester’s Criterion** to ensure every
+  calculated tensor is physically possible (Positive Semi-Definite).
+- **Topology Linting**: A 5-phase validation pass catches "unwelded" vertices
+  and inconsistent winding *before* calculations begin.
 :::
