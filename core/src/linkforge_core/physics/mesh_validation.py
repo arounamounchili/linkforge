@@ -48,7 +48,7 @@ def validate_mesh_topology(
     warnings: list[str] = []
     prefix = f"Mesh '{name}'" if name else "Mesh"
 
-    # Strict normalization and type checking
+    # --- 1. Basic Input Normalization ---
     try:
         triangles_list = list(triangles)
         vertices_list = list(vertices)
@@ -61,7 +61,7 @@ def validate_mesh_topology(
         warnings.append(msg)
         return warnings
 
-    # 1. Vertex Proximity Check (Level 2)
+    # --- 2. Vertex Proximity Check (Level 2) ---
     # Detects "unwelded" vertices where different indices share the same coordinate.
     if level >= 2:
         coord_map: dict[tuple[float, float, float], list[int]] = {}
@@ -91,6 +91,7 @@ def validate_mesh_topology(
                 )
             logger.warning(msg)
 
+    # --- 3. Edge Registration & Triangle-Level Filtering ---
     seen_faces = set()
     duplicate_count = 0
     degenerate_count = 0
@@ -135,6 +136,7 @@ def validate_mesh_topology(
             if level >= 2:
                 edge_directions.setdefault(undirected_edge, []).append(directed_edges[i])
 
+    # --- 4. Preliminary Warnings (Invalid/Degenerate/Duplicate) ---
     if invalid_count > 0:
         msg = f"{prefix} has {invalid_count} invalid triangle(s) (unparsable or missing indices)."
         warnings.append(msg)
@@ -172,7 +174,7 @@ def validate_mesh_topology(
                 )
             logger.warning(msg)
 
-    # Topology Evaluation
+    # --- 5. Topology Evaluation (Boundary/Manifold/Winding) ---
     boundary_edges = []
     non_manifold_edges = []
     inconsistent_edges_count = 0

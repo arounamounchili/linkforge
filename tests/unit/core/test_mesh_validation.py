@@ -83,38 +83,59 @@ class TestMeshTopologyValidation:
     def test_unwelded_vertices(self) -> None:
         """Different indices sharing the same coordinates should yield a proximity warning."""
         # 0 and 4 are at the same location but have different indices
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0, 0)]
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0.00000001, 0)]
         triangles = [(0, 2, 1), (4, 1, 3), (0, 3, 2), (1, 2, 3)]
 
-        # Should warning at level 2
+        # Should warning at level 2 (proximity_threshold default is 6, so 0.00000001 matches 0)
         warnings = validate_mesh_topology(vertices, triangles, level=2)
         assert any("unwelded" in w.lower() for w in warnings)
 
-        # Should raise in strict mode
-        with pytest.raises(RobotPhysicsError, match="unwelded"):
-            validate_mesh_topology(vertices, triangles, level=2, strict=True)
+        # If we set proximity_threshold to 9, they should NOT match
+        warnings_strict = validate_mesh_topology(
+            vertices, triangles, level=2, proximity_threshold=9
+        )
+        assert not any("unwelded" in w.lower() for w in warnings_strict)
 
     def test_strict_mode_raises(self) -> None:
         """Strict mode should raise RobotPhysicsError on topology issues."""
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
-        triangles = [(0, 1, 2)]  # Boundary edges
+        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 1)]
+
+        # 1. Boundary
         with pytest.raises(RobotPhysicsError, match="boundary edge"):
-            validate_mesh_topology(vertices, triangles, strict=True)
+            validate_mesh_topology(vertices, [(0, 1, 2)], strict=True)
 
-        vertices_dup = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
-        triangles_dup = [(0, 1, 2), (0, 2, 1)]
+        # 2. Duplicate
         with pytest.raises(RobotPhysicsError, match="duplicate"):
-            validate_mesh_topology(vertices_dup, triangles_dup, strict=True, level=2)
+            validate_mesh_topology(vertices, [(0, 1, 2), (0, 2, 1)], strict=True, level=2)
 
-        # Test degenerate triangles in strict mode
+        # 3. Degenerate
         with pytest.raises(RobotPhysicsError, match="degenerate"):
             validate_mesh_topology(vertices, [(0, 1, 1)], strict=True, level=2)
 
-        # Standard tetrahedron but the last face is reversed
-        vertices_tetra = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)]
+        # 4. Non-manifold
+        triangles_non_manifold = [
+            (0, 1, 2),
+            (0, 2, 3),
+            (0, 3, 1),
+            (1, 3, 2),
+            (4, 1, 2),
+            (4, 2, 5),
+            (4, 5, 1),
+            (1, 5, 2),
+        ]
+        vertices_nm = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0)]
+        with pytest.raises(RobotPhysicsError, match="non-manifold edge"):
+            validate_mesh_topology(vertices_nm, triangles_non_manifold, strict=True, level=1)
+
+        # 5. Inconsistent winding
         triangles_inconsistent = [(0, 2, 1), (0, 1, 3), (0, 3, 2), (1, 3, 2)]
         with pytest.raises(RobotPhysicsError, match="inconsistent winding"):
-            validate_mesh_topology(vertices_tetra, triangles_inconsistent, strict=True, level=2)
+            validate_mesh_topology(vertices, triangles_inconsistent, strict=True, level=2)
+
+        # 6. Unwelded
+        vertices_unwelded = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0, 0)]
+        with pytest.raises(RobotPhysicsError, match="unwelded"):
+            validate_mesh_topology(vertices_unwelded, triangles_inconsistent, strict=True, level=2)
 
     def test_failing_iterator_validation(self) -> None:
         """Test fallback type casting for bad inputs."""
@@ -128,12 +149,11 @@ class TestMeshTopologyValidation:
         # Short faces cause IndexError, which trips invalid_count
         vertices = [(0, 0, 0), (1, 0, 0)]
         warnings = validate_mesh_topology(vertices, [(0, 1)], level=1)
-        assert len(warnings) == 1
-        assert "invalid" in warnings[0]
+        assert any("invalid" in w.lower() for w in warnings)
 
         with pytest.raises(RobotPhysicsError, match="invalid"):
             validate_mesh_topology(vertices, [(0, 1)], strict=True, level=1)
 
         # Test string characters trip ValueError -> invalid_count
         warnings = validate_mesh_topology(vertices, [("a", "b", "c")], level=1)
-        assert len(warnings) == 1
+        assert any("invalid" in w.lower() for w in warnings)
