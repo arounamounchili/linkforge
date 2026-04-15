@@ -105,8 +105,8 @@ graph TB
 | **Models** | Core data structures (`Robot`, `Link`, `Joint`, `Sensor`, `Ros2Control`, `Transmission`, `GazeboElement`) |
 | **Parsers** | URDF/XACRO parsing |
 | **Generators** | Shared XML engine & format-specific generation (URDF, XACRO, etc.) |
-| **Physics** | Inertia & dynamics |
-| **Validation** | Modular checks & security registry |
+| **Physics** | Inertia & dynamics (Mirtich algorithm & physicality audits) |
+| **Validation** | Modular checks (Topology, Kinematic, & Security) |
 | **Utils** | Shared internal logic (math, strings, XML, kinematics) |
 
 ## Data Flow
@@ -485,8 +485,10 @@ To support a completely new robotics format:
 ## Performance Considerations
 
 ### Core Optimizations
-- **Inertia calculation**: O(n) where n = triangle count (canonical integration).
-- **Primitive detection**: O(1) using mesh topology heuristics.
+- **Inertia calculation**: $O(V + T)$ where $V$ = vertices (shashing) and $T$ = triangles (integration).
+- **Topology Audit**: Multi-phase pipeline covering boundary, manifold, and winding consistency.
+- **Physicality Check**: $O(1)$ post-integration verification via Sylvester's Criterion.
+- **Numerical Conditioning**: Local mean origin translation to preserve floating-point precision on large CAD assets.
 - **Viewport interaction**: Debounced (0.3s delay) for responsive UI during property manipulation.
 - **Lookup efficiency**: O(1) hash-map indexing for links and joints.
 
@@ -532,5 +534,5 @@ LinkForge implements a multi-layered security architecture to protect against ma
 
 ---
 
-**Last Updated:** 2026-03-10
-**Version:** 1.5.0
+**Last Updated:** 2026-04-15
+**Version:** 1.6.0
