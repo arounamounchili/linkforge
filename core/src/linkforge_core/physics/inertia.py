@@ -126,7 +126,7 @@ def calculate_mesh_inertia_from_triangles(
 
     # 1. Topology and numerical validation
     _validate_mesh_inputs(vertices, triangles)
-    validate_mesh_topology(triangles, strict=True)
+    validate_mesh_topology(vertices, triangles, strict=True)
 
     # Translate mesh to local origin to improve numerical conditioning
     mean = [sum(v[i] for v in vertices) / len(vertices) for i in range(3)]

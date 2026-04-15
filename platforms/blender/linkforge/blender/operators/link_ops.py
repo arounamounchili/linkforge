@@ -583,7 +583,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
                 if res:
                     verts_np, faces_np = res
                     # Mandatory topology validation for mesh inertia (informs user of bad CAD data)
-                    validate_mesh_topology(faces_np, name=target_obj.name)
+                    validate_mesh_topology(verts_np, faces_np, name=target_obj.name)
                     tensor = calculate_mesh_inertia_numpy(verts_np, faces_np, mass)
             except (ImportError, AttributeError, NameError, RobotPhysicsError):
                 # Fallback to core Python if NumPy fails or calculation error
@@ -591,7 +591,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
                 if res:
                     verts, faces = res
                     # Mandatory topology validation for mesh inertia
-                    validate_mesh_topology(faces, name=target_obj.name)
+                    validate_mesh_topology(verts, faces, name=target_obj.name)
                     tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
 
         if tensor is not None:
