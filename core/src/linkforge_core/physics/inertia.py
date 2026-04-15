@@ -322,7 +322,7 @@ def _validate_mesh_inputs(
     triangles: list[tuple[int, int, int]],
 ) -> None:
     """Numerical and index validation."""
-    if not vertices or not triangles:
+    if len(vertices) == 0 or len(triangles) == 0:
         raise RobotPhysicsError(ValidationErrorCode.VALUE_EMPTY, "Mesh is empty")
 
     for i, v in enumerate(vertices):
