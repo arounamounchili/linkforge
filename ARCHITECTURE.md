@@ -34,7 +34,7 @@ graph TB
     subgraph "Core Layer"
         Models[Data Models<br/>Robot/Link/Joint]
         Physics[Physics Engine<br/>Inertia/Validation]
-        IO[Parsers & Generators<br/>URDF/XACRO]
+        IO[Parsers & Generators<br/>URDF/XACRO/SRDF]
     end
     IO --> Models
     Physics --> Models
@@ -53,14 +53,14 @@ sequenceDiagram
     participant Blender as Blender Viewport
     participant Adapter as blender_to_core
     participant Core as Physics Core
-    participant File as URDF Export
+    participant File as Robot Description
 
     User->>Blender: Click Export
     Blender->>Adapter: Extract geometry & props
     Adapter->>Core: Run Hardened Validation (Phases 1-5)
     Core->>Core: Calculate Mirtich Inertia
     Core-->>Adapter: Validated Robot Model
-    Adapter->>File: Write Sanitized URDF/XACRO
+    Adapter->>File: Write URDF/XACRO/SRDF
 ```
 
 ---
