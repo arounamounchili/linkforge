@@ -23,6 +23,7 @@ NEGATIVE_INERTIA_THRESHOLD = -1e-06
 MIN_MASS_STABILITY_THRESHOLD = 0.01  # kg
 DEGENERATE_VOL_THRESHOLD = 1e-12  # m³
 MIN_INERTIA_STABILITY_VALUE = 1e-06  # kg·m²
+SYLVESTER_TOLERANCE_EPSILON = 1e-9
 
 # Configurable cache size for inertia calculations
 DEFAULT_INERTIA_CACHE_SIZE = int(os.environ.get("LINKFORGE_INERTIA_CACHE_SIZE", "512"))
@@ -287,7 +288,6 @@ def calculate_mesh_inertia_from_triangles(
 
     # 4. Physicality check
     # Check positive semi-definiteness using Sylvester's criterion (principal minors)
-    # This avoids adding a heavy dependency on numpy just for an eigenvalue check.
     delta1 = i_xx
     delta2 = i_xx * i_yy - i_xy**2
     delta3 = (
@@ -296,13 +296,16 @@ def calculate_mesh_inertia_from_triangles(
         + i_xz * (i_xy * i_yz - i_yy * i_xz)
     )
 
-    eps = 1e-9 * max(i_xx, i_yy, i_zz, 1.0)
+    scale = max(abs(i_xx), abs(i_yy), abs(i_zz), abs(i_xy), abs(i_xz), abs(i_yz), 1.0)
+    eps = SYLVESTER_TOLERANCE_EPSILON * scale
     if delta1 < -eps or delta2 < -eps or delta3 < -eps:
         raise RobotPhysicsError(
             ValidationErrorCode.PHYSICS_VIOLATION,
             f"Inertia tensor is not positive semi-definite (fails Sylvester criterion). "
-            f"Often indicates numerical corruption or extreme non-manifold shapes. "
-            f"Minors: D1={delta1:.6f}, D2={delta2:.6f}, D3={delta3:.6f}",
+            f"Often indicates numerical corruption or extreme non-manifold shapes.\n"
+            f"Minors: D1={delta1:.6e}, D2={delta2:.6e}, D3={delta3:.6e}\n"
+            f"Tensor: Ixx={i_xx:.6g}, Iyy={i_yy:.6g}, Izz={i_zz:.6g}, "
+            f"Ixy={i_xy:.6g}, Ixz={i_xz:.6g}, Iyz={i_yz:.6g}",
             target="InertiaTensor",
             value=(delta1, delta2, delta3),
         )
