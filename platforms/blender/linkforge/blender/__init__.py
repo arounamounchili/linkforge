@@ -37,14 +37,3 @@ def unregister() -> None:
     for module in reversed(modules):
         with contextlib.suppress(Exception):
             module.unregister()
-
-
-__all__ = [
-    "properties",
-    "preferences",
-    "operators",
-    "panels",
-    "joint_gizmos",
-    "register",
-    "unregister",
-]

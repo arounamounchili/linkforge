@@ -40,15 +40,3 @@ def unregister() -> None:
     """Unregister all property groups."""
     for module in reversed(modules):
         module.unregister()
-
-
-__all__ = [
-    "link_props",
-    "joint_props",
-    "sensor_props",
-    "transmission_props",
-    "robot_props",
-    "validation_props",
-    "register",
-    "unregister",
-]

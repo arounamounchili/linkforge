@@ -41,15 +41,3 @@ def unregister() -> None:
     """Unregister all panels."""
     for module in reversed(modules):
         module.unregister()
-
-
-__all__ = [
-    "link_panel",
-    "joint_panel",
-    "sensor_panel",
-    "control_panel",
-    "robot_panel",
-    "export_panel",
-    "register",
-    "unregister",
-]
