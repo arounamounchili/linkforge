@@ -157,3 +157,19 @@ class TestMeshTopologyValidation:
         # Test string characters trip ValueError -> invalid_count
         warnings = validate_mesh_topology(vertices, [("a", "b", "c")], level=1)
         assert any("invalid" in w.lower() for w in warnings)
+
+    def test_sliver_triangles(self) -> None:
+        """Sliver triangles should yield a warning at level >= 2."""
+        # Base = 1, Height = 0.0001 => Aspect ratio = 1/(2*0.5*0.0001) = 10000
+        vertices = [(0, 0, 0), (1, 0, 0), (0.5, 0.0001, 0)]
+        triangles = [(0, 1, 2)]
+
+        # Should warning at level 2 with default threshold (1000)
+        warnings = validate_mesh_topology(vertices, triangles, level=2)
+        assert any("sliver" in w.lower() for w in warnings)
+
+        # Should NOT warning if we increase threshold to 20000
+        warnings_clean = validate_mesh_topology(
+            vertices, triangles, level=2, sliver_threshold=20000
+        )
+        assert not any("sliver" in w.lower() for w in warnings_clean)

@@ -10,6 +10,7 @@ A valid mesh for inertia calculation must be:
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from ..exceptions import RobotPhysicsError, ValidationErrorCode
@@ -26,6 +27,7 @@ def validate_mesh_topology(
     level: int = 2,
     name: str | None = None,
     proximity_threshold: int = 6,
+    sliver_threshold: float = 1000.0,
 ) -> list[str]:
     """Check mesh topology for structural and numerical issues.
 
@@ -38,6 +40,7 @@ def validate_mesh_topology(
                2: Plus degenerate triangles, duplicate faces, winding, and vertex proximity
         name: Optional mesh name for logging context.
         proximity_threshold: Decimal precision for vertex proximity check (default 6).
+        sliver_threshold: Aspect ratio threshold for sliver triangle detection (default 1000).
 
     Returns:
         List of warning messages (empty = clean mesh)
@@ -95,6 +98,7 @@ def validate_mesh_topology(
     seen_faces = set()
     duplicate_count = 0
     degenerate_count = 0
+    sliver_count = 0
     invalid_count = 0
 
     edge_counts: dict[tuple[int, int], int] = {}
@@ -112,6 +116,40 @@ def validate_mesh_topology(
             if level >= 2:
                 degenerate_count += 1
             continue
+
+        # Sliver check (Level 2)
+        # Skinny triangles cause numerical instability in physics engines.
+        if level >= 2:
+            va, vb, vc = vertices_list[a], vertices_list[b], vertices_list[c]
+
+            # Edge vectors
+            ab = (vb[0] - va[0], vb[1] - va[1], vb[2] - va[2])
+            bc = (vc[0] - vb[0], vc[1] - vb[1], vc[2] - vb[2])
+            ca = (va[0] - vc[0], va[1] - vc[1], va[2] - vc[2])
+
+            # Squared edge lengths
+            l2_ab = ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2
+            l2_bc = bc[0] ** 2 + bc[1] ** 2 + bc[2] ** 2
+            l2_ca = ca[0] ** 2 + ca[1] ** 2 + ca[2] ** 2
+
+            l2_max = max(l2_ab, l2_bc, l2_ca)
+
+            # Area = 0.5 * |AB x AC|
+            # (Reusable for normal but we only need magnitude)
+            ac = (vc[0] - va[0], vc[1] - va[1], vc[2] - va[2])
+            cp_x = ab[1] * ac[2] - ab[2] * ac[1]
+            cp_y = ab[2] * ac[0] - ab[0] * ac[2]
+            cp_z = ab[0] * ac[1] - ab[1] * ac[0]
+
+            area = 0.5 * math.sqrt(cp_x**2 + cp_y**2 + cp_z**2)
+
+            # Aspect Ratio = L_max / H_min
+            # Area = 0.5 * L_max * H_min  => H_min = 2 * Area / L_max
+            # S = L_max / (2 * Area / L_max) = L_max^2 / (2 * Area)
+            if area > 1e-15:  # Avoid division by zero (handled by degenerate check)
+                aspect_ratio = l2_max / (2 * area)
+                if aspect_ratio > sliver_threshold:
+                    sliver_count += 1
 
         # Duplicate check (skipped from all edge mapping)
         if level >= 2:
@@ -160,6 +198,15 @@ def validate_mesh_topology(
                     target="MeshTopology",
                     value=degenerate_count,
                 )
+            logger.warning(msg)
+
+        if sliver_count > 0:
+            msg = (
+                f"{prefix} has {sliver_count} sliver triangle(s) (aspect ratio > {sliver_threshold}). "
+                "These can cause numerical instability in physics simulations."
+            )
+            warnings.append(msg)
+            # Sliver check NEVER raises even in strict mode - only a warning
             logger.warning(msg)
 
         if duplicate_count > 0:
