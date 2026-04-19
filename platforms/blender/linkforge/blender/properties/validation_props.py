@@ -39,6 +39,12 @@ class ValidationIssueProperty(PropertyGroup):
         default="",
     )
 
+    error_code: StringProperty(  # type: ignore[valid-type]
+        name="Code",
+        description="Machine-readable error code",
+        default="",
+    )
+
     @property
     def has_suggestion(self) -> bool:
         """Check if this issue has a suggestion."""

@@ -272,6 +272,7 @@ class LINKFORGE_OT_validate_robot(Operator):
             error_prop.message = error.message
             error_prop.suggestion = error.suggestion or ""
             error_prop.affected_objects = ", ".join(error.affected_objects)
+            error_prop.error_code = error.code.name if error.code else ""
 
         # Store warnings
         for warning in result.warnings:
@@ -280,6 +281,7 @@ class LINKFORGE_OT_validate_robot(Operator):
             warning_prop.message = warning.message
             warning_prop.suggestion = warning.suggestion or ""
             warning_prop.affected_objects = ", ".join(warning.affected_objects)
+            warning_prop.error_code = warning.code.name if warning.code else ""
 
         # Report result
         if result.is_valid and not result.has_warnings:
