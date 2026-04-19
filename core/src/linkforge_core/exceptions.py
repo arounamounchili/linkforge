@@ -32,6 +32,15 @@ class ValidationErrorCode(Enum):
     MATH_ERROR = "math_error"
     INERTIA_TRIANGLE_INEQUALITY = "inertia_triangle_inequality"
 
+    # Mesh Topology
+    MESH_UNWELDED = "mesh_unwelded"
+    MESH_DUPLICATE_FACE = "mesh_duplicate_face"
+    MESH_DEGENERATE = "mesh_degenerate"
+    MESH_BOUNDARY_EDGE = "mesh_boundary_edge"
+    MESH_NON_MANIFOLD = "mesh_non_manifold"
+    MESH_INCONSISTENT_WINDING = "mesh_inconsistent_winding"
+    MESH_SLIVER = "mesh_sliver"
+
     # Configuration and Misc
     MISMATCH = "mismatch"
     GENERIC_FAILURE = "generic_failure"

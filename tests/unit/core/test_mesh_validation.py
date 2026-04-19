@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core.exceptions import RobotPhysicsError
+from linkforge_core.exceptions import RobotPhysicsError, ValidationErrorCode
 from linkforge_core.physics.mesh_validation import validate_mesh_topology
 
 
@@ -28,7 +28,7 @@ class TestMeshTopologyValidation:
             # (1, 2, 3)
         ]
         warnings = validate_mesh_topology(vertices, triangles, level=1)
-        assert any("boundary edge" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.MESH_BOUNDARY_EDGE for w in warnings)
 
     def test_non_manifold_edge(self) -> None:
         """An edge shared by 3 triangles should report as non-manifold."""
@@ -41,7 +41,7 @@ class TestMeshTopologyValidation:
             (1, 2, 4),  # Extra face sharing edge (1, 2)
         ]
         warnings = validate_mesh_topology(vertices, triangles, level=1)
-        assert any("non-manifold edge" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.MESH_NON_MANIFOLD for w in warnings)
 
     def test_degenerate_triangles_level_2(self) -> None:
         """Degenerate triangles (identical vertices) should yield a warning at level >= 2."""
@@ -51,11 +51,11 @@ class TestMeshTopologyValidation:
             (1, 1, 2),  # Degenerate
         ]
         warnings = validate_mesh_topology(vertices, triangles, level=2)
-        assert any("degenerate" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.MESH_DEGENERATE for w in warnings)
 
         # Should be ignored at level 1 (only flags boundary/manifold issues)
         warnings_l1 = validate_mesh_topology(vertices, triangles, level=1)
-        assert not any("degenerate" in w.lower() for w in warnings_l1)
+        assert not any(w.code == ValidationErrorCode.MESH_DEGENERATE for w in warnings_l1)
 
     def test_duplicate_faces_level_2(self) -> None:
         """Duplicate faces should yield a warning at level >= 2."""
@@ -66,7 +66,7 @@ class TestMeshTopologyValidation:
             (0, 1, 3),
         ]
         warnings = validate_mesh_topology(vertices, triangles, level=2)
-        assert any("duplicate" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.MESH_DUPLICATE_FACE for w in warnings)
 
     def test_inconsistent_orientation_level_2(self) -> None:
         """Inconsistent face winding should yield a warning at level >= 2."""
@@ -78,7 +78,7 @@ class TestMeshTopologyValidation:
             (1, 2, 3),
         ]
         warnings = validate_mesh_topology(vertices, triangles, level=2)
-        assert any("inconsistent winding" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.MESH_INCONSISTENT_WINDING for w in warnings)
 
     def test_unwelded_vertices(self) -> None:
         """Different indices sharing the same coordinates should yield a proximity warning."""
@@ -88,13 +88,13 @@ class TestMeshTopologyValidation:
 
         # Should warning at level 2 (proximity_threshold default is 6, so 0.00000001 matches 0)
         warnings = validate_mesh_topology(vertices, triangles, level=2)
-        assert any("unwelded" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.MESH_UNWELDED for w in warnings)
 
         # If we set proximity_threshold to 9, they should NOT match
         warnings_strict = validate_mesh_topology(
             vertices, triangles, level=2, proximity_threshold=9
         )
-        assert not any("unwelded" in w.lower() for w in warnings_strict)
+        assert not any(w.code == ValidationErrorCode.MESH_UNWELDED for w in warnings_strict)
 
     def test_strict_mode_raises(self) -> None:
         """Strict mode should raise RobotPhysicsError on topology issues."""
@@ -137,11 +137,10 @@ class TestMeshTopologyValidation:
         with pytest.raises(RobotPhysicsError, match="unwelded"):
             validate_mesh_topology(vertices_unwelded, triangles_inconsistent, strict=True, level=2)
 
-    def test_failing_iterator_validation(self) -> None:
-        """Test fallback type casting for bad inputs."""
+        # Iterator validation
         warnings = validate_mesh_topology(None, None, level=1)
         assert len(warnings) == 1
-        assert "iterable" in warnings[0]
+        assert warnings[0].code == ValidationErrorCode.INVALID_VALUE
 
         with pytest.raises(RobotPhysicsError, match="iterable"):
             validate_mesh_topology(None, None, strict=True)
@@ -149,14 +148,14 @@ class TestMeshTopologyValidation:
         # Short faces cause IndexError, which trips invalid_count
         vertices = [(0, 0, 0), (1, 0, 0)]
         warnings = validate_mesh_topology(vertices, [(0, 1)], level=1)
-        assert any("invalid" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.INVALID_VALUE for w in warnings)
 
         with pytest.raises(RobotPhysicsError, match="invalid"):
             validate_mesh_topology(vertices, [(0, 1)], strict=True, level=1)
 
         # Test string characters trip ValueError -> invalid_count
         warnings = validate_mesh_topology(vertices, [("a", "b", "c")], level=1)
-        assert any("invalid" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.INVALID_VALUE for w in warnings)
 
     def test_sliver_triangles(self) -> None:
         """Sliver triangles should yield a warning at level >= 2."""
@@ -166,10 +165,10 @@ class TestMeshTopologyValidation:
 
         # Should warning at level 2 with default threshold (1000)
         warnings = validate_mesh_topology(vertices, triangles, level=2)
-        assert any("sliver" in w.lower() for w in warnings)
+        assert any(w.code == ValidationErrorCode.MESH_SLIVER for w in warnings)
 
         # Should NOT warning if we increase threshold to 20000
         warnings_clean = validate_mesh_topology(
             vertices, triangles, level=2, sliver_threshold=20000
         )
-        assert not any("sliver" in w.lower() for w in warnings_clean)
+        assert not any(w.code == ValidationErrorCode.MESH_SLIVER for w in warnings_clean)

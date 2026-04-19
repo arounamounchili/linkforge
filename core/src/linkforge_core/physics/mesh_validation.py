@@ -15,6 +15,7 @@ from typing import Any
 
 from ..exceptions import RobotPhysicsError, ValidationErrorCode
 from ..logging_config import get_logger
+from ..validation.result import Severity, ValidationIssue
 
 logger = get_logger(__name__)
 
@@ -28,7 +29,7 @@ def validate_mesh_topology(
     name: str | None = None,
     proximity_threshold: int = 6,
     sliver_threshold: float = 1000.0,
-) -> list[str]:
+) -> list[ValidationIssue]:
     """Check mesh topology for structural and numerical issues.
 
     Args:
@@ -43,12 +44,12 @@ def validate_mesh_topology(
         sliver_threshold: Aspect ratio threshold for sliver triangle detection (default 1000).
 
     Returns:
-        List of warning messages (empty = clean mesh)
+        List of ValidationIssue objects (empty = clean mesh)
 
     Raises:
         RobotPhysicsError: If strict=True and issues are found
     """
-    warnings: list[str] = []
+    issues: list[ValidationIssue] = []
     prefix = f"Mesh '{name}'" if name else "Mesh"
 
     # --- 1. Basic Input Normalization ---
@@ -56,13 +57,16 @@ def validate_mesh_topology(
         triangles_list = list(triangles)
         vertices_list = list(vertices)
     except TypeError as e:
-        msg = f"{prefix} failed validation: Vertices and Triangles must be iterable."
+        issue = ValidationIssue(
+            severity=Severity.ERROR,
+            title="Invalid Input",
+            message=f"{prefix} failed validation: Vertices and Triangles must be iterable.",
+            code=ValidationErrorCode.INVALID_VALUE,
+        )
         if strict:
-            raise RobotPhysicsError(
-                ValidationErrorCode.INVALID_VALUE, msg, target="MeshTopology"
-            ) from e
-        warnings.append(msg)
-        return warnings
+            raise RobotPhysicsError(issue.code, issue.message, target="MeshTopology") from e
+        issues.append(issue)
+        return issues
 
     # --- 2. Vertex Proximity Check (Level 2) ---
     # Detects "unwelded" vertices where different indices share the same coordinate.
@@ -80,19 +84,22 @@ def validate_mesh_topology(
         unwelded_groups = [indices for indices in coord_map.values() if len(indices) > 1]
         if unwelded_groups:
             count = sum(len(g) for g in unwelded_groups)
-            msg = (
-                f"{prefix} has {count} unwelded vertices (duplicate coordinates with different indices). "
-                "This often breaks topology checks. Consider welding vertices in your CAD tool."
+            issue = ValidationIssue(
+                severity=Severity.WARNING,
+                title="Unwelded Vertices",
+                message=f"{prefix} has {count} unwelded vertices (duplicate coordinates with different indices).",
+                code=ValidationErrorCode.MESH_UNWELDED,
+                suggestion="Consider welding vertices in your CAD tool or using the 'Weld' modifier.",
             )
-            warnings.append(msg)
+            issues.append(issue)
             if strict:
                 raise RobotPhysicsError(
-                    ValidationErrorCode.PHYSICS_VIOLATION,
-                    msg,
+                    issue.code,
+                    issue.message,
                     target="MeshTopology",
                     value=count,
                 )
-            logger.warning(msg)
+            logger.warning(issue.message)
 
     # --- 3. Edge Registration & Triangle-Level Filtering ---
     seen_faces = set()
@@ -176,50 +183,68 @@ def validate_mesh_topology(
 
     # --- 4. Preliminary Warnings (Invalid/Degenerate/Duplicate) ---
     if invalid_count > 0:
-        msg = f"{prefix} has {invalid_count} invalid triangle(s) (unparsable or missing indices)."
-        warnings.append(msg)
+        issue = ValidationIssue(
+            severity=Severity.ERROR,
+            title="Invalid Triangles",
+            message=f"{prefix} has {invalid_count} invalid triangle(s) (unparsable or missing indices).",
+            code=ValidationErrorCode.INVALID_VALUE,
+        )
+        issues.append(issue)
         if strict:
             raise RobotPhysicsError(
-                ValidationErrorCode.INVALID_VALUE,
-                msg,
+                issue.code,
+                issue.message,
                 target="MeshTopology",
                 value=invalid_count,
             )
-        logger.warning(msg)
+        logger.warning(issue.message)
 
     if level >= 2:
         if degenerate_count > 0:
-            msg = f"{prefix} has {degenerate_count} degenerate triangle(s) (missing or identical vertices)."
-            warnings.append(msg)
+            issue = ValidationIssue(
+                severity=Severity.WARNING,
+                title="Degenerate Triangles",
+                message=f"{prefix} has {degenerate_count} degenerate triangle(s) (missing or identical vertices).",
+                code=ValidationErrorCode.MESH_DEGENERATE,
+            )
+            issues.append(issue)
             if strict:
                 raise RobotPhysicsError(
-                    ValidationErrorCode.PHYSICS_VIOLATION,
-                    msg,
+                    issue.code,
+                    issue.message,
                     target="MeshTopology",
                     value=degenerate_count,
                 )
-            logger.warning(msg)
+            logger.warning(issue.message)
 
         if sliver_count > 0:
-            msg = (
-                f"{prefix} has {sliver_count} sliver triangle(s) (aspect ratio > {sliver_threshold}). "
-                "These can cause numerical instability in physics simulations."
+            issue = ValidationIssue(
+                severity=Severity.WARNING,
+                title="Sliver Triangles",
+                message=f"{prefix} has {sliver_count} sliver triangle(s) (aspect ratio > {sliver_threshold}).",
+                code=ValidationErrorCode.MESH_SLIVER,
+                suggestion="Skinny triangles cause numerical instability. Refine the mesh to improve quality.",
             )
-            warnings.append(msg)
+            issues.append(issue)
             # Sliver check NEVER raises even in strict mode - only a warning
-            logger.warning(msg)
+            logger.warning(issue.message)
 
         if duplicate_count > 0:
-            msg = f"{prefix} has {duplicate_count} duplicate triangle(s)."
-            warnings.append(msg)
+            issue = ValidationIssue(
+                severity=Severity.WARNING,
+                title="Duplicate Faces",
+                message=f"{prefix} has {duplicate_count} duplicate triangle(s).",
+                code=ValidationErrorCode.MESH_DUPLICATE_FACE,
+            )
+            issues.append(issue)
             if strict:
                 raise RobotPhysicsError(
-                    ValidationErrorCode.PHYSICS_VIOLATION,
-                    msg,
+                    issue.code,
+                    issue.message,
                     target="MeshTopology",
                     value=duplicate_count,
                 )
-            logger.warning(msg)
+            logger.warning(issue.message)
 
     # --- 5. Topology Evaluation (Boundary/Manifold/Winding) ---
     boundary_edges = []
@@ -244,39 +269,56 @@ def validate_mesh_topology(
                 inconsistent_edges_count += 1
 
     if boundary_edges:
-        msg = f"{prefix} has {len(boundary_edges)} boundary edge(s) — not watertight. Inertia calculation will be inaccurate."
-        warnings.append(msg)
+        issue = ValidationIssue(
+            severity=Severity.WARNING,
+            title="Non-Watertight Mesh",
+            message=f"{prefix} has {len(boundary_edges)} boundary edge(s).",
+            code=ValidationErrorCode.MESH_BOUNDARY_EDGE,
+            suggestion="Ensure the mesh is closed (watertight) for accurate inertia calculation.",
+        )
+        issues.append(issue)
         if strict:
             raise RobotPhysicsError(
-                ValidationErrorCode.PHYSICS_VIOLATION,
-                msg,
+                issue.code,
+                issue.message,
                 target="MeshTopology",
                 value=len(boundary_edges),
             )
-        logger.warning(msg)
+        logger.warning(issue.message)
 
     if non_manifold_edges:
-        msg = f"{prefix} has {len(non_manifold_edges)} non-manifold edge(s) (shared by >2 triangles). Mesh may be self-intersecting."
-        warnings.append(msg)
+        issue = ValidationIssue(
+            severity=Severity.WARNING,
+            title="Non-Manifold Mesh",
+            message=f"{prefix} has {len(non_manifold_edges)} non-manifold edge(s) (shared by >2 triangles).",
+            code=ValidationErrorCode.MESH_NON_MANIFOLD,
+        )
+        issues.append(issue)
         if strict:
             raise RobotPhysicsError(
-                ValidationErrorCode.PHYSICS_VIOLATION,
-                msg,
+                issue.code,
+                issue.message,
                 target="MeshTopology",
                 value=len(non_manifold_edges),
             )
-        logger.warning(msg)
+        logger.warning(issue.message)
 
     if level >= 2 and inconsistent_edges_count > 0:
-        msg = f"{prefix} has {inconsistent_edges_count} edge(s) with inconsistent winding (orientation mismatch). Normals are likely flipped."
-        warnings.append(msg)
+        issue = ValidationIssue(
+            severity=Severity.WARNING,
+            title="Inconsistent Winding",
+            message=f"{prefix} has {inconsistent_edges_count} edge(s) with inconsistent winding.",
+            code=ValidationErrorCode.MESH_INCONSISTENT_WINDING,
+            suggestion="Ensure all normals point outward. Some faces may be flipped.",
+        )
+        issues.append(issue)
         if strict:
             raise RobotPhysicsError(
-                ValidationErrorCode.PHYSICS_VIOLATION,
-                msg,
+                issue.code,
+                issue.message,
                 target="MeshTopology",
                 value=inconsistent_edges_count,
             )
-        logger.warning(msg)
+        logger.warning(issue.message)
 
-    return warnings
+    return issues
