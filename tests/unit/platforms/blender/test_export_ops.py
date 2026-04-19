@@ -93,12 +93,14 @@ def test_validate_robot_operator(mocker, clean_scene) -> None:
     err.message = "Error Message"
     err.affected_objects = ["Cube"]
     err.suggestion = ""  # Must be a string
+    err.code = None
 
     warn = MagicMock()
     warn.title = "Warn Title"
     warn.message = "Warn Message"
     warn.affected_objects = ["Sphere"]
     warn.suggestion = "Do something"  # Must be a string
+    warn.code = None
 
     # Mock scene_to_robot
     mocker.patch(
