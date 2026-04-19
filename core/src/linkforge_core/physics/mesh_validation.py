@@ -1,11 +1,13 @@
-"""Non-manifold mesh validation utilities.
+"""Mesh topology and numerical validation utilities.
 
-Provides topology checks for triangle meshes before physics calculations.
-A valid mesh for inertia calculation must be:
-  - Closed (watertight): every edge shared by exactly 2 triangles
-  - Manifold: no edges shared by >2 triangles
-  - Consistently oriented: adjacent triangles share edges in opposite order
-  - Welded: no duplicate vertices sharing the same coordinate
+Provides checks for the 'Top Six Pathologies' of triangle meshes to ensure
+physical accuracy and simulation stability. A valid mesh must be:
+  - Closed (watertight): no boundary edges
+  - Manifold: no shared edges by >2 triangles
+  - Consistently oriented: uniform winding (outward normals)
+  - Welded: no unwelded/proximal vertices
+  - Efficient: no duplicate or degenerate triangles
+  - Numerically stable: no extreme aspect ratio 'sliver' triangles
 """
 
 from __future__ import annotations
@@ -38,7 +40,7 @@ def validate_mesh_topology(
         strict: If True, raise on first issue. If False, collect all warnings.
         level: Validation strictness level.
                1: Basic topology (boundary & non-manifold edges)
-               2: Plus degenerate triangles, duplicate faces, winding, and vertex proximity
+               2: Comprehensive (adds degenerate, slivers, duplicates, winding, and vertex proximity)
         name: Optional mesh name for logging context.
         proximity_threshold: Decimal precision for vertex proximity check (default 6).
         sliver_threshold: Aspect ratio threshold for sliver triangle detection (default 1000).
