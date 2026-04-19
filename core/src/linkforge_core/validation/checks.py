@@ -46,6 +46,7 @@ class HasLinksCheck(ValidationCheck):
             result.add_error(
                 title="No links",
                 message="Robot must have at least one link",
+                code=ValidationErrorCode.VALUE_EMPTY,
                 suggestion="Add a link by marking an object as a robot link in the Link panel",
             )
 
@@ -78,6 +79,7 @@ class DuplicateNameCheck(ValidationCheck):
                         f"{names.count(name)} {kind}s. Each {kind} must have a unique name"
                     ),
                     affected_objects=[n for n in names if n == name],
+                    code=ValidationErrorCode.DUPLICATE_NAME,
                     suggestion=f"Rename duplicate {kind}s to unique names (e.g., '{name}_1', '{name}_2')",
                 )
                 return  # Report once per kind
@@ -100,6 +102,7 @@ class JointReferenceCheck(ValidationCheck):
                         f"'{joint.parent}' which does not exist"
                     ),
                     affected_objects=[joint.name],
+                    code=ValidationErrorCode.NOT_FOUND,
                     suggestion=f"Create a link named '{joint.parent}' or update the joint's parent reference",
                 )
 
@@ -111,6 +114,7 @@ class JointReferenceCheck(ValidationCheck):
                         f"'{joint.child}' which does not exist"
                     ),
                     affected_objects=[joint.name],
+                    code=ValidationErrorCode.NOT_FOUND,
                     suggestion=f"Create a link named '{joint.child}' or update the joint's child reference",
                 )
 
@@ -138,6 +142,7 @@ class TreeStructureCheck(ValidationCheck):
                         "Kinematic tree contains a cycle. "
                         "Links must form a tree structure, not a loop."
                     ),
+                    code=ValidationErrorCode.HAS_CYCLE,
                     suggestion="Review joint connections to ensure they form a tree (no loops)",
                 )
         except RobotModelError as e:
@@ -148,6 +153,7 @@ class TreeStructureCheck(ValidationCheck):
                 result.add_error(
                     title="Kinematic graph error",
                     message=str(e),
+                    code=ValidationErrorCode.INVALID_VALUE,
                     suggestion="Check joint and link consistency",
                 )
 
@@ -163,6 +169,7 @@ class TreeStructureCheck(ValidationCheck):
                         "No root link found. A robot must have exactly one link "
                         "that is not a child in any joint."
                     ),
+                    code=ValidationErrorCode.NO_ROOT,
                     suggestion="Ensure exactly one link has no parent joint (the base/root link)",
                 )
             return root
@@ -184,6 +191,7 @@ class TreeStructureCheck(ValidationCheck):
                     result.add_error(
                         title="Root link error",
                         message=str(e),
+                        code=e.code if hasattr(e, "code") else ValidationErrorCode.INVALID_VALUE,
                         suggestion="Check the joint connections in your robot tree",
                     )
             else:
@@ -207,6 +215,7 @@ class TreeStructureCheck(ValidationCheck):
                     title="Disconnected link",
                     message=f"Link '{link.name}' is not connected to the kinematic tree",
                     affected_objects=[link.name],
+                    code=ValidationErrorCode.DISCONNECTED,
                     suggestion=f"Create a joint connecting '{link.name}' to another link in the tree",
                 )
             elif count > 1:
@@ -216,6 +225,7 @@ class TreeStructureCheck(ValidationCheck):
                         f"Link '{link.name}' has {count} parent joints (should have exactly 1)"
                     ),
                     affected_objects=[link.name],
+                    code=ValidationErrorCode.MULTIPLE_ROOTS,
                     suggestion="Remove extra joints. Each link can only have one parent",
                 )
 
@@ -231,6 +241,7 @@ class MassPropertiesCheck(ValidationCheck):
                     title="Very low mass",
                     message=f"Link '{link.name}' has very low mass ({link.mass:.6f} kg).",
                     affected_objects=[link.name],
+                    code=ValidationErrorCode.INVALID_VALUE,
                     suggestion="Consider providing a more realistic mass to avoid simulation instability",
                 )
 
@@ -239,6 +250,7 @@ class MassPropertiesCheck(ValidationCheck):
                     title="Missing inertia",
                     message=f"Link '{link.name}' has no inertia tensor defined",
                     affected_objects=[link.name],
+                    code=ValidationErrorCode.NOT_FOUND,
                     suggestion="Add an inertial element or use automatic inertia calculation",
                 )
 
@@ -254,6 +266,7 @@ class GeometryCheck(ValidationCheck):
                     title="No visual geometry",
                     message=f"Link '{link.name}' has no visual geometry",
                     affected_objects=[link.name],
+                    code=ValidationErrorCode.NOT_FOUND,
                     suggestion="Add visual geometry for better visualization in simulators",
                 )
 
@@ -262,6 +275,7 @@ class GeometryCheck(ValidationCheck):
                     title="No collision geometry",
                     message=f"Link '{link.name}' has no collision geometry",
                     affected_objects=[link.name],
+                    code=ValidationErrorCode.NOT_FOUND,
                     suggestion="Add collision geometry for physics simulation",
                 )
 
@@ -285,6 +299,7 @@ class Ros2ControlCheck(ValidationCheck):
                             "does not exist in the kinematic tree"
                         ),
                         affected_objects=[rc_joint.name],
+                        code=ValidationErrorCode.NOT_FOUND,
                         suggestion="Ensure joint name in control matches a robot joint",
                     )
 
@@ -310,6 +325,7 @@ class MimicChainCheck(ValidationCheck):
                         title="Invalid mimic target",
                         message=(f"Joint '{joint.name}' mimics non-existent joint '{current}'"),
                         affected_objects=[joint.name],
+                        code=ValidationErrorCode.NOT_FOUND,
                         suggestion=(f"Ensure joint '{current}' exists or update mimic reference"),
                     )
                     break
@@ -320,6 +336,7 @@ class MimicChainCheck(ValidationCheck):
                         title="Circular mimic dependency",
                         message=f"Circular mimic dependency detected: {chain}",
                         affected_objects=list(visited),
+                        code=ValidationErrorCode.HAS_CYCLE,
                         suggestion="Break the circular mimic chain by changing mimic targets",
                     )
                     break

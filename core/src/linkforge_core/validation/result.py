@@ -102,6 +102,7 @@ class ValidationResult:
         message: str,
         affected_objects: list[str] | None = None,
         suggestion: str | None = None,
+        code: ValidationErrorCode | None = None,
         auto_fix: Callable[[], None] | None = None,
     ) -> None:
         """Add an error to the validation result."""
@@ -112,6 +113,7 @@ class ValidationResult:
                 message=message,
                 affected_objects=affected_objects or [],
                 suggestion=suggestion,
+                code=code,
                 auto_fix=auto_fix,
             )
         )
@@ -122,6 +124,7 @@ class ValidationResult:
         message: str,
         affected_objects: list[str] | None = None,
         suggestion: str | None = None,
+        code: ValidationErrorCode | None = None,
         auto_fix: Callable[[], None] | None = None,
     ) -> None:
         """Add a warning to the validation result."""
@@ -132,6 +135,7 @@ class ValidationResult:
                 message=message,
                 affected_objects=affected_objects or [],
                 suggestion=suggestion,
+                code=code,
                 auto_fix=auto_fix,
             )
         )
