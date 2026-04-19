@@ -5,6 +5,73 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0](https://github.com/arounamounchili/linkforge/compare/v1.3.0...v1.4.0) (2026-04-19)
+
+
+### 🚀 Features
+
+* **blender:** implement high-performance mesh inertia integrator using NumPy vectorization ([0c815ee](https://github.com/arounamounchili/linkforge/commit/0c815eebf7f960f24c38413083d79d6c85f8b724))
+* **core:** harden xacro eval sandbox against dunder escapes ([7def4d8](https://github.com/arounamounchili/linkforge/commit/7def4d817904796dbe71c8390c04cee97668ded0))
+* **core:** implement abstract resource resolver ([#166](https://github.com/arounamounchili/linkforge/issues/166)) ([b746e40](https://github.com/arounamounchili/linkforge/commit/b746e4097ffef91cbab23e4b6eb0915b2210eff3))
+* **core:** implement structural XACRO caching for optimized robot assembly ([a1dc8af](https://github.com/arounamounchili/linkforge/commit/a1dc8afea9b9c28d6e07f35ec45ee370ea5f5876))
+* **core:** modular validation registry and targeted checks ([#167](https://github.com/arounamounchili/linkforge/issues/167)) ([efe67ba](https://github.com/arounamounchili/linkforge/commit/efe67ba18f1e8e884bb72b3e5c7e8dec10d4cb62))
+* hybrid RobotAssembly API (The Composer) ([d7947a3](https://github.com/arounamounchili/linkforge/commit/d7947a3df3954fb44b0d294c99c598ca957062be))
+* Implement srdf generator ([2019465](https://github.com/arounamounchili/linkforge/commit/2019465e53fc3bbed313ecd737b23f87171845c7))
+* implement SRDF intermediate representation ([960ac48](https://github.com/arounamounchili/linkforge/commit/960ac48f1e1b3b1f6c28d1a63c52db963078a0d0))
+* implement SRDF XML parser with XACRO support ([8235793](https://github.com/arounamounchili/linkforge/commit/8235793e14603b47bb7e2beb97c3636feec429e2))
+* introduce sliver triangle detection and structured validation architecture ([4e7264d](https://github.com/arounamounchili/linkforge/commit/4e7264d3cf67558de9649548611db75abd3d200b))
+* **parsers:** add xacro console logging and custom ROS package paths ([#179](https://github.com/arounamounchili/linkforge/issues/179)) ([cb09062](https://github.com/arounamounchili/linkforge/commit/cb0906208cc1506d3e4c3e3851a95788a5a7ea43))
+* ROS XACRO Parity and Blender 5.x (Python 3.13) Support ([#198](https://github.com/arounamounchili/linkforge/issues/198)) ([7bfbd57](https://github.com/arounamounchili/linkforge/commit/7bfbd574b5af638954dd5a31d8c1572548061466))
+
+
+### 🐞 Bug Fixes
+
+* **blender:** sensor visibility and live physics gizmo updates  ([777fb1d](https://github.com/arounamounchili/linkforge/commit/777fb1dcb7c984e8fcc4570ee587e7011fb85c26))
+* **ci:** exclude flaky monorepo.tools from link checker and canonicalize redirects ([8f623ad](https://github.com/arounamounchili/linkforge/commit/8f623addca19f611141156406ccf0aef86435cfa))
+* synchronize LinkForge names with Blender object names ([c844a3a](https://github.com/arounamounchili/linkforge/commit/c844a3a0fd7a7675f195b505333a63dfc690a13e))
+* **urdf:** handle out-of-order elements in iterative parser ([869182a](https://github.com/arounamounchili/linkforge/commit/869182aad9b2c161913f6798d03714330af797a1))
+* **xacro:** enhance spec compliance and hardening ([010eeec](https://github.com/arounamounchili/linkforge/commit/010eeec5c54a698fab7470d797d037bde77363b6))
+
+
+### 📚 Documentation
+
+* add ADR-001 for monorepo structure decision ([#163](https://github.com/arounamounchili/linkforge/issues/163)) ([2300f25](https://github.com/arounamounchili/linkforge/commit/2300f2581864a46613b7cdb0b5185a73f9798d5d))
+* add lionelfung7 as a contributor for bug ([#199](https://github.com/arounamounchili/linkforge/issues/199)) ([5e48eaf](https://github.com/arounamounchili/linkforge/commit/5e48eaf9cf38f8dfebaac603faf607c002372839))
+* add peci1 as a contributor for bug ([3f2b0ad](https://github.com/arounamounchili/linkforge/commit/3f2b0ad491068a503ab3cdbbc206f408f70bd640))
+* add peci1 as a contributor for ideas ([be038b1](https://github.com/arounamounchili/linkforge/commit/be038b14bb857e318dc16573ef220a98d781c585))
+* add Python API reference and SRDF documentation ([e2f1b51](https://github.com/arounamounchili/linkforge/commit/e2f1b517b1b9001267506010b604601cb786841d))
+* clarify support for both comma and os path separators ([630e6ac](https://github.com/arounamounchili/linkforge/commit/630e6acbd6fab6d1882cceadb210fb542b9b6a29))
+* exclude flaky academic URL from link checker ([894d66f](https://github.com/arounamounchili/linkforge/commit/894d66fc4d88e4dfc060ad46af09c81290a61d66))
+* synchronize and standardize core and blender docstrings ([b06805e](https://github.com/arounamounchili/linkforge/commit/b06805e24cf39fb8fd00c38f3994a796d1285907))
+* update issue assignment policies in CONTRIBUTING.md ([bd8e315](https://github.com/arounamounchili/linkforge/commit/bd8e315281fc5235548b158e164d5954a8bb3885))
+* update readme file ([381040b](https://github.com/arounamounchili/linkforge/commit/381040bcfa0100365f613e4d7a16b3d897fe539d))
+* update v1.3.0 roadmap status and CITATION.cff release date ([#168](https://github.com/arounamounchili/linkforge/issues/168)) ([ab1ba5b](https://github.com/arounamounchili/linkforge/commit/ab1ba5b35b63a497737e85fa887e88fc0fec64f7))
+
+
+### ⚡ Performance Updates
+
+* optimize collision quality slider with BMesh and true debounce ([db6b0c3](https://github.com/arounamounchili/linkforge/commit/db6b0c3e13346ab74ea53521d4822ae591aeafc1))
+
+
+### 🛠️ Refactors
+
+* **core:** implement shared RobotXMLGenerator engine ([#186](https://github.com/arounamounchili/linkforge/issues/186)) ([0e7646e](https://github.com/arounamounchili/linkforge/commit/0e7646ee0b4f0258dda4ba0a02882de062be5ddb))
+* **core:** modularize xacro parser dispatch logic ([d18193d](https://github.com/arounamounchili/linkforge/commit/d18193d00b417820816d2ea337b4f7faa4b3b1ae))
+* **core:** refactor URDFParser engine ([b417148](https://github.com/arounamounchili/linkforge/commit/b417148dbb234c6d77143ddd917dd6f0545334d0))
+* extract heavy scene calculations from export_panel.py draw loop ([#182](https://github.com/arounamounchili/linkforge/issues/182)) ([6a5ecb8](https://github.com/arounamounchili/linkforge/commit/6a5ecb8a1437179eda835afbbd2102a42a873136))
+* finalize blender platform stability and test  ([d3abbf3](https://github.com/arounamounchili/linkforge/commit/d3abbf3496204808208bfa8da60da187eb2dc505))
+* harden core model encapsulation and stabilize naming utilities ([b4fea84](https://github.com/arounamounchili/linkforge/commit/b4fea84ad947dfaaba5d95bb46339e2329bf2f7a))
+* harden mesh inertia calculations with strict validation and topology checks ([e009352](https://github.com/arounamounchili/linkforge/commit/e0093522834a6542923637748b556d39431ce1d0))
+* harden physics inertia pipeline and blender platform API architecture ([d1faba2](https://github.com/arounamounchili/linkforge/commit/d1faba27369428560d86dd1d9b29f2c3448bd0f1))
+* hardened core architecture and comprehensive test stabilisation ([9da8efa](https://github.com/arounamounchili/linkforge/commit/9da8efa322313c37f9d022c648c46c7ad0e69810))
+* migrate to structured error handling with ValidationErrorCode and absolute Import Normalization  ([2b4c909](https://github.com/arounamounchili/linkforge/commit/2b4c9093a686367113f23ef0f0fb2cab8448b551))
+* modernize core architecture and normalize XML generation ([06eda1d](https://github.com/arounamounchili/linkforge/commit/06eda1d49c54b59f5fb8d76963eb1d8097d57e45))
+* **physics:** enhance mesh inertia robustness and numerical stability ([d7d6de9](https://github.com/arounamounchili/linkforge/commit/d7d6de97ddadcb949c77e9d303a51ebe6b009c22))
+* **physics:** harden mesh topology validation and inertia pipeline ([b511d6a](https://github.com/arounamounchili/linkforge/commit/b511d6acd583eeed02a56fa3a73456d84eb540c3))
+* **physics:** harden mesh topology validation and inertia pipeline ([0927906](https://github.com/arounamounchili/linkforge/commit/09279066324131145af992c5af3e003b5bb93c41))
+* **physics:** mesh topology validation ([5787c52](https://github.com/arounamounchili/linkforge/commit/5787c52d729c5d3d137c231f69e8fa6f294b69a4))
+* unify Blender architecture and optimize scene traversal ([#183](https://github.com/arounamounchili/linkforge/issues/183)) ([a777a8e](https://github.com/arounamounchili/linkforge/commit/a777a8e3030210ae47ea99a3947f5d3218fe27bc))
+
 ## [1.3.0](https://github.com/arounamounchili/linkforge/compare/v1.2.3...v1.3.0) (2026-03-01)
 
 
