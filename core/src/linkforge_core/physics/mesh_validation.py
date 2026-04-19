@@ -63,7 +63,7 @@ def validate_mesh_topology(
             message=f"{prefix} failed validation: Vertices and Triangles must be iterable.",
             code=ValidationErrorCode.INVALID_VALUE,
         )
-        if strict:
+        if strict and issue.code:
             raise RobotPhysicsError(issue.code, issue.message, target="MeshTopology") from e
         issues.append(issue)
         return issues
@@ -92,7 +92,7 @@ def validate_mesh_topology(
                 suggestion="Consider welding vertices in your CAD tool or using the 'Weld' modifier.",
             )
             issues.append(issue)
-            if strict:
+            if strict and issue.code:
                 raise RobotPhysicsError(
                     issue.code,
                     issue.message,
@@ -190,7 +190,7 @@ def validate_mesh_topology(
             code=ValidationErrorCode.INVALID_VALUE,
         )
         issues.append(issue)
-        if strict:
+        if strict and issue.code:
             raise RobotPhysicsError(
                 issue.code,
                 issue.message,
@@ -208,7 +208,7 @@ def validate_mesh_topology(
                 code=ValidationErrorCode.MESH_DEGENERATE,
             )
             issues.append(issue)
-            if strict:
+            if strict and issue.code:
                 raise RobotPhysicsError(
                     issue.code,
                     issue.message,
@@ -237,7 +237,7 @@ def validate_mesh_topology(
                 code=ValidationErrorCode.MESH_DUPLICATE_FACE,
             )
             issues.append(issue)
-            if strict:
+            if strict and issue.code:
                 raise RobotPhysicsError(
                     issue.code,
                     issue.message,
@@ -277,7 +277,7 @@ def validate_mesh_topology(
             suggestion="Ensure the mesh is closed (watertight) for accurate inertia calculation.",
         )
         issues.append(issue)
-        if strict:
+        if strict and issue.code:
             raise RobotPhysicsError(
                 issue.code,
                 issue.message,
@@ -294,7 +294,7 @@ def validate_mesh_topology(
             code=ValidationErrorCode.MESH_NON_MANIFOLD,
         )
         issues.append(issue)
-        if strict:
+        if strict and issue.code:
             raise RobotPhysicsError(
                 issue.code,
                 issue.message,
@@ -312,7 +312,7 @@ def validate_mesh_topology(
             suggestion="Ensure all normals point outward. Some faces may be flipped.",
         )
         issues.append(issue)
-        if strict:
+        if strict and issue.code:
             raise RobotPhysicsError(
                 issue.code,
                 issue.message,
