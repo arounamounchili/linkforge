@@ -130,8 +130,7 @@ Complete examples in `examples/` directory:
 
 ### Setup
 ```bash
-# 1. Install 'just' (Command Runner)
-brew install just
+# 1. Install 'just' command runner (see Contributing Guide for OS-specific instructions)
 
 # 2. Clone repository
 git clone https://github.com/arounamounchili/linkforge.git
@@ -141,34 +140,7 @@ cd linkforge
 just install
 ```
 
-### Testing
-```bash
-# Run all tests (Core + Blender)
-just test
-
-# Run only core tests
-just test-core
-
-# Run with coverage
-just coverage
-```
-
-### Code Quality
-```bash
-# Run all checks (Lint + Types)
-just check
-
-# Fix linting issues
-just fix
-```
-
-### Building & Distribution
-To package LinkForge as a Blender extension:
-```bash
-# Build the production-ready .zip
-just build
-```
-The package will be created in the `dist/` directory.
+For complete instructions on testing, linting, and building the extension, please see our [Contributing Guide](CONTRIBUTING.md#development-workflow).
 
 ## 🎓 Learning Resources
 
@@ -187,15 +159,16 @@ The package will be created in the `dist/` directory.
 - [ ] **v1.7.0**: **Mechanical Debugging** (Real-time IK & Collision Interference Validation).
 - [ ] **v2.0.0**: **Intelligence-Driven Rigging** (AI-assisted geometry analysis & Auto-Rigging).
 
-## 🔭 Vision & Future
-For a deep dive into our long-term strategy, the **Digital Twin** philosophy, and our technical roadmap for AI and Kinematics, please read our [Project Vision](VISION.md).
-
 ## 🤝 Contributing
 
 We welcome contributions! LinkForge is a community-driven project.
 - 🙋 Review our [Contributing Guide](CONTRIBUTING.md).
 - 🏗️ Check our [Architecture](ARCHITECTURE.md) to understand the internals.
 - 💬 Join the conversation on [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).
+
+## 📝 Citing LinkForge
+
+If you use LinkForge in academic research, please cite it using the provided `CITATION.cff` file. You can find the citation format in the "Cite this repository" button on GitHub's sidebar.
 
 ## 📄 License
 

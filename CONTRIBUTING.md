@@ -60,8 +60,8 @@ just install
 # Run tests to verify everything works
 just test
 
-# Run linter
-just lint
+# Run linter and type checker
+just check
 
 # Build extension
 just build
@@ -196,9 +196,9 @@ def test_link_creation():
     """Test creating a link with valid parameters."""
     link = Link(
         name="test_link",
-        visuals=[],
-        collisions=[],
-        inertial=Inertial(mass=1.0, inertia=InertiaTensor(...))
+        initial_visuals=[],
+        initial_collisions=[],
+        inertial=Inertial(mass=1.0, inertia=InertiaTensor.zero())
     )
     assert link.name == "test_link"
     assert link.inertial.mass == 1.0
@@ -212,8 +212,16 @@ def test_sensor_roundtrip():
     # Create robot with sensor
     robot = Robot(
         name="test",
-        links=[Link(...)],
-        sensors=[Sensor(origin=Transform(xyz=(0.1, 0, 0.2)))]
+        initial_links=[Link(name="base_link")],
+        initial_sensors=[
+            Sensor(
+                name="test_camera",
+                type=SensorType.CAMERA,
+                link_name="base_link",
+                camera_info=CameraInfo(),
+                origin=Transform(xyz=(0.1, 0.0, 0.2))
+            )
+        ]
     )
 
     # Export to URDF
@@ -250,8 +258,8 @@ We prioritize testing with **real objects and environments** over mocking.
 ### Debugging in Blender
 
 ```python
-import logging
-logger = logging.getLogger(__name__)
+from linkforge_core.logging_config import get_logger
+logger = get_logger(__name__)
 logger.error(f"Debug: {variable}")
 
 # View in Blender Console (Window > Toggle System Console)
@@ -299,17 +307,7 @@ def parse_float(text, default=None):
 
 ### Linting Configuration
 
-Our `ruff` configuration (in `pyproject.toml`):
-
-```toml
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM"]
-ignore = ["E501", "N801"]  # Line length (formatter) & naming convention
-```
+Our project rigorously enforces code quality using `ruff`. The definitive configuration (including line length, target version, and active rule sets) is maintained centrally in `pyproject.toml`. Please refer to the `[tool.ruff.lint]` section in that file for the current active and ignored rules.
 
 ### Pre-commit Hooks
 
@@ -372,7 +370,7 @@ Use conventional commits:
 LinkForge uses **Release Please** to automate versioning and changelogs.
 
 1. **Automation**: When code is merged into `main`, Release Please will automatically create (or update) a "Release PR".
-2. **Versioning**: This PR will contain a version bump in `blender_manifest.toml`, `CITATION.cff`, and an updated `CHANGELOG.md` based on your commit messages.
+2. **Versioning**: This PR will contain a version bump in `pyproject.toml`, `blender_manifest.toml`, `CITATION.cff`, and an updated `CHANGELOG.md` based on your commit messages.
 3. **Merging**: Once a maintainer merges this Release PR, a GitHub Tag and Release are automatically created.
 4. **Distribution**: The `release-please.yml` workflow will then build the extension `.zip` and attach it to the GitHub Release.
 
@@ -392,7 +390,7 @@ To maintain LinkForge's status as a professional-grade **Linter & Bridge**, we p
 
 ### 1. The Blender Bridge (Foundation)
 LinkForge must remain compatible with the latest Blender LTS (Long Term Support) and the current stable release.
-- **Vigilance**: When a new Blender version (e.g., 5.0) enters Beta, we prioritize testing our `export_ops.py` to ensure no API breaking changes affect our users.
+- **Vigilance**: When a new Blender version (e.g., 6.0) enters Beta, we prioritize testing our Blender integration to ensure no API breaking changes affect our users.
 
 ### 2. URDF/XACRO Fidelity (Core)
 Our primary goal is 100% compliance with official specifications.
@@ -459,6 +457,8 @@ If you've contributed (code, docs, ideas, etc.), you can ask the bot to add you 
 Replace `<contribution-type>` with one of the [valid contribution types](https://allcontributors.org/docs/en/emoji-key) (e.g., `code`, `doc`, `bug`, etc.).
 
 ### Academic Recognition
-For significant core contributions (new sensor systems, physics engine refinements, major architectural changes), we may invite you to be listed as a co-author in the `CITATION.cff` file and the official documentation, ensuring your work is properly attributed in academic research using LinkForge.
+For profound core contributions (e.g., advanced mathematical noise models, novel simulator integrations, or deep physics engine refinements), we may invite you to be listed as a co-author in the `CITATION.cff` file and the official documentation. This ensures your high-level domain expertise is properly attributed in future academic research using LinkForge.
+
+*(Note: Standard features, basic sensor additions, and bug fixes are highly valued and will be celebrated via our standard Open Source contributors framework, but they do not automatically qualify for academic co-authorship).*
 
 Thank you for contributing to LinkForge! 🚀
