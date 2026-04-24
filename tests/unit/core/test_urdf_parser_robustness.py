@@ -16,6 +16,9 @@ class MockXMLParser(RobotXMLParser):
     def parse(self, filepath: Path, **kwargs):
         pass
 
+    def parse_string(self, xml_string: str, **kwargs):
+        pass
+
 
 # --- Base Parser Robustness (RobotXMLParser) ---
 

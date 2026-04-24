@@ -181,7 +181,10 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
     from linkforge_core.parsers.xml_base import RobotXMLParser
 
     class MockParser(RobotXMLParser):
-        def parse(self, *args, **kwargs):
+        def parse(self, filepath, **kwargs):
+            pass
+
+        def parse_string(self, xml_string, **kwargs):
             pass
 
     parser = MockParser()
@@ -219,7 +222,10 @@ def test_xml_base_parser_geometry_nones() -> None:
     from linkforge_core.parsers.xml_base import RobotXMLParser
 
     class MockParser(RobotXMLParser):
-        def parse(self, p, **k):
+        def parse(self, filepath, **kwargs):
+            pass
+
+        def parse_string(self, xml_string, **kwargs):
             pass
 
     parser = MockParser()

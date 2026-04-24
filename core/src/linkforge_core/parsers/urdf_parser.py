@@ -81,7 +81,7 @@ from .xml_base import MAX_FILE_SIZE, RobotXMLParser
 logger = get_logger(__name__)
 
 
-class URDFParser(RobotXMLParser):
+class URDFParser(RobotXMLParser[Robot]):
     """Refined URDF Parser using a class-based interface."""
 
     def __init__(
@@ -846,14 +846,14 @@ class URDFParser(RobotXMLParser):
 
     def parse_string(
         self,
-        urdf_string: str,
+        content: str,
         urdf_directory: Path | None = None,
         **_kwargs: Any,
     ) -> Robot:
         """Parse URDF from string.
 
         Args:
-            urdf_string: URDF XML content as string
+            content: URDF XML content as string
             urdf_directory: Base directory for relative mesh path resolution
             **kwargs: Additional parsing options
 
@@ -866,15 +866,15 @@ class URDFParser(RobotXMLParser):
             RobotParserXMLRootError: If root tag is not <robot>
             RobotParserUnexpectedError: If XML parsing fails
         """
-        string_size = len(urdf_string.encode("utf-8"))
+        string_size = len(content.encode("utf-8"))
         if string_size > self.max_file_size:
             raise RobotParserIOError(filepath=Path("string"), reason="URDF string too large")
 
-        if "<xacro:" in urdf_string:
+        if "<xacro:" in content:
             raise XacroDetectedError(message="URDF String contains XACRO")
 
         try:
-            stream = io.BytesIO(urdf_string.encode("utf-8"))
+            stream = io.BytesIO(content.encode("utf-8"))
             context = ET.iterparse(stream, events=("start", "end"))
             event, root = next(context)
 

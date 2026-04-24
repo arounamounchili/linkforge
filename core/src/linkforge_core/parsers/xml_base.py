@@ -6,7 +6,7 @@ __all__ = ["RobotXMLParser"]
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from ..base import IResourceResolver, RobotParser
 from ..exceptions import (
@@ -41,8 +41,10 @@ logger = get_logger(__name__)
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 
+T = TypeVar("T")
 
-class RobotXMLParser(RobotParser):
+
+class RobotXMLParser(RobotParser[T], Generic[T]):
     """Abstract base class for XML-based robotics format parsers."""
 
     def __init__(
@@ -61,6 +63,18 @@ class RobotXMLParser(RobotParser):
         self.max_file_size = max_file_size
         self.sandbox_root = sandbox_root
         self.resource_resolver = resource_resolver
+
+    def parse_xacro(self, filepath: Path, **kwargs: Any) -> T:
+        """Resolve XACRO then parse the resulting XML string.
+
+        This is a convenience wrapper around XacroResolver + parse_string().
+        For full control over resolver args, use XACROParser.resolve() directly.
+        """
+        from .xacro_parser import XacroResolver
+
+        resolver = XacroResolver(start_dir=filepath.parent)
+        xml_string = resolver.resolve_file(filepath)
+        return self.parse_string(xml_string, **kwargs)
 
     def _parse_origin_element(self, elem: ET.Element | None) -> Transform:
         """Parse origin-style element into a Transform object.

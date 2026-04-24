@@ -1024,36 +1024,55 @@ class XacroResolver:
         return None
 
 
-class XACROParser(RobotParser):
+class XACROParser(RobotParser[Robot]):
     """Refined XACRO Parser using a class-based interface."""
 
+    def resolve(self, filepath: Path, **kwargs: Any) -> str:
+        """Resolve a XACRO file into a plain XML string.
+
+        This is format-agnostic: the result can be passed to URDFParser,
+        SRDFParser, or any other XML consumer.
+        """
+        resolver = XacroResolver(
+            search_paths=kwargs.get("search_paths"),
+            start_dir=kwargs.get("start_dir", filepath.parent),
+        )
+        for k, v in kwargs.items():
+            if k not in ["search_paths", "start_dir"] and v is not None:
+                resolver.args[k] = resolver._try_parse_typed_value(str(v))
+        return resolver.resolve_file(filepath)
+
     def parse(self, filepath: Path, **kwargs: Any) -> Robot:
-        """Parse XACRO file into a Robot model.
+        """Convenience: resolve XACRO and parse as URDF.
 
         Args:
             filepath: Path to the input file
             **kwargs: Additional parsing options
-                search_paths: List of additional paths to search for includes
-                start_dir: Base directory for package:// resolution (defaults to filepath.parent)
 
         Returns:
-            The generic Robot model (Intermediate Representation)
+            The generic Robot model
+        """
+        from .urdf_parser import URDFParser
+
+        xml_string = self.resolve(filepath, **kwargs)
+        return URDFParser().parse_string(
+            xml_string, urdf_directory=filepath.parent, default_name=filepath.stem, **kwargs
+        )
+
+    def parse_string(self, content: str, **kwargs: Any) -> Robot:
+        """Convenience: resolve XACRO from string and parse as URDF.
+
+        Note: File resolution is preferred since include paths depend on the file location.
         """
         from .urdf_parser import URDFParser
 
         resolver = XacroResolver(
             search_paths=kwargs.get("search_paths"),
-            start_dir=kwargs.get("start_dir", filepath.parent),
+            start_dir=kwargs.get("start_dir"),
         )
-
-        # Forward caller-supplied args to the resolver, skipping internal keys
-        # and None values (str(None) would override xacro defaults like default="").
         for k, v in kwargs.items():
             if k not in ["search_paths", "start_dir"] and v is not None:
                 resolver.args[k] = resolver._try_parse_typed_value(str(v))
 
-        urdf_string = resolver.resolve_file(filepath)
-
-        return URDFParser().parse_string(
-            urdf_string, urdf_directory=filepath.parent, default_name=filepath.stem, **kwargs
-        )
+        xml_string = resolver.resolve_string(content)
+        return URDFParser().parse_string(xml_string, **kwargs)
