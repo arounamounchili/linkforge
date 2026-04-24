@@ -97,19 +97,32 @@ class RobotGenerator(ABC, Generic[T]):
             raise RobotGeneratorError(self.__class__.__name__, type(content))
 
 
-class RobotParser(ABC):
+class RobotParser(ABC, Generic[T]):
     """Abstract base class for all Robot Parsers."""
 
     @abstractmethod
-    def parse(self, filepath: Path, **kwargs: Any) -> Robot:
-        """Parse a file into a Robot model.
+    def parse(self, filepath: Path, **kwargs: Any) -> T:
+        """Parse a file into a model.
 
         Args:
             filepath: Path to the input file
             **kwargs: Format-specific parsing options
 
         Returns:
-            The generic Robot model (Intermediate Representation)
+            The parsed model (e.g. Robot, SemanticRobotDescription)
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    def parse_string(self, content: str, **kwargs: Any) -> T:
+        """Parse a string representation into a model.
+
+        Args:
+            content: The string content to parse
+            **kwargs: Format-specific parsing options
+
+        Returns:
+            The parsed model (e.g. Robot, SemanticRobotDescription)
         """
         pass  # pragma: no cover
 

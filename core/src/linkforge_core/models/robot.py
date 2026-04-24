@@ -16,13 +16,14 @@ from ..base import FileSystemResolver, IResourceResolver
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_urdf_name
 from .gazebo import GazeboElement
+from .geometry import Transform, Vector3
 from .graph import KinematicGraph
-from .joint import Joint
+from .joint import Joint, JointLimits, JointType
 from .link import Link
 from .material import Material
 from .ros2_control import Ros2Control
 from .sensor import Sensor
-from .srdf import SemanticRobotDescription
+from .srdf import DisabledCollision, PlanningGroup, SemanticRobotDescription
 from .transmission import Transmission
 
 
@@ -575,6 +576,197 @@ class Robot:
     def semantic(self, value: SemanticRobotDescription | None) -> None:
         """Set semantic description of the robot."""
         self._semantic = value
+
+    def merge(
+        self,
+        component: Robot,
+        at_link: str,
+        joint_name: str,
+        prefix: str = "",
+        joint_type: JointType = JointType.FIXED,
+        origin: Transform | None = None,
+        axis: Vector3 | None = None,
+        limits: JointLimits | None = None,
+    ) -> None:
+        """Merge a sub-robot (kinematic + semantic) into this robot in-place.
+
+        Args:
+            component: The robot model to attach.
+            at_link: The link in the current assembly to attach to.
+            joint_name: Name of the joint connecting the assembly to the component.
+            prefix: Optional prefix to add to all elements in the component.
+            joint_type: Type of the connecting joint (default: FIXED).
+            origin: Optional transform for the joint.
+            axis: Optional joint axis.
+            limits: Optional joint limits.
+        """
+        # 0. Early validation of attachment point
+        if not self.get_link(at_link):
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Attachment link '{at_link}' not found in assembly",
+                target="Attach",
+                value=at_link,
+            )
+
+        # 1. Deep copy the component to ensure isolation
+        sub_robot = component.clone()
+
+        # 2. Apply prefix if provided
+        if prefix:
+            sub_robot.prefix_all(prefix)
+            joint_name = f"{prefix}{joint_name}"
+
+        # 3. Identify the root link of the sub-robot
+        root_link = sub_robot.get_root_link()
+        if not root_link:
+            raise RobotValidationError(
+                ValidationErrorCode.NO_ROOT,
+                f"No root link found in component '{component.name}'",
+                target="Attach",
+                value=component.name,
+            )
+
+        # 4. Merge links
+        for link in sub_robot.links:
+            self.add_link(link)
+
+        # 5. Merge joints
+        for joint in sub_robot.joints:
+            self.add_joint(joint)
+
+        # 6. Create the connecting joint
+        connection = Joint(
+            name=joint_name,
+            type=joint_type,
+            parent=at_link,
+            child=root_link.name,
+            origin=origin or Transform.identity(),
+            axis=axis,
+            limits=limits,
+        )
+        self.add_joint(connection)
+
+        # 7. Merge additional elements (sensors, transmissions, etc.)
+        for sensor in sub_robot.sensors:
+            self.add_sensor(sensor)
+
+        for trans in sub_robot.transmissions:
+            self.add_transmission(trans)
+
+        for rc in sub_robot.ros2_controls:
+            self.add_ros2_control(rc)
+
+        for gz in sub_robot.gazebo_elements:
+            self.add_gazebo_element(gz)
+
+        # 8. Merge materials
+        self.materials.update(sub_robot.materials)
+
+        # 9. Merge semantic data (SRDF)
+        if sub_robot.semantic:
+            if not self._semantic:
+                self._semantic = SemanticRobotDescription()
+            self._semantic.virtual_joints.extend(sub_robot.semantic.virtual_joints)
+            self._semantic.groups.extend(sub_robot.semantic.groups)
+            self._semantic.group_states.extend(sub_robot.semantic.group_states)
+            self._semantic.end_effectors.extend(sub_robot.semantic.end_effectors)
+            self._semantic.passive_joints.extend(sub_robot.semantic.passive_joints)
+            self._semantic.disabled_collisions.extend(sub_robot.semantic.disabled_collisions)
+
+        # 10. Validate kinematic integrity
+        _ = self.graph  # Accessing the property triggers validation of connectivity and cycles
+
+    def add_group(
+        self,
+        name: str,
+        links: list[str] | None = None,
+        joints: list[str] | None = None,
+        chains: list[tuple[str, str]] | None = None,
+    ) -> Robot:
+        """Add a planning group for MoveIt.
+
+        Args:
+            name: Unique group name.
+            links: List of link names.
+            joints: List of joint names.
+            chains: List of (base_link, tip_link) tuples.
+
+        Returns:
+            The robot instance for chaining.
+        """
+        if not self._semantic:
+            self._semantic = SemanticRobotDescription()
+
+        group = PlanningGroup(
+            name=name, links=links or [], joints=joints or [], chains=chains or []
+        )
+        self._semantic.groups.append(group)
+        return self
+
+    def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> Robot:
+        """Disable collision checking between two links.
+
+        Args:
+            link1: First link name.
+            link2: Second link name.
+            reason: Reason for disabling (default: 'Adjacent').
+
+        Returns:
+            The robot instance for chaining.
+        """
+        if not self._semantic:
+            self._semantic = SemanticRobotDescription()
+
+        dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
+        self._semantic.disabled_collisions.append(dc)
+        return self
+
+    def disable_all_collisions(self, links: list[str], reason: str = "Adjacent") -> Robot:
+        """Disable collision checking between all pairs in the provided list.
+
+        Args:
+            links: List of link names to disable collisions between.
+            reason: Reason for disabling (default: 'Adjacent').
+
+        Returns:
+            The robot instance for chaining.
+        """
+        import itertools
+
+        for l1, l2 in itertools.combinations(links, 2):
+            self.disable_collisions(l1, l2, reason)
+        return self
+
+    def export_urdf(self, validate: bool = True, pretty_print: bool = True) -> str:
+        """Export the assembled robot to URDF XML.
+
+        Args:
+            validate: Whether to run full kinematic validation (default: True).
+            pretty_print: Whether to indent the XML (default: True).
+
+        Returns:
+            URDF XML string.
+        """
+        from ..generators.urdf_generator import URDFGenerator
+
+        generator = URDFGenerator(pretty_print=pretty_print)
+        return generator.generate(self, validate=validate)
+
+    def export_srdf(self, validate: bool = True, pretty_print: bool = True) -> str:
+        """Export the assembled semantic description to SRDF XML.
+
+        Args:
+            validate: Whether to validate (default: True).
+            pretty_print: Whether to indent the XML (default: True).
+
+        Returns:
+            SRDF XML string.
+        """
+        from ..generators.srdf_generator import SRDFGenerator
+
+        generator = SRDFGenerator(pretty_print=pretty_print)
+        return generator.generate(self, validate=validate)
 
     def __str__(self) -> str:
         """Return a human-readable summary of the robot structure."""
