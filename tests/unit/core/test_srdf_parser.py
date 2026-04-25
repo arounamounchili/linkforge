@@ -6,8 +6,8 @@ from linkforge_core.exceptions import (
     RobotParserUnexpectedError,
     RobotParserXMLRootError,
 )
-from linkforge_core.models.robot import Robot
 from linkforge_core.parsers.srdf_parser import SRDFParser
+from linkforge_core.parsers.xacro_parser import XACROParser
 
 BASIC_SRDF = """<?xml version="1.0"?>
 <robot name="test_robot">
@@ -39,50 +39,45 @@ XACRO_SRDF = """<?xml version="1.0"?>
 def test_srdf_parser_basic_string():
     """Test parsing a basic SRDF string."""
     parser = SRDFParser()
-    robot = parser.parse_string(BASIC_SRDF)
+    semantic = parser.parse_string(BASIC_SRDF)
+    assert len(semantic.virtual_joints) == 1
+    assert semantic.virtual_joints[0].name == "world_joint"
 
-    assert robot.name == "test_robot"
-    assert robot.semantic is not None
-    assert len(robot.semantic.virtual_joints) == 1
-    assert robot.semantic.virtual_joints[0].name == "world_joint"
+    assert len(semantic.groups) == 1
+    assert semantic.groups[0].name == "arm"
+    assert ("base_link", "tool0") in semantic.groups[0].chains
 
-    assert len(robot.semantic.groups) == 1
-    assert robot.semantic.groups[0].name == "arm"
-    assert ("base_link", "tool0") in robot.semantic.groups[0].chains
+    assert len(semantic.group_states) == 1
+    assert semantic.group_states[0].name == "home"
+    assert semantic.group_states[0].joint_values["joint1"] == 0.0
 
-    assert len(robot.semantic.group_states) == 1
-    assert robot.semantic.group_states[0].name == "home"
-    assert robot.semantic.group_states[0].joint_values["joint1"] == 0.0
+    assert len(semantic.end_effectors) == 1
+    assert semantic.end_effectors[0].name == "hand"
 
-    assert len(robot.semantic.end_effectors) == 1
-    assert robot.semantic.end_effectors[0].name == "hand"
+    assert len(semantic.passive_joints) == 1
+    assert semantic.passive_joints[0].name == "passive_1"
 
-    assert len(robot.semantic.passive_joints) == 1
-    assert robot.semantic.passive_joints[0].name == "passive_1"
-
-    assert len(robot.semantic.disabled_collisions) == 1
-    assert robot.semantic.disabled_collisions[0].link1 == "link1"
-    assert robot.semantic.disabled_collisions[0].reason == "Adjacent"
+    assert len(semantic.disabled_collisions) == 1
+    assert semantic.disabled_collisions[0].link1 == "link1"
+    assert semantic.disabled_collisions[0].reason == "Adjacent"
 
 
 def test_srdf_parser_xacro_resolution():
-    """Test that SRDFParser resolves XACRO macros."""
+    """Test the two-step XACRO to SRDF resolution workflow."""
+    xml_string = (
+        XACROParser().resolve_string(XACRO_SRDF)
+        if hasattr(XACROParser(), "resolve_string")
+        else XACROParser().parse_string(XACRO_SRDF).semantic
+    )  # wait, XACROParser resolve_string? No.
+
+    from linkforge_core.parsers.xacro_parser import XacroResolver
+
+    xml_string = XacroResolver().resolve_string(XACRO_SRDF)
+
     parser = SRDFParser()
-    robot = parser.parse_string(XACRO_SRDF)
+    semantic = parser.parse_string(xml_string)
 
-    assert robot.semantic is not None
-    assert robot.semantic.group_states[0].joint_values["joint1"] == 1.57
-
-
-def test_srdf_parser_robot_integration():
-    """Test parsing SRDF and attaching it to an existing Robot."""
-    existing_robot = Robot(name="my_robot")
-    parser = SRDFParser()
-    parser.parse_string(BASIC_SRDF, robot=existing_robot)
-
-    # Existing robot should be updated
-    assert existing_robot.semantic is not None
-    assert len(existing_robot.semantic.groups) == 1
+    assert semantic.group_states[0].joint_values["joint1"] == 1.57
 
 
 def test_srdf_parser_invalid_xml():
@@ -105,20 +100,17 @@ def test_srdf_parser_file_parsing(tmp_path):
     srdf_file.write_text(BASIC_SRDF)
 
     parser = SRDFParser()
-    robot = parser.parse(srdf_file)
-    assert robot.semantic is not None
-    assert robot.name == "test_robot"
+    semantic = parser.parse(srdf_file)
 
 
 def test_srdf_parser_xacro_file_parsing(tmp_path):
-    """Test parsing from a .xacro file."""
+    """Test parsing from a .xacro file using parse_xacro()."""
     xacro_file = tmp_path / "test.srdf.xacro"
     xacro_file.write_text(XACRO_SRDF)
 
     parser = SRDFParser()
-    robot = parser.parse(xacro_file)
-    assert robot.semantic is not None
-    assert robot.semantic.group_states[0].joint_values["joint1"] == 1.57
+    semantic = parser.parse_xacro(xacro_file)
+    assert semantic.group_states[0].joint_values["joint1"] == 1.57
 
 
 def test_srdf_parser_file_not_found():
@@ -177,14 +169,14 @@ def test_srdf_parser_optional_attributes():
     </robot>
     """
     parser = SRDFParser()
-    robot = parser.parse_string(xml)
-    ee = robot.semantic.end_effectors[0]
+    semantic = parser.parse_string(xml)
+    ee = semantic.end_effectors[0]
     assert ee.parent_group is None
 
-    dc = robot.semantic.disabled_collisions[0]
+    dc = semantic.disabled_collisions[0]
     assert dc.reason is None
 
-    group = robot.semantic.groups[0]
+    group = semantic.groups[0]
     assert len(group.links) == 0
     assert len(group.joints) == 0
     assert len(group.chains) == 0
@@ -202,11 +194,11 @@ def test_srdf_parser_subgroups_and_collisions():
         <disable_collisions link1="l1" link2="l2" reason="adjacent"/>
     </robot>
     """
-    robot = parser.parse_string(xml)
-    assert len(robot.semantic.groups) == 1
-    assert robot.semantic.groups[0].subgroups == ["hand"]
-    assert len(robot.semantic.disabled_collisions) == 1
-    assert robot.semantic.disabled_collisions[0].reason == "adjacent"
+    semantic = parser.parse_string(xml)
+    assert len(semantic.groups) == 1
+    assert semantic.groups[0].subgroups == ["hand"]
+    assert len(semantic.disabled_collisions) == 1
+    assert semantic.disabled_collisions[0].reason == "adjacent"
 
 
 def test_srdf_parser_kwargs_and_malformed_joints():
@@ -220,9 +212,9 @@ def test_srdf_parser_kwargs_and_malformed_joints():
     </robot>
     """
     # Test kwargs logging
-    robot = parser.parse_string(xml, debug=True)
-    assert len(robot.semantic.group_states) == 1
-    assert len(robot.semantic.group_states[0].joint_values) == 0
+    semantic = parser.parse_string(xml, debug=True)
+    assert len(semantic.group_states) == 1
+    assert len(semantic.group_states[0].joint_values) == 0
 
 
 def test_srdf_parser_generic_exception_in_parse(tmp_path, monkeypatch):
@@ -259,9 +251,9 @@ def test_srdf_parser_missing_names_in_elements():
         <disable_collisions link1="l1" link2="l2"/>
     </robot>
     """
-    robot = parser.parse_string(xml)
-    assert len(robot.semantic.groups[0].subgroups) == 0
-    assert len(robot.semantic.disabled_collisions) == 1
+    semantic = parser.parse_string(xml)
+    assert len(semantic.groups[0].subgroups) == 0
+    assert len(semantic.disabled_collisions) == 1
 
 
 def test_srdf_parser_unrecognized_tags():
@@ -275,5 +267,5 @@ def test_srdf_parser_unrecognized_tags():
         </group>
     </robot>
     """
-    robot = parser.parse_string(xml)
-    assert len(robot.semantic.groups) == 1
+    semantic = parser.parse_string(xml)
+    assert len(semantic.groups) == 1

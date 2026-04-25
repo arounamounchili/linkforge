@@ -18,7 +18,6 @@ from ..exceptions import (
     RobotParserXMLRootError,
 )
 from ..logging_config import get_logger
-from ..models import Robot
 from ..models.srdf import (
     DisabledCollision,
     EndEffector,
@@ -29,7 +28,6 @@ from ..models.srdf import (
     VirtualJoint,
 )
 from ..utils.xml_utils import parse_float
-from .xacro_parser import XacroResolver
 from .xml_base import MAX_FILE_SIZE, RobotXMLParser
 
 logger = get_logger(__name__)
@@ -44,8 +42,8 @@ class ITemplateResolver(Protocol):
         ...
 
 
-class SRDFParser(RobotXMLParser):
-    """Refined SRDF Parser with XACRO and MoveIt support."""
+class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
+    """Refined SRDF Parser with MoveIt support."""
 
     def __init__(
         self,
@@ -71,10 +69,6 @@ class SRDFParser(RobotXMLParser):
         )
         self.search_paths = search_paths or []
         self.template_resolver = template_resolver
-
-    def _detect_xacro(self, xml_string: str) -> bool:
-        """Detect if the string contains XACRO tags."""
-        return "xmlns:xacro" in xml_string or "<xacro:" in xml_string
 
     def _parse_planning_group(self, group_elem: ET.Element) -> PlanningGroup:
         """Parse a planning group including its nested components."""
@@ -123,21 +117,16 @@ class SRDFParser(RobotXMLParser):
 
     def parse_string(
         self,
-        xml_string: str,
-        robot: Robot | None = None,
-        base_directory: Path | None = None,
+        content: str,
         **kwargs: Any,
-    ) -> Robot:
-        """Parse SRDF from string and update or create a Robot model."""
+    ) -> SemanticRobotDescription:
+        """Parse SRDF from string into a SemanticRobotDescription model."""
         # Handle templating resolution
         if self.template_resolver is not None:
-            xml_string = self.template_resolver.resolve_string(xml_string)
-        elif self._detect_xacro(xml_string):
-            resolver = XacroResolver(search_paths=self.search_paths, start_dir=base_directory)
-            xml_string = resolver.resolve_string(xml_string)
+            content = self.template_resolver.resolve_string(content)
 
         try:
-            root = ET.fromstring(xml_string)
+            root = ET.fromstring(content)
         except ET.ParseError as e:
             raise RobotParserUnexpectedError(source_area="SRDF parse", original_error=e) from e
         except Exception as e:
@@ -148,19 +137,15 @@ class SRDFParser(RobotXMLParser):
         if root.tag != "robot":
             raise RobotParserXMLRootError(root.tag)
 
-        robot_name = root.get("name", "unnamed_robot")
-        if robot is None:
-            robot = Robot(name=robot_name)
-
-        self._parse_elements(root, robot)
+        semantic = self._parse_elements(root)
 
         # Handle kwargs if any (e.g. for future extensions)
         if kwargs:
             logger.debug(f"SRDFParser received unused options: {list(kwargs.keys())}")
 
-        return robot
+        return semantic
 
-    def _parse_elements(self, root: ET.Element, robot: Robot) -> None:
+    def _parse_elements(self, root: ET.Element) -> SemanticRobotDescription:
         """Internal helper to parse all SRDF elements from root."""
         virtual_joints: list[VirtualJoint] = []
         groups: list[PlanningGroup] = []
@@ -183,7 +168,7 @@ class SRDFParser(RobotXMLParser):
             elif child.tag == "disable_collisions":
                 disabled_collisions.append(self._parse_disable_collisions_elem(child))
 
-        robot.semantic = SemanticRobotDescription(
+        return SemanticRobotDescription(
             virtual_joints=virtual_joints,
             groups=groups,
             group_states=group_states,
@@ -218,7 +203,7 @@ class SRDFParser(RobotXMLParser):
             reason=elem.get("reason"),
         )
 
-    def parse(self, filepath: Path, robot: Robot | None = None, **kwargs: Any) -> Robot:
+    def parse(self, filepath: Path, **kwargs: Any) -> SemanticRobotDescription:
         """Parse SRDF from file."""
         if not filepath.exists():
             raise RobotParserIOError(filepath=filepath, reason="Missing file")
@@ -229,17 +214,8 @@ class SRDFParser(RobotXMLParser):
             raise RobotParserIOError(filepath=filepath, reason="File too large")
 
         try:
-            # If it's a XACRO file, resolve it using XacroResolver
-            if filepath.suffix == ".xacro" or filepath.name.endswith(".srdf.xacro"):
-                resolver = XacroResolver(search_paths=self.search_paths, start_dir=filepath.parent)
-                resolved_content = resolver.resolve_file(filepath)
-                return self.parse_string(
-                    resolved_content, robot=robot, base_directory=filepath.parent, **kwargs
-                )
-
-            # For standard SRDF, read and call parse_string
             content = filepath.read_text(encoding="utf-8")
-            return self.parse_string(content, robot=robot, base_directory=filepath.parent, **kwargs)
+            return self.parse_string(content, **kwargs)
 
         except Exception as e:
             if isinstance(e, RobotParserError):

@@ -60,23 +60,24 @@ def test_srdf_generator_basic():
 def test_srdf_generator_round_trip():
     """Test the idempotency of Parse -> Generate -> Parse."""
     parser = SRDFParser()
-    robot_1 = parser.parse_string(SAMPLE_SRDF)
+    semantic_1 = parser.parse_string(SAMPLE_SRDF)
+    robot_1 = Robot(name="test_robot")
+    robot_1.semantic = semantic_1
 
     generator = SRDFGenerator(pretty_print=True)
     xml_generated = generator.generate(robot_1)
 
     # Parse the generated XML
-    robot_2 = parser.parse_string(xml_generated)
+    semantic_2 = parser.parse_string(xml_generated)
 
     # Compare semantic models
-    assert robot_1.semantic == robot_2.semantic
-    assert robot_2.name == "test_robot"
+    assert semantic_1 == semantic_2
 
     # Check specific details
-    assert len(robot_2.semantic.groups) == 1
-    assert robot_2.semantic.groups[0].name == "arm"
-    assert ("base_link", "tool0") in robot_2.semantic.groups[0].chains
-    assert robot_2.semantic.group_states[0].joint_values["joint1"] == 0.0
+    assert len(semantic_2.groups) == 1
+    assert semantic_2.groups[0].name == "arm"
+    assert ("base_link", "tool0") in semantic_2.groups[0].chains
+    assert semantic_2.group_states[0].joint_values["joint1"] == 0.0
 
 
 def test_srdf_generator_empty_semantic():
