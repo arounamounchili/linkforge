@@ -286,7 +286,7 @@ def calculate_mesh_inertia_from_triangles(
     i_xz += mass * cx * cz
     i_yz += mass * cy * cz
 
-    # 4. Physicality check
+    # Physicality check
     # Check positive semi-definiteness using Sylvester's criterion (principal minors)
     delta1 = i_xx
     delta2 = i_xx * i_yy - i_xy**2

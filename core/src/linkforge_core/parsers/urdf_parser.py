@@ -338,7 +338,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 parameters=parameters,
             )
         except RobotModelError as e:
-            logger.warning(f"Invalid ros2_control '{name}' ignored: {e}")
+            logger.warning(f"Invalid ros2_control '{name}' ignored during strict parsing: {e}")
             return None
 
     def _parse_transmission_component(
@@ -583,6 +583,17 @@ class URDFParser(RobotXMLParser[Robot]):
                 noise=self._parse_sensor_noise(ft_elem),
             )
 
+        # Ensure that if a sensor type is known, we have at least a default info object
+        # to avoid NoneType errors during inspection.
+        if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA) and camera_info is None:
+            camera_info = CameraInfo()
+        elif sensor_type == SensorType.LIDAR and lidar_info is None:
+            lidar_info = LidarInfo()
+        elif sensor_type == SensorType.IMU and imu_info is None:
+            imu_info = IMUInfo()
+        elif sensor_type == SensorType.GPS and gps_info is None:
+            gps_info = GPSInfo()
+
         topic = sensor_elem.findtext("topic") or f"/{sensor_name}"
         return Sensor(
             name=sensor_name,
@@ -748,7 +759,6 @@ class URDFParser(RobotXMLParser[Robot]):
                         depth -= 1
                         continue
 
-                    root.clear()
                 depth -= 1
 
         for tag, elem in delayed_elements:

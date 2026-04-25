@@ -42,7 +42,8 @@ def test_full_robot_description_integration():
 
     assert robot.name == "panda"
     assert len(robot.links) == 2
-    assert robot.semantic is None  # Initially empty
+    assert not robot.semantic.groups  # Initially empty
+    assert not robot.semantic.virtual_joints
 
     # 2. Parse SRDF and update the same robot model
     srdf_parser = SRDFParser()

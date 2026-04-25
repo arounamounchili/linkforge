@@ -31,7 +31,7 @@ class TestRobotBuilder:
         builder = RobotBuilder("my_robot")
         assert builder.robot.name == "my_robot"
         assert len(builder.robot.links) == 0
-        assert builder.robot.semantic is None
+        assert len(builder.robot.semantic.groups) == 0
 
     def test_micro_construction_fluent(self) -> None:
         """Test building a robot link-by-link using the fluent API."""

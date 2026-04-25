@@ -790,7 +790,7 @@ class XacroResolver:
         sentinel = "\x00LFDOLLAR\x00"
         text = text.replace("$$", sentinel)
 
-        # 1. Handle arguments: $(arg name)
+        # Handle arguments: $(arg name)
         def _resolve_arg(m: re.Match[str]) -> str:
             name = m.group(1).strip()
             if name not in self.args:
@@ -799,11 +799,11 @@ class XacroResolver:
 
         text = re.sub(r"\$\(arg (.*?)\)", _resolve_arg, text)
 
-        # 2. Handle evaluation: $(eval expression) - Standard ROS XACRO feature
+        # Handle evaluation: $(eval expression) - Standard ROS XACRO feature
         # We treat it as an alias for ${...} since our evaluation engine is Python-based.
         text = re.sub(r"\$\(eval (.*?)\)", r"${\1}", text)
 
-        # 3. Handle environment variable substitution, matching roslaunch behaviour.
+        # Handle environment variable substitution, matching roslaunch behaviour.
         # $(env VAR) raises if unset; $(optenv VAR) returns ""; $(optenv VAR default) returns default.
         def _resolve_env(m: re.Match[str]) -> str:
             parts = m.group(1).split(None, 1)
@@ -826,7 +826,7 @@ class XacroResolver:
         text = re.sub(r"file://\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
         text = re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
 
-        # 4. Handle properties and math: ${expression}
+        # Handle properties and math: ${expression}
         # If the entire string is a single ${...} block, return the object directly.
         # This keeps dicts/lists as real objects for subsequent evaluations.
         stripped = text.strip()
@@ -1006,16 +1006,16 @@ class XacroResolver:
         Returns:
             The absolute path to the file if found, otherwise None.
         """
-        # 1. Handle package:// URIs
+        # Handle package:// URIs
         if filename.startswith("package:"):
             return resolve_package_path(filename, self.start_dir or Path.cwd())
 
-        # 2. Handle absolute paths
+        # Handle absolute paths
         path = Path(filename)
         if path.is_absolute() and path.exists():
             return path
 
-        # 3. Handle relative paths in search_paths
+        # Handle relative paths in search_paths
         for search_path in self.search_paths:
             candidate = search_path / filename
             if candidate.exists():

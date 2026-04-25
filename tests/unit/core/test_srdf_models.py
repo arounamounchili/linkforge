@@ -98,7 +98,7 @@ def test_robot_semantic_integration():
 
     # Test via property setter
     robot.semantic = None
-    assert robot.semantic is None
+    assert len(robot.semantic.groups) == 0
 
     new_srdf = SemanticRobotDescription(passive_joints=[PassiveJoint(name="pj")])
     robot.semantic = new_srdf

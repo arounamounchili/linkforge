@@ -63,7 +63,9 @@ class Robot:
     _transmissions: list[Transmission] = field(default_factory=list, init=False)
     _ros2_controls: list[Ros2Control] = field(default_factory=list, init=False)
     _gazebo_elements: list[GazeboElement] = field(default_factory=list, init=False)
-    _semantic: SemanticRobotDescription | None = field(default=None, init=False)
+    _semantic: SemanticRobotDescription = field(
+        default_factory=SemanticRobotDescription, init=False
+    )
 
     # Fast lookup indices (name -> object)
     _link_index: dict[str, Link] = field(default_factory=dict, init=False)
@@ -175,11 +177,11 @@ class Robot:
         if not prefix:
             return
 
-        # 1. Update Links (Mutable)
+        # Update Links (Mutable)
         for link in self._links:
             link.name = f"{prefix}{link.name}"
 
-        # 2. Update Joints (Frozen)
+        # Update Joints (Frozen)
         new_joints = []
         for joint in self._joints:
             new_joint = replace(
@@ -196,7 +198,7 @@ class Robot:
             new_joints.append(new_joint)
         self._joints = new_joints
 
-        # 3. Update Sensors (Frozen)
+        # Update Sensors (Frozen)
         new_sensors = []
         for sensor in self._sensors:
             new_sensor = replace(
@@ -215,7 +217,7 @@ class Robot:
             new_sensors.append(new_sensor)
         self._sensors = new_sensors
 
-        # 4. Update Transmissions (Frozen)
+        # Update Transmissions (Frozen)
         new_transmissions = []
         for trans in self._transmissions:
             new_trans = replace(
@@ -227,71 +229,70 @@ class Robot:
             new_transmissions.append(new_trans)
         self._transmissions = new_transmissions
 
-        # 5. Update ROS2 Controls (Mutable)
+        # Update ROS2 Controls (Mutable)
         for rc in self._ros2_controls:
             rc.name = f"{prefix}{rc.name}"
             for rc_joint in rc.joints:
                 rc_joint.name = f"{prefix}{rc_joint.name}"
 
-        # 6. Update Gazebo Elements (Frozen)
+        # Update Gazebo Elements (Frozen)
         new_gazebo_elements = []
         for ge in self._gazebo_elements:
             new_ge = replace(ge, reference=f"{prefix}{ge.reference}" if ge.reference else None)
             new_gazebo_elements.append(new_ge)
         self._gazebo_elements = new_gazebo_elements
 
-        # 7. Update Semantic Description (Frozen)
-        if self._semantic:
-            s = self._semantic
-            self._semantic = replace(
-                s,
-                virtual_joints=[
-                    replace(
-                        vj,
-                        name=f"{prefix}{vj.name}",
-                        child_link=f"{prefix}{vj.child_link}",
-                    )
-                    for vj in s.virtual_joints
-                ],
-                groups=[
-                    replace(
-                        g,
-                        name=f"{prefix}{g.name}",
-                        links=[f"{prefix}{link_name}" for link_name in g.links],
-                        joints=[f"{prefix}{joint_name}" for joint_name in g.joints],
-                        chains=[
-                            (f"{prefix}{base_name}", f"{prefix}{tip_name}")
-                            for base_name, tip_name in g.chains
-                        ],
-                        subgroups=[f"{prefix}{subgroup_name}" for subgroup_name in g.subgroups],
-                    )
-                    for g in s.groups
-                ],
-                group_states=[
-                    replace(
-                        gs,
-                        name=f"{prefix}{gs.name}",
-                        group=f"{prefix}{gs.group}",
-                        joint_values={f"{prefix}{k}": v for k, v in gs.joint_values.items()},
-                    )
-                    for gs in s.group_states
-                ],
-                end_effectors=[
-                    replace(
-                        ee,
-                        name=f"{prefix}{ee.name}",
-                        group=f"{prefix}{ee.group}",
-                        parent_link=f"{prefix}{ee.parent_link}",
-                        parent_group=f"{prefix}{ee.parent_group}" if ee.parent_group else None,
-                    )
-                    for ee in s.end_effectors
-                ],
-                passive_joints=[replace(pj, name=f"{prefix}{pj.name}") for pj in s.passive_joints],
-                disabled_collisions=[
-                    replace(dc, link1=f"{prefix}{dc.link1}", link2=f"{prefix}{dc.link2}")
-                    for dc in s.disabled_collisions
-                ],
-            )
+        # Update Semantic Description (Frozen)
+        s = self._semantic
+        self._semantic = replace(
+            s,
+            virtual_joints=[
+                replace(
+                    vj,
+                    name=f"{prefix}{vj.name}",
+                    child_link=f"{prefix}{vj.child_link}",
+                )
+                for vj in s.virtual_joints
+            ],
+            groups=[
+                replace(
+                    g,
+                    name=f"{prefix}{g.name}",
+                    links=[f"{prefix}{link_name}" for link_name in g.links],
+                    joints=[f"{prefix}{joint_name}" for joint_name in g.joints],
+                    chains=[
+                        (f"{prefix}{base_name}", f"{prefix}{tip_name}")
+                        for base_name, tip_name in g.chains
+                    ],
+                    subgroups=[f"{prefix}{subgroup_name}" for subgroup_name in g.subgroups],
+                )
+                for g in s.groups
+            ],
+            group_states=[
+                replace(
+                    gs,
+                    name=f"{prefix}{gs.name}",
+                    group=f"{prefix}{gs.group}",
+                    joint_values={f"{prefix}{k}": v for k, v in gs.joint_values.items()},
+                )
+                for gs in s.group_states
+            ],
+            end_effectors=[
+                replace(
+                    ee,
+                    name=f"{prefix}{ee.name}",
+                    group=f"{prefix}{ee.group}",
+                    parent_link=f"{prefix}{ee.parent_link}",
+                    parent_group=f"{prefix}{ee.parent_group}" if ee.parent_group else None,
+                )
+                for ee in s.end_effectors
+            ],
+            passive_joints=[replace(pj, name=f"{prefix}{pj.name}") for pj in s.passive_joints],
+            disabled_collisions=[
+                replace(dc, link1=f"{prefix}{dc.link1}", link2=f"{prefix}{dc.link2}")
+                for dc in s.disabled_collisions
+            ],
+        )
 
         self._reindex()
 
@@ -560,14 +561,17 @@ class Robot:
         return tuple(self._gazebo_elements)
 
     @property
-    def semantic(self) -> SemanticRobotDescription | None:
+    def semantic(self) -> SemanticRobotDescription:
         """Get semantic description (SRDF metadata) of the robot."""
         return self._semantic
 
     @semantic.setter
     def semantic(self, value: SemanticRobotDescription | None) -> None:
         """Set semantic description of the robot."""
-        self._semantic = value
+        if value is None:
+            self._semantic = SemanticRobotDescription()
+        else:
+            self._semantic = value
 
     def merge(
         self,
@@ -592,7 +596,7 @@ class Robot:
             axis: Optional joint axis.
             limits: Optional joint limits.
         """
-        # 0. Early validation of attachment point
+        # Validation of attachment point
         if not self.get_link(at_link):
             raise RobotValidationError(
                 ValidationErrorCode.NOT_FOUND,
@@ -601,15 +605,15 @@ class Robot:
                 value=at_link,
             )
 
-        # 1. Deep copy the component to ensure isolation
+        # Deep copy the component to ensure isolation
         sub_robot = component.clone()
 
-        # 2. Apply prefix if provided
+        # Apply prefix if provided
         if prefix:
             sub_robot.prefix_all(prefix)
             joint_name = f"{prefix}{joint_name}"
 
-        # 3. Identify the root link of the sub-robot
+        # Identify the root link of the sub-robot
         root_link = sub_robot.get_root_link()
         if not root_link:
             raise RobotValidationError(
@@ -619,15 +623,55 @@ class Robot:
                 value=component.name,
             )
 
-        # 4. Merge links
+        # Merge links and joints
         for link in sub_robot.links:
             self.add_link(link)
 
-        # 5. Merge joints
         for joint in sub_robot.joints:
             self.add_joint(joint)
 
-        # 6. Create the connecting joint
+        # Merge semantic data (SRDF)
+        # deduplicate groups, virtual joints, and passive joints to avoid conflicts
+        new_groups = list(self._semantic.groups)
+        current_group_names = {g.name for g in new_groups}
+        for g in sub_robot.semantic.groups:
+            if g.name not in current_group_names:
+                new_groups.append(g)
+                current_group_names.add(g.name)
+
+        new_vjoints = list(self._semantic.virtual_joints)
+        current_vj_names = {vj.name for vj in new_vjoints}
+        for vj in sub_robot.semantic.virtual_joints:
+            if vj.name not in current_vj_names:
+                new_vjoints.append(vj)
+                current_vj_names.add(vj.name)
+
+        new_passive = list(self._semantic.passive_joints)
+        current_pj_names = {pj.name for pj in new_passive}
+        for pj in sub_robot.semantic.passive_joints:
+            if pj.name not in current_pj_names:
+                new_passive.append(pj)
+                current_pj_names.add(pj.name)
+
+        new_disabled = list(self._semantic.disabled_collisions)
+        current_disabled = {(dc.link1, dc.link2) for dc in new_disabled}
+        for dc in sub_robot.semantic.disabled_collisions:
+            if (dc.link1, dc.link2) not in current_disabled:
+                new_disabled.append(dc)
+                current_disabled.add((dc.link1, dc.link2))
+
+        self._semantic = replace(
+            self._semantic,
+            groups=new_groups,
+            virtual_joints=new_vjoints,
+            passive_joints=new_passive,
+            disabled_collisions=new_disabled,
+            end_effectors=list(self._semantic.end_effectors)
+            + list(sub_robot.semantic.end_effectors),
+            group_states=list(self._semantic.group_states) + list(sub_robot.semantic.group_states),
+        )
+
+        # Create the connecting joint
         connection = Joint(
             name=joint_name,
             type=joint_type,
@@ -639,7 +683,7 @@ class Robot:
         )
         self.add_joint(connection)
 
-        # 7. Merge additional elements (sensors, transmissions, etc.)
+        # Merge additional elements (sensors, transmissions, etc.)
         for sensor in sub_robot.sensors:
             self.add_sensor(sensor)
 
@@ -652,22 +696,11 @@ class Robot:
         for gz in sub_robot.gazebo_elements:
             self.add_gazebo_element(gz)
 
-        # 8. Merge materials
+        # Merge materials
         self.materials.update(sub_robot.materials)
 
-        # 9. Merge semantic data (SRDF)
-        if sub_robot.semantic:
-            if not self._semantic:
-                self._semantic = SemanticRobotDescription()
-            self._semantic.virtual_joints.extend(sub_robot.semantic.virtual_joints)
-            self._semantic.groups.extend(sub_robot.semantic.groups)
-            self._semantic.group_states.extend(sub_robot.semantic.group_states)
-            self._semantic.end_effectors.extend(sub_robot.semantic.end_effectors)
-            self._semantic.passive_joints.extend(sub_robot.semantic.passive_joints)
-            self._semantic.disabled_collisions.extend(sub_robot.semantic.disabled_collisions)
-
-        # 10. Validate kinematic integrity
-        _ = self.graph  # Accessing the property triggers validation of connectivity and cycles
+        # Validate kinematic integrity (connectivity and cycles)
+        _ = self.graph
 
     def add_group(
         self,
@@ -687,9 +720,7 @@ class Robot:
         Returns:
             The robot instance for chaining.
         """
-        if not self._semantic:
-            self._semantic = SemanticRobotDescription()
-
+        # Add group
         group = PlanningGroup(
             name=name, links=links or [], joints=joints or [], chains=chains or []
         )
@@ -707,9 +738,7 @@ class Robot:
         Returns:
             The robot instance for chaining.
         """
-        if not self._semantic:
-            self._semantic = SemanticRobotDescription()
-
+        # Disable collisions
         dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
         self._semantic.disabled_collisions.append(dc)
         return self

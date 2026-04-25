@@ -141,11 +141,11 @@ def get_export_path(resource: str, relative_to: Path | None = None) -> str:
     Returns:
         The string to be used in the 'filename' attribute.
     """
-    # 1. Preserve package:// URIs (never make relative)
+    # Preserve package:// URIs (never make relative)
     if resource.startswith("package://") or resource.startswith("package:/"):
         return resource
 
-    # 2. Handle file:// URIs
+    # Handle file:// URIs
     if resource.startswith("file://"):
         path = normalize_uri_to_path(resource)
         if relative_to and path.is_absolute():
@@ -157,7 +157,7 @@ def get_export_path(resource: str, relative_to: Path | None = None) -> str:
                 pass
         return resource
 
-    # 3. Handle standard paths
+    # Handle standard paths
     path = Path(resource)
     if relative_to and path.is_absolute():
         try:

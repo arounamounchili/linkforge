@@ -162,7 +162,7 @@ class FileSystemResolver:
         """Resolve standard file paths, file:// URIs, and package:// URIs."""
         from .utils.path_utils import resolve_package_path
 
-        # 1. Handle package:// URIs
+        # Handle package:// URIs
         if "package://" in uri or "package:/" in uri:
             # We use an empty Path if relative_to is not provided,
             # though package resolution usually doesn't strictly need it if ROS_PACKAGE_PATH is set.
@@ -173,7 +173,7 @@ class FileSystemResolver:
                 return resolved.absolute()
             raise FileNotFoundError(uri)
 
-        # 2. Handle file:// URIs
+        # Handle file:// URIs
         if uri.startswith("file://"):
             from .utils.path_utils import normalize_uri_to_path
 
@@ -182,7 +182,7 @@ class FileSystemResolver:
                 return path.absolute()
             raise FileNotFoundError(uri)
 
-        # 3. Handle standard paths (absolute or relative)
+        # Handle standard paths (absolute or relative)
         path = Path(uri)
         if path.is_absolute():
             if path.exists():

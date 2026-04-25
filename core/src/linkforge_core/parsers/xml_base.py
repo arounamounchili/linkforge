@@ -219,8 +219,15 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         if texture_elem is not None:
             texture = texture_elem.get("filename")
 
-        if color or texture:
-            return Material(name=mat_name if mat_name else "default", color=color, texture=texture)
+        # Create material even if color/texture are missing if we have a name
+        if mat_name or color or texture:
+            try:
+                return Material(
+                    name=mat_name if mat_name else "default", color=color, texture=texture
+                )
+            except RobotModelError as e:
+                logger.warning(f"Failed to create material '{mat_name}': {e}")
+                return None
 
         return None
 

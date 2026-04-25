@@ -123,7 +123,7 @@ class XACROGenerator(URDFGenerator):
         # Create root element
         root = ET.Element("robot", name=robot.name)
 
-        # 1. Collect properties (Materials & Dimensions)
+        # Collect properties (Materials & Dimensions)
         properties: list[tuple[str, str]] = []
 
         if self.extract_materials:
@@ -132,7 +132,7 @@ class XACROGenerator(URDFGenerator):
         if self.extract_dimensions:
             self._extract_dimensions(robot, properties)
 
-        # 2. Identify Macros
+        # Identify Macros
         self.macro_groups = {}
         self.links_in_macros = set()
 
@@ -142,7 +142,7 @@ class XACROGenerator(URDFGenerator):
                 for link, _ in group:
                     self.links_in_macros.add(link.name)
 
-        # 3. Add Properties to Root
+        # Add Properties to Root
         if properties:
             root.append(ET.Comment(" Properties "))
         for prop_name, prop_value in properties:
@@ -172,14 +172,14 @@ class XACROGenerator(URDFGenerator):
             for material in self.global_materials.values():
                 self._add_material_element(root, material)
 
-        # 4. Generate Macro Definitions
+        # Generate Macro Definitions
         if self.generate_macros and self.macro_groups:
             root.append(ET.Comment(" Macros "))
         if self.generate_macros:
             for signature, group in self.macro_groups.items():
                 self._generate_macro_definition(root, signature, group)
 
-        # 5. Generate Links and Joints (using unified Template Method)
+        # Generate Links and Joints (using unified Template Method)
         self.add_links_section(root, robot)
         self.add_joints_section(root, robot)
 
