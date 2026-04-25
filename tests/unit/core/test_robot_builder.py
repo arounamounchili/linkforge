@@ -378,7 +378,28 @@ class TestRobotBuilder:
     def test_missing_connect_to_raises_error(self) -> None:
         """Verify that finalizing without connect_to raises an error."""
         builder = RobotBuilder("error_test")
-        builder = builder.add_link("l1")
+        lb = builder.add_link("l1")
 
         with pytest.raises(RobotValidationError, match=r"connect_to\(\) must be called"):
-            builder.as_fixed()
+            lb.as_fixed()
+
+    def test_auto_inertia_calculation(self) -> None:
+        """Verify that calculate_inertial compute physics properties from geometry."""
+        from linkforge_core.models.geometry import Box, Vector3
+
+        builder = RobotBuilder("physics_test")
+        builder.robot.add_link(Link(name="base"))
+
+        # Add a link with a 1x1x1 box visual and auto-calculate inertia for 12kg
+        # Box inertia Ixx = 1/12 * mass * (y^2 + z^2) = 1/12 * 12 * (1+1) = 2.0
+        builder.add_link("box_link").with_visual(Box(size=Vector3(1, 1, 1))).calculate_inertial(
+            mass=12.0
+        ).connect_to("base", "j1").as_fixed()
+
+        link = builder.robot.get_link("box_link")
+        assert link is not None
+        assert link.inertial is not None
+        assert link.inertial.mass == 12.0
+        assert link.inertial.inertia.ixx == pytest.approx(2.0)
+        assert link.inertial.inertia.iyy == pytest.approx(2.0)
+        assert link.inertial.inertia.izz == pytest.approx(2.0)

@@ -6,11 +6,15 @@ This module implements the 'Composer' which allows for both macro-assembly
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
-from ..models.geometry import Transform, Vector3
+from ..models.geometry import Geometry, Transform, Vector3
 from ..models.joint import Joint, JointLimits, JointType
-from ..models.link import Link
+from ..models.link import Collision, Inertial, InertiaTensor, Link, Visual
+from ..models.material import Material
 from ..models.robot import Robot
+from ..physics.inertia import calculate_inertia
 
 
 class RobotBuilder:
@@ -134,15 +138,65 @@ class LinkBuilder:
         self._pending_joint_name: str | None = None
 
     def with_mass(self, value: float) -> LinkBuilder:
-        """Set the link's mass and calculate default inertia."""
-        from dataclasses import replace
+        """Set the link's mass and a minimal inertia tensor.
 
-        from ..models.link import Inertial, InertiaTensor
-
+        Note:
+            Prefer ``calculate_inertial()`` when the link already has a visual
+            or collision geometry, as it will produce a physically correct
+            tensor instead of the minimal fallback.
+        """
         if self._link.inertial:
             new_inertial = replace(self._link.inertial, mass=value)
         else:
             new_inertial = Inertial(mass=value, inertia=InertiaTensor.zero())
+
+        self._link = replace(self._link, inertial=new_inertial)
+        return self
+
+    def with_visual(
+        self,
+        geometry: Geometry,
+        origin: Transform | None = None,
+        material: Material | None = None,
+        name: str | None = None,
+    ) -> LinkBuilder:
+        """Add a visual element to the link."""
+        self._link.add_visual(
+            Visual(geometry=geometry, origin=origin, material=material, name=name)
+        )
+        return self
+
+    def with_collision(
+        self,
+        geometry: Geometry,
+        origin: Transform | None = None,
+        name: str | None = None,
+    ) -> LinkBuilder:
+        """Add a collision element to the link."""
+        self._link.add_collision(Collision(geometry=geometry, origin=origin, name=name))
+        return self
+
+    def calculate_inertial(self, mass: float) -> LinkBuilder:
+        """Auto-calculate the inertial properties based on the link's geometry.
+
+        Looks at the first visual (falling back to the first collision) to
+        derive a geometry-aware inertia tensor and center-of-mass origin.
+        Falls back to a minimal inertia tensor when no geometry is present.
+        """
+        # Prefer visual geometry; fall back to collision geometry
+        source = (
+            self._link.visuals[0]
+            if self._link.visuals
+            else self._link.collisions[0]
+            if self._link.collisions
+            else None
+        )
+
+        if source is not None:
+            tensor = calculate_inertia(source.geometry, mass)
+            new_inertial = Inertial(mass=mass, inertia=tensor, origin=source.origin)
+        else:
+            new_inertial = Inertial(mass=mass, inertia=InertiaTensor.zero())
 
         self._link = replace(self._link, inertial=new_inertial)
         return self
@@ -153,8 +207,6 @@ class LinkBuilder:
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
         """Store a custom transform to use when connecting this link."""
-        from ..models.geometry import Transform, Vector3
-
         self._pending_origin = Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy))
         return self
 
