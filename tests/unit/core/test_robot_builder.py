@@ -304,7 +304,9 @@ class TestRobotBuilder:
 
         # Test as_fixed
         builder.add_link("child_fixed").connect_to("parent", "j_fixed").as_fixed()
-        assert builder.robot.get_joint("j_fixed").type == JointType.FIXED
+        j_fixed = builder.robot.get_joint("j_fixed")
+        assert j_fixed is not None
+        assert j_fixed.type == JointType.FIXED
 
         # Test as_revolute
         axis = Vector3(0, 0, 1)

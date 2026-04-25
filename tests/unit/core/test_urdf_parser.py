@@ -699,6 +699,7 @@ class TestURDFParser:
         """
         parser = URDFParser()
         robot = parser.parse_string(xml)
+        assert robot.links[0].inertial is not None
         inertia = robot.links[0].inertial.inertia
         assert inertia.ixx == 1e-6
         assert inertia.izz == 1e-6
@@ -726,6 +727,7 @@ class TestURDFParser:
         robot = parser.parse_string(xml)
 
         cam = next(s for s in robot.sensors if s.name == "cam")
+        assert cam.camera_info is not None
         assert isinstance(cam.camera_info, CameraInfo)
 
         lidar = next(s for s in robot.sensors if s.name == "lidar")
@@ -777,6 +779,9 @@ class TestURDFParser:
         </gazebo>
         """
         sensor = parser._parse_sensor_from_gazebo(ET.fromstring(xml))
+        assert sensor is not None
+        assert sensor.gps_info is not None
+        assert sensor.gps_info.position_sensing_horizontal_noise is not None
         assert sensor.gps_info.position_sensing_horizontal_noise.mean == 0.1
         assert sensor.gps_info.velocity_sensing_vertical_noise is None
 
@@ -1150,6 +1155,7 @@ class TestURDFParserAdditionalEdgeCoverage:
         </link></robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
+        assert robot.links[0].inertial is not None
         t = robot.links[0].inertial.inertia
         assert t.ixx == pytest.approx(1e-6)
         assert t.iyy == pytest.approx(1e-6)
@@ -1340,8 +1346,10 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         assert robot.has_link("link1")
         assert robot.has_link("link2")
         assert robot.has_joint("joint1")
-        assert robot.get_joint("joint1").parent == "link1"
-        assert robot.get_joint("joint1").child == "link2"
+        joint = robot.get_joint("joint1")
+        assert joint is not None
+        assert joint.parent == "link1"
+        assert joint.child == "link2"
 
     def test_urdf_parser_directory_failure_and_file_success(self, tmp_path) -> None:
         """Test file-based parsing edge cases."""

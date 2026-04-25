@@ -25,7 +25,10 @@ def test_round_trip_safety_calibration() -> None:
 
     # Verify model content
     joint = robot.get_joint("joint1")
+    assert joint is not None
+    assert joint.safety_controller is not None
     assert joint.safety_controller.k_position == 15.0
+    assert joint.calibration is not None
     assert joint.calibration.rising == 0.5
 
     # 3. Generate back to XML
@@ -35,9 +38,11 @@ def test_round_trip_safety_calibration() -> None:
     # 4. Re-parse and verify
     robot2 = parser.parse_string(generated_xml)
     joint2 = robot2.get_joint("joint1")
-
+    assert joint2 is not None
+    assert joint2.safety_controller is not None
     assert joint2.safety_controller.k_position == 15.0
     assert joint2.safety_controller.soft_lower_limit == -1.5
+    assert joint2.calibration is not None
     assert joint2.calibration.rising == 0.5
     assert joint2.calibration.falling == 1.0
 
