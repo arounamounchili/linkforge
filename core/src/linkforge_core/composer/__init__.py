@@ -5,6 +5,6 @@ by attaching components and programmatically constructing links/joints.
 """
 
 from .factories import fixed_joint, origin, revolute_joint
-from .robot_assembly import RobotAssembly
+from .robot_builder import RobotBuilder
 
-__all__ = ["RobotAssembly", "fixed_joint", "revolute_joint", "origin"]
+__all__ = ["RobotBuilder", "fixed_joint", "revolute_joint", "origin"]
