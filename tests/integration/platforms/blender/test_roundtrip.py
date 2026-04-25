@@ -147,9 +147,10 @@ def test_joint_limits_preserved(examples_dir: Path) -> None:
 
     # Check that all joints have limits
     for joint in robot.joints:
-        if joint.type.name == "REVOLUTE" or joint.type.name == "PRISMATIC":
+        if joint.type.name in ("REVOLUTE", "PRISMATIC"):
             assert joint.limits is not None, f"Joint {joint.name} missing limits"
-            assert joint.limits.lower < joint.limits.upper, f"Invalid limits for {joint.name}"
+            if joint.limits.lower is not None and joint.limits.upper is not None:
+                assert joint.limits.lower < joint.limits.upper, f"Invalid limits for {joint.name}"
             assert joint.limits.effort > 0, f"Invalid effort for {joint.name}"
             assert joint.limits.velocity > 0, f"Invalid velocity for {joint.name}"
 
