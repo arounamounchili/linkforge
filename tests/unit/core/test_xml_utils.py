@@ -209,6 +209,7 @@ def test_create_xml_element_no_formatter() -> None:
     parent = ET.Element("p")
     create_xml_element(parent, "child", a=1, b=True)
     child = parent.find("child")
+    assert child is not None
     assert child.get("a") == "1"
     assert child.get("b") == "True"
 

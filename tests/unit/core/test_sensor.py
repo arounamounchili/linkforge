@@ -217,6 +217,7 @@ class TestSensor:
         assert sensor.name == "front_camera"
         assert sensor.type == SensorType.CAMERA
         assert sensor.link_name == "camera_link"
+        assert sensor.camera_info is not None
         assert sensor.camera_info.width == 1920
 
     def test_lidar_sensor(self) -> None:
@@ -230,6 +231,7 @@ class TestSensor:
         )
         assert sensor.name == "lidar"
         assert sensor.type == SensorType.LIDAR
+        assert sensor.lidar_info is not None
         assert sensor.lidar_info.horizontal_samples == 1024
 
     def test_imu_sensor(self) -> None:
@@ -285,6 +287,7 @@ class TestSensor:
             camera_info=camera_info,
             origin=transform,
         )
+        assert sensor.origin is not None
         assert sensor.origin.xyz.x == pytest.approx(0.1)
         assert sensor.origin.xyz.z == pytest.approx(0.2)
 
@@ -374,5 +377,6 @@ def test_sensor_parsing_pose_robustness() -> None:
     elem = ET.fromstring(xml)
     sensor = parser._parse_sensor_from_gazebo(elem)
     # Pose should revert to identity or skip if invalid
+    assert sensor is not None
     assert sensor.origin is not None
     assert sensor.origin.xyz.x == 0

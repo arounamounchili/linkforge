@@ -79,6 +79,7 @@ kinematics:
         next(link for link in robot.links if link.name == "base_link")
 
         arm_link = next(link for link in robot.links if link.name == "arm_link")
+        assert arm_link.inertial is not None
         assert arm_link.inertial.mass == 2.0
 
         joint = robot.joints[0]

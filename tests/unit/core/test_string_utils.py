@@ -17,7 +17,7 @@ def test_sanitize_name_basic() -> None:
 def test_sanitize_name_empty() -> None:
     """Test sanitization of empty names."""
     assert sanitize_name("") == ""
-    assert sanitize_name(None) == ""
+    assert sanitize_name(None) == ""  # type: ignore[arg-type]
 
 
 def test_sanitize_name_starting_with_number() -> None:

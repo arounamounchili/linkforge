@@ -7,7 +7,6 @@ from linkforge_core.exceptions import (
     RobotParserXMLRootError,
 )
 from linkforge_core.parsers.srdf_parser import SRDFParser
-from linkforge_core.parsers.xacro_parser import XACROParser
 
 BASIC_SRDF = """<?xml version="1.0"?>
 <robot name="test_robot">
@@ -64,12 +63,6 @@ def test_srdf_parser_basic_string():
 
 def test_srdf_parser_xacro_resolution():
     """Test the two-step XACRO to SRDF resolution workflow."""
-    xml_string = (
-        XACROParser().resolve_string(XACRO_SRDF)
-        if hasattr(XACROParser(), "resolve_string")
-        else XACROParser().parse_string(XACRO_SRDF).semantic
-    )  # wait, XACROParser resolve_string? No.
-
     from linkforge_core.parsers.xacro_parser import XacroResolver
 
     xml_string = XacroResolver().resolve_string(XACRO_SRDF)

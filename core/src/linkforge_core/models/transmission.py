@@ -45,7 +45,7 @@ class TransmissionJoint:
 
     name: str
     hardware_interfaces: list[str] = field(default_factory=lambda: ["position"])
-    mechanical_reduction: float = 1.0
+    mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
     def __post_init__(self) -> None:
@@ -64,7 +64,7 @@ class TransmissionJoint:
                 target="HardwareInterfaces",
                 value=self.name,
             )
-        if self.mechanical_reduction == 0:
+        if self.mechanical_reduction is not None and self.mechanical_reduction == 0:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Mechanical reduction for transmission joint '{self.name}' cannot be zero",
@@ -82,7 +82,7 @@ class TransmissionActuator:
 
     name: str
     hardware_interfaces: list[str] = field(default_factory=lambda: ["position"])
-    mechanical_reduction: float = 1.0
+    mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
     def __post_init__(self) -> None:
@@ -101,7 +101,7 @@ class TransmissionActuator:
                 target="HardwareInterfaces",
                 value=self.name,
             )
-        if self.mechanical_reduction == 0:
+        if self.mechanical_reduction is not None and self.mechanical_reduction == 0:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Mechanical reduction for transmission actuator '{self.name}' cannot be zero",

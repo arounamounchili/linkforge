@@ -107,7 +107,7 @@ class TestValidateMeshPath:
         urdf_dir.mkdir()
 
         # URL-encoded path (space as %20)
-        encoded_path = "meshes/my%20file.stl"
+        encoded_path = Path("meshes/my%20file.stl")
         result = validate_mesh_path(encoded_path, urdf_dir)
 
         # Should decode to normal path
@@ -210,7 +210,7 @@ def test_find_sandbox_root_recursion_break() -> None:
     # Returns current (fake_root).
 
     # We need to type ignore or ensure it quacks like Path
-    res = find_sandbox_root(fake_filepath)
+    res = find_sandbox_root(fake_filepath)  # type: ignore[arg-type]
     assert res == fake_root
 
 

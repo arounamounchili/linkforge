@@ -93,6 +93,7 @@ class TestRobotBuilder:
 
         # Verify connectivity
         fix_joint = builder.robot.get_joint("left_gripper_fix")
+        assert fix_joint is not None
         assert fix_joint.parent == "tool0"
         assert fix_joint.child == "left_palm"
 
@@ -118,6 +119,7 @@ class TestRobotBuilder:
         builder._link = replace(builder._link, inertial=init_inertial)
 
         builder.with_mass(5.0)
+        assert builder._link.inertial is not None
         assert builder._link.inertial.mass == 5.0
 
     def test_srdf_helpers(self) -> None:
@@ -220,8 +222,9 @@ class TestRobotBuilder:
         builder.attach(comp, at_link="root", joint_name="conn", prefix="p_")
 
         # Verify
-        assert builder.robot._sensor_index.get("p_lidar") is not None
-        assert builder.robot._sensor_index.get("p_lidar").link_name == "p_sub_link"
+        sensor = builder.robot._sensor_index.get("p_lidar")
+        assert sensor is not None
+        assert sensor.link_name == "p_sub_link"
         assert len(builder.robot.gazebo_elements) == 1
         assert builder.robot.gazebo_elements[0].reference == "p_sub_link"
         assert len(builder.robot.transmissions) == 1
@@ -315,6 +318,7 @@ class TestRobotBuilder:
             axis=axis, limits=limits
         )
         joint = builder.robot.get_joint("j_rev")
+        assert joint is not None
         assert joint.type == JointType.REVOLUTE
         assert joint.axis == axis
 
@@ -328,6 +332,8 @@ class TestRobotBuilder:
         ).as_fixed()
 
         joint = builder.robot.get_joint("j1")
+        assert joint is not None
+        assert joint.origin is not None
         assert joint.origin.xyz.x == 1.0
         assert joint.origin.xyz.y == 2.0
         assert joint.origin.xyz.z == 3.0
@@ -345,6 +351,8 @@ class TestRobotBuilder:
         )
 
         joint = builder.robot.get_joint("j1")
+        assert joint is not None
+        assert joint.origin is not None
         assert joint.origin.xyz.x == 10.0
         assert joint.origin.xyz.y == 0.0
 
@@ -358,6 +366,7 @@ class TestRobotBuilder:
         builder.add_link("l1").connect_to("base", "j1").as_prismatic(axis=axis, limits=limits)
 
         joint = builder.robot.get_joint("j1")
+        assert joint is not None
         assert joint.type == JointType.PRISMATIC
         assert joint.axis == axis
         assert joint.limits == limits
@@ -371,6 +380,7 @@ class TestRobotBuilder:
         builder.add_link("l1").connect_to("base", "j1").as_continuous(axis=axis)
 
         joint = builder.robot.get_joint("j1")
+        assert joint is not None
         assert joint.type == JointType.CONTINUOUS
         assert joint.axis == axis
         assert joint.limits is None

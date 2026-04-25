@@ -104,6 +104,7 @@ def test_xacro_with_relative_includes() -> None:
         # Verify material from included file is present
         assert wheel_link.visuals[0].material is not None
         assert wheel_link.visuals[0].material.name == "black"
+        assert wheel_link.visuals[0].material.color is not None
         assert wheel_link.visuals[0].material.color.r == pytest.approx(0.0)
 
 
@@ -223,4 +224,5 @@ def test_xacro_absolute_path_includes() -> None:
 
         # Parse and verify
         robot = URDFParser().parse_string(urdf_string)
+        assert robot.links[0].inertial is not None
         assert robot.links[0].inertial.mass == pytest.approx(42.0)

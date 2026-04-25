@@ -166,6 +166,7 @@ class TestJoint:
             limits=JointLimits(lower=-math.pi, upper=math.pi),
         )
         assert joint.type == JointType.REVOLUTE
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 1
 
     def test_continuous_joint(self) -> None:
@@ -178,6 +179,7 @@ class TestJoint:
             axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.type == JointType.CONTINUOUS
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 1
 
     def test_prismatic_joint(self) -> None:
@@ -191,6 +193,7 @@ class TestJoint:
             limits=JointLimits(lower=0.0, upper=1.0),
         )
         assert joint.type == JointType.PRISMATIC
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 1
 
     def test_planar_joint(self) -> None:
@@ -203,6 +206,7 @@ class TestJoint:
             axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.type == JointType.PLANAR
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 2
 
     def test_floating_joint(self) -> None:
@@ -362,6 +366,7 @@ class TestJoint:
             axis=Vector3(0.0, 0.0, 1.0),
             limits=JointLimits(lower=0.0, upper=1.0),
         )
+        assert joint.axis is not None
         assert joint.axis == Vector3(0.0, 0.0, 1.0)
 
     def test_default_origin(self) -> None:
@@ -488,6 +493,7 @@ class TestJoint:
             child="link2",
             axis=Vector3(1.0, 0.0, 0.0),
         )
+        assert joint.axis is not None
         assert joint.limits is None
 
 
@@ -546,6 +552,7 @@ class TestJointAxisNormalization:
             limits=JointLimits(lower=0.0, upper=1.0),
         )
         # Should remain unchanged
+        assert joint.axis is not None
         assert joint.axis.x == 1.0
         assert joint.axis.y == 0.0
         assert joint.axis.z == 0.0

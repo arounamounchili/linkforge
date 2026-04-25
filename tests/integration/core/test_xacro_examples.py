@@ -25,6 +25,7 @@ def test_xacro_roundtrip_master_structure(examples_dir: Path) -> None:
     # base_mass 5.0, width 0.5, height 0.2, depth 0.5
     # ixx = (5/12) * (0.2^2 + 0.5^2) = (5/12) * (0.04 + 0.25) = (5/12) * 0.29 = 0.120833
     base_link = next(link for link in robot.links if link.name == "base_link")
+    assert base_link.inertial is not None
     assert round(base_link.inertial.inertia.ixx, 6) == 0.120833
 
 

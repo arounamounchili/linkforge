@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,10 +14,10 @@ from linkforge_core.parsers.xml_base import RobotXMLParser
 class MockXMLParser(RobotXMLParser):
     """Minimal implementation of RobotXMLParser for testing base functionality."""
 
-    def parse(self, filepath: Path, **kwargs):
+    def parse(self, filepath: Path, **kwargs: Any):
         pass
 
-    def parse_string(self, xml_string: str, **kwargs):
+    def parse_string(self, content: str, **kwargs: Any):
         pass
 
 
@@ -34,6 +35,8 @@ def test_xml_base_material_parsing_robustness() -> None:
     # Support 3-component RGB by defaulting alpha to 1.0
     elem = ET.fromstring('<material name="m"><color rgba="1.0 0.5 0.0"/></material>')
     mat = parser._parse_material_element(elem, {})
+    assert mat is not None
+    assert mat.color is not None
     assert mat.color.r == 1.0
     assert mat.color.a == 1.0
 
@@ -47,6 +50,7 @@ def test_xml_base_inertia_sanitization() -> None:
         '<inertial><mass value="1"/><inertia ixx="10" iyy="1" izz="1"/></inertial>'
     )
     inertial = parser._parse_inertial_element(elem)
+    assert inertial is not None
     # Minimal stable diagonal is 1e-6
     assert inertial.inertia.ixx == 1e-6
 
@@ -107,6 +111,7 @@ def test_urdf_parser_axis_normalization() -> None:
     """
     robot = parser.parse_string(xml)
     # Zero axis should normalize to default [1, 0, 0]
+    assert robot.joints[0].axis is not None
     assert robot.joints[0].axis.x == 1.0
 
 
@@ -122,6 +127,7 @@ def test_urdf_parser_revolute_joint_without_limits() -> None:
     </robot>
     """
     robot = parser.parse_string(xml)
+    assert robot.joints[0].limits is not None
     assert robot.joints[0].limits.lower == 0.0
     assert robot.joints[0].limits.upper == 0.0
 

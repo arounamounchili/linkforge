@@ -82,6 +82,7 @@ class TestURDFParser:
 
         assert isinstance(mat, Material)
         assert mat.name == "blue"
+        assert mat.color is not None
         assert mat.color.r == 0.0
         assert mat.color.b == 1.0
         assert mat.color.a == 1.0
@@ -918,6 +919,7 @@ class TestURDFParser:
         # 7. Joint with explicit Axis
         xml = '<joint name="j1" type="continuous"><parent link="p"/><child link="c"/><axis xyz="0 1 0"/></joint>'
         joint = parser._parse_joint(ET.fromstring(xml))
+        assert joint.axis is not None
         assert joint.axis.y == 1.0
 
         # 8. Gazebo Plugin parsing
@@ -927,8 +929,10 @@ class TestURDFParser:
         </plugin>
         """
         plugin = parser._parse_gazebo_plugin(ET.fromstring(xml))
+        assert plugin is not None
         assert plugin.name == "p"
         assert plugin.filename == "lib.so"
+        assert plugin.raw_xml is not None
         assert "<param>value</param>" in plugin.raw_xml
 
         # 9. ROS2 Control misc parameters
@@ -939,6 +943,7 @@ class TestURDFParser:
         </ros2_control>
         """
         rc = parser._parse_ros2_control(ET.fromstring(xml))
+        assert rc is not None
         assert rc.parameters["param_block"] == "some config"
 
     def test_parse_robot_full_traversal(self) -> None:
@@ -1203,6 +1208,7 @@ class TestURDFParserAdditionalEdgeCoverage:
         </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
+        assert robot.sensors[0].camera_info is not None
         assert robot.sensors[0].camera_info.width == 640
         assert robot.sensors[0].camera_info.height == 480
 
@@ -1282,6 +1288,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         parser = URDFParser()
         robot = parser.parse_string(xml)
         imu = robot.sensors[0].imu_info
+        assert imu is not None
         assert imu.angular_velocity_noise is not None
 
     def test_imu_sensor_with_linear_acceleration_x_noise(self) -> None:
@@ -1301,6 +1308,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         parser = URDFParser()
         robot = parser.parse_string(xml)
         imu = robot.sensors[0].imu_info
+        assert imu is not None
         assert imu.linear_acceleration_noise is not None
 
     def test_parse_file_too_large_raises_error(self, tmp_path) -> None:

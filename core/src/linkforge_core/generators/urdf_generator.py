@@ -454,7 +454,10 @@ class URDFGenerator(RobotXMLGenerator):
                 iface_elem.text = self._normalize_interface_name(interface)
 
             # Add mechanical reduction if not default
-            if trans_joint.mechanical_reduction != 1.0:
+            if (
+                trans_joint.mechanical_reduction is not None
+                and trans_joint.mechanical_reduction != 1.0
+            ):
                 reduction_elem = ET.SubElement(joint_elem, "mechanicalReduction")
                 reduction_elem.text = format_float(trans_joint.mechanical_reduction)
 

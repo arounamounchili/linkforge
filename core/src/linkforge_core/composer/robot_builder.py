@@ -162,7 +162,12 @@ class LinkBuilder:
     ) -> LinkBuilder:
         """Add a visual element to the link."""
         self._link.add_visual(
-            Visual(geometry=geometry, origin=origin, material=material, name=name)
+            Visual(
+                geometry=geometry,
+                origin=origin or Transform.identity(),
+                material=material,
+                name=name,
+            )
         )
         return self
 
@@ -173,7 +178,9 @@ class LinkBuilder:
         name: str | None = None,
     ) -> LinkBuilder:
         """Add a collision element to the link."""
-        self._link.add_collision(Collision(geometry=geometry, origin=origin, name=name))
+        self._link.add_collision(
+            Collision(geometry=geometry, origin=origin or Transform.identity(), name=name)
+        )
         return self
 
     def calculate_inertial(self, mass: float) -> LinkBuilder:
