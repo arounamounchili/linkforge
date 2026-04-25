@@ -2,7 +2,7 @@
 
 The `KinematicGraph` provides formal graph-theory logic for validating and
 traversing the link-joint structure of a robot. It is used internally by
-`RobotValidator` and `RobotAssembly`, but is also available for advanced users
+`RobotValidator` and `RobotBuilder`, but is also available for advanced users
 who need custom traversal or analysis logic.
 
 ## KinematicGraph

@@ -6,7 +6,7 @@ without Blender. It supports two complementary workflows that can be freely comb
 ## Overview
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.composer.robot_assembly.RobotAssembly
+.. autoclass:: linkforge_core.composer.robot_builder.RobotBuilder
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,12 +15,12 @@ without Blender. It supports two complementary workflows that can be freely comb
 
 ## Link Builder
 
-The `LinkBuilder` is the fluent interface returned by `RobotAssembly.add_link()`.
+The `LinkBuilder` is the fluent interface returned by `RobotBuilder.add_link()`.
 It uses a staged pattern — configuration methods accumulate state, and a terminal
 method commits the link and joint to the assembly.
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.composer.robot_assembly.LinkBuilder
+.. autoclass:: linkforge_core.composer.robot_builder.LinkBuilder
    :members:
    :undoc-members:
    :show-inheritance:
@@ -48,7 +48,7 @@ gripper model can be reused across multiple arms.
 
 ```python
 from pathlib import Path
-from linkforge_core.composer.robot_assembly import RobotAssembly
+from linkforge_core.composer.robot_builder import RobotBuilder
 from linkforge_core.parsers import XACROParser
 
 # Load sub-robots from XACRO files
@@ -56,7 +56,7 @@ base_arm = XACROParser().parse(Path("ur10e.urdf.xacro"))
 gripper  = XACROParser().parse(Path("robotiq_2f140.urdf.xacro"))
 
 # Build assembly
-assembly = RobotAssembly("dual_arm_cell", base_arm)
+assembly = RobotBuilder("dual_arm_cell", base_arm)
 assembly.attach(gripper, at_link="tool0", joint_name="gripper_mount", prefix="left_")
 ```
 
@@ -65,12 +65,12 @@ assembly.attach(gripper, at_link="tool0", joint_name="gripper_mount", prefix="le
 Add individual links and joints using the staged builder API:
 
 ```python
-from linkforge_core.composer.robot_assembly import RobotAssembly
+from linkforge_core.composer.robot_builder import RobotBuilder
 from linkforge_core.models.geometry import Vector3
 from linkforge_core.models.joint import JointLimits
 from linkforge_core.models import Robot
 
-assembly = RobotAssembly("my_robot", Robot(name="my_robot"))
+assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
 
 # Fixed bracket
 assembly.add_link("bracket") \
@@ -127,11 +127,11 @@ with open("my_robot.srdf", "w") as f:
 | Config | `.with_mass(value)` | `LinkBuilder` | Sets mass (kg) |
 | Config | `.at_origin(xyz, rpy)` | `LinkBuilder` | Sets joint transform |
 | Staging | `.connect_to(parent, joint_name)` | `LinkBuilder` | Stages parent/joint |
-| Terminal | `.as_fixed()` | `RobotAssembly` | Fixed joint (0 DOF) |
-| Terminal | `.as_revolute(axis, limits)` | `RobotAssembly` | Revolute joint (1 DOF) |
-| Terminal | `.as_prismatic(axis, limits)` | `RobotAssembly` | Prismatic/sliding joint (1 DOF) |
-| Terminal | `.as_continuous(axis)` | `RobotAssembly` | Continuous rotation (no limits) |
-| Terminal | `.as_joint(type, ...)` | `RobotAssembly` | Generic escape hatch |
+| Terminal | `.as_fixed()` | `RobotBuilder` | Fixed joint (0 DOF) |
+| Terminal | `.as_revolute(axis, limits)` | `RobotBuilder` | Revolute joint (1 DOF) |
+| Terminal | `.as_prismatic(axis, limits)` | `RobotBuilder` | Prismatic/sliding joint (1 DOF) |
+| Terminal | `.as_continuous(axis)` | `RobotBuilder` | Continuous rotation (no limits) |
+| Terminal | `.as_joint(type, ...)` | `RobotBuilder` | Generic escape hatch |
 
 :::{note}
 `connect_to()` **must** be called before any terminal method. Calling a
