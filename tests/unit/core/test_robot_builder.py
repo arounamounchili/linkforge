@@ -51,9 +51,15 @@ class TestRobotBuilder:
 
         assert len(builder.robot.links) == 2
         assert len(builder.robot.joints) == 1
-        assert builder.robot.get_link("link1").mass == 1.5
-        assert builder.robot.get_joint("joint1").parent == "base_link"
-        assert builder.robot.get_joint("joint1").axis.z == 1.0
+        link1 = builder.robot.get_link("link1")
+        assert link1 is not None
+        assert link1.mass == 1.5
+
+        joint1 = builder.robot.get_joint("joint1")
+        assert joint1 is not None
+        assert joint1.parent == "base_link"
+        assert joint1.axis is not None
+        assert joint1.axis.z == 1.0
 
     def test_macro_builder_attach(self) -> None:
         """Test attaching a sub-robot component."""
