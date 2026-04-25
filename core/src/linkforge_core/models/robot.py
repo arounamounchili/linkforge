@@ -7,8 +7,9 @@ hub for all kinematic, physical, and sensor data within the LinkForge ecosystem.
 from __future__ import annotations
 
 import copy
+import itertools
 from collections.abc import Sequence
-from dataclasses import InitVar, dataclass, field
+from dataclasses import InitVar, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -170,18 +171,9 @@ class Robot:
         return copy.deepcopy(self)
 
     def prefix_all(self, prefix: str) -> None:
-        """Add a prefix to all links, joints, sensors, and related elements.
-
-        This is used when merging robots into an assembly to prevent
-        name collisions.
-
-        Args:
-            prefix: The string to prepend to all names.
-        """
+        """Add a prefix to all links, joints, sensors, and related elements."""
         if not prefix:
             return
-
-        from dataclasses import replace
 
         # 1. Update Links (Mutable)
         for link in self._links:
@@ -732,8 +724,6 @@ class Robot:
         Returns:
             The robot instance for chaining.
         """
-        import itertools
-
         for l1, l2 in itertools.combinations(links, 2):
             self.disable_collisions(l1, l2, reason)
         return self

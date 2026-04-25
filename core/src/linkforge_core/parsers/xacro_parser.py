@@ -34,6 +34,7 @@ from ..logging_config import get_logger
 from ..models.robot import Robot
 from ..utils.dict_utils import AttrDict
 from ..utils.path_utils import resolve_package_path
+from ..utils.xml_utils import serialize_xml
 
 logger = get_logger(__name__)
 DEFAULT_MAX_DEPTH = 2000  # Increased for extremely complex industrial robots
@@ -994,8 +995,6 @@ class XacroResolver:
                     cleanup(child)
 
         cleanup(root)
-        from ..utils.xml_utils import serialize_xml
-
         return serialize_xml(root)
 
     def _find_file(self, filename: str) -> Path | None:

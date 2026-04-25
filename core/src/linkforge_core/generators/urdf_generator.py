@@ -39,7 +39,7 @@ from ..models.sensor import (
 )
 from ..models.transmission import Transmission
 from ..utils.math_utils import format_float, format_vector
-from ..utils.xml_utils import create_xml_element, serialize_xml
+from ..utils.xml_utils import create_xml_element, serialize_xml, xml_add_text
 from ..validation import RobotValidator
 from .xml_base import RobotXMLGenerator
 
@@ -764,8 +764,6 @@ class URDFGenerator(RobotXMLGenerator):
 
         # Add material if specified
         if gazebo_elem.material is not None:
-            from ..utils.xml_utils import xml_add_text
-
             xml_add_text(gz_elem, "material", gazebo_elem.material)
 
         # Add boolean properties
