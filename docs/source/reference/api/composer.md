@@ -15,7 +15,7 @@ without Blender. It supports two complementary workflows that can be freely comb
 
 ## Link Builder
 
-The `LinkBuilder` is the fluent interface returned by `RobotBuilder.add_link()`.
+The ``LinkBuilder`` is the fluent interface returned by ``RobotBuilder.link()``.
 It uses a staged pattern — configuration methods accumulate state, and a terminal
 method commits the link and joint to the assembly.
 
@@ -73,14 +73,14 @@ from linkforge_core.models import Robot
 assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
 
 # Fixed bracket
-assembly.add_link("bracket") \
+assembly.link("bracket") \
     .with_mass(0.3) \
     .at_origin(xyz=(0.2, 0, 0)) \
     .connect_to("base_link", "bracket_joint") \
     .as_fixed()
 
 # Revolute elbow
-assembly.add_link("elbow") \
+assembly.link("elbow") \
     .with_mass(1.5) \
     .connect_to("bracket", "elbow_joint") \
     .as_revolute(
@@ -89,7 +89,7 @@ assembly.add_link("elbow") \
     )
 
 # Wheel (continuous — no position limits)
-assembly.add_link("wheel") \
+assembly.link("wheel") \
     .with_mass(0.5) \
     .at_origin(xyz=(0, 0.175, 0)) \
     .connect_to("base_link", "wheel_joint") \
@@ -103,7 +103,7 @@ and export both URDF and SRDF in one step:
 
 ```python
 # Define a planning group
-assembly.add_group("arm", base_link="base_link", tip_link="elbow")
+assembly.group("arm", base_link="base_link", tip_link="elbow")
 
 # Disable self-collision between adjacent links
 assembly.disable_collisions("base_link", "bracket", reason="Adjacent")
@@ -123,15 +123,15 @@ with open("my_robot.srdf", "w") as f:
 
 | Step | Method | Returns | Description |
 |---|---|---|---|
-| Start | `add_link(name)` | `LinkBuilder` | Creates a new link |
-| Config | `.with_mass(value)` | `LinkBuilder` | Sets mass (kg) |
-| Config | `.at_origin(xyz, rpy)` | `LinkBuilder` | Sets joint transform |
-| Staging | `.connect_to(parent, joint_name)` | `LinkBuilder` | Stages parent/joint |
-| Terminal | `.as_fixed()` | `RobotBuilder` | Fixed joint (0 DOF) |
-| Terminal | `.as_revolute(axis, limits)` | `RobotBuilder` | Revolute joint (1 DOF) |
-| Terminal | `.as_prismatic(axis, limits)` | `RobotBuilder` | Prismatic/sliding joint (1 DOF) |
-| Terminal | `.as_continuous(axis)` | `RobotBuilder` | Continuous rotation (no limits) |
-| Terminal | `.as_joint(type, ...)` | `RobotBuilder` | Generic escape hatch |
+| Start | ``link(name)`` | ``LinkBuilder`` | Creates a new link |
+| Config | ``.with_mass(value)`` | ``LinkBuilder`` | Sets mass (kg) |
+| Config | ``.at_origin(xyz, rpy)`` | ``LinkBuilder`` | Sets joint transform |
+| Staging | ``.connect_to(parent, joint_name)`` | ``LinkBuilder`` | Stages parent/joint |
+| Terminal | ``.as_fixed()`` | ``RobotBuilder`` | Fixed joint (0 DOF) |
+| Terminal | ``.as_revolute(axis, limits)`` | ``RobotBuilder`` | Revolute joint (1 DOF) |
+| Terminal | ``.as_prismatic(axis, limits)`` | ``RobotBuilder`` | Prismatic/sliding joint (1 DOF) |
+| Terminal | ``.as_continuous(axis)`` | ``RobotBuilder`` | Continuous rotation (no limits) |
+| Terminal | ``.as_joint(type, ...)`` | ``RobotBuilder`` | Generic escape hatch |
 
 :::{note}
 `connect_to()` **must** be called before any terminal method. Calling a
