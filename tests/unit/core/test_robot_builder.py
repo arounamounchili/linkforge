@@ -24,7 +24,8 @@ class TestRobotBuilder:
         builder = RobotBuilder("mat_test")
         builder.material("red", color=(1, 0, 0, 1))
         assert "red" in builder.robot.materials
-        assert builder.robot.materials["red"].color == (1, 0, 0, 1)
+        assert builder.robot.materials["red"].color.r == 1.0
+        assert builder.robot.materials["red"].color.a == 1.0
 
     def test_link_chaining_and_root(self) -> None:
         """Test the hierarchical link chaining API."""
@@ -332,6 +333,8 @@ class TestRobotBuilder:
         assert any(s.name == "my_gps" for s in robot.sensors)
         assert any(s.name == "custom" for s in robot.sensors)
         cam = next(s for s in robot.sensors if s.name == "my_cam")
+        assert cam.type == SensorType.CAMERA
+        assert cam.camera_info is not None
         assert cam.camera_info.width == 1280
 
         assert len(robot._ros2_controls) == 1

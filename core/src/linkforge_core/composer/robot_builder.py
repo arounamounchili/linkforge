@@ -12,7 +12,7 @@ from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorC
 from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere, Transform, Vector3
 from ..models.joint import Joint, JointLimits, JointType
 from ..models.link import Collision, Inertial, InertiaTensor, Link, Visual
-from ..models.material import Material
+from ..models.material import Color, Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2Control, Ros2ControlJoint
 from ..models.sensor import CameraInfo, GPSInfo, IMUInfo, LidarInfo, Sensor, SensorType
@@ -65,7 +65,8 @@ class RobotBuilder:
         self, name: str, color: tuple[float, float, float, float] | None = None
     ) -> RobotBuilder:
         """Add a global material to the robot."""
-        self.robot.materials[name] = Material(name=name, color=color)
+        color_obj = Color(*color) if color else None
+        self.robot.materials[name] = Material(name=name, color=color_obj)
         return self
 
     def link(self, name: str, parent: str | None = None) -> LinkBuilder:
@@ -85,11 +86,12 @@ class RobotBuilder:
         parameters: dict[str, Any] | None = None,
     ) -> RobotBuilder:
         """Add a ros2_control system configuration."""
+        params = {k: str(v) for k, v in (parameters or {}).items()}
         control = Ros2Control(
             name=name,
             type=control_type,
             hardware_plugin=hardware_plugin,
-            parameters=parameters or {},
+            parameters=params,
         )
         self.robot.add_ros2_control(control)
         return self
@@ -373,7 +375,8 @@ class LinkBuilder:
         parameters: dict[str, Any] | None = None,
     ) -> LinkBuilder:
         """Configure ros2_control interfaces for the current joint."""
-        self._control_interfaces = (command_interfaces, state_interfaces, parameters or {})
+        params = {k: str(v) for k, v in (parameters or {}).items()}
+        self._control_interfaces = (command_interfaces, state_interfaces, params)
         return self
 
     def camera(
