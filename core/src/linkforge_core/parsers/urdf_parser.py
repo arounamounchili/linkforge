@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Any
 
 from ..base import IResourceResolver
-from ..composer.naming import add_joint_with_renaming, add_link_with_renaming
 from ..exceptions import (
     RobotModelError,
     RobotParserIOError,
@@ -744,7 +743,7 @@ class URDFParser(RobotXMLParser[Robot]):
                                 filepath.parent if filepath and filepath.is_file() else filepath
                             ) or Path(".")
                             link = self._parse_link(elem, materials, urdf_dir)
-                            add_link_with_renaming(robot, link)
+                            robot.add_link(link)
                         except (
                             RobotModelError,
                             ValueError,
@@ -765,7 +764,7 @@ class URDFParser(RobotXMLParser[Robot]):
             try:
                 if tag == "joint":
                     joint = self._parse_joint(elem)
-                    add_joint_with_renaming(robot, joint, fallback_name=elem.get("name"))
+                    robot.add_joint(joint)
                 elif tag == "transmission":
                     transmission = self._parse_transmission(elem)
                     if transmission:

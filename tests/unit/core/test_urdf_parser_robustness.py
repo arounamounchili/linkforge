@@ -1,12 +1,10 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from linkforge_core.composer.naming import add_joint_with_renaming, add_link_with_renaming
 from linkforge_core.exceptions import RobotModelError, RobotParserError, XacroDetectedError
-from linkforge_core.models import Joint, Link, Robot
 from linkforge_core.parsers.urdf_parser import URDFParser
 from linkforge_core.parsers.xml_base import RobotXMLParser
 
@@ -75,22 +73,6 @@ def test_xml_base_geometry_error_handling() -> None:
         assert parser._parse_geometry_element(elem) is None
         assert "[INVALID_VALUE]" in mock_logger.warning.call_args[0][0]
         assert "(target: Vector3)" in mock_logger.warning.call_args[0][0]
-
-
-def test_xml_base_robust_joint_addition_errors() -> None:
-    """Verify logging of non-duplicate joint model errors."""
-    parser = MockXMLParser()
-    robot = Robot(name="test")
-    joint = MagicMock(spec=Joint)
-    joint.name = "unstable_joint"
-
-    with (
-        patch("linkforge_core.composer.naming.logger") as mock_logger,
-        patch.object(robot, "add_joint", side_effect=RobotModelError("invalid parent link")),
-    ):
-        add_joint_with_renaming(robot, joint, fallback_name="unstable_joint")
-        assert mock_logger.warning.called
-        assert "invalid parent link" in mock_logger.warning.call_args[0][0]
 
 
 # --- URDF Parser Feature Robustness ---
@@ -224,18 +206,6 @@ def test_urdf_parser_iterative_parsing_robustness(tmp_path) -> None:
     with patch.object(linkforge_core.parsers.urdf_parser, "logger") as mock_logger:
         parser.parse_string(xml)
         assert mock_logger.warning.called
-
-
-def test_urdf_parser_link_renaming_recursive() -> None:
-    """Verify iterative renaming handles multiple sequential collisions."""
-    parser = URDFParser()
-    robot = Robot(name="test")
-    robot.add_link(Link(name="l"))
-    robot.add_link(Link(name="l_duplicate_1"))
-
-    # Adding 'l' again should result in 'l_duplicate_2'
-    add_link_with_renaming(robot, Link(name="l"))
-    assert robot.has_link("l_duplicate_2")
 
 
 def test_urdf_parser_material_naming() -> None:

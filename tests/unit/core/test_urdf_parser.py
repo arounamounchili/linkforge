@@ -4,12 +4,9 @@ from unittest.mock import patch
 
 import pytest
 from linkforge_core.base import RobotParserError, XacroDetectedError
-from linkforge_core.composer.naming import add_joint_with_renaming, add_link_with_renaming
 from linkforge_core.exceptions import (
     RobotModelError,
     RobotParserIOError,
-    RobotValidationError,
-    ValidationErrorCode,
 )
 from linkforge_core.models import (
     Box,
@@ -415,7 +412,7 @@ class TestURDFParser:
             parser.parse_string("<robot>..............</robot>")
 
     def test_urdf_parser_robustness(self) -> None:
-        """Test duplicate name handling."""
+        """Test duplicate name handling (should skip duplicate)."""
         from linkforge_core.parsers.urdf_parser import URDFParser
 
         xml = """
@@ -427,9 +424,8 @@ class TestURDFParser:
         parser = URDFParser()
         robot = parser.parse_string(xml)
 
-        assert len(robot.links) == 2
-        names = {link.name for link in robot.links}
-        assert "link1" in names
+        assert len(robot.links) == 1
+        assert robot.links[0].name == "link1"
 
     def test_parse_sensors_extended(self, parser) -> None:
         """Test parsing various sensor types (lidar, imu, gps, ft, contact)."""
@@ -617,13 +613,13 @@ class TestURDFParser:
         assert len(robot.sensors) == 1
         assert len(robot.gazebo_elements) == 1
 
-    def test_link_duplication_renaming(self, tmp_path) -> None:
-        """Test that duplicate links are renamed."""
+    def test_link_duplication_skipping(self, tmp_path) -> None:
+        """Test that duplicate links are skipped."""
         xml = """
         <robot name="dupe_links">
             <link name="link1"/>
-            <link name="link1"/> <!-- Should become link1_duplicate_1 -->
-            <link name="link1"/> <!-- Should become link1_duplicate_2 -->
+            <link name="link1"/>
+            <link name="link1"/>
         </robot>
         """
         urdf_file = tmp_path / "dupe_link.urdf"
@@ -632,11 +628,11 @@ class TestURDFParser:
         parser = URDFParser()
         robot = parser.parse(urdf_file)
 
-        names = sorted([link.name for link in robot.links])
-        assert names == ["link1", "link1_duplicate_1", "link1_duplicate_2"]
+        assert len(robot.links) == 1
+        assert robot.links[0].name == "link1"
 
-    def test_joint_duplication_renaming(self, tmp_path) -> None:
-        """Test that duplicate joints are renamed."""
+    def test_joint_duplication_skipping(self, tmp_path) -> None:
+        """Test that duplicate joints are skipped."""
         xml = """
         <robot name="dupe_joints">
             <link name="base"/>
@@ -661,8 +657,8 @@ class TestURDFParser:
         parser = URDFParser()
         robot = parser.parse(urdf_file)
 
-        names = sorted([j.name for j in robot.joints])
-        assert names == ["j1", "j1_duplicate_1", "j1_duplicate_2"]
+        assert len(robot.joints) == 1
+        assert robot.joints[0].name == "j1"
 
     def test_xacro_detection_detailed(self, parser, tmp_path) -> None:
         """Test various XACRO artifacts triggering detection."""
@@ -825,34 +821,6 @@ class TestURDFParser:
         ):
             parser.parse_string("<robot name='test'/>")
 
-    def test_joint_renaming_robustness_broken_ref(self) -> None:
-        """Test robustness of joint renaming when duplicates exist AND references are broken."""
-        from unittest.mock import patch
-
-        from linkforge_core.models import Joint, JointType, Robot
-        from linkforge_core.parsers.urdf_parser import URDFParser
-
-        robot = Robot(name="test_robot")
-        parser = URDFParser()
-        elem = ET.Element("joint", name="fixed_joint")
-        joint = Joint(name="fixed_joint", type=JointType.FIXED, parent="p", child="c")
-
-        # We need to simulate the exact conditions to hit the nested exception handler
-        # in _add_joint_with_renaming.
-        # This requires add_joint to fail with "already exists" first (to enter rename loop),
-        # then fail with "not found" (to hit the break).
-
-        with patch.object(robot, "add_joint") as mock_add:
-            mock_add.side_effect = [
-                RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "Already exists"),
-                RobotValidationError(ValidationErrorCode.NOT_FOUND, "Link not found"),
-            ]
-
-            add_joint_with_renaming(robot, joint, fallback_name=elem.get("name"))
-
-            # Should have attempted twice
-            assert mock_add.call_count == 2
-
     def test_parse_material_invalid_color(self, parser) -> None:
         """Test parsing invalid material colors."""
         materials = {}
@@ -1005,64 +973,6 @@ class TestURDFParser:
             pytest.raises(RobotParserError, match="URDF XML"),
         ):
             parser.parse(path)
-
-    def test_add_joint_with_renaming_renaming(self) -> None:
-        """Test robust joint addition with duplicate names."""
-        from unittest.mock import MagicMock
-
-        from linkforge_core.models import Joint, JointType, Robot
-        from linkforge_core.parsers.urdf_parser import URDFParser
-
-        parser = URDFParser()
-        robot = MagicMock(spec=Robot)
-        # Mock existence check for 'j' and 'j_duplicate_1'
-        robot.has_joint.side_effect = lambda name: name in ("j", "j_duplicate_1")
-
-        joint = Joint(name="j", type=JointType.FIXED, parent="p", child="c")
-        joint_elem = ET.Element("joint", name="j")
-
-        # First two names already exist in _joint_index
-        # Third name 'j_duplicate_2' is free
-        robot.add_joint.side_effect = [
-            RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "already exists"),  # j exists
-            RobotValidationError(
-                ValidationErrorCode.DUPLICATE_NAME, "already exists"
-            ),  # j_duplicate_1 exists
-            None,  # Success for j_duplicate_2
-        ]
-
-        add_joint_with_renaming(robot, joint, fallback_name=joint_elem.get("name"))
-
-        assert robot.add_joint.call_count == 3
-
-    def test_add_link_with_renaming_renaming(self) -> None:
-        """Test robust link addition with duplicate names."""
-        from unittest.mock import patch
-
-        from linkforge_core.models import Link, Robot
-        from linkforge_core.parsers.urdf_parser import URDFParser
-
-        parser = URDFParser()
-        robot = Robot(name="test")
-        robot.add_link(Link(name="l"))
-        robot.add_link(Link(name="l_duplicate_1"))
-
-        link = Link(name="l")
-
-        with patch.object(robot, "add_link") as mock_add_link:
-            mock_add_link.side_effect = [
-                RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "Link 'l' already exists"),
-                RobotValidationError(
-                    ValidationErrorCode.DUPLICATE_NAME, "Link 'l_duplicate_1' failed"
-                ),  # Trigger exception inside loop
-                None,  # Succeeds for l_duplicate_2
-            ]
-
-            with patch("linkforge_core.composer.naming.logger") as mock_logger:
-                add_link_with_renaming(robot, link)
-                assert mock_add_link.call_count == 3
-                assert mock_logger.warning.called
-                assert "Renamed duplicate link" in mock_logger.warning.call_args[0][0]
 
 
 class TestURDFParserEdgeCoverage:
