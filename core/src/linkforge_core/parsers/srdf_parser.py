@@ -35,15 +35,31 @@ logger = get_logger(__name__)
 
 @runtime_checkable
 class ITemplateResolver(Protocol):
-    """Protocol for resolving templated XML strings (e.g., XACRO, Jinja)."""
+    """Protocol for resolving templated XML strings (e.g., XACRO, Jinja).
+
+    Implementing this protocol allows the SRDFParser to handle files that
+    require preprocessing before they can be parsed as standard XML.
+    """
 
     def resolve_string(self, xml_string: str) -> str:
-        """Resolve a templated string into plain XML."""
+        """Resolve a templated string into plain XML.
+
+        Args:
+            xml_string: The raw string containing template directives.
+
+        Returns:
+            A resolved XML string ready for parsing.
+        """
         ...
 
 
 class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
-    """Refined SRDF Parser with MoveIt support."""
+    """Semantic Robot Description Format (SRDF) Parser.
+
+    This parser converts SRDF XML content into a structured
+    `SemanticRobotDescription` model. It supports MoveIt-specific tags
+    such as planning groups, end effectors, and collision disabling.
+    """
 
     def __init__(
         self,
@@ -71,7 +87,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         self.template_resolver = template_resolver
 
     def _parse_planning_group(self, group_elem: ET.Element) -> PlanningGroup:
-        """Parse a planning group including its nested components."""
+        """Parse a <group> element into a PlanningGroup model.
+
+        Args:
+            group_elem: The XML element for the group.
+
+        Returns:
+            A populated PlanningGroup instance.
+        """
         name = group_elem.get("name", "unnamed_group")
         links: list[str] = []
         joints: list[str] = []
@@ -102,7 +125,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         )
 
     def _parse_group_state(self, state_elem: ET.Element) -> GroupState:
-        """Parse a named group state."""
+        """Parse a <group_state> element into a GroupState model.
+
+        Args:
+            state_elem: The XML element for the group state.
+
+        Returns:
+            A populated GroupState instance.
+        """
         name = state_elem.get("name", "unnamed_state")
         group = state_elem.get("group", "")
         joint_values: dict[str, float] = {}
@@ -120,7 +150,19 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         content: str,
         **kwargs: Any,
     ) -> SemanticRobotDescription:
-        """Parse SRDF from string into a SemanticRobotDescription model."""
+        """Parse SRDF content from a string.
+
+        Args:
+            content: The raw SRDF XML string.
+            **kwargs: Additional options for future extensions.
+
+        Returns:
+            A SemanticRobotDescription model representing the SRDF.
+
+        Raises:
+            RobotParserUnexpectedError: If the XML is malformed.
+            RobotParserXMLRootError: If the root tag is not <robot>.
+        """
         # Handle templating resolution
         if self.template_resolver is not None:
             content = self.template_resolver.resolve_string(content)
@@ -146,7 +188,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         return semantic
 
     def _parse_elements(self, root: ET.Element) -> SemanticRobotDescription:
-        """Internal helper to parse all SRDF elements from root."""
+        """Iterate through the XML root and parse all supported SRDF tags.
+
+        Args:
+            root: The <robot> XML root element.
+
+        Returns:
+            A SemanticRobotDescription containing all parsed elements.
+        """
         virtual_joints: list[VirtualJoint] = []
         groups: list[PlanningGroup] = []
         group_states: list[GroupState] = []
@@ -178,7 +227,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         )
 
     def _parse_virtual_joint_elem(self, elem: ET.Element) -> VirtualJoint:
-        """Parse virtual_joint element."""
+        """Parse a <virtual_joint> element.
+
+        Args:
+            elem: The XML element.
+
+        Returns:
+            A VirtualJoint model.
+        """
         return VirtualJoint(
             name=elem.get("name", "unnamed_vj"),
             type=elem.get("type", "fixed"),
@@ -187,7 +243,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         )
 
     def _parse_end_effector_elem(self, elem: ET.Element) -> EndEffector:
-        """Parse end_effector element."""
+        """Parse an <end_effector> element.
+
+        Args:
+            elem: The XML element.
+
+        Returns:
+            An EndEffector model.
+        """
         return EndEffector(
             name=elem.get("name", "unnamed_ee"),
             group=elem.get("group", ""),
@@ -196,7 +259,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         )
 
     def _parse_disable_collisions_elem(self, elem: ET.Element) -> DisabledCollision:
-        """Parse disable_collisions element."""
+        """Parse a <disable_collisions> element.
+
+        Args:
+            elem: The XML element.
+
+        Returns:
+            A DisabledCollision model.
+        """
         return DisabledCollision(
             link1=elem.get("link1", ""),
             link2=elem.get("link2", ""),
@@ -204,7 +274,18 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         )
 
     def parse(self, filepath: Path, **kwargs: Any) -> SemanticRobotDescription:
-        """Parse SRDF from file."""
+        """Load and parse an SRDF file from disk.
+
+        Args:
+            filepath: Path to the .srdf file.
+            **kwargs: Passed to parse_string.
+
+        Returns:
+            A SemanticRobotDescription model.
+
+        Raises:
+            RobotParserIOError: If the file is missing or exceeds max_file_size.
+        """
         if not filepath.exists():
             raise RobotParserIOError(filepath=filepath, reason="Missing file")
 
