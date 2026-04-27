@@ -1,7 +1,22 @@
 """RobotBuilder API for LinkForge.
 
-This module implements the 'Composer' which allows for both macro-assembly
-(merging sub-robots) and micro-construction (programmatic link/joint building).
+This module implements the 'Composer' layer—the primary interface for
+programmatically defining, assembling, and merging robots.
+
+The API uses a **Fluent Builder Pattern** that allows for intuitive,
+hierarchical construction of robot trees (links and joints) as well as
+high-level assembly of pre-existing sub-components.
+
+Example:
+    >>> builder = RobotBuilder("my_robot")
+    >>> (
+    ...     builder.link("base_link")
+    ...     .visual(box(1, 1, 1))
+    ...     .child("arm")
+    ...         .revolute(axis=(0, 0, 1), limits=(0, 3.14))
+    ...         .commit()
+    ... )
+    >>> robot = builder.build()
 """
 
 from __future__ import annotations
@@ -20,6 +35,8 @@ from ..models.sensor import CameraInfo, GPSInfo, IMUInfo, LidarInfo, Sensor, Sen
 from ..models.srdf import EndEffector, GroupState, VirtualJoint
 from ..models.transmission import Transmission
 from ..physics.inertia import calculate_inertia
+
+# --- Geometry Helpers ---
 
 
 def box(x: float, y: float, z: float) -> Box:
@@ -45,16 +62,20 @@ def mesh(resource: str, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> 
 class RobotBuilder:
     """A high-level API to compose robots programmatically.
 
-    Attributes:
-        robot: The underlying robot model being composed.
+    This class serves as the entry point for building robots. It can create
+    new robots from scratch or modify existing ones by adding links or
+    attaching sub-components.
     """
 
     def __init__(self, name: str | None = None, robot: Robot | None = None) -> None:
         """Initialize a new robot builder.
 
         Args:
-            name: Name of the new robot (if creating from scratch).
+            name: Name of the new robot (required if robot is None).
             robot: Existing robot model to build upon.
+
+        Raises:
+            RobotModelError: If neither name nor robot is provided.
         """
         if robot is not None:
             self.robot = robot
@@ -63,64 +84,19 @@ class RobotBuilder:
         else:
             raise RobotModelError("Either name or robot must be provided")  # noqa: TRY003
 
-    def material(
-        self, name: str, color: tuple[float, float, float, float] | None = None
-    ) -> RobotBuilder:
-        """Add a global material to the robot."""
-        color_obj = Color(*color) if color else None
-        self.robot.materials[name] = Material(name=name, color=color_obj)
-        return self
+    # --- Core Construction ---
 
     def link(self, name: str, parent: str | None = None) -> LinkBuilder:
-        """Start building a new link.
+        """Start building a new link programmatically.
 
         Args:
             name: Unique name for the link.
-            parent: Optional parent link name to connect to.
+            parent: Optional parent link name to connect to immediately.
+
+        Returns:
+            A LinkBuilder instance for fluent construction.
         """
         return LinkBuilder(self, name, parent=parent)
-
-    def ros2_control(
-        self,
-        name: str,
-        hardware_plugin: str,
-        control_type: str = "system",
-        parameters: dict[str, Any] | None = None,
-    ) -> RobotBuilder:
-        """Add a ros2_control system configuration."""
-        params = {k: str(v) for k, v in (parameters or {}).items()}
-        control = Ros2Control(
-            name=name,
-            type=control_type,
-            hardware_plugin=hardware_plugin,
-            parameters=params,
-        )
-        self.robot.add_ros2_control(control)
-        return self
-
-    def virtual_joint(
-        self, name: str, child_link: str, parent_frame: str = "world", joint_type: str = "fixed"
-    ) -> RobotBuilder:
-        """Add a virtual joint (SRDF)."""
-        vj = VirtualJoint(
-            name=name, type=joint_type, parent_frame=parent_frame, child_link=child_link
-        )
-        self.robot.semantic.virtual_joints.append(vj)
-        return self
-
-    def group_state(self, name: str, group: str, values: dict[str, float]) -> RobotBuilder:
-        """Add a group state (pose) for a MoveIt group."""
-        gs = GroupState(name=name, group=group, joint_values=values)
-        self.robot.semantic.group_states.append(gs)
-        return self
-
-    def end_effector(
-        self, name: str, group: str, parent_link: str, parent_group: str | None = None
-    ) -> RobotBuilder:
-        """Add an end effector definition (SRDF)."""
-        ee = EndEffector(name=name, group=group, parent_link=parent_link, parent_group=parent_group)
-        self.robot.semantic.end_effectors.append(ee)
-        return self
 
     def attach(
         self,
@@ -133,7 +109,21 @@ class RobotBuilder:
         axis: Vector3 | None = None,
         limits: JointLimits | None = None,
     ) -> RobotBuilder:
-        """Attach a sub-robot component to the current assembly."""
+        """Merge a sub-robot component into the current assembly.
+
+        Args:
+            component: The robot model to attach.
+            at_link: The link in the current assembly to attach to.
+            joint_name: Name of the joint connecting the assembly to the component.
+            prefix: Optional prefix for all elements in the component.
+            joint_type: Type of the connecting joint (default: FIXED).
+            origin: Optional transform for the joint.
+            axis: Optional joint axis.
+            limits: Optional joint limits.
+
+        Returns:
+            The RobotBuilder instance for chaining.
+        """
         self.robot.merge(
             component=component,
             at_link=at_link,
@@ -146,6 +136,74 @@ class RobotBuilder:
         )
         return self
 
+    # --- System Setup ---
+
+    def material(
+        self, name: str, color: tuple[float, float, float, float] | None = None
+    ) -> RobotBuilder:
+        """Define a global material that can be reused by multiple links.
+
+        Args:
+            name: Unique material name.
+            color: RGBA color as (r, g, b, a).
+
+        Returns:
+            The RobotBuilder instance.
+        """
+        color_obj = Color(*color) if color else None
+        self.robot.materials[name] = Material(name=name, color=color_obj)
+        return self
+
+    def ros2_control(
+        self,
+        name: str,
+        hardware_plugin: str,
+        control_type: str = "system",
+        parameters: dict[str, Any] | None = None,
+    ) -> RobotBuilder:
+        """Add a global ros2_control system configuration.
+
+        Args:
+            name: Unique system name.
+            hardware_plugin: The hardware interface plugin (e.g. 'fake_components/GenericSystem').
+            control_type: Type of control (usually 'system').
+            parameters: Key-value parameters for the hardware interface.
+
+        Returns:
+            The RobotBuilder instance.
+        """
+        params = {k: str(v) for k, v in (parameters or {}).items()}
+        control = Ros2Control(
+            name=name,
+            type=control_type,
+            hardware_plugin=hardware_plugin,
+            parameters=params,
+        )
+        self.robot.add_ros2_control(control)
+        return self
+
+    # --- Semantic Setup (SRDF) ---
+
+    def virtual_joint(
+        self, name: str, child_link: str, parent_frame: str = "world", joint_type: str = "fixed"
+    ) -> RobotBuilder:
+        """Define a virtual joint connecting the robot to the world frame.
+
+        Args:
+            name: Unique joint name.
+            child_link: The root link of the robot.
+            parent_frame: The external frame (e.g., 'world', 'map').
+            joint_type: Joint type (fixed, floating, planar).
+
+        Returns:
+            The RobotBuilder instance.
+        """
+        vj = VirtualJoint(
+            name=name, type=joint_type, parent_frame=parent_frame, child_link=child_link
+        )
+        self.robot.semantic.virtual_joints.append(vj)
+        return self
+
     def add_group(
         self,
         name: str,
@@ -153,30 +211,108 @@ class RobotBuilder:
         joints: list[str] | None = None,
         chains: list[tuple[str, str]] | None = None,
     ) -> RobotBuilder:
-        """Add a planning group for MoveIt."""
+        """Add a planning group for MoveIt motion planning.
+
+        Args:
+            name: Unique group name (e.g., 'arm', 'gripper').
+            links: List of link names in the group.
+            joints: List of joint names in the group.
+            chains: List of (base_link, tip_link) tuples.
+
+        Returns:
+            The RobotBuilder instance.
+        """
         self.robot.add_group(name=name, links=links, joints=joints, chains=chains)
         return self
 
+    def group_state(self, name: str, group: str, values: dict[str, float]) -> RobotBuilder:
+        """Define a named pose (group state) for a planning group.
+
+        Args:
+            name: Unique pose name (e.g., 'home', 'ready').
+            group: The target planning group.
+            values: Map of joint names to their target positions.
+
+        Returns:
+            The RobotBuilder instance.
+        """
+        gs = GroupState(name=name, group=group, joint_values=values)
+        self.robot.semantic.group_states.append(gs)
+        return self
+
+    def end_effector(
+        self, name: str, group: str, parent_link: str, parent_group: str | None = None
+    ) -> RobotBuilder:
+        """Define an end effector for MoveIt.
+
+        Args:
+            name: Unique name for the end effector.
+            group: The planning group representing the end effector.
+            parent_link: The link it is attached to.
+            parent_group: Optional parent group (e.g. 'arm').
+
+        Returns:
+            The RobotBuilder instance.
+        """
+        ee = EndEffector(name=name, group=group, parent_link=parent_link, parent_group=parent_group)
+        self.robot.semantic.end_effectors.append(ee)
+        return self
+
     def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> RobotBuilder:
-        """Disable collision checking between two links."""
+        """Instruct MoveIt to ignore collisions between two specific links.
+
+        Args:
+            link1: First link name.
+            link2: Second link name.
+            reason: Why collisions are disabled (default: 'Adjacent').
+
+        Returns:
+            The RobotBuilder instance.
+        """
         self.robot.disable_collisions(link1=link1, link2=link2, reason=reason)
         return self
 
+    # --- Finalization & Export ---
+
+    def build(self) -> Robot:
+        """Finalize the building process and return the Robot model.
+
+        Returns:
+            The completed Robot model.
+        """
+        return self.robot
+
     def export_urdf(self, validate: bool = True, pretty_print: bool = True) -> str:
-        """Export the assembled robot to URDF XML."""
+        """Generate the URDF XML representation of the robot.
+
+        Args:
+            validate: Whether to run kinematic and physical validation.
+            pretty_print: Whether to format the XML with indentation.
+
+        Returns:
+            A URDF XML string.
+        """
         return self.robot.export_urdf(validate=validate, pretty_print=pretty_print)
 
     def export_srdf(self, validate: bool = True, pretty_print: bool = True) -> str:
-        """Export the assembled semantic description to SRDF XML."""
-        return self.robot.export_srdf(validate=validate, pretty_print=pretty_print)
+        """Generate the SRDF XML representation of the robot.
 
-    def build(self) -> Robot:
-        """Return the completed Robot model."""
-        return self.robot
+        Args:
+            validate: Whether to validate the semantic description.
+            pretty_print: Whether to format the XML with indentation.
+
+        Returns:
+            An SRDF XML string.
+        """
+        return self.robot.export_srdf(validate=validate, pretty_print=pretty_print)
 
 
 class LinkBuilder:
-    """Staged fluent builder for programmatic link and joint construction."""
+    """Staged fluent builder for programmatic link and joint construction.
+
+    This builder accumulates link and joint properties in stages. It is usually
+    returned by builder.link() or link_builder.child().
+    """
 
     def __init__(
         self,
@@ -185,6 +321,7 @@ class LinkBuilder:
         parent: str | None = None,
         joint_name: str | None = None,
     ) -> None:
+        """Initialize a new LinkBuilder. Internal use only."""
         self._builder = builder
         self._link = Link(name=name)
         self._name = name
@@ -200,12 +337,15 @@ class LinkBuilder:
         self._control_interfaces: tuple[list[str], list[str], dict[str, Any]] | None = None
         self._committed = False
 
+        # Link physical state
         self._mass: float | None = None
         self._inertia: InertiaTensor | None = None
         self._inertial_origin: Transform | None = None
         self._visuals: list[Visual] = []
         self._collisions: list[Collision] = []
         self._sensors: list[Sensor] = []
+
+    # --- Physical Body ---
 
     def visual(
         self,
@@ -215,7 +355,18 @@ class LinkBuilder:
         material: str | Material | None = None,
         name: str | None = None,
     ) -> LinkBuilder:
-        """Add a visual element to the link."""
+        """Add a visual representation to the link.
+
+        Args:
+            geometry: Shape of the visual (e.g., box(), cylinder()).
+            xyz: Translation relative to the link frame.
+            rpy: Rotation (roll-pitch-yaw) in radians.
+            material: Material name or Material object.
+            name: Optional name for this visual element.
+
+        Returns:
+            The LinkBuilder instance for chaining.
+        """
         origin = Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy))
         mat = self._builder.robot.materials.get(material) if isinstance(material, str) else material
         self._link.add_visual(Visual(geometry=geometry, origin=origin, material=mat, name=name))
@@ -228,9 +379,19 @@ class LinkBuilder:
         rpy: tuple[float, float, float] | None = None,
         name: str | None = None,
     ) -> LinkBuilder:
-        """Add a collision element to the link.
+        """Add a collision geometry to the link.
 
-        If no geometry is provided, it clones the last visual element's geometry and origin.
+        If no arguments are provided, it automatically clones the last added
+        visual element's geometry and origin.
+
+        Args:
+            geometry: Shape of the collision element.
+            xyz: Translation relative to the link frame.
+            rpy: Rotation relative to the link frame.
+            name: Optional name for this collision element.
+
+        Returns:
+            The LinkBuilder instance.
         """
         if geometry is None:
             if not self._link.visuals:
@@ -259,7 +420,20 @@ class LinkBuilder:
         origin_rpy: tuple[float, float, float] | None = None,
         inertia: InertiaTensor | None = None,
     ) -> LinkBuilder:
-        """Set the mass and optional inertial properties."""
+        """Define the mass and center of gravity for the link.
+
+        If no inertia is provided, LinkForge will automatically calculate the
+        inertia tensor based on the link's geometry and mass during commit().
+
+        Args:
+            value: Mass in kilograms.
+            origin_xyz: Position of the center of mass.
+            origin_rpy: Orientation of the principal axes of inertia.
+            inertia: Optional manual InertiaTensor.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._mass = value
         if inertia:
             self._inertia = inertia
@@ -273,16 +447,34 @@ class LinkBuilder:
     def inertia(
         self, ixx: float, iyy: float, izz: float, ixy: float = 0, ixz: float = 0, iyz: float = 0
     ) -> LinkBuilder:
-        """Manually set the inertia tensor."""
+        """Manually specify the inertia tensor components.
+
+        Args:
+            ixx, iyy, izz: Moments of inertia.
+            ixy, ixz, iyz: Products of inertia.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._inertia = InertiaTensor(ixx=ixx, iyy=iyy, izz=izz, ixy=ixy, ixz=ixz, iyz=iyz)
         return self
+
+    # --- Joint Configuration ---
 
     def at_origin(
         self,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
-        """Set the joint origin (transform from parent to child)."""
+        """Set the transform from the parent link to this link's frame.
+
+        Args:
+            xyz: Translation as (x, y, z).
+            rpy: Rotation as (roll, pitch, yaw).
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._joint_origin = Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy))
         return self
 
@@ -292,7 +484,16 @@ class LinkBuilder:
         xyz: tuple[float, float, float] | None = None,
         rpy: tuple[float, float, float] | None = None,
     ) -> LinkBuilder:
-        """Set joint type to FIXED."""
+        """Configure the connection as a FIXED joint.
+
+        Args:
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._joint_type = JointType.FIXED
         return self._configure_joint(name, xyz, rpy)
 
@@ -304,7 +505,18 @@ class LinkBuilder:
         xyz: tuple[float, float, float] | None = None,
         rpy: tuple[float, float, float] | None = None,
     ) -> LinkBuilder:
-        """Set joint type to REVOLUTE."""
+        """Configure the connection as a REVOLUTE (limited rotation) joint.
+
+        Args:
+            axis: Rotation axis unit vector.
+            limits: (lower, upper) joint limits in radians.
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._joint_type = JointType.REVOLUTE
         self._joint_axis = Vector3(*axis)
         self._joint_limits = JointLimits(lower=limits[0], upper=limits[1], effort=0, velocity=0)
@@ -317,7 +529,17 @@ class LinkBuilder:
         xyz: tuple[float, float, float] | None = None,
         rpy: tuple[float, float, float] | None = None,
     ) -> LinkBuilder:
-        """Set joint type to CONTINUOUS."""
+        """Configure the connection as a CONTINUOUS (unlimited rotation) joint.
+
+        Args:
+            axis: Rotation axis unit vector.
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._joint_type = JointType.CONTINUOUS
         self._joint_axis = Vector3(*axis)
         return self._configure_joint(name, xyz, rpy)
@@ -330,7 +552,18 @@ class LinkBuilder:
         xyz: tuple[float, float, float] | None = None,
         rpy: tuple[float, float, float] | None = None,
     ) -> LinkBuilder:
-        """Set joint type to PRISMATIC."""
+        """Configure the connection as a PRISMATIC (linear sliding) joint.
+
+        Args:
+            axis: Translation axis unit vector.
+            limits: (lower, upper) joint limits in meters.
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._joint_type = JointType.PRISMATIC
         self._joint_axis = Vector3(*axis)
         self._joint_limits = JointLimits(lower=limits[0], upper=limits[1], effort=0, velocity=0)
@@ -351,6 +584,8 @@ class LinkBuilder:
             )
         return self
 
+    # --- Control & Actuation ---
+
     def transmission(
         self,
         reduction: float = 1.0,
@@ -358,7 +593,17 @@ class LinkBuilder:
         actuator: str | None = None,
         name: str | None = None,
     ) -> LinkBuilder:
-        """Configure a transmission for the current joint."""
+        """Define a transmission (mechanical reduction) for the current joint.
+
+        Args:
+            reduction: Mechanical reduction ratio.
+            interface: Hardware interface (effort, position, velocity).
+            actuator: Optional name for the actuator.
+            name: Optional transmission name.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._transmission_params = {
             "reduction": reduction,
             "interface": interface,
@@ -373,10 +618,21 @@ class LinkBuilder:
         state_interfaces: list[str],
         parameters: dict[str, Any] | None = None,
     ) -> LinkBuilder:
-        """Configure ros2_control interfaces for the current joint."""
+        """Configure ros2_control interfaces for the current joint.
+
+        Args:
+            command_interfaces: List of allowed commands (e.g. ['position']).
+            state_interfaces: List of exposed states (e.g. ['position', 'velocity']).
+            parameters: Key-value parameters for the joint control.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         params = {k: str(v) for k, v in (parameters or {}).items()}
         self._control_interfaces = (command_interfaces, state_interfaces, params)
         return self
+
+    # --- Sensors ---
 
     def camera(
         self,
@@ -387,7 +643,17 @@ class LinkBuilder:
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
-        """Attach a camera sensor to this link."""
+        """Attach a camera sensor to this link.
+
+        Args:
+            name: Unique sensor name.
+            fov: Horizontal field of view in radians.
+            width, height: Resolution in pixels.
+            xyz, rpy: Position/Orientation relative to link frame.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         info = CameraInfo(horizontal_fov=fov, width=width, height=height)
         sensor = Sensor(
             name=name,
@@ -408,7 +674,17 @@ class LinkBuilder:
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
-        """Attach a lidar sensor to this link."""
+        """Attach a 1D/2D lidar sensor to this link.
+
+        Args:
+            name: Unique sensor name.
+            range_min, range_max: Distance limits in meters.
+            samples: Number of rays per scan.
+            xyz, rpy: Position/Orientation relative to link frame.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         info = LidarInfo(range_min=range_min, range_max=range_max, horizontal_samples=samples)
         sensor = Sensor(
             name=name,
@@ -427,7 +703,16 @@ class LinkBuilder:
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
-        """Attach an IMU sensor to this link."""
+        """Attach an IMU (Inertial Measurement Unit) to this link.
+
+        Args:
+            name: Unique sensor name.
+            update_rate: Sampling rate in Hz.
+            xyz, rpy: Position/Orientation relative to link frame.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         sensor = Sensor(
             name=name,
             type=SensorType.IMU,
@@ -446,7 +731,16 @@ class LinkBuilder:
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
-        """Attach a GPS sensor to this link."""
+        """Attach a GPS sensor to this link.
+
+        Args:
+            name: Unique sensor name.
+            update_rate: Sampling rate in Hz.
+            xyz, rpy: Position/Orientation relative to link frame.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         sensor = Sensor(
             name=name,
             type=SensorType.GPS,
@@ -459,22 +753,43 @@ class LinkBuilder:
         return self
 
     def sensor(self, sensor: Sensor) -> LinkBuilder:
-        """Attach a pre-configured sensor to this link."""
+        """Attach a pre-configured Sensor object to this link.
+
+        Returns:
+            The LinkBuilder instance.
+        """
         self._sensors.append(replace(sensor, link_name=self._name))
         return self
 
+    # --- Navigation & Lifecycle ---
+
     def child(self, name: str, joint_name: str | None = None) -> LinkBuilder:
-        """Finalize this link and start a new child link."""
+        """Finalize this link and start building a new child link attached to it.
+
+        Returns:
+            A new LinkBuilder instance for the child link.
+        """
         self._commit()
         return LinkBuilder(self._builder, name, parent=self._link.name, joint_name=joint_name)
 
     def commit(self) -> RobotBuilder:
-        """Finalize this link and return to the RobotBuilder."""
+        """Finalize this link and return to the main RobotBuilder.
+
+        Returns:
+            The parent RobotBuilder instance.
+        """
         self._commit()
         return self._builder
 
     def root(self) -> RobotBuilder:
-        """Finalize this link as the root (no joint) and return to RobotBuilder."""
+        """Finalize this link as the robot's root link (no joint).
+
+        Raises:
+            RobotValidationError: If the link already has a parent assigned.
+
+        Returns:
+            The parent RobotBuilder instance.
+        """
         if self._parent:
             raise RobotValidationError(
                 ValidationErrorCode.GENERIC_FAILURE,
@@ -484,12 +799,16 @@ class LinkBuilder:
         return self.commit()
 
     def build(self) -> Robot:
-        """Finalize this link and return the completed Robot model."""
+        """Finalize this link and return the completed Robot model.
+
+        Returns:
+            The completed Robot model.
+        """
         self._commit()
         return self._builder.build()
 
     def _commit(self) -> None:
-        """Internal method to flush staged link/joint to the Robot model."""
+        """Internal method to flush staged properties to the Robot model."""
         if self._committed:
             return
         # 1. Handle Inertial properties
