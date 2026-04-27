@@ -797,12 +797,14 @@ class LinkBuilder:
                 source_geometry = None
                 source_origin = Transform.identity()
 
-                if self._link.visuals:
-                    source_geometry = self._link.visuals[0].geometry
-                    source_origin = self._link.visuals[0].origin
-                elif self._link.collisions:
+                if self._link.collisions:
+                    # Prioritize collision geometry for inertia as it represents the physical volume
                     source_geometry = self._link.collisions[0].geometry
                     source_origin = self._link.collisions[0].origin
+                elif self._link.visuals:
+                    # Fallback to visual geometry if no collisions are defined
+                    source_geometry = self._link.visuals[0].geometry
+                    source_origin = self._link.visuals[0].origin
 
                 if source_geometry:
                     self._inertia = calculate_inertia(source_geometry, self._mass)

@@ -259,6 +259,22 @@ class TestRobotBuilder:
         assert link.inertial is not None
         assert link.inertial.inertia.ixx == pytest.approx(2.0)
 
+    def test_inertia_priority_collision(self) -> None:
+        """Verify inertia calculation prioritizes collision over visual geometry."""
+        robot = (
+            RobotBuilder("priority_test")
+            .link("l1")
+            .visual(box(1, 1, 1))
+            .collision(box(0.1, 0.1, 0.1))
+            .mass(12.0)
+            .root()
+            .build()
+        )
+        link = robot.link("l1")
+        assert link.inertial is not None
+        # Expect 0.02 (collision-based) rather than 2.0 (visual-based)
+        assert link.inertial.inertia.ixx == pytest.approx(0.02)
+
     def test_explicit_joint_naming(self) -> None:
         """Test providing explicit names for all joint types."""
         builder = RobotBuilder("name_test")
