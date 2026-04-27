@@ -144,7 +144,7 @@ class TestRobotBuilder:
         builder = RobotBuilder("srdf_test")
         builder.link("l1").root().link("l2", parent="l1").commit()
 
-        builder.add_group("my_group", links=["l1", "l2"])
+        builder.group("my_group", links=["l1", "l2"])
         builder.disable_collisions("l1", "l2", reason="Adjacent")
 
         assert len(builder.robot.semantic.groups) == 1
@@ -348,7 +348,7 @@ class TestRobotBuilder:
         builder = RobotBuilder("srdf")
         builder.link("base").root().link("tool", parent="base").commit()
 
-        builder.add_group("arm", links=["base", "tool"])
+        builder.group("arm", links=["base", "tool"])
         builder.group_state("home", "arm", {"base_to_tool": 0.0})
         builder.end_effector("gripper", "arm", "tool")
         builder.virtual_joint("world_joint", "base", "world", "fixed")

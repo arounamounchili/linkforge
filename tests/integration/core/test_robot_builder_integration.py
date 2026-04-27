@@ -32,7 +32,7 @@ def test_full_robot_build_and_export():
     )
 
     # 3. Add Semantic info
-    builder.add_group("arm_group", links=["base", "arm_1"], joints=["base_to_arm_1"])
+    builder.group("arm_group", links=["base", "arm_1"], joints=["base_to_arm_1"])
     builder.end_effector("my_hand", group="arm_group", parent_link="hand")
     builder.virtual_joint("world_fix", child_link="base")
 

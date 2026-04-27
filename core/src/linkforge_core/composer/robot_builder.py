@@ -195,7 +195,7 @@ class RobotBuilder:
         self.robot.semantic.virtual_joints.append(vj)
         return self
 
-    def add_group(
+    def group(
         self,
         name: str,
         links: list[str] | None = None,
