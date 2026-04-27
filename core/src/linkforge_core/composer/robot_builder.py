@@ -736,6 +736,9 @@ class LinkBuilder:
     def sensor(self, sensor: Sensor) -> LinkBuilder:
         """Attach a pre-configured Sensor object to this link.
 
+        Args:
+            sensor: Pre-configured Sensor model.
+
         Returns:
             The LinkBuilder instance.
         """
@@ -744,6 +747,10 @@ class LinkBuilder:
 
     def child(self, name: str, joint_name: str | None = None) -> LinkBuilder:
         """Finalize this link and start building a new child link attached to it.
+
+        Args:
+            name: Name of the new child link.
+            joint_name: Optional explicit name for the connecting joint.
 
         Returns:
             A new LinkBuilder instance for the child link.
