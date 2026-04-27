@@ -31,7 +31,7 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v4
         with:
-          just-version: '1.50.0'
+          just-version: '1.49.0'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
@@ -65,7 +65,7 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v4
         with:
-          just-version: '1.50.0'
+          just-version: '1.49.0'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
