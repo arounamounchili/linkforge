@@ -24,8 +24,10 @@ class TestRobotBuilder:
         builder = RobotBuilder("mat_test")
         builder.material("red", color=(1, 0, 0, 1))
         assert "red" in builder.robot.materials
-        assert builder.robot.materials["red"].color.r == 1.0
-        assert builder.robot.materials["red"].color.a == 1.0
+        material = builder.robot.materials["red"]
+        assert material.color is not None
+        assert material.color.r == 1.0
+        assert material.color.a == 1.0
 
     def test_link_chaining_and_root(self) -> None:
         """Test the hierarchical link chaining API."""
