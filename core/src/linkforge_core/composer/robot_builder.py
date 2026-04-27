@@ -7,7 +7,7 @@ The API uses a **Fluent Builder Pattern** that allows for intuitive,
 hierarchical construction of robot trees (links and joints) as well as
 high-level assembly of pre-existing sub-components.
 
-Example:
+Examples:
     >>> builder = RobotBuilder("my_robot")
     >>> (
     ...     builder.link("base_link")
@@ -88,7 +88,6 @@ class RobotBuilder:
         Args:
             name: Unique name for the link.
             parent: Optional parent link name to connect to immediately.
-
         Returns:
             A LinkBuilder instance for fluent construction.
         """

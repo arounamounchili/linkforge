@@ -46,7 +46,6 @@ class ITemplateResolver(Protocol):
 
         Args:
             xml_string: The raw string containing template directives.
-
         Returns:
             A resolved XML string ready for parsing.
         """
@@ -57,7 +56,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
     """Semantic Robot Description Format (SRDF) Parser.
 
     This parser converts SRDF XML content into a structured
-    `SemanticRobotDescription` model. It supports MoveIt-specific tags
+    ``SemanticRobotDescription`` model. It supports MoveIt-specific tags
     such as planning groups, end effectors, and collision disabling.
     """
 
@@ -91,7 +90,6 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Args:
             group_elem: The XML element for the group.
-
         Returns:
             A populated PlanningGroup instance.
         """

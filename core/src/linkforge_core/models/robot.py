@@ -47,7 +47,7 @@ class Robot:
     Note:
         Uses O(1) hash map lookups for links and joints via internal indices.
         The kinematic structure (parent-child tree) is managed via the
-        `graph` property.
+        ``graph`` property.
     """
 
     name: str
@@ -204,7 +204,7 @@ class Robot:
         name collisions.
 
         Args:
-            prefix: The string prefix to prepend (e.g., 'arm_').
+            prefix: The string prefix to prepend (e.g., ``arm_``).
         """
         if not prefix:
             return
@@ -648,7 +648,7 @@ class Robot:
     def links(self) -> tuple[Link, ...]:
         """Get read-only view of links.
 
-        Use `add_link()` to modify the robot structure.
+        Use ``add_link()`` to modify the robot structure.
         """
         return tuple(self._links)
 
@@ -656,7 +656,7 @@ class Robot:
     def joints(self) -> tuple[Joint, ...]:
         """Get read-only view of joints.
 
-        Use `add_joint()` to modify the robot structure.
+        Use ``add_joint()`` to modify the robot structure.
         """
         return tuple(self._joints)
 
