@@ -371,9 +371,33 @@ class Robot:
         """Get link by name - O(1) lookup."""
         return self._link_index.get(name)
 
+    def link(self, name: str) -> Link:
+        """Get link by name, raising error if not found."""
+        link_obj = self.get_link(name)
+        if link_obj is None:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Link '{name}' not found in robot '{self.name}'",
+                target="Link",
+                value=name,
+            )
+        return link_obj
+
     def get_joint(self, name: str) -> Joint | None:
         """Get joint by name - O(1) lookup."""
         return self._joint_index.get(name)
+
+    def joint(self, name: str) -> Joint:
+        """Get joint by name, raising error if not found."""
+        joint_obj = self.get_joint(name)
+        if joint_obj is None:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Joint '{name}' not found in robot '{self.name}'",
+                target="Joint",
+                value=name,
+            )
+        return joint_obj
 
     def has_link(self, name: str) -> bool:
         """Check if a link with the given name exists in the robot."""

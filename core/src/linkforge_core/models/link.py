@@ -150,14 +150,14 @@ class Link:
             self._collisions.extend(initial_collisions)
 
     @property
-    def visuals(self) -> Sequence[Visual]:
+    def visuals(self) -> list[Visual]:
         """Get visual representations."""
-        return tuple(self._visuals)
+        return list(self._visuals)
 
     @property
-    def collisions(self) -> Sequence[Collision]:
+    def collisions(self) -> list[Collision]:
         """Get collision representations."""
-        return tuple(self._collisions)
+        return list(self._collisions)
 
     def add_visual(self, visual: Visual) -> None:
         """Add a visual representation."""

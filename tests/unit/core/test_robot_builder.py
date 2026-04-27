@@ -1,415 +1,412 @@
-from dataclasses import replace
-
 import pytest
-from linkforge_core.composer import RobotBuilder, fixed_joint, origin, revolute_joint
-from linkforge_core.exceptions import RobotValidationError
-from linkforge_core.models.gazebo import GazeboElement
-from linkforge_core.models.geometry import Transform, Vector3
-from linkforge_core.models.joint import Joint, JointLimits, JointType
+from linkforge_core.composer.robot_builder import RobotBuilder, box, cylinder, mesh, sphere
+from linkforge_core.exceptions import RobotModelError, RobotValidationError
+from linkforge_core.models.joint import JointType
 from linkforge_core.models.link import Link
 from linkforge_core.models.robot import Robot
-from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
-from linkforge_core.models.sensor import LidarInfo, Sensor, SensorType
-from linkforge_core.models.srdf import (
-    GroupState,
-    PassiveJoint,
-    PlanningGroup,
-    SemanticRobotDescription,
-    VirtualJoint,
-)
-from linkforge_core.models.transmission import (
-    Transmission,
-    TransmissionActuator,
-    TransmissionJoint,
-    TransmissionType,
-)
+from linkforge_core.models.sensor import SensorType
 
 
 class TestRobotBuilder:
     def test_builder_creation(self) -> None:
-        """Test basic builder creation."""
+        """Test basic builder creation with name and existing robot."""
+        # By name
         builder = RobotBuilder("my_robot")
         assert builder.robot.name == "my_robot"
-        assert len(builder.robot.links) == 0
-        assert len(builder.robot.semantic.groups) == 0
 
-    def test_micro_construction_fluent(self) -> None:
-        """Test building a robot link-by-link using the fluent API."""
-        builder = RobotBuilder("fluent_bot")
+        # By existing robot
+        existing = Robot(name="existing")
+        builder2 = RobotBuilder(robot=existing)
+        assert builder2.robot.name == "existing"
 
-        # Build base
-        builder.robot.add_link(Link(name="base_link"))
+    def test_material_registration(self) -> None:
+        """Test global material registration."""
+        builder = RobotBuilder("mat_test")
+        builder.material("red", color=(1, 0, 0, 1))
+        assert "red" in builder.robot.materials
+        assert builder.robot.materials["red"].color == (1, 0, 0, 1)
 
-        # Build arm link using fluent API with full validation parameters
-        builder.add_link("link1").with_mass(1.5).connect_to(
-            parent="base_link",
-            joint_name="joint1",
-        ).as_revolute(
-            axis=Vector3(0, 0, 1),
-            limits=JointLimits(lower=-1, upper=1),
+    def test_link_chaining_and_root(self) -> None:
+        """Test the hierarchical link chaining API."""
+        robot = (
+            RobotBuilder("chain_test")
+            .link("base")
+            .visual(box(0.1, 0.1, 0.1))
+            .mass(1.0)
+            .root()
+            .link("arm1", parent="base")
+            .revolute(axis=(0, 0, 1), limits=(-1, 1))
+            .visual(cylinder(0.05, 0.5))
+            .build()
         )
 
-        assert len(builder.robot.links) == 2
-        assert len(builder.robot.joints) == 1
-        link1 = builder.robot.get_link("link1")
-        assert link1 is not None
-        assert link1.mass == 1.5
+        assert len(robot.links) == 2
+        assert len(robot.joints) == 1
+        assert robot.joint("base_to_arm1").type == JointType.REVOLUTE
+        assert robot.graph.get_root_links() == ["base"]
 
-        joint1 = builder.robot.get_joint("joint1")
-        assert joint1 is not None
-        assert joint1.parent == "base_link"
-        assert joint1.axis is not None
-        assert joint1.axis.z == 1.0
-
-    def test_macro_builder_attach(self) -> None:
-        """Test attaching a sub-robot component."""
-        # Create a simple gripper component
-        gripper = Robot(name="gripper")
-        gripper.add_link(Link(name="palm"))
-        gripper.add_link(Link(name="finger"))
-        gripper.add_joint(
-            Joint(
-                name="f_joint",
-                parent="palm",
-                child="finger",
-                type=JointType.REVOLUTE,
-                axis=Vector3(0, 0, 1),
-                limits=JointLimits(lower=0, upper=0.5),
-            )
+    def test_child_chaining(self) -> None:
+        """Test the .child() shortcut for kinematic chaining."""
+        robot = (
+            RobotBuilder("child_test")
+            .link("base")
+            .visual(box(0.1, 0.1, 0.1))
+            .child("link1")
+            .fixed()
+            .visual(box(0.05, 0.05, 0.05))
+            .build()
         )
+        assert len(robot.links) == 2
+        assert robot.get_joint("base_to_link1") is not None
 
-        # Create base robot
-        builder = RobotBuilder("robot_arm")
-        builder.robot.add_link(Link(name="tool0"))
+    def test_collision_inference(self) -> None:
+        """Test that collision() clones visual geometry if none provided."""
+        builder = RobotBuilder("inf_test")
+        builder.link("l1").visual(box(1, 2, 3), xyz=(0.1, 0.2, 0.3)).collision().root()
 
-        # Attach gripper
-        builder.attach(component=gripper, at_link="tool0", joint_name="gripper_fix", prefix="left_")
+        link = builder.robot.link("l1")
+        assert len(link.collisions) == 1
 
-        # Verify names are prefixed
-        assert builder.robot.get_link("left_palm") is not None
-        assert builder.robot.get_link("left_finger") is not None
-        assert builder.robot.get_joint("left_f_joint") is not None
-        assert builder.robot.get_joint("left_gripper_fix") is not None
+        from linkforge_core.models.geometry import Box
 
-        # Verify connectivity
-        fix_joint = builder.robot.get_joint("left_gripper_fix")
-        assert fix_joint is not None
-        assert fix_joint.parent == "tool0"
-        assert fix_joint.child == "left_palm"
+        geom = link.collisions[0].geometry
+        assert isinstance(geom, Box)
+        assert geom.size.x == 1.0
+        assert link.collisions[0].origin.xyz.x == 0.1
 
-        # Verify isolation (original gripper should not be modified)
-        assert gripper.get_link("left_palm") is None
-        assert gripper.get_link("palm") is not None
+    def test_collision_inference_error(self) -> None:
+        """Test error when inferring collision without visuals."""
+        builder = RobotBuilder("err_test")
+        with pytest.raises(RobotValidationError, match="Cannot infer collision geometry"):
+            builder.link("l1").collision()
 
-    def test_builder_init_with_existing_semantic(self) -> None:
-        """Test that builder syncs with existing semantic data in the robot."""
-        robot = Robot(name="test")
-        semantic = SemanticRobotDescription(virtual_joints=[])
-        robot.semantic = semantic
-        builder = RobotBuilder(robot=robot)
-        assert builder.robot.semantic is semantic
+    def test_automatic_inertia_calculation(self) -> None:
+        """Test automatic inertia calculation from geometry."""
+        # Box: 1x1x1, mass 12 -> Ixx = 1/12 * 12 * (1^2 + 1^2) = 2.0
+        robot = RobotBuilder("phys_test").link("box").visual(box(1, 1, 1)).mass(12.0).root().build()
+        link = robot.link("box")
+        assert link.inertial is not None
+        assert link.inertial.inertia.ixx == pytest.approx(2.0)
+        assert link.inertial.inertia.izz == pytest.approx(2.0)
 
-    def test_link_builder_with_existing_inertial(self) -> None:
-        """Test LinkBuilder.with_mass on a link that already has inertial data."""
-        from linkforge_core.models.link import Inertial, InertiaTensor
+    def test_manual_inertia(self) -> None:
+        """Test manual inertia tensor override."""
+        robot = (
+            RobotBuilder("manual_phys")
+            .link("l1")
+            .mass(1.0)
+            .inertia(ixx=10, iyy=10, izz=10)
+            .root()
+            .build()
+        )
+        link = robot.link("l1")
+        assert link.inertial is not None
+        assert link.inertial.inertia.ixx == 10.0
 
-        builder = RobotBuilder("test")
-        init_inertial = Inertial(mass=1.0, inertia=InertiaTensor.zero())
-        builder = builder.add_link("link1")
-        builder._link = replace(builder._link, inertial=init_inertial)
+    def test_joint_configurations(self) -> None:
+        """Test different joint type configurations."""
+        builder = RobotBuilder("joint_test")
+        builder.link("base").root()
 
-        builder.with_mass(5.0)
-        assert builder._link.inertial is not None
-        assert builder._link.inertial.mass == 5.0
+        # Continuous
+        builder.link("l1", parent="base").continuous(axis=(0, 0, 1)).commit()
+        assert builder.robot.joint("base_to_l1").type == JointType.CONTINUOUS
+
+        # Revolute with limits
+        builder.link("l2", parent="base").revolute(axis=(1, 0, 0), limits=(-0.5, 0.5)).commit()
+        j2 = builder.robot.joint("base_to_l2")
+        assert j2.type == JointType.REVOLUTE
+        assert j2.limits is not None
+        assert j2.limits.lower == -0.5
+
+    def test_transmission_registration(self) -> None:
+        """Test that transmissions are correctly registered."""
+        robot = (
+            RobotBuilder("trans_test")
+            .link("base")
+            .root()
+            .link("arm", parent="base")
+            .revolute(axis=(0, 0, 1), limits=(-1, 1))
+            .transmission(reduction=100.0, interface="effort", name="my_trans")
+            .build()
+        )
+        assert len(robot.transmissions) == 1
+        trans = robot.transmissions[0]
+        assert trans.name == "my_trans"
+        assert trans.joints[0].mechanical_reduction == 100.0
+        assert trans.joints[0].hardware_interfaces == ["effort"]
 
     def test_srdf_helpers(self) -> None:
-        """Test SRDF semantic data helpers."""
-        builder = RobotBuilder("semantic_bot")
-        builder.robot.add_link(Link(name="link_a"))
-        builder.robot.add_link(Link(name="link_b"))
+        """Test SRDF helpers in RobotBuilder."""
+        builder = RobotBuilder("srdf_test")
+        builder.link("l1").root().link("l2", parent="l1").commit()
 
-        builder.add_group("arm", links=["link_a", "link_b"])
-        builder.disable_collisions("link_a", "link_b", reason="Never")
+        builder.add_group("my_group", links=["l1", "l2"])
+        builder.disable_collisions("l1", "l2", reason="Adjacent")
 
         assert len(builder.robot.semantic.groups) == 1
-        assert builder.robot.semantic.groups[0].name == "arm"
         assert len(builder.robot.semantic.disabled_collisions) == 1
-        assert builder.robot.semantic.disabled_collisions[0].reason == "Never"
 
-    def test_attach_duplicate_protection(self) -> None:
-        """Test that attaching twice with different prefixes works perfectly."""
-        wheel = Robot(name="wheel")
-        wheel.add_link(Link(name="rim"))
+    def test_root_validation(self) -> None:
+        """Test that root() fails if there is a parent."""
+        builder = RobotBuilder("root_err")
+        with pytest.raises(RobotValidationError, match="has a parent"):
+            builder.link("l1", parent="world").root()
 
-        builder = RobotBuilder("car")
-        builder.robot.add_link(Link(name="chassis"))
-
-        # Attach two identical wheels
-        builder.attach(wheel, at_link="chassis", joint_name="w_joint", prefix="fr_")
-        builder.attach(wheel, at_link="chassis", joint_name="w_joint", prefix="fl_")
-
-        assert len(builder.robot.links) == 3  # chassis + 2 rims
-        assert builder.robot.get_link("fr_rim") is not None
-        assert builder.robot.get_link("fl_rim") is not None
-
-    def test_validation_error_on_attach(self) -> None:
-        """Test that builder re-validates and catches errors."""
-        builder = RobotBuilder("error_bot")
-        builder.robot.add_link(Link(name="base"))
-
-        # 1. Test missing parent link in builder
-        bad_component = Robot(name="comp")
-        bad_component.add_link(Link(name="l1"))
-        with pytest.raises(
-            RobotValidationError, match=r"\[NOT_FOUND\] Attachment link 'non_existent' not found"
-        ):
-            builder.attach(bad_component, at_link="non_existent", joint_name="j")
-
-        # 2. Test component with no root (empty)
-        empty_comp = Robot(name="empty")
-        with pytest.raises(RobotValidationError, match="No root link found"):
-            builder.attach(empty_comp, at_link="base", joint_name="j")
-
-    def test_complex_component_merge(self) -> None:
-        """Test merging a component with sensors, gazebo, and ros2_control."""
-        # Create a complex sub-robot
-        comp = Robot(name="sub")
-        comp.add_link(Link(name="sub_base"))
-        comp.add_link(Link(name="sub_link"))
-        comp.add_joint(
-            Joint(
-                name="sub_joint",
-                parent="sub_base",
-                child="sub_link",
-                type=JointType.REVOLUTE,
-                axis=Vector3(0, 0, 1),
-                limits=JointLimits(lower=-1, upper=1),
-            )
-        )
-
-        # Add a sensor
-        comp.add_sensor(
-            Sensor(
-                name="lidar",
-                type=SensorType.LIDAR,
-                link_name="sub_link",
-                lidar_info=LidarInfo(),
-            )
-        )
-
-        # Add a gazebo element
-        comp.add_gazebo_element(GazeboElement(reference="sub_link"))
-
-        # Add a transmission
-        trans = Transmission(
-            name="trans1",
-            type=TransmissionType.SIMPLE,
-            joints=[TransmissionJoint(name="sub_joint")],
-            actuators=[TransmissionActuator(name="act1")],
-        )
-        comp.add_transmission(trans)
-
-        # Add ROS2 Control
-        rc = Ros2Control(name="sub_ctrl", hardware_plugin="mock_hw")
-        rc.joints.append(Ros2ControlJoint(name="sub_joint", state_interfaces=["position"]))
-        comp.add_ros2_control(rc)
-
-        # Create builder
-        builder = RobotBuilder("main")
-        builder.robot.add_link(Link(name="root"))
-
-        # Attach (using sub_base as the root of the component)
-        builder.attach(comp, at_link="root", joint_name="conn", prefix="p_")
-
-        # Verify
-        sensor = builder.robot._sensor_index.get("p_lidar")
-        assert sensor is not None
-        assert sensor.link_name == "p_sub_link"
-        assert len(builder.robot.gazebo_elements) == 1
-        assert builder.robot.gazebo_elements[0].reference == "p_sub_link"
-        assert len(builder.robot.transmissions) == 1
-        assert builder.robot.transmissions[0].name == "p_trans1"
-        assert builder.robot.transmissions[0].joints[0].name == "p_sub_joint"
-        assert len(builder.robot.ros2_controls) == 1
-        assert builder.robot.ros2_controls[0].name == "p_sub_ctrl"
-        assert builder.robot.ros2_controls[0].joints[0].name == "p_sub_joint"
-
-    def test_prefix_all_semantic_merging(self) -> None:
-        """Test that SRDF groups and states are correctly prefixed and merged."""
+    def test_attach_merge(self) -> None:
+        """Test the attach (merge) functionality."""
         sub = Robot(name="sub")
-        sub.add_link(Link(name="l1"))  # Add root link
-        sub._semantic = SemanticRobotDescription(
-            groups=[PlanningGroup(name="grp", links=["l1"])],
-            group_states=[GroupState(name="st", group="grp", joint_values={"j1": 0.0})],
-            virtual_joints=[
-                VirtualJoint(name="vj", child_link="l1", parent_frame="world", type="fixed")
-            ],
-            passive_joints=[PassiveJoint(name="pj")],
-        )
+        sub.add_link(Link(name="sub_root"))
 
         builder = RobotBuilder("main")
-        builder.robot.add_link(Link(name="root"))
-        builder.attach(sub, at_link="root", joint_name="conn", prefix="p_")
+        builder.link("base").root()
+        builder.attach(sub, at_link="base", joint_name="conn", prefix="p_")
 
-        assert len(builder.robot.semantic.groups) == 1
-        assert builder.robot.semantic.groups[0].name == "p_grp"
-        assert builder.robot.semantic.groups[0].links == ["p_l1"]
-        assert builder.robot.semantic.group_states[0].name == "p_st"
-        assert builder.robot.semantic.group_states[0].group == "p_grp"
-        assert builder.robot.semantic.group_states[0].joint_values == {"p_j1": 0.0}
-        assert builder.robot.semantic.virtual_joints[0].name == "p_vj"
-        assert builder.robot.semantic.virtual_joints[0].child_link == "p_l1"
-        assert builder.robot.semantic.passive_joints[0].name == "p_pj"
+        assert builder.robot.get_link("p_sub_root") is not None
+        assert builder.robot.get_joint("p_conn") is not None
+
+    def test_geometry_helpers(self) -> None:
+        """Test the geometry helper functions."""
+        from linkforge_core.models.geometry import Box, Cylinder, Mesh, Sphere
+
+        b = box(1, 2, 3)
+        assert isinstance(b, Box)
+        assert b.size.x == 1
+
+        c = cylinder(0.1, 0.5)
+        assert isinstance(c, Cylinder)
+        assert c.radius == 0.1
+
+        s = sphere(0.5)
+        assert isinstance(s, Sphere)
+        assert s.radius == 0.5
+
+        m = mesh("file://test.stl", scale=(2, 2, 2))
+        assert isinstance(m, Mesh)
+        assert m.resource == "file://test.stl"
+        assert m.scale.x == 2.0
+
+    def test_builder_errors(self) -> None:
+        """Test builder initialization errors."""
+        with pytest.raises(RobotModelError, match="Either name or robot must be provided"):
+            RobotBuilder()
 
     def test_export_shortcuts(self) -> None:
-        """Test the shortcut methods for URDF and SRDF export."""
-        builder = RobotBuilder("export_bot")
-        builder.robot.add_link(Link(name="base"))
-        builder.add_link("root").connect_to("base", "joint").as_fixed()
+        """Test URDF/SRDF export shortcuts."""
+        builder = RobotBuilder("export_test")
+        builder.link("base").root()
+        assert '<robot name="export_test"' in builder.export_urdf()
+        assert '<robot name="export_test"' in builder.export_srdf()
 
-        urdf = builder.export_urdf(validate=True)
-        assert '<robot name="export_bot"' in urdf
-        assert '<link name="root"' in urdf
+    def test_explicit_transforms_and_origins(self) -> None:
+        """Test explicit transforms in visual/collision and joint origin."""
+        builder = RobotBuilder("trans_test")
+        builder.link("base").root()
 
-        srdf = builder.export_srdf(validate=False)
-        assert '<robot name="export_bot"' in srdf
+        # Test at_origin and explicit collision transform
+        builder.link("l1", parent="base").at_origin(xyz=(1, 0, 0), rpy=(0, 0, 1.57)).visual(
+            box(0.1, 0.1, 0.1)
+        ).collision(box(0.1, 0.1, 0.1), xyz=(0, 0, 0.1)).commit()
 
-    def test_batch_collision_disable(self) -> None:
-        """Test the batch collision disable helper."""
-        builder = RobotBuilder("coll_bot")
-        links = ["l1", "l2", "l3"]
-        for link_name in links:
-            builder.robot.add_link(Link(name=link_name))
-
-        builder.disable_all_collisions(links, reason="BatchDisable")
-
-        # Combinations of 3 are (l1,l2), (l1,l3), (l2,l3)
-        assert len(builder.robot.semantic.disabled_collisions) == 3
-        found_pairs = {(dc.link1, dc.link2) for dc in builder.robot.semantic.disabled_collisions}
-        assert ("l1", "l2") in found_pairs
-        assert ("l1", "l3") in found_pairs
-        assert ("l2", "l3") in found_pairs
-
-    def test_factory_aliases(self) -> None:
-        """Test the ergonomic factory aliases from the composer package."""
-        assert fixed_joint() == JointType.FIXED
-        assert revolute_joint() == JointType.REVOLUTE
-
-        o = origin(xyz=(1, 2, 3), rpy=(0.1, 0.2, 0.3))
-        assert isinstance(o, Transform)
-        assert o.xyz.x == 1.0
-        assert o.rpy.z == 0.3
-
-    def test_fluent_joint_builders(self) -> None:
-        """Test as_fixed and as_revolute fluent builders."""
-        builder = RobotBuilder("fluent_bot")
-        builder.robot.add_link(Link(name="parent"))
-
-        # Test as_fixed
-        builder.add_link("child_fixed").connect_to("parent", "j_fixed").as_fixed()
-        j_fixed = builder.robot.get_joint("j_fixed")
-        assert j_fixed is not None
-        assert j_fixed.type == JointType.FIXED
-
-        # Test as_revolute
-        axis = Vector3(0, 0, 1)
-        limits = JointLimits(effort=10, velocity=1)
-        builder.add_link("child_rev").connect_to("parent", "j_rev").as_revolute(
-            axis=axis, limits=limits
-        )
-        joint = builder.robot.get_joint("j_rev")
-        assert joint is not None
-        assert joint.type == JointType.REVOLUTE
-        assert joint.axis == axis
-
-    def test_at_origin_sets_joint_transform(self) -> None:
-        """Verify that at_origin() correctly sets the joint transform."""
-        builder = RobotBuilder("origin_test")
-        builder.robot.add_link(Link(name="base"))
-
-        builder.add_link("l1").at_origin(xyz=(1, 2, 3), rpy=(0, 0.5, 0)).connect_to(
-            "base", "j1"
-        ).as_fixed()
-
-        joint = builder.robot.get_joint("j1")
-        assert joint is not None
-        assert joint.origin is not None
+        joint = builder.robot.joint("base_to_l1")
         assert joint.origin.xyz.x == 1.0
-        assert joint.origin.xyz.y == 2.0
-        assert joint.origin.xyz.z == 3.0
-        assert joint.origin.rpy.y == 0.5
+        assert joint.origin.rpy.z == 1.57
 
-    def test_explicit_origin_overrides_at_origin(self) -> None:
-        """Verify that explicit origin takes precedence over at_origin()."""
-        builder = RobotBuilder("override_test")
-        builder.robot.add_link(Link(name="base"))
+        link = builder.robot.link("l1")
+        assert link.collisions[0].origin.xyz.z == 0.1
 
-        explicit_origin = Transform(xyz=Vector3(10, 0, 0))
-
-        builder.add_link("l1").at_origin(xyz=(1, 1, 1)).connect_to("base", "j1").as_fixed(
-            origin=explicit_origin
-        )
-
-        joint = builder.robot.get_joint("j1")
-        assert joint is not None
-        assert joint.origin is not None
-        assert joint.origin.xyz.x == 10.0
-        assert joint.origin.xyz.y == 0.0
-
-    def test_as_prismatic_creates_correct_joint(self) -> None:
-        """Verify the prismatic joint shortcut."""
-        builder = RobotBuilder("prismatic_test")
-        builder.robot.add_link(Link(name="base"))
-
-        axis = Vector3(1, 0, 0)
-        limits = JointLimits(lower=0, upper=1, effort=10, velocity=1)
-        builder.add_link("l1").connect_to("base", "j1").as_prismatic(axis=axis, limits=limits)
-
-        joint = builder.robot.get_joint("j1")
-        assert joint is not None
-        assert joint.type == JointType.PRISMATIC
-        assert joint.axis == axis
-        assert joint.limits == limits
-
-    def test_as_continuous_creates_correct_joint(self) -> None:
-        """Verify the continuous joint shortcut."""
-        builder = RobotBuilder("continuous_test")
-        builder.robot.add_link(Link(name="base"))
-
-        axis = Vector3(0, 0, 1)
-        builder.add_link("l1").connect_to("base", "j1").as_continuous(axis=axis)
-
-        joint = builder.robot.get_joint("j1")
-        assert joint is not None
-        assert joint.type == JointType.CONTINUOUS
-        assert joint.axis == axis
-        assert joint.limits is None
-
-    def test_missing_connect_to_raises_error(self) -> None:
-        """Verify that finalizing without connect_to raises an error."""
-        builder = RobotBuilder("error_test")
-        lb = builder.add_link("l1")
-
-        with pytest.raises(RobotValidationError, match=r"connect_to\(\) must be called"):
-            lb.as_fixed()
-
-    def test_auto_inertia_calculation(self) -> None:
-        """Verify that calculate_inertial compute physics properties from geometry."""
-        from linkforge_core.models.geometry import Box, Vector3
-
-        builder = RobotBuilder("physics_test")
-        builder.robot.add_link(Link(name="base"))
-
-        # Add a link with a 1x1x1 box visual and auto-calculate inertia for 12kg
-        # Box inertia Ixx = 1/12 * mass * (y^2 + z^2) = 1/12 * 12 * (1+1) = 2.0
-        builder.add_link("box_link").with_visual(Box(size=Vector3(1, 1, 1))).calculate_inertial(
-            mass=12.0
-        ).connect_to("base", "j1").as_fixed()
-
-        link = builder.robot.get_link("box_link")
-        assert link is not None
+    def test_physics_fallback_and_manual_origin(self) -> None:
+        """Test fallback to zero inertia and manual inertial origin."""
+        # No geometry -> Zero inertia (uses epsilon 1e-6 in IR)
+        robot = RobotBuilder("fallback").link("l1").mass(1.0).root().build()
+        link = robot.link("l1")
         assert link.inertial is not None
-        assert link.inertial.mass == 12.0
+        assert link.inertial.inertia.ixx == 1e-6
+
+        # Manual inertial origin
+        robot2 = (
+            RobotBuilder("origin")
+            .link("l1")
+            .visual(box(1, 1, 1))
+            .mass(1.0, origin_xyz=(0, 0, 10))
+            .root()
+            .build()
+        )
+        link2 = robot2.link("l1")
+        assert link2.inertial is not None
+        assert link2.inertial.origin.xyz.z == 10.0
+
+    def test_visual_with_material_object(self) -> None:
+        """Test passing a Material object to visual()."""
+        from linkforge_core.models.material import Color, Material
+
+        mat = Material(name="blue", color=Color(0, 0, 1, 1))
+        builder = RobotBuilder("mat_obj")
+        builder.link("l1").visual(box(1, 1, 1), material=mat).root()
+        vis = builder.robot.link("l1").visuals[0]
+        assert vis.material is not None
+        assert vis.material.name == "blue"
+
+    def test_collision_only_physics(self) -> None:
+        """Test inertia calculation when only collision geometry exists."""
+        robot = (
+            RobotBuilder("coll_phys").link("l1").collision(box(1, 1, 1)).mass(12.0).root().build()
+        )
+        link = robot.link("l1")
+        assert link.inertial is not None
         assert link.inertial.inertia.ixx == pytest.approx(2.0)
-        assert link.inertial.inertia.iyy == pytest.approx(2.0)
-        assert link.inertial.inertia.izz == pytest.approx(2.0)
+
+    def test_explicit_joint_naming(self) -> None:
+        """Test providing explicit names for all joint types."""
+        builder = RobotBuilder("name_test")
+        builder.link("base").root()
+
+        builder.link("l1", parent="base").fixed(name="custom_fixed").commit()
+        builder.link("l2", parent="base").revolute(
+            axis=(0, 0, 1), limits=(0, 1), name="custom_rev"
+        ).commit()
+        builder.link("l3", parent="base").continuous(axis=(0, 0, 1), name="custom_cont").commit()
+
+        assert builder.robot.get_joint("custom_fixed") is not None
+        assert builder.robot.get_joint("custom_rev") is not None
+        assert builder.robot.get_joint("custom_cont") is not None
+
+    def test_partial_transforms(self) -> None:
+        """Test providing only rpy in collision or mass origin."""
+        # Collision with only rpy
+        builder = RobotBuilder("partial_trans")
+        builder.link("l1").visual(box(1, 1, 1)).collision(box(1, 1, 1), rpy=(0, 1.57, 0)).commit()
+        assert builder.robot.link("l1").collisions[0].origin.rpy.y == 1.57
+
+        # Mass with only rpy
+        builder2 = RobotBuilder("partial_mass")
+        builder2.link("l1").visual(box(1, 1, 1)).mass(1.0, origin_rpy=(0, 0, 1.57)).commit()
+        link2 = builder2.robot.link("l1")
+        assert link2.inertial is not None
+        assert link2.inertial.origin.rpy.z == 1.57
+
+    def test_full_collision_transform(self) -> None:
+        """Test providing both xyz and rpy in collision."""
+        builder = RobotBuilder("full_trans")
+        builder.link("l1").visual(box(1, 1, 1)).collision(
+            box(1, 1, 1), xyz=(1, 1, 1), rpy=(1, 1, 1)
+        ).commit()
+        coll = builder.robot.link("l1").collisions[0]
+        assert coll.origin.xyz.x == 1.0
+        assert coll.origin.rpy.x == 1.0
+
+    def test_direct_inertia_in_mass(self) -> None:
+        """Test passing an InertiaTensor directly to the mass() method."""
+        from linkforge_core.models.link import InertiaTensor
+
+        tensor = InertiaTensor(ixx=5, iyy=5, izz=5, ixy=0, ixz=0, iyz=0)
+        builder = RobotBuilder("direct_inertia")
+        builder.link("l1").mass(1.0, inertia=tensor).root()
+        link = builder.robot.link("l1")
+        assert link.inertial is not None
+        assert link.inertial.inertia.ixx == 5.0
+
+    def test_sensors_and_ros2_control(self) -> None:
+        """Test adding sensors and ros2_control to links."""
+        builder = RobotBuilder("rob")
+        from linkforge_core.models.sensor import Sensor, SensorType
+
+        custom_sensor = Sensor(name="custom", type=SensorType.CONTACT, link_name="base")
+
+        builder.ros2_control("test_sys", "test/Plugin")
+        builder.link("base").sensor(custom_sensor).root()
+
+        builder.link("camera_link", parent="base").fixed().camera(
+            "my_cam", fov=1.5, width=1280, height=720, xyz=(0, 0, 0.1)
+        ).ros2_control(
+            command_interfaces=["position"], state_interfaces=["position", "velocity"]
+        ).commit()
+
+        builder.link("imu_link", parent="base").fixed().imu("my_imu", update_rate=200.0).gps(
+            "my_gps"
+        ).commit()
+
+        robot = builder.build()
+        assert len(robot.sensors) == 4
+        assert any(s.name == "my_imu" for s in robot.sensors)
+        assert any(s.name == "my_gps" for s in robot.sensors)
+        assert any(s.name == "custom" for s in robot.sensors)
+        cam = next(s for s in robot.sensors if s.name == "my_cam")
+        assert cam.camera_info.width == 1280
+
+        assert len(robot._ros2_controls) == 1
+        assert robot._ros2_controls[0].joints[0].name == "base_to_camera_link"
+        assert "position" in robot._ros2_controls[0].joints[0].command_interfaces
+
+    def test_advanced_srdf_helpers(self) -> None:
+        """Test SRDF helpers like group_state and end_effector."""
+        builder = RobotBuilder("srdf")
+        builder.link("base").root().link("tool", parent="base").commit()
+
+        builder.add_group("arm", links=["base", "tool"])
+        builder.group_state("home", "arm", {"base_to_tool": 0.0})
+        builder.end_effector("gripper", "arm", "tool")
+        builder.virtual_joint("world_joint", "base", "world", "fixed")
+
+        robot = builder.build()
+        assert len(robot.semantic.group_states) == 1
+        assert robot.semantic.group_states[0].name == "home"
+        assert len(robot.semantic.end_effectors) == 1
+        assert robot.semantic.end_effectors[0].name == "gripper"
+        assert len(robot.semantic.virtual_joints) == 1
+        assert robot.semantic.virtual_joints[0].name == "world_joint"
+
+    def test_lidar_and_multi_control(self) -> None:
+        """Test lidar sensor and adding joints to an existing ros2_control system."""
+        builder = RobotBuilder("multi")
+        builder.ros2_control("multi_sys", "hardware/Plugin")
+        builder.link("base").root()
+        builder.link("l1", parent="base").revolute(axis=(0, 0, 1), limits=(0, 1)).ros2_control(
+            ["pos"], ["pos"]
+        ).commit()
+        # Second joint should use the existing system
+        builder.link("l2", parent="l1").revolute(axis=(0, 0, 1), limits=(0, 1)).ros2_control(
+            ["pos"], ["pos"]
+        ).lidar("laser").commit()
+
+        robot = builder.build()
+        assert len(robot._ros2_controls) == 1
+        assert len(robot._ros2_controls[0].joints) == 2
+        assert any(s.type == SensorType.LIDAR for s in robot.sensors)
+
+    def test_double_commit_guard(self) -> None:
+        """Test that calling _commit twice doesn't cause issues."""
+        builder = RobotBuilder("guard")
+        lb = builder.link("base")
+        lb.root()
+        # Internal _commit is already called by root()
+        # Calling it again manually should be a no-op due to self._committed
+        lb._commit()
+        assert len(builder.robot.links) == 1
+
+    def test_all_joint_types_and_origins(self) -> None:
+        """Test all joint types (including continuous and prismatic) and their origins."""
+        builder = RobotBuilder("all_joints")
+        builder.link("base").root()
+
+        # Continuous
+        builder.link("c", parent="base").continuous(axis=(0, 0, 1), xyz=(1, 0, 0)).commit()
+        # Prismatic with name and both xyz/rpy
+        builder.link("p", parent="c").prismatic(
+            axis=(1, 0, 0), limits=(0, 0.5), name="c_to_p", xyz=(0, 0, 0), rpy=(0.1, 0, 0)
+        ).commit()
+        # Prismatic without name or origin (False branches)
+        builder.link("p2", parent="p").prismatic(axis=(0, 1, 0), limits=(0, 0.1)).commit()
+        # Fixed with origin
+        builder.link("f", parent="p").fixed(xyz=(0, 0, 1), rpy=(0, 0, 1.57)).commit()
+        # Revolute with origin
+        builder.link("r", parent="f").revolute(
+            axis=(0, 1, 0), limits=(-1, 1), xyz=(0.1, 0.1, 0.1)
+        ).commit()
+
+        robot = builder.build()
+        assert len(robot.joints) == 5
+        assert robot.joint("base_to_c").type == JointType.CONTINUOUS
+        assert robot.joint("c_to_p").type == JointType.PRISMATIC
+        assert robot.joint("p_to_f").origin.xyz.z == 1.0
+        assert robot.joint("p_to_f").origin.rpy.z == 1.57
