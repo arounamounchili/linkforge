@@ -93,7 +93,23 @@ class Robot:
         initial_gazebo_elements: Sequence[GazeboElement] | None = None,
         initial_semantic: SemanticRobotDescription | None = None,
     ) -> None:
-        """Initialize and index the robot structure."""
+        """Initialize and index the robot structure.
+
+        This method validates the robot name and populates the internal
+        storage with any components provided during instantiation.
+
+        Args:
+            initial_links: Links to add to the robot.
+            initial_joints: Joints connecting the links.
+            initial_sensors: Attached sensors (Lidar, Camera, etc.).
+            initial_transmissions: Mechanical transmission definitions.
+            initial_ros2_controls: Hardware interface configurations.
+            initial_gazebo_elements: Simulation-specific metadata.
+            initial_semantic: MoveIt/SRDF semantic metadata.
+
+        Raises:
+            RobotValidationError: If the robot name is empty or invalid.
+        """
         if not self.name:
             raise RobotValidationError(
                 ValidationErrorCode.NAME_EMPTY,
@@ -136,7 +152,14 @@ class Robot:
         self._reindex()
 
     def _reindex(self) -> None:
-        """Rebuild internal lookup indices and clear cache."""
+        """Rebuild internal lookup indices and clear cache.
+
+        This is an internal maintenance method that ensures the O(1)
+        lookup maps stay in sync with the list-based storage.
+
+        Raises:
+            RobotValidationError: If duplicate link or joint names are detected.
+        """
         # Validate link names and build index
         self._link_index = {}
         for link in self._links:
@@ -173,7 +196,16 @@ class Robot:
         return copy.deepcopy(self)
 
     def prefix_all(self, prefix: str) -> None:
-        """Add a prefix to all links, joints, sensors, and related elements."""
+        """Add a namespace prefix to all components in the robot.
+
+        This is a recursive operation that updates names for links, joints,
+        sensors, transmissions, ros2_control interfaces, and semantic data.
+        It is primarily used during 'RobotBuilder.attach()' to prevent
+        name collisions.
+
+        Args:
+            prefix: The string prefix to prepend (e.g., 'arm_').
+        """
         if not prefix:
             return
 
@@ -368,11 +400,28 @@ class Robot:
         return self.resource_resolver.resolve(uri, relative_to=relative_to)
 
     def get_link(self, name: str) -> Link | None:
-        """Get link by name - O(1) lookup."""
+        """Retrieve a link by name using the internal index.
+
+        Args:
+            name: The name of the link to find.
+
+        Returns:
+            The Link object if found, otherwise None.
+        """
         return self._link_index.get(name)
 
     def link(self, name: str) -> Link:
-        """Get link by name, raising error if not found."""
+        """Retrieve a link by name, raising an error if it does not exist.
+
+        Args:
+            name: The name of the link to find.
+
+        Returns:
+            The Link object.
+
+        Raises:
+            RobotValidationError: If the link is not found.
+        """
         link_obj = self.get_link(name)
         if link_obj is None:
             raise RobotValidationError(
@@ -384,11 +433,28 @@ class Robot:
         return link_obj
 
     def get_joint(self, name: str) -> Joint | None:
-        """Get joint by name - O(1) lookup."""
+        """Retrieve a joint by name using the internal index.
+
+        Args:
+            name: The name of the joint to find.
+
+        Returns:
+            The Joint object if found, otherwise None.
+        """
         return self._joint_index.get(name)
 
     def joint(self, name: str) -> Joint:
-        """Get joint by name, raising error if not found."""
+        """Retrieve a joint by name, raising an error if it does not exist.
+
+        Args:
+            name: The name of the joint to find.
+
+        Returns:
+            The Joint object.
+
+        Raises:
+            RobotValidationError: If the joint is not found.
+        """
         joint_obj = self.get_joint(name)
         if joint_obj is None:
             raise RobotValidationError(
@@ -423,7 +489,15 @@ class Robot:
             return [joint for joint in self.joints if joint.child == link_name]
 
     def add_sensor(self, sensor: Sensor) -> None:
-        """Add a sensor to the robot and update indices."""
+        """Attach a sensor to the robot model.
+
+        Args:
+            sensor: The Sensor object to add.
+
+        Raises:
+            RobotValidationError: If the sensor name is a duplicate or
+                referenced link does not exist.
+        """
         if sensor.name in self._sensor_index:
             raise RobotValidationError(
                 ValidationErrorCode.DUPLICATE_NAME,
@@ -445,7 +519,15 @@ class Robot:
         self._sensor_index[sensor.name] = sensor
 
     def add_transmission(self, transmission: Transmission) -> None:
-        """Add a transmission to the robot."""
+        """Define a mechanical transmission for one or more joints.
+
+        Args:
+            transmission: The Transmission definition to add.
+
+        Raises:
+            RobotValidationError: If the transmission name is a duplicate
+                or referenced joints do not exist.
+        """
         if any(t.name == transmission.name for t in self._transmissions):
             raise RobotValidationError(
                 ValidationErrorCode.DUPLICATE_NAME,
@@ -467,7 +549,14 @@ class Robot:
         self._transmissions.append(transmission)
 
     def add_gazebo_element(self, element: GazeboElement) -> None:
-        """Add a Gazebo element to the robot."""
+        """Add simulation-specific metadata (Gazebo tags).
+
+        Args:
+            element: The GazeboElement definition.
+
+        Raises:
+            RobotValidationError: If the referenced link/joint does not exist.
+        """
         # Validate reference if specified
         if (
             element.reference is not None
@@ -484,7 +573,14 @@ class Robot:
         self._gazebo_elements.append(element)
 
     def add_ros2_control(self, ros2_control: Ros2Control) -> None:
-        """Add a ROS2 Control configuration to the robot."""
+        """Register a ros2_control hardware system.
+
+        Args:
+            ros2_control: The hardware configuration to add.
+
+        Raises:
+            RobotValidationError: If the configuration name is a duplicate.
+        """
         # Check for duplicate names
         if any(rc.name == ros2_control.name for rc in self._ros2_controls):
             raise RobotValidationError(
