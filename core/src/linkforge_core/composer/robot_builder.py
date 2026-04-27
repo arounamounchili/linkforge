@@ -6,6 +6,7 @@ This module implements the 'Composer' which allows for both macro-assembly
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
@@ -17,6 +18,7 @@ from ..models.robot import Robot
 from ..models.ros2_control import Ros2Control, Ros2ControlJoint
 from ..models.sensor import CameraInfo, GPSInfo, IMUInfo, LidarInfo, Sensor, SensorType
 from ..models.srdf import EndEffector, GroupState, VirtualJoint
+from ..models.transmission import Transmission
 from ..physics.inertia import calculate_inertia
 
 
@@ -198,7 +200,6 @@ class LinkBuilder:
         self._control_interfaces: tuple[list[str], list[str], dict[str, Any]] | None = None
         self._committed = False
 
-        # Link accumulation
         self._mass: float | None = None
         self._inertia: InertiaTensor | None = None
         self._inertial_origin: Transform | None = None
@@ -275,8 +276,6 @@ class LinkBuilder:
         """Manually set the inertia tensor."""
         self._inertia = InertiaTensor(ixx=ixx, iyy=iyy, izz=izz, ixy=ixy, ixz=ixz, iyz=iyz)
         return self
-
-    # Joint Configuration (only relevant if it has a parent)
 
     def at_origin(
         self,
@@ -461,10 +460,8 @@ class LinkBuilder:
 
     def sensor(self, sensor: Sensor) -> LinkBuilder:
         """Attach a pre-configured sensor to this link."""
-        self._sensors.append(sensor)
+        self._sensors.append(replace(sensor, link_name=self._name))
         return self
-
-    # Kinematic Branching
 
     def child(self, name: str, joint_name: str | None = None) -> LinkBuilder:
         """Finalize this link and start a new child link."""
@@ -541,8 +538,6 @@ class LinkBuilder:
 
             # 4. Add Transmission (if configured)
             if self._transmission_params:
-                from ..models.transmission import Transmission
-
                 t_name = self._transmission_params["name"] or f"trans_{joint.name}"
                 trans = Transmission.create_simple(
                     name=t_name,
@@ -555,7 +550,7 @@ class LinkBuilder:
 
             # 5. Add ROS2 Control (if configured)
             if self._control_interfaces:
-                if not self._builder.robot._ros2_controls:
+                if not self._builder.robot.ros2_controls:
                     raise RobotValidationError(
                         ValidationErrorCode.VALUE_EMPTY,
                         f"Joint '{joint.name}' requested ros2_control interfaces, but no global ros2_control system was defined. Call builder.ros2_control() first.",
@@ -563,7 +558,7 @@ class LinkBuilder:
                     )
 
                 # Add joint to the first control system
-                ctrl = self._builder.robot._ros2_controls[0]
+                ctrl = self._builder.robot.ros2_controls[0]
                 ctrl.joints.append(
                     Ros2ControlJoint(
                         name=joint.name,
