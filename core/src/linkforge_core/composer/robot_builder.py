@@ -36,8 +36,6 @@ from ..models.srdf import EndEffector, GroupState, VirtualJoint
 from ..models.transmission import Transmission
 from ..physics.inertia import calculate_inertia
 
-# --- Geometry Helpers ---
-
 
 def box(x: float, y: float, z: float) -> Box:
     """Helper to create Box geometry."""
@@ -83,8 +81,6 @@ class RobotBuilder:
             self.robot = Robot(name=name)
         else:
             raise RobotModelError("Either name or robot must be provided")  # noqa: TRY003
-
-    # --- Core Construction ---
 
     def link(self, name: str, parent: str | None = None) -> LinkBuilder:
         """Start building a new link programmatically.
@@ -136,8 +132,6 @@ class RobotBuilder:
         )
         return self
 
-    # --- System Setup ---
-
     def material(
         self, name: str, color: tuple[float, float, float, float] | None = None
     ) -> RobotBuilder:
@@ -181,8 +175,6 @@ class RobotBuilder:
         )
         self.robot.add_ros2_control(control)
         return self
-
-    # --- Semantic Setup (SRDF) ---
 
     def virtual_joint(
         self, name: str, child_link: str, parent_frame: str = "world", joint_type: str = "fixed"
@@ -272,8 +264,6 @@ class RobotBuilder:
         self.robot.disable_collisions(link1=link1, link2=link2, reason=reason)
         return self
 
-    # --- Finalization & Export ---
-
     def build(self) -> Robot:
         """Finalize the building process and return the Robot model.
 
@@ -344,8 +334,6 @@ class LinkBuilder:
         self._visuals: list[Visual] = []
         self._collisions: list[Collision] = []
         self._sensors: list[Sensor] = []
-
-    # --- Physical Body ---
 
     def visual(
         self,
@@ -458,8 +446,6 @@ class LinkBuilder:
         """
         self._inertia = InertiaTensor(ixx=ixx, iyy=iyy, izz=izz, ixy=ixy, ixz=ixz, iyz=iyz)
         return self
-
-    # --- Joint Configuration ---
 
     def at_origin(
         self,
@@ -584,8 +570,6 @@ class LinkBuilder:
             )
         return self
 
-    # --- Control & Actuation ---
-
     def transmission(
         self,
         reduction: float = 1.0,
@@ -631,8 +615,6 @@ class LinkBuilder:
         params = {k: str(v) for k, v in (parameters or {}).items()}
         self._control_interfaces = (command_interfaces, state_interfaces, params)
         return self
-
-    # --- Sensors ---
 
     def camera(
         self,
@@ -760,8 +742,6 @@ class LinkBuilder:
         """
         self._sensors.append(replace(sensor, link_name=self._name))
         return self
-
-    # --- Navigation & Lifecycle ---
 
     def child(self, name: str, joint_name: str | None = None) -> LinkBuilder:
         """Finalize this link and start building a new child link attached to it.
