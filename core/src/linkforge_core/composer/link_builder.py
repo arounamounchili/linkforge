@@ -114,9 +114,9 @@ class LinkBuilder:
             # Resolve global material
             mat = self._builder.robot.materials.get(material)
             if mat is None:
-                # Fallback: create a placeholder material if not found
-                # This will raise RobotValidationError in Material.__post_init__
-                # because both color and texture are None.
+                # Fallback: create a placeholder material if not found.
+                # This triggers RobotValidationError in Material.__post_init__
+                # because both color and texture will be None.
                 mat = Material(name=material)
         else:
             mat = material

@@ -42,7 +42,13 @@ class TestRobotBuilder:
 
         # Attach to visual to hit existing material branch
         builder.link("l1").visual(box(1, 1, 1), material="red").root()
-        assert builder.robot.link("l1").visuals[0].material.name == "red"
+        link = builder.robot.link("l1")
+        assert len(link.visuals) > 0
+        visual = link.visuals[0]
+        from linkforge_core.models.material import Material
+
+        assert isinstance(visual.material, Material)
+        assert visual.material.name == "red"
 
     def test_link_chaining_and_root(self) -> None:
         """Test the basic root link and child chaining logic."""
@@ -51,7 +57,9 @@ class TestRobotBuilder:
         # Define root
         builder.link("base").root()
         assert builder.robot.has_link("base")
-        assert builder.robot.get_root_link().name == "base"
+        root = builder.robot.get_root_link()
+        assert root is not None
+        assert root.name == "base"
 
         # Add child
         builder.link("link1", parent="base").revolute(axis=(0, 0, 1), limits=(-1, 1)).commit()
@@ -275,8 +283,12 @@ class TestRobotBuilder:
         mat = Material(name="custom", color=Color(0, 1, 0, 1))
 
         builder.link("l1_mat").visual(box(1, 1, 1), material=mat).root()
-        visual = builder.robot.link("l1_mat").visuals[0]
-        assert visual.material is not None
+        link = builder.robot.link("l1_mat")
+        assert len(link.visuals) > 0
+        visual = link.visuals[0]
+        from linkforge_core.models.material import Material
+
+        assert isinstance(visual.material, Material)
         assert visual.material.name == "custom"
 
     def test_collision_only_physics(self) -> None:
@@ -518,6 +530,9 @@ class TestRobotBuilder:
             axis=(0, 0, 1), effort=10.0, velocity=5.0
         ).commit()
         limits = builder.robot.joint("base_to_l1").limits
+        from linkforge_core.models.joint import JointLimits
+
+        assert isinstance(limits, JointLimits)
         assert limits.effort == 10.0
         assert limits.velocity == 5.0
 
@@ -569,5 +584,7 @@ class TestRobotBuilder:
 
         # Verify it attached to the correct one
         assert len(builder.robot.ros2_controls[0].joints) == 0
-        assert len(builder.robot.ros2_controls[1].joints) == 1
-        assert builder.robot.ros2_controls[1].joints[0].name == "base_to_l1"
+        system2 = builder.robot.ros2_controls[1]
+        assert len(system2.joints) == 1
+        joint_ctrl = system2.joints[0]
+        assert joint_ctrl.name == "base_to_l1"
