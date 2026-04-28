@@ -109,12 +109,18 @@ class LinkBuilder:
             The LinkBuilder instance for chaining.
         """
         origin = Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy))
+
         if isinstance(material, str):
+            # Resolve global material
             mat = self._builder.robot.materials.get(material)
             if mat is None:
+                # Fallback: create a placeholder material if not found
+                # This will raise RobotValidationError in Material.__post_init__
+                # because both color and texture are None.
                 mat = Material(name=material)
         else:
             mat = material
+
         self._link.visuals.append(Visual(geometry=geometry, origin=origin, material=mat, name=name))
         return self
 
