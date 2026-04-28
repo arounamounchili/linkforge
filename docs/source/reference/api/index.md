@@ -50,7 +50,7 @@ The `RobotBuilder` Composer is the recommended way to build robots in Python.
 It handles validation, prefixing, and SRDF generation automatically.
 
 ```python
-from linkforge_core.composer.robot_builder import RobotBuilder
+from linkforge_core.composer import RobotBuilder
 from linkforge_core.models import Robot
 from linkforge_core.models.geometry import Vector3
 from linkforge_core.models.joint import JointLimits

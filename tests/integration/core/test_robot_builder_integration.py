@@ -1,4 +1,4 @@
-from linkforge_core.composer.robot_builder import RobotBuilder, box, cylinder
+from linkforge_core.composer import RobotBuilder, box, cylinder
 from linkforge_core.models.joint import JointType
 
 
@@ -32,9 +32,9 @@ def test_full_robot_build_and_export():
     )
 
     # 3. Add Semantic info
-    builder.group("arm_group", links=["base", "arm_1"], joints=["base_to_arm_1"])
-    builder.end_effector("my_hand", group="arm_group", parent_link="hand")
-    builder.virtual_joint("world_fix", child_link="base")
+    builder.semantic.group("arm_group", links=["base", "arm_1"], joints=["base_to_arm_1"])
+    builder.semantic.end_effector("my_hand", group="arm_group", parent_link="hand")
+    builder.semantic.virtual_joint("world_fix", child_link="base")
 
     robot = builder.build()
 

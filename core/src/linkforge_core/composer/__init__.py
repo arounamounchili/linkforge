@@ -4,6 +4,7 @@ This package provides high-level APIs for building modular robots
 by programmatically constructing links, joints, and semantic data.
 """
 
-from .robot_builder import RobotBuilder, box, cylinder, mesh, sphere
+from .helpers import box, cylinder, mesh, sphere
+from .robot_builder import RobotBuilder
 
 __all__ = ["RobotBuilder", "box", "cylinder", "sphere", "mesh"]

@@ -130,7 +130,7 @@ class TreeStructureCheck(ValidationCheck):
         self._check_cycles(robot, result)
         root = self._check_root(robot, result)
         if root is not None:
-            self._check_connectivity(robot, result)
+            self._check_connectivity(robot, root, result)
 
     @staticmethod
     def _check_cycles(robot: Robot, result: ValidationResult) -> None:
@@ -194,7 +194,7 @@ class TreeStructureCheck(ValidationCheck):
             return None
 
     @staticmethod
-    def _check_connectivity(robot: Robot, result: ValidationResult) -> None:
+    def _check_connectivity(robot: Robot, root: Link, result: ValidationResult) -> None:
         child_counts: dict[str, int] = {}
         for joint in robot.joints:
             child_counts[joint.child] = child_counts.get(joint.child, 0) + 1
@@ -210,6 +210,14 @@ class TreeStructureCheck(ValidationCheck):
                     affected_objects=[link.name],
                     code=ValidationErrorCode.MULTIPLE_ROOTS,
                     suggestion="Remove extra joints. Each link can only have one parent",
+                )
+            elif count == 0 and link.name != root.name:
+                result.add_error(
+                    title="Disconnected link",
+                    message=f"Link '{link.name}' is not connected to the kinematic tree",
+                    affected_objects=[link.name],
+                    code=ValidationErrorCode.MULTIPLE_ROOTS,
+                    suggestion="Add a joint to connect this link to the kinematic tree",
                 )
 
 
