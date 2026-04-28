@@ -130,7 +130,7 @@ class TreeStructureCheck(ValidationCheck):
         self._check_cycles(robot, result)
         root = self._check_root(robot, result)
         if root is not None:
-            self._check_connectivity(robot, root, result)
+            self._check_connectivity(robot, result)
 
     @staticmethod
     def _check_cycles(robot: Robot, result: ValidationResult) -> None:
@@ -161,8 +161,9 @@ class TreeStructureCheck(ValidationCheck):
     def _check_root(robot: Robot, result: ValidationResult) -> Link | None:
         """Return the root link, or None if it cannot be determined."""
         try:
-            root = robot.get_root_link()
-            if root is None:
+            return robot.get_root_link()
+        except RobotValidationError as e:
+            if e.code == ValidationErrorCode.NO_ROOT:
                 result.add_error(
                     title="No root link",
                     message=(
@@ -172,28 +173,12 @@ class TreeStructureCheck(ValidationCheck):
                     code=ValidationErrorCode.NO_ROOT,
                     suggestion="Ensure exactly one link has no parent joint (the base/root link)",
                 )
-            return root
-        except RobotModelError as e:
-            if isinstance(e, RobotValidationError):
-                if e.code == ValidationErrorCode.MULTIPLE_ROOTS:
-                    result.add_error(
-                        title="Multiple root links",
-                        message=str(e),
-                        suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
-                    )
-                elif e.code == ValidationErrorCode.NO_ROOT:
-                    result.add_error(
-                        title="No root link",
-                        message=str(e),
-                        suggestion="Ensure exactly one link has no parent joint (the base/root link)",
-                    )
-                else:
-                    result.add_error(
-                        title="Root link error",
-                        message=str(e),
-                        code=e.code if hasattr(e, "code") else ValidationErrorCode.INVALID_VALUE,
-                        suggestion="Check the joint connections in your robot tree",
-                    )
+            elif e.code == ValidationErrorCode.MULTIPLE_ROOTS:
+                result.add_error(
+                    title="Multiple root links",
+                    message=str(e),
+                    suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
+                )
             else:
                 result.add_error(
                     title="Root link error",
@@ -201,24 +186,22 @@ class TreeStructureCheck(ValidationCheck):
                     suggestion="Check the joint connections in your robot tree",
                 )
             return None
+        except RobotModelError as e:
+            result.add_error(
+                title="Kinematic error",
+                message=str(e),
+            )
+            return None
 
     @staticmethod
-    def _check_connectivity(robot: Robot, root: object, result: ValidationResult) -> None:
+    def _check_connectivity(robot: Robot, result: ValidationResult) -> None:
         child_counts: dict[str, int] = {}
         for joint in robot.joints:
             child_counts[joint.child] = child_counts.get(joint.child, 0) + 1
 
         for link in robot.links:
             count = child_counts.get(link.name, 0)
-            if link != root and count == 0:
-                result.add_error(
-                    title="Disconnected link",
-                    message=f"Link '{link.name}' is not connected to the kinematic tree",
-                    affected_objects=[link.name],
-                    code=ValidationErrorCode.DISCONNECTED,
-                    suggestion=f"Create a joint connecting '{link.name}' to another link in the tree",
-                )
-            elif count > 1:
+            if count > 1:
                 result.add_error(
                     title="Multiple parent joints",
                     message=(

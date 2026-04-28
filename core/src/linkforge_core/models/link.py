@@ -171,3 +171,13 @@ class Link:
     def mass(self) -> float:
         """Get link mass (0.0 if no inertial properties are defined)."""
         return self.inertial.mass if self.inertial else 0.0
+
+    @property
+    def inertia(self) -> InertiaTensor:
+        """Get link inertia tensor (zero tensor if not defined)."""
+        return self.inertial.inertia if self.inertial else InertiaTensor.zero()
+
+    @property
+    def inertial_origin(self) -> Transform:
+        """Get inertial origin (identity if not defined)."""
+        return self.inertial.origin if self.inertial else Transform.identity()

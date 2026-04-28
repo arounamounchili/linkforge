@@ -424,7 +424,11 @@ class TestRobotCoverage:
 
     def test_get_root_link_empty(self) -> None:
         robot = Robot(name="test")
-        assert robot.get_root_link() is None
+        from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+
+        with pytest.raises(RobotValidationError) as exc:
+            robot.get_root_link()
+        assert exc.value.code == ValidationErrorCode.NO_ROOT
 
     def test_validate_tree_structure_duplicate_names_mock(self) -> None:
         # To test duplicate names logic in validate_tree_structure,
@@ -463,12 +467,15 @@ class TestRobotCoverage:
         assert any("Missing child link" in e.title for e in result.errors)
 
     def test_validate_tree_structure_root_none_mock(self) -> None:
-        # Mock get_root_link to return None even if links exist
+        # Mock get_root_link to raise NO_ROOT error even if links exist
         robot = Robot(name="test")
         l1 = Link(name="l1")
         robot.add_link(l1)
 
-        with patch.object(robot, "get_root_link", return_value=None):
+        from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+
+        error = RobotValidationError(ValidationErrorCode.NO_ROOT, "No root link found")
+        with patch.object(robot, "get_root_link", side_effect=error):
             result = RobotValidator().validate(robot)
             assert any("No root link found" in e.message for e in result.errors)
 

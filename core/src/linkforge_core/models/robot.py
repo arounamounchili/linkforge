@@ -603,14 +603,17 @@ class Robot:
             self._graph_cache = KinematicGraph(self._links, self._joints)
         return self._graph_cache
 
-    def get_root_link(self) -> Link | None:
+    def get_root_link(self) -> Link:
         """Get the root link of the kinematic tree.
 
         The root link is the one that is never a child in any joint.
-        """
-        if not self.links:
-            return None
 
+        Returns:
+            The root Link object.
+
+        Raises:
+            RobotValidationError: If no root link is found or multiple root links exist.
+        """
         roots = self.graph.get_root_links()
         if not roots:
             raise RobotValidationError(
@@ -627,7 +630,16 @@ class Robot:
                 value=len(roots),
             )
 
-        return self.get_link(roots[0])
+        # We can safely call get_link as roots[0] is guaranteed to be in the graph
+        link = self.get_link(roots[0])
+        if link is None:
+            # This should be unreachable given graph integrity
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Root link '{roots[0]}' exists in graph but not in link index",
+                target="Roots",
+            )
+        return link
 
     @property
     def has_cycle(self) -> bool:
@@ -735,13 +747,6 @@ class Robot:
 
         # Identify the root link of the sub-robot
         root_link = sub_robot.get_root_link()
-        if not root_link:
-            raise RobotValidationError(
-                ValidationErrorCode.NO_ROOT,
-                f"No root link found in component '{component.name}'",
-                target="Attach",
-                value=component.name,
-            )
 
         # Merge links and joints
         for link in sub_robot.links:
