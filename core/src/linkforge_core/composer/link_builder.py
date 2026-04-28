@@ -88,6 +88,13 @@ class LinkBuilder:
         self._control_system_name: str | None = None
         self._committed = False
 
+        self._builder._active_link_builders.append(self)
+
+    def _check_not_committed(self) -> None:
+        """Helper to ensure the builder hasn't been committed yet."""
+        if self._committed:
+            raise RuntimeError(f"LinkBuilder '{self._link_name}' already committed")  # noqa: TRY003
+
     def visual(
         self,
         geometry: Geometry,
@@ -108,16 +115,18 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance for chaining.
         """
+        self._check_not_committed()
         origin = Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy))
 
         if isinstance(material, str):
             # Resolve global material
             mat = self._builder.robot.materials.get(material)
             if mat is None:
-                # Fallback: create a placeholder material if not found.
-                # This triggers RobotValidationError in Material.__post_init__
-                # because both color and texture will be None.
-                mat = Material(name=material)
+                raise RobotValidationError(
+                    ValidationErrorCode.NOT_FOUND,
+                    f"Material '{material}' not found. Did you call builder.material('{material}', ...) first?",
+                    target="LinkBuilder",
+                )
         else:
             mat = material
 
@@ -145,6 +154,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         if geometry is None:
             if not self._link.visuals:
                 raise RobotValidationError(
@@ -192,6 +202,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._link.mass = value
         if inertia:
             self._link.inertia = inertia
@@ -214,6 +225,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._link.inertia = InertiaTensor(ixx=ixx, iyy=iyy, izz=izz, ixy=ixy, ixz=ixz, iyz=iyz)
         return self
 
@@ -231,6 +243,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.origin = Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy))
         return self
 
@@ -250,6 +263,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.type = JointType.FIXED
         return self._configure_joint(name, xyz, rpy)
 
@@ -277,6 +291,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.type = JointType.REVOLUTE
         self._joint.axis = Vector3(*axis)
         self._joint.limits = JointLimits(
@@ -306,6 +321,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.type = JointType.CONTINUOUS
         self._joint.axis = Vector3(*axis)
         if effort is not None or velocity is not None:
@@ -338,6 +354,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.type = JointType.PRISMATIC
         self._joint.axis = Vector3(*axis)
         self._joint.limits = JointLimits(
@@ -355,6 +372,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.dynamics = JointDynamics(damping=damping, friction=friction)
         return self
 
@@ -369,6 +387,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.mimic = JointMimic(joint=joint, multiplier=multiplier, offset=offset)
         return self
 
@@ -377,7 +396,7 @@ class LinkBuilder:
         soft_lower: float | None = None,
         soft_upper: float | None = None,
         k_position: float | None = None,
-        k_velocity: float | None = None,
+        k_velocity: float = 0.0,
     ) -> LinkBuilder:
         """Define a safety controller for the joint.
 
@@ -388,11 +407,12 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.safety = JointSafetyController(
-            soft_lower_limit=soft_lower if soft_lower is not None else 0.0,
-            soft_upper_limit=soft_upper if soft_upper is not None else 0.0,
-            k_position=k_position if k_position is not None else 0.0,
-            k_velocity=k_velocity if k_velocity is not None else 0.0,
+            soft_lower_limit=soft_lower,
+            soft_upper_limit=soft_upper,
+            k_position=k_position,
+            k_velocity=k_velocity,
         )
         return self
 
@@ -406,6 +426,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._joint.calibration = JointCalibration(rising=rising, falling=falling)
         return self
 
@@ -422,6 +443,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._link.gazebo_params.update(kwargs)
         return self
 
@@ -458,6 +480,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._transmission_params = {
             "reduction": reduction,
             "interface": interface,
@@ -484,6 +507,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         params = {k: str(v) for k, v in (parameters or {}).items()}
         self._control_interfaces = (command_interfaces, state_interfaces, params)
         self._control_system_name = system_name
@@ -509,6 +533,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         info = CameraInfo(horizontal_fov=fov, width=width, height=height)
         sensor = Sensor(
             name=name,
@@ -540,6 +565,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         info = LidarInfo(range_min=range_min, range_max=range_max, horizontal_samples=samples)
         sensor = Sensor(
             name=name,
@@ -568,6 +594,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         sensor = Sensor(
             name=name,
             type=SensorType.IMU,
@@ -596,6 +623,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         sensor = Sensor(
             name=name,
             type=SensorType.GPS,
@@ -624,6 +652,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         sensor = Sensor(
             name=name,
             type=SensorType.FORCE_TORQUE,
@@ -650,6 +679,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         sensor = Sensor(
             name=name,
             type=SensorType.CONTACT,
@@ -669,6 +699,7 @@ class LinkBuilder:
         Returns:
             The LinkBuilder instance.
         """
+        self._check_not_committed()
         self._link.sensors.append(replace(sensor, link_name=self._link_name))
         return self
 
@@ -796,10 +827,11 @@ class LinkBuilder:
         joint_name = self._joint_name or f"{self._parent}_to_{self._link_name}"
         is_fixed = j_state.type == JointType.FIXED
 
+        assert self._parent is not None
         joint = Joint(
             name=joint_name,
             type=j_state.type,
-            parent=self._parent,  # type: ignore
+            parent=self._parent,
             child=self._link_name,
             origin=j_state.origin,
             axis=j_state.axis if not is_fixed else None,

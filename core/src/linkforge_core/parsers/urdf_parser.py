@@ -233,13 +233,13 @@ class URDFParser(RobotXMLParser[Robot]):
         if safety_elem is not None:
             safety_controller = JointSafetyController(
                 soft_lower_limit=parse_float(
-                    safety_elem.get("soft_lower_limit"), check_name="soft_lower_limit", default=0.0
+                    safety_elem.get("soft_lower_limit"), check_name="soft_lower_limit", default=None
                 ),
                 soft_upper_limit=parse_float(
-                    safety_elem.get("soft_upper_limit"), check_name="soft_upper_limit", default=0.0
+                    safety_elem.get("soft_upper_limit"), check_name="soft_upper_limit", default=None
                 ),
                 k_position=parse_float(
-                    safety_elem.get("k_position"), check_name="k_position", default=0.0
+                    safety_elem.get("k_position"), check_name="k_position", default=None
                 ),
                 k_velocity=parse_float(
                     safety_elem.get("k_velocity"), check_name="k_velocity", default=0.0

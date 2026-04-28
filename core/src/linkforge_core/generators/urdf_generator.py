@@ -408,12 +408,15 @@ class URDFGenerator(RobotXMLGenerator):
         """Add safety controller limits."""
         if joint.safety_controller:
             s = joint.safety_controller
-            safety_attrib = {
-                "soft_lower_limit": s.soft_lower_limit,
-                "soft_upper_limit": s.soft_upper_limit,
-                "k_position": s.k_position,
-                "k_velocity": s.k_velocity,
-            }
+            safety_attrib: dict[str, str | float] = {}
+            if s.soft_lower_limit is not None:
+                safety_attrib["soft_lower_limit"] = s.soft_lower_limit
+            if s.soft_upper_limit is not None:
+                safety_attrib["soft_upper_limit"] = s.soft_upper_limit
+            if s.k_position is not None:
+                safety_attrib["k_position"] = s.k_position
+            safety_attrib["k_velocity"] = s.k_velocity
+
             create_xml_element(
                 joint_elem, "safety_controller", formatter=self._format_value, **safety_attrib
             )

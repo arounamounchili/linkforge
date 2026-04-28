@@ -118,9 +118,9 @@ class TestJointSafetyController:
     def test_default_values(self) -> None:
         """Test default values for safety controller."""
         safety = JointSafetyController()
-        assert safety.soft_lower_limit == 0.0
-        assert safety.soft_upper_limit == 0.0
-        assert safety.k_position == 0.0
+        assert safety.soft_lower_limit is None
+        assert safety.soft_upper_limit is None
+        assert safety.k_position is None
         assert safety.k_velocity == 0.0
 
 

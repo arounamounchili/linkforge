@@ -105,9 +105,9 @@ class JointSafetyController:
         k_velocity: Velocity gain.
     """
 
-    soft_lower_limit: float = 0.0
-    soft_upper_limit: float = 0.0
-    k_position: float = 0.0
+    soft_lower_limit: float | None = None
+    soft_upper_limit: float | None = None
+    k_position: float | None = None
     k_velocity: float = 0.0
 
 

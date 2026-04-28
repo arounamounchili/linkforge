@@ -1,29 +1,28 @@
 """RobotBuilder API for LinkForge.
 
-This module implements the 'Composer' layer—the primary interface for
-programmatically defining, assembling, and merging robots.
+The 'Composer' layer provides a **Fluent Builder Pattern** for intuitive,
+hierarchical construction of robot kinematic trees (links and joints).
 
-The API uses a **Fluent Builder Pattern** that allows for intuitive,
-hierarchical construction of robot trees (links and joints) as well as
-high-level assembly of pre-existing sub-components.
+Key Features:
+- **Fluent API**: Chain methods to define visuals, collisions, and dynamics.
+- **Safety**: Automatically commits dangling builders and prevents post-commit mutations.
+- **Validation**: Enforces structural integrity and material registration at build time.
 
-Examples:
+Example:
+    >>> from linkforge_core.composer import RobotBuilder
+    >>> from linkforge_core.composer.helpers import box
     >>> builder = RobotBuilder("my_robot")
+    >>> builder.material("blue", color=(0, 0, 1, 1))
     >>> (
     ...     builder.link("base_link")
     ...         .visual(box(0.5, 0.5, 0.2), material="blue")
     ...         .collision()  # Auto-clones visual geometry
     ...         .mass(10.0)   # Auto-calculates inertia
-    ...     .child("arm_link", xyz=(0, 0, 0.1))
-    ...         .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57))
-    ...         .dynamics(damping=0.5)
+    ...     .child("arm_link")
+    ...         .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57), xyz=(0, 0, 0.1))
     ...         .commit()
     ... )
-    >>> # Define semantic properties
-    >>> builder.semantic.group("arm", links=["arm_link"])
-    >>>
-    >>> # Finalize with validation
-    >>> robot = builder.build(validate=True)
+    >>> robot = builder.build()
 """
 
 from __future__ import annotations
@@ -65,6 +64,8 @@ class RobotBuilder:
         else:
             msg = "Either name or robot must be provided"
             raise RobotModelError(msg)
+
+        self._active_link_builders: list[LinkBuilder] = []
 
     def link(
         self, name: str, parent: str | None = None, joint_name: str | None = None
@@ -182,6 +183,10 @@ class RobotBuilder:
         Raises:
             RobotValidationError: If validation is requested and the robot is invalid.
         """
+        for lb in list(self._active_link_builders):
+            lb._commit()
+        self._active_link_builders.clear()
+
         if validate:
             # Trigger root search to verify connectivity (raises error if no root)
             self.robot.get_root_link()

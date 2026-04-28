@@ -509,9 +509,9 @@ class TestRobotBuilder:
             ).ros2_control(command_interfaces=["pos"], state_interfaces=["pos"]).commit()
 
     def test_missing_material_creation(self) -> None:
-        """Test that a material string not in global materials creates a new Material."""
+        """Test that a material string not in global materials raises an error."""
         builder = RobotBuilder("miss_mat")
-        with pytest.raises(RobotValidationError, match="either color or texture"):
+        with pytest.raises(RobotValidationError, match="not found"):
             builder.link("l1_mm").visual(box(1, 1, 1), material="unknown_mat").root()
 
     def test_collision_inference_with_origin(self) -> None:
