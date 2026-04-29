@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
@@ -26,6 +25,7 @@ from ..models.ros2_control import Ros2ControlJoint
 from ..models.sensor import CameraInfo, ContactInfo, GPSInfo, IMUInfo, LidarInfo, Sensor, SensorType
 from ..models.transmission import Transmission
 from ..physics.inertia import calculate_inertia
+from ..utils.math_utils import normalize_vector
 
 if TYPE_CHECKING:
     from .robot_builder import RobotBuilder
@@ -475,16 +475,15 @@ class LinkBuilder:
         Raises:
             RobotValidationError: If the axis magnitude is too small.
         """
-        x, y, z = axis
-        mag = math.sqrt(x**2 + y**2 + z**2)
-        if mag < 1e-10:
+        nx, ny, nz = normalize_vector(*axis)
+        if nx == 0.0 and ny == 0.0 and nz == 0.0:
             raise RobotValidationError(
                 ValidationErrorCode.OUT_OF_RANGE,
                 "Joint axis magnitude is too small",
                 target="LinkBuilder",
-                value=mag,
+                value=0.0,
             )
-        return Vector3(x / mag, y / mag, z / mag)
+        return Vector3(nx, ny, nz)
 
     def transmission(
         self,
