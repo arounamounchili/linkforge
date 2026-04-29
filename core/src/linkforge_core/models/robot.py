@@ -68,8 +68,8 @@ class Robot:
     )
 
     # Fast lookup indices (name -> object)
-    _link_index: dict[str, Link] = field(default_factory=dict, init=False)
-    _joint_index: dict[str, Joint] = field(default_factory=dict, init=False)
+    _link_index: dict[str, Link] = field(default_factory=dict, init=False, repr=False)
+    _joint_index: dict[str, Joint] = field(default_factory=dict, init=False, repr=False)
     _sensor_index: dict[str, Sensor] = field(default_factory=dict, init=False, repr=False)
 
     _graph_cache: KinematicGraph | None = field(default=None, init=False, repr=False)
@@ -209,9 +209,31 @@ class Robot:
         if not prefix:
             return
 
+        # Update Materials (Global)
+        new_materials = {}
+        for name, mat in self.materials.items():
+            new_mat = replace(mat, name=f"{prefix}{mat.name}")
+            new_materials[f"{prefix}{name}"] = new_mat
+        self.materials = new_materials
+
         # Update Links (Mutable)
         for link in self._links:
             link.name = f"{prefix}{link.name}"
+
+            # Prefix internal elements (Visuals/Collisions)
+            link._visuals = [
+                replace(
+                    v,
+                    name=f"{prefix}{v.name}" if v.name else None,
+                    material=replace(v.material, name=f"{prefix}{v.material.name}")
+                    if v.material
+                    else None,
+                )
+                for v in link._visuals
+            ]
+            link._collisions = [
+                replace(c, name=f"{prefix}{c.name}" if c.name else None) for c in link._collisions
+            ]
 
         # Update Joints (Frozen)
         new_joints = []
@@ -237,6 +259,7 @@ class Robot:
                 sensor,
                 name=f"{prefix}{sensor.name}",
                 link_name=f"{prefix}{sensor.link_name}",
+                topic=f"{prefix}{sensor.topic}" if sensor.topic else None,
             )
             if sensor.contact_info:
                 new_sensor = replace(
@@ -270,7 +293,11 @@ class Robot:
         # Update Gazebo Elements (Frozen)
         new_gazebo_elements = []
         for ge in self._gazebo_elements:
-            new_ge = replace(ge, reference=f"{prefix}{ge.reference}" if ge.reference else None)
+            new_ge = replace(
+                ge,
+                reference=f"{prefix}{ge.reference}" if ge.reference else None,
+                plugins=[replace(p, name=f"{prefix}{p.name}") for p in ge.plugins],
+            )
             new_gazebo_elements.append(new_ge)
         self._gazebo_elements = new_gazebo_elements
 
@@ -715,7 +742,7 @@ class Robot:
         origin: Transform | None = None,
         axis: Vector3 | None = None,
         limits: JointLimits | None = None,
-    ) -> None:
+    ) -> Robot:
         """Merge a sub-robot (kinematic + semantic) into this robot in-place.
 
         Args:
@@ -727,6 +754,12 @@ class Robot:
             origin: Optional transform for the joint.
             axis: Optional joint axis.
             limits: Optional joint limits.
+
+        Returns:
+            The robot instance for chaining.
+
+        Raises:
+            RobotValidationError: If the attachment link is not found.
         """
         # Validation of attachment point
         if not self.get_link(at_link):
@@ -779,11 +812,25 @@ class Robot:
                 current_pj_names.add(pj.name)
 
         new_disabled = list(self._semantic.disabled_collisions)
-        current_disabled = {(dc.link1, dc.link2) for dc in new_disabled}
+        current_disabled = {frozenset([dc.link1, dc.link2]) for dc in new_disabled}
         for dc in sub_robot.semantic.disabled_collisions:
-            if (dc.link1, dc.link2) not in current_disabled:
+            if frozenset([dc.link1, dc.link2]) not in current_disabled:
                 new_disabled.append(dc)
-                current_disabled.add((dc.link1, dc.link2))
+                current_disabled.add(frozenset([dc.link1, dc.link2]))
+
+        new_ee = list(self._semantic.end_effectors)
+        current_ee_names = {ee.name for ee in new_ee}
+        for ee in sub_robot.semantic.end_effectors:
+            if ee.name not in current_ee_names:
+                new_ee.append(ee)
+                current_ee_names.add(ee.name)
+
+        new_gs = list(self._semantic.group_states)
+        current_gs_names = {gs.name for gs in new_gs}
+        for gs in sub_robot.semantic.group_states:
+            if gs.name not in current_gs_names:
+                new_gs.append(gs)
+                current_gs_names.add(gs.name)
 
         self._semantic = replace(
             self._semantic,
@@ -791,9 +838,8 @@ class Robot:
             virtual_joints=new_vjoints,
             passive_joints=new_passive,
             disabled_collisions=new_disabled,
-            end_effectors=list(self._semantic.end_effectors)
-            + list(sub_robot.semantic.end_effectors),
-            group_states=list(self._semantic.group_states) + list(sub_robot.semantic.group_states),
+            end_effectors=new_ee,
+            group_states=new_gs,
         )
 
         # Create the connecting joint
@@ -826,6 +872,8 @@ class Robot:
 
         # Validate kinematic integrity (connectivity and cycles)
         _ = self.graph
+
+        return self
 
     def add_group(
         self,

@@ -163,3 +163,16 @@ def test_ros2_control_sensor_empty_joints() -> None:
     """Test that a sensor with no joints passes validation (e.g., IMU on a link)."""
     rc = Ros2Control(name="sens", type="sensor", hardware_plugin="mock", joints=[])
     assert len(rc.joints) == 0
+
+
+def test_ros2_control_duplicate_joint_validation() -> None:
+    """Test that duplicate joint names within a ROS2 control block are caught."""
+    j1 = Ros2ControlJoint(name="joint1", state_interfaces=["position"])
+    j2 = Ros2ControlJoint(name="joint1", state_interfaces=["velocity"])  # Duplicate name
+
+    with pytest.raises(RobotModelError, match="Duplicate joint names found"):
+        Ros2Control(
+            name="MySystem",
+            hardware_plugin="mock",
+            joints=[j1, j2],
+        )

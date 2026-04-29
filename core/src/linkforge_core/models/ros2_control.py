@@ -28,8 +28,8 @@ class Ros2ControlJoint:
                 target="JointName",
                 value=self.name,
             )
-        # For sensors, both can be empty initially, but at least one state interface is usually required.
-        # However, we'll allow empty for now to support incremental building.
+        # At least one interface is required to ensure the control block is functional.
+        # This prevents defining "empty" joints that ROS 2 control would reject.
         if not self.command_interfaces and not self.state_interfaces:
             raise RobotValidationError(
                 ValidationErrorCode.VALUE_EMPTY,
@@ -75,6 +75,15 @@ class Ros2Control:
                 "Hardware plugin cannot be empty",
                 target="HardwarePlugin",
                 value=self.hardware_plugin,
+            )
+
+        # Ensure all joints have unique names within this system
+        joint_names = [j.name for j in self.joints]
+        if len(joint_names) != len(set(joint_names)):
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Duplicate joint names found in ROS2 control system '{self.name}'",
+                target="Ros2ControlJoints",
             )
 
         # Hardware sensors are read-only and do not accept command interfaces
