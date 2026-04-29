@@ -683,12 +683,19 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists() -> None:
     )
     rc = Ros2Control(name="RealRobot", type="system", hardware_plugin="fake_hw", joints=[rc_joint])
 
+    from linkforge.linkforge_core.models import TransmissionActuator
+
     trans = Transmission(
         name="trans1",
         type="transmission_interface/SimpleTransmission",
         joints=[
             TransmissionJoint(
                 name="j1", hardware_interfaces=["hardware_interface/PositionJointInterface"]
+            )
+        ],
+        actuators=[
+            TransmissionActuator(
+                name="motor1", hardware_interfaces=["hardware_interface/PositionJointInterface"]
             )
         ],
     )
