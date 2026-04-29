@@ -14,6 +14,7 @@ class TestLinkBuilderAdvanced:
 
         joint = builder.robot.get_joint("base_to_link1")
         assert joint is not None
+        assert joint.axis is not None
         # Should be normalized to (0, 0, 1)
         assert joint.axis.x == 0.0
         assert joint.axis.y == 0.0
@@ -27,6 +28,7 @@ class TestLinkBuilderAdvanced:
 
         joint = builder.robot.get_joint("base_to_link1")
         assert joint is not None
+        assert joint.axis is not None
         assert joint.axis.x == 1.0
         assert joint.axis.y == 0.0
         assert joint.axis.z == 0.0
@@ -39,6 +41,7 @@ class TestLinkBuilderAdvanced:
 
         joint = builder.robot.get_joint("base_to_link1")
         assert joint is not None
+        assert joint.axis is not None
         assert joint.axis.x == 0.0
         assert joint.axis.y == 1.0
         assert joint.axis.z == 0.0
