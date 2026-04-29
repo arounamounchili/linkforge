@@ -33,6 +33,7 @@ class SemanticBuilder:
         links: list[str] | None = None,
         joints: list[str] | None = None,
         chains: list[tuple[str, str]] | None = None,
+        subgroups: list[str] | None = None,
     ) -> RobotBuilder:
         """Define a planning group for MoveIt.
 
@@ -41,6 +42,7 @@ class SemanticBuilder:
             links: List of link names to include.
             joints: List of joint names to include.
             chains: List of (base, tip) tuples for kinematic chains.
+            subgroups: List of other planning group names to include.
 
         Returns:
             The parent RobotBuilder instance.
@@ -52,6 +54,7 @@ class SemanticBuilder:
             links=links or [],
             joints=joints or [],
             chains=chains or [],
+            subgroups=subgroups or [],
         )
         self._builder.robot.semantic.groups.append(group)
         return self._builder

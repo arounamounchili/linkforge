@@ -220,6 +220,20 @@ class TestRobotBuilder:
         assert b1.robot.has_link("tool")
         assert b1.robot.has_joint("attachment")
 
+    def test_semantic_subgroups(self) -> None:
+        """Test defining planning groups with subgroups."""
+        builder = RobotBuilder("semantic_bot")
+        builder.link("base").root()
+
+        builder.semantic.group("arm", links=["base"])
+        builder.semantic.group("manipulator", subgroups=["arm"])
+
+        robot = builder.build()
+        groups = {g.name: g for g in robot.semantic.groups}
+        assert "arm" in groups
+        assert "manipulator" in groups
+        assert "arm" in groups["manipulator"].subgroups
+
     def test_geometry_helpers(self) -> None:
         """Test box, cylinder, etc. factory functions."""
         b = box(1, 2, 3)
