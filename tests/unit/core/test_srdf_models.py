@@ -88,7 +88,7 @@ def test_semantic_robot_description_container():
 
 def test_robot_semantic_integration():
     """Test that SRDF data can be attached to a Robot model."""
-    srdf = SemanticRobotDescription(groups=[PlanningGroup(name="arm")])
+    srdf = SemanticRobotDescription(groups=[PlanningGroup(name="arm", joints=["joint1"])])
 
     # Test via initial_semantic
     robot = Robot(name="test_robot", initial_semantic=srdf)

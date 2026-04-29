@@ -154,10 +154,10 @@ def test_srdf_parser_optional_attributes():
       <end_effector name="ee" group="g" parent_link="l"/>
       <disable_collisions link1="l1" link2="l2"/>
       <group name="empty_tags">
-        <link/>
-        <joint/>
-        <chain/>
-        <group/>
+        <link name="l1"/>
+        <joint name="j1"/>
+        <chain base_link="base" tip_link="tip"/>
+        <group name="sub"/>
       </group>
     </robot>
     """
@@ -170,10 +170,10 @@ def test_srdf_parser_optional_attributes():
     assert dc.reason is None
 
     group = semantic.groups[0]
-    assert len(group.links) == 0
-    assert len(group.joints) == 0
-    assert len(group.chains) == 0
-    assert len(group.subgroups) == 0
+    assert len(group.links) == 1
+    assert len(group.joints) == 1
+    assert len(group.chains) == 1
+    assert len(group.subgroups) == 1
 
 
 def test_srdf_parser_subgroups_and_collisions():
@@ -182,6 +182,7 @@ def test_srdf_parser_subgroups_and_collisions():
     xml = """
     <robot name="test">
         <group name="arm">
+            <joint name="j1"/>
             <group name="hand"/>
         </group>
         <disable_collisions link1="l1" link2="l2" reason="adjacent"/>
@@ -239,6 +240,7 @@ def test_srdf_parser_missing_names_in_elements():
     xml = """
     <robot name="test">
         <group name="g1">
+            <joint name="j1"/>
             <group/> <!-- Missing name -->
         </group>
         <disable_collisions link1="l1" link2="l2"/>
@@ -255,9 +257,10 @@ def test_srdf_parser_unrecognized_tags():
     xml = """
     <robot name="test">
         <unknown_robot_tag/>
-        <group name="g1">
-            <unknown_group_tag/>
-        </group>
+    <group name="g1">
+        <joint name="j1"/>
+        <unknown_subtag/>
+    </group>
     </robot>
     """
     semantic = parser.parse_string(xml)
