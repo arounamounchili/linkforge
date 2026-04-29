@@ -305,29 +305,29 @@ class Robot:
         s = self._semantic
         self._semantic = replace(
             s,
-            virtual_joints=[
+            virtual_joints=tuple(
                 replace(
                     vj,
                     name=f"{prefix}{vj.name}",
                     child_link=f"{prefix}{vj.child_link}",
                 )
                 for vj in s.virtual_joints
-            ],
-            groups=[
+            ),
+            groups=tuple(
                 replace(
                     g,
                     name=f"{prefix}{g.name}",
-                    links=[f"{prefix}{link_name}" for link_name in g.links],
-                    joints=[f"{prefix}{joint_name}" for joint_name in g.joints],
-                    chains=[
+                    links=tuple(f"{prefix}{link_name}" for link_name in g.links),
+                    joints=tuple(f"{prefix}{joint_name}" for joint_name in g.joints),
+                    chains=tuple(
                         (f"{prefix}{base_name}", f"{prefix}{tip_name}")
                         for base_name, tip_name in g.chains
-                    ],
-                    subgroups=[f"{prefix}{subgroup_name}" for subgroup_name in g.subgroups],
+                    ),
+                    subgroups=tuple(f"{prefix}{subgroup_name}" for subgroup_name in g.subgroups),
                 )
                 for g in s.groups
-            ],
-            group_states=[
+            ),
+            group_states=tuple(
                 replace(
                     gs,
                     name=f"{prefix}{gs.name}",
@@ -335,8 +335,8 @@ class Robot:
                     joint_values={f"{prefix}{k}": v for k, v in gs.joint_values.items()},
                 )
                 for gs in s.group_states
-            ],
-            end_effectors=[
+            ),
+            end_effectors=tuple(
                 replace(
                     ee,
                     name=f"{prefix}{ee.name}",
@@ -345,12 +345,12 @@ class Robot:
                     parent_group=f"{prefix}{ee.parent_group}" if ee.parent_group else None,
                 )
                 for ee in s.end_effectors
-            ],
-            passive_joints=[replace(pj, name=f"{prefix}{pj.name}") for pj in s.passive_joints],
-            disabled_collisions=[
+            ),
+            passive_joints=tuple(replace(pj, name=f"{prefix}{pj.name}") for pj in s.passive_joints),
+            disabled_collisions=tuple(
                 replace(dc, link1=f"{prefix}{dc.link1}", link2=f"{prefix}{dc.link2}")
                 for dc in s.disabled_collisions
-            ],
+            ),
         )
 
         self._reindex()
@@ -833,12 +833,12 @@ class Robot:
 
         self._semantic = replace(
             self._semantic,
-            groups=new_groups,
-            virtual_joints=new_vjoints,
-            passive_joints=new_passive,
-            disabled_collisions=new_disabled,
-            end_effectors=new_ee,
-            group_states=new_gs,
+            groups=tuple(new_groups),
+            virtual_joints=tuple(new_vjoints),
+            passive_joints=tuple(new_passive),
+            disabled_collisions=tuple(new_disabled),
+            end_effectors=tuple(new_ee),
+            group_states=tuple(new_gs),
         )
 
         # Create the connecting joint
@@ -880,6 +880,9 @@ class Robot:
         links: list[str] | None = None,
         joints: list[str] | None = None,
         chains: list[tuple[str, str]] | None = None,
+        subgroups: list[str] | None = None,
+        base_link: str | None = None,
+        tip_link: str | None = None,
     ) -> Robot:
         """Add a planning group for MoveIt.
 
@@ -888,15 +891,26 @@ class Robot:
             links: List of link names.
             joints: List of joint names.
             chains: List of (base_link, tip_link) tuples.
+            subgroups: List of subgroup names.
+            base_link: Shorthand for chain base.
+            tip_link: Shorthand for chain tip.
 
         Returns:
             The robot instance for chaining.
         """
         # Add group
+        final_chains = list(chains or [])
+        if base_link and tip_link:
+            final_chains.append((base_link, tip_link))
+
         group = PlanningGroup(
-            name=name, links=links or [], joints=joints or [], chains=chains or []
+            name=name,
+            links=tuple(links or []),
+            joints=tuple(joints or []),
+            chains=tuple(final_chains),
+            subgroups=tuple(subgroups or []),
         )
-        self._semantic.groups.append(group)
+        self._semantic = replace(self._semantic, groups=self._semantic.groups + (group,))
         return self
 
     def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> Robot:
@@ -912,7 +926,9 @@ class Robot:
         """
         # Disable collisions
         dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
-        self._semantic.disabled_collisions.append(dc)
+        self._semantic = replace(
+            self._semantic, disabled_collisions=self._semantic.disabled_collisions + (dc,)
+        )
         return self
 
     def disable_all_collisions(self, links: list[str], reason: str = "Adjacent") -> Robot:

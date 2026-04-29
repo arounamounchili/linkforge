@@ -16,12 +16,16 @@ from linkforge_core.composer import RobotBuilder
 builder = RobotBuilder("my_robot")
 # ... (build your robot links and joints)
 
-# Define an arm group using a chain
+# Define an arm group using a chain shorthand
 builder.group("arm", base_link="base_link", tip_link="flange")
 
 # Define a gripper group using a list of links
 builder.group("gripper", links=["left_finger", "right_finger", "palm"])
 ```
+
+::: {tip}
+The ``base_link`` and ``tip_link`` arguments are convenience shorthands for defining a single kinematic chain. You can also provide multiple chains using the ``chains=[(base, tip), ...]`` argument.
+:::
 
 ## 2. Group States (Named Poses)
 

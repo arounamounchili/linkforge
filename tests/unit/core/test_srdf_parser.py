@@ -190,7 +190,7 @@ def test_srdf_parser_subgroups_and_collisions():
     """
     semantic = parser.parse_string(xml)
     assert len(semantic.groups) == 1
-    assert semantic.groups[0].subgroups == ["hand"]
+    assert semantic.groups[0].subgroups == ("hand",)
     assert len(semantic.disabled_collisions) == 1
     assert semantic.disabled_collisions[0].reason == "adjacent"
 

@@ -151,13 +151,19 @@ class PlanningGroup:
     """
 
     name: str
-    links: list[str] = field(default_factory=list)
-    joints: list[str] = field(default_factory=list)
-    chains: list[tuple[str, str]] = field(default_factory=list)
-    subgroups: list[str] = field(default_factory=list)
+    links: tuple[str, ...] = field(default_factory=tuple)
+    joints: tuple[str, ...] = field(default_factory=tuple)
+    chains: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    subgroups: tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         """Validate planning group."""
+        # Convert to tuples if they are lists
+        object.__setattr__(self, "links", tuple(self.links))
+        object.__setattr__(self, "joints", tuple(self.joints))
+        object.__setattr__(self, "chains", tuple(self.chains))
+        object.__setattr__(self, "subgroups", tuple(self.subgroups))
+
         if not self.name:
             raise RobotValidationError(
                 ValidationErrorCode.NAME_EMPTY, "Planning group name cannot be empty"
@@ -178,9 +184,18 @@ class SemanticRobotDescription:
     that exists alongside the kinematic URDF description.
     """
 
-    virtual_joints: list[VirtualJoint] = field(default_factory=list)
-    groups: list[PlanningGroup] = field(default_factory=list)
-    group_states: list[GroupState] = field(default_factory=list)
-    end_effectors: list[EndEffector] = field(default_factory=list)
-    passive_joints: list[PassiveJoint] = field(default_factory=list)
-    disabled_collisions: list[DisabledCollision] = field(default_factory=list)
+    virtual_joints: tuple[VirtualJoint, ...] = field(default_factory=tuple)
+    groups: tuple[PlanningGroup, ...] = field(default_factory=tuple)
+    group_states: tuple[GroupState, ...] = field(default_factory=tuple)
+    end_effectors: tuple[EndEffector, ...] = field(default_factory=tuple)
+    passive_joints: tuple[PassiveJoint, ...] = field(default_factory=tuple)
+    disabled_collisions: tuple[DisabledCollision, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        """Ensure all fields are tuples."""
+        object.__setattr__(self, "virtual_joints", tuple(self.virtual_joints))
+        object.__setattr__(self, "groups", tuple(self.groups))
+        object.__setattr__(self, "group_states", tuple(self.group_states))
+        object.__setattr__(self, "end_effectors", tuple(self.end_effectors))
+        object.__setattr__(self, "passive_joints", tuple(self.passive_joints))
+        object.__setattr__(self, "disabled_collisions", tuple(self.disabled_collisions))

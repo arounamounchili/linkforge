@@ -123,7 +123,11 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
                     subgroups.append(subgroup_name)
 
         return PlanningGroup(
-            name=name, links=links, joints=joints, chains=chains, subgroups=subgroups
+            name=name,
+            links=tuple(links),
+            joints=tuple(joints),
+            chains=tuple(chains),
+            subgroups=tuple(subgroups),
         )
 
     def _parse_group_state(self, state_elem: ET.Element) -> GroupState:
@@ -226,12 +230,12 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
                 disabled_collisions.append(self._parse_disable_collisions_elem(child))
 
         return SemanticRobotDescription(
-            virtual_joints=virtual_joints,
-            groups=groups,
-            group_states=group_states,
-            end_effectors=end_effectors,
-            passive_joints=passive_joints,
-            disabled_collisions=disabled_collisions,
+            virtual_joints=tuple(virtual_joints),
+            groups=tuple(groups),
+            group_states=tuple(group_states),
+            end_effectors=tuple(end_effectors),
+            passive_joints=tuple(passive_joints),
+            disabled_collisions=tuple(disabled_collisions),
         )
 
     def _parse_virtual_joint_elem(self, elem: ET.Element) -> VirtualJoint:

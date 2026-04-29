@@ -9,6 +9,7 @@ allowing the caller to run any subset of checks independently.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
@@ -421,7 +422,7 @@ class SemanticCheck(ValidationCheck):
                 )
 
     def _check_subgroup_cycles(
-        self, group: PlanningGroup, all_groups: list[PlanningGroup], result: ValidationResult
+        self, group: PlanningGroup, all_groups: Sequence[PlanningGroup], result: ValidationResult
     ) -> None:
         """Check for circular subgroup dependencies."""
         group_map = {g.name for g in all_groups}

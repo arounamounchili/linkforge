@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from ..models.srdf import (
@@ -34,6 +35,8 @@ class SemanticBuilder:
         joints: list[str] | None = None,
         chains: list[tuple[str, str]] | None = None,
         subgroups: list[str] | None = None,
+        base_link: str | None = None,
+        tip_link: str | None = None,
     ) -> RobotBuilder:
         """Define a planning group for MoveIt.
 
@@ -43,20 +46,27 @@ class SemanticBuilder:
             joints: List of joint names to include.
             chains: List of (base, tip) tuples for kinematic chains.
             subgroups: List of other planning group names to include.
+            base_link: Optional shorthand for chain base.
+            tip_link: Optional shorthand for chain tip.
 
         Returns:
             The parent RobotBuilder instance.
         """
         # Define planning group
+        final_chains = list(chains or [])
+        if base_link and tip_link:
+            final_chains.append((base_link, tip_link))
 
         group = PlanningGroup(
             name=name,
-            links=links or [],
-            joints=joints or [],
-            chains=chains or [],
-            subgroups=subgroups or [],
+            links=tuple(links or []),
+            joints=tuple(joints or []),
+            chains=tuple(final_chains),
+            subgroups=tuple(subgroups or []),
         )
-        self._builder.robot.semantic.groups.append(group)
+
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(semantic, groups=semantic.groups + (group,))
         return self._builder
 
     def group_state(self, name: str, group: str, values: dict[str, float]) -> RobotBuilder:
@@ -71,7 +81,10 @@ class SemanticBuilder:
             The parent RobotBuilder instance.
         """
         state = GroupState(name=name, group=group, joint_values=values)
-        self._builder.robot.semantic.group_states.append(state)
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic, group_states=semantic.group_states + (state,)
+        )
         return self._builder
 
     def end_effector(
@@ -89,7 +102,10 @@ class SemanticBuilder:
             The parent RobotBuilder instance.
         """
         ee = EndEffector(name=name, group=group, parent_link=parent_link, parent_group=parent_group)
-        self._builder.robot.semantic.end_effectors.append(ee)
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic, end_effectors=semantic.end_effectors + (ee,)
+        )
         return self._builder
 
     def passive_joint(self, name: str) -> RobotBuilder:
@@ -101,7 +117,11 @@ class SemanticBuilder:
         Returns:
             The parent RobotBuilder instance.
         """
-        self._builder.robot.semantic.passive_joints.append(PassiveJoint(name=name))
+        pj = PassiveJoint(name=name)
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic, passive_joints=semantic.passive_joints + (pj,)
+        )
         return self._builder
 
     def virtual_joint(
@@ -121,7 +141,10 @@ class SemanticBuilder:
         vj = VirtualJoint(
             name=name, type=joint_type, parent_frame=parent_frame, child_link=child_link
         )
-        self._builder.robot.semantic.virtual_joints.append(vj)
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic, virtual_joints=semantic.virtual_joints + (vj,)
+        )
         return self._builder
 
     def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> RobotBuilder:
@@ -134,7 +157,9 @@ class SemanticBuilder:
         Returns:
             The parent RobotBuilder instance.
         """
-        self._builder.robot.semantic.disabled_collisions.append(
-            DisabledCollision(link1=link1, link2=link2, reason=reason)
+        dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic, disabled_collisions=semantic.disabled_collisions + (dc,)
         )
         return self._builder
