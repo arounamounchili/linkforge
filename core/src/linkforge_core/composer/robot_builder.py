@@ -31,10 +31,11 @@ from typing import Any
 
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
 from ..models.geometry import Transform, Vector3
-from ..models.joint import JointType
+from ..models.joint import JointLimits, JointType
 from ..models.material import Color, Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2Control
+from ..utils.math_utils import normalize_vector
 from .link_builder import LinkBuilder
 from .semantic_builder import SemanticBuilder
 
@@ -91,6 +92,8 @@ class RobotBuilder:
         joint_type: JointType = JointType.FIXED,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
+        axis: tuple[float, float, float] | None = None,
+        limits: tuple[float, float] | None = None,
     ) -> RobotBuilder:
         """Merge another robot or assembly into the current one.
 
@@ -102,12 +105,33 @@ class RobotBuilder:
             joint_type: Type of connecting joint.
             xyz: Joint origin translation.
             rpy: Joint origin rotation.
+            axis: Optional joint axis (automatically normalized).
+            limits: Optional (lower, upper) joint limits.
 
         Returns:
             The RobotBuilder instance.
         """
         sub_robot = component.robot if isinstance(component, RobotBuilder) else component
         root_link = sub_robot.get_root_link()
+
+        # Normalize axis if provided
+        axis_vec = None
+        if axis:
+            nx, ny, nz = normalize_vector(*axis)
+            if nx == 0.0 and ny == 0.0 and nz == 0.0:
+                raise RobotValidationError(
+                    ValidationErrorCode.OUT_OF_RANGE,
+                    "Joint axis magnitude is too small",
+                    target="RobotBuilder.attach",
+                    value=0.0,
+                )
+            axis_vec = Vector3(nx, ny, nz)
+
+        # Prepare limits if provided
+        limits_obj = None
+        if limits:
+            limits_obj = JointLimits(lower=limits[0], upper=limits[1])
+
         self.robot.merge(
             component=sub_robot,
             at_link=at_link,
@@ -115,6 +139,8 @@ class RobotBuilder:
             prefix=prefix,
             joint_type=joint_type,
             origin=Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy)),
+            axis=axis_vec,
+            limits=limits_obj,
         )
         return self
 
@@ -125,7 +151,7 @@ class RobotBuilder:
 
         Args:
             name: Unique material name.
-            color: RGBA color as (r, g, b, a).
+            color: RGBA color as (r, g, b, a), each in range [0.0, 1.0].
 
         Returns:
             The RobotBuilder instance.

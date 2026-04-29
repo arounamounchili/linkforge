@@ -64,3 +64,33 @@ class TestLinkBuilderAdvanced:
         assert lb._finalize_inertial.__doc__ is not None
         assert lb._finalize_transmission.__doc__ is not None
         assert lb._finalize_ros2_control.__doc__ is not None
+
+    def test_attach_with_axis_and_limits(self) -> None:
+        """Test attaching a component with explicit axis and limits."""
+        # Base robot
+        builder = RobotBuilder("base_bot")
+        builder.link("base").root()
+
+        # Component to attach
+        comp_builder = RobotBuilder("arm")
+        comp_builder.link("link1").root()
+
+        # Attach with revolute joint
+        from linkforge_core.models.joint import JointType
+
+        builder.attach(
+            comp_builder,
+            at_link="base",
+            prefix="arm_",
+            joint_type=JointType.REVOLUTE,
+            axis=(0, 0, 2),  # Should normalize
+            limits=(-3.14, 3.14),
+        )
+
+        joint = builder.robot.get_joint("base_to_arm_link1")
+        assert joint is not None
+        assert joint.type == JointType.REVOLUTE
+        assert joint.axis is not None
+        assert joint.axis.z == 1.0  # Normalized
+        assert joint.limits is not None
+        assert joint.limits.lower == -3.14

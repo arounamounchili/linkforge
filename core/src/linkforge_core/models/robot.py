@@ -776,7 +776,6 @@ class Robot:
         # Apply prefix if provided
         if prefix:
             sub_robot.prefix_all(prefix)
-            joint_name = f"{prefix}{joint_name}"
 
         # Identify the root link of the sub-robot
         root_link = sub_robot.get_root_link()
