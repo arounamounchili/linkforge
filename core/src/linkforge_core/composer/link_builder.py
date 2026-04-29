@@ -653,11 +653,14 @@ class LinkBuilder:
             The LinkBuilder instance.
         """
         self._check_not_committed()
+        from linkforge_core.models.sensor import ForceTorqueInfo
+
         sensor = Sensor(
             name=name,
             type=SensorType.FORCE_TORQUE,
             link_name=self._link_name,
             update_rate=update_rate,
+            force_torque_info=ForceTorqueInfo(),
             origin=Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy)),
         )
         self._link.sensors.append(sensor)

@@ -6,6 +6,8 @@ import pytest
 from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     CameraInfo,
+    ContactInfo,
+    ForceTorqueInfo,
     GazeboPlugin,
     GPSInfo,
     IMUInfo,
@@ -259,8 +261,41 @@ class TestSensor:
         )
         assert sensor.name == "gps"
         assert sensor.type == SensorType.GPS
+        assert sensor.gps_info is not None
 
-    def test_sensor_with_plugin(self) -> None:
+    def test_contact_sensor(self) -> None:
+        """Test creating a contact sensor."""
+        contact_info = ContactInfo(collision="my_link_collision")
+        sensor = Sensor(
+            name="contact",
+            type=SensorType.CONTACT,
+            link_name="link1",
+            contact_info=contact_info,
+        )
+        assert sensor.name == "contact"
+        assert sensor.contact_info is not None
+        assert sensor.contact_info.collision == "my_link_collision"
+
+    def test_force_torque_sensor(self) -> None:
+        """Test creating a force/torque sensor."""
+        ft_info = ForceTorqueInfo(frame="parent", measure_direction="parent_to_child")
+        sensor = Sensor(
+            name="ft_sensor",
+            type=SensorType.FORCE_TORQUE,
+            link_name="joint1",
+            force_torque_info=ft_info,
+        )
+        assert sensor.name == "ft_sensor"
+        assert sensor.force_torque_info is not None
+        assert sensor.force_torque_info.frame == "parent"
+
+    def test_force_torque_invalid_params(self) -> None:
+        """Test invalid F/T parameters."""
+        with pytest.raises(RobotModelError, match="Invalid F/T frame"):
+            ForceTorqueInfo(frame="invalid_frame")
+
+        with pytest.raises(RobotModelError, match="Invalid F/T direction"):
+            ForceTorqueInfo(measure_direction="invalid_dir")
         """Test sensor with plugin."""
         camera_info = CameraInfo()
         plugin = GazeboPlugin(name="camera_plugin", filename="libgazebo_ros_camera.so")
@@ -325,6 +360,24 @@ class TestSensor:
                 name="gps",
                 type=SensorType.GPS,
                 link_name="gps_link",
+            )
+
+    def test_contact_without_info(self) -> None:
+        """Test that contact sensor requires contact_info."""
+        with pytest.raises(RobotModelError):
+            Sensor(
+                name="contact",
+                type=SensorType.CONTACT,
+                link_name="link1",
+            )
+
+    def test_force_torque_without_info(self) -> None:
+        """Test that force_torque sensor requires force_torque_info."""
+        with pytest.raises(RobotModelError):
+            Sensor(
+                name="ft",
+                type=SensorType.FORCE_TORQUE,
+                link_name="joint1",
             )
 
     def test_empty_name(self) -> None:

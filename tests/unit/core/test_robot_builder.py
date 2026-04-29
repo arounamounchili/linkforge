@@ -385,6 +385,12 @@ class TestRobotBuilder:
         assert SensorType.FORCE_TORQUE in types
         assert SensorType.CONTACT in types
 
+        # Check sub-info existence
+        ft_sensor = next(s for s in builder.robot.sensors if s.type == SensorType.FORCE_TORQUE)
+        assert ft_sensor.force_torque_info is not None
+        contact_sensor = next(s for s in builder.robot.sensors if s.type == SensorType.CONTACT)
+        assert contact_sensor.contact_info is not None
+
     def test_lidar_and_multi_control(self) -> None:
         """Test lidar sensor and multiple control interfaces."""
         builder = RobotBuilder("multi")

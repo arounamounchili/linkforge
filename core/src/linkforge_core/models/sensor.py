@@ -189,6 +189,23 @@ class ForceTorqueInfo:
     # Noise model for force/torque measurements
     noise: SensorNoise | None = None
 
+    def __post_init__(self) -> None:
+        """Validate F/T sensor parameters."""
+        if self.frame not in ("child", "parent", "sensor"):
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Invalid F/T frame '{self.frame}' (must be child, parent, or sensor)",
+                target="ForceTorqueFrame",
+                value=self.frame,
+            )
+        if self.measure_direction not in ("child_to_parent", "parent_to_child"):
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Invalid F/T direction '{self.measure_direction}'",
+                target="ForceTorqueDirection",
+                value=self.measure_direction,
+            )
+
 
 # GazeboPlugin is imported from gazebo module to avoid duplication
 
@@ -277,6 +294,20 @@ class Sensor:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Sensor '{self.name}' [type: {self.type.value}] requires gps_info",
+                target="SensorInfo",
+                value=self.name,
+            )
+        elif self.type == SensorType.CONTACT and self.contact_info is None:
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Sensor '{self.name}' [type: {self.type.value}] requires contact_info",
+                target="SensorInfo",
+                value=self.name,
+            )
+        elif self.type == SensorType.FORCE_TORQUE and self.force_torque_info is None:
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Sensor '{self.name}' [type: {self.type.value}] requires force_torque_info",
                 target="SensorInfo",
                 value=self.name,
             )
