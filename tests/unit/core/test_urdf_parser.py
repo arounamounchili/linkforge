@@ -372,6 +372,7 @@ class TestURDFParser:
                 <joint name="j1">
                     <hardwareInterface>position</hardwareInterface>
                 </joint>
+                <actuator name="a1"/>
             </transmission>
 
             <gazebo reference="base">
@@ -580,6 +581,7 @@ class TestURDFParser:
                 <joint name="j1">
                     <hardwareInterface>position</hardwareInterface>
                 </joint>
+                <actuator name="a1"/>
             </transmission>
 
             <ros2_control name="Control" type="system">

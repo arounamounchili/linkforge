@@ -404,6 +404,7 @@ class TestURDFGenerator:
                     mechanical_reduction=50.0,
                 )
             ],
+            actuators=[TransmissionActuator(name="actuator1")],
         )
         robot.add_transmission(trans)
 
@@ -587,6 +588,7 @@ class TestURDFGenerator:
             joints=[
                 TransmissionJoint(name="arm_joint", hardware_interfaces=["PositionJointInterface"])
             ],
+            actuators=[TransmissionActuator(name="actuator1")],
         )
         robot.add_transmission(trans)
 
@@ -833,8 +835,9 @@ class TestURDFGenerator:
 
         trans = Transmission(
             name="t1",
-            type="transmission_interface/SimpleTransmission",
-            joints=[TransmissionJoint(name="j1", hardware_interfaces=["UnknownInterface"])],
+            type="Simple",
+            joints=[TransmissionJoint(name="j1", hardware_interfaces=["PositionJointInterface"])],
+            actuators=[TransmissionActuator(name="a1")],
         )
         robot.add_transmission(trans)
 
@@ -1087,9 +1090,11 @@ class TestURDFGenerator:
 
         gz_plugin = GazeboPlugin(name="my_ros2_control", filename="lib.so")
         gz = GazeboElement(plugins=[gz_plugin])
-        # Add a transmission to ensure we enter the logic if it's gated
         trans = Transmission(
-            name="t", joints=[TransmissionJoint(name="j")], type="interface/Simple"
+            name="t",
+            joints=[TransmissionJoint(name="j")],
+            actuators=[TransmissionActuator(name="a")],
+            type="Simple",
         )
         robot = Robot(
             name="r",
@@ -1464,7 +1469,12 @@ class TestURDFGeneratorEdgeCoverage:
         )
         gen = URDFGenerator(use_ros2_control=True)
         robot.add_transmission(
-            Transmission(name="t", joints=[TransmissionJoint(name="j")], type="Simple")
+            Transmission(
+                name="t",
+                joints=[TransmissionJoint(name="j")],
+                actuators=[TransmissionActuator(name="a")],
+                type="Simple",
+            )
         )
         xml = gen.generate(robot, validate=False)
         assert xml.count("libgz_ros2_control-system.so") == 0
@@ -1570,7 +1580,12 @@ class TestURDFGeneratorEdgeCoverage:
             name="r", initial_links=[Link(name="base"), Link(name="child")], initial_joints=[j]
         )
         robot.add_transmission(
-            Transmission(name="t", joints=[TransmissionJoint(name="j")], type="Simple")
+            Transmission(
+                name="t",
+                joints=[TransmissionJoint(name="j")],
+                actuators=[TransmissionActuator(name="a")],
+                type="Simple",
+            )
         )
         gen = URDFGenerator(use_ros2_control=True)
         xml = gen.generate(robot, validate=False)
@@ -1617,12 +1632,16 @@ class TestURDFGeneratorEdgeCoverage:
 
     def test_generate_sensor_without_info_block(self) -> None:
         """Verify sensor generation correctly skips info blocks when none are provided."""
-        # FORCE_TORQUE doesn't require info in Sensor.__post_init__
-        sensor = Sensor(name="s", type=SensorType.FORCE_TORQUE, link_name="base")
-        robot = Robot(name="r", initial_links=[Link(name="base")])
-        robot.add_sensor(sensor)
+        from unittest.mock import patch
 
-        gen = URDFGenerator()
-        xml = gen.generate(robot, validate=False)
-        assert '<sensor name="s" type="force_torque">' in xml
-        assert "<force_torque>" not in xml
+        with patch.object(Sensor, "__post_init__", return_value=None):
+            sensor = Sensor(name="s", type=SensorType.FORCE_TORQUE, link_name="base")
+            object.__setattr__(sensor, "force_torque_info", None)
+
+            robot = Robot(name="r", initial_links=[Link(name="base")])
+            robot.add_sensor(sensor)
+
+            gen = URDFGenerator()
+            xml = gen.generate(robot, validate=False)
+            assert '<sensor name="s" type="force_torque">' in xml
+            assert "<force_torque>" not in xml

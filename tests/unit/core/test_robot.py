@@ -18,7 +18,12 @@ from linkforge_core.models import (
     Vector3,
 )
 from linkforge_core.models.sensor import Sensor
-from linkforge_core.models.transmission import Transmission, TransmissionJoint
+from linkforge_core.models.transmission import (
+    Transmission,
+    TransmissionActuator,
+    TransmissionJoint,
+    TransmissionType,
+)
 from linkforge_core.validation import RobotValidator
 
 
@@ -235,16 +240,18 @@ class TestRobot:
 
         trans = Transmission(
             name="t1",
-            type="SimpleTransmission",
+            type=TransmissionType.SIMPLE,
             joints=[TransmissionJoint(name="j1", hardware_interfaces=["position"])],
+            actuators=[TransmissionActuator(name="a1")],
         )
         robot.add_transmission(trans)
         assert robot.transmissions[0] == trans
 
         bad_trans = Transmission(
             name="t2",
-            type="SimpleTransmission",
+            type=TransmissionType.SIMPLE,
             joints=[TransmissionJoint(name="missing_joint", hardware_interfaces=["position"])],
+            actuators=[TransmissionActuator(name="a1")],
         )
 
         with pytest.raises(RobotModelError):
@@ -344,8 +351,9 @@ class TestRobot:
 
         trans = Transmission(
             name="t1",
-            type="Simple",
+            type=TransmissionType.SIMPLE,
             joints=[TransmissionJoint(name="j1", hardware_interfaces=["position"])],
+            actuators=[TransmissionActuator(name="a1")],
         )
 
         robot.add_transmission(trans)
@@ -416,7 +424,12 @@ class TestRobotCoverage:
         j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
         robot.add_joint(j1)
 
-        t1 = Transmission(name="t1", type="SimpleTransmission", joints=[j1])
+        t1 = Transmission(
+            name="t1",
+            type=TransmissionType.SIMPLE,
+            joints=[TransmissionJoint(name=j1.name)],
+            actuators=[TransmissionActuator(name="a1")],
+        )
         robot.add_transmission(t1)
 
         with pytest.raises(RobotModelError, match="Already exists"):

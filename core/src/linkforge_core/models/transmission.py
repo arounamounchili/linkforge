@@ -152,13 +152,38 @@ class Transmission:
                 value=self.name,
             )
 
-        # Must have at least one joint
+        # Must have at least one joint and one actuator
         if not self.joints:
             raise RobotValidationError(
                 ValidationErrorCode.VALUE_EMPTY,
                 "Transmission must have at least one joint",
                 target="TransmissionJoints",
                 value=self.name,
+            )
+        if not self.actuators:
+            raise RobotValidationError(
+                ValidationErrorCode.VALUE_EMPTY,
+                "Transmission must have at least one actuator",
+                target="TransmissionActuators",
+                value=self.name,
+            )
+
+        # Specific constraints for standard transmission types
+        if self.type == TransmissionType.SIMPLE.value:
+            if len(self.joints) != 1 or len(self.actuators) != 1:
+                raise RobotValidationError(
+                    ValidationErrorCode.INVALID_VALUE,
+                    "Simple transmission must have exactly 1 joint and 1 actuator",
+                    target="TransmissionComponents",
+                )
+        elif self.type in (
+            TransmissionType.DIFFERENTIAL.value,
+            TransmissionType.FOUR_BAR_LINKAGE.value,
+        ) and (len(self.joints) != 2 or len(self.actuators) != 2):
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"{self.type} must have exactly 2 joints and 2 actuators",
+                target="TransmissionComponents",
             )
 
         # Check for duplicate joint names
@@ -173,16 +198,15 @@ class Transmission:
             )
 
         # Check for duplicate actuator names
-        if self.actuators:
-            actuator_names = [a.name for a in self.actuators]
-            duplicates = {name for name, count in Counter(actuator_names).items() if count > 1}
-            if duplicates:
-                raise RobotValidationError(
-                    ValidationErrorCode.DUPLICATE_NAME,
-                    f"Duplicate actuators in transmission: {duplicates}",
-                    target="DuplicateActuators",
-                    value=self.name,
-                )
+        actuator_names = [a.name for a in self.actuators]
+        duplicates = {name for name, count in Counter(actuator_names).items() if count > 1}
+        if duplicates:
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Duplicate actuators in transmission: {duplicates}",
+                target="DuplicateActuators",
+                value=self.name,
+            )
 
     @classmethod
     def create_simple(

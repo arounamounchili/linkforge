@@ -189,10 +189,12 @@ class TestTransmission:
     def test_transmission_with_parameters(self) -> None:
         """Test transmission with additional parameters."""
         joint = TransmissionJoint(name="joint1")
+        actuator = TransmissionActuator(name="actuator1")
         trans = Transmission(
             name="trans1",
             type=TransmissionType.CUSTOM.value,
             joints=[joint],
+            actuators=[actuator],
             parameters={"param1": "value1", "param2": "42"},
         )
         assert trans.parameters["param1"] == "value1"
@@ -201,51 +203,73 @@ class TestTransmission:
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         joint = TransmissionJoint(name="joint1")
+        actuator = TransmissionActuator(name="actuator1")
         with pytest.raises(RobotModelError):
             Transmission(
                 name="",
                 type=TransmissionType.SIMPLE.value,
                 joints=[joint],
+                actuators=[actuator],
             )
 
     def test_empty_type(self) -> None:
         """Test that empty type raises error."""
         joint = TransmissionJoint(name="joint1")
+        actuator = TransmissionActuator(name="actuator1")
         with pytest.raises(RobotModelError):
             Transmission(
                 name="trans1",
                 type="",
                 joints=[joint],
+                actuators=[actuator],
             )
 
     def test_invalid_name(self) -> None:
         """Test that invalid name raises error."""
         joint = TransmissionJoint(name="joint1")
+        actuator = TransmissionActuator(name="actuator1")
         with pytest.raises(RobotModelError):
             Transmission(
                 name="trans@1",
                 type=TransmissionType.SIMPLE.value,
                 joints=[joint],
+                actuators=[actuator],
             )
 
     def test_no_joints(self) -> None:
         """Test that transmission without joints raises error."""
+        actuator = TransmissionActuator(name="actuator1")
         with pytest.raises(RobotModelError):
             Transmission(
                 name="trans1",
                 type=TransmissionType.SIMPLE.value,
                 joints=[],
+                actuators=[actuator],
+            )
+
+    def test_no_actuators(self) -> None:
+        """Test that transmission without actuators raises error."""
+        joint = TransmissionJoint(name="joint1")
+        with pytest.raises(RobotModelError, match="at least one actuator"):
+            Transmission(
+                name="trans1",
+                type=TransmissionType.SIMPLE.value,
+                joints=[joint],
+                actuators=[],
             )
 
     def test_duplicate_joint_names(self) -> None:
         """Test that duplicate joint names raise error."""
         joint1 = TransmissionJoint(name="joint1")
         joint2 = TransmissionJoint(name="joint1")  # Duplicate
+        actuator1 = TransmissionActuator(name="a1")
+        actuator2 = TransmissionActuator(name="a2")
         with pytest.raises(RobotModelError):
             Transmission(
                 name="trans1",
                 type=TransmissionType.DIFFERENTIAL.value,
                 joints=[joint1, joint2],
+                actuators=[actuator1, actuator2],
             )
 
     def test_duplicate_actuator_names(self) -> None:
@@ -259,6 +283,29 @@ class TestTransmission:
                 type=TransmissionType.SIMPLE.value,
                 joints=[joint],
                 actuators=[actuator1, actuator2],
+            )
+
+    def test_cardinality_validation(self) -> None:
+        """Test cardinality constraints for standard transmissions."""
+        joint = TransmissionJoint(name="j1")
+        actuator = TransmissionActuator(name="a1")
+
+        # Simple needs exactly 1:1
+        with pytest.raises(RobotModelError, match="exactly 1 joint and 1 actuator"):
+            Transmission(
+                name="trans",
+                type=TransmissionType.SIMPLE.value,
+                joints=[joint, TransmissionJoint(name="j2")],
+                actuators=[actuator],
+            )
+
+        # Differential needs exactly 2:2
+        with pytest.raises(RobotModelError, match="exactly 2 joints and 2 actuators"):
+            Transmission(
+                name="trans",
+                type=TransmissionType.DIFFERENTIAL.value,
+                joints=[joint],
+                actuators=[actuator],
             )
 
 
