@@ -18,6 +18,7 @@ from .checks import (
     MassPropertiesCheck,
     MimicChainCheck,
     Ros2ControlCheck,
+    SemanticCheck,
     TreeStructureCheck,
     ValidationCheck,
 )
@@ -57,6 +58,7 @@ class RobotValidator:
         GeometryCheck,
         Ros2ControlCheck,
         MimicChainCheck,
+        SemanticCheck,
     ]
 
     def __init__(

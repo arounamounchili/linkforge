@@ -17,6 +17,7 @@ from .result import ValidationResult
 if TYPE_CHECKING:
     from ..models.link import Link
     from ..models.robot import Robot
+    from ..models.srdf import PlanningGroup
 
 
 class ValidationCheck(ABC):
@@ -339,6 +340,125 @@ class MimicChainCheck(ValidationCheck):
                 current = next_joint.mimic.joint
 
 
+class SemanticCheck(ValidationCheck):
+    """Check for semantic robot description (SRDF) invariants."""
+
+    def run(self, robot: Robot, result: ValidationResult) -> None:
+        """Check SRDF invariants."""
+        if not robot.semantic:
+            return
+
+        semantic = robot.semantic
+        group_names = {g.name for g in semantic.groups}
+        link_names = {link.name for link in robot.links}
+        joint_names = {joint.name for joint in robot.joints}
+
+        # Check planning groups
+        for group in semantic.groups:
+            # Check links
+            for link_name in group.links:
+                if link_name not in link_names:
+                    result.add_error(
+                        title="Invalid planning group link",
+                        message=f"Group '{group.name}' references non-existent link '{link_name}'",
+                        affected_objects=[group.name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                    )
+            # Check joints
+            for joint_name in group.joints:
+                if joint_name not in joint_names:
+                    result.add_error(
+                        title="Invalid planning group joint",
+                        message=f"Group '{group.name}' references non-existent joint '{joint_name}'",
+                        affected_objects=[group.name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                    )
+            # Check subgroups and cycles
+            self._check_subgroup_cycles(group, semantic.groups, result)
+
+        # Check group states
+        for state in semantic.group_states:
+            if state.group not in group_names:
+                result.add_error(
+                    title="Invalid group state reference",
+                    message=f"State '{state.name}' references non-existent group '{state.group}'",
+                    affected_objects=[state.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+
+        # Check end effectors
+        for ee in semantic.end_effectors:
+            if ee.group not in group_names:
+                result.add_error(
+                    title="Invalid end effector group",
+                    message=f"End effector '{ee.name}' references non-existent group '{ee.group}'",
+                    affected_objects=[ee.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+            if ee.parent_link not in link_names:
+                result.add_error(
+                    title="Invalid end effector parent link",
+                    message=f"End effector '{ee.name}' references non-existent parent link '{ee.parent_link}'",
+                    affected_objects=[ee.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+            if ee.parent_group and ee.parent_group not in group_names:
+                result.add_error(
+                    title="Invalid end effector parent group",
+                    message=f"End effector '{ee.name}' references non-existent parent group '{ee.parent_group}'",
+                    affected_objects=[ee.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+
+        # Check passive joints
+        for pj in semantic.passive_joints:
+            if pj.name not in joint_names:
+                result.add_error(
+                    title="Invalid passive joint",
+                    message=f"Passive joint '{pj.name}' does not exist",
+                    affected_objects=[pj.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+
+    def _check_subgroup_cycles(
+        self, group: PlanningGroup, all_groups: list[PlanningGroup], result: ValidationResult
+    ) -> None:
+        """Check for circular subgroup dependencies."""
+        group_map = {g.name for g in all_groups}
+        group_obj_map = {g.name: g for g in all_groups}
+
+        def _dfs(current_name: str, path: list[str]) -> bool:
+            current_group = group_obj_map.get(current_name)
+            if not current_group:
+                return False
+
+            for sg_name in current_group.subgroups:
+                if sg_name not in group_map:
+                    result.add_error(
+                        title="Invalid subgroup reference",
+                        message=f"Group '{current_name}' references non-existent subgroup '{sg_name}'",
+                        affected_objects=[current_name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                    )
+                    continue
+
+                if sg_name in path:
+                    cycle = " -> ".join(path[path.index(sg_name) :]) + f" -> {sg_name}"
+                    result.add_error(
+                        title="Circular subgroup dependency",
+                        message=f"Circular subgroup dependency detected: {cycle}",
+                        affected_objects=path[path.index(sg_name) :],
+                        code=ValidationErrorCode.HAS_CYCLE,
+                    )
+                    return True
+
+                if _dfs(sg_name, path + [sg_name]):
+                    return True
+            return False
+
+        _dfs(group.name, [group.name])
+
+
 __all__ = [
     "ValidationCheck",
     "HasLinksCheck",
@@ -349,4 +469,5 @@ __all__ = [
     "GeometryCheck",
     "Ros2ControlCheck",
     "MimicChainCheck",
+    "SemanticCheck",
 ]
