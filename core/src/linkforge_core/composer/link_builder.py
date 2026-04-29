@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
@@ -293,7 +294,7 @@ class LinkBuilder:
         """
         self._check_not_committed()
         self._joint.type = JointType.REVOLUTE
-        self._joint.axis = Vector3(*axis)
+        self._joint.axis = self._normalize_axis(axis)
         self._joint.limits = JointLimits(
             lower=limits[0], upper=limits[1], effort=effort, velocity=velocity
         )
@@ -323,7 +324,7 @@ class LinkBuilder:
         """
         self._check_not_committed()
         self._joint.type = JointType.CONTINUOUS
-        self._joint.axis = Vector3(*axis)
+        self._joint.axis = self._normalize_axis(axis)
         if effort is not None or velocity is not None:
             self._joint.limits = JointLimits(
                 lower=0.0, upper=0.0, effort=effort or 0.0, velocity=velocity or 0.0
@@ -356,7 +357,7 @@ class LinkBuilder:
         """
         self._check_not_committed()
         self._joint.type = JointType.PRISMATIC
-        self._joint.axis = Vector3(*axis)
+        self._joint.axis = self._normalize_axis(axis)
         self._joint.limits = JointLimits(
             lower=limits[0], upper=limits[1], effort=effort, velocity=velocity
         )
@@ -461,6 +462,29 @@ class LinkBuilder:
                 xyz=Vector3(*(xyz or (0, 0, 0))), rpy=Vector3(*(rpy or (0, 0, 0)))
             )
         return self
+
+    def _normalize_axis(self, axis: tuple[float, float, float]) -> Vector3:
+        """Validate and normalize a joint axis vector.
+
+        Args:
+            axis: The raw (x, y, z) axis.
+
+        Returns:
+            A normalized Vector3.
+
+        Raises:
+            RobotValidationError: If the axis magnitude is too small.
+        """
+        x, y, z = axis
+        mag = math.sqrt(x**2 + y**2 + z**2)
+        if mag < 1e-10:
+            raise RobotValidationError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Joint axis magnitude is too small",
+                target="LinkBuilder",
+                value=mag,
+            )
+        return Vector3(x / mag, y / mag, z / mag)
 
     def transmission(
         self,
@@ -770,6 +794,7 @@ class LinkBuilder:
         self._committed = True
 
     def _finalize_inertial(self) -> Inertial | None:
+        """Calculate and return the final Inertial properties for the link."""
         l_state = self._link
         if l_state.mass is None:
             return None
@@ -809,6 +834,7 @@ class LinkBuilder:
         )
 
     def _finalize_link(self, inertial: Inertial | None) -> None:
+        """Create and add the final Link model to the robot."""
         l_state = self._link
         link = Link(
             name=self._link_name,
@@ -826,6 +852,7 @@ class LinkBuilder:
             self._builder.robot.add_gazebo_element(gz)
 
     def _finalize_joint(self) -> Joint:
+        """Create and add the final Joint model to the robot."""
         j_state = self._joint
         joint_name = self._joint_name or f"{self._parent}_to_{self._link_name}"
         is_fixed = j_state.type == JointType.FIXED
@@ -848,6 +875,7 @@ class LinkBuilder:
         return joint
 
     def _finalize_transmission(self, joint: Joint) -> None:
+        """Create and add the final Transmission model to the robot."""
         if not self._transmission_params:
             return
         t_name = self._transmission_params["name"] or f"trans_{joint.name}"
@@ -861,6 +889,7 @@ class LinkBuilder:
         self._builder.robot.add_transmission(trans)
 
     def _finalize_ros2_control(self, joint: Joint) -> None:
+        """Configure and add ros2_control interfaces to the robot."""
         if not self._control_interfaces:
             return
 
