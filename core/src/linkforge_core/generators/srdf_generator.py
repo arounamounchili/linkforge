@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import __version__
+from ..base import RobotGeneratorError
 from ..logging_config import get_logger
 from ..models import (
     DisabledCollision,
@@ -23,6 +24,7 @@ from ..models import (
 from ..models.robot import Robot
 from ..utils.math_utils import format_float
 from ..utils.xml_utils import create_xml_element, serialize_xml
+from ..validation import RobotValidator
 from .xml_base import RobotXMLGenerator
 
 logger = get_logger(__name__)
@@ -51,7 +53,14 @@ class SRDFGenerator(RobotXMLGenerator):
         Returns:
             SRDF XML as formatted string with proper indentation
         """
-        if validate and robot.semantic is None:
+        if validate:
+            validator = RobotValidator()
+            result = validator.validate(robot)
+            if not result.is_valid:
+                error_msgs = [str(issue) for issue in result.errors]
+                raise RobotGeneratorError("Robot validation failed:\n" + "\n".join(error_msgs))
+
+        if robot.semantic is None:
             logger.warning(f"Robot '{robot.name}' has no semantic description to generate.")
 
         root = self.generate_robot_element(robot)
@@ -65,12 +74,14 @@ class SRDFGenerator(RobotXMLGenerator):
             return root
 
         semantic = robot.semantic
-        self._add_virtual_joints(root, semantic.virtual_joints)
-        self._add_groups(root, semantic.groups)
-        self._add_group_states(root, semantic.group_states)
-        self._add_end_effectors(root, semantic.end_effectors)
-        self._add_passive_joints(root, semantic.passive_joints)
-        self._add_disabled_collisions(root, semantic.disabled_collisions)
+        self._add_virtual_joints(root, sorted(semantic.virtual_joints, key=lambda x: x.name))
+        self._add_groups(root, sorted(semantic.groups, key=lambda x: x.name))
+        self._add_group_states(root, sorted(semantic.group_states, key=lambda x: x.name))
+        self._add_end_effectors(root, sorted(semantic.end_effectors, key=lambda x: x.name))
+        self._add_passive_joints(root, sorted(semantic.passive_joints, key=lambda x: x.name))
+        self._add_disabled_collisions(
+            root, sorted(semantic.disabled_collisions, key=lambda x: (x.link1, x.link2))
+        )
 
         return root
 

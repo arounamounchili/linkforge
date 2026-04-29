@@ -789,13 +789,13 @@ class URDFGenerator(RobotXMLGenerator):
         self._add_optional_numeric_element(gz_elem, "stopCfm", gazebo_elem.stop_cfm)
         self._add_optional_numeric_element(gz_elem, "stopErp", gazebo_elem.stop_erp)
 
-        # Add custom properties
-        for key, value in gazebo_elem.properties.items():
+        # Add custom properties (sort by key for deterministic output)
+        for key in sorted(gazebo_elem.properties.keys()):
             prop_elem = ET.SubElement(gz_elem, key)
-            prop_elem.text = value
+            prop_elem.text = gazebo_elem.properties[key]
 
-        # Add plugins
-        for plugin in gazebo_elem.plugins:
+        # Add plugins (sort by name for deterministic output)
+        for plugin in sorted(gazebo_elem.plugins, key=lambda p: p.name):
             self._add_gazebo_plugin_element(gz_elem, plugin)
 
     def _add_gazebo_plugin_element(self, parent: ET.Element, plugin: GazeboPlugin) -> None:
@@ -874,7 +874,8 @@ class URDFGenerator(RobotXMLGenerator):
         """
         if robot.transmissions:
             parent.append(ET.Comment(" Transmissions "))
-        for transmission in robot.transmissions:
+        # Sort transmissions by name for deterministic output
+        for transmission in sorted(robot.transmissions, key=lambda t: t.name):
             self._add_transmission_element(parent, transmission)
 
     def add_gazebo(self, parent: ET.Element, robot: Robot) -> None:
@@ -886,7 +887,9 @@ class URDFGenerator(RobotXMLGenerator):
         """
         if robot.gazebo_elements:
             parent.append(ET.Comment(" Gazebo "))
-        for gazebo_elem in robot.gazebo_elements:
+        # Sort gazebo elements by reference for deterministic output
+        # Empty reference (global) comes first
+        for gazebo_elem in sorted(robot.gazebo_elements, key=lambda g: g.reference or ""):
             self._add_gazebo_element(parent, gazebo_elem)
 
     def add_sensors(self, parent: ET.Element, robot: Robot) -> None:
@@ -898,7 +901,8 @@ class URDFGenerator(RobotXMLGenerator):
         """
         if robot.sensors:
             parent.append(ET.Comment(" Sensors "))
-        for sensor in robot.sensors:
+        # Sort sensors by name for deterministic output
+        for sensor in sorted(robot.sensors, key=lambda s: s.name):
             self._add_sensor_element(parent, sensor)
 
     def _add_ros2_control_element(self, parent: ET.Element, robot: Robot) -> None:
@@ -918,8 +922,8 @@ class URDFGenerator(RobotXMLGenerator):
         plugin_elem = ET.SubElement(hw_elem, "plugin")
         plugin_elem.text = "gz_ros2_control/GazeboSimSystem"
 
-        # Process transmissions to extract joint interfaces
-        for trans in robot.transmissions:
+        # Process transmissions to extract joint interfaces (sort for deterministic output)
+        for trans in sorted(robot.transmissions, key=lambda t: t.name):
             for trans_joint in trans.joints:
                 joint_elem = ET.SubElement(rc_elem, "joint", name=trans_joint.name)
 
@@ -977,13 +981,13 @@ class URDFGenerator(RobotXMLGenerator):
         plugin_elem = ET.SubElement(hw_elem, "plugin")
         plugin_elem.text = rc.hardware_plugin
 
-        # Hardware-level parameters
-        for key, value in rc.parameters.items():
+        # Joint parameters (sort by key for deterministic output)
+        for key in sorted(rc.parameters.keys()):
             param_elem = ET.SubElement(hw_elem, "param", name=key)
-            param_elem.text = value
+            param_elem.text = rc.parameters[key]
 
-        # Joints
-        for joint in rc.joints:
+        # Joints (sort by name for deterministic output)
+        for joint in sorted(rc.joints, key=lambda j: j.name):
             joint_elem = ET.SubElement(rc_elem, "joint", name=joint.name)
 
             # Command interfaces
