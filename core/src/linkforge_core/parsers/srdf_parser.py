@@ -93,7 +93,11 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         Returns:
             A populated PlanningGroup instance.
         """
-        name = group_elem.get("name", "unnamed_group")
+        name = group_elem.get("name")
+        if not name:
+            logger.warning("SRDF: Planning group missing name attribute, skipping")
+            return None  # type: ignore[return-value]
+
         links: list[str] = []
         joints: list[str] = []
         chains: list[tuple[str, str]] = []
@@ -205,13 +209,19 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             if child.tag == "virtual_joint":
                 virtual_joints.append(self._parse_virtual_joint_elem(child))
             elif child.tag == "group":
-                groups.append(self._parse_planning_group(child))
+                group = self._parse_planning_group(child)
+                if group:
+                    groups.append(group)
             elif child.tag == "group_state":
                 group_states.append(self._parse_group_state(child))
             elif child.tag == "end_effector":
                 end_effectors.append(self._parse_end_effector_elem(child))
             elif child.tag == "passive_joint":
-                passive_joints.append(PassiveJoint(name=child.get("name", "unnamed_pj")))
+                pj_name = child.get("name")
+                if pj_name:
+                    passive_joints.append(PassiveJoint(name=pj_name))
+                else:
+                    logger.warning("SRDF: Passive joint missing name, skipping")
             elif child.tag == "disable_collisions":
                 disabled_collisions.append(self._parse_disable_collisions_elem(child))
 

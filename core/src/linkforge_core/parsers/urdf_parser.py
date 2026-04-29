@@ -194,13 +194,28 @@ class URDFParser(RobotXMLParser[Robot]):
             if limits_elem is not None:
                 lower_str = limits_elem.get("lower")
                 upper_str = limits_elem.get("upper")
+                effort = parse_float(limits_elem.get("effort"), check_name="effort", default=0.0)
+                velocity = parse_float(
+                    limits_elem.get("velocity"), check_name="velocity", default=0.0
+                )
+
+                # Validation: effort and velocity must be non-negative
+                if effort < 0:
+                    logger.warning(
+                        f"Joint '{name}' effort limit is negative ({effort}), setting to 0"
+                    )
+                    effort = 0.0
+                if velocity < 0:
+                    logger.warning(
+                        f"Joint '{name}' velocity limit is negative ({velocity}), setting to 0"
+                    )
+                    velocity = 0.0
+
                 limits = JointLimits(
                     lower=float(lower_str) if lower_str is not None else None,
                     upper=float(upper_str) if upper_str is not None else None,
-                    effort=parse_float(limits_elem.get("effort"), check_name="effort", default=0.0),
-                    velocity=parse_float(
-                        limits_elem.get("velocity"), check_name="velocity", default=0.0
-                    ),
+                    effort=effort,
+                    velocity=velocity,
                 )
             elif joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
                 limits = JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
@@ -359,6 +374,10 @@ class URDFParser(RobotXMLParser[Robot]):
             check_name="mechanicalReduction",
             default=1.0,
         )
+        if reduction == 0:
+            logger.warning(f"Transmission component '{name}' has zero reduction, defaulting to 1.0")
+            reduction = 1.0
+
         offset = parse_float(elem.findtext("offset"), check_name="offset", default=0.0)
 
         if tag == "joint":
