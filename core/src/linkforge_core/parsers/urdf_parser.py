@@ -106,7 +106,7 @@ class URDFParser(RobotXMLParser[Robot]):
         self,
         link_elem: ET.Element,
         materials: dict[str, Material],
-        urdf_directory: Path | None = None,
+        source_directory: Path | None = None,
     ) -> Link:
         """Parse link element with support for multiple visual/collision elements."""
         name = link_elem.get("name", "unnamed_link")
@@ -116,7 +116,7 @@ class URDFParser(RobotXMLParser[Robot]):
             origin = self._parse_origin_element(visual_elem.find("origin"))
             geom_elem = visual_elem.find("geometry")
             geometry = (
-                self._parse_geometry_element(geom_elem, urdf_directory)
+                self._parse_geometry_element(geom_elem, source_directory)
                 if geom_elem is not None
                 else None
             )
@@ -133,7 +133,7 @@ class URDFParser(RobotXMLParser[Robot]):
             origin = self._parse_origin_element(collision_elem.find("origin"))
             geom_elem = collision_elem.find("geometry")
             geometry = (
-                self._parse_geometry_element(geom_elem, urdf_directory)
+                self._parse_geometry_element(geom_elem, source_directory)
                 if geom_elem is not None
                 else None
             )
@@ -875,14 +875,14 @@ class URDFParser(RobotXMLParser[Robot]):
     def parse_string(
         self,
         content: str,
-        urdf_directory: Path | None = None,
+        source_directory: Path | None = None,
         **_kwargs: Any,
     ) -> Robot:
         """Parse URDF from string.
 
         Args:
             content: URDF XML content as string
-            urdf_directory: Base directory for relative mesh path resolution
+            source_directory: Base directory for relative mesh path resolution
             **kwargs: Additional parsing options
 
         Returns:
@@ -909,7 +909,7 @@ class URDFParser(RobotXMLParser[Robot]):
             if root.tag != "robot":
                 raise RobotParserXMLRootError(actual_tag=root.tag)
 
-            return self._parse_from_context(context, root, urdf_directory)
+            return self._parse_from_context(context, root, source_directory)
 
         except ET.ParseError as e:
             raise RobotParserUnexpectedError(source_area="URDF XML", original_error=e) from e

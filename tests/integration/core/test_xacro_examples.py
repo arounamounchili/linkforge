@@ -2,14 +2,14 @@
 
 from pathlib import Path
 
-from linkforge_core.parsers.xacro_parser import XACROParser
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_xacro_roundtrip_master_structure(examples_dir: Path) -> None:
     """Test roundtrip.xacro parses into a valid robot with expected features."""
-    parser = XACROParser()
-    # The XACROParser.parse() handles search path setup
-    robot = parser.parse(examples_dir / "xacro" / "roundtrip.xacro")
+    parser = URDFParser()
+    # The URDFParser.parse_xacro() handles search path setup
+    robot = parser.parse_xacro(examples_dir / "xacro" / "roundtrip.xacro")
 
     assert robot.name == "xacro_roundtrip_robot"
     # base_link + arm_link (if use_arm=true)
@@ -31,9 +31,9 @@ def test_xacro_roundtrip_master_structure(examples_dir: Path) -> None:
 
 def test_xacro_roundtrip_with_disabled_arm(examples_dir: Path) -> None:
     """Test roundtrip.xacro with argument-driven conditional logic."""
-    parser = XACROParser()
-    # Arguments are now passed directly to parse()
-    robot = parser.parse(examples_dir / "xacro" / "roundtrip.xacro", use_arm="false")
+    parser = URDFParser()
+    # Arguments are now passed directly to parse_xacro()
+    robot = parser.parse_xacro(examples_dir / "xacro" / "roundtrip.xacro", use_arm="false")
 
     assert robot.name == "xacro_roundtrip_robot"
     # base_link + no_arm_payload

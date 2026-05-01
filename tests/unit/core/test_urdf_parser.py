@@ -1040,13 +1040,13 @@ class TestURDFParserAdditionalEdgeCoverage:
     """Parser behavior for inertial properties, transmissions, and mesh validation."""
 
     def test_mesh_path_validation_error_with_directory(self, tmp_path) -> None:
-        """Non-package:// mesh path with urdf_directory triggers security validation."""
+        """Non-package:// mesh path with source_directory triggers security validation."""
         xml = """<robot name="r"><link name="l1"><visual>
             <geometry><mesh filename="/outside/path/mesh.stl"/></geometry>
         </visual></link></robot>"""
         parser = URDFParser()
-        # When urdf_directory is set and path escapes it, logs warning and returns None geometry
-        robot = parser.parse_string(xml, urdf_directory=tmp_path)
+        # When source_directory is set and path escapes it, logs warning and returns None geometry
+        robot = parser.parse_string(xml, source_directory=tmp_path)
         # Mesh should be skipped — link exists but no visual geometry
         assert len(robot.links) == 1
 

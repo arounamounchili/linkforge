@@ -80,7 +80,7 @@ def test_import_urdf_xacro_fallback(tmp_path) -> None:
         mock_self.report.assert_any_call({"WARNING"}, ANY)
 
 
-def test_import_urdf_directory_handling_more(tmp_path) -> None:
+def test_import_source_directory_handling_more(tmp_path) -> None:
     """Test standard directory handling branches."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()
@@ -106,7 +106,7 @@ def test_import_urdf_directory_handling_more(tmp_path) -> None:
         mock_self.report.assert_any_call({"INFO"}, ANY)
 
 
-def test_import_urdf_directory_candidates(tmp_path) -> None:
+def test_import_source_directory_candidates(tmp_path) -> None:
     """Test candidate detection when importing a directory."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_urdf)
     mock_self.report = MagicMock()

@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from linkforge_core.parsers.xacro_parser import XACROParser
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_xacro_standard_parities() -> None:
@@ -68,8 +68,8 @@ kinematics:
         xacro_file.write_text(xacro_content)
 
         # 3. Resolve and verify
-        parser = XACROParser()
-        robot = parser.parse(xacro_file)
+        parser = URDFParser()
+        robot = parser.parse_xacro(xacro_file)
 
         assert robot.name == "compat_robot"
         assert len(robot.links) == 2

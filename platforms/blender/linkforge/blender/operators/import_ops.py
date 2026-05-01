@@ -174,7 +174,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
                     sandbox_root=sandbox_root, resource_resolver=resolver
                 ).parse_string(
                     urdf_string,
-                    urdf_directory=urdf_path.parent,
+                    source_directory=urdf_path.parent,
                     default_name=urdf_path.stem,
                 )
         except RobotParserError as e:

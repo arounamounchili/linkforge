@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 def validate_mesh_path(
     mesh_filepath: Path,
-    urdf_directory: Path,
+    source_directory: Path,
     allow_absolute: bool = False,
     sandbox_root: Path | None = None,
 ) -> Path:
@@ -31,9 +31,9 @@ def validate_mesh_path(
 
     Args:
         mesh_filepath: The mesh file path from the URDF (may be relative or absolute)
-        urdf_directory: The directory containing the URDF file
+        source_directory: The directory containing the URDF file
         allow_absolute: If True, allows absolute paths (default: False for security)
-        sandbox_root: The root directory for the sandbox. If None, urdf_directory is used.
+        sandbox_root: The root directory for the sandbox. If None, source_directory is used.
                       Access is restricted to files within this root and its subdirectories.
 
     Returns:
@@ -59,7 +59,7 @@ def validate_mesh_path(
         resolved = mesh_filepath.resolve()
     else:
         # Resolve relative to URDF directory
-        resolved = (urdf_directory / mesh_filepath).resolve()
+        resolved = (source_directory / mesh_filepath).resolve()
 
     # Additional security: check for suspicious system paths
     if is_suspicious_location(resolved):
@@ -67,7 +67,7 @@ def validate_mesh_path(
         raise RobotSecurityError(str(mesh_filepath), "Restricted system location")
 
     # Sandbox validation: ensure resolved path is within sandbox_root
-    check_root = (sandbox_root or urdf_directory).resolve()
+    check_root = (sandbox_root or source_directory).resolve()
     try:
         resolved.relative_to(check_root)
     except ValueError:

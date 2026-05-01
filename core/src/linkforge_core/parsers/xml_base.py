@@ -83,7 +83,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         from .xacro_parser import XACROParser
 
         xml_string = XACROParser().resolve(filepath, **kwargs)
-        return self.parse_string(xml_string, **kwargs)
+        return self.parse_string(xml_string, source_directory=filepath.parent, **kwargs)
 
     def _parse_origin_element(self, elem: ET.Element | None) -> Transform:
         """Parse origin-style element into a Transform object.
