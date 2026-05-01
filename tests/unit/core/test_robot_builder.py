@@ -608,3 +608,30 @@ class TestRobotBuilder:
         assert len(system2.joints) == 1
         joint_ctrl = system2.joints[0]
         assert joint_ctrl.name == "base_to_l1"
+
+    def test_attach_with_collision_disable(self) -> None:
+        """Test that attach(..., disable_collision=True) correctly adds semantic data."""
+        b1 = RobotBuilder("main")
+        b1.link("base").root()
+
+        b2 = RobotBuilder("gripper")
+        b2.link("gripper_base").root()
+
+        # Attach with collision disable
+        b1.attach(b2, at_link="base", disable_collision=True, reason="Adjacent")
+
+        assert len(b1.robot.semantic.disabled_collisions) == 1
+        dc = b1.robot.semantic.disabled_collisions[0]
+        assert dc.link1 == "base"
+        assert dc.link2 == "gripper_base"
+        assert dc.reason == "Adjacent"
+
+        # Test with prefix
+        b3 = RobotBuilder("prefixed")
+        b3.link("root").root()
+        b1.attach(b3, at_link="base", prefix="p1_", disable_collision=True)
+
+        assert len(b1.robot.semantic.disabled_collisions) == 2
+        dc2 = b1.robot.semantic.disabled_collisions[1]
+        assert dc2.link1 == "base"
+        assert dc2.link2 == "p1_root"

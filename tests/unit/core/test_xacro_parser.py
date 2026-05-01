@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from linkforge_core.base import RobotParserError
 from linkforge_core.exceptions import RobotModelError
-from linkforge_core.parsers.xacro_parser import XACROParser, XacroResolver
+from linkforge_core.parsers.xacro_parser import XacroResolver
 from linkforge_core.parsers.xacro_parser import logger as xacro_logger
 
 
@@ -251,11 +251,11 @@ def test_macro_expansion_with_parameter_defaults() -> None:
     assert link.get("mass") == "1.5"
 
 
-def test_finalize_urdf_returns_empty_on_empty_container() -> None:
+def test_finalize_xml_returns_empty_on_empty_container() -> None:
     resolver = XacroResolver()
     # Empty container should yield valid XML with empty container, not empty string
     empty_root = ET.Element("container")
-    res = resolver._finalize_urdf(empty_root)
+    res = resolver._finalize_xml(empty_root)
     assert "<container />" in res
     assert "<?xml" in res
 
@@ -275,13 +275,13 @@ def test_find_file_and_search_paths(tmp_path) -> None:
 
 
 def test_xacro_parser_class_entry_point(tmp_path) -> None:
-    from linkforge_core.parsers.xacro_parser import XACROParser
+    from linkforge_core.parsers.urdf_parser import URDFParser
 
     robot_xml = tmp_path / "robot.xacro"
     robot_xml.write_text("<robot name='test'><link name='l'/></robot>")
 
-    parser = XACROParser()
-    robot = parser.parse(robot_xml)
+    parser = URDFParser()
+    robot = parser.parse_xacro(robot_xml)
     assert robot.name == "test"
     assert len(robot.links) == 1
 
@@ -376,24 +376,24 @@ def test_macro_expansion_flattens_nested_containers() -> None:
     assert any(c.tag == "link" for c in resolved)
 
 
-def test_finalize_urdf_cleans_namespaced_attributes() -> None:
+def test_finalize_xml_cleans_namespaced_attributes() -> None:
     resolver = XacroResolver()
     # Element with XACRO and namespaced attributes
     root = ET.Element(
         "link", {"name": "base", "xacro:foo": "bar", "{http://example.com}attr": "val"}
     )
     # Finalize should strip the xacro: and {ns} attributes
-    res_xml = resolver._finalize_urdf(root)
+    res_xml = resolver._finalize_xml(root)
     assert 'name="base"' in res_xml
     assert "xacro:foo" not in res_xml
     assert "example.com" not in res_xml
 
 
-def test_finalize_urdf_with_no_root_children() -> None:
+def test_finalize_xml_with_no_root_children() -> None:
     resolver = XacroResolver()
     # Container with NO children -> valid XML
     root = ET.Element("container")
-    res = resolver._finalize_urdf(root)
+    res = resolver._finalize_xml(root)
     assert "<container />" in res
 
 
@@ -416,14 +416,14 @@ def test_resolve_file_raises_generic_error_on_resolution(tmp_path, monkeypatch) 
         resolver.resolve_file(robot_xml)
 
 
-def test_finalize_urdf_with_container_root() -> None:
+def test_finalize_xml_with_container_root() -> None:
     # Test containers with existing child elements
     resolver = XacroResolver()
     container = ET.Element("container")
     robot = ET.Element("robot", name="foo")
     container.append(robot)
 
-    xml_str = resolver._finalize_urdf(container)
+    xml_str = resolver._finalize_xml(container)
     assert '<robot name="foo"' in xml_str
 
 
@@ -617,7 +617,6 @@ def test_xacro_resolve_file_exception(tmp_path) -> None:
     """Test RobotParserError wrap in resolve_file."""
     resolver = XacroResolver()
     # Mock _process_include_file to raise a plain Exception
-    import unittest.mock as mock
 
     with (
         mock.patch.object(
@@ -636,7 +635,7 @@ def test_xacro_parser_math_eval_error() -> None:
         resolver._evaluate("undefined_var + 1")
 
 
-def test_xacro_parser_finalize_urdf_recursive_cleanup() -> None:
+def test_xacro_parser_finalize_xml_recursive_cleanup() -> None:
     """Test recursive cleanup in finalize_urdf."""
     resolver = XacroResolver()
     root = ET.Element("robot")
@@ -645,7 +644,7 @@ def test_xacro_parser_finalize_urdf_recursive_cleanup() -> None:
     inner = ET.SubElement(link, "visual")
     ET.SubElement(inner, "xacro:info")
 
-    xml = resolver._finalize_urdf(root)
+    xml = resolver._finalize_xml(root)
     assert "xacro:info" not in xml
 
 
@@ -895,9 +894,10 @@ def test_xacro_parser_extra_args_coverage(tmp_path) -> None:
         '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="r">'
         '<link name="${my_arg}"/></robot>'
     )
+    from linkforge_core.parsers.urdf_parser import URDFParser
 
-    parser = XACROParser()
-    robot = parser.parse(xacro_file, my_arg="custom_name")
+    parser = URDFParser()
+    robot = parser.parse_xacro(xacro_file, my_arg="custom_name")
     assert robot.links[0].name == "custom_name"
 
 
@@ -932,7 +932,7 @@ def test_xacro_recursive_cleanup_comments() -> None:
     # Add a xacro tag inside a preserved tag
     ET.SubElement(link, "xacro:property", name="p")
 
-    xml_str = resolver._finalize_urdf(root)
+    xml_str = resolver._finalize_xml(root)
     assert "xacro:property" not in xml_str
     assert '<link name="l" />' in xml_str or '<link name="l"/>' in xml_str
 
@@ -950,7 +950,7 @@ def test_resolve_file_flatten_container(tmp_path) -> None:
     </robot>
     """)
 
-    # resolve_file -> _finalize_urdf -> _append_filtered
+    # resolve_file -> _finalize_xml -> _append_filtered
     # The container from if should be flattened.
     xml = resolver.resolve_file(path)
     assert '<link name="l"' in xml
@@ -1043,7 +1043,7 @@ def test_cleanup_non_string_tag() -> None:
 
     # Mock serialize_xml to avoid crash if finalize tries to serialize it
     with mock.patch("linkforge_core.utils.xml_utils.serialize_xml", return_value=""):
-        resolver._finalize_urdf(root)
+        resolver._finalize_xml(root)
         # Should not crash.
 
 
@@ -1074,7 +1074,9 @@ class TestXACROParserEdgeCoverage:
     def _write_and_parse(self, xml: str, tmp_path: Path) -> None:
         p = tmp_path / "test.xacro"
         p.write_text(xml)
-        XACROParser().parse(p)
+        from linkforge_core.parsers.urdf_parser import URDFParser
+
+        URDFParser().parse_xacro(p)
 
     def test_unknown_xacro_tag_is_skipped_with_warning(self, tmp_path, caplog) -> None:
         """An unknown xacro: tag logs a warning and resolves to skip."""
@@ -1136,9 +1138,10 @@ def test_xacro_parser_skips_none_kwargs(tmp_path) -> None:
         '<link name="${prefix}link_0"/>'
         "</robot>"
     )
+    from linkforge_core.parsers.urdf_parser import URDFParser
 
-    parser = XACROParser()
-    robot = parser.parse(xacro_file, prefix=None)
+    parser = URDFParser()
+    robot = parser.parse_xacro(xacro_file, prefix=None)
     assert "link_0" in [link.name for link in robot.links]
 
 

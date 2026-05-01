@@ -67,13 +67,22 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
     def parse_xacro(self, filepath: Path, **kwargs: Any) -> T:
         """Resolve XACRO then parse the resulting XML string.
 
-        This is a convenience wrapper around XacroResolver + parse_string().
-        For full control over resolver args, use XACROParser.resolve() directly.
-        """
-        from .xacro_parser import XacroResolver
+        This is a convenience wrapper around XACROParser.resolve() + parse_string().
 
-        resolver = XacroResolver(start_dir=filepath.parent)
-        xml_string = resolver.resolve_file(filepath)
+        Args:
+            filepath: Path to the XACRO file to resolve.
+            **kwargs: Arguments passed to both the resolver and the format parser.
+
+        Returns:
+            The parsed robot model (T).
+
+        Raises:
+            RobotXacroError: If XACRO resolution fails.
+            RobotParserError: If XML parsing fails.
+        """
+        from .xacro_parser import XACROParser
+
+        xml_string = XACROParser().resolve(filepath, **kwargs)
         return self.parse_string(xml_string, **kwargs)
 
     def _parse_origin_element(self, elem: ET.Element | None) -> Transform:

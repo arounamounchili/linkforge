@@ -94,6 +94,8 @@ class RobotBuilder:
         rpy: tuple[float, float, float] = (0, 0, 0),
         axis: tuple[float, float, float] | None = None,
         limits: tuple[float, float] | None = None,
+        disable_collision: bool = False,
+        reason: str = "Adjacent",
     ) -> RobotBuilder:
         """Merge another robot or assembly into the current one.
 
@@ -107,6 +109,8 @@ class RobotBuilder:
             rpy: Joint origin rotation.
             axis: Optional joint axis (automatically normalized).
             limits: Optional (lower, upper) joint limits.
+            disable_collision: Whether to disable collision checking at the interface.
+            reason: Semantic reason for disabling collisions (e.g., "Adjacent").
 
         Returns:
             The RobotBuilder instance.
@@ -142,6 +146,10 @@ class RobotBuilder:
             axis=axis_vec,
             limits=limits_obj,
         )
+
+        if disable_collision:
+            self.robot.disable_collisions(at_link, f"{prefix}{root_link.name}", reason=reason)
+
         return self
 
     def material(

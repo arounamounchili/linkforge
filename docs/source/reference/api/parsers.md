@@ -57,13 +57,25 @@ on the dedicated [SRDF reference page](srdf.md).
 
 ### Parse XACRO File
 
+To resolve a XACRO file into a plain XML string (format-agnostic):
+
 ```python
 from linkforge_core.parsers import XACROParser
 from pathlib import Path
 
-# Natively resolves properties, macros, and includes
-robot = XACROParser().parse(Path("robot.urdf.xacro"))
-print(f"Resolved robot: {robot.name}")
+# Returns a plain XML string
+xml_string = XACROParser().resolve(Path("robot.urdf.xacro"))
+```
+
+To parse a XACRO file directly into a Robot model (canonical usage):
+
+```python
+from linkforge_core.parsers import URDFParser
+from pathlib import Path
+
+# Natively resolves XACRO then parses URDF
+robot = URDFParser().parse_xacro(Path("robot.urdf.xacro"))
+print(f"Loaded robot: {robot.name}")
 ```
 
 ### Parse URDF File

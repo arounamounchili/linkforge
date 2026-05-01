@@ -23,7 +23,6 @@ try:
 except ImportError:
     yaml = None  # type: ignore[assignment]
 
-from ..base import RobotParser
 from ..exceptions import (
     RobotParserError,
     RobotXacroError,
@@ -31,7 +30,6 @@ from ..exceptions import (
     RobotXacroRecursionError,
 )
 from ..logging_config import get_logger
-from ..models.robot import Robot
 from ..utils.dict_utils import AttrDict
 from ..utils.path_utils import resolve_package_path
 from ..utils.xml_utils import serialize_xml
@@ -137,36 +135,32 @@ class XacroResolver:
         self.eval_context["xacro"] = xacro_ns
 
     def resolve_file(self, filepath: Path) -> str:
-        """Resolve a XACRO file and return the final URDF string.
+        """Resolve a XACRO file and return the final XML string.
 
         Args:
             filepath: Path to the XACRO file to resolve.
 
         Returns:
-            The fully resolved URDF XML as a string.
+            The fully resolved XML as a string.
 
         Raises:
             RobotXacroError: If resolution fails or internal error occurs
             RobotXacroRecursionError: If circular dependencies are found
         """
-        # Deeply nested XACRO files can exceed Python's default recursion limit (usually 1000)
-        # We temporarily boost it to ensure we can handle complex industrial robots
-        # (e.g. mobile_fr3_duo has very deep macro expansions)
+        # Boost recursion limit to handle complex modular robot assemblies
         old_limit = sys.getrecursionlimit()
-        if old_limit < RECURSION_LIMIT_BOOST:
-            sys.setrecursionlimit(RECURSION_LIMIT_BOOST)
-
-        filepath = filepath.resolve()
-
-        # Set start_dir from file if not already set
-        if self.start_dir is None:
-            self.start_dir = filepath.parent
+        sys.setrecursionlimit(max(old_limit, RECURSION_LIMIT_BOOST))
 
         try:
+            filepath = filepath.resolve()
+
+            # Set start_dir from file if not already set
+            if self.start_dir is None:
+                self.start_dir = filepath.parent
+
             template = self._get_structural_template(filepath)
 
-            # Standard URDF requires a <robot> root tag
-            # Create URDF root preserving original name and attributes from the template
+            # Standard XML requires a root tag
             out_root = ET.Element(template.root_tag, template.root_attrib)
 
             # Copy template macros into our active resolver
@@ -191,7 +185,8 @@ class XacroResolver:
 
             _append_filtered(out_root, list(resolved_container))
 
-            return self._finalize_urdf(out_root)
+            # finalize_xml handles cleanup of xacro artifacts
+            return self._finalize_xml(out_root)
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise
@@ -212,16 +207,16 @@ class XacroResolver:
         Raises:
             RobotXacroError: If XML is malformed or resolution fails
         """
+        # Boost recursion limit to handle complex modular robot assemblies
         old_limit = sys.getrecursionlimit()
-        if old_limit < RECURSION_LIMIT_BOOST:
-            sys.setrecursionlimit(RECURSION_LIMIT_BOOST)
+        sys.setrecursionlimit(max(old_limit, RECURSION_LIMIT_BOOST))
 
         try:
             root = ET.fromstring(xml_string)
             resolved_root = self.resolve_element(root)
 
-            # finalize_urdf expects an ET.Element and handles cleanup of xacro artifacts
-            return self._finalize_urdf(resolved_root)
+            # finalize_xml handles cleanup of xacro artifacts
+            return self._finalize_xml(resolved_root)
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise
@@ -307,7 +302,7 @@ class XacroResolver:
                         structural_macros[name] = (params, child)
                     container.append(child)
                 else:
-                    # Keep all other elements (properties, conditionals, URDF tags) as is
+                    # Keep all other elements (properties, conditionals, XML tags) as is
                     container.append(child)
 
             self.search_paths = old_paths
@@ -891,7 +886,7 @@ class XacroResolver:
             return eval(expr, ctx, {})
         except Exception as e:
             # CRITICAL: Do not silent-fail! If math fails (e.g. missing variable),
-            # we must tell the user immediately rather than producing a corrupt URDF.
+            # we must tell the user immediately rather than producing a corrupt output.
             raise RobotXacroExpressionError(expr, str(e)) from e
 
     def _handle_arg_eval(self, name: str) -> Any:
@@ -939,9 +934,6 @@ class XacroResolver:
         Returns:
             The parsed JSON data (dict or list).
         """
-        if json is None:  # pragma: no cover
-            return {}
-
         path = self._find_file(filename)
         if not path:
             logger.error(f"XACRO: Could not find JSON file {filename}")
@@ -954,14 +946,15 @@ class XacroResolver:
             logger.error(f"XACRO: Failed to load JSON {filename}: {e}")
             return AttrDict()
 
-    def _finalize_urdf(self, root: ET.Element) -> str:
+    def _finalize_xml(self, root: ET.Element) -> str:
+        """Clean up XACRO artifacts and serialize to XML string."""
         """Strip XACRO artifacts and format the final XML.
 
         Args:
-            root: The root element of the resolved URDF.
+            root: The root element of the resolved XML.
 
         Returns:
-            The serialized URDF string.
+            The serialized XML string.
         """
 
         # Recursively strip XML namespaces and filter out XACRO-specific elements
@@ -971,7 +964,7 @@ class XacroResolver:
                 if "xacro" in attr or attr.startswith("{"):
                     del elem.attrib[attr]
 
-            # Flatten tag by removing the {namespace} prefix for URDF parser compatibility
+            # Flatten tag by removing the {namespace} prefix for parser compatibility
             if isinstance(elem.tag, str) and elem.tag.startswith("{"):
                 elem.tag = elem.tag.split("}", 1)[1]
 
@@ -1023,14 +1016,29 @@ class XacroResolver:
         return None
 
 
-class XACROParser(RobotParser[Robot]):
-    """Refined XACRO Parser using a class-based interface."""
+class XACROParser:
+    """Independent XACRO resolution utility.
+
+    This class acts as a pre-processor for URDF/SRDF files that use
+    the XACRO templating system. It resolves templates into plain XML strings.
+    """
 
     def resolve(self, filepath: Path, **kwargs: Any) -> str:
         """Resolve a XACRO file into a plain XML string.
 
-        This is format-agnostic: the result can be passed to URDFParser,
-        SRDFParser, or any other XML consumer.
+        Args:
+            filepath: Path to the XACRO file to resolve.
+            **kwargs: Custom arguments and properties for resolution.
+                - search_paths: List of paths to search for includes.
+                - start_dir: Base directory for relative includes.
+                - All other keys are passed as $(arg) values.
+
+        Returns:
+            The fully resolved XML as a string.
+
+        Raises:
+            RobotXacroError: If resolution fails.
+            RobotXacroRecursionError: If circular includes are detected.
         """
         resolver = XacroResolver(
             search_paths=kwargs.get("search_paths"),
@@ -1040,38 +1048,3 @@ class XACROParser(RobotParser[Robot]):
             if k not in ["search_paths", "start_dir"] and v is not None:
                 resolver.args[k] = resolver._try_parse_typed_value(str(v))
         return resolver.resolve_file(filepath)
-
-    def parse(self, filepath: Path, **kwargs: Any) -> Robot:
-        """Convenience: resolve XACRO and parse as URDF.
-
-        Args:
-            filepath: Path to the input file
-            **kwargs: Additional parsing options
-
-        Returns:
-            The generic Robot model
-        """
-        from .urdf_parser import URDFParser
-
-        xml_string = self.resolve(filepath, **kwargs)
-        return URDFParser().parse_string(
-            xml_string, urdf_directory=filepath.parent, default_name=filepath.stem, **kwargs
-        )
-
-    def parse_string(self, content: str, **kwargs: Any) -> Robot:
-        """Convenience: resolve XACRO from string and parse as URDF.
-
-        Note: File resolution is preferred since include paths depend on the file location.
-        """
-        from .urdf_parser import URDFParser
-
-        resolver = XacroResolver(
-            search_paths=kwargs.get("search_paths"),
-            start_dir=kwargs.get("start_dir"),
-        )
-        for k, v in kwargs.items():
-            if k not in ["search_paths", "start_dir"] and v is not None:
-                resolver.args[k] = resolver._try_parse_typed_value(str(v))
-
-        xml_string = resolver.resolve_string(content)
-        return URDFParser().parse_string(xml_string, **kwargs)
