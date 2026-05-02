@@ -73,7 +73,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
 
     This function generates native Blender mesh primitives (Cube, Cylinder,
     Sphere) based on the Core geometry model and applies the correct
-    dimensions and URDF-specific metadata tags.
+    dimensions and format-specific metadata tags.
 
     Args:
         geometry: One of Box, Cylinder, or Sphere models.

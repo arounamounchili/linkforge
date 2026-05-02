@@ -1,6 +1,6 @@
-"""Security validation functions for URDF parsing.
+"""Security validation functions for robot model parsing.
 
-This module provides security checks to prevent malicious URDF files from
+This module provides security checks to prevent malicious robot description files from
 accessing unauthorized file system locations or causing other security issues.
 """
 
@@ -24,14 +24,14 @@ def validate_mesh_path(
     """Validate that a mesh file path is safe to access.
 
     This function prevents path traversal attacks by ensuring that mesh paths
-    stay within the URDF file's directory or its subdirectories.
+    stay within the robot model's directory or its subdirectories.
 
     **Security Note:** Absolute paths are discouraged for portability and security.
-    Use `allow_absolute=True` only when loading trusted URDF files.
+    Use `allow_absolute=True` only when loading trusted robot description files.
 
     Args:
         mesh_filepath: The mesh file path from the URDF (may be relative or absolute)
-        source_directory: The directory containing the URDF file
+        source_directory: The directory containing the robot model file
         allow_absolute: If True, allows absolute paths (default: False for security)
         sandbox_root: The root directory for the sandbox. If None, source_directory is used.
                       Access is restricted to files within this root and its subdirectories.
@@ -40,7 +40,7 @@ def validate_mesh_path(
         The validated absolute path to the mesh file
 
     Raises:
-        RobotSecurityError: If the mesh path attempts to escape the URDF directory
+        RobotSecurityError: If the mesh path attempts to escape the source directory
         RobotSecurityError: If absolute paths are not allowed but one is provided
     """
     # Decode URL encoding to catch encoded path traversal attempts (e.g., %2e%2e%2f -> ../)
@@ -58,7 +58,7 @@ def validate_mesh_path(
         # Absolute paths allowed: resolve and validate against system paths
         resolved = mesh_filepath.resolve()
     else:
-        # Resolve relative to URDF directory
+        # Resolve relative to source directory
         resolved = (source_directory / mesh_filepath).resolve()
 
     # Additional security: check for suspicious system paths
@@ -147,10 +147,10 @@ def find_sandbox_root(filepath: Path) -> Path:
     """Find a sensible sandbox root for a given file.
 
     For robotics projects, this frequently means going up one level if the file
-    is inside a folder named 'urdf' or 'xacro', or searching for a package.xml.
+    is inside a robot model folder (e.g., 'urdf' or 'xacro'), or searching for a package.xml.
 
     Args:
-        filepath: Path to the URDF or XACRO file
+        filepath: Path to the robot model file (URDF, XACRO, etc.)
 
     Returns:
         The detected sandbox root Path

@@ -1,4 +1,4 @@
-"""Blender Operators for importing robot models from URDF/XACRO.
+"""Blender Operators for importing robot models.
 
 This module implements the user-facing operators that handle the import of
 robot descriptions into the Blender environment.
@@ -27,7 +27,7 @@ else:
 logger = get_logger(__name__)
 
 
-class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
+class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[misc]
     """Import robot from URDF or XACRO file.
 
     This operator opens a file browser to select a robot description file,
@@ -35,9 +35,9 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
     and initiates an asynchronous import process into the Blender scene.
     """
 
-    bl_idname = "linkforge.import_urdf"
-    bl_label = "Import Robot"
-    bl_description = "Import robot from URDF or XACRO file (auto-detects format)"
+    bl_idname = "linkforge.import_robot_model"
+    bl_label = "Import Robot Model"
+    bl_description = "Import robot from supported formats (URDF, XACRO, etc.)"
 
     # Operator properties for ExportHelper/ImportHelper
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
@@ -234,7 +234,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
 
 # Registration
 classes = [
-    LINKFORGE_OT_import_urdf,
+    LINKFORGE_OT_import_robot_model,
 ]
 
 

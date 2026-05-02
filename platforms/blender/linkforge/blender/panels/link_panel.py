@@ -145,7 +145,7 @@ class LINKFORGE_PT_links(Panel):
             ):
                 box.separator()
                 row = box.row()
-                # Disable slider if imported from URDF (cannot be simplified via slider)
+                # Disable slider if imported from source (cannot be simplified via slider)
                 row.enabled = not is_imported
                 row.prop(props, "collision_quality", text="Collision Quality", slider=True)
 

@@ -1,7 +1,7 @@
-"""Blender Operators for exporting robot models to URDF/XACRO.
+"""Blender Operators for exporting robot models.
 
 This module implements the user-facing operators that handle the export of
-robot models from Blender to URDF or XACRO formats.
+robot models from Blender to supported description formats.
 """
 
 from __future__ import annotations
@@ -36,12 +36,12 @@ def working_directory(path: Path) -> typing.Iterator[Path]:
         os.chdir(old_cwd)
 
 
-class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
+class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     """Export robot to robot model file"""
 
-    bl_idname = "linkforge.export_urdf"
-    bl_label = "Export URDF"
-    bl_description = "Export robot to URDF/XACRO file"
+    bl_idname = "linkforge.export_robot_model"
+    bl_label = "Export Robot Model"
+    bl_description = "Export robot to supported description formats"
 
     # ExportHelper properties
     # Operator properties for ExportHelper/ImportHelper
@@ -308,7 +308,7 @@ class LINKFORGE_OT_validate_robot(Operator):
 
 # Registration
 classes = [
-    LINKFORGE_OT_export_urdf,
+    LINKFORGE_OT_export_robot_model,
     LINKFORGE_OT_validate_robot,
 ]
 
