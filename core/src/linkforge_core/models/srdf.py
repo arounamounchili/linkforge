@@ -6,6 +6,7 @@ such as planning groups, poses, and collision filters.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
@@ -151,10 +152,10 @@ class PlanningGroup:
     """
 
     name: str
-    links: tuple[str, ...] = field(default_factory=tuple)
-    joints: tuple[str, ...] = field(default_factory=tuple)
-    chains: tuple[tuple[str, str], ...] = field(default_factory=tuple)
-    subgroups: tuple[str, ...] = field(default_factory=tuple)
+    links: Sequence[str] = field(default_factory=tuple)
+    joints: Sequence[str] = field(default_factory=tuple)
+    chains: Sequence[tuple[str, str]] = field(default_factory=tuple)
+    subgroups: Sequence[str] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         """Validate planning group."""
@@ -184,12 +185,12 @@ class SemanticRobotDescription:
     that exists alongside the kinematic URDF description.
     """
 
-    virtual_joints: tuple[VirtualJoint, ...] = field(default_factory=tuple)
-    groups: tuple[PlanningGroup, ...] = field(default_factory=tuple)
-    group_states: tuple[GroupState, ...] = field(default_factory=tuple)
-    end_effectors: tuple[EndEffector, ...] = field(default_factory=tuple)
-    passive_joints: tuple[PassiveJoint, ...] = field(default_factory=tuple)
-    disabled_collisions: tuple[DisabledCollision, ...] = field(default_factory=tuple)
+    virtual_joints: Sequence[VirtualJoint] = field(default_factory=tuple)
+    groups: Sequence[PlanningGroup] = field(default_factory=tuple)
+    group_states: Sequence[GroupState] = field(default_factory=tuple)
+    end_effectors: Sequence[EndEffector] = field(default_factory=tuple)
+    passive_joints: Sequence[PassiveJoint] = field(default_factory=tuple)
+    disabled_collisions: Sequence[DisabledCollision] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         """Ensure all fields are tuples."""
