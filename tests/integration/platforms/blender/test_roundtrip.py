@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.generators.urdf_generator import URDFGenerator
 from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 

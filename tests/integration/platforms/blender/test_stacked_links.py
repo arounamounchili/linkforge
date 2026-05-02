@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.generators.urdf_generator import URDFGenerator
 from linkforge.linkforge_core.models import (
     Box,
     Collision,
