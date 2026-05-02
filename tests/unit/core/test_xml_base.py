@@ -181,12 +181,12 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
 
     from linkforge_core.parsers.xml_base import RobotXMLParser
 
-    class MockParser(RobotXMLParser):
-        def parse(self, filepath: Path, **kwargs: Any):
-            pass
+    class MockParser(RobotXMLParser[Any]):
+        def parse(self, filepath: Path, **kwargs: Any) -> Any:
+            return None
 
-        def parse_string(self, content: str, **kwargs: Any):
-            pass
+        def parse_string(self, content: str, **kwargs: Any) -> Any:
+            return None
 
     parser = MockParser()
     elem = ET.Element("geometry")

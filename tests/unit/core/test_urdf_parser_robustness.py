@@ -9,14 +9,14 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 from linkforge_core.parsers.xml_base import RobotXMLParser
 
 
-class MockXMLParser(RobotXMLParser):
+class MockXMLParser(RobotXMLParser[Any]):
     """Minimal implementation of RobotXMLParser for testing base functionality."""
 
-    def parse(self, filepath: Path, **kwargs: Any):
-        pass
+    def parse(self, filepath: Path, **kwargs: Any) -> Any:
+        return None
 
-    def parse_string(self, content: str, **kwargs: Any):
-        pass
+    def parse_string(self, content: str, **kwargs: Any) -> Any:
+        return None
 
 
 # --- Base Parser Robustness (RobotXMLParser) ---
