@@ -209,46 +209,47 @@ def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path) -> None
                     f"Joint {joint_name}: mimic offset mismatch"
                 )
 
+            def assert_optional_float_eq(
+                val1: float | None,
+                val2: float | None,
+                field_name: str,
+                jn: str = joint_name,
+            ) -> None:
+                if val1 is None:
+                    assert val2 is None, f"Joint {jn}: {field_name} should be None"
+                else:
+                    assert val2 is not None, f"Joint {jn}: {field_name} should not be None"
+                    assert abs(val2 - val1) < 0.001, f"Joint {jn}: {field_name} mismatch"
+
             # Verify safety controller
             if joint1.safety_controller:
                 assert joint2.safety_controller is not None, (
                     f"Joint {joint_name}: missing safety controller"
                 )
-                assert (
-                    abs(
-                        joint2.safety_controller.soft_lower_limit
-                        - joint1.safety_controller.soft_lower_limit
-                    )
-                    < 0.001
+
+                sc1 = joint1.safety_controller
+                sc2 = joint2.safety_controller
+
+                assert_optional_float_eq(
+                    sc1.soft_lower_limit, sc2.soft_lower_limit, "soft_lower_limit"
                 )
-                assert (
-                    abs(joint2.safety_controller.k_position - joint1.safety_controller.k_position)
-                    < 0.001
+                assert_optional_float_eq(
+                    sc1.soft_upper_limit, sc2.soft_upper_limit, "soft_upper_limit"
+                )
+                assert_optional_float_eq(sc1.k_position, sc2.k_position, "k_position")
+                assert abs(sc2.k_velocity - sc1.k_velocity) < 0.001, (
+                    f"Joint {joint_name}: k_velocity mismatch"
                 )
 
             # Verify calibration
             if joint1.calibration:
                 assert joint2.calibration is not None, f"Joint {joint_name}: missing calibration"
 
-                def assert_optional_calib_eq(
-                    val1: float | None,
-                    val2: float | None,
-                    name: str,
-                    _jn: str = joint_name,
-                ) -> None:
-                    if val1 is None:
-                        assert val2 is None, f"Joint {_jn}: calibration {name} should be None"
-                    else:
-                        assert val2 is not None, (
-                            f"Joint {_jn}: calibration {name} should not be None"
-                        )
-                        assert abs(val2 - val1) < 0.001, f"Joint {_jn}: calibration {name} mismatch"
-
-                assert_optional_calib_eq(
-                    joint1.calibration.rising, joint2.calibration.rising, "rising"
+                assert_optional_float_eq(
+                    joint1.calibration.rising, joint2.calibration.rising, "calibration.rising"
                 )
-                assert_optional_calib_eq(
-                    joint1.calibration.falling, joint2.calibration.falling, "falling"
+                assert_optional_float_eq(
+                    joint1.calibration.falling, joint2.calibration.falling, "calibration.falling"
                 )
 
         # ========== VERIFY TRANSMISSIONS ==========
