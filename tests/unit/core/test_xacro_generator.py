@@ -389,8 +389,8 @@ class TestXACROGenerator:
 
         link = Link(name="l", initial_visuals=[Visual(geometry=Mesh(resource=str(mesh_path)))])
         robot.add_link(link)
-
-        gen = XACROGenerator(advanced_mode=True, urdf_path=tmp_path / "urdf" / "robot.xacro")
+        output_path = tmp_path / "urdf" / "robot.xacro"
+        gen = XACROGenerator(advanced_mode=True, output_path=output_path)
         xml_str = gen.generate(robot)
         # Relaxed check for relative path
         assert "meshes/link.stl" in xml_str.replace("\\", "/")

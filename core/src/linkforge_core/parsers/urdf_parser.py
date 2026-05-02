@@ -758,10 +758,10 @@ class URDFParser(RobotXMLParser[Robot]):
                             # Determine base directory for resolving relative mesh paths.
                             # When parsing from a string (e.g. after Xacro resolution),
                             # the filepath may already be the directory.
-                            urdf_dir = (
+                            source_directory = (
                                 filepath.parent if filepath and filepath.is_file() else filepath
                             ) or Path(".")
-                            link = self._parse_link(elem, materials, urdf_dir)
+                            link = self._parse_link(elem, materials, source_directory)
                             robot.add_link(link)
                         except (
                             RobotModelError,

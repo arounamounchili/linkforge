@@ -100,7 +100,7 @@ def test_collision_quality_skip_imported() -> None:
         col_obj = bpy.context.active_object
         col_obj.name = "imported_collision"
         col_obj.parent = obj
-        col_obj["imported_from_urdf"] = True
+        col_obj["imported_from_source"] = True
 
         # Change quality
         obj.linkforge.collision_quality = 20.0

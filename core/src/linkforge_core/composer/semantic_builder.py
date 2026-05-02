@@ -15,7 +15,7 @@ from ..models.srdf import (
 )
 
 if TYPE_CHECKING:
-    from .robot_builder import RobotBuilder
+    from .interfaces import IComposer
 
 
 class SemanticBuilder:
@@ -24,7 +24,7 @@ class SemanticBuilder:
     Accessed via RobotBuilder.semantic.
     """
 
-    def __init__(self, builder: RobotBuilder) -> None:
+    def __init__(self, builder: IComposer) -> None:
         """Initialize semantic builder."""
         self._builder = builder
 
@@ -37,7 +37,7 @@ class SemanticBuilder:
         subgroups: list[str] | None = None,
         base_link: str | None = None,
         tip_link: str | None = None,
-    ) -> RobotBuilder:
+    ) -> IComposer:
         """Define a planning group for MoveIt.
 
         Args:
@@ -69,7 +69,7 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(semantic, groups=semantic.groups + (group,))
         return self._builder
 
-    def group_state(self, name: str, group: str, values: dict[str, float]) -> RobotBuilder:
+    def group_state(self, name: str, group: str, values: dict[str, float]) -> IComposer:
         """Define a named state (e.g. 'home') for a planning group.
 
         Args:
@@ -89,7 +89,7 @@ class SemanticBuilder:
 
     def end_effector(
         self, name: str, group: str, parent_link: str, parent_group: str | None = None
-    ) -> RobotBuilder:
+    ) -> IComposer:
         """Define an end effector for MoveIt.
 
         Args:
@@ -108,7 +108,7 @@ class SemanticBuilder:
         )
         return self._builder
 
-    def passive_joint(self, name: str) -> RobotBuilder:
+    def passive_joint(self, name: str) -> IComposer:
         """Mark a joint as passive (not actuated) for MoveIt.
 
         Args:
@@ -126,7 +126,7 @@ class SemanticBuilder:
 
     def virtual_joint(
         self, name: str, child_link: str, parent_frame: str = "world", joint_type: str = "fixed"
-    ) -> RobotBuilder:
+    ) -> IComposer:
         """Define a virtual joint connecting the robot to the world frame.
 
         Args:
@@ -147,7 +147,7 @@ class SemanticBuilder:
         )
         return self._builder
 
-    def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> RobotBuilder:
+    def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> IComposer:
         """Instruct MoveIt to ignore collisions between two specific links.
 
         Args:

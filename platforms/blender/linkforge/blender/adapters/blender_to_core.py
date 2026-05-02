@@ -176,7 +176,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
 
     # Check for explicit geometry type tags
     # This guarantees round-trip stability and prevents auto-detection failures
-    tags = ["urdf_geometry_type", "collision_geometry_type"]
+    tags = ["source_geometry_type", "collision_geometry_type"]
     for tag in tags:
         if tag in obj:
             geom_type = str(obj[tag])
@@ -519,10 +519,10 @@ def blender_link_to_core_with_origin(
             # Extract material
             material = get_object_material(child, props)
 
-            # Determine unique suffix (use urdf_name if present, otherwise counter)
-            urdf_name = child.get("urdf_name", None)
-            if urdf_name:
-                suffix = f"_{sanitize_name(urdf_name)}"
+            # Determine unique suffix (use source_name if present, otherwise counter)
+            source_name = child.get("source_name", None)
+            if source_name:
+                suffix = f"_{sanitize_name(source_name)}"
             elif total_visuals > 1:
                 suffix = f"_{visual_count}"
             else:
@@ -551,12 +551,12 @@ def blender_link_to_core_with_origin(
 
             if visual_geom:
                 visuals.append(
-                    Visual(geometry=visual_geom, origin=origin, material=material, name=urdf_name)
+                    Visual(geometry=visual_geom, origin=origin, material=material, name=source_name)
                 )
 
         elif "_collision" in child_name:
             # Check if this collision was imported from URDF (skip simplification)
-            is_imported = child.get("imported_from_urdf", False)
+            is_imported = child.get("imported_from_source", False)
 
             # Determine simplification ratio based on collision quality setting
             quality_percent = props.collision_quality
@@ -569,9 +569,9 @@ def blender_link_to_core_with_origin(
             stored_geom_type = child.get("collision_geometry_type", "AUTO")
 
             # Determine unique suffix
-            urdf_name = child.get("urdf_name", None)
-            if urdf_name:
-                suffix = f"_{sanitize_name(urdf_name)}"
+            source_name = child.get("source_name", None)
+            if source_name:
+                suffix = f"_{sanitize_name(source_name)}"
             elif total_collisions > 1:
                 suffix = f"_{collision_count}"
             else:
@@ -599,7 +599,9 @@ def blender_link_to_core_with_origin(
             origin = matrix_to_transform(relative_matrix)
 
             if collision_geom:
-                collisions.append(Collision(geometry=collision_geom, origin=origin, name=urdf_name))
+                collisions.append(
+                    Collision(geometry=collision_geom, origin=origin, name=source_name)
+                )
 
     # Inertial properties
     inertial = None
@@ -720,7 +722,7 @@ def blender_joint_to_core(obj: Any) -> Joint | None:
     # Joint axis
     # Valid axis for joints that support it
     if joint_type in (JointType.FIXED, JointType.FLOATING):
-        # FIXED and FLOATING joints MUST NOT have an axis per URDF strict mode
+        # FIXED and FLOATING joints MUST NOT have an axis per robot model strict mode
         axis = None
     elif props.axis == "X":
         axis = Vector3(1.0, 0.0, 0.0)
@@ -729,7 +731,7 @@ def blender_joint_to_core(obj: Any) -> Joint | None:
     elif props.axis == "Z":
         axis = Vector3(0.0, 0.0, 1.0)
     else:  # CUSTOM
-        # URDF spec requires unit vectors for joint axes - normalize custom axes
+        # robot model spec requires unit vectors for joint axes - normalize custom axes
         nx, ny, nz = normalize_vector(props.custom_axis_x, props.custom_axis_y, props.custom_axis_z)
         if nx == 0 and ny == 0 and nz == 0:
             # Zero vector - fallback to default Z-axis
@@ -745,13 +747,13 @@ def blender_joint_to_core(obj: Any) -> Joint | None:
     origin = matrix_to_transform(obj.matrix_world)
 
     # Joint limits
-    # Per URDF spec:
+    # Per robot model spec:
     # - REVOLUTE/PRISMATIC: limits are REQUIRED
     # - CONTINUOUS: limits are OPTIONAL (only effort/velocity, no position limits)
     # - FIXED/FLOATING/PLANAR: limits are NOT ALLOWED
     limits = None
     if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
-        # Always export limits for REVOLUTE and PRISMATIC (required by URDF spec)
+        # Always export limits for REVOLUTE and PRISMATIC (required by robot model spec)
         limits = JointLimits(
             lower=props.limit_lower,
             upper=props.limit_upper,

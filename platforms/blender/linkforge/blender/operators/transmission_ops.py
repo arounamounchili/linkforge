@@ -7,7 +7,7 @@ import typing
 
 import bpy
 
-from ..properties.link_props import sanitize_urdf_name
+from ..properties.link_props import sanitize_robot_name
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
 
@@ -155,7 +155,7 @@ class LINKFORGE_OT_create_transmission(Operator):
             "TransmissionPropertyGroup", getattr(transmission_empty, "linkforge_transmission")
         )
         trans_props.is_robot_transmission = True
-        trans_props.transmission_name = sanitize_urdf_name(transmission_empty.name)
+        trans_props.transmission_name = sanitize_robot_name(transmission_empty.name)
 
         # Set default transmission type
         trans_props.transmission_type = "SIMPLE"

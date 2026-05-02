@@ -32,7 +32,7 @@ class Color:
         return (self.r, self.g, self.b, self.a)
 
     def __str__(self) -> str:
-        """String representation for URDF."""
+        """String representation."""
         return f"{self.r} {self.g} {self.b} {self.a}"
 
 

@@ -52,14 +52,14 @@ class URDFGenerator(RobotXMLGenerator):
     def __init__(
         self,
         pretty_print: bool = True,
-        urdf_path: Path | None = None,
+        output_path: Path | None = None,
         use_ros2_control: bool = True,
     ) -> None:
         """Initialize URDF generator.
 
         Args:
             pretty_print: If True, format XML with indentation for readability (default: True)
-            urdf_path: Path where URDF will be saved. Used to calculate relative mesh paths.
+            output_path: Path where URDF will be saved. Used to calculate relative mesh paths.
                       If None, mesh paths will be absolute or package:// URIs.
             use_ros2_control: Whether to generate ros2_control blocks from transmissions.
                              Set to False if you don't use ROS2 Control or prefer
@@ -71,10 +71,10 @@ class URDFGenerator(RobotXMLGenerator):
             >>> generator = URDFGenerator()
             >>>
             >>> # Generator with relative mesh paths
-            >>> generator = URDFGenerator(urdf_path=Path("/workspace/robot.urdf"))
+            >>> generator = URDFGenerator(output_path=Path("/workspace/robot.urdf"))
         """
-        super().__init__(pretty_print=pretty_print, output_path=urdf_path)
-        self.urdf_path = urdf_path
+        super().__init__(pretty_print=pretty_print, output_path=output_path)
+        self.output_path = output_path
         self.use_ros2_control = use_ros2_control
 
     def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:

@@ -31,12 +31,12 @@ class AsynchronousRobotBuilder:
     def __init__(
         self,
         robot: Robot,
-        urdf_path: Path,
+        source_path: Path,
         context: bpy.types.Context,
         chunk_size: int = 50,
     ):
         self.robot = robot
-        self.urdf_path = urdf_path
+        self.source_path = source_path
         self.context = context
         self.chunk_size = chunk_size
 
@@ -167,7 +167,7 @@ class AsynchronousRobotBuilder:
                 self.context.scene.collection.children.link(self.collection)
 
         elif task_type == "create_link":
-            obj = create_link_object(data, self.robot, self.urdf_path.parent, self.collection)
+            obj = create_link_object(data, self.robot, self.source_path.parent, self.collection)
             if obj:
                 self.link_objects[data.name] = obj
 
@@ -195,7 +195,7 @@ class AsynchronousRobotBuilder:
                 scene.linkforge.show_collisions = scene.linkforge.show_collisions
 
                 # Auto-link ROS 2 Control joint pointers to newly created objects
-                # Match by persistent URDF identity (urdf_name_stored)
+                # Match by persistent robot model identity (source_name_stored)
                 lp = scene.linkforge
                 if lp.use_ros2_control:
                     for rc_joint in lp.ros2_control_joints:

@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field
 
 from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
-from ..utils.string_utils import is_valid_urdf_name
+from ..utils.string_utils import is_valid_name
 from .geometry import Geometry, Transform
 from .material import Material
 
@@ -113,7 +113,8 @@ class Link:
     """Robot link (rigid body in the kinematic chain).
 
     A link is a rigid body with visual, collision, and inertial properties.
-    URDF allows multiple <visual> and <collision> elements per link.
+    The LinkForge model allows multiple visual and collision elements per link,
+    supporting high-fidelity formats like URDF and SDF.
     """
 
     name: str
@@ -135,8 +136,8 @@ class Link:
                 ValidationErrorCode.NAME_EMPTY, "Link name cannot be empty", target="LinkName"
             )
 
-        # URDF naming convention: lowercase with underscores
-        if not is_valid_urdf_name(self.name):
+        # Standard naming convention: alphanumeric and underscores
+        if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
                 "Invalid characters in link name",

@@ -7,7 +7,7 @@ import typing
 
 import bpy
 
-from ..properties.link_props import sanitize_urdf_name
+from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
@@ -129,7 +129,7 @@ class LINKFORGE_OT_create_sensor(Operator):
                 "SensorPropertyGroup", getattr(sensor_empty, "linkforge_sensor")
             )
             sensor_props.is_robot_sensor = True
-            sensor_props.sensor_name = sanitize_urdf_name(sensor_empty.name)
+            sensor_props.sensor_name = sanitize_robot_name(sensor_empty.name)
 
             # Set default sensor type
             sensor_props.sensor_type = "CAMERA"

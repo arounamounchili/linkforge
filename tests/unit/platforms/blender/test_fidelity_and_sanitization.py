@@ -31,7 +31,7 @@ def test_high_fidelity_multi_geometry_export_suffixes(tmp_path) -> None:
 
 
 def test_filename_sanitization_conformity(tmp_path) -> None:
-    """Verify that LinkForge aggressively sanitizes link names to ensure URDF filename compatibility."""
+    """Verify that LinkForge aggressively sanitizes link names to ensure robot model filename compatibility."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
 

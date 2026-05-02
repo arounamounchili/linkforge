@@ -291,7 +291,7 @@ def test_import_robot_complex_tree() -> None:
 
     robot = Robot(name="tree_bot", initial_links=[l1, l2, l3, l4], initial_joints=[j1, j2, j3])
 
-    # Needs urdf_path and context. Returns bool.
+    # Needs source_path and context. Returns bool.
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
     assert success is True
     # Check hierarchy
@@ -526,7 +526,7 @@ def test_create_link_object_with_mesh_visual(tmp_path) -> None:
     visual = Visual(geometry=mesh_geom)
     link = Link(name="mesh_link", initial_visuals=[visual])
 
-    # 3. Build (providing tmp_path as urdf_dir)
+    # 3. Build (providing tmp_path as source_directory)
     robot = Robot(name="test")
     obj = create_link_object(link, robot, tmp_path)
 
@@ -793,7 +793,7 @@ def test_create_link_with_collision_mesh(tmp_path) -> None:
     # Verify
     assert obj is not None
     coll_obj = next(c for c in obj.children if "_collision" in c.name)
-    assert coll_obj["imported_from_urdf"] is True
+    assert coll_obj["imported_from_source"] is True
     assert coll_obj["collision_geometry_type"] == "MESH"
     assert obj.linkforge.collision_quality == 100.0
 
@@ -804,14 +804,14 @@ def test_create_primitive_mesh_cylinder_sphere() -> None:
     cyl = Cylinder(radius=0.5, length=2.0)
     obj_cyl = create_primitive_mesh(cyl, "test_cyl")
     assert obj_cyl is not None
-    assert obj_cyl["urdf_geometry_type"] == "CYLINDER"
+    assert obj_cyl["source_geometry_type"] == "CYLINDER"
     assert pytest.approx(obj_cyl.dimensions.z) == 2.0
 
     # Sphere
     sphere = Sphere(radius=1.0)
     obj_sphere = create_primitive_mesh(sphere, "test_sphere")
     assert obj_sphere is not None
-    assert obj_sphere["urdf_geometry_type"] == "SPHERE"
+    assert obj_sphere["source_geometry_type"] == "SPHERE"
     assert pytest.approx(obj_sphere.dimensions.x) == 2.0
 
 

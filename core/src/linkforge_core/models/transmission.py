@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
-from ..utils.string_utils import is_valid_urdf_name
+from ..utils.string_utils import is_valid_name
 
 
 class TransmissionType(str, Enum):
@@ -144,7 +144,7 @@ class Transmission:
             )
 
         # Validate naming convention
-        if not is_valid_urdf_name(self.name):
+        if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
                 "Invalid characters in transmission name",

@@ -66,8 +66,8 @@ def test_multiple_visuals_with_suffix() -> None:
     assert "multi_link_visual_1.stl" in filenames
 
 
-def test_urdf_name_preservation() -> None:
-    """Test that urdf_name is preserved even for single meshes."""
+def test_source_name_preservation() -> None:
+    """Test that source_name is preserved even for single meshes."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
     link_obj = bpy.context.active_object
@@ -78,7 +78,7 @@ def test_urdf_name_preservation() -> None:
     visual_obj = bpy.context.active_object
     visual_obj.name = "name_link_visual"
     visual_obj.parent = link_obj
-    visual_obj["urdf_name"] = "custom_part"
+    visual_obj["source_name"] = "custom_part"
 
     # Subdivide
     bpy.ops.object.modifier_add(type="SUBSURF")

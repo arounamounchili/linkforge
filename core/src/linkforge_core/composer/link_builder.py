@@ -28,7 +28,7 @@ from ..physics.inertia import calculate_inertia
 from ..utils.math_utils import normalize_vector
 
 if TYPE_CHECKING:
-    from .robot_builder import RobotBuilder
+    from .interfaces import IComposer
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class LinkBuilder:
 
     def __init__(
         self,
-        builder: RobotBuilder,
+        builder: IComposer,
         name: str,
         parent: str | None = None,
         joint_name: str | None = None,
@@ -742,7 +742,7 @@ class LinkBuilder:
         self._commit()
         return LinkBuilder(self._builder, name, parent=self._link_name, joint_name=joint_name)
 
-    def commit(self) -> RobotBuilder:
+    def commit(self) -> IComposer:
         """Finalize this link and return to the main RobotBuilder.
 
         Returns:
@@ -751,7 +751,7 @@ class LinkBuilder:
         self._commit()
         return self._builder
 
-    def root(self) -> RobotBuilder:
+    def root(self) -> IComposer:
         """Finalize this link as the robot's root link (no joint).
 
         Raises:

@@ -23,27 +23,27 @@ from ..utils.scene_utils import clear_stats_cache
 if typing.TYPE_CHECKING:
     from .link_props import LinkPropertyGroup
 
-from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 from ..utils.property_helpers import find_property_owner
 
 
 def get_sensor_name(self: SensorPropertyGroup) -> str:
-    """Getter for sensor_name - returns the persistent URDF identity.
+    """Getter for sensor_name - returns the persistent robot model identity.
 
     Args:
         self: The SensorPropertyGroup instance.
 
     Returns:
-        The sanitized URDF name.
+        The sanitized robot model name.
     """
     # Prioritize the stored identity to avoid Blender's .001 suffixing
-    if self.urdf_name_stored:
-        return str(self.urdf_name_stored)
+    if self.source_name_stored:
+        return str(self.source_name_stored)
 
     if not self.id_data:
         return ""
 
-    return sanitize_urdf_name(str(self.id_data.name))
+    return sanitize_robot_name(str(self.id_data.name))
 
 
 def set_sensor_name(self: SensorPropertyGroup, value: str) -> None:
@@ -57,10 +57,10 @@ def set_sensor_name(self: SensorPropertyGroup, value: str) -> None:
         return
 
     # Sanitize sensor name for URDF
-    sanitized_name = sanitize_urdf_name(value)
+    sanitized_name = sanitize_robot_name(value)
 
     # Store the persistent identity
-    self.urdf_name_stored = sanitized_name
+    self.source_name_stored = sanitized_name
 
     # Update object name to match sensor name
     if self.id_data.name != sanitized_name:
@@ -119,11 +119,11 @@ class SensorPropertyGroup(PropertyGroup):
         default=False,
     )
 
-    # Persistent URDF Identity
-    # Decouples logical URDF naming from physical Blender object names (resilient to .001 suffixes)
-    urdf_name_stored: StringProperty(  # type: ignore
-        name="URDF Name",
-        description="Persistent URDF name. Prevents mapping breakage if Blender renames the object",
+    # Persistent robot model Identity
+    # Decouples logical robot model naming from physical Blender object names (resilient to .001 suffixes)
+    source_name_stored: StringProperty(  # type: ignore
+        name="robot model Name",
+        description="Persistent robot model name. Prevents mapping breakage if Blender renames the object",
         default="",
     )
 

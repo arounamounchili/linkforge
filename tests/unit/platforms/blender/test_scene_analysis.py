@@ -49,7 +49,7 @@ def test_get_robot_statistics_manual_inertia() -> None:
 
 
 def test_get_robot_statistics_geometry_detection_urdf_tag() -> None:
-    """Test geometry detection via explicit urdf_geometry_type tag."""
+    """Test geometry detection via explicit source_geometry_type tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
     link.linkforge.is_robot_link = True
@@ -60,7 +60,7 @@ def test_get_robot_statistics_geometry_detection_urdf_tag() -> None:
     coll = bpy.context.active_object
     coll.name = "tag_link_collision"
     coll.parent = link
-    coll["urdf_geometry_type"] = "SPHERE"
+    coll["source_geometry_type"] = "SPHERE"
 
     stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
     assert "tag_link" in stats.geometry_stats

@@ -36,6 +36,7 @@ from ..models.material import Color, Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2Control
 from ..utils.math_utils import normalize_vector
+from .interfaces import IComposer
 from .link_builder import LinkBuilder
 from .semantic_builder import SemanticBuilder
 
@@ -85,7 +86,7 @@ class RobotBuilder:
 
     def attach(
         self,
-        component: Robot | RobotBuilder,
+        component: Robot | IComposer,
         at_link: str,
         joint_name: str | None = None,
         prefix: str = "",
@@ -100,7 +101,7 @@ class RobotBuilder:
         """Merge another robot or assembly into the current one.
 
         Args:
-            component: The Robot or RobotBuilder to attach.
+            component: The Robot or IComposer (e.g. RobotBuilder) to attach.
             at_link: The link in the current robot to attach to.
             joint_name: Optional name for the connecting joint.
             prefix: Optional prefix for all links/joints in the component.
@@ -115,7 +116,7 @@ class RobotBuilder:
         Returns:
             The RobotBuilder instance.
         """
-        sub_robot = component.robot if isinstance(component, RobotBuilder) else component
+        sub_robot = component if isinstance(component, Robot) else component.robot
         root_link = sub_robot.get_root_link()
 
         # Normalize axis if provided

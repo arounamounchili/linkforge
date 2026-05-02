@@ -7,12 +7,12 @@ from dataclasses import dataclass
 from enum import Enum
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
-from ..utils.string_utils import is_valid_urdf_name
+from ..utils.string_utils import is_valid_name
 from .geometry import Transform, Vector3
 
 
 class JointType(Enum):
-    """URDF joint types."""
+    """Standard robot joint types."""
 
     REVOLUTE = "revolute"  # Rotates around axis with limits
     CONTINUOUS = "continuous"  # Rotates around axis without limits
@@ -164,7 +164,7 @@ class Joint:
             )
 
         # Validate naming convention
-        if not is_valid_urdf_name(self.name):
+        if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
                 "Invalid characters in joint name",

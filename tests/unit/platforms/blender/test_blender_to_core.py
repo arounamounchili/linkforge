@@ -1758,6 +1758,6 @@ def test_detect_primitive_type_tags() -> None:
     """Verify manual primitive type override via custom properties."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
-    obj["urdf_geometry_type"] = "SPHERE"
+    obj["source_geometry_type"] = "SPHERE"
 
     assert detect_primitive_type(obj) == "SPHERE"

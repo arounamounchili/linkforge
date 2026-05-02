@@ -7,7 +7,7 @@ import typing
 
 import bpy
 
-from ..properties.link_props import sanitize_urdf_name
+from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
@@ -115,7 +115,7 @@ class LINKFORGE_OT_create_joint(Operator):
 
         # Enable joint properties
         typing.cast(typing.Any, joint_empty).linkforge_joint.is_robot_joint = True
-        typing.cast(typing.Any, joint_empty).linkforge_joint.joint_name = sanitize_urdf_name(
+        typing.cast(typing.Any, joint_empty).linkforge_joint.joint_name = sanitize_robot_name(
             joint_empty.name
         )
 

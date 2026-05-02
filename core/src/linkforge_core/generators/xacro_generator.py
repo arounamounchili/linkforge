@@ -48,7 +48,7 @@ class XACROGenerator(URDFGenerator):
         extract_dimensions: bool = True,
         generate_macros: bool = False,
         split_files: bool = False,
-        urdf_path: Path | None = None,
+        output_path: Path | None = None,
         use_ros2_control: bool = True,
     ) -> None:
         """Initialize XACRO generator.
@@ -60,13 +60,13 @@ class XACROGenerator(URDFGenerator):
             extract_dimensions: Extract common dimensions as properties
             generate_macros: Auto-generate macros for repeated patterns
             split_files: Split into multiple files (materials, macros, robot)
-            urdf_path: Path where XACRO will be saved (for relative mesh paths)
+            output_path: Path where XACRO will be saved (for relative mesh paths)
             use_ros2_control: Whether to generate ROS2 Control from transmissions
 
         """
         super().__init__(
             pretty_print=pretty_print,
-            urdf_path=urdf_path,
+            output_path=output_path,
             use_ros2_control=use_ros2_control,
         )
         self.advanced_mode = advanced_mode
@@ -719,7 +719,7 @@ class XACROGenerator(URDFGenerator):
     def _(self, geometry: Mesh, parent: ET.Element, tag: str = "geometry") -> None:
         geom_elem = ET.SubElement(parent, tag)
 
-        urdf_dir = self.urdf_path.parent if self.urdf_path else None
+        urdf_dir = self.output_path.parent if self.output_path else None
         export_path = get_export_path(geometry.resource, relative_to=urdf_dir)
 
         attrib: dict[str, str] = {"filename": export_path}

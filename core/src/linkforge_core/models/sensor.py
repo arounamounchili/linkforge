@@ -1,4 +1,4 @@
-"""Sensor models for URDF/Gazebo integration."""
+"""Sensor models for robotic simulation (Gazebo, SDF, URDF)."""
 
 from __future__ import annotations
 

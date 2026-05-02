@@ -367,8 +367,8 @@ class TestURDFGenerator:
         robot.add_joint(Joint(name="j1", parent="base", child="child", type=JointType.FIXED))
 
         # Generate to a file in tmp_path (parent of meshes)
-        urdf_path = tmp_path / "robot.urdf"
-        generator = URDFGenerator(urdf_path=urdf_path)
+        output_path = tmp_path / "robot.urdf"
+        generator = URDFGenerator(output_path=output_path)
 
         xml_str = generator.generate(robot)
         root = ET.fromstring(xml_str)

@@ -20,28 +20,28 @@ from bpy.types import Context, PropertyGroup
 if typing.TYPE_CHECKING:
     from .link_props import LinkPropertyGroup
 
-from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 from ..utils.property_helpers import find_property_owner
 from ..utils.scene_utils import clear_stats_cache
 
 
 def get_joint_name(self: JointPropertyGroup) -> str:
-    """Getter for joint_name - returns the persistent URDF identity.
+    """Getter for joint_name - returns the persistent source identity.
 
     Args:
         self: The JointPropertyGroup instance.
 
     Returns:
-        The sanitized URDF name.
+        The sanitized robot model name.
     """
     # Prioritize the stored identity to avoid Blender's .001 suffixing
-    if self.urdf_name_stored:
-        return str(self.urdf_name_stored)
+    if self.source_name_stored:
+        return str(self.source_name_stored)
 
     if not self.id_data:
         return ""
 
-    return sanitize_urdf_name(str(self.id_data.name))
+    return sanitize_robot_name(str(self.id_data.name))
 
 
 def set_joint_name(self: JointPropertyGroup, value: str) -> None:
@@ -54,11 +54,11 @@ def set_joint_name(self: JointPropertyGroup, value: str) -> None:
     if not value or not self.id_data:
         return
 
-    # Sanitize joint name for URDF
-    sanitized_name = sanitize_urdf_name(value)
+    # Sanitize joint name for robot model
+    sanitized_name = sanitize_robot_name(value)
 
     # Store the persistent identity
-    self.urdf_name_stored = sanitized_name
+    self.source_name_stored = sanitized_name
 
     # Update object name to match joint name
     # Blender will handle collisions by appending suffixes, but our stored name persists
@@ -73,7 +73,7 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
     """Update Blender object hierarchy when parent/child links change.
 
     Establishes hierarchy: parent_link → joint → child_link
-    This matches URDF import behavior and shows kinematic tree in outliner.
+    This matches import behavior and shows kinematic tree in outliner.
     """
     if not bpy:
         return
@@ -158,17 +158,17 @@ class JointPropertyGroup(PropertyGroup):
         default=False,
     )
 
-    # Persistent URDF Identity
-    # Decouples logical URDF naming from physical Blender object names (resilient to .001 suffixes)
-    urdf_name_stored: StringProperty(  # type: ignore
-        name="URDF Name",
-        description="Persistent URDF name. Prevents mapping breakage if Blender renames the object",
+    # Persistent source Identity
+    # Decouples logical robot model naming from physical Blender object names (resilient to .001 suffixes)
+    source_name_stored: StringProperty(  # type: ignore
+        name="Source Name",
+        description="Persistent source name. Prevents mapping breakage if Blender renames the object",
         default="",
     )
 
     joint_name: StringProperty(  # type: ignore
         name="Joint Name",
-        description="Name of the joint in URDF (must be unique)",
+        description="Name of the joint in robot model (must be unique)",
         maxlen=64,
         get=get_joint_name,
         set=set_joint_name,
@@ -338,7 +338,7 @@ class JointPropertyGroup(PropertyGroup):
     # Joint Safety Controller
     use_safety_controller: BoolProperty(  # type: ignore
         name="Use Safety Controller",
-        description="Add a safety controller to the joint (standard URDF feature)",
+        description="Add a safety controller to the joint (standard robot model feature)",
         default=False,
     )
 

@@ -1,7 +1,7 @@
 import bpy
 
 
-def test_link_urdf_name_persistence() -> None:
+def test_link_source_name_persistence() -> None:
     """Test that link_name remains persistent even if Blender renames the object."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -12,7 +12,7 @@ def test_link_urdf_name_persistence() -> None:
     obj1.linkforge.link_name = "base_link"
     assert obj1.name == "base_link"
     assert obj1.linkforge.link_name == "base_link"
-    assert obj1.linkforge.urdf_name_stored == "base_link"
+    assert obj1.linkforge.source_name_stored == "base_link"
 
     # 2. Simulate Blender renaming (e.g. by manual rename or suffixing)
     obj1.name = "chassis"
@@ -32,7 +32,7 @@ def test_link_urdf_name_persistence() -> None:
     # but the logical name must match our intent.
 
 
-def test_joint_urdf_name_persistence() -> None:
+def test_joint_source_name_persistence() -> None:
     """Test that joint_name remains persistent even if Blender renames the object."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -43,7 +43,7 @@ def test_joint_urdf_name_persistence() -> None:
     obj.linkforge_joint.joint_name = "elbow_joint"
     assert obj.name == "elbow_joint"
     assert obj.linkforge_joint.joint_name == "elbow_joint"
-    assert obj.linkforge_joint.urdf_name_stored == "elbow_joint"
+    assert obj.linkforge_joint.source_name_stored == "elbow_joint"
 
     # 2. Simulate Blender suffixing
     obj.name = "elbow_joint.001"
@@ -80,7 +80,7 @@ def test_reimport_name_matching() -> None:
 
     assert obj is not None
     # Verify persistent identity survives creation
-    assert obj.linkforge_joint.urdf_name_stored == "shoulder_joint"
+    assert obj.linkforge_joint.source_name_stored == "shoulder_joint"
     assert obj.linkforge_joint.joint_name == "shoulder_joint"
 
     # Clean up
@@ -88,7 +88,7 @@ def test_reimport_name_matching() -> None:
 
 
 def test_auto_linking_integration() -> None:
-    """Test that the builder auto-links real ROS 2 Control pointers by URDF identity."""
+    """Test that the builder auto-links real ROS 2 Control pointers by robot model identity."""
     from pathlib import Path
 
     from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
@@ -113,14 +113,14 @@ def test_auto_linking_integration() -> None:
     # Populate joint_objects with persistent identity
     joint_obj = bpy.data.objects.new("j1.001", None)
     joint_obj.linkforge_joint.is_robot_joint = True
-    joint_obj.linkforge_joint.urdf_name_stored = "j1"
+    joint_obj.linkforge_joint.source_name_stored = "j1"
 
     builder.joint_objects["j1"] = joint_obj
 
     # Trigger finalize logic for auto-linking
     builder._execute_task("finalize", None)
 
-    # Verify re-linking by URDF Identity (casting to Any to avoid dynamic property errors)
+    # Verify re-linking by robot model Identity (casting to Any to avoid dynamic property errors)
     lp_final = scene.linkforge  # type: ignore[attr-defined]
     rc_joint = lp_final.ros2_control_joints[0]
 

@@ -37,7 +37,7 @@ def working_directory(path: Path) -> typing.Iterator[Path]:
 
 
 class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
-    """Export robot to URDF file"""
+    """Export robot to robot model file"""
 
     bl_idname = "linkforge.export_urdf"
     bl_label = "Export URDF"
@@ -154,7 +154,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
         if robot_props.export_format == "URDF":
             urdf_generator = URDFGenerator(
                 pretty_print=True,
-                urdf_path=output_path,
+                output_path=output_path,
                 use_ros2_control=robot_props.use_ros2_control,
             )
             urdf_generator.write(robot, output_path, validate=False)
@@ -171,7 +171,7 @@ class LINKFORGE_OT_export_urdf(Operator, ExportHelper):
                 extract_dimensions=robot_props.xacro_extract_dimensions,
                 generate_macros=robot_props.xacro_generate_macros,
                 split_files=robot_props.xacro_split_files,
-                urdf_path=output_path,
+                output_path=output_path,
                 use_ros2_control=robot_props.use_ros2_control,
             )
             xacro_generator.write(robot, output_path, validate=False)

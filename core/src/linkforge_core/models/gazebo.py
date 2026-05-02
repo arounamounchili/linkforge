@@ -1,4 +1,4 @@
-"""Gazebo-specific URDF extensions and elements."""
+"""Gazebo simulation extensions and elements."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 class GazeboElement:
     """Generic Gazebo element that can be applied to robot, link, or joint.
 
-    The <gazebo> tag in URDF allows specification of Gazebo-specific properties
-    that are not part of the standard URDF specification.
+    Simulation elements allow specification of Gazebo-specific properties
+    that are not part of the standard kinematic tree.
     """
 
     reference: str | None = None  # Link or joint name (None for robot-level)

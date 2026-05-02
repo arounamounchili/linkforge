@@ -279,7 +279,7 @@ def test_export_urdf_extension_correction(mocker, clean_scene) -> None:
     scene = bpy.context.scene
     props = scene.linkforge
 
-    # Case 1: URDF format but .xacro extension
+    # Case 1: robot model format but .xacro extension
     props.export_format = "URDF"
     mock_self = MagicMock()
     mock_self.filepath = "/tmp/fake.xacro"  # Wrong extension

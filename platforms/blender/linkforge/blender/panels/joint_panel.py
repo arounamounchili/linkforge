@@ -99,7 +99,7 @@ class LINKFORGE_PT_joints(Panel):
                 col.prop(props, "custom_axis_y", text="Y")
                 col.prop(props, "custom_axis_z", text="Z")
 
-        # Joint limits (dynamic based on joint type per URDF spec)
+        # Joint limits (dynamic based on joint type per robot model spec)
         if props.joint_type in {"REVOLUTE", "PRISMATIC"}:
             # REVOLUTE/PRISMATIC: Limits are REQUIRED (no checkbox)
             box.separator()
@@ -118,7 +118,7 @@ class LINKFORGE_PT_joints(Panel):
                 col.label(text="Effort & Velocity Limits:", icon="DRIVER_DISTANCE")
                 col.prop(props, "limit_effort")
                 col.prop(props, "limit_velocity")
-        # FIXED/FLOATING/PLANAR: No limits section (not allowed per URDF spec)
+        # FIXED/FLOATING/PLANAR: No limits section (not allowed per robot model spec)
 
         # Joint Dynamics settings (optional)
         box.separator()

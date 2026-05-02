@@ -15,7 +15,7 @@ from typing import Any
 
 from ..base import FileSystemResolver, IResourceResolver
 from ..exceptions import RobotValidationError, ValidationErrorCode
-from ..utils.string_utils import is_valid_urdf_name
+from ..utils.string_utils import is_valid_name
 from .gazebo import GazeboElement
 from .geometry import Transform, Vector3
 from .graph import KinematicGraph
@@ -119,7 +119,7 @@ class Robot:
             )
 
         # Validate naming convention
-        if not is_valid_urdf_name(self.name):
+        if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
                 "Invalid name format",

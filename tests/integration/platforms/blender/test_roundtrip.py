@@ -51,7 +51,7 @@ def test_simple_arm_roundtrip(examples_dir: Path) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir) / "exported.urdf"
 
-        generator = URDFGenerator(pretty_print=True, urdf_path=output_path)
+        generator = URDFGenerator(pretty_print=True, output_path=output_path)
         generator.write(robot, output_path)
 
         assert output_path.exists(), "Exported URDF file not created"
