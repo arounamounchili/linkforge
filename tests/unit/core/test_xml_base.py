@@ -13,10 +13,10 @@ from linkforge_core.models.robot import Robot
 class MockXMLGenerator(RobotXMLGenerator):
     """Minimal implementation of abstract RobotXMLGenerator for testing base functionality."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def generate(self, robot: Robot, **kwargs) -> str:
+    def generate(self, robot: Robot, **kwargs: Any) -> str:
         return "<robot></robot>"
 
 
@@ -221,12 +221,12 @@ def test_xml_base_parser_geometry_nones() -> None:
     """Test geometry parsing fallback when elements are None."""
     from linkforge_core.parsers.xml_base import RobotXMLParser
 
-    class MockParser(RobotXMLParser):
-        def parse(self, filepath: Path, **kwargs: Any):
-            pass
+    class MockParser(RobotXMLParser[Any]):
+        def parse(self, filepath: Path, **kwargs: Any) -> Any:
+            return None
 
-        def parse_string(self, content: str, **kwargs: Any):
-            pass
+        def parse_string(self, content: str, **kwargs: Any) -> Any:
+            return None
 
     parser = MockParser()
     assert parser._parse_box(None) is None
