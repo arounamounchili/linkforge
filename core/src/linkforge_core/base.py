@@ -19,6 +19,7 @@ from .exceptions import (
     RobotParserError,
     XacroDetectedError,
 )
+from .utils.path_utils import normalize_uri_to_path, resolve_package_path
 
 if TYPE_CHECKING:
     from .models.robot import Robot
@@ -160,8 +161,6 @@ class FileSystemResolver:
 
     def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
         """Resolve standard file paths, file:// URIs, and package:// URIs."""
-        from .utils.path_utils import resolve_package_path
-
         # Handle package:// URIs
         if "package://" in uri or "package:/" in uri:
             # We use an empty Path if relative_to is not provided,
@@ -175,8 +174,6 @@ class FileSystemResolver:
 
         # Handle file:// URIs
         if uri.startswith("file://"):
-            from .utils.path_utils import normalize_uri_to_path
-
             path = normalize_uri_to_path(uri)
             if path.exists():
                 return path.absolute()

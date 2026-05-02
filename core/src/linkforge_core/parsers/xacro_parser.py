@@ -18,11 +18,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-try:
-    import yaml
-except ImportError:
-    yaml = None  # type: ignore[assignment]
-
 from ..exceptions import (
     RobotParserError,
     RobotXacroError,
@@ -30,9 +25,13 @@ from ..exceptions import (
     RobotXacroRecursionError,
 )
 from ..logging_config import get_logger
+from ..utils.dependencies import get_yaml
 from ..utils.dict_utils import AttrDict
 from ..utils.path_utils import resolve_package_path
 from ..utils.xml_utils import serialize_xml
+
+yaml = get_yaml()
+
 
 logger = get_logger(__name__)
 DEFAULT_MAX_DEPTH = 2000  # Increased for extremely complex industrial robots

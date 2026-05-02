@@ -85,18 +85,18 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         self.search_paths = search_paths or []
         self.template_resolver = template_resolver
 
-    def _parse_planning_group(self, group_elem: ET.Element) -> PlanningGroup:
+    def _parse_planning_group(self, group_elem: ET.Element) -> PlanningGroup | None:
         """Parse a <group> element into a PlanningGroup model.
 
         Args:
             group_elem: The XML element for the group.
         Returns:
-            A populated PlanningGroup instance.
+            A populated PlanningGroup instance or None if invalid.
         """
         name = group_elem.get("name")
         if not name:
             logger.warning("SRDF: Planning group missing name attribute, skipping")
-            return None  # type: ignore[return-value]
+            return None
 
         links: list[str] = []
         joints: list[str] = []

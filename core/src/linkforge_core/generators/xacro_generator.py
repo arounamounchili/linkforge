@@ -726,7 +726,7 @@ class XACROGenerator(URDFGenerator):
         if geometry.scale.x != 1.0 or geometry.scale.y != 1.0 or geometry.scale.z != 1.0:
             scale_str = self._format_vector(geometry.scale.x, geometry.scale.y, geometry.scale.z)
             attrib["scale"] = scale_str
-        ET.SubElement(geom_elem, "mesh", **attrib)  # type: ignore[arg-type]
+        ET.SubElement(geom_elem, "mesh", attrib=attrib)
 
     def _get_dimension_property(self, dim_key: str, value: float) -> str | None:
         """Get property name for a dimension if it was extracted.
