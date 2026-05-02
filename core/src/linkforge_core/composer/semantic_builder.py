@@ -66,7 +66,7 @@ class SemanticBuilder:
         )
 
         semantic = self._builder.robot.semantic
-        self._builder.robot.semantic = replace(semantic, groups=semantic.groups + (group,))
+        self._builder.robot.semantic = replace(semantic, groups=tuple(semantic.groups) + (group,))
         return self._builder
 
     def group_state(self, name: str, group: str, values: dict[str, float]) -> IComposer:
@@ -83,7 +83,7 @@ class SemanticBuilder:
         state = GroupState(name=name, group=group, joint_values=values)
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(
-            semantic, group_states=semantic.group_states + (state,)
+            semantic, group_states=tuple(semantic.group_states) + (state,)
         )
         return self._builder
 
@@ -104,7 +104,7 @@ class SemanticBuilder:
         ee = EndEffector(name=name, group=group, parent_link=parent_link, parent_group=parent_group)
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(
-            semantic, end_effectors=semantic.end_effectors + (ee,)
+            semantic, end_effectors=tuple(semantic.end_effectors) + (ee,)
         )
         return self._builder
 
@@ -120,7 +120,7 @@ class SemanticBuilder:
         pj = PassiveJoint(name=name)
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(
-            semantic, passive_joints=semantic.passive_joints + (pj,)
+            semantic, passive_joints=tuple(semantic.passive_joints) + (pj,)
         )
         return self._builder
 
@@ -143,7 +143,7 @@ class SemanticBuilder:
         )
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(
-            semantic, virtual_joints=semantic.virtual_joints + (vj,)
+            semantic, virtual_joints=tuple(semantic.virtual_joints) + (vj,)
         )
         return self._builder
 
@@ -160,6 +160,6 @@ class SemanticBuilder:
         dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(
-            semantic, disabled_collisions=semantic.disabled_collisions + (dc,)
+            semantic, disabled_collisions=tuple(semantic.disabled_collisions) + (dc,)
         )
         return self._builder

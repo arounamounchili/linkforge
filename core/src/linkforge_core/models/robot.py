@@ -910,7 +910,7 @@ class Robot:
             chains=tuple(final_chains),
             subgroups=tuple(subgroups or []),
         )
-        self._semantic = replace(self._semantic, groups=self._semantic.groups + (group,))
+        self._semantic = replace(self._semantic, groups=tuple(self._semantic.groups) + (group,))
         return self
 
     def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> Robot:
@@ -927,7 +927,8 @@ class Robot:
         # Disable collisions
         dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
         self._semantic = replace(
-            self._semantic, disabled_collisions=self._semantic.disabled_collisions + (dc,)
+            self._semantic,
+            disabled_collisions=tuple(self._semantic.disabled_collisions) + (dc,),
         )
         return self
 
