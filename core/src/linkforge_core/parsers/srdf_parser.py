@@ -154,7 +154,11 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
                     f"SRDF: Invalid joint value for '{j_name}' in group state '{name}': {e}"
                 )
 
-        return GroupState(name=name, group=group, joint_values=joint_values)
+        try:
+            return GroupState(name=name, group=group, joint_values=joint_values)
+        except Exception as e:
+            logger.warning(f"SRDF: Skipping group state '{name}': {e}")
+            return None
 
     def parse_string(
         self,
@@ -310,12 +314,16 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             logger.warning("SRDF: Virtual joint missing required attributes, skipping")
             return None
 
-        return VirtualJoint(
-            name=name,
-            type=vtype,
-            parent_frame=parent,
-            child_link=child,
-        )
+        try:
+            return VirtualJoint(
+                name=name,
+                type=vtype,
+                parent_frame=parent,
+                child_link=child,
+            )
+        except Exception as e:
+            logger.warning(f"SRDF: Skipping virtual joint '{name}': {e}")
+            return None
 
     def _parse_end_effector_elem(self, elem: ET.Element) -> EndEffector | None:
         """Parse an <end_effector> element.
@@ -334,12 +342,16 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             logger.warning("SRDF: End effector missing required attributes, skipping")
             return None
 
-        return EndEffector(
-            name=name,
-            group=group,
-            parent_link=parent,
-            parent_group=elem.get("parent_group"),
-        )
+        try:
+            return EndEffector(
+                name=name,
+                group=group,
+                parent_link=parent,
+                parent_group=elem.get("parent_group"),
+            )
+        except Exception as e:
+            logger.warning(f"SRDF: Skipping end effector '{name}': {e}")
+            return None
 
     def _parse_collision_pair_elem(self, elem: ET.Element) -> CollisionPair | None:
         """Parse a <disable_collisions> or <enable_collisions> element.
@@ -357,11 +369,15 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             logger.warning("SRDF: Collision pair missing link1 or link2, skipping")
             return None
 
-        return CollisionPair(
-            link1=link1,
-            link2=link2,
-            reason=elem.get("reason"),
-        )
+        try:
+            return CollisionPair(
+                link1=link1,
+                link2=link2,
+                reason=elem.get("reason"),
+            )
+        except Exception as e:
+            logger.warning(f"SRDF: Skipping collision pair '{link1}/{link2}': {e}")
+            return None
 
     def _parse_link_sphere_approximation_elem(
         self, elem: ET.Element
@@ -389,7 +405,11 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
                 except Exception as e:
                     logger.warning(f"SRDF: Invalid sphere in link '{link}': {e}")
 
-        return LinkSphereApproximation(link=link, spheres=tuple(spheres))
+        try:
+            return LinkSphereApproximation(link=link, spheres=tuple(spheres))
+        except Exception as e:
+            logger.warning(f"SRDF: Skipping sphere approximation for link '{link}': {e}")
+            return None
 
     def _parse_joint_property_elem(self, elem: ET.Element) -> JointProperty | None:
         """Parse a <joint_property> element."""
@@ -401,11 +421,15 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             logger.warning("SRDF: Joint property missing required attributes, skipping")
             return None
 
-        return JointProperty(
-            joint_name=joint_name,
-            property_name=property_name,
-            value=value,
-        )
+        try:
+            return JointProperty(
+                joint_name=joint_name,
+                property_name=property_name,
+                value=value,
+            )
+        except Exception as e:
+            logger.warning(f"SRDF: Skipping joint property for '{joint_name}': {e}")
+            return None
 
     def parse(self, filepath: Path, **kwargs: Any) -> SemanticRobotDescription:
         """Load and parse an SRDF file from disk.
