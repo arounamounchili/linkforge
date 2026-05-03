@@ -187,7 +187,10 @@ class TestVisual:
         vis = Visual(name="vis", geometry=geom, material=mat)
         vis_pre = vis.with_prefix("p_")
         assert vis_pre.name == "p_vis"
-        assert vis_pre.material.name == "p_red"
+
+        material = vis_pre.material
+        assert material is not None
+        assert material.name == "p_red"
 
 
 class TestCollision:

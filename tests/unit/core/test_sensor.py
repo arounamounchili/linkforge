@@ -427,7 +427,7 @@ class TestSensor:
         plugin = GazeboPlugin(name="p1", filename="f1")
         sensor = Sensor(
             name="s1",
-            type="contact",
+            type=SensorType.CONTACT,
             link_name="l1",
             topic="/t1",
             contact_info=contact,
@@ -438,8 +438,14 @@ class TestSensor:
         assert pre.name == "b_s1"
         assert pre.link_name == "b_l1"
         assert pre.topic == "b_/t1"
-        assert pre.contact_info.collision == "b_c1"
-        assert pre.plugin.name == "b_p1"
+
+        contact_info = pre.contact_info
+        assert contact_info is not None
+        assert contact_info.collision == "b_c1"
+
+        plugin = pre.plugin
+        assert plugin is not None
+        assert plugin.name == "b_p1"
 
 
 def test_sensor_parsing_pose_robustness() -> None:

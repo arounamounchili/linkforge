@@ -180,14 +180,14 @@ def test_ros2_control_duplicate_joint_validation() -> None:
 
 def test_ros2_control_joint_prefix() -> None:
     """Test creating a ros2 control joint with a prefix."""
-    rj = Ros2ControlJoint(name="j1", state_interfaces=("position",))
+    rj = Ros2ControlJoint(name="j1", state_interfaces=["position"])
     pre = rj.with_prefix("r_")
     assert pre.name == "r_j1"
 
 
 def test_ros2_control_prefix() -> None:
     """Test creating a ros2 control block with a prefix."""
-    rj = Ros2ControlJoint(name="j1", state_interfaces=("position",))
+    rj = Ros2ControlJoint(name="j1", state_interfaces=["position"])
     rc = Ros2Control(name="c1", type="system", hardware_plugin="h1", joints=[rj])
 
     pre = rc.with_prefix("r_")

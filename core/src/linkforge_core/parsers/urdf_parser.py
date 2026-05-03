@@ -69,6 +69,7 @@ from ..models import (
 )
 from ..utils.xml_utils import (
     MAX_XML_DEPTH,
+    get_xml_namespace,
     parse_float,
     parse_int,
     parse_optional_bool,
@@ -379,7 +380,7 @@ class URDFParser(RobotXMLParser[Robot]):
             logger.warning(f"Transmission component '{name}' has zero reduction, defaulting to 1.0")
             reduction = 1.0
 
-        offset = parse_float(elem.findtext("offset"), check_name="offset", default=0.0)
+        offset = parse_float(elem.findtext("{*}offset"), check_name="offset", default=0.0)
 
         if tag == "joint":
             return TransmissionJoint(
@@ -399,10 +400,10 @@ class URDFParser(RobotXMLParser[Robot]):
     def _parse_transmission(self, trans_elem: ET.Element) -> Transmission | None:
         """Parse transmission element."""
         name = trans_elem.get("name", "unnamed_transmission")
-        trans_type = trans_elem.findtext("type", "")
+        trans_type = trans_elem.findtext("{*}type", "")
 
         joints: list[TransmissionJoint] = []
-        for j_elem in trans_elem.findall("joint"):
+        for j_elem in trans_elem.findall("{*}joint"):
             comp = self._parse_transmission_component(j_elem, "joint")
             if isinstance(comp, TransmissionJoint):
                 joints.append(comp)
@@ -427,12 +428,12 @@ class URDFParser(RobotXMLParser[Robot]):
         if actual_noise_elem is None:
             return None
         return SensorNoise(
-            type=actual_noise_elem.findtext("type", "gaussian"),
+            type=actual_noise_elem.findtext("{*}type", "gaussian"),
             mean=parse_float(
-                actual_noise_elem.findtext("mean", "0.0"), check_name="mean", default=0.0
+                actual_noise_elem.findtext("{*}mean", "0.0"), check_name="mean", default=0.0
             ),
             stddev=parse_float(
-                actual_noise_elem.findtext("stddev", "0.0"), check_name="stddev", default=0.0
+                actual_noise_elem.findtext("{*}stddev", "0.0"), check_name="stddev", default=0.0
             ),
         )
 
@@ -463,7 +464,7 @@ class URDFParser(RobotXMLParser[Robot]):
         }
         sensor_type = type_map.get(sensor_type_str.lower(), SensorType.CAMERA)
         update_rate = parse_float(
-            sensor_elem.findtext("update_rate", "30.0"), check_name="updateRate", default=30.0
+            sensor_elem.findtext("{*}update_rate", "30.0"), check_name="updateRate", default=30.0
         )
 
         origin = Transform.identity()
@@ -573,7 +574,7 @@ class URDFParser(RobotXMLParser[Robot]):
         elif sensor_type == SensorType.CONTACT:
             contact_elem = sensor_elem.find("{*}contact")
             if contact_elem is not None:
-                collision = contact_elem.findtext("collision")
+                collision = contact_elem.findtext("{*}collision")
                 if not collision:
                     raise RobotValidationError(
                         ValidationErrorCode.VALUE_EMPTY,
@@ -595,8 +596,8 @@ class URDFParser(RobotXMLParser[Robot]):
         elif sensor_type == SensorType.FORCE_TORQUE:
             ft_elem = sensor_elem.find("{*}force_torque")
             force_torque_info = ForceTorqueInfo(
-                frame=ft_elem.findtext("frame", "child") if ft_elem is not None else "child",
-                measure_direction=ft_elem.findtext("measure_direction", "child_to_parent")
+                frame=ft_elem.findtext("{*}frame", "child") if ft_elem is not None else "child",
+                measure_direction=ft_elem.findtext("{*}measure_direction", "child_to_parent")
                 if ft_elem is not None
                 else "child_to_parent",
                 noise=self._parse_sensor_noise(ft_elem),
@@ -613,7 +614,7 @@ class URDFParser(RobotXMLParser[Robot]):
         elif sensor_type == SensorType.GPS and gps_info is None:
             gps_info = GPSInfo()
 
-        topic = sensor_elem.findtext("topic") or f"/{sensor_name}"
+        topic = sensor_elem.findtext("{*}topic") or f"/{sensor_name}"
         return Sensor(
             name=sensor_name,
             type=sensor_type,
@@ -708,9 +709,10 @@ class URDFParser(RobotXMLParser[Robot]):
                     pass
 
         if not is_xacro:
+            from .xacro_parser import XACRO_URIS
+
             for child in root:
-                tag = strip_xml_namespace(child.tag)
-                if "xacro:" in tag or (isinstance(tag, str) and "xacro" in tag):
+                if get_xml_namespace(child.tag) in XACRO_URIS:
                     is_xacro = True
                     break
 

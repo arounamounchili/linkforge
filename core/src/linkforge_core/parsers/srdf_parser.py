@@ -82,25 +82,26 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         chains: list[Chain] = []
         subgroups: list[str] = []
 
-        for child in group_elem:
-            tag = strip_xml_namespace(child.tag)
-            if tag == "link":
-                link_name = child.get("name")
-                if link_name:
-                    links.append(link_name)
-            elif tag == "joint":
-                joint_name = child.get("name")
-                if joint_name:
-                    joints.append(joint_name)
-            elif tag == "chain":
-                base = child.get("base_link")
-                tip = child.get("tip_link")
-                if base and tip:
-                    chains.append(Chain(base_link=base, tip_link=tip))
-            elif tag == "group":
-                subgroup_name = child.get("name")
-                if subgroup_name:
-                    subgroups.append(subgroup_name)
+        for link_elem in group_elem.findall("{*}link"):
+            link_name = link_elem.get("name")
+            if link_name:
+                links.append(link_name)
+
+        for joint_elem in group_elem.findall("{*}joint"):
+            joint_name = joint_elem.get("name")
+            if joint_name:
+                joints.append(joint_name)
+
+        for chain_elem in group_elem.findall("{*}chain"):
+            base = chain_elem.get("base_link")
+            tip = chain_elem.get("tip_link")
+            if base and tip:
+                chains.append(Chain(base_link=base, tip_link=tip))
+
+        for subgroup_elem in group_elem.findall("{*}group"):
+            subgroup_name = subgroup_elem.get("name")
+            if subgroup_name:
+                subgroups.append(subgroup_name)
 
         try:
             return PlanningGroup(
@@ -132,9 +133,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         joint_values: dict[str, tuple[float, ...]] = {}
 
-        for joint_elem in state_elem:
-            if strip_xml_namespace(joint_elem.tag) != "joint":
-                continue
+        for joint_elem in state_elem.findall("{*}joint"):
             j_name = joint_elem.get("name")
             j_val_str = joint_elem.get("value")
 
@@ -220,54 +219,59 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         link_sphere_approximations: list[LinkSphereApproximation] = []
         joint_properties: list[JointProperty] = []
 
-        for child in root:
-            tag = strip_xml_namespace(child.tag)
-            if tag == "virtual_joint":
-                vj = self._parse_virtual_joint_elem(child)
-                if vj:
-                    virtual_joints.append(vj)
-            elif tag == "group":
-                group = self._parse_planning_group(child)
-                if group:
-                    groups.append(group)
-            elif tag == "group_state":
-                gs = self._parse_group_state(child)
-                if gs:
-                    group_states.append(gs)
-            elif tag == "end_effector":
-                ee = self._parse_end_effector_elem(child)
-                if ee:
-                    end_effectors.append(ee)
-            elif tag == "passive_joint":
-                pj_name = child.get("name")
-                if pj_name:
-                    passive_joints.append(PassiveJoint(name=pj_name))
-                else:
-                    logger.warning("SRDF: Passive joint missing name, skipping")
-            elif tag == "disable_collisions":
-                dc = self._parse_collision_pair_elem(child)
-                if dc:
-                    disabled_collisions.append(dc)
-            elif tag == "enable_collisions":
-                ec = self._parse_collision_pair_elem(child)
-                if ec:
-                    enabled_collisions.append(ec)
-            elif tag == "disable_default_collisions":
-                link = child.get("link")
-                if link:
-                    no_default_collision_links.append(link)
-                else:
-                    logger.warning(
-                        "SRDF: disable_default_collisions missing link attribute, skipping"
-                    )
-            elif tag == "link_sphere_approximation":
-                lsa = self._parse_link_sphere_approximation_elem(child)
-                if lsa:
-                    link_sphere_approximations.append(lsa)
-            elif tag == "joint_property":
-                jp = self._parse_joint_property_elem(child)
-                if jp:
-                    joint_properties.append(jp)
+        for vj_elem in root.findall("{*}virtual_joint"):
+            vj = self._parse_virtual_joint_elem(vj_elem)
+            if vj:
+                virtual_joints.append(vj)
+
+        for group_elem in root.findall("{*}group"):
+            group = self._parse_planning_group(group_elem)
+            if group:
+                groups.append(group)
+
+        for state_elem in root.findall("{*}group_state"):
+            gs = self._parse_group_state(state_elem)
+            if gs:
+                group_states.append(gs)
+
+        for ee_elem in root.findall("{*}end_effector"):
+            ee = self._parse_end_effector_elem(ee_elem)
+            if ee:
+                end_effectors.append(ee)
+
+        for pj_elem in root.findall("{*}passive_joint"):
+            pj_name = pj_elem.get("name")
+            if pj_name:
+                passive_joints.append(PassiveJoint(name=pj_name))
+            else:
+                logger.warning("SRDF: Passive joint missing name, skipping")
+
+        for dc_elem in root.findall("{*}disable_collisions"):
+            dc = self._parse_collision_pair_elem(dc_elem)
+            if dc:
+                disabled_collisions.append(dc)
+
+        for ec_elem in root.findall("{*}enable_collisions"):
+            ec = self._parse_collision_pair_elem(ec_elem)
+            if ec:
+                enabled_collisions.append(ec)
+
+        for ddc_elem in root.findall("{*}disable_default_collisions"):
+            link = ddc_elem.get("link")
+            if link:
+                no_default_collision_links.append(link)
+            else:
+                logger.warning("SRDF: disable_default_collisions missing link attribute, skipping")
+
+        for lsa_elem in root.findall("{*}link_sphere_approximation"):
+            lsa = self._parse_link_sphere_approximation_elem(lsa_elem)
+            if lsa:
+                link_sphere_approximations.append(lsa)
+
+        for jp_elem in root.findall("{*}joint_property"):
+            jp = self._parse_joint_property_elem(jp_elem)
+            if jp:
+                joint_properties.append(jp)
 
         # Cross-reference validation
         group_names = {g.name for g in groups}
@@ -389,21 +393,18 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             return None
 
         spheres: list[SrdfSphere] = []
-        for child in elem:
-            if strip_xml_namespace(child.tag) == "sphere":
-                center_str = child.get("center")
-                radius_str = child.get("radius")
-                if not center_str or not radius_str:
-                    logger.warning(
-                        f"SRDF: Sphere in link '{link}' missing center or radius, skipping"
-                    )
-                    continue
-                try:
-                    cx, cy, cz = (parse_float(v, "sphere center") for v in center_str.split())
-                    r = parse_float(radius_str, "sphere radius")
-                    spheres.append(SrdfSphere(center_x=cx, center_y=cy, center_z=cz, radius=r))
-                except Exception as e:
-                    logger.warning(f"SRDF: Invalid sphere in link '{link}': {e}")
+        for sphere_elem in elem.findall("{*}sphere"):
+            center_str = sphere_elem.get("center")
+            radius_str = sphere_elem.get("radius")
+            if not center_str or not radius_str:
+                logger.warning(f"SRDF: Sphere in link '{link}' missing center or radius, skipping")
+                continue
+            try:
+                cx, cy, cz = (parse_float(v, "sphere center") for v in center_str.split())
+                r = parse_float(radius_str, "sphere radius")
+                spheres.append(SrdfSphere(center_x=cx, center_y=cy, center_z=cz, radius=r))
+            except Exception as e:
+                logger.warning(f"SRDF: Invalid sphere in link '{link}': {e}")
 
         try:
             return LinkSphereApproximation(link=link, spheres=tuple(spheres))

@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 from linkforge_core.exceptions import RobotModelError, RobotParserError, XacroDetectedError
+from linkforge_core.models.geometry import Box
 from linkforge_core.parsers.urdf_parser import URDFParser
 from linkforge_core.parsers.xml_base import RobotXMLParser
 
@@ -268,10 +269,19 @@ def test_urdf_parser_namespaced_parsing() -> None:
     robot = parser.parse_string(urdf_content)
 
     assert robot.name == "ns_robot"
-    assert robot.get_link("base_link") is not None
-    assert robot.get_link("child_link") is not None
-    assert len(robot.get_link("base_link").visuals) == 1
-    assert robot.get_link("base_link").visuals[0].geometry.size.x == 1.0
-    assert robot.get_joint("test_joint") is not None
-    assert robot.get_joint("test_joint").parent == "base_link"
-    assert robot.get_joint("test_joint").child == "child_link"
+
+    base_link = robot.get_link("base_link")
+    assert base_link is not None
+    assert len(base_link.visuals) == 1
+
+    visual = base_link.visuals[0]
+    assert isinstance(visual.geometry, Box)
+    assert visual.geometry.size.x == 1.0
+
+    child_link = robot.get_link("child_link")
+    assert child_link is not None
+
+    test_joint = robot.get_joint("test_joint")
+    assert test_joint is not None
+    assert test_joint.parent == "base_link"
+    assert test_joint.child == "child_link"

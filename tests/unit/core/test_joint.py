@@ -518,7 +518,10 @@ class TestJoint:
         assert pre.name == "a_j2"
         assert pre.parent == "a_l1"
         assert pre.child == "a_l2"
-        assert pre.mimic.joint == "a_j1"
+
+        mimic = pre.mimic
+        assert mimic is not None
+        assert mimic.joint == "a_j1"
 
 
 class TestJointType:
