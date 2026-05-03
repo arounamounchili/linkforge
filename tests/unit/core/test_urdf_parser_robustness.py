@@ -243,3 +243,35 @@ def test_urdf_parser_xml_error_in_parse(tmp_path) -> None:
     # Standardizing on 'Failed to parse URDF XML' for ParseError
     with pytest.raises(RobotParserError):
         parser.parse(p)
+
+
+def test_urdf_parser_namespaced_parsing() -> None:
+    """Verify that the URDF parser can handle files with default namespaces."""
+    urdf_content = """<?xml version="1.0"?>
+    <robot name="ns_robot" xmlns="http://www.ros.org/wiki/urdf">
+      <link name="base_link">
+        <visual>
+          <geometry>
+            <box size="1 2 3"/>
+          </geometry>
+        </visual>
+      </link>
+      <joint name="test_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="child_link"/>
+      </joint>
+      <link name="child_link"/>
+    </robot>
+    """
+
+    parser = URDFParser()
+    robot = parser.parse_string(urdf_content)
+
+    assert robot.name == "ns_robot"
+    assert robot.get_link("base_link") is not None
+    assert robot.get_link("child_link") is not None
+    assert len(robot.get_link("base_link").visuals) == 1
+    assert robot.get_link("base_link").visuals[0].geometry.size.x == 1.0
+    assert robot.get_joint("test_joint") is not None
+    assert robot.get_joint("test_joint").parent == "base_link"
+    assert robot.get_joint("test_joint").child == "child_link"

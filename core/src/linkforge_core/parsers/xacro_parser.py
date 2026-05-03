@@ -28,7 +28,11 @@ from ..logging_config import get_logger
 from ..utils.dependencies import get_yaml
 from ..utils.dict_utils import AttrDict
 from ..utils.path_utils import resolve_package_path
-from ..utils.xml_utils import serialize_xml
+from ..utils.xml_utils import (
+    get_xml_namespace,
+    serialize_xml,
+    strip_xml_namespace,
+)
 
 yaml = get_yaml()
 
@@ -262,12 +266,10 @@ class XacroResolver:
 
             for child in root:
                 # Basic tagging of XACRO elements
+                ns = get_xml_namespace(child.tag)
                 tag = child.tag
-                for uri in XACRO_URIS:
-                    prefix = f"{{{uri}}}"
-                    if tag.startswith(prefix):
-                        tag = tag.replace(prefix, "xacro:")
-                        break
+                if ns in XACRO_URIS:
+                    tag = f"xacro:{strip_xml_namespace(tag)}"
 
                 if tag == "xacro:include":
                     # Handle structural inclusion
@@ -308,9 +310,7 @@ class XacroResolver:
 
             # Clean root attributes (remove xacro namespace)
             clean_attrib = {
-                k: v
-                for k, v in root.attrib.items()
-                if not k.startswith("{http://www.ros.org/wiki/xacro}")
+                k: v for k, v in root.attrib.items() if get_xml_namespace(k) not in XACRO_URIS
             }
 
             template = XacroTemplate(
@@ -360,12 +360,10 @@ class XacroResolver:
             The resolved XML element.
         """
         # Convert any recognized XACRO namespace URI to 'xacro:' prefix
+        ns = get_xml_namespace(element.tag)
         tag = element.tag
-        for uri in XACRO_URIS:
-            prefix = f"{{{uri}}}"
-            if tag.startswith(prefix):
-                tag = tag.replace(prefix, "xacro:")
-                break
+        if ns in XACRO_URIS:
+            tag = f"xacro:{strip_xml_namespace(tag)}"
 
         # Dispatch dictionary for known xacro tags
         dispatch = {

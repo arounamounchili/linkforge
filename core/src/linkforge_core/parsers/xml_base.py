@@ -112,14 +112,14 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
     ) -> Box | Cylinder | Sphere | Mesh | None:
         """Parse geometry element (box, cylinder, sphere, mesh)."""
         try:
-            if geom_elem.find("box") is not None:
-                return self._parse_box(geom_elem.find("box"))
-            if geom_elem.find("cylinder") is not None:
-                return self._parse_cylinder(geom_elem.find("cylinder"))
-            if geom_elem.find("sphere") is not None:
-                return self._parse_sphere(geom_elem.find("sphere"))
-            if geom_elem.find("mesh") is not None:
-                return self._parse_mesh(geom_elem.find("mesh"), base_directory)
+            if geom_elem.find("{*}box") is not None:
+                return self._parse_box(geom_elem.find("{*}box"))
+            if geom_elem.find("{*}cylinder") is not None:
+                return self._parse_cylinder(geom_elem.find("{*}cylinder"))
+            if geom_elem.find("{*}sphere") is not None:
+                return self._parse_sphere(geom_elem.find("{*}sphere"))
+            if geom_elem.find("{*}mesh") is not None:
+                return self._parse_mesh(geom_elem.find("{*}mesh"), base_directory)
         except (RobotModelError, ValueError, RobotParserError) as e:
             logger.warning(f"Invalid geometry ignored: {e}")
             return None
@@ -205,7 +205,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
             return materials[mat_name]
 
         color = None
-        color_elem = mat_elem.find("color")
+        color_elem = mat_elem.find("{*}color")
         num_rgb = 3
         num_rgba = 4
         if color_elem is not None:
@@ -224,7 +224,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
                 return None
 
         texture = None
-        texture_elem = mat_elem.find("texture")
+        texture_elem = mat_elem.find("{*}texture")
         if texture_elem is not None:
             texture = texture_elem.get("filename")
 
@@ -252,12 +252,12 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         if inertial_elem is None:
             return None
 
-        origin = self._parse_origin_element(inertial_elem.find("origin"))
+        origin = self._parse_origin_element(inertial_elem.find("{*}origin"))
 
-        mass_elem = inertial_elem.find("mass")
+        mass_elem = inertial_elem.find("{*}mass")
         mass = parse_float(mass_elem.get("value") if mass_elem is not None else None, default=0.0)
 
-        inertia_elem = inertial_elem.find("inertia")
+        inertia_elem = inertial_elem.find("{*}inertia")
         if inertia_elem is not None:
             # Delegate physical validity entirely to the InertiaTensor model
             ixx = parse_float(inertia_elem.get("ixx"), default=0.0)

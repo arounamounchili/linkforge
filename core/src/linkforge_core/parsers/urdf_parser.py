@@ -74,6 +74,7 @@ from ..utils.xml_utils import (
     parse_optional_bool,
     parse_optional_float,
     parse_vector3,
+    strip_xml_namespace,
 )
 from .xml_base import MAX_FILE_SIZE, RobotXMLParser
 
@@ -112,15 +113,15 @@ class URDFParser(RobotXMLParser[Robot]):
         name = link_elem.get("name", "unnamed_link")
 
         visuals: list[Visual] = []
-        for visual_elem in link_elem.findall("visual"):
-            origin = self._parse_origin_element(visual_elem.find("origin"))
-            geom_elem = visual_elem.find("geometry")
+        for visual_elem in link_elem.findall("{*}visual"):
+            origin = self._parse_origin_element(visual_elem.find("{*}origin"))
+            geom_elem = visual_elem.find("{*}geometry")
             geometry = (
                 self._parse_geometry_element(geom_elem, source_directory)
                 if geom_elem is not None
                 else None
             )
-            material = self._parse_material_element(visual_elem.find("material"), materials)
+            material = self._parse_material_element(visual_elem.find("{*}material"), materials)
             visual_name = visual_elem.get("name")
 
             if geometry:
@@ -129,9 +130,9 @@ class URDFParser(RobotXMLParser[Robot]):
                 )
 
         collisions: list[Collision] = []
-        for collision_elem in link_elem.findall("collision"):
-            origin = self._parse_origin_element(collision_elem.find("origin"))
-            geom_elem = collision_elem.find("geometry")
+        for collision_elem in link_elem.findall("{*}collision"):
+            origin = self._parse_origin_element(collision_elem.find("{*}origin"))
+            geom_elem = collision_elem.find("{*}geometry")
             geometry = (
                 self._parse_geometry_element(geom_elem, source_directory)
                 if geom_elem is not None
@@ -142,7 +143,7 @@ class URDFParser(RobotXMLParser[Robot]):
             if geometry:
                 collisions.append(Collision(geometry=geometry, origin=origin, name=collision_name))
 
-        inertial = self._parse_inertial_element(link_elem.find("inertial"))
+        inertial = self._parse_inertial_element(link_elem.find("{*}inertial"))
         return Link(
             name=name, initial_visuals=visuals, initial_collisions=collisions, inertial=inertial
         )
@@ -162,12 +163,12 @@ class URDFParser(RobotXMLParser[Robot]):
         }
         joint_type = type_map.get(joint_type_str.lower(), JointType.FIXED)
 
-        parent_elem = joint_elem.find("parent")
-        child_elem = joint_elem.find("child")
+        parent_elem = joint_elem.find("{*}parent")
+        child_elem = joint_elem.find("{*}child")
         parent = parent_elem.get("link", "") if parent_elem is not None else ""
         child = child_elem.get("link", "") if child_elem is not None else ""
 
-        origin = self._parse_origin_element(joint_elem.find("origin"))
+        origin = self._parse_origin_element(joint_elem.find("{*}origin"))
 
         axis: Vector3 | None = None
         if joint_type in (
@@ -176,7 +177,7 @@ class URDFParser(RobotXMLParser[Robot]):
             JointType.PRISMATIC,
             JointType.PLANAR,
         ):
-            axis_elem = joint_elem.find("axis")
+            axis_elem = joint_elem.find("{*}axis")
             if axis_elem is not None:
                 axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
                 # Normalize axis
@@ -190,7 +191,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         limits = None
         if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS):
-            limits_elem = joint_elem.find("limit")
+            limits_elem = joint_elem.find("{*}limit")
             if limits_elem is not None:
                 lower_str = limits_elem.get("lower")
                 upper_str = limits_elem.get("upper")
@@ -221,7 +222,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 limits = JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
 
         dynamics = None
-        dynamics_elem = joint_elem.find("dynamics")
+        dynamics_elem = joint_elem.find("{*}dynamics")
         if dynamics_elem is not None:
             dynamics = JointDynamics(
                 damping=parse_float(
@@ -233,7 +234,7 @@ class URDFParser(RobotXMLParser[Robot]):
             )
 
         mimic = None
-        mimic_elem = joint_elem.find("mimic")
+        mimic_elem = joint_elem.find("{*}mimic")
         if mimic_elem is not None:
             mimic = JointMimic(
                 joint=mimic_elem.get("joint", ""),
@@ -244,7 +245,7 @@ class URDFParser(RobotXMLParser[Robot]):
             )
 
         safety_controller = None
-        safety_elem = joint_elem.find("safety_controller")
+        safety_elem = joint_elem.find("{*}safety_controller")
         if safety_elem is not None:
             safety_controller = JointSafetyController(
                 soft_lower_limit=parse_float(
@@ -262,7 +263,7 @@ class URDFParser(RobotXMLParser[Robot]):
             )
 
         calibration = None
-        calib_elem = joint_elem.find("calibration")
+        calib_elem = joint_elem.find("{*}calibration")
         if calib_elem is not None:
             rising_str = calib_elem.get("rising")
             falling_str = calib_elem.get("falling")
@@ -299,33 +300,33 @@ class URDFParser(RobotXMLParser[Robot]):
         name = rc_elem.get("name", "")
         rc_type = rc_elem.get("type", "system")
 
-        hw_elem = rc_elem.find("hardware")
-        plugin_elem = hw_elem.find("plugin") if hw_elem is not None else None
+        hw_elem = rc_elem.find("{*}hardware")
+        plugin_elem = hw_elem.find("{*}plugin") if hw_elem is not None else None
         hardware_plugin = (
             plugin_elem.text.strip() if plugin_elem is not None and plugin_elem.text else ""
         )
 
         parameters: dict[str, str] = {}
         if hw_elem is not None:
-            for param_elem in hw_elem.findall("param"):
+            for param_elem in hw_elem.findall("{*}param"):
                 p_name = param_elem.get("name")
                 if p_name and param_elem.text:
                     parameters[p_name] = param_elem.text.strip()
 
         joints: list[Ros2ControlJoint] = []
-        for joint_elem in rc_elem.findall("joint"):
+        for joint_elem in rc_elem.findall("{*}joint"):
             joint_name = joint_elem.get("name", "")
             command_interfaces = [
                 self._normalize_hardware_interface(cmd.get("name", "position"))
-                for cmd in joint_elem.findall("command_interface")
+                for cmd in joint_elem.findall("{*}command_interface")
             ]
             state_interfaces = [
                 self._normalize_hardware_interface(state.get("name", "position"))
-                for state in joint_elem.findall("state_interface")
+                for state in joint_elem.findall("{*}state_interface")
             ]
             joint_params: dict[str, str] = {
                 str(param.get("name")): param.text.strip()
-                for param in joint_elem.findall("param")
+                for param in joint_elem.findall("{*}param")
                 if param.get("name") and param.text
             }
 
@@ -365,12 +366,12 @@ class URDFParser(RobotXMLParser[Robot]):
 
         hw_interfaces = [
             self._normalize_hardware_interface(hw.text.strip())
-            for hw in (elem.findall("hardwareInterface") + elem.findall("hardware_interface"))
+            for hw in (elem.findall("{*}hardwareInterface") + elem.findall("{*}hardware_interface"))
             if hw.text
         ]
 
         reduction = parse_float(
-            elem.findtext("mechanicalReduction") or elem.findtext("mechanical_reduction"),
+            elem.findtext("{*}mechanicalReduction") or elem.findtext("{*}mechanical_reduction"),
             check_name="mechanicalReduction",
             default=1.0,
         )
@@ -407,7 +408,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 joints.append(comp)
 
         actuators: list[TransmissionActuator] = []
-        for a_elem in trans_elem.findall("actuator"):
+        for a_elem in trans_elem.findall("{*}actuator"):
             comp = self._parse_transmission_component(a_elem, "actuator")
             if isinstance(comp, TransmissionActuator):
                 actuators.append(comp)
@@ -422,7 +423,7 @@ class URDFParser(RobotXMLParser[Robot]):
         """Parse sensor noise element."""
         if noise_elem is None:
             return None
-        actual_noise_elem = noise_elem.find("noise") if noise_elem.tag != "noise" else noise_elem
+        actual_noise_elem = noise_elem.find("{*}noise") if noise_elem.tag != "noise" else noise_elem
         if actual_noise_elem is None:
             return None
         return SensorNoise(
@@ -438,7 +439,7 @@ class URDFParser(RobotXMLParser[Robot]):
     def _parse_sensor_from_gazebo(self, gazebo_elem: ET.Element) -> Sensor | None:
         """Parse sensor from Gazebo element."""
         link_name = gazebo_elem.get("reference", "")
-        sensor_elem = gazebo_elem.find("sensor")
+        sensor_elem = gazebo_elem.find("{*}sensor")
         if not link_name or sensor_elem is None:
             return None
 
@@ -466,7 +467,7 @@ class URDFParser(RobotXMLParser[Robot]):
         )
 
         origin = Transform.identity()
-        pose_elem = sensor_elem.find("pose")
+        pose_elem = sensor_elem.find("{*}pose")
         if pose_elem is not None and pose_elem.text:
             parts = pose_elem.text.strip().split()
             if len(parts) >= 6:
@@ -485,22 +486,22 @@ class URDFParser(RobotXMLParser[Robot]):
         force_torque_info = None
 
         if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA):
-            camera_elem = sensor_elem.find("camera")
+            camera_elem = sensor_elem.find("{*}camera")
             if camera_elem is not None:
                 camera_info = CameraInfo(
                     horizontal_fov=parse_float(
-                        camera_elem.findtext("horizontal_fov"),
+                        camera_elem.findtext("{*}horizontal_fov"),
                         check_name="horizontal_fov",
                         default=1.047,
                     ),
-                    width=parse_int(camera_elem.findtext("image/width"), default=640),
-                    height=parse_int(camera_elem.findtext("image/height"), default=480),
-                    format=camera_elem.findtext("image/format", "R8G8B8"),
+                    width=parse_int(camera_elem.findtext("{*}image/{*}width"), default=640),
+                    height=parse_int(camera_elem.findtext("{*}image/{*}height"), default=480),
+                    format=camera_elem.findtext("{*}image/{*}format", "R8G8B8"),
                     near_clip=parse_float(
-                        camera_elem.findtext("clip/near"), check_name="near", default=0.1
+                        camera_elem.findtext("{*}clip/{*}near"), check_name="near", default=0.1
                     ),
                     far_clip=parse_float(
-                        camera_elem.findtext("clip/far"), check_name="far", default=100.0
+                        camera_elem.findtext("{*}clip/{*}far"), check_name="far", default=100.0
                     ),
                     noise=self._parse_sensor_noise(camera_elem),
                 )
@@ -508,27 +509,27 @@ class URDFParser(RobotXMLParser[Robot]):
                 camera_info = CameraInfo()
 
         elif sensor_type == SensorType.LIDAR:
-            ray_elem = sensor_elem.find("ray")
+            ray_elem = sensor_elem.find("{*}ray")
             if ray_elem is not None:
                 lidar_info = LidarInfo(
                     horizontal_samples=parse_int(
-                        ray_elem.findtext("scan/horizontal/samples"), default=640
+                        ray_elem.findtext("{*}scan/{*}horizontal/{*}samples"), default=640
                     ),
                     horizontal_min_angle=parse_float(
-                        ray_elem.findtext("scan/horizontal/min_angle"),
+                        ray_elem.findtext("{*}scan/{*}horizontal/{*}min_angle"),
                         check_name="min_angle",
                         default=-1.570796,
                     ),
                     horizontal_max_angle=parse_float(
-                        ray_elem.findtext("scan/horizontal/max_angle"),
+                        ray_elem.findtext("{*}scan/{*}horizontal/{*}max_angle"),
                         check_name="max_angle",
                         default=1.570796,
                     ),
                     range_min=parse_float(
-                        ray_elem.findtext("range/min"), check_name="range_min", default=0.1
+                        ray_elem.findtext("{*}range/{*}min"), check_name="range_min", default=0.1
                     ),
                     range_max=parse_float(
-                        ray_elem.findtext("range/max"), check_name="range_max", default=10.0
+                        ray_elem.findtext("{*}range/{*}max"), check_name="range_max", default=10.0
                     ),
                     noise=self._parse_sensor_noise(ray_elem),
                 )
@@ -536,41 +537,41 @@ class URDFParser(RobotXMLParser[Robot]):
                 lidar_info = LidarInfo()
 
         elif sensor_type == SensorType.GPS:
-            gps_elem = sensor_elem.find("gps")
+            gps_elem = sensor_elem.find("{*}gps")
             if gps_elem is not None:
                 gps_info = GPSInfo(
                     position_sensing_horizontal_noise=self._parse_sensor_noise(
-                        gps_elem.find("position_sensing/horizontal")
+                        gps_elem.find("{*}position_sensing/{*}horizontal")
                     ),
                     position_sensing_vertical_noise=self._parse_sensor_noise(
-                        gps_elem.find("position_sensing/vertical")
+                        gps_elem.find("{*}position_sensing/{*}vertical")
                     ),
                     velocity_sensing_horizontal_noise=self._parse_sensor_noise(
-                        gps_elem.find("velocity_sensing/horizontal")
+                        gps_elem.find("{*}velocity_sensing/{*}horizontal")
                     ),
                     velocity_sensing_vertical_noise=self._parse_sensor_noise(
-                        gps_elem.find("velocity_sensing/vertical")
+                        gps_elem.find("{*}velocity_sensing/{*}vertical")
                     ),
                 )
             else:
                 gps_info = GPSInfo()
 
         elif sensor_type == SensorType.IMU:
-            imu_elem = sensor_elem.find("imu")
+            imu_elem = sensor_elem.find("{*}imu")
             if imu_elem is not None:
                 imu_info = IMUInfo(
                     angular_velocity_noise=self._parse_sensor_noise(
-                        imu_elem.find("angular_velocity/x")
+                        imu_elem.find("{*}angular_velocity/{*}x")
                     ),
                     linear_acceleration_noise=self._parse_sensor_noise(
-                        imu_elem.find("linear_acceleration/x")
+                        imu_elem.find("{*}linear_acceleration/{*}x")
                     ),
                 )
             else:
                 imu_info = IMUInfo()
 
         elif sensor_type == SensorType.CONTACT:
-            contact_elem = sensor_elem.find("contact")
+            contact_elem = sensor_elem.find("{*}contact")
             if contact_elem is not None:
                 collision = contact_elem.findtext("collision")
                 if not collision:
@@ -592,7 +593,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 )
 
         elif sensor_type == SensorType.FORCE_TORQUE:
-            ft_elem = sensor_elem.find("force_torque")
+            ft_elem = sensor_elem.find("{*}force_torque")
             force_torque_info = ForceTorqueInfo(
                 frame=ft_elem.findtext("frame", "child") if ft_elem is not None else "child",
                 measure_direction=ft_elem.findtext("measure_direction", "child_to_parent")
@@ -625,7 +626,7 @@ class URDFParser(RobotXMLParser[Robot]):
             gps_info=gps_info,
             contact_info=contact_info,
             force_torque_info=force_torque_info,
-            plugin=self._parse_gazebo_plugin(sensor_elem.find("plugin")),
+            plugin=self._parse_gazebo_plugin(sensor_elem.find("{*}plugin")),
             topic=topic,
         )
 
@@ -649,7 +650,7 @@ class URDFParser(RobotXMLParser[Robot]):
         """Parse Gazebo extension element."""
         reference = gazebo_elem.get("reference")
         plugins = [
-            self._parse_gazebo_plugin(p) for p in gazebo_elem.findall("plugin") if p is not None
+            self._parse_gazebo_plugin(p) for p in gazebo_elem.findall("{*}plugin") if p is not None
         ]
 
         # Filter out None values from cast
@@ -680,7 +681,7 @@ class URDFParser(RobotXMLParser[Robot]):
             reference=reference,
             properties=properties,
             plugins=valid_plugins,
-            material=gazebo_elem.findtext("material"),
+            material=gazebo_elem.findtext("{*}material"),
             self_collide=parse_optional_bool(gazebo_elem, "selfCollide"),
             static=parse_optional_bool(gazebo_elem, "static"),
             gravity=parse_optional_bool(gazebo_elem, "gravity", "true"),
@@ -708,7 +709,8 @@ class URDFParser(RobotXMLParser[Robot]):
 
         if not is_xacro:
             for child in root:
-                if "xacro:" in child.tag or (isinstance(child.tag, str) and "xacro" in child.tag):
+                tag = strip_xml_namespace(child.tag)
+                if "xacro:" in tag or (isinstance(tag, str) and "xacro" in tag):
                     is_xacro = True
                     break
 
@@ -747,13 +749,14 @@ class URDFParser(RobotXMLParser[Robot]):
                     )
             elif event == "end":
                 if depth == 1:
-                    if elem.tag == "material":
+                    tag = strip_xml_namespace(elem.tag)
+                    if tag == "material":
                         mat = self._parse_material_element(elem, materials)
                         if mat:
                             materials[mat.name] = mat
                             robot.materials[mat.name] = mat
 
-                    elif elem.tag == "link":
+                    elif tag == "link":
                         try:
                             # Determine base directory for resolving relative mesh paths.
                             # When parsing from a string (e.g. after Xacro resolution),
@@ -772,8 +775,8 @@ class URDFParser(RobotXMLParser[Robot]):
                         ) as e:
                             logger.warning(f"Skipping invalid link '{elem.get('name')}': {e}")
 
-                    elif elem.tag in ("joint", "transmission", "ros2_control", "gazebo"):
-                        delayed_elements.append((elem.tag, elem))
+                    elif tag in ("joint", "transmission", "ros2_control", "gazebo"):
+                        delayed_elements.append((tag, elem))
                         depth -= 1
                         continue
 
@@ -850,7 +853,7 @@ class URDFParser(RobotXMLParser[Robot]):
             context = ET.iterparse(str(filepath), events=("start", "end"))
             event, root = next(context)
 
-            if root.tag != "robot":
+            if strip_xml_namespace(root.tag) != "robot":
                 raise RobotParserXMLRootError(actual_tag=root.tag)
 
             return self._parse_from_context(context, root, filepath)
@@ -906,7 +909,7 @@ class URDFParser(RobotXMLParser[Robot]):
             context = ET.iterparse(stream, events=("start", "end"))
             event, root = next(context)
 
-            if root.tag != "robot":
+            if strip_xml_namespace(root.tag) != "robot":
                 raise RobotParserXMLRootError(actual_tag=root.tag)
 
             return self._parse_from_context(context, root, source_directory)

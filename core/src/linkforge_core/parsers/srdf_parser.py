@@ -31,15 +31,10 @@ from ..models.srdf import (
     SrdfSphere,
     VirtualJoint,
 )
-from ..utils.xml_utils import parse_float
+from ..utils.xml_utils import parse_float, strip_xml_namespace
 from .xml_base import MAX_FILE_SIZE, RobotXMLParser
 
 logger = get_logger(__name__)
-
-
-def _strip_ns(tag: str) -> str:
-    """Strip XML namespace from tag if present."""
-    return tag.split("}", 1)[-1] if "}" in tag else tag
 
 
 class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
@@ -88,7 +83,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         subgroups: list[str] = []
 
         for child in group_elem:
-            tag = _strip_ns(child.tag)
+            tag = strip_xml_namespace(child.tag)
             if tag == "link":
                 link_name = child.get("name")
                 if link_name:
@@ -138,7 +133,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         joint_values: dict[str, tuple[float, ...]] = {}
 
         for joint_elem in state_elem:
-            if _strip_ns(joint_elem.tag) != "joint":
+            if strip_xml_namespace(joint_elem.tag) != "joint":
                 continue
             j_name = joint_elem.get("name")
             j_val_str = joint_elem.get("value")
@@ -189,7 +184,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
                 source_area="Unexpected SRDF parse", original_error=e
             ) from e
 
-        if root.tag != "robot":
+        if strip_xml_namespace(root.tag) != "robot":
             raise RobotParserXMLRootError(root.tag)
 
         semantic = self._parse_elements(root)
@@ -222,7 +217,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         joint_properties: list[JointProperty] = []
 
         for child in root:
-            tag = _strip_ns(child.tag)
+            tag = strip_xml_namespace(child.tag)
             if tag == "virtual_joint":
                 vj = self._parse_virtual_joint_elem(child)
                 if vj:
@@ -379,7 +374,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         spheres: list[SrdfSphere] = []
         for child in elem:
-            if _strip_ns(child.tag) == "sphere":
+            if strip_xml_namespace(child.tag) == "sphere":
                 center_str = child.get("center")
                 radius_str = child.get("radius")
                 if not center_str or not radius_str:
