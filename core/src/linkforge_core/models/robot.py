@@ -24,7 +24,15 @@ from .link import Link
 from .material import Material
 from .ros2_control import Ros2Control
 from .sensor import Sensor
-from .srdf import DisabledCollision, PlanningGroup, SemanticRobotDescription
+from .srdf import (
+    Chain,
+    CollisionPair,
+    JointProperty,
+    LinkSphereApproximation,
+    PlanningGroup,
+    SemanticRobotDescription,
+    SrdfSphere,
+)
 from .transmission import Transmission
 
 
@@ -147,7 +155,9 @@ class Robot:
             for gz in initial_gazebo_elements:
                 self.add_gazebo_element(gz)
         if initial_semantic:
-            self._semantic = initial_semantic
+            self._semantic = replace(initial_semantic, robot_name=self.name)
+        else:
+            self._semantic = replace(self._semantic, robot_name=self.name)
 
         self._reindex()
 
@@ -305,6 +315,7 @@ class Robot:
         s = self._semantic
         self._semantic = replace(
             s,
+            robot_name=f"{prefix}{s.robot_name}" if s.robot_name else self.name,
             virtual_joints=tuple(
                 replace(
                     vj,
@@ -320,8 +331,12 @@ class Robot:
                     links=tuple(f"{prefix}{link_name}" for link_name in g.links),
                     joints=tuple(f"{prefix}{joint_name}" for joint_name in g.joints),
                     chains=tuple(
-                        (f"{prefix}{base_name}", f"{prefix}{tip_name}")
-                        for base_name, tip_name in g.chains
+                        replace(
+                            chain,
+                            base_link=f"{prefix}{chain.base_link}",
+                            tip_link=f"{prefix}{chain.tip_link}",
+                        )
+                        for chain in g.chains
                     ),
                     subgroups=tuple(f"{prefix}{subgroup_name}" for subgroup_name in g.subgroups),
                 )
@@ -350,6 +365,19 @@ class Robot:
             disabled_collisions=tuple(
                 replace(dc, link1=f"{prefix}{dc.link1}", link2=f"{prefix}{dc.link2}")
                 for dc in s.disabled_collisions
+            ),
+            enabled_collisions=tuple(
+                replace(ec, link1=f"{prefix}{ec.link1}", link2=f"{prefix}{ec.link2}")
+                for ec in s.enabled_collisions
+            ),
+            no_default_collision_links=tuple(
+                f"{prefix}{link}" for link in s.no_default_collision_links
+            ),
+            link_sphere_approximations=tuple(
+                replace(lsa, link=f"{prefix}{lsa.link}") for lsa in s.link_sphere_approximations
+            ),
+            joint_properties=tuple(
+                replace(jp, joint_name=f"{prefix}{jp.joint_name}") for jp in s.joint_properties
             ),
         )
 
@@ -726,11 +754,14 @@ class Robot:
 
     @semantic.setter
     def semantic(self, value: SemanticRobotDescription | None) -> None:
-        """Set semantic description of the robot."""
+        """Set semantic description of the robot.
+
+        Always syncs the internal robot_name to match this robot's name.
+        """
         if value is None:
-            self._semantic = SemanticRobotDescription()
+            self._semantic = replace(SemanticRobotDescription(), robot_name=self.name)
         else:
-            self._semantic = value
+            self._semantic = replace(value, robot_name=self.name)
 
     def merge(
         self,
@@ -831,12 +862,44 @@ class Robot:
                 new_gs.append(gs)
                 current_gs_names.add(gs.name)
 
+        new_enabled = list(self._semantic.enabled_collisions)
+        current_enabled = {frozenset([ec.link1, ec.link2]) for ec in new_enabled}
+        for ec in sub_robot.semantic.enabled_collisions:
+            if frozenset([ec.link1, ec.link2]) not in current_enabled:
+                new_enabled.append(ec)
+                current_enabled.add(frozenset([ec.link1, ec.link2]))
+
+        new_no_default = list(self._semantic.no_default_collision_links)
+        current_no_default = set(new_no_default)
+        for link_name in sub_robot.semantic.no_default_collision_links:
+            if link_name not in current_no_default:
+                new_no_default.append(link_name)
+                current_no_default.add(link_name)
+
+        new_lsa = list(self._semantic.link_sphere_approximations)
+        current_lsa_links = {lsa.link for lsa in new_lsa}
+        for lsa in sub_robot.semantic.link_sphere_approximations:
+            if lsa.link not in current_lsa_links:
+                new_lsa.append(lsa)
+                current_lsa_links.add(lsa.link)
+
+        new_jp = list(self._semantic.joint_properties)
+        current_jp = {(jp.joint_name, jp.property_name) for jp in new_jp}
+        for jp in sub_robot.semantic.joint_properties:
+            if (jp.joint_name, jp.property_name) not in current_jp:
+                new_jp.append(jp)
+                current_jp.add((jp.joint_name, jp.property_name))
+
         self._semantic = replace(
             self._semantic,
             groups=tuple(new_groups),
             virtual_joints=tuple(new_vjoints),
             passive_joints=tuple(new_passive),
             disabled_collisions=tuple(new_disabled),
+            enabled_collisions=tuple(new_enabled),
+            no_default_collision_links=tuple(new_no_default),
+            link_sphere_approximations=tuple(new_lsa),
+            joint_properties=tuple(new_jp),
             end_effectors=tuple(new_ee),
             group_states=tuple(new_gs),
         )
@@ -879,7 +942,7 @@ class Robot:
         name: str,
         links: list[str] | None = None,
         joints: list[str] | None = None,
-        chains: list[tuple[str, str]] | None = None,
+        chains: list[Chain] | None = None,
         subgroups: list[str] | None = None,
         base_link: str | None = None,
         tip_link: str | None = None,
@@ -901,7 +964,7 @@ class Robot:
         # Add group
         final_chains = list(chains or [])
         if base_link and tip_link:
-            final_chains.append((base_link, tip_link))
+            final_chains.append(Chain(base_link=base_link, tip_link=tip_link))
 
         group = PlanningGroup(
             name=name,
@@ -925,7 +988,7 @@ class Robot:
             The robot instance for chaining.
         """
         # Disable collisions
-        dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
+        dc = CollisionPair(link1=link1, link2=link2, reason=reason)
         self._semantic = replace(
             self._semantic,
             disabled_collisions=tuple(self._semantic.disabled_collisions) + (dc,),
@@ -944,6 +1007,74 @@ class Robot:
         """
         for l1, l2 in itertools.combinations(links, 2):
             self.disable_collisions(l1, l2, reason)
+        return self
+
+    def enable_collisions(self, link1: str, link2: str, reason: str | None = None) -> Robot:
+        """Explicitly re-enable collision checking between two links.
+
+        Args:
+            link1: First link name.
+            link2: Second link name.
+            reason: Optional reason for enabling.
+
+        Returns:
+            The robot instance for chaining.
+        """
+        ec = CollisionPair(link1=link1, link2=link2, reason=reason)
+        self._semantic = replace(
+            self._semantic,
+            enabled_collisions=tuple(self._semantic.enabled_collisions) + (ec,),
+        )
+        return self
+
+    def disable_default_collisions(self, link: str) -> Robot:
+        """Disable all default collisions for a specific link.
+
+        Args:
+            link: Link name.
+
+        Returns:
+            The robot instance for chaining.
+        """
+        self._semantic = replace(
+            self._semantic,
+            no_default_collision_links=tuple(self._semantic.no_default_collision_links) + (link,),
+        )
+        return self
+
+    def add_joint_property(self, joint_name: str, property_name: str, value: str) -> Robot:
+        """Add a custom property/metadata to a joint.
+
+        Args:
+            joint_name: Name of the joint.
+            property_name: Name of the property.
+            value: Property value as string.
+
+        Returns:
+            The robot instance for chaining.
+        """
+        jp = JointProperty(joint_name=joint_name, property_name=property_name, value=value)
+        self._semantic = replace(
+            self._semantic,
+            joint_properties=tuple(self._semantic.joint_properties) + (jp,),
+        )
+        return self
+
+    def approximate_link_collision(self, link: str, spheres: list[SrdfSphere]) -> Robot:
+        """Add sphere-based collision approximation for a link.
+
+        Args:
+            link: Name of the link.
+            spheres: List of SrdfSphere objects.
+
+        Returns:
+            The robot instance for chaining.
+        """
+        lsa = LinkSphereApproximation(link=link, spheres=tuple(spheres))
+        self._semantic = replace(
+            self._semantic,
+            link_sphere_approximations=tuple(self._semantic.link_sphere_approximations) + (lsa,),
+        )
         return self
 
     def export_urdf(self, validate: bool = True, pretty_print: bool = True) -> str:

@@ -43,12 +43,16 @@ from .sensor import (
     SensorType,
 )
 from .srdf import (
-    DisabledCollision,
+    Chain,
+    CollisionPair,
     EndEffector,
     GroupState,
+    JointProperty,
+    LinkSphereApproximation,
     PassiveJoint,
     PlanningGroup,
     SemanticRobotDescription,
+    SrdfSphere,
     VirtualJoint,
 )
 from .transmission import (
@@ -111,12 +115,16 @@ __all__ = [
     "GazeboPlugin",
     "GazeboElement",
     # SRDF
-    "VirtualJoint",
-    "PlanningGroup",
-    "GroupState",
+    "Chain",
+    "CollisionPair",
     "EndEffector",
+    "GroupState",
+    "JointProperty",
+    "LinkSphereApproximation",
     "PassiveJoint",
-    "DisabledCollision",
+    "PlanningGroup",
     "SemanticRobotDescription",
+    "SrdfSphere",
+    "VirtualJoint",
     "KinematicGraph",
 ]

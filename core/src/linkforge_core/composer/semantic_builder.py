@@ -6,11 +6,15 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from ..models.srdf import (
-    DisabledCollision,
+    Chain,
+    CollisionPair,
     EndEffector,
     GroupState,
+    JointProperty,
+    LinkSphereApproximation,
     PassiveJoint,
     PlanningGroup,
+    SrdfSphere,
     VirtualJoint,
 )
 
@@ -33,7 +37,7 @@ class SemanticBuilder:
         name: str,
         links: list[str] | None = None,
         joints: list[str] | None = None,
-        chains: list[tuple[str, str]] | None = None,
+        chains: list[Chain] | None = None,
         subgroups: list[str] | None = None,
         base_link: str | None = None,
         tip_link: str | None = None,
@@ -55,7 +59,7 @@ class SemanticBuilder:
         # Define planning group
         final_chains = list(chains or [])
         if base_link and tip_link:
-            final_chains.append((base_link, tip_link))
+            final_chains.append(Chain(base_link=base_link, tip_link=tip_link))
 
         group = PlanningGroup(
             name=name,
@@ -69,7 +73,9 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(semantic, groups=tuple(semantic.groups) + (group,))
         return self._builder
 
-    def group_state(self, name: str, group: str, values: dict[str, float]) -> IComposer:
+    def group_state(
+        self, name: str, group: str, values: dict[str, float | tuple[float, ...]]
+    ) -> IComposer:
         """Define a named state (e.g. 'home') for a planning group.
 
         Args:
@@ -80,7 +86,10 @@ class SemanticBuilder:
         Returns:
             The parent RobotBuilder instance.
         """
-        state = GroupState(name=name, group=group, joint_values=values)
+        normalized_values = {
+            k: (v,) if isinstance(v, (int, float)) else tuple(v) for k, v in values.items()
+        }
+        state = GroupState(name=name, group=group, joint_values=normalized_values)
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(
             semantic, group_states=tuple(semantic.group_states) + (state,)
@@ -157,9 +166,78 @@ class SemanticBuilder:
         Returns:
             The parent RobotBuilder instance.
         """
-        dc = DisabledCollision(link1=link1, link2=link2, reason=reason)
+        dc = CollisionPair(link1=link1, link2=link2, reason=reason)
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(
             semantic, disabled_collisions=tuple(semantic.disabled_collisions) + (dc,)
+        )
+        return self._builder
+
+    def enable_collisions(self, link1: str, link2: str, reason: str | None = None) -> IComposer:
+        """Explicitly re-enable collision checking between two specific links.
+
+        Args:
+            link1, link2: Names of the links.
+            reason: Optional explanation for enabling.
+
+        Returns:
+            The parent RobotBuilder instance.
+        """
+        ec = CollisionPair(link1=link1, link2=link2, reason=reason)
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic, enabled_collisions=tuple(semantic.enabled_collisions) + (ec,)
+        )
+        return self._builder
+
+    def disable_default_collisions(self, link: str) -> IComposer:
+        """Disable all default collisions for a specific link.
+
+        Args:
+            link: Name of the link.
+
+        Returns:
+            The parent RobotBuilder instance.
+        """
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic,
+            no_default_collision_links=tuple(semantic.no_default_collision_links) + (link,),
+        )
+        return self._builder
+
+    def joint_property(self, joint_name: str, property_name: str, value: str) -> IComposer:
+        """Add a custom property/metadata to a joint.
+
+        Args:
+            joint_name: Name of the joint.
+            property_name: Name of the property.
+            value: Property value as string.
+
+        Returns:
+            The parent RobotBuilder instance.
+        """
+        jp = JointProperty(joint_name=joint_name, property_name=property_name, value=value)
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic, joint_properties=tuple(semantic.joint_properties) + (jp,)
+        )
+        return self._builder
+
+    def approximate_link_collision(self, link: str, spheres: list[SrdfSphere]) -> IComposer:
+        """Add sphere-based collision approximation for a link.
+
+        Args:
+            link: Name of the link.
+            spheres: List of SrdfSphere objects.
+
+        Returns:
+            The parent RobotBuilder instance.
+        """
+        lsa = LinkSphereApproximation(link=link, spheres=tuple(spheres))
+        semantic = self._builder.robot.semantic
+        self._builder.robot.semantic = replace(
+            semantic,
+            link_sphere_approximations=tuple(semantic.link_sphere_approximations) + (lsa,),
         )
         return self._builder

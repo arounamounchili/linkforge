@@ -2,12 +2,16 @@
 
 from linkforge_core.models.robot import Robot
 from linkforge_core.models.srdf import (
-    DisabledCollision,
+    Chain,
+    CollisionPair,
     EndEffector,
     GroupState,
+    JointProperty,
+    LinkSphereApproximation,
     PassiveJoint,
     PlanningGroup,
     SemanticRobotDescription,
+    SrdfSphere,
     VirtualJoint,
 )
 
@@ -29,23 +33,27 @@ def test_planning_group_creation():
         name="arm",
         links=["link1", "link2"],
         joints=["joint1", "joint2"],
-        chains=[("base_link", "tool0")],
+        chains=[Chain(base_link="base_link", tip_link="tool0")],
         subgroups=["hand"],
     )
     assert group.name == "arm"
     assert "link1" in group.links
     assert "joint1" in group.joints
-    assert ("base_link", "tool0") in group.chains
+    assert group.chains[0].base_link == "base_link"
+    assert group.chains[0].tip_link == "tool0"
     assert "hand" in group.subgroups
 
 
 def test_group_state_creation():
     """Test creating a named group state (pose)."""
-    state = GroupState(name="home", group="arm", joint_values={"joint1": 0.0, "joint2": 1.57})
+    state = GroupState(
+        name="home", group="arm", joint_values={"joint1": 0.0, "joint2": 1.57, "joint3": (1.0, 2.0)}
+    )
     assert state.name == "home"
     assert state.group == "arm"
-    assert state.joint_values["joint1"] == 0.0
-    assert state.joint_values["joint2"] == 1.57
+    assert state.joint_values["joint1"] == (0.0,)
+    assert state.joint_values["joint2"] == (1.57,)
+    assert state.joint_values["joint3"] == (1.0, 2.0)
 
 
 def test_end_effector_creation():
@@ -61,12 +69,30 @@ def test_passive_joint_creation():
     assert pj.name == "wheel_joint"
 
 
-def test_disabled_collision_creation():
-    """Test creating a disabled collision pair."""
-    dc = DisabledCollision(link1="link1", link2="link2", reason="adjacent")
-    assert dc.link1 == "link1"
-    assert dc.link2 == "link2"
-    assert dc.reason == "adjacent"
+def test_collision_pair_creation():
+    """Test creating a collision pair."""
+    cp = CollisionPair(link1="link1", link2="link2", reason="adjacent")
+    assert cp.link1 == "link1"
+    assert cp.link2 == "link2"
+    assert cp.reason == "adjacent"
+
+
+def test_link_sphere_approximation_creation():
+    """Test creating link sphere approximations."""
+    sphere = SrdfSphere(center_x=1.0, center_y=2.0, center_z=3.0, radius=0.5)
+    lsa = LinkSphereApproximation(link="link1", spheres=[sphere])
+    assert lsa.link == "link1"
+    assert len(lsa.spheres) == 1
+    assert lsa.spheres[0].radius == 0.5
+    assert lsa.spheres[0].center_x == 1.0
+
+
+def test_joint_property_creation():
+    """Test creating a joint property."""
+    jp = JointProperty(joint_name="joint1", property_name="friction", value="0.5")
+    assert jp.joint_name == "joint1"
+    assert jp.property_name == "friction"
+    assert jp.value == "0.5"
 
 
 def test_semantic_robot_description_container():

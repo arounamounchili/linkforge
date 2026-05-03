@@ -13,15 +13,17 @@ from typing import Any
 from .. import __version__
 from ..base import RobotGeneratorError
 from ..logging_config import get_logger
-from ..models import (
-    DisabledCollision,
+from ..models.robot import Robot
+from ..models.srdf import (
+    CollisionPair,
     EndEffector,
     GroupState,
+    JointProperty,
+    LinkSphereApproximation,
     PassiveJoint,
     PlanningGroup,
     VirtualJoint,
 )
-from ..models.robot import Robot
 from ..utils.math_utils import format_float
 from ..utils.xml_utils import create_xml_element, serialize_xml
 from ..validation import RobotValidator
@@ -68,7 +70,12 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def generate_robot_element(self, robot: Robot) -> ET.Element:
         """Generate SRDF XML Element tree from robot."""
-        root = ET.Element("robot", name=robot.name)
+        name = (
+            robot.semantic.robot_name
+            if robot.semantic and robot.semantic.robot_name
+            else robot.name
+        )
+        root = ET.Element("robot", name=name)
 
         if not robot.semantic:
             return root
@@ -81,6 +88,16 @@ class SRDFGenerator(RobotXMLGenerator):
         self._add_passive_joints(root, sorted(semantic.passive_joints, key=lambda x: x.name))
         self._add_disabled_collisions(
             root, sorted(semantic.disabled_collisions, key=lambda x: (x.link1, x.link2))
+        )
+        self._add_enabled_collisions(
+            root, sorted(semantic.enabled_collisions, key=lambda x: (x.link1, x.link2))
+        )
+        self._add_no_default_collision_links(root, sorted(semantic.no_default_collision_links))
+        self._add_link_sphere_approximations(
+            root, sorted(semantic.link_sphere_approximations, key=lambda x: x.link)
+        )
+        self._add_joint_properties(
+            root, sorted(semantic.joint_properties, key=lambda x: (x.joint_name, x.property_name))
         )
 
         return root
@@ -106,8 +123,10 @@ class SRDFGenerator(RobotXMLGenerator):
                 ET.SubElement(group_elem, "link", name=link_name)
             for joint_name in group.joints:
                 ET.SubElement(group_elem, "joint", name=joint_name)
-            for base, tip in group.chains:
-                ET.SubElement(group_elem, "chain", base_link=base, tip_link=tip)
+            for chain in group.chains:
+                ET.SubElement(
+                    group_elem, "chain", base_link=chain.base_link, tip_link=chain.tip_link
+                )
             for subgroup in group.subgroups:
                 ET.SubElement(group_elem, "group", name=subgroup)
 
@@ -115,8 +134,9 @@ class SRDFGenerator(RobotXMLGenerator):
         """Add group state elements to root."""
         for state in states:
             state_elem = ET.SubElement(root, "group_state", name=state.name, group=state.group)
-            for j_name, j_val in state.joint_values.items():
-                ET.SubElement(state_elem, "joint", name=j_name, value=format_float(j_val))
+            for j_name, j_vals in state.joint_values.items():
+                val_str = " ".join(format_float(v) for v in j_vals)
+                ET.SubElement(state_elem, "joint", name=j_name, value=val_str)
 
     def _add_end_effectors(self, root: ET.Element, end_effectors: list[EndEffector]) -> None:
         """Add end effector elements to root."""
@@ -137,7 +157,7 @@ class SRDFGenerator(RobotXMLGenerator):
             ET.SubElement(root, "passive_joint", name=pj.name)
 
     def _add_disabled_collisions(
-        self, root: ET.Element, disabled_collisions: list[DisabledCollision]
+        self, root: ET.Element, disabled_collisions: list[CollisionPair]
     ) -> None:
         """Add disabled collision elements to root."""
         for dc in disabled_collisions:
@@ -148,4 +168,50 @@ class SRDFGenerator(RobotXMLGenerator):
                 link1=dc.link1,
                 link2=dc.link2,
                 reason=dc.reason,
+            )
+
+    def _add_enabled_collisions(
+        self, root: ET.Element, enabled_collisions: list[CollisionPair]
+    ) -> None:
+        """Add enabled collision elements to root."""
+        for ec in enabled_collisions:
+            create_xml_element(
+                root,
+                "enable_collisions",
+                formatter=self._format_value,
+                link1=ec.link1,
+                link2=ec.link2,
+                reason=ec.reason,
+            )
+
+    def _add_no_default_collision_links(self, root: ET.Element, links: list[str]) -> None:
+        """Add disable default collisions elements to root."""
+        for link in links:
+            ET.SubElement(root, "disable_default_collisions", link=link)
+
+    def _add_link_sphere_approximations(
+        self, root: ET.Element, approximations: list[LinkSphereApproximation]
+    ) -> None:
+        """Add link sphere approximation elements to root."""
+        for lsa in approximations:
+            lsa_elem = ET.SubElement(root, "link_sphere_approximation", link=lsa.link)
+            for sphere in lsa.spheres:
+                center_str = f"{format_float(sphere.center_x)} {format_float(sphere.center_y)} {format_float(sphere.center_z)}"
+                create_xml_element(
+                    lsa_elem,
+                    "sphere",
+                    formatter=self._format_value,
+                    center=center_str,
+                    radius=sphere.radius,
+                )
+
+    def _add_joint_properties(self, root: ET.Element, properties: list[JointProperty]) -> None:
+        """Add joint property elements to root."""
+        for jp in properties:
+            ET.SubElement(
+                root,
+                "joint_property",
+                joint_name=jp.joint_name,
+                property_name=jp.property_name,
+                value=jp.value,
             )

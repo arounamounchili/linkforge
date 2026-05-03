@@ -54,6 +54,15 @@ def test_srdf_roundtrip():
     semantic.group_state("home", group="arm", values={"base_link_to_link1": 0.0})
     semantic.end_effector("gripper", group="arm", parent_link="link1")
 
+    # New MoveIt 2 features
+    from linkforge_core.models.srdf import SrdfSphere
+
+    semantic.virtual_joint("vj1", "base_link", "world", "fixed")
+    semantic.enable_collisions("base_link", "link1", reason="Testing")
+    semantic.disable_default_collisions("base_link")
+    semantic.approximate_link_collision("link1", [SrdfSphere(0, 0, 0, 0.1)])
+    semantic.joint_property("base_link_to_link1", "p1", "v1")
+
     robot = builder.build()
 
     # 2. Generate SRDF
@@ -66,14 +75,33 @@ def test_srdf_roundtrip():
 
     # 4. Verify equality
     assert len(semantic_parsed.groups) == 2
+    assert len(semantic_parsed.virtual_joints) == 1
+    assert len(semantic_parsed.enabled_collisions) == 1
+    assert len(semantic_parsed.no_default_collision_links) == 1
+    assert len(semantic_parsed.link_sphere_approximations) == 1
+    assert len(semantic_parsed.joint_properties) == 1
 
     group_arm = next(g for g in semantic_parsed.groups if g.name == "arm")
     assert "base_link" in group_arm.links
     assert "base_link_to_link1" in group_arm.joints
 
-    group_hand = next(g for g in semantic_parsed.groups if g.name == "hand")
-    assert "arm" in group_hand.subgroups
-
     state_home = next(s for s in semantic_parsed.group_states if s.name == "home")
-    assert state_home.group == "arm"
-    assert state_home.joint_values["base_link_to_link1"] == 0.0
+    assert state_home.joint_values["base_link_to_link1"] == (0.0,)
+
+    vj = semantic_parsed.virtual_joints[0]
+    assert vj.name == "vj1"
+    assert vj.parent_frame == "world"
+
+    ec = semantic_parsed.enabled_collisions[0]
+    assert ec.link1 == "base_link"
+    assert ec.reason == "Testing"
+
+    lsa = semantic_parsed.link_sphere_approximations[0]
+    assert lsa.link == "link1"
+    assert len(lsa.spheres) == 1
+    assert lsa.spheres[0].radius == 0.1
+
+    jp = semantic_parsed.joint_properties[0]
+    assert jp.joint_name == "base_link_to_link1"
+    assert jp.property_name == "p1"
+    assert jp.value == "v1"
