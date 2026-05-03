@@ -129,3 +129,84 @@ def test_robot_semantic_integration():
     new_srdf = SemanticRobotDescription(passive_joints=[PassiveJoint(name="pj")])
     robot.semantic = new_srdf
     assert robot.semantic.passive_joints[0].name == "pj"
+
+
+def test_srdf_submodels_prefix() -> None:
+    """Test prefixing for all SRDF sub-models."""
+    vj = VirtualJoint(name="vj", child_link="l1", parent_frame="f1", type="fixed")
+    assert vj.with_prefix("p_").name == "p_vj"
+    assert vj.with_prefix("p_").child_link == "p_l1"
+
+    gs = GroupState(name="gs", group="g1", joint_values={"j1": 0.5})
+    pre_gs = gs.with_prefix("p_")
+    assert pre_gs.name == "p_gs"
+    assert pre_gs.group == "p_g1"
+    assert "p_j1" in pre_gs.joint_values
+
+    ee = EndEffector(name="ee", group="g1", parent_link="l1", parent_group="pg")
+    pre_ee = ee.with_prefix("p_")
+    assert pre_ee.name == "p_ee"
+    assert pre_ee.group == "p_g1"
+    assert pre_ee.parent_link == "p_l1"
+    assert pre_ee.parent_group == "p_pg"
+
+    pj = PassiveJoint(name="pj")
+    assert pj.with_prefix("p_").name == "p_pj"
+
+    cp = CollisionPair(link1="l1", link2="l2")
+    pre_cp = cp.with_prefix("p_")
+    assert pre_cp.link1 == "p_l1"
+    assert pre_cp.link2 == "p_l2"
+
+    chain = Chain(base_link="b1", tip_link="t1")
+    pre_chain = chain.with_prefix("p_")
+    assert pre_chain.base_link == "p_b1"
+    assert pre_chain.tip_link == "p_t1"
+
+    pg = PlanningGroup(name="g1", links=("l1",), joints=("j1",), subgroups=("s1",), chains=(chain,))
+    pre_pg = pg.with_prefix("p_")
+    assert pre_pg.name == "p_g1"
+    assert "p_l1" in pre_pg.links
+    assert "p_j1" in pre_pg.joints
+    assert "p_s1" in pre_pg.subgroups
+    assert pre_pg.chains[0].base_link == "p_b1"
+
+    lsa = LinkSphereApproximation(link="l1", spheres=())
+    assert lsa.with_prefix("p_").link == "p_l1"
+
+    jp = JointProperty(joint_name="j1", property_name="pn", value="v")
+    assert jp.with_prefix("p_").joint_name == "p_j1"
+
+
+def test_semantic_description_prefix() -> None:
+    """Test prefixing for the full SRDF container."""
+    srdf = SemanticRobotDescription(
+        robot_name="r1",
+        groups=(PlanningGroup(name="g1", links=("l1",)),),
+        virtual_joints=(VirtualJoint(name="vj", child_link="l1", parent_frame="f", type="fixed"),),
+    )
+    pre = srdf.with_prefix("arm_")
+    assert pre.robot_name == "arm_r1"
+    assert pre.groups[0].name == "arm_g1"
+    assert pre.virtual_joints[0].name == "arm_vj"
+
+
+def test_semantic_description_merge() -> None:
+    """Test merging and deduplication of SRDF containers."""
+    srdf1 = SemanticRobotDescription(
+        groups=(PlanningGroup(name="g1", links=("l1",)),),
+        disabled_collisions=(CollisionPair(link1="l1", link2="l2"),),
+    )
+    srdf2 = SemanticRobotDescription(
+        groups=(PlanningGroup(name="g1", links=("l1",)), PlanningGroup(name="g2", links=("l2",))),
+        disabled_collisions=(
+            CollisionPair(link1="l1", link2="l2"),
+            CollisionPair(link1="l2", link2="l3"),
+        ),
+    )
+
+    merged = srdf1.merge_with(srdf2)
+    # Deduplication check
+    assert len(merged.groups) == 2
+    assert {g.name for g in merged.groups} == {"g1", "g2"}
+    assert len(merged.disabled_collisions) == 2

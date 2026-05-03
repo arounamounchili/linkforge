@@ -33,6 +33,12 @@ class TestGazeboPlugin:
         assert plugin.parameters["param1"] == "value1"
         assert plugin.parameters["param2"] == "42"
 
+    def test_prefix(self) -> None:
+        """Test creating a plugin with a prefix."""
+        plugin = GazeboPlugin(name="p1", filename="f1")
+        pre = plugin.with_prefix("g_")
+        assert pre.name == "g_p1"
+
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError, match="cannot be empty"):
@@ -109,6 +115,14 @@ class TestGazeboElement:
             properties={"custom_prop": "custom_value"},
         )
         assert element.properties["custom_prop"] == "custom_value"
+
+    def test_prefix(self) -> None:
+        """Test creating a gazebo element with a prefix."""
+        plugin = GazeboPlugin(name="p1", filename="f1")
+        ge = GazeboElement(reference="l1", plugins=[plugin])
+        pre = ge.with_prefix("g_")
+        assert pre.reference == "g_l1"
+        assert pre.plugins[0].name == "g_p1"
 
     def test_empty_reference_string(self) -> None:
         """Test that empty string reference raises error."""

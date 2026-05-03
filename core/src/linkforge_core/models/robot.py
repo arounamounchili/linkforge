@@ -220,166 +220,16 @@ class Robot:
             return
 
         # Update Materials (Global)
-        new_materials = {}
-        for name, mat in self.materials.items():
-            new_mat = replace(mat, name=f"{prefix}{mat.name}")
-            new_materials[f"{prefix}{name}"] = new_mat
-        self.materials = new_materials
+        self.materials = {f"{prefix}{k}": v.with_prefix(prefix) for k, v in self.materials.items()}
 
-        # Update Links (Mutable)
-        for link in self._links:
-            link.name = f"{prefix}{link.name}"
-
-            # Prefix internal elements (Visuals/Collisions)
-            link._visuals = [
-                replace(
-                    v,
-                    name=f"{prefix}{v.name}" if v.name else None,
-                    material=replace(v.material, name=f"{prefix}{v.material.name}")
-                    if v.material
-                    else None,
-                )
-                for v in link._visuals
-            ]
-            link._collisions = [
-                replace(c, name=f"{prefix}{c.name}" if c.name else None) for c in link._collisions
-            ]
-
-        # Update Joints (Frozen)
-        new_joints = []
-        for joint in self._joints:
-            new_joint = replace(
-                joint,
-                name=f"{prefix}{joint.name}",
-                parent=f"{prefix}{joint.parent}",
-                child=f"{prefix}{joint.child}",
-            )
-            if joint.mimic:
-                new_joint = replace(
-                    new_joint,
-                    mimic=replace(joint.mimic, joint=f"{prefix}{joint.mimic.joint}"),
-                )
-            new_joints.append(new_joint)
-        self._joints = new_joints
-
-        # Update Sensors (Frozen)
-        new_sensors = []
-        for sensor in self._sensors:
-            new_sensor = replace(
-                sensor,
-                name=f"{prefix}{sensor.name}",
-                link_name=f"{prefix}{sensor.link_name}",
-                topic=f"{prefix}{sensor.topic}" if sensor.topic else None,
-            )
-            if sensor.contact_info:
-                new_sensor = replace(
-                    new_sensor,
-                    contact_info=replace(
-                        sensor.contact_info,
-                        collision=f"{prefix}{sensor.contact_info.collision}",
-                    ),
-                )
-            new_sensors.append(new_sensor)
-        self._sensors = new_sensors
-
-        # Update Transmissions (Frozen)
-        new_transmissions = []
-        for trans in self._transmissions:
-            new_trans = replace(
-                trans,
-                name=f"{prefix}{trans.name}",
-                joints=[replace(tj, name=f"{prefix}{tj.name}") for tj in trans.joints],
-                actuators=[replace(ta, name=f"{prefix}{ta.name}") for ta in trans.actuators],
-            )
-            new_transmissions.append(new_trans)
-        self._transmissions = new_transmissions
-
-        # Update ROS2 Controls (Mutable)
-        for rc in self._ros2_controls:
-            rc.name = f"{prefix}{rc.name}"
-            for rc_joint in rc.joints:
-                rc_joint.name = f"{prefix}{rc_joint.name}"
-
-        # Update Gazebo Elements (Frozen)
-        new_gazebo_elements = []
-        for ge in self._gazebo_elements:
-            new_ge = replace(
-                ge,
-                reference=f"{prefix}{ge.reference}" if ge.reference else None,
-                plugins=[replace(p, name=f"{prefix}{p.name}") for p in ge.plugins],
-            )
-            new_gazebo_elements.append(new_ge)
-        self._gazebo_elements = new_gazebo_elements
-
-        # Update Semantic Description (Frozen)
-        s = self._semantic
-        self._semantic = replace(
-            s,
-            robot_name=f"{prefix}{s.robot_name}" if s.robot_name else self.name,
-            virtual_joints=tuple(
-                replace(
-                    vj,
-                    name=f"{prefix}{vj.name}",
-                    child_link=f"{prefix}{vj.child_link}",
-                )
-                for vj in s.virtual_joints
-            ),
-            groups=tuple(
-                replace(
-                    g,
-                    name=f"{prefix}{g.name}",
-                    links=tuple(f"{prefix}{link_name}" for link_name in g.links),
-                    joints=tuple(f"{prefix}{joint_name}" for joint_name in g.joints),
-                    chains=tuple(
-                        replace(
-                            chain,
-                            base_link=f"{prefix}{chain.base_link}",
-                            tip_link=f"{prefix}{chain.tip_link}",
-                        )
-                        for chain in g.chains
-                    ),
-                    subgroups=tuple(f"{prefix}{subgroup_name}" for subgroup_name in g.subgroups),
-                )
-                for g in s.groups
-            ),
-            group_states=tuple(
-                replace(
-                    gs,
-                    name=f"{prefix}{gs.name}",
-                    group=f"{prefix}{gs.group}",
-                    joint_values={f"{prefix}{k}": v for k, v in gs.joint_values.items()},
-                )
-                for gs in s.group_states
-            ),
-            end_effectors=tuple(
-                replace(
-                    ee,
-                    name=f"{prefix}{ee.name}",
-                    group=f"{prefix}{ee.group}",
-                    parent_link=f"{prefix}{ee.parent_link}",
-                    parent_group=f"{prefix}{ee.parent_group}" if ee.parent_group else None,
-                )
-                for ee in s.end_effectors
-            ),
-            passive_joints=tuple(replace(pj, name=f"{prefix}{pj.name}") for pj in s.passive_joints),
-            disabled_collisions=tuple(
-                replace(dc, link1=f"{prefix}{dc.link1}", link2=f"{prefix}{dc.link2}")
-                for dc in s.disabled_collisions
-            ),
-            enabled_collisions=tuple(
-                replace(ec, link1=f"{prefix}{ec.link1}", link2=f"{prefix}{ec.link2}")
-                for ec in s.enabled_collisions
-            ),
-            no_default_collision_links=tuple(
-                f"{prefix}{link}" for link in s.no_default_collision_links
-            ),
-            link_sphere_approximations=tuple(
-                replace(lsa, link=f"{prefix}{lsa.link}") for lsa in s.link_sphere_approximations
-            ),
-            joint_properties=tuple(
-                replace(jp, joint_name=f"{prefix}{jp.joint_name}") for jp in s.joint_properties
-            ),
-        )
+        # Update Components
+        self._links = [link.with_prefix(prefix) for link in self._links]
+        self._joints = [joint.with_prefix(prefix) for joint in self._joints]
+        self._sensors = [sensor.with_prefix(prefix) for sensor in self._sensors]
+        self._transmissions = [trans.with_prefix(prefix) for trans in self._transmissions]
+        self._ros2_controls = [rc.with_prefix(prefix) for rc in self._ros2_controls]
+        self._gazebo_elements = [ge.with_prefix(prefix) for ge in self._gazebo_elements]
+        self._semantic = self._semantic.with_prefix(prefix)
 
         self._reindex()
 
@@ -818,91 +668,26 @@ class Robot:
         for joint in sub_robot.joints:
             self.add_joint(joint)
 
+        # Merge other components
+        for sensor in sub_robot.sensors:
+            self.add_sensor(sensor)
+
+        for transmission in sub_robot.transmissions:
+            self.add_transmission(transmission)
+
+        for rc in sub_robot.ros2_controls:
+            self.add_ros2_control(rc)
+
+        for ge in sub_robot.gazebo_elements:
+            self.add_gazebo_element(ge)
+
+        # Merge materials (avoid duplicates by name)
+        for name, mat in sub_robot.materials.items():
+            if name not in self.materials:
+                self.materials[name] = mat
+
         # Merge semantic data (SRDF)
-        # deduplicate groups, virtual joints, and passive joints to avoid conflicts
-        new_groups = list(self._semantic.groups)
-        current_group_names = {g.name for g in new_groups}
-        for g in sub_robot.semantic.groups:
-            if g.name not in current_group_names:
-                new_groups.append(g)
-                current_group_names.add(g.name)
-
-        new_vjoints = list(self._semantic.virtual_joints)
-        current_vj_names = {vj.name for vj in new_vjoints}
-        for vj in sub_robot.semantic.virtual_joints:
-            if vj.name not in current_vj_names:
-                new_vjoints.append(vj)
-                current_vj_names.add(vj.name)
-
-        new_passive = list(self._semantic.passive_joints)
-        current_pj_names = {pj.name for pj in new_passive}
-        for pj in sub_robot.semantic.passive_joints:
-            if pj.name not in current_pj_names:
-                new_passive.append(pj)
-                current_pj_names.add(pj.name)
-
-        new_disabled = list(self._semantic.disabled_collisions)
-        current_disabled = {frozenset([dc.link1, dc.link2]) for dc in new_disabled}
-        for dc in sub_robot.semantic.disabled_collisions:
-            if frozenset([dc.link1, dc.link2]) not in current_disabled:
-                new_disabled.append(dc)
-                current_disabled.add(frozenset([dc.link1, dc.link2]))
-
-        new_ee = list(self._semantic.end_effectors)
-        current_ee_names = {ee.name for ee in new_ee}
-        for ee in sub_robot.semantic.end_effectors:
-            if ee.name not in current_ee_names:
-                new_ee.append(ee)
-                current_ee_names.add(ee.name)
-
-        new_gs = list(self._semantic.group_states)
-        current_gs_names = {gs.name for gs in new_gs}
-        for gs in sub_robot.semantic.group_states:
-            if gs.name not in current_gs_names:
-                new_gs.append(gs)
-                current_gs_names.add(gs.name)
-
-        new_enabled = list(self._semantic.enabled_collisions)
-        current_enabled = {frozenset([ec.link1, ec.link2]) for ec in new_enabled}
-        for ec in sub_robot.semantic.enabled_collisions:
-            if frozenset([ec.link1, ec.link2]) not in current_enabled:
-                new_enabled.append(ec)
-                current_enabled.add(frozenset([ec.link1, ec.link2]))
-
-        new_no_default = list(self._semantic.no_default_collision_links)
-        current_no_default = set(new_no_default)
-        for link_name in sub_robot.semantic.no_default_collision_links:
-            if link_name not in current_no_default:
-                new_no_default.append(link_name)
-                current_no_default.add(link_name)
-
-        new_lsa = list(self._semantic.link_sphere_approximations)
-        current_lsa_links = {lsa.link for lsa in new_lsa}
-        for lsa in sub_robot.semantic.link_sphere_approximations:
-            if lsa.link not in current_lsa_links:
-                new_lsa.append(lsa)
-                current_lsa_links.add(lsa.link)
-
-        new_jp = list(self._semantic.joint_properties)
-        current_jp = {(jp.joint_name, jp.property_name) for jp in new_jp}
-        for jp in sub_robot.semantic.joint_properties:
-            if (jp.joint_name, jp.property_name) not in current_jp:
-                new_jp.append(jp)
-                current_jp.add((jp.joint_name, jp.property_name))
-
-        self._semantic = replace(
-            self._semantic,
-            groups=tuple(new_groups),
-            virtual_joints=tuple(new_vjoints),
-            passive_joints=tuple(new_passive),
-            disabled_collisions=tuple(new_disabled),
-            enabled_collisions=tuple(new_enabled),
-            no_default_collision_links=tuple(new_no_default),
-            link_sphere_approximations=tuple(new_lsa),
-            joint_properties=tuple(new_jp),
-            end_effectors=tuple(new_ee),
-            group_states=tuple(new_gs),
-        )
+        self._semantic = self._semantic.merge_with(sub_robot.semantic)
 
         # Create the connecting joint
         connection = Joint(

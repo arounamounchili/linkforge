@@ -20,6 +20,16 @@ from linkforge_core.models import (
 )
 
 
+class TestContactInfo:
+    """Tests for ContactInfo model."""
+
+    def test_prefix(self) -> None:
+        """Test creating a contact info with a prefix."""
+        contact = ContactInfo(collision="c1")
+        pre = contact.with_prefix("b_")
+        assert pre.collision == "b_c1"
+
+
 class TestSensorNoise:
     """Tests for SensorNoise model."""
 
@@ -410,6 +420,26 @@ class TestSensor:
                 camera_info=CameraInfo(),
                 update_rate=-10.0,
             )
+
+    def test_prefix(self) -> None:
+        """Test creating a sensor with a prefix."""
+        contact = ContactInfo(collision="c1")
+        plugin = GazeboPlugin(name="p1", filename="f1")
+        sensor = Sensor(
+            name="s1",
+            type="contact",
+            link_name="l1",
+            topic="/t1",
+            contact_info=contact,
+            plugin=plugin,
+        )
+
+        pre = sensor.with_prefix("b_")
+        assert pre.name == "b_s1"
+        assert pre.link_name == "b_l1"
+        assert pre.topic == "b_/t1"
+        assert pre.contact_info.collision == "b_c1"
+        assert pre.plugin.name == "b_p1"
 
 
 def test_sensor_parsing_pose_robustness() -> None:

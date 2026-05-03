@@ -7,7 +7,7 @@ such as planning groups, poses, and collision filters.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
@@ -42,6 +42,14 @@ class VirtualJoint:
                 target="VirtualJointType",
                 value=self.type,
             )
+
+    def with_prefix(self, prefix: str) -> VirtualJoint:
+        """Create a new virtual joint with prefixed name and child_link."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            child_link=f"{prefix}{self.child_link}",
+        )
 
 
 @dataclass(frozen=True)
@@ -79,6 +87,15 @@ class GroupState:
                 normalized[k] = (v,)
         object.__setattr__(self, "joint_values", normalized)
 
+    def with_prefix(self, prefix: str) -> GroupState:
+        """Create a new group state with prefixed name, group, and joint names."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            group=f"{prefix}{self.group}",
+            joint_values={f"{prefix}{k}": v for k, v in self.joint_values.items()},
+        )
+
 
 @dataclass(frozen=True)
 class EndEffector:
@@ -105,6 +122,16 @@ class EndEffector:
         if not self.group:
             raise RobotValidationError(ValidationErrorCode.NAME_EMPTY, "Group name cannot be empty")
 
+    def with_prefix(self, prefix: str) -> EndEffector:
+        """Create a new end effector with prefixed name, group, and links."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            group=f"{prefix}{self.group}",
+            parent_link=f"{prefix}{self.parent_link}",
+            parent_group=f"{prefix}{self.parent_group}" if self.parent_group else None,
+        )
+
 
 @dataclass(frozen=True)
 class PassiveJoint:
@@ -122,6 +149,10 @@ class PassiveJoint:
             raise RobotValidationError(
                 ValidationErrorCode.NAME_EMPTY, "Passive joint name cannot be empty"
             )
+
+    def with_prefix(self, prefix: str) -> PassiveJoint:
+        """Create a new passive joint with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
 
 
 @dataclass(frozen=True)
@@ -153,6 +184,14 @@ class CollisionPair:
                 target="CollisionPair",
             )
 
+    def with_prefix(self, prefix: str) -> CollisionPair:
+        """Create a new collision pair with prefixed link names."""
+        return replace(
+            self,
+            link1=f"{prefix}{self.link1}",
+            link2=f"{prefix}{self.link2}",
+        )
+
 
 @dataclass(frozen=True)
 class Chain:
@@ -172,6 +211,14 @@ class Chain:
             raise RobotValidationError(
                 ValidationErrorCode.NAME_EMPTY, "Chain base and tip link names cannot be empty"
             )
+
+    def with_prefix(self, prefix: str) -> Chain:
+        """Create a new chain with prefixed base and tip links."""
+        return replace(
+            self,
+            base_link=f"{prefix}{self.base_link}",
+            tip_link=f"{prefix}{self.tip_link}",
+        )
 
 
 @dataclass(frozen=True)
@@ -210,6 +257,17 @@ class PlanningGroup:
                 f"Planning group '{self.name}' must contain at least one link, joint, chain, or subgroup",
                 target="PlanningGroup",
             )
+
+    def with_prefix(self, prefix: str) -> PlanningGroup:
+        """Create a new planning group with prefixed name and sub-elements."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            links=tuple(f"{prefix}{link}" for link in self.links),
+            joints=tuple(f"{prefix}{joint}" for joint in self.joints),
+            chains=tuple(c.with_prefix(prefix) for c in self.chains),
+            subgroups=tuple(f"{prefix}{subgroup}" for subgroup in self.subgroups),
+        )
 
 
 @dataclass(frozen=True)
@@ -256,6 +314,10 @@ class LinkSphereApproximation:
             )
         object.__setattr__(self, "spheres", tuple(self.spheres))
 
+    def with_prefix(self, prefix: str) -> LinkSphereApproximation:
+        """Create a new approximation with a prefixed link name."""
+        return replace(self, link=f"{prefix}{self.link}")
+
 
 @dataclass(frozen=True)
 class JointProperty:
@@ -277,6 +339,10 @@ class JointProperty:
                 ValidationErrorCode.VALUE_EMPTY,
                 "Joint property must have a joint_name, property_name, and value",
             )
+
+    def with_prefix(self, prefix: str) -> JointProperty:
+        """Create a new joint property with a prefixed joint name."""
+        return replace(self, joint_name=f"{prefix}{self.joint_name}")
 
 
 @dataclass(frozen=True)
@@ -328,3 +394,115 @@ class SemanticRobotDescription:
             self, "link_sphere_approximations", tuple(self.link_sphere_approximations)
         )
         object.__setattr__(self, "joint_properties", tuple(self.joint_properties))
+
+    def with_prefix(self, prefix: str) -> SemanticRobotDescription:
+        """Create a new description with prefixed name and all sub-elements."""
+        return replace(
+            self,
+            robot_name=f"{prefix}{self.robot_name}" if self.robot_name else "",
+            virtual_joints=tuple(vj.with_prefix(prefix) for vj in self.virtual_joints),
+            groups=tuple(g.with_prefix(prefix) for g in self.groups),
+            group_states=tuple(gs.with_prefix(prefix) for gs in self.group_states),
+            end_effectors=tuple(ee.with_prefix(prefix) for ee in self.end_effectors),
+            passive_joints=tuple(pj.with_prefix(prefix) for pj in self.passive_joints),
+            disabled_collisions=tuple(dc.with_prefix(prefix) for dc in self.disabled_collisions),
+            enabled_collisions=tuple(ec.with_prefix(prefix) for ec in self.enabled_collisions),
+            no_default_collision_links=tuple(
+                f"{prefix}{link}" for link in self.no_default_collision_links
+            ),
+            link_sphere_approximations=tuple(
+                lsa.with_prefix(prefix) for lsa in self.link_sphere_approximations
+            ),
+            joint_properties=tuple(jp.with_prefix(prefix) for jp in self.joint_properties),
+        )
+
+    def merge_with(self, other: SemanticRobotDescription) -> SemanticRobotDescription:
+        """Merge another semantic description into this one, deduplicating elements."""
+        # Deduplicate groups
+        new_groups = list(self.groups)
+        current_group_names = {g.name for g in new_groups}
+        for g in other.groups:
+            if g.name not in current_group_names:
+                new_groups.append(g)
+                current_group_names.add(g.name)
+
+        # Deduplicate virtual joints
+        new_vjoints = list(self.virtual_joints)
+        current_vj_names = {vj.name for vj in new_vjoints}
+        for vj in other.virtual_joints:
+            if vj.name not in current_vj_names:
+                new_vjoints.append(vj)
+                current_vj_names.add(vj.name)
+
+        # Deduplicate passive joints
+        new_passive = list(self.passive_joints)
+        current_pj_names = {pj.name for pj in new_passive}
+        for pj in other.passive_joints:
+            if pj.name not in current_pj_names:
+                new_passive.append(pj)
+                current_pj_names.add(pj.name)
+
+        # Deduplicate collision pairs
+        new_disabled = list(self.disabled_collisions)
+        current_disabled = {frozenset([dc.link1, dc.link2]) for dc in new_disabled}
+        for dc in other.disabled_collisions:
+            if frozenset([dc.link1, dc.link2]) not in current_disabled:
+                new_disabled.append(dc)
+                current_disabled.add(frozenset([dc.link1, dc.link2]))
+
+        new_enabled = list(self.enabled_collisions)
+        current_enabled = {frozenset([ec.link1, ec.link2]) for ec in new_enabled}
+        for ec in other.enabled_collisions:
+            if frozenset([ec.link1, ec.link2]) not in current_enabled:
+                new_enabled.append(ec)
+                current_enabled.add(frozenset([ec.link1, ec.link2]))
+
+        # Deduplicate other elements
+        new_ee = list(self.end_effectors)
+        current_ee_names = {ee.name for ee in new_ee}
+        for ee in other.end_effectors:
+            if ee.name not in current_ee_names:
+                new_ee.append(ee)
+                current_ee_names.add(ee.name)
+
+        new_gs = list(self.group_states)
+        current_gs_names = {gs.name for gs in new_gs}
+        for gs in other.group_states:
+            if gs.name not in current_gs_names:
+                new_gs.append(gs)
+                current_gs_names.add(gs.name)
+
+        new_no_default = list(self.no_default_collision_links)
+        current_no_default = set(new_no_default)
+        for link_name in other.no_default_collision_links:
+            if link_name not in current_no_default:
+                new_no_default.append(link_name)
+                current_no_default.add(link_name)
+
+        new_lsa = list(self.link_sphere_approximations)
+        current_lsa_links = {lsa.link for lsa in new_lsa}
+        for lsa in other.link_sphere_approximations:
+            if lsa.link not in current_lsa_links:
+                new_lsa.append(lsa)
+                current_lsa_links.add(lsa.link)
+
+        new_jp = list(self.joint_properties)
+        current_jp = {(jp.joint_name, jp.property_name) for jp in new_jp}
+        for jp in other.joint_properties:
+            if (jp.joint_name, jp.property_name) not in current_jp:
+                new_jp.append(jp)
+                current_jp.add((jp.joint_name, jp.property_name))
+
+        return replace(
+            self,
+            groups=tuple(new_groups),
+            virtual_joints=tuple(new_vjoints),
+            passive_joints=tuple(new_passive),
+            disabled_collisions=tuple(new_disabled),
+            enabled_collisions=tuple(new_enabled),
+            end_effectors=tuple(new_ee),
+            group_states=tuple(new_gs),
+            no_default_collision_links=tuple(new_no_default),
+            link_sphere_approximations=tuple(new_lsa),
+            joint_properties=tuple(new_jp),
+        )

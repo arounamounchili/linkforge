@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
@@ -37,6 +37,10 @@ class Ros2ControlJoint:
                 target="Ros2ControlInterfaces",
                 value=self.name,
             )
+
+    def with_prefix(self, prefix: str) -> Ros2ControlJoint:
+        """Create a new control joint with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
 
 
 @dataclass
@@ -105,3 +109,11 @@ class Ros2Control:
                 target="Ros2ControlJoints",
                 value=len(self.joints),
             )
+
+    def with_prefix(self, prefix: str) -> Ros2Control:
+        """Create a new control block with prefixed name and joints."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            joints=[j.with_prefix(prefix) for j in self.joints],
+        )

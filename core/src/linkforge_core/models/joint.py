@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
@@ -92,6 +92,10 @@ class JointMimic:
     joint: str  # Name of joint to mimic
     multiplier: float = 1.0
     offset: float = 0.0
+
+    def with_prefix(self, prefix: str) -> JointMimic:
+        """Create a new mimic with a prefixed joint name."""
+        return replace(self, joint=f"{prefix}{self.joint}")
 
 
 @dataclass(frozen=True)
@@ -266,3 +270,13 @@ class Joint:
             JointType.FLOATING: 6,
         }
         return dof_map[self.type]
+
+    def with_prefix(self, prefix: str) -> Joint:
+        """Create a new joint with prefixed name, parent, child, and mimic."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            parent=f"{prefix}{self.parent}",
+            child=f"{prefix}{self.child}",
+            mimic=self.mimic.with_prefix(prefix) if self.mimic else None,
+        )

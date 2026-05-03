@@ -98,6 +98,13 @@ class TestJointMimic:
         assert mimic.multiplier == 1.0
         assert mimic.offset == 0.0
 
+    def test_prefix(self) -> None:
+        """Test creating a mimic with a prefix."""
+        mimic = JointMimic(joint="other_joint", multiplier=2.0, offset=0.5)
+        pre = mimic.with_prefix("a_")
+        assert pre.joint == "a_other_joint"
+        assert pre.multiplier == 2.0
+
 
 class TestJointSafetyController:
     """Tests for JointSafetyController."""
@@ -495,6 +502,23 @@ class TestJoint:
         )
         assert joint.axis is not None
         assert joint.limits is None
+
+    def test_prefix(self) -> None:
+        """Test creating a joint with a prefix."""
+        mimic = JointMimic(joint="j1", multiplier=2.0)
+        joint = Joint(
+            name="j2",
+            type=JointType.FIXED,
+            parent="l1",
+            child="l2",
+            mimic=mimic,
+        )
+
+        pre = joint.with_prefix("a_")
+        assert pre.name == "a_j2"
+        assert pre.parent == "a_l1"
+        assert pre.child == "a_l2"
+        assert pre.mimic.joint == "a_j1"
 
 
 class TestJointType:

@@ -38,6 +38,12 @@ class TestTransmissionJoint:
         assert joint.mechanical_reduction == 50.0
         assert joint.offset == pytest.approx(0.1)
 
+    def test_prefix(self) -> None:
+        """Test creating a transmission joint with a prefix."""
+        tj = TransmissionJoint(name="j1")
+        pre = tj.with_prefix("t_")
+        assert pre.name == "t_j1"
+
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError):
@@ -77,6 +83,12 @@ class TestTransmissionActuator:
         assert "effort" in actuator.hardware_interfaces
         assert actuator.mechanical_reduction == 100.0
         assert actuator.offset == pytest.approx(-0.05)
+
+    def test_prefix(self) -> None:
+        """Test creating a transmission actuator with a prefix."""
+        ta = TransmissionActuator(name="motor1")
+        pre = ta.with_prefix("t_")
+        assert pre.name == "t_motor1"
 
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
@@ -307,6 +319,22 @@ class TestTransmission:
                 joints=[joint],
                 actuators=[actuator],
             )
+
+    def test_prefix(self) -> None:
+        """Test creating a transmission with a prefix."""
+        tj = TransmissionJoint(name="j1")
+        ta = TransmissionActuator(name="a1")
+        trans = Transmission(
+            name="t1",
+            type=TransmissionType.SIMPLE.value,
+            joints=[tj],
+            actuators=[ta],
+        )
+
+        pre = trans.with_prefix("t_")
+        assert pre.name == "t_t1"
+        assert pre.joints[0].name == "t_j1"
+        assert pre.actuators[0].name == "t_a1"
 
 
 class TestTransmissionType:

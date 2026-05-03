@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
@@ -72,6 +72,10 @@ class TransmissionJoint:
                 value=self.name,
             )
 
+    def with_prefix(self, prefix: str) -> TransmissionJoint:
+        """Create a new transmission joint with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
+
 
 @dataclass(frozen=True)
 class TransmissionActuator:
@@ -108,6 +112,10 @@ class TransmissionActuator:
                 target="MechanicalReduction",
                 value=self.name,
             )
+
+    def with_prefix(self, prefix: str) -> TransmissionActuator:
+        """Create a new transmission actuator with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
 
 
 @dataclass(frozen=True)
@@ -207,6 +215,15 @@ class Transmission:
                 target="DuplicateActuators",
                 value=self.name,
             )
+
+    def with_prefix(self, prefix: str) -> Transmission:
+        """Create a new transmission with prefixed name, joints, and actuators."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            joints=[j.with_prefix(prefix) for j in self.joints],
+            actuators=[a.with_prefix(prefix) for a in self.actuators],
+        )
 
     @classmethod
     def create_simple(

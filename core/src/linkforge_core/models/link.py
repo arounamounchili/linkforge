@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import InitVar, dataclass, field
+from dataclasses import InitVar, dataclass, field, replace
 
 from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
@@ -98,6 +98,14 @@ class Visual:
     material: Material | None = None
     name: str | None = None
 
+    def with_prefix(self, prefix: str) -> Visual:
+        """Create a new visual with a prefixed name and material."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}" if self.name else None,
+            material=self.material.with_prefix(prefix) if self.material else None,
+        )
+
 
 @dataclass(frozen=True)
 class Collision:
@@ -106,6 +114,10 @@ class Collision:
     geometry: Geometry
     origin: Transform = Transform.identity()
     name: str | None = None
+
+    def with_prefix(self, prefix: str) -> Collision:
+        """Create a new collision with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}" if self.name else None)
 
 
 @dataclass
@@ -182,3 +194,12 @@ class Link:
     def inertial_origin(self) -> Transform:
         """Get inertial origin (identity if not defined)."""
         return self.inertial.origin if self.inertial else Transform.identity()
+
+    def with_prefix(self, prefix: str) -> Link:
+        """Create a new link with a prefixed name and sub-elements."""
+        return Link(
+            name=f"{prefix}{self.name}",
+            initial_visuals=[v.with_prefix(prefix) for v in self._visuals],
+            initial_collisions=[c.with_prefix(prefix) for c in self._collisions],
+            inertial=self.inertial,
+        )
