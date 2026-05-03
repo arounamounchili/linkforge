@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
@@ -56,7 +57,7 @@ class GroupState:
 
     name: str
     group: str
-    joint_values: dict[str, tuple[float, ...]] = field(default_factory=dict)
+    joint_values: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate and normalize group state."""
