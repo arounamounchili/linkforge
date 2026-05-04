@@ -116,9 +116,7 @@ class XacroResolver:
         self._current_depth = 0
         self._ns_stack: list[str] = []
         self._file_stack: list[Path] = []
-        self._block_stack: set[str] = (
-            set()
-        )  # Track active block insertions to prevent infinite recursion
+        self._block_stack: set[str] = set()
 
         # Shared evaluation context (load functions and standard arg)
         self.eval_context = MATH_CONTEXT.copy()
@@ -136,6 +134,35 @@ class XacroResolver:
         xacro_ns.fatal = logger.critical
         xacro_ns.message = logger.info
         self.eval_context["xacro"] = xacro_ns
+
+    def _resolve_children(self, parent_elem: ET.Element, target_elem: ET.Element) -> None:
+        """Recursively resolve and append children to a parent element.
+
+        Args:
+            parent_elem: The element to receive the resolved children.
+            target_elem: The element whose children should be resolved.
+        """
+        for child in target_elem:
+            resolved = self.resolve_element(child)
+            self._append_resolved(parent_elem, resolved)
+
+    def _append_resolved(self, parent: ET.Element, items: list[ET.Element] | ET.Element) -> None:
+        """Append resolved items to a parent, flattening containers and skipping tags.
+
+        Args:
+            parent: The parent XML element.
+            items: A single element or list of elements to append.
+        """
+        if isinstance(items, ET.Element):
+            items = [items]
+
+        for item in items:
+            if item.tag == "container":
+                # Flatten container recursively
+                self._append_resolved(parent, list(item))
+            elif item.tag != "skip" and not item.tag.startswith("xacro:"):
+                # Add valid element
+                parent.append(item)
 
     def resolve_file(self, filepath: Path) -> str:
         """Resolve a XACRO file and return the final XML string.
@@ -173,20 +200,8 @@ class XacroResolver:
             # We deepcopy the container to ensure this evaluation doesn't mutate the cache.
             resolved_container = self.resolve_element(copy.deepcopy(template.container))
 
-            # Helper to flatten container and filter items
-            def _append_filtered(parent: ET.Element, items: list[ET.Element] | ET.Element) -> None:
-                if isinstance(items, ET.Element):
-                    items = [items]
-
-                for item in items:
-                    if item.tag == "container":
-                        # Flatten container
-                        _append_filtered(parent, list(item))
-                    elif item.tag != "skip" and not item.tag.startswith("xacro:"):
-                        # Add valid element
-                        parent.append(item)
-
-            _append_filtered(out_root, list(resolved_container))
+            # Use helper to flatten container and filter items
+            self._append_resolved(out_root, list(resolved_container))
 
             # finalize_xml handles cleanup of xacro artifacts
             return self._finalize_xml(out_root)
@@ -385,13 +400,7 @@ class XacroResolver:
                 self._ns_stack.append(ns)
 
             new_container = ET.Element("container")
-            for child in element:
-                resolved_child = self.resolve_element(child)
-                if resolved_child.tag == "container":
-                    for sc in resolved_child:
-                        new_container.append(sc)
-                elif resolved_child.tag != "skip":
-                    new_container.append(resolved_child)
+            self._resolve_children(new_container, element)
 
             if ns:
                 self._ns_stack.pop()
@@ -537,13 +546,7 @@ class XacroResolver:
 
         if is_true:
             container = ET.Element("container")
-            for child in element:
-                resolved_child = self.resolve_element(child)
-                if resolved_child.tag == "container":
-                    for sc in resolved_child:
-                        container.append(sc)
-                elif resolved_child.tag != "skip":
-                    container.append(resolved_child)
+            self._resolve_children(container, element)
             return container
         return ET.Element("skip")
 
@@ -572,11 +575,7 @@ class XacroResolver:
 
                     def _process_block_item(item: ET.Element) -> None:
                         res = self.resolve_element(copy.deepcopy(item))
-                        if res.tag == "container":
-                            for child in res:
-                                container.append(child)
-                        elif res.tag != "skip":
-                            container.append(res)
+                        self._append_resolved(container, res)
 
                     if isinstance(block, ET.Element):
                         # Single element
@@ -617,8 +616,8 @@ class XacroResolver:
             resolved_block_content: list[ET.Element] = []
             for child in element:
                 res = self.resolve_element(copy.deepcopy(child))
-                if res.tag == "container":
-                    resolved_block_content.extend(res)
+                if isinstance(res, ET.Element) and res.tag == "container":
+                    resolved_block_content.extend(list(res))
                 elif res.tag != "skip":
                     resolved_block_content.append(res)
 
@@ -658,13 +657,7 @@ class XacroResolver:
             self.properties.update(local_props)
 
             container = ET.Element("container")
-            for child in macro_elem:
-                resolved_child = self.resolve_element(child)
-                if resolved_child.tag == "container":
-                    for sc in resolved_child:
-                        container.append(sc)
-                elif resolved_child.tag != "skip":
-                    container.append(resolved_child)
+            self._resolve_children(container, macro_elem)
 
             self.properties = parent_props
             return container
@@ -694,13 +687,7 @@ class XacroResolver:
         new_element.tail = str(self._substitute(element.tail or ""))
 
         # Recursively process children
-        for child in element:
-            resolved_child = self.resolve_element(child)
-            if resolved_child.tag == "container":
-                for subchild in resolved_child:
-                    new_element.append(subchild)
-            elif resolved_child.tag != "skip":
-                new_element.append(resolved_child)
+        self._resolve_children(new_element, element)
 
         return new_element
 
@@ -773,30 +760,47 @@ class XacroResolver:
             a single ${} block.
 
         Raises:
-            RobotParserError: If an undefined argument or environment variable is required.
+            RobotXacroExpressionError: If an undefined argument or environment variable is required.
         """
         if not text:
             return ""
 
-        # Handle $$ escaping (e.g. $${expr} -> literal ${expr})
+        # 1. Handle escaping ($$ -> literal $)
         sentinel = "\x00LFDOLLAR\x00"
         text = text.replace("$$", sentinel)
 
-        # Handle arguments: $(arg name)
+        # 2. Resolve $(arg ...)
+        text = self._substitute_args(text)
+
+        # 3. Resolve $(env ...) and $(optenv ...)
+        text = self._substitute_env(text)
+
+        # 4. Resolve $(find ...)
+        text = self._substitute_find(text)
+
+        # 5. Resolve $(eval ...) and ${...}
+        result = self._substitute_math(text, sentinel)
+
+        # 6. Restore escaped dollar signs if result is a string
+        if isinstance(result, str):
+            result = result.replace(sentinel, "$")
+
+        return result
+
+    def _substitute_args(self, text: str) -> str:
+        """Resolve $(arg name) expressions."""
+
         def _resolve_arg(m: re.Match[str]) -> str:
             name = m.group(1).strip()
             if name not in self.args:
                 raise RobotXacroExpressionError(name, "Undefined substitution argument")
             return str(self.args[name])
 
-        text = re.sub(r"\$\(arg (.*?)\)", _resolve_arg, text)
+        return re.sub(r"\$\(arg (.*?)\)", _resolve_arg, text)
 
-        # Handle evaluation: $(eval expression) - Standard ROS XACRO feature
-        # We treat it as an alias for ${...} since our evaluation engine is Python-based.
-        text = re.sub(r"\$\(eval (.*?)\)", r"${\1}", text)
+    def _substitute_env(self, text: str) -> str:
+        """Resolve $(env VAR) and $(optenv VAR default) expressions."""
 
-        # Handle environment variable substitution, matching roslaunch behaviour.
-        # $(env VAR) raises if unset; $(optenv VAR) returns ""; $(optenv VAR default) returns default.
         def _resolve_env(m: re.Match[str]) -> str:
             parts = m.group(1).split(None, 1)
             var = parts[0]
@@ -812,11 +816,19 @@ class XacroResolver:
             return os.environ.get(var, default)
 
         text = re.sub(r"\$\(env (.*?)\)", _resolve_env, text)
-        text = re.sub(r"\$\(optenv (.*?)\)", _resolve_optenv, text)
+        return re.sub(r"\$\(optenv (.*?)\)", _resolve_optenv, text)
 
+    def _substitute_find(self, text: str) -> str:
+        """Resolve $(find pkg) expressions into package:// URIs."""
         # Strip file:// prefix from ROS package finds to prevent double-prefix.
         text = re.sub(r"file://\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
-        text = re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
+        return re.sub(r"\$\(find (.*?)\)", lambda m: f"package://{m.group(1)}", text)
+
+    def _substitute_math(self, text: str, sentinel: str) -> Any:
+        """Resolve ${expression} and $(eval expression) with math engine."""
+        # Handle evaluation: $(eval expression) - Standard ROS XACRO feature
+        # We treat it as an alias for ${...} since our evaluation engine is Python-based.
+        text = re.sub(r"\$\(eval (.*?)\)", r"${\1}", text)
 
         # Handle properties and math: ${expression}
         # If the entire string is a single ${...} block, return the object directly.
@@ -839,12 +851,8 @@ class XacroResolver:
             return str(res)
 
         # If we have mixed text and expressions, we must stringify everything.
-        # Use a lambda to ensure we always return strings for re.sub.
         if "${" in text:
             text = re.sub(r"\${(.*?)}", replace_expr, text)
-
-        # Restore escaped dollar signs
-        text = text.replace(sentinel, "$")
 
         return text
 
@@ -858,7 +866,7 @@ class XacroResolver:
             The result of the evaluation.
 
         Raises:
-            RobotParserError: If the expression contains malicious dunder attributes.
+            RobotXacroExpressionError: If the expression is invalid or contains forbidden dunder attributes.
         """
         if _DUNDER_PATTERN.search(expr):
             raise RobotXacroExpressionError(expr, "Forbidden dunder attributes")
@@ -944,14 +952,13 @@ class XacroResolver:
             return AttrDict()
 
     def _finalize_xml(self, root: ET.Element) -> str:
-        """Clean up XACRO artifacts and serialize to XML string."""
-        """Strip XACRO artifacts and format the final XML.
+        """Strip XACRO artifacts and serialize to XML string.
 
         Args:
             root: The root element of the resolved XML.
 
         Returns:
-            The serialized XML string.
+            The fully serialized XML string, formatted for readability.
         """
 
         # Recursively strip XML namespaces and filter out XACRO-specific elements
