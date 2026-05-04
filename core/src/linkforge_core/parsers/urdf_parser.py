@@ -110,47 +110,110 @@ class URDFParser(RobotXMLParser[Robot]):
         materials: dict[str, Material],
         source_directory: Path | None = None,
     ) -> Link:
-        """Parse link element with support for multiple visual/collision elements."""
+        """Parse a <link> element into a Link model.
+
+        Args:
+            link_elem: The XML element for the link.
+            materials: Dictionary of global materials for resolution.
+            source_directory: Base directory for relative mesh paths.
+
+        Returns:
+            A populated Link model.
+        """
         name = link_elem.get("name", "unnamed_link")
 
-        visuals: list[Visual] = []
-        for visual_elem in link_elem.findall("{*}visual"):
-            origin = self._parse_origin_element(visual_elem.find("{*}origin"))
-            geom_elem = visual_elem.find("{*}geometry")
-            geometry = (
-                self._parse_geometry_element(geom_elem, source_directory)
-                if geom_elem is not None
-                else None
-            )
-            material = self._parse_material_element(visual_elem.find("{*}material"), materials)
-            visual_name = visual_elem.get("name")
+        # Parse Visuals
+        visuals = [
+            v
+            for visual_elem in link_elem.findall("{*}visual")
+            if (v := self._parse_visual_element(visual_elem, materials, source_directory))
+        ]
 
-            if geometry:
-                visuals.append(
-                    Visual(geometry=geometry, origin=origin, material=material, name=visual_name)
-                )
-
-        collisions: list[Collision] = []
-        for collision_elem in link_elem.findall("{*}collision"):
-            origin = self._parse_origin_element(collision_elem.find("{*}origin"))
-            geom_elem = collision_elem.find("{*}geometry")
-            geometry = (
-                self._parse_geometry_element(geom_elem, source_directory)
-                if geom_elem is not None
-                else None
-            )
-            collision_name = collision_elem.get("name")
-
-            if geometry:
-                collisions.append(Collision(geometry=geometry, origin=origin, name=collision_name))
+        # Parse Collisions
+        collisions = [
+            c
+            for collision_elem in link_elem.findall("{*}collision")
+            if (c := self._parse_collision_element(collision_elem, source_directory))
+        ]
 
         inertial = self._parse_inertial_element(link_elem.find("{*}inertial"))
+
         return Link(
-            name=name, initial_visuals=visuals, initial_collisions=collisions, inertial=inertial
+            name=name,
+            initial_visuals=visuals,
+            initial_collisions=collisions,
+            inertial=inertial,
+        )
+
+    def _parse_visual_element(
+        self,
+        visual_elem: ET.Element,
+        materials: dict[str, Material],
+        source_directory: Path | None = None,
+    ) -> Visual | None:
+        """Parse a single <visual> element.
+
+        Args:
+            visual_elem: The visual XML element.
+            materials: Global materials dictionary.
+            source_directory: Path for mesh resolution.
+
+        Returns:
+            A Visual model or None if geometry is missing.
+        """
+        origin = self._parse_origin_element(visual_elem.find("{*}origin"))
+        geom_elem = visual_elem.find("{*}geometry")
+        if geom_elem is None:
+            return None
+
+        geometry = self._parse_geometry_element(geom_elem, source_directory)
+        if not geometry:
+            return None
+
+        material = self._parse_material_element(visual_elem.find("{*}material"), materials)
+        return Visual(
+            geometry=geometry,
+            origin=origin,
+            material=material,
+            name=visual_elem.get("name"),
+        )
+
+    def _parse_collision_element(
+        self, collision_elem: ET.Element, source_directory: Path | None = None
+    ) -> Collision | None:
+        """Parse a single <collision> element.
+
+        Args:
+            collision_elem: The collision XML element.
+            source_directory: Path for mesh resolution.
+
+        Returns:
+            A Collision model or None if geometry is missing.
+        """
+        origin = self._parse_origin_element(collision_elem.find("{*}origin"))
+        geom_elem = collision_elem.find("{*}geometry")
+        if geom_elem is None:
+            return None
+
+        geometry = self._parse_geometry_element(geom_elem, source_directory)
+        if not geometry:
+            return None
+
+        return Collision(
+            geometry=geometry,
+            origin=origin,
+            name=collision_elem.get("name"),
         )
 
     def _parse_joint(self, joint_elem: ET.Element) -> Joint:
-        """Parse joint element into a Joint object."""
+        """Parse a <joint> element into a Joint model.
+
+        Args:
+            joint_elem: The XML element for the joint.
+
+        Returns:
+            A populated Joint model.
+        """
         name = joint_elem.get("name", "unnamed_joint")
         joint_type_str = joint_elem.get("type", "fixed")
 
@@ -171,111 +234,15 @@ class URDFParser(RobotXMLParser[Robot]):
 
         origin = self._parse_origin_element(joint_elem.find("{*}origin"))
 
-        axis: Vector3 | None = None
-        if joint_type in (
-            JointType.REVOLUTE,
-            JointType.CONTINUOUS,
-            JointType.PRISMATIC,
-            JointType.PLANAR,
-        ):
-            axis_elem = joint_elem.find("{*}axis")
-            if axis_elem is not None:
-                axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
-                # Normalize axis
-                axis_mag = math.sqrt(axis.x**2 + axis.y**2 + axis.z**2)
-                if axis_mag > 1e-10:
-                    axis = Vector3(axis.x / axis_mag, axis.y / axis_mag, axis.z / axis_mag)
-                else:
-                    axis = Vector3(1.0, 0.0, 0.0)
-            else:
-                axis = Vector3(1.0, 0.0, 0.0)
+        # Parse Axis
+        axis = self._parse_joint_axis(joint_elem, joint_type)
 
-        limits = None
-        if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS):
-            limits_elem = joint_elem.find("{*}limit")
-            if limits_elem is not None:
-                lower_str = limits_elem.get("lower")
-                upper_str = limits_elem.get("upper")
-                effort = parse_float(limits_elem.get("effort"), check_name="effort", default=0.0)
-                velocity = parse_float(
-                    limits_elem.get("velocity"), check_name="velocity", default=0.0
-                )
-
-                # Validation: effort and velocity must be non-negative
-                if effort < 0:
-                    logger.warning(
-                        f"Joint '{name}' effort limit is negative ({effort}), setting to 0"
-                    )
-                    effort = 0.0
-                if velocity < 0:
-                    logger.warning(
-                        f"Joint '{name}' velocity limit is negative ({velocity}), setting to 0"
-                    )
-                    velocity = 0.0
-
-                limits = JointLimits(
-                    lower=float(lower_str) if lower_str is not None else None,
-                    upper=float(upper_str) if upper_str is not None else None,
-                    effort=effort,
-                    velocity=velocity,
-                )
-            elif joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
-                limits = JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
-
-        dynamics = None
-        dynamics_elem = joint_elem.find("{*}dynamics")
-        if dynamics_elem is not None:
-            dynamics = JointDynamics(
-                damping=parse_float(
-                    dynamics_elem.get("damping"), check_name="damping", default=0.0
-                ),
-                friction=parse_float(
-                    dynamics_elem.get("friction"), check_name="friction", default=0.0
-                ),
-            )
-
-        mimic = None
-        mimic_elem = joint_elem.find("{*}mimic")
-        if mimic_elem is not None:
-            mimic = JointMimic(
-                joint=mimic_elem.get("joint", ""),
-                multiplier=parse_float(
-                    mimic_elem.get("multiplier"), check_name="multiplier", default=1.0
-                ),
-                offset=parse_float(mimic_elem.get("offset"), check_name="offset", default=0.0),
-            )
-
-        safety_controller = None
-        safety_elem = joint_elem.find("{*}safety_controller")
-        if safety_elem is not None:
-            safety_controller = JointSafetyController(
-                soft_lower_limit=parse_float(
-                    safety_elem.get("soft_lower_limit"), check_name="soft_lower_limit", default=None
-                ),
-                soft_upper_limit=parse_float(
-                    safety_elem.get("soft_upper_limit"), check_name="soft_upper_limit", default=None
-                ),
-                k_position=parse_float(
-                    safety_elem.get("k_position"), check_name="k_position", default=None
-                ),
-                k_velocity=parse_float(
-                    safety_elem.get("k_velocity"), check_name="k_velocity", default=0.0
-                ),
-            )
-
-        calibration = None
-        calib_elem = joint_elem.find("{*}calibration")
-        if calib_elem is not None:
-            rising_str = calib_elem.get("rising")
-            falling_str = calib_elem.get("falling")
-            calibration = JointCalibration(
-                rising=parse_float(rising_str, check_name="rising")
-                if rising_str is not None
-                else None,
-                falling=parse_float(falling_str, check_name="falling")
-                if falling_str is not None
-                else None,
-            )
+        # Parse Sub-components
+        limits = self._parse_joint_limits(joint_elem, joint_type, name)
+        dynamics = self._parse_joint_dynamics(joint_elem.find("{*}dynamics"))
+        mimic = self._parse_joint_mimic(joint_elem.find("{*}mimic"))
+        safety = self._parse_joint_safety(joint_elem.find("{*}safety_controller"))
+        calibration = self._parse_joint_calibration(joint_elem.find("{*}calibration"))
 
         return Joint(
             name=name,
@@ -287,8 +254,155 @@ class URDFParser(RobotXMLParser[Robot]):
             limits=limits,
             dynamics=dynamics,
             mimic=mimic,
-            safety_controller=safety_controller,
+            safety_controller=safety,
             calibration=calibration,
+        )
+
+    def _parse_joint_axis(self, joint_elem: ET.Element, joint_type: JointType) -> Vector3 | None:
+        """Parse the <axis> element for a joint.
+
+        Args:
+            joint_elem: The joint XML element.
+            joint_type: The type of the joint.
+
+        Returns:
+            A normalized Vector3 for the axis, or None if not applicable.
+        """
+        if joint_type not in (
+            JointType.REVOLUTE,
+            JointType.CONTINUOUS,
+            JointType.PRISMATIC,
+            JointType.PLANAR,
+        ):
+            return None
+
+        axis_elem = joint_elem.find("{*}axis")
+        if axis_elem is not None:
+            axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
+            # Normalize axis
+            axis_mag = math.sqrt(axis.x**2 + axis.y**2 + axis.z**2)
+            if axis_mag > 1e-10:
+                return Vector3(axis.x / axis_mag, axis.y / axis_mag, axis.z / axis_mag)
+            return Vector3(1.0, 0.0, 0.0)
+
+        return Vector3(1.0, 0.0, 0.0)
+
+    def _parse_joint_limits(
+        self, joint_elem: ET.Element, joint_type: JointType, joint_name: str
+    ) -> JointLimits | None:
+        """Parse the <limit> element for a joint.
+
+        Args:
+            joint_elem: The joint XML element.
+            joint_type: The type of the joint.
+            joint_name: The name of the joint for logging.
+
+        Returns:
+            A JointLimits model or None.
+        """
+        if joint_type not in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS):
+            return None
+
+        limits_elem = joint_elem.find("{*}limit")
+        if limits_elem is not None:
+            lower_str = limits_elem.get("lower")
+            upper_str = limits_elem.get("upper")
+            effort = parse_float(limits_elem.get("effort"), check_name="effort", default=0.0)
+            velocity = parse_float(limits_elem.get("velocity"), check_name="velocity", default=0.0)
+
+            # Validation: effort and velocity must be non-negative
+            if effort < 0:
+                logger.warning(f"Joint '{joint_name}' effort limit is negative ({effort})")
+                effort = 0.0
+            if velocity < 0:
+                logger.warning(f"Joint '{joint_name}' velocity limit is negative ({velocity})")
+                velocity = 0.0
+
+            return JointLimits(
+                lower=float(lower_str) if lower_str is not None else None,
+                upper=float(upper_str) if upper_str is not None else None,
+                effort=effort,
+                velocity=velocity,
+            )
+
+        if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
+            return JointLimits(lower=0.0, upper=0.0, effort=0.0, velocity=0.0)
+
+        return None
+
+    def _parse_joint_dynamics(self, elem: ET.Element | None) -> JointDynamics | None:
+        """Parse the <dynamics> element into a JointDynamics model.
+
+        Args:
+            elem: The dynamics XML element.
+
+        Returns:
+            A populated JointDynamics instance or None.
+        """
+        if elem is None:
+            return None
+        return JointDynamics(
+            damping=parse_float(elem.get("damping"), check_name="damping", default=0.0),
+            friction=parse_float(elem.get("friction"), check_name="friction", default=0.0),
+        )
+
+    def _parse_joint_mimic(self, elem: ET.Element | None) -> JointMimic | None:
+        """Parse the <mimic> element into a JointMimic model.
+
+        Args:
+            elem: The mimic XML element.
+
+        Returns:
+            A populated JointMimic instance or None.
+        """
+        if elem is None:
+            return None
+        return JointMimic(
+            joint=elem.get("joint", ""),
+            multiplier=parse_float(elem.get("multiplier"), check_name="multiplier", default=1.0),
+            offset=parse_float(elem.get("offset"), check_name="offset", default=0.0),
+        )
+
+    def _parse_joint_safety(self, elem: ET.Element | None) -> JointSafetyController | None:
+        """Parse the <safety_controller> element into a JointSafetyController model.
+
+        Args:
+            elem: The safety_controller XML element.
+
+        Returns:
+            A populated JointSafetyController instance or None.
+        """
+        if elem is None:
+            return None
+        return JointSafetyController(
+            soft_lower_limit=parse_float(
+                elem.get("soft_lower_limit"), check_name="soft_lower_limit"
+            ),
+            soft_upper_limit=parse_float(
+                elem.get("soft_upper_limit"), check_name="soft_upper_limit"
+            ),
+            k_position=parse_float(elem.get("k_position"), check_name="k_position"),
+            k_velocity=parse_float(elem.get("k_velocity"), check_name="k_velocity", default=0.0),
+        )
+
+    def _parse_joint_calibration(self, elem: ET.Element | None) -> JointCalibration | None:
+        """Parse the <calibration> element into a JointCalibration model.
+
+        Args:
+            elem: The calibration XML element.
+
+        Returns:
+            A populated JointCalibration instance or None.
+        """
+        if elem is None:
+            return None
+        rising_str = elem.get("rising")
+        falling_str = elem.get("falling")
+        return JointCalibration(
+            rising=parse_float(rising_str, check_name="rising") if rising_str is not None else None,
+            falling=parse_float(falling_str, check_name="falling")
+            if falling_str is not None
+            else None,
         )
 
     def _normalize_hardware_interface(self, interface: str) -> str:
@@ -297,7 +411,14 @@ class URDFParser(RobotXMLParser[Robot]):
         return clean.replace("interface", "")
 
     def _parse_ros2_control(self, rc_elem: ET.Element) -> Ros2Control | None:
-        """Parse ros2_control element."""
+        """Parse a <ros2_control> element.
+
+        Args:
+            rc_elem: The XML element for ros2_control.
+
+        Returns:
+            A Ros2Control model or None if parsing fails.
+        """
         name = rc_elem.get("name", "")
         rc_type = rc_elem.get("type", "system")
 
@@ -341,6 +462,7 @@ class URDFParser(RobotXMLParser[Robot]):
                     )
                 )
 
+        # Catch-all for top-level parameters not inside <hardware>
         for child in rc_elem:
             if child.tag not in ("hardware", "joint") and child.text:
                 parameters[child.tag] = child.text.strip()
@@ -360,11 +482,20 @@ class URDFParser(RobotXMLParser[Robot]):
     def _parse_transmission_component(
         self, elem: ET.Element, tag: str
     ) -> TransmissionJoint | TransmissionActuator | None:
-        """Parse joint or actuator within a transmission."""
+        """Parse a joint or actuator component within a transmission.
+
+        Args:
+            elem: The XML element (joint or actuator).
+            tag: The component type ('joint' or 'actuator').
+
+        Returns:
+            The parsed component model or None.
+        """
         name = elem.get("name", "")
         if not name:
             return None
 
+        # Handle both camelCase and snake_case for hardware interfaces
         hw_interfaces = [
             self._normalize_hardware_interface(hw.text.strip())
             for hw in (elem.findall("{*}hardwareInterface") + elem.findall("{*}hardware_interface"))
@@ -389,16 +520,22 @@ class URDFParser(RobotXMLParser[Robot]):
                 mechanical_reduction=reduction,
                 offset=offset,
             )
-        else:
-            return TransmissionActuator(
-                name=name,
-                hardware_interfaces=hw_interfaces or ["position"],
-                mechanical_reduction=reduction,
-                offset=offset,
-            )
+        return TransmissionActuator(
+            name=name,
+            hardware_interfaces=hw_interfaces or ["position"],
+            mechanical_reduction=reduction,
+            offset=offset,
+        )
 
     def _parse_transmission(self, trans_elem: ET.Element) -> Transmission | None:
-        """Parse transmission element."""
+        """Parse a <transmission> element.
+
+        Args:
+            trans_elem: The transmission XML element.
+
+        Returns:
+            A Transmission model or None if parsing fails.
+        """
         name = trans_elem.get("name", "unnamed_transmission")
         trans_type = trans_elem.findtext("{*}type", "")
 
@@ -421,7 +558,14 @@ class URDFParser(RobotXMLParser[Robot]):
             return None
 
     def _parse_sensor_noise(self, noise_elem: ET.Element | None) -> SensorNoise | None:
-        """Parse sensor noise element."""
+        """Parse a <noise> element.
+
+        Args:
+            noise_elem: The XML element containing noise parameters.
+
+        Returns:
+            A SensorNoise model or None.
+        """
         if noise_elem is None:
             return None
         actual_noise_elem = noise_elem.find("{*}noise") if noise_elem.tag != "noise" else noise_elem
@@ -438,7 +582,14 @@ class URDFParser(RobotXMLParser[Robot]):
         )
 
     def _parse_sensor_from_gazebo(self, gazebo_elem: ET.Element) -> Sensor | None:
-        """Parse sensor from Gazebo element."""
+        """Parse a <sensor> from within a <gazebo> extension element.
+
+        Args:
+            gazebo_elem: The parent Gazebo extension element.
+
+        Returns:
+            A populated Sensor model or None if no sensor is defined.
+        """
         link_name = gazebo_elem.get("reference", "")
         sensor_elem = gazebo_elem.find("{*}sensor")
         if not link_name or sensor_elem is None:
@@ -479,6 +630,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 except RobotModelError as e:
                     logger.warning(f"Invalid sensor pose in Gazebo element: {e}")
 
+        # Initialize info objects based on sensor type
         camera_info = None
         lidar_info = None
         imu_info = None
@@ -603,8 +755,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 noise=self._parse_sensor_noise(ft_elem),
             )
 
-        # Ensure that if a sensor type is known, we have at least a default info object
-        # to avoid NoneType errors during inspection.
+        # Safety Fallbacks: Ensure info objects are initialized for known types
         if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA) and camera_info is None:
             camera_info = CameraInfo()
         elif sensor_type == SensorType.LIDAR and lidar_info is None:
@@ -632,7 +783,14 @@ class URDFParser(RobotXMLParser[Robot]):
         )
 
     def _parse_gazebo_plugin(self, plugin_elem: ET.Element | None) -> GazeboPlugin | None:
-        """Parse Gazebo plugin element."""
+        """Parse a Gazebo plugin element.
+
+        Args:
+            plugin_elem: The plugin XML element.
+
+        Returns:
+            A populated GazeboPlugin model or None.
+        """
         if plugin_elem is None:
             return None
         name = plugin_elem.get("name", "")
@@ -648,13 +806,20 @@ class URDFParser(RobotXMLParser[Robot]):
         return GazeboPlugin(name=name, filename=filename, parameters=parameters, raw_xml=raw_xml)
 
     def _parse_gazebo_element(self, gazebo_elem: ET.Element) -> GazeboElement:
-        """Parse Gazebo extension element."""
+        """Parse a <gazebo> extension element.
+
+        Args:
+            gazebo_elem: The XML element for the Gazebo extension.
+
+        Returns:
+            A populated GazeboElement model.
+        """
         reference = gazebo_elem.get("reference")
         plugins = [
             self._parse_gazebo_plugin(p) for p in gazebo_elem.findall("{*}plugin") if p is not None
         ]
 
-        # Filter out None values from cast
+        # Filter out None values
         valid_plugins = [p for p in plugins if p is not None]
 
         properties = {}
@@ -729,18 +894,43 @@ class URDFParser(RobotXMLParser[Robot]):
     def _parse_from_context(
         self, context: Any, root: ET.Element, filepath: Path | None = None
     ) -> Robot:
-        """Internal processor for iterative XML parsing."""
+        """Internal processor for iterative XML parsing.
+
+        This method orchestrates the element-by-element construction of the
+        Robot model. It handles depth tracking for security and manages the
+        processing order of dependent elements (links must exist before joints).
+
+        Args:
+            context: The iterparse context.
+            root: The root <robot> element.
+            filepath: Path to the source file for resolution.
+
+        Returns:
+            A fully populated Robot model.
+
+        Raises:
+            RobotParserUnexpectedError: If XML nesting exceeds MAX_XML_DEPTH.
+            XacroDetectedError: If the parser detects unexpanded XACRO macros.
+        """
         self._detect_xacro_file(root, filepath)
 
         default_name = filepath.stem if filepath else "unnamed_robot"
         kwargs: dict[str, Any] = {"name": root.get("name", default_name)}
         if self.resource_resolver is not None:
             kwargs["resource_resolver"] = self.resource_resolver
+
         robot = Robot(**kwargs)
         materials: dict[str, Material] = {}
         depth = 0
 
+        # Elements that depend on links (joints, transmissions, etc.) are processed
+        # in a second pass to ensure the robot's kinematic graph is complete.
         delayed_elements: list[tuple[str, ET.Element]] = []
+
+        # Determine base directory for resolving relative mesh paths.
+        source_directory = (
+            filepath.parent if filepath and filepath.is_file() else filepath
+        ) or Path(".")
 
         for event, elem in context:
             if event == "start":
@@ -752,6 +942,7 @@ class URDFParser(RobotXMLParser[Robot]):
             elif event == "end":
                 if depth == 1:
                     tag = strip_xml_namespace(elem.tag)
+
                     if tag == "material":
                         mat = self._parse_material_element(elem, materials)
                         if mat:
@@ -760,39 +951,28 @@ class URDFParser(RobotXMLParser[Robot]):
 
                     elif tag == "link":
                         try:
-                            # Determine base directory for resolving relative mesh paths.
-                            # When parsing from a string (e.g. after Xacro resolution),
-                            # the filepath may already be the directory.
-                            source_directory = (
-                                filepath.parent if filepath and filepath.is_file() else filepath
-                            ) or Path(".")
                             link = self._parse_link(elem, materials, source_directory)
                             robot.add_link(link)
-                        except (
-                            RobotModelError,
-                            ValueError,
-                            RobotParserUnexpectedError,
-                            RobotParserIOError,
-                            RobotParserXMLRootError,
-                        ) as e:
+                        except (RobotModelError, ValueError, Exception) as e:
                             logger.warning(f"Skipping invalid link '{elem.get('name')}': {e}")
 
                     elif tag in ("joint", "transmission", "ros2_control", "gazebo"):
                         delayed_elements.append((tag, elem))
                         depth -= 1
+                        # Do NOT clear delayed elements yet as they will be processed later
                         continue
 
                 depth -= 1
 
+        # Second Pass: Process dependent elements
         for tag, elem in delayed_elements:
             try:
                 if tag == "joint":
-                    joint = self._parse_joint(elem)
-                    robot.add_joint(joint)
+                    robot.add_joint(self._parse_joint(elem))
                 elif tag == "transmission":
-                    transmission = self._parse_transmission(elem)
-                    if transmission:
-                        robot.add_transmission(transmission)
+                    trans = self._parse_transmission(elem)
+                    if trans:
+                        robot.add_transmission(trans)
                 elif tag == "ros2_control":
                     ros2_ctrl = self._parse_ros2_control(elem)
                     if ros2_ctrl:
@@ -803,13 +983,7 @@ class URDFParser(RobotXMLParser[Robot]):
                         robot.add_sensor(sensor)
                     else:
                         robot.add_gazebo_element(self._parse_gazebo_element(elem))
-            except (
-                RobotModelError,
-                ValueError,
-                RobotParserUnexpectedError,
-                RobotParserIOError,
-                RobotParserXMLRootError,
-            ) as e:
+            except (RobotModelError, ValueError, Exception) as e:
                 logger.warning(f"Skipping invalid {tag} '{elem.get('name')}': {e}")
             finally:
                 elem.clear()
