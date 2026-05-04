@@ -2,6 +2,13 @@
 
 This module provides the core `Robot` class, which serves as the central
 hub for all kinematic, physical, and sensor data within the LinkForge ecosystem.
+It acts as a unified data structure that bridges high-fidelity design tools
+(like Blender or FreeCAD) with robotics description formats (URDF, XACRO, SRDF).
+
+The LinkForge IR is designed for:
+1.  **Format Agnosticism**: Supporting lossless translation between different description formats.
+2.  **Physical Integrity**: Ensuring all mass properties and kinematic constraints are validated.
+3.  **Extensibility**: Allowing format-specific metadata to be preserved via internal dictionaries.
 """
 
 from __future__ import annotations
@@ -51,11 +58,18 @@ class Robot:
         materials: Global material library shared across links.
         metadata: Arbitrary dictionary for format-specific extensions.
         resource_resolver: Strategy for locating meshes and external files.
+        links: Read-only access to the collection of rigid bodies.
+        joints: Read-only access to kinematic constraints connecting links.
+        sensors: Read-only access to attached sensors.
+        transmissions: Read-only access to mechanical transmissions.
+        ros2_controls: Read-only access to hardware interface configurations.
+        gazebo_elements: Read-only access to simulation-specific metadata.
+        semantic: MoveIt/SRDF semantic description of the robot.
+        graph: Formally verified kinematic structure (rebuilt on demand).
 
     Note:
-        Uses O(1) hash map lookups for links and joints via internal indices.
-        The kinematic structure (parent-child tree) is managed via the
-        ``graph`` property.
+        - Uses O(1) hash map lookups for links and joints via internal indices.
+        - The `initial_*` arguments are `InitVar` used during instantiation and are not stored directly.
     """
 
     name: str
@@ -624,23 +638,28 @@ class Robot:
         axis: Vector3 | None = None,
         limits: JointLimits | None = None,
     ) -> Robot:
-        """Merge a sub-robot (kinematic + semantic) into this robot in-place.
+        """Merge another robot model into this one at a specific link.
+
+        This operation combines the kinematic tree, sensors, transmissions,
+        hardware interfaces, and semantic metadata. A new joint is created
+        to connect this robot's `at_link` to the sub-robot's root link.
 
         Args:
-            component: The robot model to attach.
-            at_link: The link in the current assembly to attach to.
-            joint_name: Name of the joint connecting the assembly to the component.
-            prefix: Optional prefix to add to all elements in the component.
+            component: The sub-robot model to attach.
+            at_link: The link in the current robot to attach to.
+            joint_name: Unique name for the new connecting joint.
+            prefix: Optional namespace prefix for all elements in the sub-robot.
             joint_type: Type of the connecting joint (default: FIXED).
-            origin: Optional transform for the joint.
-            axis: Optional joint axis.
+            origin: Optional relative transform for the connection.
+            axis: Optional joint axis (required for non-fixed types).
             limits: Optional joint limits.
 
         Returns:
-            The robot instance for chaining.
+            The current robot instance (self) for method chaining.
 
         Raises:
-            RobotValidationError: If the attachment link is not found.
+            RobotValidationError: If the attachment link is not found or
+                if merging results in name collisions or kinematic cycles.
         """
         # Validation of attachment point
         if not self.get_link(at_link):
@@ -651,29 +670,27 @@ class Robot:
                 value=at_link,
             )
 
-        # Deep copy the component to ensure isolation
+        # Deep copy and prefix the component to ensure isolation
         sub_robot = component.clone()
-
-        # Apply prefix if provided
         if prefix:
             sub_robot.prefix_all(prefix)
 
-        # Identify the root link of the sub-robot
+        # Identify the connection point in the sub-robot
         root_link = sub_robot.get_root_link()
 
-        # Merge links and joints
+        # Merge kinematic elements
         for link in sub_robot.links:
             self.add_link(link)
 
         for joint in sub_robot.joints:
             self.add_joint(joint)
 
-        # Merge other components
+        # Merge additional components
         for sensor in sub_robot.sensors:
             self.add_sensor(sensor)
 
-        for transmission in sub_robot.transmissions:
-            self.add_transmission(transmission)
+        for trans in sub_robot.transmissions:
+            self.add_transmission(trans)
 
         for rc in sub_robot.ros2_controls:
             self.add_ros2_control(rc)
@@ -681,15 +698,13 @@ class Robot:
         for ge in sub_robot.gazebo_elements:
             self.add_gazebo_element(ge)
 
-        # Merge materials (avoid duplicates by name)
-        for name, mat in sub_robot.materials.items():
-            if name not in self.materials:
-                self.materials[name] = mat
+        # Merge global resources (materials)
+        self.materials.update(sub_robot.materials)
 
         # Merge semantic data (SRDF)
         self._semantic = self._semantic.merge_with(sub_robot.semantic)
 
-        # Create the connecting joint
+        # Create and add the connecting joint
         connection = Joint(
             name=joint_name,
             type=joint_type,
@@ -701,23 +716,7 @@ class Robot:
         )
         self.add_joint(connection)
 
-        # Merge additional elements (sensors, transmissions, etc.)
-        for sensor in sub_robot.sensors:
-            self.add_sensor(sensor)
-
-        for trans in sub_robot.transmissions:
-            self.add_transmission(trans)
-
-        for rc in sub_robot.ros2_controls:
-            self.add_ros2_control(rc)
-
-        for gz in sub_robot.gazebo_elements:
-            self.add_gazebo_element(gz)
-
-        # Merge materials
-        self.materials.update(sub_robot.materials)
-
-        # Validate kinematic integrity (connectivity and cycles)
+        # Re-trigger graph build to validate integrity (cycles, connectivity)
         _ = self.graph
 
         return self
@@ -738,10 +737,10 @@ class Robot:
             name: Unique group name.
             links: List of link names.
             joints: List of joint names.
-            chains: List of (base_link, tip_link) tuples.
-            subgroups: List of subgroup names.
-            base_link: Shorthand for chain base.
-            tip_link: Shorthand for chain tip.
+            chains: List of kinematic `Chain` objects.
+            subgroups: List of other planning group names to include.
+            base_link: Shorthand for a single chain base link.
+            tip_link: Shorthand for a single chain tip link.
 
         Returns:
             The robot instance for chaining.
