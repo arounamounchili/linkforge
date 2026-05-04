@@ -1032,11 +1032,23 @@ class Robot:
 
     def __str__(self) -> str:
         """Return a human-readable summary of the robot structure."""
+        # Safely determine root and validity without triggering exceptions
+        try:
+            roots = self.graph.get_root_links()
+            root_name = roots[0] if len(roots) == 1 else "None"
+            # A valid robot in LinkForge is a single-rooted tree with no cycles
+            is_valid = len(roots) == 1 and not self.has_cycle
+        except Exception:
+            root_name = "Unknown"
+            is_valid = False
+
         parts = [
             f"Robot(name={self.name}",
+            f"root={root_name}",
             f"links={len(self.links)}",
             f"joints={len(self.joints)}",
             f"dof={self.degrees_of_freedom}",
+            f"valid={is_valid}",
         ]
         if self.sensors:
             parts.append(f"sensors={len(self.sensors)}")
