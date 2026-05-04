@@ -272,22 +272,23 @@ class Robot:
                 value=at_link,
             )
 
-        # Deep copy and prefix the component to ensure isolation
+        # Prepare component (Namespace Isolation)
+        # Deep copy ensures we don't mutate the original template robot
         sub_robot = component.clone()
         if prefix:
             sub_robot.prefix_all(prefix)
 
-        # Identify the connection point in the sub-robot
+        # Identify the connection point (root) of the incoming component
         root_link = sub_robot.get_root_link()
 
-        # Merge kinematic elements
+        # Migrate Physical & Functional Collections
+        # We use internal add_* methods to inherit all validation logic
         for link in sub_robot.links:
             self.add_link(link)
 
         for joint in sub_robot.joints:
             self.add_joint(joint)
 
-        # Merge additional components
         for sensor in sub_robot.sensors:
             self.add_sensor(sensor)
 
@@ -300,13 +301,12 @@ class Robot:
         for ge in sub_robot.gazebo_elements:
             self.add_gazebo_element(ge)
 
-        # Merge global resources (materials)
+        # Integrate Global Resources & Metadata
         self.materials.update(sub_robot.materials)
-
-        # Merge semantic data (SRDF)
         self._semantic = self._semantic.merge_with(sub_robot.semantic)
 
-        # Create and add the connecting joint
+        # Bridge the Kinematic Trees
+        # This joint connects our existing structure to the sub-robot's root
         connection = Joint(
             name=joint_name,
             type=joint_type,
@@ -318,7 +318,8 @@ class Robot:
         )
         self.add_joint(connection)
 
-        # Re-trigger graph build to validate integrity (cycles, connectivity)
+        # Final Integrity Validation
+        # Re-triggering the graph property ensures no cycles or islands were created
         _ = self.graph
 
         return self
@@ -748,7 +749,28 @@ class Robot:
 
         Returns:
             The robot instance for chaining.
+
+        Raises:
+            RobotValidationError: If any referenced link, joint, or subgroup does not exist.
         """
+        # Validate that all referenced elements exist
+        if links:
+            for link_name in links:
+                self.link(link_name)
+        if joints:
+            for j in joints:
+                self.joint(j)
+        if chains:
+            for c in chains:
+                self.link(c.base_link)
+                self.link(c.tip_link)
+        if base_link and tip_link:
+            self.link(base_link)
+            self.link(tip_link)
+
+        # Note: subgroups validation is deferred to final export or graph check
+        # as the subgroups might not have been added yet in the chain.
+
         # Add group
         final_chains = list(chains or [])
         if base_link and tip_link:
@@ -774,7 +796,13 @@ class Robot:
 
         Returns:
             The robot instance for chaining.
+
+        Raises:
+            RobotValidationError: If link1 or link2 is not found.
         """
+        self.link(link1)
+        self.link(link2)
+
         # Disable collisions
         dc = CollisionPair(link1=link1, link2=link2, reason=reason)
         self._semantic = replace(
@@ -807,7 +835,13 @@ class Robot:
 
         Returns:
             The robot instance for chaining.
+
+        Raises:
+            RobotValidationError: If link1 or link2 is not found.
         """
+        self.link(link1)
+        self.link(link2)
+
         ec = CollisionPair(link1=link1, link2=link2, reason=reason)
         self._semantic = replace(
             self._semantic,
@@ -823,7 +857,12 @@ class Robot:
 
         Returns:
             The robot instance for chaining.
+
+        Raises:
+            RobotValidationError: If the link is not found.
         """
+        self.link(link)
+
         self._semantic = replace(
             self._semantic,
             no_default_collision_links=tuple(self._semantic.no_default_collision_links) + (link,),
@@ -840,7 +879,12 @@ class Robot:
 
         Returns:
             The robot instance for chaining.
+
+        Raises:
+            RobotValidationError: If the joint is not found.
         """
+        self.joint(joint_name)
+
         jp = JointProperty(joint_name=joint_name, property_name=property_name, value=value)
         self._semantic = replace(
             self._semantic,
@@ -857,7 +901,12 @@ class Robot:
 
         Returns:
             The robot instance for chaining.
+
+        Raises:
+            RobotValidationError: If the link is not found.
         """
+        self.link(link)
+
         lsa = LinkSphereApproximation(link=link, spheres=tuple(spheres))
         self._semantic = replace(
             self._semantic,
