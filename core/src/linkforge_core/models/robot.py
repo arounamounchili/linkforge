@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import copy
 import itertools
+from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field, replace
 from pathlib import Path
@@ -93,6 +94,20 @@ class Robot:
     _link_index: dict[str, Link] = field(default_factory=dict, init=False, repr=False)
     _joint_index: dict[str, Joint] = field(default_factory=dict, init=False, repr=False)
     _sensor_index: dict[str, Sensor] = field(default_factory=dict, init=False, repr=False)
+    _transmission_index: dict[str, Transmission] = field(
+        default_factory=dict, init=False, repr=False
+    )
+    _ros2_control_index: dict[str, Ros2Control] = field(
+        default_factory=dict, init=False, repr=False
+    )
+
+    # Adjacency maps for kinematic traversal
+    _link_as_parent_index: dict[str, list[Joint]] = field(
+        default_factory=lambda: defaultdict(list), init=False, repr=False
+    )
+    _link_as_child_index: dict[str, list[Joint]] = field(
+        default_factory=lambda: defaultdict(list), init=False, repr=False
+    )
 
     _graph_cache: KinematicGraph | None = field(default=None, init=False, repr=False)
 
@@ -175,42 +190,6 @@ class Robot:
 
         self._reindex()
 
-    def _reindex(self) -> None:
-        """Rebuild internal lookup indices and clear cache.
-
-        This is an internal maintenance method that ensures the O(1)
-        lookup maps stay in sync with the list-based storage.
-
-        Raises:
-            RobotValidationError: If duplicate link or joint names are detected.
-        """
-        # Validate link names and build index
-        self._link_index = {}
-        for link in self._links:
-            if link.name in self._link_index:
-                raise RobotValidationError(
-                    ValidationErrorCode.DUPLICATE_NAME,
-                    f"Already exists: Link '{link.name}'",
-                    target="Link",
-                    value=link.name,
-                )
-            self._link_index[link.name] = link
-
-        # Validate joint names and build index
-        self._joint_index = {}
-        for joint in self._joints:
-            if joint.name in self._joint_index:
-                raise RobotValidationError(
-                    ValidationErrorCode.DUPLICATE_NAME,
-                    f"Already exists: Joint '{joint.name}'",
-                    target="Joint",
-                    value=joint.name,
-                )
-            self._joint_index[joint.name] = joint
-
-        self._sensor_index = {sensor.name: sensor for sensor in self._sensors}
-        self._graph_cache = None
-
     def clone(self) -> Robot:
         """Create a deep copy of the robot.
 
@@ -233,6 +212,9 @@ class Robot:
         if not prefix:
             return
 
+        # Update Robot Name
+        self.name = f"{prefix}{self.name}"
+
         # Update Materials (Global)
         self.materials = {f"{prefix}{k}": v.with_prefix(prefix) for k, v in self.materials.items()}
 
@@ -246,386 +228,6 @@ class Robot:
         self._semantic = self._semantic.with_prefix(prefix)
 
         self._reindex()
-
-    def add_link(self, link: Link) -> None:
-        """Add a link to the robot and update indices.
-
-        Args:
-            link: The Link object to add.
-
-        Raises:
-            RobotValidationError: If a link with the same name already exists
-                or if naming conventions are violated.
-        """
-        if link.name in self._link_index:
-            raise RobotValidationError(
-                ValidationErrorCode.DUPLICATE_NAME,
-                f"Already exists: Link '{link.name}'",
-                target="Link",
-                value=link.name,
-            )
-        self._links.append(link)
-        self._link_index[link.name] = link
-        self._graph_cache = None
-
-    def add_joint(self, joint: Joint) -> None:
-        """Add a joint to the robot and update indices.
-
-        Args:
-            joint: The Joint object to add.
-
-        Raises:
-            RobotValidationError: If the joint name is a duplicate or if the
-                referenced parent/child links do not exist.
-        """
-        if joint.name in self._joint_index:
-            raise RobotValidationError(
-                ValidationErrorCode.DUPLICATE_NAME,
-                f"Already exists: Joint '{joint.name}'",
-                target="Joint",
-                value=joint.name,
-            )
-
-        # Validate parent and child links exist
-        if joint.parent not in self._link_index:
-            raise RobotValidationError(
-                ValidationErrorCode.NOT_FOUND,
-                f"Not found: Parent link '{joint.parent}'",
-                target="ParentLink",
-                value=joint.parent,
-            )
-        if joint.child not in self._link_index:
-            raise RobotValidationError(
-                ValidationErrorCode.NOT_FOUND,
-                f"Not found: Child link '{joint.child}'",
-                target="ChildLink",
-                value=joint.child,
-            )
-
-        self._joints.append(joint)
-        self._joint_index[joint.name] = joint
-        self._graph_cache = None
-
-    def resolve_resource(self, uri: str, relative_to: Path | None = None) -> Path:
-        """Resolve a resource URI using the robot's configured resolver.
-
-        Args:
-            uri: The resource URI to resolve (e.g. mesh path, package://).
-            relative_to: Optional base directory for relative path resolution.
-
-        Returns:
-            The resolved absolute Path.
-        """
-        return self.resource_resolver.resolve(uri, relative_to=relative_to)
-
-    def get_link(self, name: str) -> Link | None:
-        """Retrieve a link by name using the internal index.
-
-        Args:
-            name: The name of the link to find.
-
-        Returns:
-            The Link object if found, otherwise None.
-        """
-        return self._link_index.get(name)
-
-    def link(self, name: str) -> Link:
-        """Retrieve a link by name, raising an error if it does not exist.
-
-        Args:
-            name: The name of the link to find.
-
-        Returns:
-            The Link object.
-
-        Raises:
-            RobotValidationError: If the link is not found.
-        """
-        link_obj = self.get_link(name)
-        if link_obj is None:
-            raise RobotValidationError(
-                ValidationErrorCode.NOT_FOUND,
-                f"Link '{name}' not found in robot '{self.name}'",
-                target="Link",
-                value=name,
-            )
-        return link_obj
-
-    def get_joint(self, name: str) -> Joint | None:
-        """Retrieve a joint by name using the internal index.
-
-        Args:
-            name: The name of the joint to find.
-
-        Returns:
-            The Joint object if found, otherwise None.
-        """
-        return self._joint_index.get(name)
-
-    def joint(self, name: str) -> Joint:
-        """Retrieve a joint by name, raising an error if it does not exist.
-
-        Args:
-            name: The name of the joint to find.
-
-        Returns:
-            The Joint object.
-
-        Raises:
-            RobotValidationError: If the joint is not found.
-        """
-        joint_obj = self.get_joint(name)
-        if joint_obj is None:
-            raise RobotValidationError(
-                ValidationErrorCode.NOT_FOUND,
-                f"Joint '{name}' not found in robot '{self.name}'",
-                target="Joint",
-                value=name,
-            )
-        return joint_obj
-
-    def has_link(self, name: str) -> bool:
-        """Check if a link with the given name exists in the robot."""
-        return name in self._link_index
-
-    def has_joint(self, name: str) -> bool:
-        """Check if a joint with the given name exists in the robot."""
-        return name in self._joint_index
-
-    def get_joints_for_link(self, link_name: str, as_parent: bool = True) -> list[Joint]:
-        """Get all joints where the link is parent or child.
-
-        Args:
-            link_name: Name of the link
-            as_parent: If True, get joints where link is parent; if False, where link is child
-
-        Returns:
-            List of matching joints.
-        """
-        if as_parent:
-            return [joint for joint in self.joints if joint.parent == link_name]
-        else:
-            return [joint for joint in self.joints if joint.child == link_name]
-
-    def add_sensor(self, sensor: Sensor) -> None:
-        """Attach a sensor to the robot model.
-
-        Args:
-            sensor: The Sensor object to add.
-
-        Raises:
-            RobotValidationError: If the sensor name is a duplicate or
-                referenced link does not exist.
-        """
-        if sensor.name in self._sensor_index:
-            raise RobotValidationError(
-                ValidationErrorCode.DUPLICATE_NAME,
-                f"Already exists: Sensor '{sensor.name}'",
-                target="Sensor",
-                value=sensor.name,
-            )
-
-        # Validate that the link exists
-        if sensor.link_name not in self._link_index:
-            raise RobotValidationError(
-                ValidationErrorCode.NOT_FOUND,
-                f"Not found: Link '{sensor.link_name}'",
-                target="LinkName",
-                value=sensor.link_name,
-            )
-
-        self._sensors.append(sensor)
-        self._sensor_index[sensor.name] = sensor
-
-    def add_transmission(self, transmission: Transmission) -> None:
-        """Define a mechanical transmission for one or more joints.
-
-        Args:
-            transmission: The Transmission definition to add.
-
-        Raises:
-            RobotValidationError: If the transmission name is a duplicate
-                or referenced joints do not exist.
-        """
-        if any(t.name == transmission.name for t in self._transmissions):
-            raise RobotValidationError(
-                ValidationErrorCode.DUPLICATE_NAME,
-                f"Already exists: Transmission '{transmission.name}'",
-                target="Transmission",
-                value=transmission.name,
-            )
-
-        # Validate that all referenced joints exist
-        for trans_joint in transmission.joints:
-            if trans_joint.name not in self._joint_index:
-                raise RobotValidationError(
-                    ValidationErrorCode.NOT_FOUND,
-                    f"Not found: Joint '{trans_joint.name}'",
-                    target="JointName",
-                    value=trans_joint.name,
-                )
-
-        self._transmissions.append(transmission)
-
-    def add_gazebo_element(self, element: GazeboElement) -> None:
-        """Add simulation-specific metadata (Gazebo tags).
-
-        Args:
-            element: The GazeboElement definition.
-
-        Raises:
-            RobotValidationError: If the referenced link/joint does not exist.
-        """
-        # Validate reference if specified
-        if (
-            element.reference is not None
-            and self.get_link(element.reference) is None
-            and self.get_joint(element.reference) is None
-        ):
-            raise RobotValidationError(
-                ValidationErrorCode.NOT_FOUND,
-                f"Not found: Gazebo reference '{element.reference}'",
-                target="GazeboReference",
-                value=element.reference,
-            )
-
-        self._gazebo_elements.append(element)
-
-    def add_ros2_control(self, ros2_control: Ros2Control) -> None:
-        """Register a ros2_control hardware system.
-
-        Args:
-            ros2_control: The hardware configuration to add.
-
-        Raises:
-            RobotValidationError: If the configuration name is a duplicate.
-        """
-        # Check for duplicate names
-        if any(rc.name == ros2_control.name for rc in self._ros2_controls):
-            raise RobotValidationError(
-                ValidationErrorCode.DUPLICATE_NAME,
-                f"Already exists: ROS2 control '{ros2_control.name}'",
-                target="Ros2Control",
-                value=ros2_control.name,
-            )
-
-        self._ros2_controls.append(ros2_control)
-
-    @property
-    def graph(self) -> KinematicGraph:
-        """Get the formal kinematic graph representing the robot's structure.
-
-        This is built on demand (and cached) to ensure it reflects the current state
-        of links and joints with optimal performance.
-        """
-        if self._graph_cache is None:
-            self._graph_cache = KinematicGraph(self._links, self._joints)
-        return self._graph_cache
-
-    def get_root_link(self) -> Link:
-        """Get the root link of the kinematic tree.
-
-        The root link is the one that is never a child in any joint.
-
-        Returns:
-            The root Link object.
-
-        Raises:
-            RobotValidationError: If no root link is found or multiple root links exist.
-        """
-        roots = self.graph.get_root_links()
-        if not roots:
-            raise RobotValidationError(
-                ValidationErrorCode.NO_ROOT,
-                "No root link found in the kinematic tree",
-                target="Roots",
-                value=0,
-            )
-        if len(roots) > 1:
-            raise RobotValidationError(
-                ValidationErrorCode.MULTIPLE_ROOTS,
-                f"Multiple root links found ({len(roots)}): {roots}",
-                target="Roots",
-                value=len(roots),
-            )
-
-        # We can safely call get_link as roots[0] is guaranteed to be in the graph
-        link = self.get_link(roots[0])
-        if link is None:
-            # This should be unreachable given graph integrity
-            raise RobotValidationError(
-                ValidationErrorCode.NOT_FOUND,
-                f"Root link '{roots[0]}' exists in graph but not in link index",
-                target="Roots",
-            )
-        return link
-
-    @property
-    def has_cycle(self) -> bool:
-        """Check for cycles in the kinematic tree."""
-        return self.graph.has_cycle()
-
-    @property
-    def total_mass(self) -> float:
-        """Calculate total mass of the robot."""
-        return sum(link.mass for link in self.links)
-
-    @property
-    def degrees_of_freedom(self) -> int:
-        """Calculate total degrees of freedom (actuated joints only)."""
-        return sum(joint.degrees_of_freedom for joint in self.joints)
-
-    @property
-    def links(self) -> tuple[Link, ...]:
-        """Get read-only view of links.
-
-        Use ``add_link()`` to modify the robot structure.
-        """
-        return tuple(self._links)
-
-    @property
-    def joints(self) -> tuple[Joint, ...]:
-        """Get read-only view of joints.
-
-        Use ``add_joint()`` to modify the robot structure.
-        """
-        return tuple(self._joints)
-
-    @property
-    def sensors(self) -> tuple[Sensor, ...]:
-        """Get read-only view of sensors."""
-        return tuple(self._sensors)
-
-    @property
-    def transmissions(self) -> tuple[Transmission, ...]:
-        """Get read-only view of transmissions."""
-        return tuple(self._transmissions)
-
-    @property
-    def ros2_controls(self) -> tuple[Ros2Control, ...]:
-        """Get read-only view of ROS2 Control configurations."""
-        return tuple(self._ros2_controls)
-
-    @property
-    def gazebo_elements(self) -> tuple[GazeboElement, ...]:
-        """Get read-only view of Gazebo elements."""
-        return tuple(self._gazebo_elements)
-
-    @property
-    def semantic(self) -> SemanticRobotDescription:
-        """Get semantic description (SRDF metadata) of the robot."""
-        return self._semantic
-
-    @semantic.setter
-    def semantic(self, value: SemanticRobotDescription | None) -> None:
-        """Set semantic description of the robot.
-
-        Always syncs the internal robot_name to match this robot's name.
-        """
-        if value is None:
-            self._semantic = replace(SemanticRobotDescription(), robot_name=self.name)
-        else:
-            self._semantic = replace(value, robot_name=self.name)
 
     def merge(
         self,
@@ -720,6 +322,408 @@ class Robot:
         _ = self.graph
 
         return self
+
+    def add_link(self, link: Link) -> None:
+        """Add a link to the robot and update indices.
+
+        Args:
+            link: The Link object to add.
+
+        Raises:
+            RobotValidationError: If a link with the same name already exists
+                or if naming conventions are violated.
+        """
+        if link.name in self._link_index:
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Link '{link.name}'",
+                target="Link",
+                value=link.name,
+            )
+        self._links.append(link)
+        self._link_index[link.name] = link
+        self._graph_cache = None
+
+    def add_joint(self, joint: Joint) -> None:
+        """Add a joint to the robot and update indices.
+
+        Args:
+            joint: The Joint object to add.
+
+        Raises:
+            RobotValidationError: If the joint name is a duplicate or if the
+                referenced parent/child links do not exist.
+        """
+        if joint.name in self._joint_index:
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Joint '{joint.name}'",
+                target="Joint",
+                value=joint.name,
+            )
+
+        # Validate parent and child links exist
+        if joint.parent not in self._link_index:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Parent link '{joint.parent}'",
+                target="ParentLink",
+                value=joint.parent,
+            )
+        if joint.child not in self._link_index:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Child link '{joint.child}'",
+                target="ChildLink",
+                value=joint.child,
+            )
+
+        self._joints.append(joint)
+        self._joint_index[joint.name] = joint
+        self._link_as_parent_index[joint.parent].append(joint)
+        self._link_as_child_index[joint.child].append(joint)
+        self._graph_cache = None
+
+    def get_link(self, name: str) -> Link | None:
+        """Retrieve a link by name using the internal index.
+
+        Args:
+            name: The name of the link to find.
+
+        Returns:
+            The Link object if found, otherwise None.
+        """
+        return self._link_index.get(name)
+
+    def link(self, name: str) -> Link:
+        """Retrieve a link by name, raising an error if it does not exist.
+
+        Args:
+            name: The name of the link to find.
+
+        Returns:
+            The Link object.
+
+        Raises:
+            RobotValidationError: If the link is not found.
+        """
+        link_obj = self.get_link(name)
+        if link_obj is None:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Link '{name}' not found in robot '{self.name}'",
+                target="Link",
+                value=name,
+            )
+        return link_obj
+
+    def get_joint(self, name: str) -> Joint | None:
+        """Retrieve a joint by name using the internal index.
+
+        Args:
+            name: The name of the joint to find.
+
+        Returns:
+            The Joint object if found, otherwise None.
+        """
+        return self._joint_index.get(name)
+
+    def joint(self, name: str) -> Joint:
+        """Retrieve a joint by name, raising an error if it does not exist.
+
+        Args:
+            name: The name of the joint to find.
+
+        Returns:
+            The Joint object.
+
+        Raises:
+            RobotValidationError: If the joint is not found.
+        """
+        joint_obj = self.get_joint(name)
+        if joint_obj is None:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Joint '{name}' not found in robot '{self.name}'",
+                target="Joint",
+                value=name,
+            )
+        return joint_obj
+
+    def has_link(self, name: str) -> bool:
+        """Check if a link with the given name exists in the robot."""
+        return name in self._link_index
+
+    def has_joint(self, name: str) -> bool:
+        """Check if a joint with the given name exists in the robot."""
+        return name in self._joint_index
+
+    def get_joints_for_link(self, link_name: str, as_parent: bool = True) -> list[Joint]:
+        """Get all joints where the link is parent or child.
+
+        Args:
+            link_name: Name of the link
+            as_parent: If True, get joints where link is parent; if False, where link is child
+
+        Returns:
+            List of matching joints.
+        """
+        if as_parent:
+            return list(self._link_as_parent_index.get(link_name, []))
+        else:
+            return list(self._link_as_child_index.get(link_name, []))
+
+    def get_parent_joint(self, link_name: str) -> Joint | None:
+        """Get the joint that has this link as its child.
+
+        In a tree structure, a link has at most one parent joint.
+
+        Args:
+            link_name: Name of the link.
+
+        Returns:
+            The parent Joint if found, otherwise None.
+        """
+        joints = self._link_as_child_index.get(link_name, [])
+        return joints[0] if joints else None
+
+    def get_child_joints(self, link_name: str) -> list[Joint]:
+        """Get all joints that have this link as their parent."""
+        return list(self._link_as_parent_index.get(link_name, []))
+
+    def get_parent_link(self, link_name: str) -> Link | None:
+        """Get the parent link of the specified link."""
+        joint = self.get_parent_joint(link_name)
+        return self.get_link(joint.parent) if joint else None
+
+    def get_child_links(self, link_name: str) -> list[Link]:
+        """Get all immediate child links of the specified link."""
+        return [self.link(j.child) for j in self.get_child_joints(link_name)]
+
+    def get_root_link(self) -> Link:
+        """Get the root link of the kinematic tree.
+
+        Returns:
+            The root Link object.
+
+        Raises:
+            RobotValidationError: If no root link is found or multiple root links exist.
+        """
+        roots = self.graph.get_root_links()
+        if not roots:
+            raise RobotValidationError(
+                ValidationErrorCode.NO_ROOT,
+                "No root link found in the kinematic tree",
+                target="Roots",
+                value=0,
+            )
+        if len(roots) > 1:
+            raise RobotValidationError(
+                ValidationErrorCode.MULTIPLE_ROOTS,
+                f"Multiple root links found ({len(roots)}): {roots}",
+                target="Roots",
+                value=len(roots),
+            )
+
+        # We can safely call get_link as roots[0] is guaranteed to be in the graph
+        link = self.get_link(roots[0])
+        if link is None:
+            # This should be unreachable given graph integrity
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Root link '{roots[0]}' exists in graph but not in link index",
+                target="Roots",
+            )
+        return link
+
+    def add_sensor(self, sensor: Sensor) -> None:
+        """Attach a sensor to the robot model.
+
+        Args:
+            sensor: The Sensor object to add.
+
+        Raises:
+            RobotValidationError: If the sensor name is a duplicate or
+                referenced link does not exist.
+        """
+        if sensor.name in self._sensor_index:
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Sensor '{sensor.name}'",
+                target="Sensor",
+                value=sensor.name,
+            )
+
+        # Validate that the link exists
+        if sensor.link_name not in self._link_index:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Link '{sensor.link_name}'",
+                target="LinkName",
+                value=sensor.link_name,
+            )
+
+        self._sensors.append(sensor)
+        self._sensor_index[sensor.name] = sensor
+
+    def get_sensor(self, name: str) -> Sensor | None:
+        """Retrieve a sensor by name."""
+        return self._sensor_index.get(name)
+
+    def sensor(self, name: str) -> Sensor:
+        """Retrieve a sensor by name, raising an error if it does not exist."""
+        obj = self.get_sensor(name)
+        if obj is None:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Sensor '{name}' not found in robot '{self.name}'",
+                target="Sensor",
+                value=name,
+            )
+        return obj
+
+    def has_sensor(self, name: str) -> bool:
+        """Check if a sensor with the given name exists."""
+        return name in self._sensor_index
+
+    def add_transmission(self, transmission: Transmission) -> None:
+        """Define a mechanical transmission for one or more joints.
+
+        Args:
+            transmission: The Transmission definition to add.
+
+        Raises:
+            RobotValidationError: If the transmission name is a duplicate
+                or referenced joints do not exist.
+        """
+        if transmission.name in self._transmission_index:
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: Transmission '{transmission.name}'",
+                target="Transmission",
+                value=transmission.name,
+            )
+
+        # Validate that all referenced joints exist
+        for trans_joint in transmission.joints:
+            if trans_joint.name not in self._joint_index:
+                raise RobotValidationError(
+                    ValidationErrorCode.NOT_FOUND,
+                    f"Not found: Joint '{trans_joint.name}'",
+                    target="JointName",
+                    value=trans_joint.name,
+                )
+
+        self._transmissions.append(transmission)
+        self._transmission_index[transmission.name] = transmission
+
+    def get_transmission(self, name: str) -> Transmission | None:
+        """Retrieve a transmission by name."""
+        return self._transmission_index.get(name)
+
+    def transmission(self, name: str) -> Transmission:
+        """Retrieve a transmission by name, raising an error if it does not exist."""
+        obj = self.get_transmission(name)
+        if obj is None:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Transmission '{name}' not found in robot '{self.name}'",
+                target="Transmission",
+                value=name,
+            )
+        return obj
+
+    def has_transmission(self, name: str) -> bool:
+        """Check if a transmission with the given name exists."""
+        return name in self._transmission_index
+
+    def add_ros2_control(self, ros2_control: Ros2Control) -> None:
+        """Register a ros2_control hardware system.
+
+        Args:
+            ros2_control: The hardware configuration to add.
+
+        Raises:
+            RobotValidationError: If the configuration name is a duplicate.
+        """
+        # Check for duplicate names
+        if ros2_control.name in self._ros2_control_index:
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Already exists: ROS2 control '{ros2_control.name}'",
+                target="Ros2Control",
+                value=ros2_control.name,
+            )
+
+        # Validate that all referenced joints exist
+        for ctrl_joint in ros2_control.joints:
+            if ctrl_joint.name not in self._joint_index:
+                raise RobotValidationError(
+                    ValidationErrorCode.NOT_FOUND,
+                    f"Not found: Joint '{ctrl_joint.name}'",
+                    target="JointName",
+                    value=ctrl_joint.name,
+                )
+
+        self._ros2_controls.append(ros2_control)
+        self._ros2_control_index[ros2_control.name] = ros2_control
+
+    def get_ros2_control(self, name: str) -> Ros2Control | None:
+        """Retrieve a ROS2 Control configuration by name."""
+        return self._ros2_control_index.get(name)
+
+    def ros2_control(self, name: str) -> Ros2Control:
+        """Retrieve a ROS2 Control configuration by name, raising an error if it does not exist."""
+        obj = self.get_ros2_control(name)
+        if obj is None:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"ROS2 control '{name}' not found in robot '{self.name}'",
+                target="Ros2Control",
+                value=name,
+            )
+        return obj
+
+    def has_ros2_control(self, name: str) -> bool:
+        """Check if a ROS2 Control configuration with the given name exists."""
+        return name in self._ros2_control_index
+
+    def add_gazebo_element(self, element: GazeboElement) -> None:
+        """Add simulation-specific metadata (Gazebo tags).
+
+        Args:
+            element: The GazeboElement definition.
+
+        Raises:
+            RobotValidationError: If the referenced link/joint does not exist.
+        """
+        # Validate reference if specified
+        if (
+            element.reference is not None
+            and self.get_link(element.reference) is None
+            and self.get_joint(element.reference) is None
+        ):
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND,
+                f"Not found: Gazebo reference '{element.reference}'",
+                target="GazeboReference",
+                value=element.reference,
+            )
+
+        self._gazebo_elements.append(element)
+
+    def get_gazebo_elements(self, reference: str | None = None) -> list[GazeboElement]:
+        """Get Gazebo elements, optionally filtered by reference.
+
+        Args:
+            reference: Optional name of the link/joint to filter by.
+
+        Returns:
+            List of matching GazeboElement objects.
+        """
+        if reference is None:
+            return list(self._gazebo_elements)
+        return [ge for ge in self._gazebo_elements if ge.reference == reference]
 
     def add_group(
         self,
@@ -861,6 +865,92 @@ class Robot:
         )
         return self
 
+    @property
+    def graph(self) -> KinematicGraph:
+        """Get the formal kinematic graph representing the robot's structure.
+
+        This is built on demand (and cached) to ensure it reflects the current state
+        of links and joints with optimal performance.
+        """
+        if self._graph_cache is None:
+            self._graph_cache = KinematicGraph(self._links, self._joints)
+        return self._graph_cache
+
+    @property
+    def root_link(self) -> Link:
+        """Get the root link of the kinematic tree.
+
+        The root link is the one that is never a child in any joint.
+        """
+        return self.get_root_link()
+
+    @property
+    def has_cycle(self) -> bool:
+        """Check for cycles in the kinematic tree."""
+        return self.graph.has_cycle()
+
+    @property
+    def total_mass(self) -> float:
+        """Calculate total mass of the robot."""
+        return sum(link.mass for link in self._links)
+
+    @property
+    def degrees_of_freedom(self) -> int:
+        """Calculate total degrees of freedom (actuated joints only)."""
+        return sum(joint.degrees_of_freedom for joint in self._joints)
+
+    @property
+    def links(self) -> tuple[Link, ...]:
+        """Get read-only view of links.
+
+        Use ``add_link()`` to modify the robot structure.
+        """
+        return tuple(self._links)
+
+    @property
+    def joints(self) -> tuple[Joint, ...]:
+        """Get read-only view of joints.
+
+        Use ``add_joint()`` to modify the robot structure.
+        """
+        return tuple(self._joints)
+
+    @property
+    def sensors(self) -> tuple[Sensor, ...]:
+        """Get read-only view of sensors."""
+        return tuple(self._sensors)
+
+    @property
+    def transmissions(self) -> tuple[Transmission, ...]:
+        """Get read-only view of transmissions."""
+        return tuple(self._transmissions)
+
+    @property
+    def ros2_controls(self) -> tuple[Ros2Control, ...]:
+        """Get read-only view of ROS2 Control configurations."""
+        return tuple(self._ros2_controls)
+
+    @property
+    def gazebo_elements(self) -> tuple[GazeboElement, ...]:
+        """Get read-only view of Gazebo elements."""
+        return tuple(self._gazebo_elements)
+
+    @property
+    def semantic(self) -> SemanticRobotDescription:
+        """Get semantic description (SRDF metadata) of the robot."""
+        return self._semantic
+
+    @semantic.setter
+    def semantic(self, value: SemanticRobotDescription | None) -> None:
+        """Set semantic description of the robot.
+
+        Always syncs the internal robot_name to match this robot's name.
+        """
+        if value is None:
+            self._semantic = replace(SemanticRobotDescription(), robot_name=self.name)
+        else:
+            self._semantic = replace(value, robot_name=self.name)
+
     def export_urdf(self, validate: bool = True, pretty_print: bool = True) -> str:
         """Export the assembled robot to URDF XML.
 
@@ -908,3 +998,38 @@ class Robot:
         if self.gazebo_elements:
             parts.append(f"gazebo_elements={len(self.gazebo_elements)}")
         return ", ".join(parts) + ")"
+
+    def resolve_resource(self, uri: str, relative_to: Path | None = None) -> Path:
+        """Resolve a resource URI using the robot's configured resolver.
+
+        Args:
+            uri: The resource URI to resolve (e.g. mesh path, package://).
+            relative_to: Optional base directory for relative path resolution.
+
+        Returns:
+            The resolved absolute Path.
+        """
+        return self.resource_resolver.resolve(uri, relative_to=relative_to)
+
+    def _reindex(self) -> None:
+        """Rebuild internal lookup indices and clear cache.
+
+        This is an internal maintenance method that ensures the O(1)
+        lookup maps stay in sync with the list-based storage.
+        """
+        # Reset indices
+        self._link_index = {link.name: link for link in self._links}
+        self._joint_index = {joint.name: joint for joint in self._joints}
+        self._sensor_index = {s.name: s for s in self._sensors}
+        self._transmission_index = {t.name: t for t in self._transmissions}
+        self._ros2_control_index = {rc.name: rc for rc in self._ros2_controls}
+
+        # Rebuild adjacency maps for fast traversal
+        self._link_as_parent_index = defaultdict(list)
+        self._link_as_child_index = defaultdict(list)
+        for joint in self._joints:
+            self._link_as_parent_index[joint.parent].append(joint)
+            self._link_as_child_index[joint.child].append(joint)
+
+        # Clear caches
+        self._graph_cache = None

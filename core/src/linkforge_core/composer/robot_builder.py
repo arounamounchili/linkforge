@@ -117,7 +117,7 @@ class RobotBuilder:
             The RobotBuilder instance.
         """
         sub_robot = component if isinstance(component, Robot) else component.robot
-        root_link = sub_robot.get_root_link()
+        root_link = sub_robot.root_link
 
         # Normalize axis if provided
         axis_vec = None
@@ -224,7 +224,7 @@ class RobotBuilder:
 
         if validate:
             # Trigger root search to verify connectivity (raises error if no root)
-            self.robot.get_root_link()
+            _ = self.robot.root_link
 
             if self.robot.has_cycle:
                 raise RobotValidationError(

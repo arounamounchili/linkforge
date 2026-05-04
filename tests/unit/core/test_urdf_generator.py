@@ -636,7 +636,8 @@ class TestURDFGenerator:
             ],
             parameters={"param1": "value1"},
         )
-        robot.add_ros2_control(rc)
+        # Use internal bypass for out-of-order construction in test
+        robot._ros2_controls.append(rc)
 
         generator = URDFGenerator(pretty_print=False)
         xml_str = generator.generate(robot, validate=False)

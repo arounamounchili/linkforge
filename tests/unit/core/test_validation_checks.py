@@ -170,7 +170,7 @@ class TestTreeStructureCheck:
         assert not result.is_valid
 
     def test_disconnected_link_via_mock(self) -> None:
-        from unittest.mock import patch
+        from unittest.mock import PropertyMock, patch
 
         robot = _empty_robot()
         base = Link(name="base", inertial=Inertial(mass=1.0))
@@ -179,7 +179,7 @@ class TestTreeStructureCheck:
         robot.add_link(disc)
         # Mock get_root_link so TreeStructureCheck sees 'base' as root
         # while 'disc' has no parent joint → triggers "Disconnected link"
-        with patch.object(robot, "get_root_link", return_value=base):
+        with patch.object(type(robot), "root_link", new_callable=PropertyMock, return_value=base):
             result = _make_result()
             TreeStructureCheck().run(robot, result)
         assert any(e.title == "Disconnected link" for e in result.errors)
@@ -262,7 +262,8 @@ class TestRos2ControlCheck:
                 )
             ],
         )
-        robot.add_ros2_control(control)
+        # Bypass strict validation to create an invalid state for the validator
+        robot._ros2_controls.append(control)
         result = _make_result()
         Ros2ControlCheck().run(robot, result)
         assert any(e.title == "Invalid ros2_control joint" for e in result.errors)

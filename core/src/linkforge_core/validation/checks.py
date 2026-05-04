@@ -163,7 +163,7 @@ class TreeStructureCheck(ValidationCheck):
     def _check_root(robot: Robot, result: ValidationResult) -> Link | None:
         """Return the root link, or None if it cannot be determined."""
         try:
-            return robot.get_root_link()
+            return robot.root_link
         except RobotValidationError as e:
             if e.code == ValidationErrorCode.NO_ROOT:
                 result.add_error(

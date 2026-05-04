@@ -12,6 +12,12 @@ def test_parse_ros2_control_basic() -> None:
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
       <link name="base_link"/>
+      <link name="link1"/>
+      <joint name="joint1" type="revolute">
+        <parent link="base_link"/>
+        <child link="link1"/>
+        <limit lower="0" upper="1" effort="1" velocity="1"/>
+      </joint>
       <ros2_control name="MySystem" type="system">
         <hardware>
           <plugin>my_custom_plugin</plugin>
@@ -42,6 +48,12 @@ def test_parse_ros2_control_multiple_interfaces() -> None:
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
       <link name="base_link"/>
+      <link name="link1"/>
+      <joint name="joint1" type="revolute">
+        <parent link="base_link"/>
+        <child link="link1"/>
+        <limit lower="0" upper="1" effort="1" velocity="1"/>
+      </joint>
       <ros2_control name="TestSystem" type="system">
         <hardware>
           <plugin>test_plugin</plugin>
@@ -124,6 +136,10 @@ def test_ros2_control_multiple_joints() -> None:
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
       <link name="base_link"/>
+      <link name="link1"/>
+      <link name="link2"/>
+      <joint name="joint1" type="fixed"><parent link="base_link"/><child link="link1"/></joint>
+      <joint name="joint2" type="fixed"><parent link="link1"/><child link="link2"/></joint>
       <ros2_control name="MultiJointSystem" type="system">
         <hardware>
           <plugin>test_plugin</plugin>
@@ -179,6 +195,8 @@ def test_ros2_control_normalization() -> None:
     urdf_string = """<?xml version="1.0"?>
     <robot name="test">
       <link name="base_link"/>
+      <link name="link1"/>
+      <joint name="joint1" type="fixed"><parent link="base_link"/><child link="link1"/></joint>
       <ros2_control name="TestSystem" type="system">
         <hardware>
           <plugin>test_plugin</plugin>
@@ -231,6 +249,8 @@ def test_parse_ros2_control_readonly_joint() -> None:
     """Test parsing a joint with ONLY state interfaces (should be valid)."""
     xml = """
     <robot name="test">
+        <link name="base_link"/><link name="l1"/>
+        <joint name="sensor_joint" type="fixed"><parent link="base_link"/><child link="l1"/></joint>
         <ros2_control name="SensorSystem" type="system">
             <hardware><plugin>mock</plugin></hardware>
             <joint name="sensor_joint">
@@ -251,6 +271,8 @@ def test_parse_ros2_control_writeonly_joint() -> None:
     """Test parsing a joint with ONLY command interfaces (should be valid)."""
     xml = """
     <robot name="test">
+        <link name="base_link"/><link name="l1"/>
+        <joint name="actuator_joint" type="fixed"><parent link="base_link"/><child link="l1"/></joint>
         <ros2_control name="ActuatorSystem" type="system">
             <hardware><plugin>mock</plugin></hardware>
             <joint name="actuator_joint">

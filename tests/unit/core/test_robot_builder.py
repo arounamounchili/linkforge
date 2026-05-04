@@ -57,7 +57,7 @@ class TestRobotBuilder:
         # Define root
         builder.link("base").root()
         assert builder.robot.has_link("base")
-        root = builder.robot.get_root_link()
+        root = builder.robot.root_link
         assert root is not None
         assert root.name == "base"
 
@@ -422,8 +422,8 @@ class TestRobotBuilder:
         builder = RobotBuilder("cycle")
         builder.robot.add_link(Link("l1_kv"))
         builder.robot.add_link(Link("l2_kv"))
-        builder.robot._joints.append(Joint("j1_kv", JointType.FIXED, "l1_kv", "l2_kv"))
-        builder.robot._joints.append(Joint("j2_kv", JointType.FIXED, "l2_kv", "l1_kv"))
+        builder.robot.add_joint(Joint("j1_kv", JointType.FIXED, "l1_kv", "l2_kv"))
+        builder.robot.add_joint(Joint("j2_kv", JointType.FIXED, "l2_kv", "l1_kv"))
 
         with pytest.raises(RobotValidationError, match="(cyclic|NO_ROOT)"):
             builder.build(validate=True)
@@ -583,8 +583,9 @@ class TestRobotBuilder:
         builder = RobotBuilder("main")
         builder.link("base").root()
         empty = RobotBuilder("empty")
-        # get_root_link() raises NO_ROOT before attach() checks for None
+        # root_link property raises NO_ROOT before attach() checks for None
         with pytest.raises(RobotValidationError, match="No root link"):
+            _ = empty.robot.root_link
             builder.attach(empty, at_link="base")
 
     def test_ros2_control_named_system_found(self) -> None:

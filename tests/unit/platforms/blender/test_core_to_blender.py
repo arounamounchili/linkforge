@@ -308,6 +308,8 @@ def test_import_robot_complex_tree() -> None:
 def test_import_robot_with_ros2_control_and_gazebo() -> None:
     """Verify that ros2_control and Gazebo settings are synced to scene properties."""
     l1 = Link(name="l1")
+    l2 = Link(name="l2")
+    j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
 
     # Setup ros2_control
     rc_joint = Ros2ControlJoint(
@@ -325,7 +327,8 @@ def test_import_robot_with_ros2_control_and_gazebo() -> None:
 
     robot = Robot(
         name="ctrl_bot",
-        initial_links=[l1],
+        initial_links=[l1, l2],
+        initial_joints=[j1],
         initial_ros2_controls=[rc],
         initial_gazebo_elements=[gazebo],
     )

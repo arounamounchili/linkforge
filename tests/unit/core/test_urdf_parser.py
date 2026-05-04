@@ -1153,12 +1153,17 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         """Hardware <param> elements inside ros2_control are collected into the parameters dict."""
         xml = """<robot name="r">
             <link name="base"/>
+            <link name="child"/>
+            <joint name="base_joint" type="fixed">
+                <parent link="base"/>
+                <child link="child"/>
+            </joint>
             <ros2_control name="hw" type="system">
                 <hardware>
                     <plugin>fake_components/GenericSystem</plugin>
-                    <param name="joints">base</param>
+                    <param name="joints">base_joint</param>
                 </hardware>
-                <joint name="base">
+                <joint name="base_joint">
                     <command_interface name="position"/>
                     <state_interface name="position"/>
                 </joint>
