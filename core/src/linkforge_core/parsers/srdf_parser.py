@@ -177,6 +177,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             RobotParserUnexpectedError: If the XML is malformed.
             RobotParserXMLRootError: If the root tag is not <robot>.
         """
+        self._validate_content(content)
 
         try:
             root = ET.fromstring(content)
@@ -445,13 +446,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         Raises:
             RobotParserIOError: If the file is missing or exceeds max_file_size.
         """
-        if not filepath.exists():
-            raise RobotParserIOError(filepath=filepath, reason="Missing file")
-
-        # Security check: File size
-        file_size = filepath.stat().st_size
-        if file_size > self.max_file_size:
-            raise RobotParserIOError(filepath=filepath, reason="File too large")
+        self._validate_file(filepath)
 
         try:
             content = filepath.read_text(encoding="utf-8")

@@ -409,7 +409,7 @@ class TestURDFParser:
 
         # Test max file size
         parser = URDFParser(max_file_size=10)
-        with pytest.raises(RobotParserError, match="URDF string too large"):
+        with pytest.raises(RobotParserError, match="Content too large"):
             parser.parse_string("<robot>..............</robot>")
 
     def test_urdf_parser_robustness(self) -> None:
@@ -1246,7 +1246,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         content = "<robot name='r'>" + "<link name='l1'/>" * 10 + "</robot>"
         parser = URDFParser()
         parser.max_file_size = 1  # 1 byte — will trip immediately
-        with pytest.raises(RobotParserError, match="URDF string too large"):
+        with pytest.raises(RobotParserError, match="Content too large"):
             parser.parse_string(content)
 
     def test_parse_iterative_out_of_order(self, tmp_path) -> None:

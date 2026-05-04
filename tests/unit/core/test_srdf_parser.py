@@ -133,7 +133,7 @@ def test_srdf_parser_xacro_file_parsing(tmp_path):
 def test_srdf_parser_file_not_found():
     """Test error when SRDF file does not exist."""
     parser = SRDFParser()
-    with pytest.raises(RobotParserIOError, match="Missing file"):
+    with pytest.raises(RobotParserIOError, match="File not found"):
         parser.parse(Path("non_existent.srdf"))
 
 

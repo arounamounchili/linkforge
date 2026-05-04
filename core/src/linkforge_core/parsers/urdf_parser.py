@@ -835,20 +835,11 @@ class URDFParser(RobotXMLParser[Robot]):
             RobotParserXMLRootError: If root tag is not <robot>
             RobotParserUnexpectedError: If XML is malformed or internal error occurs
         """
-        if not filepath.exists():
-            raise RobotParserIOError(filepath=filepath, reason="File not found")
-
-        if filepath.is_dir():
-            raise RobotParserIOError(filepath=filepath, reason="Target path is a directory")
+        self._validate_file(filepath)
 
         # Check if this is a XACRO file by extension (proactive check)
         if filepath.suffix == ".xacro" or filepath.name.endswith(".urdf.xacro"):
             raise XacroDetectedError(filepath.name)
-
-        # Security check: File size
-        file_size = filepath.stat().st_size
-        if file_size > self.max_file_size:
-            raise RobotParserIOError(filepath=filepath, reason="File too large")
 
         try:
             # We use iterparse to process elements as they are closed
@@ -899,9 +890,7 @@ class URDFParser(RobotXMLParser[Robot]):
             RobotParserXMLRootError: If root tag is not <robot>
             RobotParserUnexpectedError: If XML parsing fails
         """
-        string_size = len(content.encode("utf-8"))
-        if string_size > self.max_file_size:
-            raise RobotParserIOError(filepath=Path("string"), reason="URDF string too large")
+        self._validate_content(content)
 
         if "<xacro:" in content:
             raise XacroDetectedError(message="URDF String contains XACRO")

@@ -12,6 +12,7 @@ from ..base import IResourceResolver, RobotParser
 from ..exceptions import (
     RobotModelError,
     RobotParserError,
+    RobotParserIOError,
     RobotValidationError,
     ValidationErrorCode,
 )
@@ -64,6 +65,37 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         self.sandbox_root = sandbox_root
         self.resource_resolver = resource_resolver
 
+    def _validate_file(self, filepath: Path) -> None:
+        """Validate file existence, type, and size.
+
+        Args:
+            filepath: Path to the file to validate.
+
+        Raises:
+            RobotParserIOError: If file is missing, is a directory, or exceeds max_file_size.
+        """
+        if not filepath.exists():
+            raise RobotParserIOError(filepath=filepath, reason="File not found")
+        if filepath.is_dir():
+            raise RobotParserIOError(filepath=filepath, reason="Target path is a directory")
+
+        file_size = filepath.stat().st_size
+        if file_size > self.max_file_size:
+            raise RobotParserIOError(filepath=filepath, reason="File too large")
+
+    def _validate_content(self, content: str | bytes) -> None:
+        """Validate content size for string or byte buffers.
+
+        Args:
+            content: The content string or bytes to validate.
+
+        Raises:
+            RobotParserIOError: If content size exceeds max_file_size.
+        """
+        size = len(content.encode("utf-8")) if isinstance(content, str) else len(content)
+        if size > self.max_file_size:
+            raise RobotParserIOError(filepath="buffer", reason="Content too large")
+
     def parse_xacro(self, filepath: Path, **kwargs: Any) -> T:
         """Resolve XACRO then parse the resulting XML string.
 
@@ -82,6 +114,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         """
         from .xacro_parser import XACROParser
 
+        self._validate_file(filepath)
         xml_string = XACROParser().resolve(filepath, **kwargs)
         return self.parse_string(xml_string, source_directory=filepath.parent, **kwargs)
 
