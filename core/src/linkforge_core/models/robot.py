@@ -1031,34 +1031,40 @@ class Robot:
         return generator.generate(self, validate=validate)
 
     def __str__(self) -> str:
-        """Return a human-readable summary of the robot structure."""
-        # Safely determine root and validity without triggering exceptions
+        """Return a lightweight human-readable summary of the robot."""
+        return f"Robot(name={self.name}, links={len(self._links)}, joints={len(self._joints)}, dof={self.degrees_of_freedom})"
+
+    def summary(self) -> str:
+        """Return a detailed architectural summary and validity status.
+
+        This method performs a deep kinematic analysis, which may be
+        computationally expensive on first call as it builds the graph.
+        """
         try:
             roots = self.graph.get_root_links()
-            root_name = roots[0] if len(roots) == 1 else "None"
-            # A valid robot in LinkForge is a single-rooted tree with no cycles
+            root_name = roots[0] if len(roots) == 1 else f"{len(roots)} roots"
             is_valid = len(roots) == 1 and not self.has_cycle
         except Exception:
             root_name = "Unknown"
             is_valid = False
 
         parts = [
-            f"Robot(name={self.name}",
-            f"root={root_name}",
-            f"links={len(self.links)}",
-            f"joints={len(self.joints)}",
-            f"dof={self.degrees_of_freedom}",
-            f"valid={is_valid}",
+            f"Robot Summary: {self.name}",
+            f"  Status: {'VALID' if is_valid else 'INVALID'}",
+            f"  Root: {root_name}",
+            f"  Topology: {len(self.links)} links, {len(self.joints)} joints ({self.degrees_of_freedom} DOF)",
         ]
+
         if self.sensors:
-            parts.append(f"sensors={len(self.sensors)}")
-        if self.transmissions:
-            parts.append(f"transmissions={len(self.transmissions)}")
+            parts.append(
+                f"  Functional: {len(self.sensors)} sensors, {len(self.transmissions)} transmissions"
+            )
         if self.ros2_controls:
-            parts.append(f"ros2_controls={len(self.ros2_controls)}")
+            parts.append(f"  Hardware: {len(self.ros2_controls)} ros2_control blocks")
         if self.gazebo_elements:
-            parts.append(f"gazebo_elements={len(self.gazebo_elements)}")
-        return ", ".join(parts) + ")"
+            parts.append(f"  Simulation: {len(self.gazebo_elements)} gazebo tags")
+
+        return "\n".join(parts)
 
     def resolve_resource(self, uri: str, relative_to: Path | None = None) -> Path:
         """Resolve a resource URI using the robot's configured resolver.

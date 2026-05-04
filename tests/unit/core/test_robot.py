@@ -332,41 +332,49 @@ class TestRobot:
             robot.add_ros2_control(ros2_ctrl)
 
     def test_string_representation(self) -> None:
-        """Test __str__ method completeness."""
+        """Test the simplified, lightweight __str__ method."""
+        robot = Robot(name="full_bot", initial_links=[Link(name="base")])
+        s = str(robot)
+
+        assert "Robot(name=full_bot" in s
+        assert "links=1" in s
+        assert "joints=0" in s
+        assert "dof=0" in s
+
+        # Verify it doesn't contain heavy diagnostic info anymore
+        assert "sensors=" not in s
+        assert "root=" not in s
+
+    def test_robot_summary(self) -> None:
+        """Test the detailed architectural summary() method."""
         robot = Robot(name="full_bot", initial_links=[Link(name="base")])
 
-        # Basic
-        assert "Robot(name=full_bot" in str(robot)
-        assert "links=1" in str(robot)
-
+        # Add components to make the summary interesting
         robot.add_sensor(
             Sensor(name="cam", link_name="base", type=SensorType.CAMERA, camera_info=CameraInfo())
         )
 
-        # Fix: Transmission requires joints, and add_transmission checks existence
         j1 = Joint(name="j1", parent="base", child="l2", type=JointType.FIXED)
         l2 = Link(name="l2")
         robot.add_link(l2)
         robot.add_joint(j1)
 
-        trans = Transmission(
-            name="t1",
-            type=TransmissionType.SIMPLE,
-            joints=[TransmissionJoint(name="j1", hardware_interfaces=["position"])],
-            actuators=[TransmissionActuator(name="a1")],
-        )
+        summary = robot.summary()
 
-        robot.add_transmission(trans)
+        assert "Robot Summary: full_bot" in summary
+        assert "Status: VALID" in summary
+        assert "Root: base" in summary
+        assert "Topology: 2 links, 1 joints" in summary
+        assert "Functional: 1 sensors" in summary
 
-        robot.add_ros2_control(
-            Ros2Control(name="ctrl", type="system", hardware_plugin="mock", joints=[])
-        )
-        robot.add_gazebo_element(GazeboElement(reference="base"))
+        # Test invalid state summary
+        # Add a cycle to make it invalid
+        j2 = Joint(name="j2", parent="l2", child="base", type=JointType.FIXED)
+        robot._joints.append(j2)  # Bypass adder validation for testing
+        robot._reindex()
 
-        s = str(robot)
-        assert "sensors=1" in s
-        assert "transmissions=1" in s
-        assert "ros2_controls=1" in s
+        invalid_summary = robot.summary()
+        assert "Status: INVALID" in invalid_summary
 
 
 class TestRobotCoverage:
