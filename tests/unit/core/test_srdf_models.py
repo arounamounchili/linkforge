@@ -210,3 +210,48 @@ def test_semantic_description_merge() -> None:
     assert len(merged.groups) == 2
     assert {g.name for g in merged.groups} == {"g1", "g2"}
     assert len(merged.disabled_collisions) == 2
+
+
+def test_semantic_description_merge_comprehensive() -> None:
+    """Test merging and deduplication across all SRDF collection types."""
+    srdf1 = SemanticRobotDescription(
+        no_default_collision_links=("l1",),
+        link_sphere_approximations=(LinkSphereApproximation(link="l1", spheres=()),),
+        joint_properties=(JointProperty(joint_name="j1", property_name="p1", value="v1"),),
+        disabled_collisions=(CollisionPair(link1="a", link2="b"),),
+    )
+
+    srdf2 = SemanticRobotDescription(
+        no_default_collision_links=("l1", "l2"),
+        link_sphere_approximations=(
+            LinkSphereApproximation(link="l1", spheres=()),
+            LinkSphereApproximation(link="l2", spheres=()),
+        ),
+        joint_properties=(
+            JointProperty(joint_name="j1", property_name="p1", value="v1"),
+            JointProperty(joint_name="j1", property_name="p2", value="v2"),
+        ),
+        # Test symmetric deduplication (a-b vs b-a)
+        disabled_collisions=(CollisionPair(link1="b", link2="a"),),
+    )
+
+    merged = srdf1.merge_with(srdf2)
+
+    # Check specialized collections
+    assert len(merged.no_default_collision_links) == 2
+    assert "l1" in merged.no_default_collision_links
+    assert "l2" in merged.no_default_collision_links
+
+    assert len(merged.link_sphere_approximations) == 2
+    assert {lsa.link for lsa in merged.link_sphere_approximations} == {"l1", "l2"}
+
+    assert len(merged.joint_properties) == 2
+    assert {(jp.joint_name, jp.property_name) for jp in merged.joint_properties} == {
+        ("j1", "p1"),
+        ("j1", "p2"),
+    }
+
+    # Check symmetric collision deduplication
+    # Even though srdf2 had (b, a), it is a duplicate of (a, b)
+    assert len(merged.disabled_collisions) == 1
+    assert merged.disabled_collisions[0].link1 == "a"

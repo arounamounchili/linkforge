@@ -44,7 +44,14 @@ class VirtualJoint:
             )
 
     def with_prefix(self, prefix: str) -> VirtualJoint:
-        """Create a new virtual joint with prefixed name and child_link."""
+        """Create a new virtual joint with prefixed name and child_link.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new VirtualJoint instance with prefixed names.
+        """
         return replace(
             self,
             name=f"{prefix}{self.name}",
@@ -88,7 +95,14 @@ class GroupState:
         object.__setattr__(self, "joint_values", normalized)
 
     def with_prefix(self, prefix: str) -> GroupState:
-        """Create a new group state with prefixed name, group, and joint names."""
+        """Create a new group state with prefixed name, group, and joint names.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new GroupState instance with prefixed names.
+        """
         return replace(
             self,
             name=f"{prefix}{self.name}",
@@ -123,7 +137,14 @@ class EndEffector:
             raise RobotValidationError(ValidationErrorCode.NAME_EMPTY, "Group name cannot be empty")
 
     def with_prefix(self, prefix: str) -> EndEffector:
-        """Create a new end effector with prefixed name, group, and links."""
+        """Create a new end effector with prefixed name, group, and links.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new EndEffector instance with prefixed names.
+        """
         return replace(
             self,
             name=f"{prefix}{self.name}",
@@ -151,7 +172,14 @@ class PassiveJoint:
             )
 
     def with_prefix(self, prefix: str) -> PassiveJoint:
-        """Create a new passive joint with a prefixed name."""
+        """Create a new passive joint with a prefixed name.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new PassiveJoint instance with a prefixed name.
+        """
         return replace(self, name=f"{prefix}{self.name}")
 
 
@@ -185,7 +213,14 @@ class CollisionPair:
             )
 
     def with_prefix(self, prefix: str) -> CollisionPair:
-        """Create a new collision pair with prefixed link names."""
+        """Create a new collision pair with prefixed link names.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new CollisionPair instance with prefixed link names.
+        """
         return replace(
             self,
             link1=f"{prefix}{self.link1}",
@@ -213,7 +248,14 @@ class Chain:
             )
 
     def with_prefix(self, prefix: str) -> Chain:
-        """Create a new chain with prefixed base and tip links."""
+        """Create a new chain with prefixed base and tip links.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new Chain instance with prefixed link names.
+        """
         return replace(
             self,
             base_link=f"{prefix}{self.base_link}",
@@ -259,7 +301,14 @@ class PlanningGroup:
             )
 
     def with_prefix(self, prefix: str) -> PlanningGroup:
-        """Create a new planning group with prefixed name and sub-elements."""
+        """Create a new planning group with prefixed name and sub-elements.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new PlanningGroup instance with prefixed sub-elements.
+        """
         return replace(
             self,
             name=f"{prefix}{self.name}",
@@ -315,7 +364,14 @@ class LinkSphereApproximation:
         object.__setattr__(self, "spheres", tuple(self.spheres))
 
     def with_prefix(self, prefix: str) -> LinkSphereApproximation:
-        """Create a new approximation with a prefixed link name."""
+        """Create a new approximation with a prefixed link name.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new LinkSphereApproximation instance with a prefixed link name.
+        """
         return replace(self, link=f"{prefix}{self.link}")
 
 
@@ -341,7 +397,14 @@ class JointProperty:
             )
 
     def with_prefix(self, prefix: str) -> JointProperty:
-        """Create a new joint property with a prefixed joint name."""
+        """Create a new joint property with a prefixed joint name.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new JointProperty instance with a prefixed joint name.
+        """
         return replace(self, joint_name=f"{prefix}{self.joint_name}")
 
 
@@ -396,7 +459,14 @@ class SemanticRobotDescription:
         object.__setattr__(self, "joint_properties", tuple(self.joint_properties))
 
     def with_prefix(self, prefix: str) -> SemanticRobotDescription:
-        """Create a new description with prefixed name and all sub-elements."""
+        """Create a new description with prefixed name and all sub-elements.
+
+        Args:
+            prefix: The namespace prefix to apply.
+
+        Returns:
+            A new SemanticRobotDescription instance with all elements prefixed.
+        """
         return replace(
             self,
             robot_name=f"{prefix}{self.robot_name}" if self.robot_name else "",
@@ -417,61 +487,55 @@ class SemanticRobotDescription:
         )
 
     def merge_with(self, other: SemanticRobotDescription) -> SemanticRobotDescription:
-        """Merge another semantic description into this one, deduplicating elements."""
-        # Deduplicate groups
-        new_groups = list(self.groups)
-        current_group_names = {g.name for g in new_groups}
-        for g in other.groups:
-            if g.name not in current_group_names:
-                new_groups.append(g)
-                current_group_names.add(g.name)
+        """Merge another semantic description into this one, deduplicating elements.
 
-        # Deduplicate virtual joints
-        new_vjoints = list(self.virtual_joints)
-        current_vj_names = {vj.name for vj in new_vjoints}
-        for vj in other.virtual_joints:
-            if vj.name not in current_vj_names:
-                new_vjoints.append(vj)
-                current_vj_names.add(vj.name)
+        Args:
+            other: The other semantic description to merge into this one.
 
-        # Deduplicate passive joints
-        new_passive = list(self.passive_joints)
-        current_pj_names = {pj.name for pj in new_passive}
-        for pj in other.passive_joints:
-            if pj.name not in current_pj_names:
-                new_passive.append(pj)
-                current_pj_names.add(pj.name)
+        Returns:
+            A new SemanticRobotDescription instance containing the combined elements.
+        """
 
-        # Deduplicate collision pairs
-        new_disabled = list(self.disabled_collisions)
-        current_disabled = {frozenset([dc.link1, dc.link2]) for dc in new_disabled}
-        for dc in other.disabled_collisions:
-            if frozenset([dc.link1, dc.link2]) not in current_disabled:
-                new_disabled.append(dc)
-                current_disabled.add(frozenset([dc.link1, dc.link2]))
+        def merge_by_name(base_items: Sequence[Any], extra_items: Sequence[Any]) -> tuple[Any, ...]:
+            """Internal helper to merge collections while preventing name collisions."""
+            result = list(base_items)
+            seen = {item.name for item in result}
+            for item in extra_items:
+                if item.name not in seen:
+                    result.append(item)
+                    seen.add(item.name)
+            return tuple(result)
 
-        new_enabled = list(self.enabled_collisions)
-        current_enabled = {frozenset([ec.link1, ec.link2]) for ec in new_enabled}
-        for ec in other.enabled_collisions:
-            if frozenset([ec.link1, ec.link2]) not in current_enabled:
-                new_enabled.append(ec)
-                current_enabled.add(frozenset([ec.link1, ec.link2]))
+        # 1. Merge name-indexed collections
+        # These elements are identified uniquely by their 'name' attribute.
+        new_groups = merge_by_name(self.groups, other.groups)
+        new_vjoints = merge_by_name(self.virtual_joints, other.virtual_joints)
+        new_passive = merge_by_name(self.passive_joints, other.passive_joints)
+        new_ee = merge_by_name(self.end_effectors, other.end_effectors)
+        new_gs = merge_by_name(self.group_states, other.group_states)
 
-        # Deduplicate other elements
-        new_ee = list(self.end_effectors)
-        current_ee_names = {ee.name for ee in new_ee}
-        for ee in other.end_effectors:
-            if ee.name not in current_ee_names:
-                new_ee.append(ee)
-                current_ee_names.add(ee.name)
+        # 2. Merge Symmetric Collections (Collisions)
+        # Collision rules are symmetric: {link1, link2} == {link2, link1}.
+        # We use frozensets to ensure we don't duplicate rules regardless of link order.
+        def merge_collisions(
+            base_rules: Sequence[CollisionPair], other_rules: Sequence[CollisionPair]
+        ) -> tuple[CollisionPair, ...]:
+            """Merge collision rules, deduplicating symmetric pairs."""
+            # Use frozenset of link names as a key for deduplication (A,B == B,A)
+            seen_pairs = {frozenset([rule.link1, rule.link2]) for rule in base_rules}
+            merged = list(base_rules)
+            for rule in other_rules:
+                pair = frozenset([rule.link1, rule.link2])
+                if pair not in seen_pairs:
+                    merged.append(rule)
+                    seen_pairs.add(pair)
+            return tuple(merged)
 
-        new_gs = list(self.group_states)
-        current_gs_names = {gs.name for gs in new_gs}
-        for gs in other.group_states:
-            if gs.name not in current_gs_names:
-                new_gs.append(gs)
-                current_gs_names.add(gs.name)
+        new_disabled = merge_collisions(self.disabled_collisions, other.disabled_collisions)
+        new_enabled = merge_collisions(self.enabled_collisions, other.enabled_collisions)
 
+        # 3. Merge Specialized Collections
+        # no_default_collision_links is a simple list of strings
         new_no_default = list(self.no_default_collision_links)
         current_no_default = set(new_no_default)
         for link_name in other.no_default_collision_links:
@@ -479,6 +543,7 @@ class SemanticRobotDescription:
                 new_no_default.append(link_name)
                 current_no_default.add(link_name)
 
+        # Sphere approximations are indexed by the link name they belong to
         new_lsa = list(self.link_sphere_approximations)
         current_lsa_links = {lsa.link for lsa in new_lsa}
         for lsa in other.link_sphere_approximations:
@@ -486,6 +551,7 @@ class SemanticRobotDescription:
                 new_lsa.append(lsa)
                 current_lsa_links.add(lsa.link)
 
+        # Joint properties are unique by (joint_name, property_name)
         new_jp = list(self.joint_properties)
         current_jp = {(jp.joint_name, jp.property_name) for jp in new_jp}
         for jp in other.joint_properties:
@@ -495,13 +561,13 @@ class SemanticRobotDescription:
 
         return replace(
             self,
-            groups=tuple(new_groups),
-            virtual_joints=tuple(new_vjoints),
-            passive_joints=tuple(new_passive),
-            disabled_collisions=tuple(new_disabled),
-            enabled_collisions=tuple(new_enabled),
-            end_effectors=tuple(new_ee),
-            group_states=tuple(new_gs),
+            groups=new_groups,
+            virtual_joints=new_vjoints,
+            passive_joints=new_passive,
+            disabled_collisions=new_disabled,
+            enabled_collisions=new_enabled,
+            end_effectors=new_ee,
+            group_states=new_gs,
             no_default_collision_links=tuple(new_no_default),
             link_sphere_approximations=tuple(new_lsa),
             joint_properties=tuple(new_jp),

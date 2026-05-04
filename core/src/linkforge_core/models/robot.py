@@ -452,11 +452,25 @@ class Robot:
         return joint_obj
 
     def has_link(self, name: str) -> bool:
-        """Check if a link with the given name exists in the robot."""
+        """Check if a link with the given name exists in the robot.
+
+        Args:
+            name: The name of the link to check.
+
+        Returns:
+            True if the link exists, False otherwise.
+        """
         return name in self._link_index
 
     def has_joint(self, name: str) -> bool:
-        """Check if a joint with the given name exists in the robot."""
+        """Check if a joint with the given name exists in the robot.
+
+        Args:
+            name: The name of the joint to check.
+
+        Returns:
+            True if the joint exists, False otherwise.
+        """
         return name in self._joint_index
 
     def get_joints_for_link(self, link_name: str, as_parent: bool = True) -> list[Joint]:
@@ -489,16 +503,37 @@ class Robot:
         return joints[0] if joints else None
 
     def get_child_joints(self, link_name: str) -> list[Joint]:
-        """Get all joints that have this link as their parent."""
+        """Get all joints that have this link as their parent.
+
+        Args:
+            link_name: Name of the parent link.
+
+        Returns:
+            List of child Joint objects.
+        """
         return list(self._link_as_parent_index.get(link_name, []))
 
     def get_parent_link(self, link_name: str) -> Link | None:
-        """Get the parent link of the specified link."""
+        """Get the parent link of the specified link.
+
+        Args:
+            link_name: Name of the child link.
+
+        Returns:
+            The parent Link object if found, otherwise None.
+        """
         joint = self.get_parent_joint(link_name)
         return self.get_link(joint.parent) if joint else None
 
     def get_child_links(self, link_name: str) -> list[Link]:
-        """Get all immediate child links of the specified link."""
+        """Get all immediate child links of the specified link.
+
+        Args:
+            link_name: Name of the parent link.
+
+        Returns:
+            List of child Link objects.
+        """
         return [self.link(j.child) for j in self.get_child_joints(link_name)]
 
     def get_root_link(self) -> Link:
@@ -568,11 +603,28 @@ class Robot:
         self._sensor_index[sensor.name] = sensor
 
     def get_sensor(self, name: str) -> Sensor | None:
-        """Retrieve a sensor by name."""
+        """Retrieve a sensor by name.
+
+        Args:
+            name: The name of the sensor to find.
+
+        Returns:
+            The Sensor object if found, otherwise None.
+        """
         return self._sensor_index.get(name)
 
     def sensor(self, name: str) -> Sensor:
-        """Retrieve a sensor by name, raising an error if it does not exist."""
+        """Retrieve a sensor by name, raising an error if it does not exist.
+
+        Args:
+            name: The name of the sensor to find.
+
+        Returns:
+            The Sensor object.
+
+        Raises:
+            RobotValidationError: If the sensor is not found.
+        """
         obj = self.get_sensor(name)
         if obj is None:
             raise RobotValidationError(
@@ -584,7 +636,14 @@ class Robot:
         return obj
 
     def has_sensor(self, name: str) -> bool:
-        """Check if a sensor with the given name exists."""
+        """Check if a sensor with the given name exists.
+
+        Args:
+            name: The name of the sensor to check.
+
+        Returns:
+            True if the sensor exists, False otherwise.
+        """
         return name in self._sensor_index
 
     def add_transmission(self, transmission: Transmission) -> None:
@@ -619,11 +678,28 @@ class Robot:
         self._transmission_index[transmission.name] = transmission
 
     def get_transmission(self, name: str) -> Transmission | None:
-        """Retrieve a transmission by name."""
+        """Retrieve a transmission by name.
+
+        Args:
+            name: The name of the transmission to find.
+
+        Returns:
+            The Transmission object if found, otherwise None.
+        """
         return self._transmission_index.get(name)
 
     def transmission(self, name: str) -> Transmission:
-        """Retrieve a transmission by name, raising an error if it does not exist."""
+        """Retrieve a transmission by name, raising an error if it does not exist.
+
+        Args:
+            name: The name of the transmission to find.
+
+        Returns:
+            The Transmission object.
+
+        Raises:
+            RobotValidationError: If the transmission is not found.
+        """
         obj = self.get_transmission(name)
         if obj is None:
             raise RobotValidationError(
@@ -635,7 +711,14 @@ class Robot:
         return obj
 
     def has_transmission(self, name: str) -> bool:
-        """Check if a transmission with the given name exists."""
+        """Check if a transmission with the given name exists.
+
+        Args:
+            name: The name of the transmission to check.
+
+        Returns:
+            True if the transmission exists, False otherwise.
+        """
         return name in self._transmission_index
 
     def add_ros2_control(self, ros2_control: Ros2Control) -> None:
@@ -670,11 +753,28 @@ class Robot:
         self._ros2_control_index[ros2_control.name] = ros2_control
 
     def get_ros2_control(self, name: str) -> Ros2Control | None:
-        """Retrieve a ROS2 Control configuration by name."""
+        """Retrieve a ROS2 Control configuration by name.
+
+        Args:
+            name: The name of the configuration to find.
+
+        Returns:
+            The Ros2Control object if found, otherwise None.
+        """
         return self._ros2_control_index.get(name)
 
     def ros2_control(self, name: str) -> Ros2Control:
-        """Retrieve a ROS2 Control configuration by name, raising an error if it does not exist."""
+        """Retrieve a ROS2 Control configuration by name, raising an error if it does not exist.
+
+        Args:
+            name: The name of the configuration to find.
+
+        Returns:
+            The Ros2Control object.
+
+        Raises:
+            RobotValidationError: If the configuration is not found.
+        """
         obj = self.get_ros2_control(name)
         if obj is None:
             raise RobotValidationError(
@@ -686,7 +786,14 @@ class Robot:
         return obj
 
     def has_ros2_control(self, name: str) -> bool:
-        """Check if a ROS2 Control configuration with the given name exists."""
+        """Check if a ROS2 Control configuration with the given name exists.
+
+        Args:
+            name: The name of the configuration to check.
+
+        Returns:
+            True if it exists, False otherwise.
+        """
         return name in self._ros2_control_index
 
     def add_gazebo_element(self, element: GazeboElement) -> None:
