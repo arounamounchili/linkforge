@@ -7,8 +7,9 @@ that supports MoveIt-style tags and native XACRO resolution.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from ..base import IResourceResolver
 from ..exceptions import (
@@ -33,6 +34,9 @@ from ..models.srdf import (
 )
 from ..utils.xml_utils import parse_float, strip_xml_namespace
 from .xml_base import MAX_FILE_SIZE, RobotXMLParser
+
+# Define a TypeVar for generic collection parsing
+T = TypeVar("T")
 
 logger = get_logger(__name__)
 
@@ -64,11 +68,32 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             resource_resolver=resource_resolver,
         )
 
+    def _collect_elements(
+        self, root: ET.Element, tag: str, parse_func: Callable[[ET.Element], T | None]
+    ) -> list[T]:
+        """Generic helper to find and parse multiple XML elements.
+
+        Args:
+            root: The XML root or parent element to search.
+            tag: The local name of the tag to find (supports wildcard namespaces).
+            parse_func: The internal method to parse a single element.
+
+        Returns:
+            A list of successfully parsed models.
+        """
+        results: list[T] = []
+        for elem in root.findall(f"{{*}}{tag}"):
+            item = parse_func(elem)
+            if item is not None:
+                results.append(item)
+        return results
+
     def _parse_planning_group(self, group_elem: ET.Element) -> PlanningGroup | None:
         """Parse a <group> element into a PlanningGroup model.
 
         Args:
             group_elem: The XML element for the group.
+
         Returns:
             A populated PlanningGroup instance or None if invalid.
         """
@@ -209,37 +234,29 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             A SemanticRobotDescription containing all parsed elements.
         """
         robot_name = root.get("name", "")
-        virtual_joints: list[VirtualJoint] = []
-        groups: list[PlanningGroup] = []
-        group_states: list[GroupState] = []
-        end_effectors: list[EndEffector] = []
+
+        # 1. Collect all semantic elements using the generic helper
+        virtual_joints = self._collect_elements(
+            root, "virtual_joint", self._parse_virtual_joint_elem
+        )
+        groups = self._collect_elements(root, "group", self._parse_planning_group)
+        group_states = self._collect_elements(root, "group_state", self._parse_group_state)
+        end_effectors = self._collect_elements(root, "end_effector", self._parse_end_effector_elem)
+        disabled_collisions = self._collect_elements(
+            root, "disable_collisions", self._parse_collision_pair_elem
+        )
+        enabled_collisions = self._collect_elements(
+            root, "enable_collisions", self._parse_collision_pair_elem
+        )
+        link_sphere_approximations = self._collect_elements(
+            root, "link_sphere_approximation", self._parse_link_sphere_approximation_elem
+        )
+        joint_properties = self._collect_elements(
+            root, "joint_property", self._parse_joint_property_elem
+        )
+
+        # 2. Parse Passive Joints (Direct mapping, no special helper needed)
         passive_joints: list[PassiveJoint] = []
-        disabled_collisions: list[CollisionPair] = []
-        enabled_collisions: list[CollisionPair] = []
-        no_default_collision_links: list[str] = []
-        link_sphere_approximations: list[LinkSphereApproximation] = []
-        joint_properties: list[JointProperty] = []
-
-        for vj_elem in root.findall("{*}virtual_joint"):
-            vj = self._parse_virtual_joint_elem(vj_elem)
-            if vj:
-                virtual_joints.append(vj)
-
-        for group_elem in root.findall("{*}group"):
-            group = self._parse_planning_group(group_elem)
-            if group:
-                groups.append(group)
-
-        for state_elem in root.findall("{*}group_state"):
-            gs = self._parse_group_state(state_elem)
-            if gs:
-                group_states.append(gs)
-
-        for ee_elem in root.findall("{*}end_effector"):
-            ee = self._parse_end_effector_elem(ee_elem)
-            if ee:
-                end_effectors.append(ee)
-
         for pj_elem in root.findall("{*}passive_joint"):
             pj_name = pj_elem.get("name")
             if pj_name:
@@ -247,16 +264,8 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             else:
                 logger.warning("SRDF: Passive joint missing name, skipping")
 
-        for dc_elem in root.findall("{*}disable_collisions"):
-            dc = self._parse_collision_pair_elem(dc_elem)
-            if dc:
-                disabled_collisions.append(dc)
-
-        for ec_elem in root.findall("{*}enable_collisions"):
-            ec = self._parse_collision_pair_elem(ec_elem)
-            if ec:
-                enabled_collisions.append(ec)
-
+        # 3. Parse Default Collision Link Rules
+        no_default_collision_links: list[str] = []
         for ddc_elem in root.findall("{*}disable_default_collisions"):
             link = ddc_elem.get("link")
             if link:
@@ -264,28 +273,8 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             else:
                 logger.warning("SRDF: disable_default_collisions missing link attribute, skipping")
 
-        for lsa_elem in root.findall("{*}link_sphere_approximation"):
-            lsa = self._parse_link_sphere_approximation_elem(lsa_elem)
-            if lsa:
-                link_sphere_approximations.append(lsa)
-
-        for jp_elem in root.findall("{*}joint_property"):
-            jp = self._parse_joint_property_elem(jp_elem)
-            if jp:
-                joint_properties.append(jp)
-
-        # Cross-reference validation
-        group_names = {g.name for g in groups}
-        for gs in group_states:
-            if gs.group not in group_names:
-                logger.warning(
-                    f"SRDF: Group state '{gs.name}' refers to unknown group '{gs.group}'"
-                )
-        for ee in end_effectors:
-            if ee.group not in group_names:
-                logger.warning(
-                    f"SRDF: End effector '{ee.name}' refers to unknown group '{ee.group}'"
-                )
+        # 4. Final cross-reference validation
+        self._validate_cross_references(groups, group_states, end_effectors)
 
         return SemanticRobotDescription(
             robot_name=robot_name,
@@ -301,14 +290,39 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             joint_properties=tuple(joint_properties),
         )
 
-    def _parse_virtual_joint_elem(self, elem: ET.Element) -> VirtualJoint | None:
-        """Parse a <virtual_joint> element.
+    def _validate_cross_references(
+        self,
+        groups: list[PlanningGroup],
+        group_states: list[GroupState],
+        end_effectors: list[EndEffector],
+    ) -> None:
+        """Validate that group states and end effectors refer to existing groups.
 
         Args:
-            elem: The XML element.
+            groups: List of parsed planning groups.
+            group_states: List of parsed group states.
+            end_effectors: List of parsed end effectors.
+        """
+        group_names = {g.name for g in groups}
+        for gs in group_states:
+            if gs.group not in group_names:
+                logger.warning(
+                    f"SRDF: Group state '{gs.name}' refers to unknown group '{gs.group}'"
+                )
+        for ee in end_effectors:
+            if ee.group not in group_names:
+                logger.warning(
+                    f"SRDF: End effector '{ee.name}' refers to unknown group '{ee.group}'"
+                )
+
+    def _parse_virtual_joint_elem(self, elem: ET.Element) -> VirtualJoint | None:
+        """Parse a <virtual_joint> element into a VirtualJoint model.
+
+        Args:
+            elem: The XML element for the virtual joint.
 
         Returns:
-            A VirtualJoint model, or None if invalid.
+            A populated VirtualJoint instance, or None if invalid.
         """
         name = elem.get("name")
         vtype = elem.get("type")
@@ -331,13 +345,13 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             return None
 
     def _parse_end_effector_elem(self, elem: ET.Element) -> EndEffector | None:
-        """Parse an <end_effector> element.
+        """Parse an <end_effector> element into an EndEffector model.
 
         Args:
-            elem: The XML element.
+            elem: The XML element for the end effector.
 
         Returns:
-            An EndEffector model, or None if invalid.
+            A populated EndEffector instance, or None if invalid.
         """
         name = elem.get("name")
         group = elem.get("group")
@@ -359,13 +373,13 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             return None
 
     def _parse_collision_pair_elem(self, elem: ET.Element) -> CollisionPair | None:
-        """Parse a <disable_collisions> or <enable_collisions> element.
+        """Parse a collision rule element into a CollisionPair model.
 
         Args:
-            elem: The XML element.
+            elem: The XML element for the collision pair (disable/enable).
 
         Returns:
-            A CollisionPair model, or None if invalid.
+            A populated CollisionPair instance, or None if invalid.
         """
         link1 = elem.get("link1")
         link2 = elem.get("link2")
@@ -387,7 +401,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
     def _parse_link_sphere_approximation_elem(
         self, elem: ET.Element
     ) -> LinkSphereApproximation | None:
-        """Parse a <link_sphere_approximation> element."""
+        """Parse a <link_sphere_approximation> element into a model.
+
+        Args:
+            elem: The XML element for the sphere approximation.
+
+        Returns:
+            A populated LinkSphereApproximation instance, or None if invalid.
+        """
         link = elem.get("link")
         if not link:
             logger.warning("SRDF: Link sphere approximation missing link attribute, skipping")
@@ -414,7 +435,14 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             return None
 
     def _parse_joint_property_elem(self, elem: ET.Element) -> JointProperty | None:
-        """Parse a <joint_property> element."""
+        """Parse a <joint_property> element into a JointProperty model.
+
+        Args:
+            elem: The XML element for the joint property.
+
+        Returns:
+            A populated JointProperty instance, or None if invalid.
+        """
         joint_name = elem.get("joint_name")
         property_name = elem.get("property_name")
         value = elem.get("value")
