@@ -100,7 +100,7 @@ class XacroResolver:
     def __init__(
         self,
         search_paths: list[Path] | None = None,
-        max_depth: int = 50,
+        max_depth: int = DEFAULT_MAX_DEPTH,
         start_dir: Path | None = None,
     ) -> None:
         """Initialize the XACRO resolver.
