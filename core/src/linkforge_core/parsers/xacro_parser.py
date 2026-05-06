@@ -29,6 +29,7 @@ from ..utils.dependencies import get_yaml
 from ..utils.dict_utils import AttrDict
 from ..utils.path_utils import resolve_package_path
 from ..utils.xml_utils import (
+    XACRO_URIS,
     get_xml_namespace,
     serialize_xml,
     strip_xml_namespace,
@@ -39,12 +40,7 @@ yaml = get_yaml()
 
 logger = get_logger(__name__)
 DEFAULT_MAX_DEPTH = 2000  # Increased for extremely complex industrial robots
-RECURSION_LIMIT_BOOST = 20000  # Python stack limit for deep recursions
-
-XACRO_URIS = [
-    "http://www.ros.org/wiki/xacro",
-    "http://wiki.ros.org/xacro",
-]
+RECURSION_LIMIT_BOOST = 5000  # Safer limit that prevents C-stack segmentation faults
 
 _DUNDER_PATTERN: re.Pattern[str] = re.compile(r"__\w+__")
 

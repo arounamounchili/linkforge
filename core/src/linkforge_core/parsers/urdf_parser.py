@@ -68,6 +68,7 @@ from ..models import (
 from ..utils.math_utils import normalize_vector
 from ..utils.xml_utils import (
     MAX_XML_DEPTH,
+    XACRO_URIS,
     get_xml_namespace,
     parse_float,
     parse_int,
@@ -898,8 +899,6 @@ class URDFParser(RobotXMLParser[Robot]):
                     pass
 
         if not is_xacro:
-            from .xacro_parser import XACRO_URIS
-
             for child in root:
                 if get_xml_namespace(child.tag) in XACRO_URIS:
                     is_xacro = True

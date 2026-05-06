@@ -12,6 +12,11 @@ from ..models import Vector3
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
 ET.register_namespace("xacro", "http://www.ros.org/wiki/xacro")
 
+XACRO_URIS = [
+    "http://www.ros.org/wiki/xacro",
+    "http://wiki.ros.org/xacro",
+]
+
 MAX_XML_DEPTH = 100
 
 
