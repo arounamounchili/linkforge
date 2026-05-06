@@ -87,6 +87,13 @@ class XacroTemplate:
 TEMPLATE_CACHE: dict[Path, XacroTemplate] = {}
 
 
+# Internal XML tags used for structural processing
+_TAG_CONTAINER = "container"
+_TAG_SKIP = "skip"
+_PREFIX_XACRO = "xacro:"
+_KEYWORD_XACRO = "xacro"
+
+
 class XacroResolver:
     """Lightweight XACRO resolver with macro and math support."""
 
@@ -153,10 +160,10 @@ class XacroResolver:
             items = [items]
 
         for item in items:
-            if item.tag == "container":
+            if item.tag == _TAG_CONTAINER:
                 # Flatten container recursively
                 self._append_resolved(parent, list(item))
-            elif item.tag != "skip" and not item.tag.startswith("xacro:"):
+            elif item.tag != _TAG_SKIP and not item.tag.startswith(_PREFIX_XACRO):
                 # Add valid element
                 parent.append(item)
 
@@ -273,16 +280,16 @@ class XacroResolver:
                 self.search_paths.insert(0, filepath.parent)
 
             structural_macros: dict[str, tuple[list[str], ET.Element]] = {}
-            container = ET.Element("container")
+            container = ET.Element(_TAG_CONTAINER)
 
             for child in root:
                 # Basic tagging of XACRO elements
                 ns = get_xml_namespace(child.tag)
                 tag = child.tag
                 if ns in XACRO_URIS:
-                    tag = f"xacro:{strip_xml_namespace(tag)}"
+                    tag = f"{_PREFIX_XACRO}{strip_xml_namespace(tag)}"
 
-                if tag == "xacro:include":
+                if tag == f"{_PREFIX_XACRO}include":
                     # Handle structural inclusion
                     # filename may depend on $(arg) or ${}, so we substitute using current context
                     filename = str(self._substitute(child.get("filename") or ""))
@@ -295,7 +302,7 @@ class XacroResolver:
 
                         # If namespaced, we wrap the included elements but keep them structural
                         if ns:
-                            ns_container = ET.Element("container", ns=ns)
+                            ns_container = ET.Element(_TAG_CONTAINER, ns=ns)
                             for sc in inc_template.container:
                                 ns_container.append(sc)
                             container.append(ns_container)
@@ -304,7 +311,7 @@ class XacroResolver:
                                 container.append(sc)
                     else:
                         logger.warning(f"XACRO: Could not find included file: '{filename}'")
-                elif tag == "xacro:macro":
+                elif tag == f"{_PREFIX_XACRO}macro":
                     # Collect macro definition but do not expand
                     name = child.get("name")
                     params_str = child.get("params") or ""
@@ -374,35 +381,35 @@ class XacroResolver:
         ns = get_xml_namespace(element.tag)
         tag = element.tag
         if ns in XACRO_URIS:
-            tag = f"xacro:{strip_xml_namespace(tag)}"
+            tag = f"{_PREFIX_XACRO}{strip_xml_namespace(tag)}"
 
         # Dispatch dictionary for known xacro tags
         dispatch = {
-            "xacro:property": self._handle_property,
-            "xacro:arg": self._handle_arg,
-            "xacro:include": self._handle_include,
-            "xacro:macro": self._handle_macro_def,
-            "xacro:if": self._handle_conditional,
-            "xacro:unless": self._handle_conditional,
-            "xacro:insert_block": self._handle_insert_block,
+            f"{_PREFIX_XACRO}property": self._handle_property,
+            f"{_PREFIX_XACRO}arg": self._handle_arg,
+            f"{_PREFIX_XACRO}include": self._handle_include,
+            f"{_PREFIX_XACRO}macro": self._handle_macro_def,
+            f"{_PREFIX_XACRO}if": self._handle_conditional,
+            f"{_PREFIX_XACRO}unless": self._handle_conditional,
+            f"{_PREFIX_XACRO}insert_block": self._handle_insert_block,
         }
 
         if tag in dispatch:
             return dispatch[tag](element)
 
-        if tag == "container":
+        if tag == _TAG_CONTAINER:
             ns = element.get("ns")
             if ns:
                 self._ns_stack.append(ns)
 
-            new_container = ET.Element("container")
+            new_container = ET.Element(_TAG_CONTAINER)
             self._resolve_children(new_container, element)
 
             if ns:
                 self._ns_stack.pop()
             return new_container
 
-        if tag.startswith("xacro:"):
+        if tag.startswith(_PREFIX_XACRO):
             return self._handle_macro_call(tag, element)
 
         return self._handle_regular_element(element)
@@ -430,7 +437,7 @@ class XacroResolver:
                 self.properties[name] = self._try_parse_typed_value(
                     self._substitute(value or element.text or "")
                 )
-        return ET.Element("skip")
+        return ET.Element(_TAG_SKIP)
 
     def _handle_arg(self, element: ET.Element) -> ET.Element:
         """Handle argument definitions: <xacro:arg name="..." default="..."/>.
@@ -445,7 +452,7 @@ class XacroResolver:
         default = element.get("default")
         if name and name not in self.args:
             self.args[name] = self._try_parse_typed_value(self._substitute(default or ""))
-        return ET.Element("skip")
+        return ET.Element(_TAG_SKIP)
 
     def _handle_include(self, element: ET.Element) -> ET.Element:
         """Handle file includes: <xacro:include filename="..." ns="..."/>.
@@ -464,7 +471,7 @@ class XacroResolver:
             logger.warning(
                 f"XACRO: Could not find included file: '{filename}'. Check your paths and $(find ...) usage."
             )
-            return ET.Element("skip")
+            return ET.Element(_TAG_SKIP)
 
         template = self._get_structural_template(included_path)
 
@@ -520,7 +527,7 @@ class XacroResolver:
             if self._ns_stack:
                 name = f"{'.'.join(self._ns_stack)}.{name}"
             self.macros[name] = (params, element)
-        return ET.Element("skip")
+        return ET.Element(_TAG_SKIP)
 
     def _handle_conditional(self, element: ET.Element) -> ET.Element:
         """Handle conditionals: <xacro:if value="..."/> or <xacro:unless value="..."/>.
@@ -533,7 +540,7 @@ class XacroResolver:
         """
         tag = element.tag
         # Check against normal and URI namespaces for the conditional tag
-        is_unless = "xacro:unless" in tag or "unless" in tag
+        is_unless = f"{_PREFIX_XACRO}unless" in tag or "unless" in tag
 
         condition = element.get("value") or "0"
         is_true = self._eval_condition(condition)
@@ -541,10 +548,10 @@ class XacroResolver:
             is_true = not is_true
 
         if is_true:
-            container = ET.Element("container")
+            container = ET.Element(_TAG_CONTAINER)
             self._resolve_children(container, element)
             return container
-        return ET.Element("skip")
+        return ET.Element(_TAG_SKIP)
 
     def _handle_insert_block(self, element: ET.Element) -> ET.Element:
         """Handle block insertion: <xacro:insert_block name="..."/>.
@@ -567,7 +574,7 @@ class XacroResolver:
                 if isinstance(block, (ET.Element, list)):
                     # It's an XML block
                     # CRITICAL: We must deepcopy the block before insertion!
-                    container = ET.Element("container")
+                    container = ET.Element(_TAG_CONTAINER)
 
                     def _process_block_item(item: ET.Element) -> None:
                         res = self.resolve_element(copy.deepcopy(item))
@@ -584,7 +591,7 @@ class XacroResolver:
                     return container
             finally:
                 self._block_stack.remove(name)
-        return ET.Element("skip")
+        return ET.Element(_TAG_SKIP)
 
     def _handle_macro_call(self, tag: str, element: ET.Element) -> ET.Element:
         """Handle macro calls: <xacro:my_macro_name ...>.
@@ -599,7 +606,7 @@ class XacroResolver:
         Raises:
             RobotParserError: If parent scope inheritance fails.
         """
-        macro_name = tag[6:]
+        macro_name = tag[len(_PREFIX_XACRO) :]
         if macro_name in self.macros:
             params, macro_elem = self.macros[macro_name]
             local_props: dict[str, Any] = {}
@@ -612,9 +619,9 @@ class XacroResolver:
             resolved_block_content: list[ET.Element] = []
             for child in element:
                 res = self.resolve_element(copy.deepcopy(child))
-                if isinstance(res, ET.Element) and res.tag == "container":
+                if isinstance(res, ET.Element) and res.tag == _TAG_CONTAINER:
                     resolved_block_content.extend(list(res))
-                elif res.tag != "skip":
+                elif res.tag != _TAG_SKIP:
                     resolved_block_content.append(res)
 
             for bp in block_params:
@@ -652,7 +659,7 @@ class XacroResolver:
             parent_props = copy.deepcopy(self.properties)
             self.properties.update(local_props)
 
-            container = ET.Element("container")
+            container = ET.Element(_TAG_CONTAINER)
             self._resolve_children(container, macro_elem)
 
             self.properties = parent_props
@@ -662,7 +669,7 @@ class XacroResolver:
         logger.warning(
             f"XACRO: Unknown macro or tag: '{macro_name}'. Did you forget to include the corresponding file?"
         )
-        return ET.Element("skip")
+        return ET.Element(_TAG_SKIP)
 
     def _handle_regular_element(self, element: ET.Element) -> ET.Element:
         """Handle substitutions in text and attributes for regular elements.
@@ -980,7 +987,7 @@ class XacroResolver:
                 # Aggressive filtering: Remove skip and any tag containing "xacro"
                 # We strip the namespace first to avoid false positives from the URI itself
                 clean_tag = tag.split("}", 1)[1] if tag.startswith("{") else tag
-                is_xacro = clean_tag == "skip" or "xacro" in clean_tag
+                is_xacro = clean_tag == _TAG_SKIP or _KEYWORD_XACRO in clean_tag
 
                 if is_xacro:
                     elem.remove(child)
