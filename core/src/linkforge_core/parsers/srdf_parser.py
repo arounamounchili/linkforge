@@ -6,8 +6,8 @@ that supports MoveIt-style tags and native XACRO resolution.
 
 from __future__ import annotations
 
+import io
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -32,7 +32,13 @@ from ..models.srdf import (
     SrdfSphere,
     VirtualJoint,
 )
-from ..utils.xml_utils import parse_float, strip_xml_namespace
+from ..utils.xml_utils import (
+    MAX_XML_DEPTH,
+    XACRO_URIS,
+    get_xml_namespace,
+    parse_float,
+    strip_xml_namespace,
+)
 from .xml_base import MAX_FILE_SIZE, RobotXMLParser
 
 # Define a TypeVar for generic collection parsing
@@ -61,6 +67,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             max_file_size: Maximum allowed file size in bytes.
             sandbox_root: Optional root directory for security sandbox.
             resource_resolver: Optional resolver for URIs.
+
         """
         super().__init__(
             max_file_size=max_file_size,
@@ -68,25 +75,33 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             resource_resolver=resource_resolver,
         )
 
-    def _collect_elements(
-        self, root: ET.Element, tag: str, parse_func: Callable[[ET.Element], T | None]
-    ) -> list[T]:
-        """Generic helper to find and parse multiple XML elements.
+    def _detect_xacro_content(self, root: ET.Element) -> None:
+        """Detect if the XML contains unexpanded XACRO macros.
 
         Args:
-            root: The XML root or parent element to search.
-            tag: The local name of the tag to find (supports wildcard namespaces).
-            parse_func: The internal method to parse a single element.
+            root: The XML root element.
 
-        Returns:
-            A list of successfully parsed models.
+        Raises:
+            RobotParserUnexpectedError: If XACRO is detected.
+
         """
-        results: list[T] = []
-        for elem in root.findall(f"{{*}}{tag}"):
-            item = parse_func(elem)
-            if item is not None:
-                results.append(item)
-        return results
+        is_xacro = False
+        for child in root:
+            if get_xml_namespace(child.tag) in XACRO_URIS:
+                is_xacro = True
+                break
+
+        if not is_xacro:
+            for elem in root.iter():
+                if any("${" in v or "$(" in v for v in elem.attrib.values() if isinstance(v, str)):
+                    is_xacro = True
+                    break
+
+        if is_xacro:
+            raise RobotParserUnexpectedError(
+                source_area="SRDF Parser",
+                original_error="Unexpanded XACRO detected in SRDF. Please use parse_xacro().",
+            )
 
     def _parse_planning_group(self, group_elem: ET.Element) -> PlanningGroup | None:
         """Parse a <group> element into a PlanningGroup model.
@@ -96,6 +111,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Returns:
             A populated PlanningGroup instance or None if invalid.
+
         """
         name = group_elem.get("name")
         if not name:
@@ -148,6 +164,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Returns:
             A populated GroupState instance, or None if invalid.
+
         """
         name = state_elem.get("name")
         group = state_elem.get("group")
@@ -187,7 +204,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
     def parse_string(
         self,
         content: str,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> SemanticRobotDescription:
         """Parse SRDF content from a string.
 
@@ -201,13 +218,19 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         Raises:
             RobotParserUnexpectedError: If the XML is malformed.
             RobotParserXMLRootError: If the root tag is not <robot>.
+
         """
         self._validate_content(content)
-
+        f = io.StringIO(content)
         try:
-            root = ET.fromstring(content)
+            context = ET.iterparse(f, events=("start", "end"))
+            _, root = next(context)
         except ET.ParseError as e:
             raise RobotParserUnexpectedError(source_area="SRDF parse", original_error=e) from e
+        except StopIteration:
+            raise RobotParserUnexpectedError(
+                source_area="SRDF parse", original_error="Empty or truncated XML"
+            ) from None
         except Exception as e:
             raise RobotParserUnexpectedError(
                 source_area="Unexpected SRDF parse", original_error=e
@@ -216,64 +239,103 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
         if strip_xml_namespace(root.tag) != "robot":
             raise RobotParserXMLRootError(root.tag)
 
-        semantic = self._parse_elements(root)
+        try:
+            return self._parse_from_context(context, root)
+        except ET.ParseError as e:
+            raise RobotParserUnexpectedError(source_area="SRDF parse", original_error=e) from e
+        except RobotParserError:
+            raise
+        except Exception as e:
+            raise RobotParserUnexpectedError(
+                source_area="Unexpected SRDF parse", original_error=e
+            ) from e
 
-        # Handle kwargs if any (e.g. for future extensions)
-        if kwargs:
-            logger.debug(f"SRDFParser received unused options: {list(kwargs.keys())}")
-
-        return semantic
-
-    def _parse_elements(self, root: ET.Element) -> SemanticRobotDescription:
-        """Iterate through the XML root and parse all supported SRDF tags.
+    def _parse_from_context(self, context: Any, root: ET.Element) -> SemanticRobotDescription:
+        """Process iterative XML parsing internally for O(1) memory complexity.
 
         Args:
-            root: The <robot> XML root element.
+            context: The iterparse context.
+            root: The root <robot> element.
 
         Returns:
-            A SemanticRobotDescription containing all parsed elements.
+            A fully populated SemanticRobotDescription model.
+
+        Raises:
+            RobotParserUnexpectedError: If XML nesting exceeds MAX_XML_DEPTH.
+
         """
+        self._detect_xacro_content(root)
+
         robot_name = root.get("name", "")
-
-        # 1. Collect all semantic elements using the generic helper
-        virtual_joints = self._collect_elements(
-            root, "virtual_joint", self._parse_virtual_joint_elem
-        )
-        groups = self._collect_elements(root, "group", self._parse_planning_group)
-        group_states = self._collect_elements(root, "group_state", self._parse_group_state)
-        end_effectors = self._collect_elements(root, "end_effector", self._parse_end_effector_elem)
-        disabled_collisions = self._collect_elements(
-            root, "disable_collisions", self._parse_collision_pair_elem
-        )
-        enabled_collisions = self._collect_elements(
-            root, "enable_collisions", self._parse_collision_pair_elem
-        )
-        link_sphere_approximations = self._collect_elements(
-            root, "link_sphere_approximation", self._parse_link_sphere_approximation_elem
-        )
-        joint_properties = self._collect_elements(
-            root, "joint_property", self._parse_joint_property_elem
-        )
-
-        # 2. Parse Passive Joints (Direct mapping, no special helper needed)
+        virtual_joints: list[VirtualJoint] = []
+        groups: list[PlanningGroup] = []
+        group_states: list[GroupState] = []
+        end_effectors: list[EndEffector] = []
         passive_joints: list[PassiveJoint] = []
-        for pj_elem in root.findall("{*}passive_joint"):
-            pj_name = pj_elem.get("name")
-            if pj_name:
-                passive_joints.append(PassiveJoint(name=pj_name))
-            else:
-                logger.warning("SRDF: Passive joint missing name, skipping")
-
-        # 3. Parse Default Collision Link Rules
+        disabled_collisions: list[CollisionPair] = []
+        enabled_collisions: list[CollisionPair] = []
         no_default_collision_links: list[str] = []
-        for ddc_elem in root.findall("{*}disable_default_collisions"):
-            link = ddc_elem.get("link")
-            if link:
-                no_default_collision_links.append(link)
-            else:
-                logger.warning("SRDF: disable_default_collisions missing link attribute, skipping")
+        link_sphere_approximations: list[LinkSphereApproximation] = []
+        joint_properties: list[JointProperty] = []
 
-        # 4. Final cross-reference validation
+        depth = 0
+        for event, elem in context:
+            if event == "start":
+                depth += 1
+                if depth > MAX_XML_DEPTH:
+                    raise RobotParserUnexpectedError(
+                        source_area="XML nesting", original_error=depth
+                    )
+            elif event == "end":
+                if depth == 1:
+                    tag = strip_xml_namespace(elem.tag)
+
+                    if tag == "virtual_joint":
+                        vj = self._parse_virtual_joint_elem(elem)
+                        if vj:
+                            virtual_joints.append(vj)
+                    elif tag == "group":
+                        g = self._parse_planning_group(elem)
+                        if g:
+                            groups.append(g)
+                    elif tag == "group_state":
+                        gs = self._parse_group_state(elem)
+                        if gs:
+                            group_states.append(gs)
+                    elif tag == "end_effector":
+                        ee = self._parse_end_effector_elem(elem)
+                        if ee:
+                            end_effectors.append(ee)
+                    elif tag == "disable_collisions":
+                        cp = self._parse_collision_pair_elem(elem)
+                        if cp:
+                            disabled_collisions.append(cp)
+                    elif tag == "enable_collisions":
+                        cp = self._parse_collision_pair_elem(elem)
+                        if cp:
+                            enabled_collisions.append(cp)
+                    elif tag == "passive_joint":
+                        pj_name = elem.get("name")
+                        if pj_name:
+                            passive_joints.append(PassiveJoint(name=pj_name))
+                    elif tag == "disable_default_collisions":
+                        link = elem.get("link")
+                        if link:
+                            no_default_collision_links.append(link)
+                    elif tag == "link_sphere_approximation":
+                        lsa = self._parse_link_sphere_approximation_elem(elem)
+                        if lsa:
+                            link_sphere_approximations.append(lsa)
+                    elif tag == "joint_property":
+                        jp = self._parse_joint_property_elem(elem)
+                        if jp:
+                            joint_properties.append(jp)
+
+                    # Clear element to free memory (O(1) complexity)
+                    root.clear()
+                depth -= 1
+
+        # Final cross-reference validation
         self._validate_cross_references(groups, group_states, end_effectors)
 
         return SemanticRobotDescription(
@@ -302,6 +364,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             groups: List of parsed planning groups.
             group_states: List of parsed group states.
             end_effectors: List of parsed end effectors.
+
         """
         group_names = {g.name for g in groups}
         for gs in group_states:
@@ -323,6 +386,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Returns:
             A populated VirtualJoint instance, or None if invalid.
+
         """
         name = elem.get("name")
         vtype = elem.get("type")
@@ -352,6 +416,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Returns:
             A populated EndEffector instance, or None if invalid.
+
         """
         name = elem.get("name")
         group = elem.get("group")
@@ -380,6 +445,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Returns:
             A populated CollisionPair instance, or None if invalid.
+
         """
         link1 = elem.get("link1")
         link2 = elem.get("link2")
@@ -408,6 +474,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Returns:
             A populated LinkSphereApproximation instance, or None if invalid.
+
         """
         link = elem.get("link")
         if not link:
@@ -442,6 +509,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
 
         Returns:
             A populated JointProperty instance, or None if invalid.
+
         """
         joint_name = elem.get("joint_name")
         property_name = elem.get("property_name")
@@ -461,25 +529,38 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             logger.warning(f"SRDF: Skipping joint property for '{joint_name}': {e}")
             return None
 
-    def parse(self, filepath: Path, **kwargs: Any) -> SemanticRobotDescription:
+    def parse(self, filepath: Path, **_kwargs: Any) -> SemanticRobotDescription:
         """Load and parse an SRDF file from disk.
 
         Args:
             filepath: Path to the .srdf file.
-            **kwargs: Passed to parse_string.
+            **kwargs: Additional options (unused).
 
         Returns:
             A SemanticRobotDescription model.
 
         Raises:
             RobotParserIOError: If the file is missing or exceeds max_file_size.
+            RobotParserXMLRootError: If the root tag is not <robot>.
+
         """
         self._validate_file(filepath)
 
         try:
-            content = filepath.read_text(encoding="utf-8")
-            return self.parse_string(content, **kwargs)
+            context = ET.iterparse(str(filepath), events=("start", "end"))
+            _, root = next(context)
 
+            if strip_xml_namespace(root.tag) != "robot":
+                raise RobotParserXMLRootError(root.tag)
+
+            return self._parse_from_context(context, root)
+
+        except ET.ParseError as e:
+            raise RobotParserUnexpectedError(source_area="SRDF file parse", original_error=e) from e
+        except StopIteration:
+            raise RobotParserUnexpectedError(
+                source_area="SRDF file parse", original_error="Empty or truncated XML"
+            ) from None
         except Exception as e:
             if isinstance(e, RobotParserError):
                 raise

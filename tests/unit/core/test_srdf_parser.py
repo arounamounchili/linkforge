@@ -158,12 +158,12 @@ def test_srdf_parser_unexpected_exception(monkeypatch):
     """Test generic exception handling during parsing."""
     parser = SRDFParser()
 
-    def mock_fromstring(*args, **kwargs):
+    def mock_iterparse(*args, **kwargs):
         raise ValueError("Unexpected error")
 
     import xml.etree.ElementTree as ET
 
-    monkeypatch.setattr(ET, "fromstring", mock_fromstring)
+    monkeypatch.setattr(ET, "iterparse", mock_iterparse)
 
     with pytest.raises(
         RobotParserUnexpectedError, match="Unexpected error in Unexpected SRDF parse"
@@ -241,10 +241,12 @@ def test_srdf_parser_generic_exception_in_parse(tmp_path, monkeypatch):
     srdf_file = tmp_path / "test.srdf"
     srdf_file.write_text("<robot name='test'/>")
 
-    def mock_read(*args, **kwargs):
+    def mock_iterparse(*args, **kwargs):
         raise RuntimeError("Disk failure")
 
-    monkeypatch.setattr("pathlib.Path.read_text", mock_read)
+    import xml.etree.ElementTree as ET
+
+    monkeypatch.setattr(ET, "iterparse", mock_iterparse)
     with pytest.raises(RobotParserIOError, match="Parser IO error: Disk failure"):
         parser.parse(srdf_file)
 

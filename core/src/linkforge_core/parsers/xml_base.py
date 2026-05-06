@@ -60,6 +60,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
             max_file_size: Maximum allowed file size in bytes
             sandbox_root: Optional root directory for security sandbox
             resource_resolver: Optional resolver for URIs
+
         """
         self.max_file_size = max_file_size
         self.sandbox_root = sandbox_root
@@ -73,6 +74,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
 
         Raises:
             RobotParserIOError: If file is missing, is a directory, or exceeds max_file_size.
+
         """
         if not filepath.exists():
             raise RobotParserIOError(filepath=filepath, reason="File not found")
@@ -91,6 +93,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
 
         Raises:
             RobotParserIOError: If content size exceeds max_file_size.
+
         """
         size = len(content.encode("utf-8")) if isinstance(content, str) else len(content)
         if size > self.max_file_size:
@@ -111,6 +114,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         Raises:
             RobotXacroError: If XACRO resolution fails.
             RobotParserError: If XML parsing fails.
+
         """
         from .xacro_parser import XACROParser
 
@@ -126,6 +130,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
 
         Returns:
             A Transform object.
+
         """
         if elem is None:
             return Transform.identity()
@@ -229,6 +234,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
 
         Returns:
             Material object or None.
+
         """
         if mat_elem is None:
             return None
@@ -281,6 +287,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
 
         Returns:
             Inertial object or None.
+
         """
         if inertial_elem is None:
             return None
