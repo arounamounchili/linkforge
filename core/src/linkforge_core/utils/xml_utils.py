@@ -17,7 +17,7 @@ XACRO_URIS = [
     "http://wiki.ros.org/xacro",
 ]
 
-MAX_XML_DEPTH = 100
+MAX_XML_DEPTH = 2000
 
 
 def strip_xml_namespace(tag: str) -> str:

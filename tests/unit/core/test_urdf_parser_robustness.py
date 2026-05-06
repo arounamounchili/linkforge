@@ -189,11 +189,22 @@ def test_urdf_parser_iterative_parsing_robustness(tmp_path) -> None:
     parser = URDFParser()
 
     # XML nesting too deep
-    p = tmp_path / "deep.urdf"
-    nested_xml = "<robot>" + "<a>" * 101 + "</a>" * 101 + "</robot>"
-    p.write_text(nested_xml)
-    with pytest.raises(RobotParserError):
-        parser.parse(p)
+    import sys
+
+    from linkforge_core.utils.xml_utils import MAX_XML_DEPTH
+
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(old_limit, MAX_XML_DEPTH + 100))
+    try:
+        p = tmp_path / "deep.urdf"
+        nested_xml = (
+            "<robot>" + "<a>" * (MAX_XML_DEPTH + 1) + "</a>" * (MAX_XML_DEPTH + 1) + "</robot>"
+        )
+        p.write_text(nested_xml)
+        with pytest.raises(RobotParserError):
+            parser.parse(p)
+    finally:
+        sys.setrecursionlimit(old_limit)
 
     # Missing root <robot>
     p.write_text("<not_robot/>")

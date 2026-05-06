@@ -106,7 +106,9 @@ robot = URDFParser().parse_string(urdf_content)
 The parser includes professional-grade protections for production robotics:
 
 *   **Duplicate Name Resolution**: Re-names conflicting link/joint names (e.g., `link_duplicate_1`) to preserve kinematic tree integrity while alerting the user.
-*   **DoS Protection**: Enforces a maximum XML depth (100 levels) and file size (100 MB) to prevent "XML Bomb" attacks.
+*   **DoS Protection**: Enforces a maximum XML depth of 2,000 levels and file size (100 MB) to prevent "XML Bomb" attacks.
+*   **O(1) Memory Efficiency**: All core parsers use iterative processing to handle massive robot descriptions with a constant, low memory footprint.
 *   **Path Sandboxing**: Validates all mesh paths to prevent directory traversal and ensure assets remain within authorized project folders.
-*   **XACRO Debugging Support**: Natively evaluates and routes `xacro.warning()`, `xacro.error()`, `xacro.fatal()`, and `xacro.message()` calls to the LinkForge Python logger, allowing users to see in-file debug messages directly in the console.
+*   **Secured Math Environment**: XACRO expressions are evaluated in a hardened sandbox that prevents access to dangerous Python built-ins or private `__dunder__` methods.
+*   **XACRO Debugging Support**: Natively evaluates and routes `xacro.warning()`, `xacro.error()`, `xacro.fatal()`, and `xacro.message()` calls to the LinkForge Python logger.
 *   **Resilient Skip**: Malformed geometry or broken joint references are logged as warnings, allowing the rest of the robot to load successfully.
