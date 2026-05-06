@@ -67,6 +67,13 @@ MATH_CONTEXT["true"] = True
 MATH_CONTEXT["false"] = False
 
 
+# Internal XML tags used for structural processing
+_TAG_CONTAINER = "container"
+_TAG_SKIP = "skip"
+_PREFIX_XACRO = "xacro:"
+_KEYWORD_XACRO = "xacro"
+
+
 @dataclass
 class XacroTemplate:
     """A pre-parsed structural template of a XACRO file.
@@ -85,13 +92,6 @@ class XacroTemplate:
 
 # Global cache for structural templates to speed up repeated assembly of identical robots.
 TEMPLATE_CACHE: dict[Path, XacroTemplate] = {}
-
-
-# Internal XML tags used for structural processing
-_TAG_CONTAINER = "container"
-_TAG_SKIP = "skip"
-_PREFIX_XACRO = "xacro:"
-_KEYWORD_XACRO = "xacro"
 
 
 class XacroResolver:
