@@ -6,10 +6,9 @@ high-fidelity round-tripping and includes:
 
 - **Comprehensive Parsing**: Full support for all URDF joint types, multiple
   visual/collision elements, and complex nested structures.
-- **Native XACRO Support**: Integrated resolution of XACRO macros, properties,
-  and includes using the built-in `XACROParser`.
 - **Security & Validation**: Built-in protection against XML attacks (depth
-  limits) and strict validation of mesh paths and numeric values.
+  limits), strict validation of mesh paths, numeric values, and rejection of
+  unresolved XACRO files to maintain model integrity.
 - **Error Resilience**: Informative error messages and fallback mechanisms
   for malformed or incomplete XML configurations.
 - **Fidelity Preservation**: Captures metadata, sensor noise, and ROS 2
@@ -19,7 +18,6 @@ high-fidelity round-tripping and includes:
 from __future__ import annotations
 
 import io
-import math
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
@@ -67,6 +65,7 @@ from ..models import (
     Vector3,
     Visual,
 )
+from ..utils.math_utils import normalize_vector
 from ..utils.xml_utils import (
     MAX_XML_DEPTH,
     get_xml_namespace,
@@ -97,6 +96,7 @@ class URDFParser(RobotXMLParser[Robot]):
             max_file_size: Maximum allowed file size in bytes (default: 100MB)
             sandbox_root: Optional root directory for security sandbox
             resource_resolver: Optional resolver for URIs
+
         """
         super().__init__(
             max_file_size=max_file_size,
@@ -119,6 +119,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated Link model.
+
         """
         name = link_elem.get("name", "unnamed_link")
 
@@ -160,6 +161,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A Visual model or None if geometry is missing.
+
         """
         origin = self._parse_origin_element(visual_elem.find("{*}origin"))
         geom_elem = visual_elem.find("{*}geometry")
@@ -189,6 +191,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A Collision model or None if geometry is missing.
+
         """
         origin = self._parse_origin_element(collision_elem.find("{*}origin"))
         geom_elem = collision_elem.find("{*}geometry")
@@ -213,6 +216,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated Joint model.
+
         """
         name = joint_elem.get("name", "unnamed_joint")
         joint_type_str = joint_elem.get("type", "fixed")
@@ -267,6 +271,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A normalized Vector3 for the axis, or None if not applicable.
+
         """
         if joint_type not in (
             JointType.REVOLUTE,
@@ -279,11 +284,10 @@ class URDFParser(RobotXMLParser[Robot]):
         axis_elem = joint_elem.find("{*}axis")
         if axis_elem is not None:
             axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
-            # Normalize axis
-            axis_mag = math.sqrt(axis.x**2 + axis.y**2 + axis.z**2)
-            if axis_mag > 1e-10:
-                return Vector3(axis.x / axis_mag, axis.y / axis_mag, axis.z / axis_mag)
-            return Vector3(1.0, 0.0, 0.0)
+            nx, ny, nz = normalize_vector(axis.x, axis.y, axis.z)
+            if nx == 0.0 and ny == 0.0 and nz == 0.0:
+                return Vector3(1.0, 0.0, 0.0)
+            return Vector3(nx, ny, nz)
 
         return Vector3(1.0, 0.0, 0.0)
 
@@ -299,6 +303,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A JointLimits model or None.
+
         """
         if joint_type not in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS):
             return None
@@ -338,6 +343,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated JointDynamics instance or None.
+
         """
         if elem is None:
             return None
@@ -354,6 +360,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated JointMimic instance or None.
+
         """
         if elem is None:
             return None
@@ -371,6 +378,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated JointSafetyController instance or None.
+
         """
         if elem is None:
             return None
@@ -393,6 +401,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated JointCalibration instance or None.
+
         """
         if elem is None:
             return None
@@ -406,7 +415,15 @@ class URDFParser(RobotXMLParser[Robot]):
         )
 
     def _normalize_hardware_interface(self, interface: str) -> str:
-        """Normalize hardware interface string (e.g., 'PositionJointInterface' -> 'position')."""
+        """Normalize hardware interface string (e.g., 'PositionJointInterface' -> 'position').
+
+        Args:
+            interface: The raw hardware interface string from the URDF.
+
+        Returns:
+            The normalized ROS 2 compatible hardware interface string.
+
+        """
         clean = interface.lower().replace("hardware_interface/", "").replace("jointinterface", "")
         return clean.replace("interface", "")
 
@@ -418,6 +435,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A Ros2Control model or None if parsing fails.
+
         """
         name = rc_elem.get("name", "")
         rc_type = rc_elem.get("type", "system")
@@ -490,6 +508,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             The parsed component model or None.
+
         """
         name = elem.get("name", "")
         if not name:
@@ -535,6 +554,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A Transmission model or None if parsing fails.
+
         """
         name = trans_elem.get("name", "unnamed_transmission")
         trans_type = trans_elem.findtext("{*}type", "")
@@ -565,6 +585,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A SensorNoise model or None.
+
         """
         if noise_elem is None:
             return None
@@ -589,6 +610,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated Sensor model or None if no sensor is defined.
+
         """
         link_name = gazebo_elem.get("reference", "")
         sensor_elem = gazebo_elem.find("{*}sensor")
@@ -790,6 +812,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated GazeboPlugin model or None.
+
         """
         if plugin_elem is None:
             return None
@@ -813,6 +836,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         Returns:
             A populated GazeboElement model.
+
         """
         reference = gazebo_elem.get("reference")
         plugins = [
@@ -894,7 +918,7 @@ class URDFParser(RobotXMLParser[Robot]):
     def _parse_from_context(
         self, context: Any, root: ET.Element, filepath: Path | None = None
     ) -> Robot:
-        """Internal processor for iterative XML parsing.
+        """Process iterative XML parsing internally.
 
         This method orchestrates the element-by-element construction of the
         Robot model. It handles depth tracking for security and manages the
@@ -911,6 +935,7 @@ class URDFParser(RobotXMLParser[Robot]):
         Raises:
             RobotParserUnexpectedError: If XML nesting exceeds MAX_XML_DEPTH.
             XacroDetectedError: If the parser detects unexpanded XACRO macros.
+
         """
         self._detect_xacro_file(root, filepath)
 
@@ -925,7 +950,11 @@ class URDFParser(RobotXMLParser[Robot]):
 
         # Elements that depend on links (joints, transmissions, etc.) are processed
         # in a second pass to ensure the robot's kinematic graph is complete.
-        delayed_elements: list[tuple[str, ET.Element]] = []
+        delayed_joints: list[Joint] = []
+        delayed_transmissions: list[Transmission] = []
+        delayed_ros2_controls: list[Ros2Control] = []
+        delayed_sensors: list[Sensor] = []
+        delayed_gazebo_elements: list[GazeboElement] = []
 
         # Determine base directory for resolving relative mesh paths.
         source_directory = (
@@ -956,37 +985,78 @@ class URDFParser(RobotXMLParser[Robot]):
                         except (RobotModelError, ValueError, Exception) as e:
                             logger.warning(f"Skipping invalid link '{elem.get('name')}': {e}")
 
-                    elif tag in ("joint", "transmission", "ros2_control", "gazebo"):
-                        delayed_elements.append((tag, elem))
-                        depth -= 1
-                        # Do NOT clear delayed elements yet as they will be processed later
-                        continue
+                    elif tag == "joint":
+                        try:
+                            delayed_joints.append(self._parse_joint(elem))
+                        except (RobotModelError, ValueError, Exception) as e:
+                            logger.warning(f"Skipping invalid joint '{elem.get('name')}': {e}")
+
+                    elif tag == "transmission":
+                        try:
+                            trans = self._parse_transmission(elem)
+                            if trans:
+                                delayed_transmissions.append(trans)
+                        except (RobotModelError, ValueError, Exception) as e:
+                            logger.warning(
+                                f"Skipping invalid transmission '{elem.get('name')}': {e}"
+                            )
+
+                    elif tag == "ros2_control":
+                        try:
+                            ros2_ctrl = self._parse_ros2_control(elem)
+                            if ros2_ctrl:
+                                delayed_ros2_controls.append(ros2_ctrl)
+                        except (RobotModelError, ValueError, Exception) as e:
+                            logger.warning(
+                                f"Skipping invalid ros2_control '{elem.get('name')}': {e}"
+                            )
+
+                    elif tag == "gazebo":
+                        try:
+                            sensor = self._parse_sensor_from_gazebo(elem)
+                            if sensor:
+                                delayed_sensors.append(sensor)
+                            else:
+                                delayed_gazebo_elements.append(self._parse_gazebo_element(elem))
+                        except (RobotModelError, ValueError, Exception) as e:
+                            logger.warning(
+                                f"Skipping invalid gazebo element '{elem.get('name') or elem.get('reference')}': {e}"
+                            )
+
+                    elem.clear()
 
                 depth -= 1
 
         # Second Pass: Process dependent elements
-        for tag, elem in delayed_elements:
+        for joint in delayed_joints:
             try:
-                if tag == "joint":
-                    robot.add_joint(self._parse_joint(elem))
-                elif tag == "transmission":
-                    trans = self._parse_transmission(elem)
-                    if trans:
-                        robot.add_transmission(trans)
-                elif tag == "ros2_control":
-                    ros2_ctrl = self._parse_ros2_control(elem)
-                    if ros2_ctrl:
-                        robot.add_ros2_control(ros2_ctrl)
-                elif tag == "gazebo":
-                    sensor = self._parse_sensor_from_gazebo(elem)
-                    if sensor:
-                        robot.add_sensor(sensor)
-                    else:
-                        robot.add_gazebo_element(self._parse_gazebo_element(elem))
-            except (RobotModelError, ValueError, Exception) as e:
-                logger.warning(f"Skipping invalid {tag} '{elem.get('name')}': {e}")
-            finally:
-                elem.clear()
+                robot.add_joint(joint)
+            except Exception as e:
+                logger.warning(f"Skipping invalid joint '{joint.name}': {e}")
+
+        for trans in delayed_transmissions:
+            try:
+                robot.add_transmission(trans)
+            except Exception as e:
+                logger.warning(f"Skipping invalid transmission '{trans.name}': {e}")
+
+        for ros2_ctrl in delayed_ros2_controls:
+            try:
+                robot.add_ros2_control(ros2_ctrl)
+            except Exception as e:
+                logger.warning(f"Skipping invalid ros2_control '{ros2_ctrl.name}': {e}")
+
+        for sensor in delayed_sensors:
+            try:
+                robot.add_sensor(sensor)
+            except Exception as e:
+                logger.warning(f"Skipping invalid sensor '{sensor.name}': {e}")
+
+        for gazebo_elem in delayed_gazebo_elements:
+            try:
+                robot.add_gazebo_element(gazebo_elem)
+            except Exception as e:
+                logger.warning(f"Skipping invalid gazebo element '{gazebo_elem.reference}': {e}")
 
         return robot
 
@@ -1008,6 +1078,7 @@ class URDFParser(RobotXMLParser[Robot]):
             XacroDetectedError: If a XACRO file is passed instead of URDF
             RobotParserXMLRootError: If root tag is not <robot>
             RobotParserUnexpectedError: If XML is malformed or internal error occurs
+
         """
         self._validate_file(filepath)
 
@@ -1063,6 +1134,7 @@ class URDFParser(RobotXMLParser[Robot]):
             XacroDetectedError: If string contains XACRO markers
             RobotParserXMLRootError: If root tag is not <robot>
             RobotParserUnexpectedError: If XML parsing fails
+
         """
         self._validate_content(content)
 
