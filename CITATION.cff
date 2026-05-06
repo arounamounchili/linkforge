@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "LinkForge: The Linter & Bridge for Robotics"
+title: "LinkForge: The LLVM for Robotics"
 message: "If you use this software, please cite it as below."
 type: software
 authors:
@@ -24,5 +24,5 @@ keywords:
   - exporter
   - robot-modeling
 abstract: >
-  LinkForge is **The Linter & Bridge for Robotics**. It provides a professional,
-  validated workflow for robotics development in Blender by exporting hardened URDF and XACRO files.
+  LinkForge is the LLVM for Robotics: a universal Intermediate Representation (IR)
+  and Blender-based Digital Twin platform for high-fidelity robotics engineering.

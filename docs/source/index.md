@@ -1,6 +1,6 @@
 # LinkForge Documentation
 
-Welcome to the official LinkForge documentation. LinkForge is **The Linter & Bridge for Robotics**, designed to provide professional validation for URDF, XACRO, and beyond.
+Welcome to the official LinkForge documentation. LinkForge is the **LLVM for Robotics**, a universal Intermediate Representation (IR) and Blender-based Digital Twin platform.
 
 ## Workflow at a Glance
 
@@ -19,12 +19,13 @@ graph LR
 
 LinkForge streamlines robotics modeling with the following capabilities:
 
+- **LLVM for Robotics**: A universal Intermediate Representation (IR) for cross-platform deployment.
+- **The .lf Standard**: A high-fidelity, metadata-rich format for the next generation of robots.
 - **Bidirectional Workflow**: Import existing URDF/XACRO files or build from scratch.
 - **Production-Ready Export**: Strictly compliant URDF/XACRO files optimized for ROS/Gazebo.
-- **Linter for Robotics**: Built-in integrity checker for robot topology and physics.
 - **ROS2 Control Support**: Automatic hardware interface configuration.
 - **Complete Sensor Suite**: Integrated support for LiDAR, IMU, Depth Cameras, and more.
-- **Automatic Physics**: Mass properties and inertia tensor calculation.
+- **Automatic Physics**: Scientific mass properties and inertia tensor calculation.
 
 ---
 

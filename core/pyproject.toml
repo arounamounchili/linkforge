@@ -1,7 +1,7 @@
 [project]
 name = "linkforge-core"
 version = "1.3.0" # x-release-please-version
-description = "Universal Robotics Interoperability Core"
+description = "LinkForge Core: The LLVM for Robotics Intermediate Representation (IR) Engine"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"

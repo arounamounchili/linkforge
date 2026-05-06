@@ -3,7 +3,7 @@
 </div>
 
 # LinkForge
-**The Linter & Bridge for Robotics**
+**The LLVM for Robotics**
 
 [![Latest Release](https://img.shields.io/github/v/release/arounamounchili/linkforge)](https://github.com/arounamounchili/linkforge/releases/latest)
 [![CI](https://github.com/arounamounchili/linkforge/actions/workflows/ci.yml/badge.svg)](https://github.com/arounamounchili/linkforge/actions)
@@ -12,14 +12,14 @@
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/download/)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://www.conventionalcommits.org)
 
-LinkForge is **The Linter & Bridge for Robotics**, integrating directly into Blender.
+LinkForge brings the **"LLVM architecture" to Robotics**. It utilizes a universal, mathematical Intermediate Representation (IR) for physical robots—paving the way for the upcoming **`.lf` standard**.
 
-It allows you to model your robot as naturally as sculpting a 3D scene, while acting as a strict safety net to guarantee the output is rigorous, simulation-ready code.
+By treating robot descriptions as *Source Code* rather than compiled *Executables*, LinkForge bridges the gap between CAD, Simulation, and AI training with zero data loss. Currently featuring a native **Blender integration**, it acts as a strict safety net to guarantee your robot is rigorous, physics-compliant, and simulation-ready.
 
- 1.  **Forge Structure**: Define links, joints, masses, and inertias visually.
- 2.  **Lint & Validate**: Catch structural and physics errors before simulation export.
- 3.  **Perceive & Control**: Attach sensors and configure `ros2_control` interfaces.
- 4.  **Export Production Code**: Generate hardened URDF/XACRO files.
+ 1.  **Model & Import**: Build natively or ingest legacy URDF/XACRO files losslessly.
+ 2.  **Lint & Validate**: Catch kinematic and physical errors before they hit your simulator.
+ 3.  **The `.lf` Standard**: Store your robot as a metadata-rich, mathematically pure IR.
+ 4.  **Deploy Anywhere**: Export hardened URDF, XACRO, or SRDF (with MJCF and SDF coming soon).
 
 ## 💎 Why LinkForge?
 
@@ -149,15 +149,27 @@ For complete instructions on testing, linting, and building the extension, pleas
 
 ## 🗺️ Roadmap
 
+
+### Phase 0: The Foundation (Completed)
 - [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
 - [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
-- [x] **v1.2.0**: **Architectural Stability** (Hexagonal Core, Numerical Precision).
-- [x] **v1.3.0**: **Performance & Control** (NumPy Acceleration, Depsgraph, & ROS2 Control).
-- [/] **v1.4.0**: **Modular Assembly** (SRDF, Composer API, `linkforge_ros`).
-- [ ] **v1.5.0**: **High-Fidelity Expansion pt.1** (MJCF/MuJoCo support).
-- [ ] **v1.6.0**: **High-Fidelity Expansion pt.2** (SDF/Gazebo support).
-- [ ] **v1.7.0**: **Mechanical Debugging** (Real-time IK & Collision Interference Validation).
-- [ ] **v2.0.0**: **Intelligence-Driven Rigging** (AI-assisted geometry analysis & Auto-Rigging).
+- [x] **v1.2.0**: Architectural Stability (Hexagonal Core).
+
+### Phase 1: The Professional Bridge (Current)
+- [x] **v1.3.0**: Performance & Control (NumPy Acceleration, Depsgraph, & ROS2 Control).
+- [/] **v1.4.0**: Modular Assembly (Composer API, SRDF Generation).
+- [ ] **v1.5.0**: Visual SRDF Editor in Blender & Semantic Assistant.
+- [ ] **v1.6.0**: LinkForge CLI & GitHub Actions for automated validation.
+
+### Phase 2: Universal Interoperability (Upcoming)
+- [ ] **v1.7.0**: Official launch of the **`.lf` File Standard**.
+- [ ] **AI Update**: Native MuJoCo (MJCF) and Gazebo (SDF) exporters.
+- [ ] **IDE Integration**: VS Code Extension with real-time linting & 3D preview.
+
+### Phase 3: The Intelligence Ecosystem (Future)
+- [ ] **CAD Expansion**: Connectors for FreeCAD and OnShape.
+- [ ] **LinkForge Package Manager (LPM)**: Decentralized cloud registry (`lf://`).
+- [ ] **Auto-Rigging**: Graph Neural Networks (GNNs) for automated joint placement.
 
 ## 🤝 Contributing
 

@@ -14,7 +14,7 @@ name = "LinkForge"
 
 # Short description (tagline) - max ~100 characters
 # Short description (tagline) - max ~100 characters
-tagline = "The Linter & Bridge for Robotics"
+tagline = "The LLVM for Robotics: Visual Digital Twin & IR Editor"
 
 # Extension type
 type = "add-on"

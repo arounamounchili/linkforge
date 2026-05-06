@@ -68,8 +68,8 @@ html_context = {
     "github_version": "main",
     "conf_py_path": "/docs/source/",
     "metatags": """
-        <meta property="og:title" content="LinkForge - The Linter & Bridge for Robotics" />
-        <meta property="og:description" content="A professional Blender extension for roboticists. Industrial-grade validation for URDF, XACRO, and beyond." />
+        <meta property="og:title" content="LinkForge - The LLVM for Robotics" />
+        <meta property="og:description" content="LinkForge is the LLVM for Robotics: a universal Intermediate Representation (IR) and Blender-based Digital Twin platform." />
         <meta property="og:image" content="https://linkforge.readthedocs.io/en/latest/_static/social_preview.png" />
         <meta name="twitter:card" content="summary_large_image" />
     """,
