@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
-from ..utils.string_utils import is_valid_urdf_name
+from ..utils.string_utils import is_valid_name
 
 
 class TransmissionType(str, Enum):
@@ -45,7 +45,7 @@ class TransmissionJoint:
 
     name: str
     hardware_interfaces: list[str] = field(default_factory=lambda: ["position"])
-    mechanical_reduction: float = 1.0
+    mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
     def __post_init__(self) -> None:
@@ -64,13 +64,17 @@ class TransmissionJoint:
                 target="HardwareInterfaces",
                 value=self.name,
             )
-        if self.mechanical_reduction == 0:
+        if self.mechanical_reduction is not None and self.mechanical_reduction == 0:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Mechanical reduction for transmission joint '{self.name}' cannot be zero",
                 target="MechanicalReduction",
                 value=self.name,
             )
+
+    def with_prefix(self, prefix: str) -> TransmissionJoint:
+        """Create a new transmission joint with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
 
 
 @dataclass(frozen=True)
@@ -82,7 +86,7 @@ class TransmissionActuator:
 
     name: str
     hardware_interfaces: list[str] = field(default_factory=lambda: ["position"])
-    mechanical_reduction: float = 1.0
+    mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
     def __post_init__(self) -> None:
@@ -101,13 +105,17 @@ class TransmissionActuator:
                 target="HardwareInterfaces",
                 value=self.name,
             )
-        if self.mechanical_reduction == 0:
+        if self.mechanical_reduction is not None and self.mechanical_reduction == 0:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Mechanical reduction for transmission actuator '{self.name}' cannot be zero",
                 target="MechanicalReduction",
                 value=self.name,
             )
+
+    def with_prefix(self, prefix: str) -> TransmissionActuator:
+        """Create a new transmission actuator with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
 
 
 @dataclass(frozen=True)
@@ -144,7 +152,7 @@ class Transmission:
             )
 
         # Validate naming convention
-        if not is_valid_urdf_name(self.name):
+        if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
                 "Invalid characters in transmission name",
@@ -152,13 +160,38 @@ class Transmission:
                 value=self.name,
             )
 
-        # Must have at least one joint
+        # Must have at least one joint and one actuator
         if not self.joints:
             raise RobotValidationError(
                 ValidationErrorCode.VALUE_EMPTY,
                 "Transmission must have at least one joint",
                 target="TransmissionJoints",
                 value=self.name,
+            )
+        if not self.actuators:
+            raise RobotValidationError(
+                ValidationErrorCode.VALUE_EMPTY,
+                "Transmission must have at least one actuator",
+                target="TransmissionActuators",
+                value=self.name,
+            )
+
+        # Specific constraints for standard transmission types
+        if self.type == TransmissionType.SIMPLE.value:
+            if len(self.joints) != 1 or len(self.actuators) != 1:
+                raise RobotValidationError(
+                    ValidationErrorCode.INVALID_VALUE,
+                    "Simple transmission must have exactly 1 joint and 1 actuator",
+                    target="TransmissionComponents",
+                )
+        elif self.type in (
+            TransmissionType.DIFFERENTIAL.value,
+            TransmissionType.FOUR_BAR_LINKAGE.value,
+        ) and (len(self.joints) != 2 or len(self.actuators) != 2):
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"{self.type} must have exactly 2 joints and 2 actuators",
+                target="TransmissionComponents",
             )
 
         # Check for duplicate joint names
@@ -173,16 +206,24 @@ class Transmission:
             )
 
         # Check for duplicate actuator names
-        if self.actuators:
-            actuator_names = [a.name for a in self.actuators]
-            duplicates = {name for name, count in Counter(actuator_names).items() if count > 1}
-            if duplicates:
-                raise RobotValidationError(
-                    ValidationErrorCode.DUPLICATE_NAME,
-                    f"Duplicate actuators in transmission: {duplicates}",
-                    target="DuplicateActuators",
-                    value=self.name,
-                )
+        actuator_names = [a.name for a in self.actuators]
+        duplicates = {name for name, count in Counter(actuator_names).items() if count > 1}
+        if duplicates:
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Duplicate actuators in transmission: {duplicates}",
+                target="DuplicateActuators",
+                value=self.name,
+            )
+
+    def with_prefix(self, prefix: str) -> Transmission:
+        """Create a new transmission with prefixed name, joints, and actuators."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            joints=[j.with_prefix(prefix) for j in self.joints],
+            actuators=[a.with_prefix(prefix) for a in self.actuators],
+        )
 
     @classmethod
     def create_simple(

@@ -11,7 +11,7 @@ from ..exceptions import RobotPhysicsError, ValidationErrorCode
 
 
 class GeometryType(Enum):
-    """Supported geometry types for URDF (standard specification only)."""
+    """Standard geometry primitives."""
 
     BOX = "box"
     CYLINDER = "cylinder"
@@ -36,7 +36,7 @@ class Vector3:
         return (self.x, self.y, self.z)
 
     def __str__(self) -> str:
-        """String representation for URDF."""
+        """String representation."""
         return f"{self.x} {self.y} {self.z}"
 
 
@@ -168,5 +168,5 @@ class Mesh:
         return GeometryType.MESH
 
 
-# Type alias for any geometry (URDF standard primitives only)
+# Type alias for any geometry primitive.
 Geometry = Box | Cylinder | Sphere | Mesh

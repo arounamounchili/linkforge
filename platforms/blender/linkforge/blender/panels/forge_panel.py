@@ -65,7 +65,9 @@ class LINKFORGE_PT_forge(Panel):
             row = layout.row()
             if row:
                 row.scale_y = 1.5
-                row.operator("linkforge.import_urdf", text="Import URDF/XACRO", icon="IMPORT")
+                row.operator(
+                    "linkforge.import_robot_model", text="Import Robot Model", icon="IMPORT"
+                )
 
         layout.separator()
         layout.label(text="Create robot structure:", icon="TOOL_SETTINGS")

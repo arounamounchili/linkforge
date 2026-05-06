@@ -61,41 +61,41 @@ def clean_scene():
 
 def test_resolve_mesh_path(tmp_path) -> None:
     """Test resolution of various mesh path types."""
-    urdf_dir = tmp_path / "urdf"
-    urdf_dir.mkdir()
+    source_directory = tmp_path / "urdf"
+    source_directory.mkdir()
     resolver = FileSystemResolver()
 
     # 1. Local relative path (exists)
-    mesh_file = urdf_dir / "mesh.stl"
+    mesh_file = source_directory / "mesh.stl"
     mesh_file.touch()
-    assert resolver.resolve("mesh.stl", relative_to=urdf_dir) == mesh_file.absolute()
+    assert resolver.resolve("mesh.stl", relative_to=source_directory) == mesh_file.absolute()
 
     # 2. Package URI (requires mock of resolve_package_path)
-    with patch("linkforge.linkforge_core.utils.path_utils.resolve_package_path") as mock_resolve:
+    with patch("linkforge.linkforge_core.base.resolve_package_path") as mock_resolve:
         mock_resolve.return_value = mesh_file
         # Note: resolve_package_path mock needs to return a Path that exists
         assert (
-            resolver.resolve("package://my_pkg/mesh.stl", relative_to=urdf_dir)
+            resolver.resolve("package://my_pkg/mesh.stl", relative_to=source_directory)
             == mesh_file.absolute()
         )
 
     # 3. Non-existent path raises FileNotFoundError (new behavior)
     with pytest.raises(FileNotFoundError):
-        resolver.resolve("/tmp/non_existent.obj", relative_to=urdf_dir)
+        resolver.resolve("/tmp/non_existent.obj", relative_to=source_directory)
 
     # 4. file:// URI
     file_uri = "file:///tmp/mesh.stl"
     # Create the file so it can be resolved (FileSystemResolver checks existence)
     mesh_tmp = Path("/tmp/mesh.stl")
     mesh_tmp.touch()
-    assert resolver.resolve(file_uri, relative_to=urdf_dir) == mesh_tmp.absolute()
+    assert resolver.resolve(file_uri, relative_to=source_directory) == mesh_tmp.absolute()
 
     # 5. Windows style URI (mocking Windows environment is hard, but we can test the regex)
     # FileSystemResolver uses re.sub and Path.
     # On Unix, file:///C:/path becomes /C:/path
     win_uri = "file:///C:/path/to/mesh.stl"
     with patch("pathlib.Path.exists", return_value=True):
-        res = resolver.resolve(win_uri, relative_to=urdf_dir)
+        res = resolver.resolve(win_uri, relative_to=source_directory)
         # Our logic for Windows URIs strips the leading slash if : is present
         # On Posix, Path("C:/...").absolute() will prepend CWD, so we check for presence
         assert "C:/path/to/mesh.stl" in str(res).replace("\\", "/")
@@ -130,19 +130,19 @@ def test_create_primitive_mesh(clean_scene) -> None:
     assert obj is not None
     assert obj.name == "TestBox"
     assert obj.dimensions == Vector((2.0, 2.0, 2.0))
-    assert obj["urdf_geometry_type"] == "BOX"
+    assert obj["source_geometry_type"] == "BOX"
 
     # 2. Cylinder
     cyl = Cylinder(radius=1.0, length=4.0)
     obj = create_primitive_mesh(cyl, "TestCylinder")
     assert obj.dimensions == Vector((2.0, 2.0, 4.0))  # radius * 2
-    assert obj["urdf_geometry_type"] == "CYLINDER"
+    assert obj["source_geometry_type"] == "CYLINDER"
 
     # 3. Sphere
     sphere = Sphere(radius=3.0)
     obj = create_primitive_mesh(sphere, "TestSphere")
     assert obj.dimensions == Vector((6.0, 6.0, 6.0))
-    assert obj["urdf_geometry_type"] == "SPHERE"
+    assert obj["source_geometry_type"] == "SPHERE"
 
     # 4. Invalid geometry
     assert create_primitive_mesh(None, "Fail") is None

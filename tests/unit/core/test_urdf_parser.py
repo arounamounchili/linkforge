@@ -4,12 +4,9 @@ from unittest.mock import patch
 
 import pytest
 from linkforge_core.base import RobotParserError, XacroDetectedError
-from linkforge_core.composer.naming import add_joint_with_renaming, add_link_with_renaming
 from linkforge_core.exceptions import (
     RobotModelError,
     RobotParserIOError,
-    RobotValidationError,
-    ValidationErrorCode,
 )
 from linkforge_core.models import (
     Box,
@@ -82,6 +79,7 @@ class TestURDFParser:
 
         assert isinstance(mat, Material)
         assert mat.name == "blue"
+        assert mat.color is not None
         assert mat.color.r == 0.0
         assert mat.color.b == 1.0
         assert mat.color.a == 1.0
@@ -374,6 +372,7 @@ class TestURDFParser:
                 <joint name="j1">
                     <hardwareInterface>position</hardwareInterface>
                 </joint>
+                <actuator name="a1"/>
             </transmission>
 
             <gazebo reference="base">
@@ -410,11 +409,11 @@ class TestURDFParser:
 
         # Test max file size
         parser = URDFParser(max_file_size=10)
-        with pytest.raises(RobotParserError, match="URDF string too large"):
+        with pytest.raises(RobotParserError, match="Content too large"):
             parser.parse_string("<robot>..............</robot>")
 
     def test_urdf_parser_robustness(self) -> None:
-        """Test duplicate name handling."""
+        """Test duplicate name handling (should skip duplicate)."""
         from linkforge_core.parsers.urdf_parser import URDFParser
 
         xml = """
@@ -426,9 +425,8 @@ class TestURDFParser:
         parser = URDFParser()
         robot = parser.parse_string(xml)
 
-        assert len(robot.links) == 2
-        names = {link.name for link in robot.links}
-        assert "link1" in names
+        assert len(robot.links) == 1
+        assert robot.links[0].name == "link1"
 
     def test_parse_sensors_extended(self, parser) -> None:
         """Test parsing various sensor types (lidar, imu, gps, ft, contact)."""
@@ -583,6 +581,7 @@ class TestURDFParser:
                 <joint name="j1">
                     <hardwareInterface>position</hardwareInterface>
                 </joint>
+                <actuator name="a1"/>
             </transmission>
 
             <ros2_control name="Control" type="system">
@@ -616,13 +615,13 @@ class TestURDFParser:
         assert len(robot.sensors) == 1
         assert len(robot.gazebo_elements) == 1
 
-    def test_link_duplication_renaming(self, tmp_path) -> None:
-        """Test that duplicate links are renamed."""
+    def test_link_duplication_skipping(self, tmp_path) -> None:
+        """Test that duplicate links are skipped."""
         xml = """
         <robot name="dupe_links">
             <link name="link1"/>
-            <link name="link1"/> <!-- Should become link1_duplicate_1 -->
-            <link name="link1"/> <!-- Should become link1_duplicate_2 -->
+            <link name="link1"/>
+            <link name="link1"/>
         </robot>
         """
         urdf_file = tmp_path / "dupe_link.urdf"
@@ -631,11 +630,11 @@ class TestURDFParser:
         parser = URDFParser()
         robot = parser.parse(urdf_file)
 
-        names = sorted([link.name for link in robot.links])
-        assert names == ["link1", "link1_duplicate_1", "link1_duplicate_2"]
+        assert len(robot.links) == 1
+        assert robot.links[0].name == "link1"
 
-    def test_joint_duplication_renaming(self, tmp_path) -> None:
-        """Test that duplicate joints are renamed."""
+    def test_joint_duplication_skipping(self, tmp_path) -> None:
+        """Test that duplicate joints are skipped."""
         xml = """
         <robot name="dupe_joints">
             <link name="base"/>
@@ -660,8 +659,8 @@ class TestURDFParser:
         parser = URDFParser()
         robot = parser.parse(urdf_file)
 
-        names = sorted([j.name for j in robot.joints])
-        assert names == ["j1", "j1_duplicate_1", "j1_duplicate_2"]
+        assert len(robot.joints) == 1
+        assert robot.joints[0].name == "j1"
 
     def test_xacro_detection_detailed(self, parser, tmp_path) -> None:
         """Test various XACRO artifacts triggering detection."""
@@ -699,6 +698,7 @@ class TestURDFParser:
         """
         parser = URDFParser()
         robot = parser.parse_string(xml)
+        assert robot.links[0].inertial is not None
         inertia = robot.links[0].inertial.inertia
         assert inertia.ixx == 1e-6
         assert inertia.izz == 1e-6
@@ -726,6 +726,7 @@ class TestURDFParser:
         robot = parser.parse_string(xml)
 
         cam = next(s for s in robot.sensors if s.name == "cam")
+        assert cam.camera_info is not None
         assert isinstance(cam.camera_info, CameraInfo)
 
         lidar = next(s for s in robot.sensors if s.name == "lidar")
@@ -777,6 +778,9 @@ class TestURDFParser:
         </gazebo>
         """
         sensor = parser._parse_sensor_from_gazebo(ET.fromstring(xml))
+        assert sensor is not None
+        assert sensor.gps_info is not None
+        assert sensor.gps_info.position_sensing_horizontal_noise is not None
         assert sensor.gps_info.position_sensing_horizontal_noise.mean == 0.1
         assert sensor.gps_info.velocity_sensing_vertical_noise is None
 
@@ -818,34 +822,6 @@ class TestURDFParser:
             pytest.raises(RobotParserError, match="Unexpected error"),
         ):
             parser.parse_string("<robot name='test'/>")
-
-    def test_joint_renaming_robustness_broken_ref(self) -> None:
-        """Test robustness of joint renaming when duplicates exist AND references are broken."""
-        from unittest.mock import patch
-
-        from linkforge_core.models import Joint, JointType, Robot
-        from linkforge_core.parsers.urdf_parser import URDFParser
-
-        robot = Robot(name="test_robot")
-        parser = URDFParser()
-        elem = ET.Element("joint", name="fixed_joint")
-        joint = Joint(name="fixed_joint", type=JointType.FIXED, parent="p", child="c")
-
-        # We need to simulate the exact conditions to hit the nested exception handler
-        # in _add_joint_with_renaming.
-        # This requires add_joint to fail with "already exists" first (to enter rename loop),
-        # then fail with "not found" (to hit the break).
-
-        with patch.object(robot, "add_joint") as mock_add:
-            mock_add.side_effect = [
-                RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "Already exists"),
-                RobotValidationError(ValidationErrorCode.NOT_FOUND, "Link not found"),
-            ]
-
-            add_joint_with_renaming(robot, joint, fallback_name=elem.get("name"))
-
-            # Should have attempted twice
-            assert mock_add.call_count == 2
 
     def test_parse_material_invalid_color(self, parser) -> None:
         """Test parsing invalid material colors."""
@@ -913,6 +889,7 @@ class TestURDFParser:
         # 7. Joint with explicit Axis
         xml = '<joint name="j1" type="continuous"><parent link="p"/><child link="c"/><axis xyz="0 1 0"/></joint>'
         joint = parser._parse_joint(ET.fromstring(xml))
+        assert joint.axis is not None
         assert joint.axis.y == 1.0
 
         # 8. Gazebo Plugin parsing
@@ -922,8 +899,10 @@ class TestURDFParser:
         </plugin>
         """
         plugin = parser._parse_gazebo_plugin(ET.fromstring(xml))
+        assert plugin is not None
         assert plugin.name == "p"
         assert plugin.filename == "lib.so"
+        assert plugin.raw_xml is not None
         assert "<param>value</param>" in plugin.raw_xml
 
         # 9. ROS2 Control misc parameters
@@ -934,6 +913,7 @@ class TestURDFParser:
         </ros2_control>
         """
         rc = parser._parse_ros2_control(ET.fromstring(xml))
+        assert rc is not None
         assert rc.parameters["param_block"] == "some config"
 
     def test_parse_robot_full_traversal(self) -> None:
@@ -995,64 +975,6 @@ class TestURDFParser:
             pytest.raises(RobotParserError, match="URDF XML"),
         ):
             parser.parse(path)
-
-    def test_add_joint_with_renaming_renaming(self) -> None:
-        """Test robust joint addition with duplicate names."""
-        from unittest.mock import MagicMock
-
-        from linkforge_core.models import Joint, JointType, Robot
-        from linkforge_core.parsers.urdf_parser import URDFParser
-
-        parser = URDFParser()
-        robot = MagicMock(spec=Robot)
-        # Mock existence check for 'j' and 'j_duplicate_1'
-        robot.has_joint.side_effect = lambda name: name in ("j", "j_duplicate_1")
-
-        joint = Joint(name="j", type=JointType.FIXED, parent="p", child="c")
-        joint_elem = ET.Element("joint", name="j")
-
-        # First two names already exist in _joint_index
-        # Third name 'j_duplicate_2' is free
-        robot.add_joint.side_effect = [
-            RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "already exists"),  # j exists
-            RobotValidationError(
-                ValidationErrorCode.DUPLICATE_NAME, "already exists"
-            ),  # j_duplicate_1 exists
-            None,  # Success for j_duplicate_2
-        ]
-
-        add_joint_with_renaming(robot, joint, fallback_name=joint_elem.get("name"))
-
-        assert robot.add_joint.call_count == 3
-
-    def test_add_link_with_renaming_renaming(self) -> None:
-        """Test robust link addition with duplicate names."""
-        from unittest.mock import patch
-
-        from linkforge_core.models import Link, Robot
-        from linkforge_core.parsers.urdf_parser import URDFParser
-
-        parser = URDFParser()
-        robot = Robot(name="test")
-        robot.add_link(Link(name="l"))
-        robot.add_link(Link(name="l_duplicate_1"))
-
-        link = Link(name="l")
-
-        with patch.object(robot, "add_link") as mock_add_link:
-            mock_add_link.side_effect = [
-                RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "Link 'l' already exists"),
-                RobotValidationError(
-                    ValidationErrorCode.DUPLICATE_NAME, "Link 'l_duplicate_1' failed"
-                ),  # Trigger exception inside loop
-                None,  # Succeeds for l_duplicate_2
-            ]
-
-            with patch("linkforge_core.composer.naming.logger") as mock_logger:
-                add_link_with_renaming(robot, link)
-                assert mock_add_link.call_count == 3
-                assert mock_logger.warning.called
-                assert "Renamed duplicate link" in mock_logger.warning.call_args[0][0]
 
 
 class TestURDFParserEdgeCoverage:
@@ -1118,13 +1040,13 @@ class TestURDFParserAdditionalEdgeCoverage:
     """Parser behavior for inertial properties, transmissions, and mesh validation."""
 
     def test_mesh_path_validation_error_with_directory(self, tmp_path) -> None:
-        """Non-package:// mesh path with urdf_directory triggers security validation."""
+        """Non-package:// mesh path with source_directory triggers security validation."""
         xml = """<robot name="r"><link name="l1"><visual>
             <geometry><mesh filename="/outside/path/mesh.stl"/></geometry>
         </visual></link></robot>"""
         parser = URDFParser()
-        # When urdf_directory is set and path escapes it, logs warning and returns None geometry
-        robot = parser.parse_string(xml, urdf_directory=tmp_path)
+        # When source_directory is set and path escapes it, logs warning and returns None geometry
+        robot = parser.parse_string(xml, source_directory=tmp_path)
         # Mesh should be skipped — link exists but no visual geometry
         assert len(robot.links) == 1
 
@@ -1150,6 +1072,7 @@ class TestURDFParserAdditionalEdgeCoverage:
         </link></robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
+        assert robot.links[0].inertial is not None
         t = robot.links[0].inertial.inertia
         assert t.ixx == pytest.approx(1e-6)
         assert t.iyy == pytest.approx(1e-6)
@@ -1197,6 +1120,7 @@ class TestURDFParserAdditionalEdgeCoverage:
         </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
+        assert robot.sensors[0].camera_info is not None
         assert robot.sensors[0].camera_info.width == 640
         assert robot.sensors[0].camera_info.height == 480
 
@@ -1229,12 +1153,17 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         """Hardware <param> elements inside ros2_control are collected into the parameters dict."""
         xml = """<robot name="r">
             <link name="base"/>
+            <link name="child"/>
+            <joint name="base_joint" type="fixed">
+                <parent link="base"/>
+                <child link="child"/>
+            </joint>
             <ros2_control name="hw" type="system">
                 <hardware>
                     <plugin>fake_components/GenericSystem</plugin>
-                    <param name="joints">base</param>
+                    <param name="joints">base_joint</param>
                 </hardware>
-                <joint name="base">
+                <joint name="base_joint">
                     <command_interface name="position"/>
                     <state_interface name="position"/>
                 </joint>
@@ -1276,6 +1205,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         parser = URDFParser()
         robot = parser.parse_string(xml)
         imu = robot.sensors[0].imu_info
+        assert imu is not None
         assert imu.angular_velocity_noise is not None
 
     def test_imu_sensor_with_linear_acceleration_x_noise(self) -> None:
@@ -1295,6 +1225,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         parser = URDFParser()
         robot = parser.parse_string(xml)
         imu = robot.sensors[0].imu_info
+        assert imu is not None
         assert imu.linear_acceleration_noise is not None
 
     def test_parse_file_too_large_raises_error(self, tmp_path) -> None:
@@ -1315,7 +1246,7 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         content = "<robot name='r'>" + "<link name='l1'/>" * 10 + "</robot>"
         parser = URDFParser()
         parser.max_file_size = 1  # 1 byte — will trip immediately
-        with pytest.raises(RobotParserError, match="URDF string too large"):
+        with pytest.raises(RobotParserError, match="Content too large"):
             parser.parse_string(content)
 
     def test_parse_iterative_out_of_order(self, tmp_path) -> None:
@@ -1340,8 +1271,10 @@ class TestURDFParserFileProtectionAndSensorCoverage:
         assert robot.has_link("link1")
         assert robot.has_link("link2")
         assert robot.has_joint("joint1")
-        assert robot.get_joint("joint1").parent == "link1"
-        assert robot.get_joint("joint1").child == "link2"
+        joint = robot.get_joint("joint1")
+        assert joint is not None
+        assert joint.parent == "link1"
+        assert joint.child == "link2"
 
     def test_urdf_parser_directory_failure_and_file_success(self, tmp_path) -> None:
         """Test file-based parsing edge cases."""

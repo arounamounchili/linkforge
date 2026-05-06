@@ -1,10 +1,10 @@
 """Robot assembly and composition tools.
 
 This package provides high-level APIs for building modular robots
-by attaching components and programmatically constructing links/joints.
+by programmatically constructing links, joints, and semantic data.
 """
 
-from .factories import fixed_joint, origin, revolute_joint
-from .robot_assembly import RobotAssembly
+from .helpers import box, cylinder, mesh, sphere
+from .robot_builder import RobotBuilder
 
-__all__ = ["RobotAssembly", "fixed_joint", "revolute_joint", "origin"]
+__all__ = ["RobotBuilder", "box", "cylinder", "sphere", "mesh"]

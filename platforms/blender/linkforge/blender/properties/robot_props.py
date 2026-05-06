@@ -48,7 +48,7 @@ class RobotPropertyGroup(PropertyGroup):
     # Robot identification
     robot_name: StringProperty(  # type: ignore
         name="Robot Name",
-        description="Name of your robot (used in URDF file)",
+        description="Name of your robot (used in robot model file)",
         default="my_robot",
         maxlen=64,
     )

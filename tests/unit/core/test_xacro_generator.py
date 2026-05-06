@@ -389,8 +389,8 @@ class TestXACROGenerator:
 
         link = Link(name="l", initial_visuals=[Visual(geometry=Mesh(resource=str(mesh_path)))])
         robot.add_link(link)
-
-        gen = XACROGenerator(advanced_mode=True, urdf_path=tmp_path / "urdf" / "robot.xacro")
+        output_path = tmp_path / "urdf" / "robot.xacro"
+        gen = XACROGenerator(advanced_mode=True, output_path=output_path)
         xml_str = gen.generate(robot)
         # Relaxed check for relative path
         assert "meshes/link.stl" in xml_str.replace("\\", "/")
@@ -609,6 +609,18 @@ class TestXACROGenerator:
         control.joints.append(
             Ros2ControlJoint(
                 name="joint1", command_interfaces=["position"], state_interfaces=["position"]
+            )
+        )
+        # Setup required joint structure for ros2_control validation
+        robot.add_link(Link(name="child"))
+        robot.add_joint(
+            Joint(
+                name="joint1",
+                type=JointType.REVOLUTE,
+                parent="base_link",
+                child="child",
+                axis=Vector3(0, 0, 1),
+                limits=JointLimits(lower=-1.0, upper=1.0, effort=10.0, velocity=1.0),
             )
         )
         robot.add_ros2_control(control)
@@ -860,7 +872,7 @@ class TestXACROGeneratorEdgeCoverage:
         assert gen._find_common_prefix(["abc", "abx"]) == "ab"
         assert gen._find_common_prefix(["", "a"]) == ""
 
-    def test_generate_robot_with_empty_name_and_missing_joint_axis(self) -> None:
+    def test_xacro_generator_edge_coverage(self) -> None:
         """Verify generator handles robots with empty names and joints missing axes."""
         robot = Robot(name="robot")
         # Bypass validation to test generator's empty name branch
@@ -1027,6 +1039,7 @@ class TestXACROGeneratorEdgeCoverage:
 
         # Signature with mesh and origin
         sig = gen._get_macro_signature(link, joint)
+        assert sig is not None, "Macro signature should not be None for a link with visuals"
         assert "cube.stl" in sig
         assert "p_0.000_0.000_0.000" in sig
 

@@ -1,32 +1,44 @@
 """Integration test for ros2_control hardware parameters and sensor type."""
 
+from typing import Any
+
 import bpy
 from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     """Test that choosing 'sensor' type exports read-only and includes parameters."""
-    scene = bpy.context.scene
-    props = scene.linkforge
+    scene = bpy.context.scene or bpy.data.scenes[0]
+    props: Any = getattr(scene, "linkforge")
 
     # 1. Create a simple robot structure
     bpy.ops.mesh.primitive_cube_add()
     base_obj = bpy.context.active_object
+    assert base_obj is not None
     base_obj.name = "base_link"
-    base_obj.linkforge.is_robot_link = True
+    base_lf: Any = getattr(base_obj, "linkforge")
+    base_lf.is_robot_link = True
 
     bpy.ops.mesh.primitive_cube_add()
     sensor_obj = bpy.context.active_object
+    assert sensor_obj is not None
     sensor_obj.name = "sensor_link"
-    sensor_obj.linkforge.is_robot_link = True
+    sensor_lf: Any = getattr(sensor_obj, "linkforge")
+    sensor_lf.is_robot_link = True
 
     # Create joint
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     joint_obj = bpy.context.active_object
+    assert joint_obj is not None
+    # Setup Link & Joint
+    scene = bpy.context.scene or bpy.data.scenes[0]
+    collection = scene.collection
+    assert collection is not None
     joint_obj.name = "joint1"
-    joint_obj.linkforge_joint.is_robot_joint = True
-    joint_obj.linkforge_joint.parent_link = base_obj
-    joint_obj.linkforge_joint.child_link = sensor_obj
+    joint_lf: Any = getattr(joint_obj, "linkforge_joint")
+    joint_lf.is_robot_joint = True
+    joint_lf.parent_link = base_obj
+    joint_lf.child_link = sensor_obj
 
     # 2. Configure ros2_control
     props.use_ros2_control = True
@@ -40,8 +52,9 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     p.value = "192.168.1.100"
 
     # Add joint to control system
-    bpy.ops.linkforge.add_ros2_control_joint(joint_name="joint1")
-    joint_item = props.ros2_control_joints[0]
+    # Instead of bpy.ops.linkforge (unregistered), add manually to the collection
+    joint_item = props.ros2_control_joints.add()
+    joint_item.name = "joint1"
 
     # Configure joint interfaces (state only)
     joint_item.cmd_position = False
@@ -86,7 +99,9 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
 
     root = ET.fromstring(exported_urdf)
     rc_xml = root.find("ros2_control")
+    assert rc_xml is not None, "ros2_control element not found in URDF"
     hw_xml = rc_xml.find("hardware")
+    assert hw_xml is not None, "hardware element not found in ros2_control"
 
     # Check global param
     param_xml = hw_xml.find(".//param[@name='ip_address']")
@@ -95,6 +110,7 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
 
     # Check joint param
     joint_xml = rc_xml.find(".//joint[@name='joint1']")
+    assert joint_xml is not None, "joint1 not found in ros2_control"
     joint_param_xml = joint_xml.find(".//param[@name='encoder_res']")
     assert joint_param_xml is not None
     assert joint_param_xml.text == "4096"

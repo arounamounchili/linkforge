@@ -6,12 +6,13 @@ __all__ = ["RobotXMLParser"]
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from ..base import IResourceResolver, RobotParser
 from ..exceptions import (
     RobotModelError,
     RobotParserError,
+    RobotParserIOError,
     RobotValidationError,
     ValidationErrorCode,
 )
@@ -41,8 +42,10 @@ logger = get_logger(__name__)
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 
+T = TypeVar("T")
 
-class RobotXMLParser(RobotParser):
+
+class RobotXMLParser(RobotParser[T], Generic[T]):
     """Abstract base class for XML-based robotics format parsers."""
 
     def __init__(
@@ -57,10 +60,67 @@ class RobotXMLParser(RobotParser):
             max_file_size: Maximum allowed file size in bytes
             sandbox_root: Optional root directory for security sandbox
             resource_resolver: Optional resolver for URIs
+
         """
         self.max_file_size = max_file_size
         self.sandbox_root = sandbox_root
         self.resource_resolver = resource_resolver
+
+    def _validate_file(self, filepath: Path) -> None:
+        """Validate file existence, type, and size.
+
+        Args:
+            filepath: Path to the file to validate.
+
+        Raises:
+            RobotParserIOError: If file is missing, is a directory, or exceeds max_file_size.
+
+        """
+        if not filepath.exists():
+            raise RobotParserIOError(filepath=filepath, reason="File not found")
+        if filepath.is_dir():
+            raise RobotParserIOError(filepath=filepath, reason="Target path is a directory")
+
+        file_size = filepath.stat().st_size
+        if file_size > self.max_file_size:
+            raise RobotParserIOError(filepath=filepath, reason="File too large")
+
+    def _validate_content(self, content: str | bytes) -> None:
+        """Validate content size for string or byte buffers.
+
+        Args:
+            content: The content string or bytes to validate.
+
+        Raises:
+            RobotParserIOError: If content size exceeds max_file_size.
+
+        """
+        size = len(content.encode("utf-8")) if isinstance(content, str) else len(content)
+        if size > self.max_file_size:
+            raise RobotParserIOError(filepath="buffer", reason="Content too large")
+
+    def parse_xacro(self, filepath: Path, **kwargs: Any) -> T:
+        """Resolve XACRO then parse the resulting XML string.
+
+        This is a convenience wrapper around XACROParser.resolve() + parse_string().
+
+        Args:
+            filepath: Path to the XACRO file to resolve.
+            **kwargs: Arguments passed to both the resolver and the format parser.
+
+        Returns:
+            The parsed robot model (T).
+
+        Raises:
+            RobotXacroError: If XACRO resolution fails.
+            RobotParserError: If XML parsing fails.
+
+        """
+        from .xacro_parser import XACROParser
+
+        self._validate_file(filepath)
+        xml_string = XACROParser().resolve(filepath, **kwargs)
+        return self.parse_string(xml_string, source_directory=filepath.parent, **kwargs)
 
     def _parse_origin_element(self, elem: ET.Element | None) -> Transform:
         """Parse origin-style element into a Transform object.
@@ -70,6 +130,7 @@ class RobotXMLParser(RobotParser):
 
         Returns:
             A Transform object.
+
         """
         if elem is None:
             return Transform.identity()
@@ -89,14 +150,14 @@ class RobotXMLParser(RobotParser):
     ) -> Box | Cylinder | Sphere | Mesh | None:
         """Parse geometry element (box, cylinder, sphere, mesh)."""
         try:
-            if geom_elem.find("box") is not None:
-                return self._parse_box(geom_elem.find("box"))
-            if geom_elem.find("cylinder") is not None:
-                return self._parse_cylinder(geom_elem.find("cylinder"))
-            if geom_elem.find("sphere") is not None:
-                return self._parse_sphere(geom_elem.find("sphere"))
-            if geom_elem.find("mesh") is not None:
-                return self._parse_mesh(geom_elem.find("mesh"), base_directory)
+            if geom_elem.find("{*}box") is not None:
+                return self._parse_box(geom_elem.find("{*}box"))
+            if geom_elem.find("{*}cylinder") is not None:
+                return self._parse_cylinder(geom_elem.find("{*}cylinder"))
+            if geom_elem.find("{*}sphere") is not None:
+                return self._parse_sphere(geom_elem.find("{*}sphere"))
+            if geom_elem.find("{*}mesh") is not None:
+                return self._parse_mesh(geom_elem.find("{*}mesh"), base_directory)
         except (RobotModelError, ValueError, RobotParserError) as e:
             logger.warning(f"Invalid geometry ignored: {e}")
             return None
@@ -173,6 +234,7 @@ class RobotXMLParser(RobotParser):
 
         Returns:
             Material object or None.
+
         """
         if mat_elem is None:
             return None
@@ -182,7 +244,7 @@ class RobotXMLParser(RobotParser):
             return materials[mat_name]
 
         color = None
-        color_elem = mat_elem.find("color")
+        color_elem = mat_elem.find("{*}color")
         num_rgb = 3
         num_rgba = 4
         if color_elem is not None:
@@ -201,12 +263,19 @@ class RobotXMLParser(RobotParser):
                 return None
 
         texture = None
-        texture_elem = mat_elem.find("texture")
+        texture_elem = mat_elem.find("{*}texture")
         if texture_elem is not None:
             texture = texture_elem.get("filename")
 
-        if color or texture:
-            return Material(name=mat_name if mat_name else "default", color=color, texture=texture)
+        # Create material even if color/texture are missing if we have a name
+        if mat_name or color or texture:
+            try:
+                return Material(
+                    name=mat_name if mat_name else "default", color=color, texture=texture
+                )
+            except RobotModelError as e:
+                logger.warning(f"Failed to create material '{mat_name}': {e}")
+                return None
 
         return None
 
@@ -218,16 +287,17 @@ class RobotXMLParser(RobotParser):
 
         Returns:
             Inertial object or None.
+
         """
         if inertial_elem is None:
             return None
 
-        origin = self._parse_origin_element(inertial_elem.find("origin"))
+        origin = self._parse_origin_element(inertial_elem.find("{*}origin"))
 
-        mass_elem = inertial_elem.find("mass")
+        mass_elem = inertial_elem.find("{*}mass")
         mass = parse_float(mass_elem.get("value") if mass_elem is not None else None, default=0.0)
 
-        inertia_elem = inertial_elem.find("inertia")
+        inertia_elem = inertial_elem.find("{*}inertia")
         if inertia_elem is not None:
             # Delegate physical validity entirely to the InertiaTensor model
             ixx = parse_float(inertia_elem.get("ixx"), default=0.0)

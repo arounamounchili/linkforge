@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
-from ..utils.string_utils import is_valid_urdf_name
+from ..utils.string_utils import is_valid_name
 from .geometry import Transform, Vector3
 
 
 class JointType(Enum):
-    """URDF joint types."""
+    """Standard robot joint types."""
 
     REVOLUTE = "revolute"  # Rotates around axis with limits
     CONTINUOUS = "continuous"  # Rotates around axis without limits
@@ -93,6 +93,10 @@ class JointMimic:
     multiplier: float = 1.0
     offset: float = 0.0
 
+    def with_prefix(self, prefix: str) -> JointMimic:
+        """Create a new mimic with a prefixed joint name."""
+        return replace(self, joint=f"{prefix}{self.joint}")
+
 
 @dataclass(frozen=True)
 class JointSafetyController:
@@ -105,9 +109,9 @@ class JointSafetyController:
         k_velocity: Velocity gain.
     """
 
-    soft_lower_limit: float = 0.0
-    soft_upper_limit: float = 0.0
-    k_position: float = 0.0
+    soft_lower_limit: float | None = None
+    soft_upper_limit: float | None = None
+    k_position: float | None = None
     k_velocity: float = 0.0
 
 
@@ -164,7 +168,7 @@ class Joint:
             )
 
         # Validate naming convention
-        if not is_valid_urdf_name(self.name):
+        if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
                 "Invalid characters in joint name",
@@ -266,3 +270,13 @@ class Joint:
             JointType.FLOATING: 6,
         }
         return dof_map[self.type]
+
+    def with_prefix(self, prefix: str) -> Joint:
+        """Create a new joint with prefixed name, parent, child, and mimic."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            parent=f"{prefix}{self.parent}",
+            child=f"{prefix}{self.child}",
+            mimic=self.mimic.with_prefix(prefix) if self.mimic else None,
+        )

@@ -4,9 +4,10 @@ import pytest
 
 try:
     import bpy
+    from bpy.app.handlers import persistent as _bpy_persistent  # noqa: F401
 
     HAS_BPY = True
-except ImportError:
+except (ImportError, AttributeError):
     HAS_BPY = False
 
 if HAS_BPY:

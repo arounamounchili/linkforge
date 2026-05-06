@@ -39,7 +39,7 @@ from ..models.sensor import (
 )
 from ..models.transmission import Transmission
 from ..utils.math_utils import format_float, format_vector
-from ..utils.xml_utils import create_xml_element, serialize_xml
+from ..utils.xml_utils import create_xml_element, serialize_xml, xml_add_text
 from ..validation import RobotValidator
 from .xml_base import RobotXMLGenerator
 
@@ -52,14 +52,14 @@ class URDFGenerator(RobotXMLGenerator):
     def __init__(
         self,
         pretty_print: bool = True,
-        urdf_path: Path | None = None,
+        output_path: Path | None = None,
         use_ros2_control: bool = True,
     ) -> None:
         """Initialize URDF generator.
 
         Args:
             pretty_print: If True, format XML with indentation for readability (default: True)
-            urdf_path: Path where URDF will be saved. Used to calculate relative mesh paths.
+            output_path: Path where URDF will be saved. Used to calculate relative mesh paths.
                       If None, mesh paths will be absolute or package:// URIs.
             use_ros2_control: Whether to generate ros2_control blocks from transmissions.
                              Set to False if you don't use ROS2 Control or prefer
@@ -71,10 +71,10 @@ class URDFGenerator(RobotXMLGenerator):
             >>> generator = URDFGenerator()
             >>>
             >>> # Generator with relative mesh paths
-            >>> generator = URDFGenerator(urdf_path=Path("/workspace/robot.urdf"))
+            >>> generator = URDFGenerator(output_path=Path("/workspace/robot.urdf"))
         """
-        super().__init__(pretty_print=pretty_print, output_path=urdf_path)
-        self.urdf_path = urdf_path
+        super().__init__(pretty_print=pretty_print, output_path=output_path)
+        self.output_path = output_path
         self.use_ros2_control = use_ros2_control
 
     def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
@@ -408,12 +408,15 @@ class URDFGenerator(RobotXMLGenerator):
         """Add safety controller limits."""
         if joint.safety_controller:
             s = joint.safety_controller
-            safety_attrib = {
-                "soft_lower_limit": s.soft_lower_limit,
-                "soft_upper_limit": s.soft_upper_limit,
-                "k_position": s.k_position,
-                "k_velocity": s.k_velocity,
-            }
+            safety_attrib: dict[str, str | float] = {}
+            if s.soft_lower_limit is not None:
+                safety_attrib["soft_lower_limit"] = s.soft_lower_limit
+            if s.soft_upper_limit is not None:
+                safety_attrib["soft_upper_limit"] = s.soft_upper_limit
+            if s.k_position is not None:
+                safety_attrib["k_position"] = s.k_position
+            safety_attrib["k_velocity"] = s.k_velocity
+
             create_xml_element(
                 joint_elem, "safety_controller", formatter=self._format_value, **safety_attrib
             )
@@ -454,7 +457,10 @@ class URDFGenerator(RobotXMLGenerator):
                 iface_elem.text = self._normalize_interface_name(interface)
 
             # Add mechanical reduction if not default
-            if trans_joint.mechanical_reduction != 1.0:
+            if (
+                trans_joint.mechanical_reduction is not None
+                and trans_joint.mechanical_reduction != 1.0
+            ):
                 reduction_elem = ET.SubElement(joint_elem, "mechanicalReduction")
                 reduction_elem.text = format_float(trans_joint.mechanical_reduction)
 
@@ -764,8 +770,6 @@ class URDFGenerator(RobotXMLGenerator):
 
         # Add material if specified
         if gazebo_elem.material is not None:
-            from ..utils.xml_utils import xml_add_text
-
             xml_add_text(gz_elem, "material", gazebo_elem.material)
 
         # Add boolean properties
@@ -785,13 +789,13 @@ class URDFGenerator(RobotXMLGenerator):
         self._add_optional_numeric_element(gz_elem, "stopCfm", gazebo_elem.stop_cfm)
         self._add_optional_numeric_element(gz_elem, "stopErp", gazebo_elem.stop_erp)
 
-        # Add custom properties
-        for key, value in gazebo_elem.properties.items():
+        # Add custom properties (sort by key for deterministic output)
+        for key in sorted(gazebo_elem.properties.keys()):
             prop_elem = ET.SubElement(gz_elem, key)
-            prop_elem.text = value
+            prop_elem.text = gazebo_elem.properties[key]
 
-        # Add plugins
-        for plugin in gazebo_elem.plugins:
+        # Add plugins (sort by name for deterministic output)
+        for plugin in sorted(gazebo_elem.plugins, key=lambda p: p.name):
             self._add_gazebo_plugin_element(gz_elem, plugin)
 
     def _add_gazebo_plugin_element(self, parent: ET.Element, plugin: GazeboPlugin) -> None:
@@ -870,7 +874,8 @@ class URDFGenerator(RobotXMLGenerator):
         """
         if robot.transmissions:
             parent.append(ET.Comment(" Transmissions "))
-        for transmission in robot.transmissions:
+        # Sort transmissions by name for deterministic output
+        for transmission in sorted(robot.transmissions, key=lambda t: t.name):
             self._add_transmission_element(parent, transmission)
 
     def add_gazebo(self, parent: ET.Element, robot: Robot) -> None:
@@ -882,7 +887,9 @@ class URDFGenerator(RobotXMLGenerator):
         """
         if robot.gazebo_elements:
             parent.append(ET.Comment(" Gazebo "))
-        for gazebo_elem in robot.gazebo_elements:
+        # Sort gazebo elements by reference for deterministic output
+        # Empty reference (global) comes first
+        for gazebo_elem in sorted(robot.gazebo_elements, key=lambda g: g.reference or ""):
             self._add_gazebo_element(parent, gazebo_elem)
 
     def add_sensors(self, parent: ET.Element, robot: Robot) -> None:
@@ -894,7 +901,8 @@ class URDFGenerator(RobotXMLGenerator):
         """
         if robot.sensors:
             parent.append(ET.Comment(" Sensors "))
-        for sensor in robot.sensors:
+        # Sort sensors by name for deterministic output
+        for sensor in sorted(robot.sensors, key=lambda s: s.name):
             self._add_sensor_element(parent, sensor)
 
     def _add_ros2_control_element(self, parent: ET.Element, robot: Robot) -> None:
@@ -914,8 +922,8 @@ class URDFGenerator(RobotXMLGenerator):
         plugin_elem = ET.SubElement(hw_elem, "plugin")
         plugin_elem.text = "gz_ros2_control/GazeboSimSystem"
 
-        # Process transmissions to extract joint interfaces
-        for trans in robot.transmissions:
+        # Process transmissions to extract joint interfaces (sort for deterministic output)
+        for trans in sorted(robot.transmissions, key=lambda t: t.name):
             for trans_joint in trans.joints:
                 joint_elem = ET.SubElement(rc_elem, "joint", name=trans_joint.name)
 
@@ -973,13 +981,13 @@ class URDFGenerator(RobotXMLGenerator):
         plugin_elem = ET.SubElement(hw_elem, "plugin")
         plugin_elem.text = rc.hardware_plugin
 
-        # Hardware-level parameters
-        for key, value in rc.parameters.items():
+        # Joint parameters (sort by key for deterministic output)
+        for key in sorted(rc.parameters.keys()):
             param_elem = ET.SubElement(hw_elem, "param", name=key)
-            param_elem.text = value
+            param_elem.text = rc.parameters[key]
 
-        # Joints
-        for joint in rc.joints:
+        # Joints (sort by name for deterministic output)
+        for joint in sorted(rc.joints, key=lambda j: j.name):
             joint_elem = ET.SubElement(rc_elem, "joint", name=joint.name)
 
             # Command interfaces

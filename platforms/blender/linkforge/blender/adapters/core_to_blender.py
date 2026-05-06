@@ -73,7 +73,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
 
     This function generates native Blender mesh primitives (Cube, Cylinder,
     Sphere) based on the Core geometry model and applies the correct
-    dimensions and URDF-specific metadata tags.
+    dimensions and format-specific metadata tags.
 
     Args:
         geometry: One of Box, Cylinder, or Sphere models.
@@ -97,7 +97,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
                 # Force update to ensure dimensions are applied correctly before return
                 if bpy.context.view_layer:
                     bpy.context.view_layer.update()
-                obj["urdf_geometry_type"] = "BOX"
+                obj["source_geometry_type"] = "BOX"
 
         elif isinstance(geometry, Cylinder):
             bpy.ops.mesh.primitive_cylinder_add(location=(0, 0, 0))
@@ -107,7 +107,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.length)
                 if bpy.context.view_layer:
                     bpy.context.view_layer.update()
-                obj["urdf_geometry_type"] = "CYLINDER"
+                obj["source_geometry_type"] = "CYLINDER"
 
         elif isinstance(geometry, Sphere):
             bpy.ops.mesh.primitive_uv_sphere_add(location=(0, 0, 0))
@@ -117,7 +117,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
                 if bpy.context.view_layer:
                     bpy.context.view_layer.update()
-                obj["urdf_geometry_type"] = "SPHERE"
+                obj["source_geometry_type"] = "SPHERE"
 
         else:
             return None
@@ -352,7 +352,7 @@ def _get_geometry_type_str(geometry: Box | Cylinder | Sphere | Mesh) -> str:
 def create_link_object(
     link: Link,
     robot: Robot,
-    urdf_dir: Path,
+    source_directory: Path,
     collection: bpy.types.Collection | None = None,
 ) -> bpy.types.Object | None:
     """Create Blender object from Link model with support for multiple visual/collision elements.
@@ -360,7 +360,7 @@ def create_link_object(
     Args:
         link: Link model
         robot: Robot model (for resolving resources)
-        urdf_dir: Directory containing URDF file (for resolving relative paths)
+        source_directory: Directory containing source file (for resolving relative paths)
         collection: Blender Collection to add object to
 
     Returns:
@@ -386,7 +386,7 @@ def create_link_object(
     if hasattr(link_obj, "linkforge"):
         props = link_obj.linkforge
         props.is_robot_link = True
-        props.urdf_name_stored = link.name
+        props.source_name_stored = link.name
         props.link_name = link.name
 
     # Create all visual geometries (URDF allows multiple <visual> per link)
@@ -397,7 +397,7 @@ def create_link_object(
         if len(link.visuals) == 1:
             visual_name = f"{link.name}_visual"
         else:
-            # Use URDF name attribute if available, otherwise use index
+            # Use robot model name attribute if available, otherwise use index
             suffix = visual.name if visual.name else str(idx)
             visual_name = f"{link.name}_visual_{suffix}"
 
@@ -405,7 +405,9 @@ def create_link_object(
         if isinstance(visual.geometry, Mesh):
             # Resolve mesh path using unified Robot resolver
             try:
-                mesh_path = robot.resolve_resource(visual.geometry.resource, relative_to=urdf_dir)
+                mesh_path = robot.resolve_resource(
+                    visual.geometry.resource, relative_to=source_directory
+                )
                 visual_obj = import_mesh_file(mesh_path, visual_name)
             except FileNotFoundError as e:
                 logger.warning(f"Mesh not found for visual '{visual_name}': {e}")
@@ -438,9 +440,9 @@ def create_link_object(
                 visual_obj.location = (0, 0, 0)
                 visual_obj.rotation_euler = (0, 0, 0)
 
-            # Store URDF name attribute for round-trip
+            # Store robot model name attribute for round-trip
             if visual.name:
-                visual_obj["urdf_name"] = visual.name
+                visual_obj["source_name"] = visual.name
 
             # Add visual mesh to collection
             if collection:
@@ -463,7 +465,7 @@ def create_link_object(
         if len(link.collisions) == 1:
             collision_name = f"{link.name}_collision"
         else:
-            # Use URDF name attribute if available, otherwise use index
+            # Use robot model name attribute if available, otherwise use index
             suffix = collision.name if collision.name else str(idx)
             collision_name = f"{link.name}_collision_{suffix}"
 
@@ -472,7 +474,7 @@ def create_link_object(
             # Resolve mesh path using unified Robot resolver
             try:
                 mesh_path = robot.resolve_resource(
-                    collision.geometry.resource, relative_to=urdf_dir
+                    collision.geometry.resource, relative_to=source_directory
                 )
                 collision_obj = import_mesh_file(mesh_path, collision_name)
             except FileNotFoundError as e:
@@ -506,13 +508,13 @@ def create_link_object(
                 collision_obj.location = (0, 0, 0)
                 collision_obj.rotation_euler = (0, 0, 0)
 
-            # Store URDF name attribute for round-trip
+            # Store robot model name attribute for round-trip
             if collision.name:
-                collision_obj["urdf_name"] = collision.name
+                collision_obj["source_name"] = collision.name
 
             # Mark as imported to prevent re-simplification on export.
             # Without this, collision meshes degrade with each import-export cycle.
-            collision_obj["imported_from_urdf"] = True
+            collision_obj["imported_from_source"] = True
 
             # Add collision mesh to link's collections
             sync_object_collections(collision_obj, link_obj)
@@ -638,7 +640,7 @@ def create_joint_object(
     if hasattr(empty, "linkforge_joint"):
         props = empty.linkforge_joint
         props.is_robot_joint = True
-        props.urdf_name_stored = joint.name
+        props.source_name_stored = joint.name
         props.joint_name = joint.name
 
         # Set joint type
@@ -977,12 +979,12 @@ def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
                 break
 
 
-def import_robot_to_scene(robot: Robot, urdf_path: Path, context: bpy.types.Context) -> bool:
+def import_robot_to_scene(robot: Robot, source_path: Path, context: bpy.types.Context) -> bool:
     """Import Robot model to Blender scene.
 
     Args:
         robot: Robot model
-        urdf_path: Path to URDF file
+        source_path: Path to source file
         context: Blender context
 
     Returns:
@@ -998,8 +1000,8 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context: bpy.types.Cont
     if context.scene:
         context.scene.collection.children.link(collection)
 
-    # Get URDF directory for resolving mesh paths
-    urdf_dir = urdf_path.parent
+    # Get source directory for resolving mesh paths
+    source_directory = source_path.parent
 
     # Count additional elements for better logging
     sensor_count = len(robot.sensors) if hasattr(robot, "sensors") else 0
@@ -1013,7 +1015,7 @@ def import_robot_to_scene(robot: Robot, urdf_path: Path, context: bpy.types.Cont
     logger.info(f"Importing robot '{robot.name}' ({', '.join(parts)})")
 
     for link in robot.links:
-        obj = create_link_object(link, robot, urdf_dir, collection)
+        obj = create_link_object(link, robot, source_directory, collection)
         if obj:
             link_objects[link.name] = obj
 

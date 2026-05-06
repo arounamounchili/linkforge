@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.generators.urdf_generator import URDFGenerator
 from linkforge.linkforge_core.models import (
     Box,
     Collision,
@@ -212,7 +212,7 @@ def test_stacked_links_roundtrip(tmp_path: Path) -> None:
 
     # Write URDF
     urdf_path = tmp_path / "stacked_robot.urdf"
-    generator = URDFGenerator(pretty_print=True, urdf_path=urdf_path)
+    generator = URDFGenerator(pretty_print=True, output_path=urdf_path)
     generator.write(robot, urdf_path)
 
     # Re-import
@@ -241,7 +241,7 @@ def test_stacked_links_roundtrip(tmp_path: Path) -> None:
 
     # Re-export
     urdf_path2 = tmp_path / "stacked_robot_reexport.urdf"
-    generator2 = URDFGenerator(pretty_print=True, urdf_path=urdf_path2)
+    generator2 = URDFGenerator(pretty_print=True, output_path=urdf_path2)
     generator2.write(reimported_robot, urdf_path2)
 
     # Verify re-exported URDF has same structure

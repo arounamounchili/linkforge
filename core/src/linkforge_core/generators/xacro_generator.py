@@ -48,7 +48,7 @@ class XACROGenerator(URDFGenerator):
         extract_dimensions: bool = True,
         generate_macros: bool = False,
         split_files: bool = False,
-        urdf_path: Path | None = None,
+        output_path: Path | None = None,
         use_ros2_control: bool = True,
     ) -> None:
         """Initialize XACRO generator.
@@ -60,13 +60,13 @@ class XACROGenerator(URDFGenerator):
             extract_dimensions: Extract common dimensions as properties
             generate_macros: Auto-generate macros for repeated patterns
             split_files: Split into multiple files (materials, macros, robot)
-            urdf_path: Path where XACRO will be saved (for relative mesh paths)
+            output_path: Path where XACRO will be saved (for relative mesh paths)
             use_ros2_control: Whether to generate ROS2 Control from transmissions
 
         """
         super().__init__(
             pretty_print=pretty_print,
-            urdf_path=urdf_path,
+            output_path=output_path,
             use_ros2_control=use_ros2_control,
         )
         self.advanced_mode = advanced_mode
@@ -123,7 +123,7 @@ class XACROGenerator(URDFGenerator):
         # Create root element
         root = ET.Element("robot", name=robot.name)
 
-        # 1. Collect properties (Materials & Dimensions)
+        # Collect properties (Materials & Dimensions)
         properties: list[tuple[str, str]] = []
 
         if self.extract_materials:
@@ -132,7 +132,7 @@ class XACROGenerator(URDFGenerator):
         if self.extract_dimensions:
             self._extract_dimensions(robot, properties)
 
-        # 2. Identify Macros
+        # Identify Macros
         self.macro_groups = {}
         self.links_in_macros = set()
 
@@ -142,7 +142,7 @@ class XACROGenerator(URDFGenerator):
                 for link, _ in group:
                     self.links_in_macros.add(link.name)
 
-        # 3. Add Properties to Root
+        # Add Properties to Root
         if properties:
             root.append(ET.Comment(" Properties "))
         for prop_name, prop_value in properties:
@@ -172,14 +172,14 @@ class XACROGenerator(URDFGenerator):
             for material in self.global_materials.values():
                 self._add_material_element(root, material)
 
-        # 4. Generate Macro Definitions
+        # Generate Macro Definitions
         if self.generate_macros and self.macro_groups:
             root.append(ET.Comment(" Macros "))
         if self.generate_macros:
             for signature, group in self.macro_groups.items():
                 self._generate_macro_definition(root, signature, group)
 
-        # 5. Generate Links and Joints (using unified Template Method)
+        # Generate Links and Joints (using unified Template Method)
         self.add_links_section(root, robot)
         self.add_joints_section(root, robot)
 
@@ -719,14 +719,14 @@ class XACROGenerator(URDFGenerator):
     def _(self, geometry: Mesh, parent: ET.Element, tag: str = "geometry") -> None:
         geom_elem = ET.SubElement(parent, tag)
 
-        urdf_dir = self.urdf_path.parent if self.urdf_path else None
+        urdf_dir = self.output_path.parent if self.output_path else None
         export_path = get_export_path(geometry.resource, relative_to=urdf_dir)
 
         attrib: dict[str, str] = {"filename": export_path}
         if geometry.scale.x != 1.0 or geometry.scale.y != 1.0 or geometry.scale.z != 1.0:
             scale_str = self._format_vector(geometry.scale.x, geometry.scale.y, geometry.scale.z)
             attrib["scale"] = scale_str
-        ET.SubElement(geom_elem, "mesh", **attrib)  # type: ignore[arg-type]
+        ET.SubElement(geom_elem, "mesh", attrib=attrib)
 
     def _get_dimension_property(self, dim_key: str, value: float) -> str | None:
         """Get property name for a dimension if it was extracted.

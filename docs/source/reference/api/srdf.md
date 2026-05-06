@@ -117,8 +117,8 @@ Path("robot_updated.srdf").write_text(output)
 ```
 
 :::{note}
-SRDF data is also produced automatically by `RobotAssembly.export_srdf()` when
-you use the `add_group()` and `disable_collisions()` helper methods. Direct
+SRDF data is also produced automatically by ``RobotBuilder.export_srdf()`` when
+you use the ``group()`` and ``disable_collisions()`` helper methods. Direct
 use of the parser and generator is mainly needed when working with existing
 SRDF files. See the [Composer reference](composer) for the higher-level API.
 :::

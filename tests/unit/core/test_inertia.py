@@ -55,7 +55,7 @@ def test_calculate_inertia_unsupported_geometry_fallback() -> None:
 def test_mesh_inertia_robust_negative_diagonals_handling() -> None:
     """Verify that CCW meshes result in positive diagonal inertia."""
     # Simple tetrahedron with mass (CCW/Outward winding)
-    vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)]
+    vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]
     triangles = [(0, 2, 1), (0, 1, 3), (0, 3, 2), (1, 2, 3)]
 
     res = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)

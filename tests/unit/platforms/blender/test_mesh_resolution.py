@@ -26,22 +26,22 @@ def mock_workspace():
         pkg_dir.mkdir()
         (pkg_dir / "package.xml").touch()
 
-        urdf_dir = pkg_dir / "urdf"
-        urdf_dir.mkdir()
+        source_directory = pkg_dir / "urdf"
+        source_directory.mkdir()
 
         mesh_dir = pkg_dir / "meshes"
         mesh_dir.mkdir()
         (mesh_dir / "base.stl").touch()
 
-        yield urdf_dir, pkg_dir
+        yield source_directory, pkg_dir
 
 
 def test_resolve_package_path_upward(mock_workspace) -> None:
-    urdf_dir, pkg_dir = mock_workspace
+    source_directory, pkg_dir = mock_workspace
     uri = "package://robot_pkg/meshes/base.stl"
 
     # Test upward search
-    resolved = resolve_package_path(uri, urdf_dir)
+    resolved = resolve_package_path(uri, source_directory)
     assert resolved is not None
     assert resolved.name == "base.stl"
     assert "robot_pkg" in resolved.parts
@@ -49,7 +49,7 @@ def test_resolve_package_path_upward(mock_workspace) -> None:
 
 
 def test_resolve_package_path_ros_env(mock_workspace) -> None:
-    urdf_dir, pkg_dir = mock_workspace
+    source_directory, pkg_dir = mock_workspace
     uri = "package://robot_pkg/meshes/base.stl"
 
     # Mock ROS_PACKAGE_PATH
@@ -61,19 +61,19 @@ def test_resolve_package_path_ros_env(mock_workspace) -> None:
 
 
 def test_resolve_mesh_path_package_uri(mock_workspace) -> None:
-    urdf_dir, pkg_dir = mock_workspace
+    source_directory, pkg_dir = mock_workspace
     uri_path = Path("package://robot_pkg/meshes/base.stl")
 
-    resolved = FileSystemResolver().resolve(str(uri_path), relative_to=urdf_dir)
+    resolved = FileSystemResolver().resolve(str(uri_path), relative_to=source_directory)
     assert resolved.exists()
     assert resolved.is_absolute()
 
 
 def test_resolve_mesh_path_relative(mock_workspace) -> None:
-    urdf_dir, pkg_dir = mock_workspace
+    source_directory, pkg_dir = mock_workspace
     rel_path = "../meshes/base.stl"
 
-    resolved = FileSystemResolver().resolve(rel_path, relative_to=urdf_dir)
+    resolved = FileSystemResolver().resolve(rel_path, relative_to=source_directory)
     assert resolved.exists()
     # Resolve to remove .. for comparison
     assert resolved.resolve() == (pkg_dir / "meshes" / "base.stl").resolve()

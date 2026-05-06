@@ -1,20 +1,23 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
 import pytest
-from linkforge_core.composer.naming import add_joint_with_renaming, add_link_with_renaming
 from linkforge_core.exceptions import RobotModelError, RobotParserError, XacroDetectedError
-from linkforge_core.models import Joint, Link, Robot
+from linkforge_core.models.geometry import Box
 from linkforge_core.parsers.urdf_parser import URDFParser
 from linkforge_core.parsers.xml_base import RobotXMLParser
 
 
-class MockXMLParser(RobotXMLParser):
+class MockXMLParser(RobotXMLParser[Any]):
     """Minimal implementation of RobotXMLParser for testing base functionality."""
 
-    def parse(self, filepath: Path, **kwargs):
-        pass
+    def parse(self, filepath: Path, **kwargs: Any) -> Any:
+        return None
+
+    def parse_string(self, content: str, **kwargs: Any) -> Any:
+        return None
 
 
 # --- Base Parser Robustness (RobotXMLParser) ---
@@ -31,6 +34,8 @@ def test_xml_base_material_parsing_robustness() -> None:
     # Support 3-component RGB by defaulting alpha to 1.0
     elem = ET.fromstring('<material name="m"><color rgba="1.0 0.5 0.0"/></material>')
     mat = parser._parse_material_element(elem, {})
+    assert mat is not None
+    assert mat.color is not None
     assert mat.color.r == 1.0
     assert mat.color.a == 1.0
 
@@ -44,6 +49,7 @@ def test_xml_base_inertia_sanitization() -> None:
         '<inertial><mass value="1"/><inertia ixx="10" iyy="1" izz="1"/></inertial>'
     )
     inertial = parser._parse_inertial_element(elem)
+    assert inertial is not None
     # Minimal stable diagonal is 1e-6
     assert inertial.inertia.ixx == 1e-6
 
@@ -70,22 +76,6 @@ def test_xml_base_geometry_error_handling() -> None:
         assert "(target: Vector3)" in mock_logger.warning.call_args[0][0]
 
 
-def test_xml_base_robust_joint_addition_errors() -> None:
-    """Verify logging of non-duplicate joint model errors."""
-    parser = MockXMLParser()
-    robot = Robot(name="test")
-    joint = MagicMock(spec=Joint)
-    joint.name = "unstable_joint"
-
-    with (
-        patch("linkforge_core.composer.naming.logger") as mock_logger,
-        patch.object(robot, "add_joint", side_effect=RobotModelError("invalid parent link")),
-    ):
-        add_joint_with_renaming(robot, joint, fallback_name="unstable_joint")
-        assert mock_logger.warning.called
-        assert "invalid parent link" in mock_logger.warning.call_args[0][0]
-
-
 # --- URDF Parser Feature Robustness ---
 
 
@@ -104,6 +94,7 @@ def test_urdf_parser_axis_normalization() -> None:
     """
     robot = parser.parse_string(xml)
     # Zero axis should normalize to default [1, 0, 0]
+    assert robot.joints[0].axis is not None
     assert robot.joints[0].axis.x == 1.0
 
 
@@ -119,6 +110,7 @@ def test_urdf_parser_revolute_joint_without_limits() -> None:
     </robot>
     """
     robot = parser.parse_string(xml)
+    assert robot.joints[0].limits is not None
     assert robot.joints[0].limits.lower == 0.0
     assert robot.joints[0].limits.upper == 0.0
 
@@ -197,11 +189,22 @@ def test_urdf_parser_iterative_parsing_robustness(tmp_path) -> None:
     parser = URDFParser()
 
     # XML nesting too deep
-    p = tmp_path / "deep.urdf"
-    nested_xml = "<robot>" + "<a>" * 101 + "</a>" * 101 + "</robot>"
-    p.write_text(nested_xml)
-    with pytest.raises(RobotParserError):
-        parser.parse(p)
+    import sys
+
+    from linkforge_core.utils.xml_utils import MAX_XML_DEPTH
+
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(old_limit, MAX_XML_DEPTH + 100))
+    try:
+        p = tmp_path / "deep.urdf"
+        nested_xml = (
+            "<robot>" + "<a>" * (MAX_XML_DEPTH + 1) + "</a>" * (MAX_XML_DEPTH + 1) + "</robot>"
+        )
+        p.write_text(nested_xml)
+        with pytest.raises(RobotParserError):
+            parser.parse(p)
+    finally:
+        sys.setrecursionlimit(old_limit)
 
     # Missing root <robot>
     p.write_text("<not_robot/>")
@@ -215,18 +218,6 @@ def test_urdf_parser_iterative_parsing_robustness(tmp_path) -> None:
     with patch.object(linkforge_core.parsers.urdf_parser, "logger") as mock_logger:
         parser.parse_string(xml)
         assert mock_logger.warning.called
-
-
-def test_urdf_parser_link_renaming_recursive() -> None:
-    """Verify iterative renaming handles multiple sequential collisions."""
-    parser = URDFParser()
-    robot = Robot(name="test")
-    robot.add_link(Link(name="l"))
-    robot.add_link(Link(name="l_duplicate_1"))
-
-    # Adding 'l' again should result in 'l_duplicate_2'
-    add_link_with_renaming(robot, Link(name="l"))
-    assert robot.has_link("l_duplicate_2")
 
 
 def test_urdf_parser_material_naming() -> None:
@@ -264,3 +255,44 @@ def test_urdf_parser_xml_error_in_parse(tmp_path) -> None:
     # Standardizing on 'Failed to parse URDF XML' for ParseError
     with pytest.raises(RobotParserError):
         parser.parse(p)
+
+
+def test_urdf_parser_namespaced_parsing() -> None:
+    """Verify that the URDF parser can handle files with default namespaces."""
+    urdf_content = """<?xml version="1.0"?>
+    <robot name="ns_robot" xmlns="http://www.ros.org/wiki/urdf">
+      <link name="base_link">
+        <visual>
+          <geometry>
+            <box size="1 2 3"/>
+          </geometry>
+        </visual>
+      </link>
+      <joint name="test_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="child_link"/>
+      </joint>
+      <link name="child_link"/>
+    </robot>
+    """
+
+    parser = URDFParser()
+    robot = parser.parse_string(urdf_content)
+
+    assert robot.name == "ns_robot"
+
+    base_link = robot.get_link("base_link")
+    assert base_link is not None
+    assert len(base_link.visuals) == 1
+
+    visual = base_link.visuals[0]
+    assert isinstance(visual.geometry, Box)
+    assert visual.geometry.size.x == 1.0
+
+    child_link = robot.get_link("child_link")
+    assert child_link is not None
+
+    test_joint = robot.get_joint("test_joint")
+    assert test_joint is not None
+    assert test_joint.parent == "base_link"
+    assert test_joint.child == "child_link"

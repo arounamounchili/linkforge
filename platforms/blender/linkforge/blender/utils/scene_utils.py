@@ -224,8 +224,8 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
                 is_primitive = False
 
                 # 1. Check explicit URDF tag
-                if collision_obj.get("urdf_geometry_type"):
-                    detected_type = typing.cast(str, collision_obj["urdf_geometry_type"])
+                if collision_obj.get("source_geometry_type"):
+                    detected_type = typing.cast(str, collision_obj["source_geometry_type"])
                     is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
                 # 2. Check generator tag
                 else:

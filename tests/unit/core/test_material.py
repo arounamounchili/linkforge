@@ -120,3 +120,10 @@ class TestMaterial:
         result = str(material)
         assert "textured" in result
         assert "texture.png" in result
+
+    def test_prefix(self) -> None:
+        """Test creating a material with a prefix."""
+        mat = Material(name="blue", color=Color(0, 0, 1))
+        prefixed = mat.with_prefix("arm_")
+        assert prefixed.name == "arm_blue"
+        assert prefixed.color == mat.color

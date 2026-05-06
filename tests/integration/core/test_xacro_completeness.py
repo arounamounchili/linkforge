@@ -191,7 +191,7 @@ def test_xacro_exports_sensors(simple_robot: Robot, tmp_path: Path) -> None:
     camera_elem = sensor_gazebo.find("camera")
     assert camera_elem is not None
     hfov = camera_elem.find("horizontal_fov")
-    assert hfov is not None
+    assert hfov is not None and hfov.text is not None
     assert float(hfov.text) == pytest.approx(1.047)
 
 

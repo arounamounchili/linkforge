@@ -18,6 +18,7 @@ from .checks import (
     MassPropertiesCheck,
     MimicChainCheck,
     Ros2ControlCheck,
+    SemanticCheck,
     TreeStructureCheck,
     ValidationCheck,
 )
@@ -57,6 +58,7 @@ class RobotValidator:
         GeometryCheck,
         Ros2ControlCheck,
         MimicChainCheck,
+        SemanticCheck,
     ]
 
     def __init__(
@@ -79,19 +81,10 @@ class RobotValidator:
 
         Returns:
             ValidationResult containing all errors and warnings.
-
-        Example:
-            >>> validator = RobotValidator()
-            >>> result = validator.validate(robot)
-            >>> print(f"Valid: {result.is_valid}")
-            >>> print(f"Errors: {result.error_count}, Warnings: {result.warning_count}")
-            >>> for error in result.errors:
-            ...     print(f"  - {error.title}: {error.message}")
-
-        Note:
-            The validator itself is stateless (aside from its check registry),
-            so a single instance can be reused across multiple robot models.
         """
+        # Ensure internal indices are fresh before validation
+        robot._reindex()
+
         result = ValidationResult(robot_name=robot.name)
         for check in self._checks:
             check.run(robot, result)

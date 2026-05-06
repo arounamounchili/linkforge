@@ -1,7 +1,7 @@
 """Handler for synchronizing LinkForge names with Blender object names.
 
 This ensures that renaming an object in the Outliner or duplicating it
-automatically updates the corresponding LinkForge URDF identity.
+automatically updates the corresponding LinkForge robot model identity.
 """
 
 from __future__ import annotations

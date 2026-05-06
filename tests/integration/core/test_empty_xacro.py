@@ -1,4 +1,4 @@
-from linkforge_core.parsers import XACROParser
+from linkforge_core.parsers import URDFParser
 
 
 def test_parse_macro_only_xacro(tmp_path) -> None:
@@ -13,8 +13,8 @@ def test_parse_macro_only_xacro(tmp_path) -> None:
     xacro_file = tmp_path / "macro_only.xacro"
     xacro_file.write_text(xacro_content)
 
-    parser = XACROParser()
-    robot = parser.parse(xacro_file)
+    parser = URDFParser()
+    robot = parser.parse_xacro(xacro_file)
 
     # In this case, the robot name is not specified in the <robot> tag,
     # and the macro is never called, so no links are created.
@@ -35,8 +35,8 @@ def test_parse_macro_with_name_no_call(tmp_path) -> None:
     xacro_file = tmp_path / "named_macro.xacro"
     xacro_file.write_text(xacro_content)
 
-    parser = XACROParser()
-    robot = parser.parse(xacro_file)
+    parser = URDFParser()
+    robot = parser.parse_xacro(xacro_file)
 
     assert robot.name == "my_robot"
     assert len(robot.links) == 0

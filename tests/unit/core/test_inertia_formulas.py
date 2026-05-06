@@ -285,7 +285,7 @@ class TestInertiaEdgeCases:
 
     def test_mesh_zero_mass(self) -> None:
         """Test that zero mass returns minimal inertia."""
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
         inertia = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=0.0)
 
@@ -295,7 +295,7 @@ class TestInertiaEdgeCases:
 
     def test_mesh_negative_mass(self) -> None:
         """Test that negative mass returns minimal inertia."""
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
         inertia = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=-1.0)
 
@@ -313,7 +313,7 @@ class TestInertiaEdgeCases:
 
     def test_mesh_empty_triangles(self) -> None:
         """Test that empty triangles raises RobotModelError."""
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = []
 
         with pytest.raises(RobotModelError):
@@ -321,15 +321,15 @@ class TestInertiaEdgeCases:
 
     def test_mesh_invalid_triangle_length(self) -> None:
         """Test that triangle with != 3 indices raises RobotModelError."""
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 1.0, 0.0)]
         triangles = [(0, 1, 2, 3)]  # 4 indices instead of 3
 
         with pytest.raises(RobotModelError):
-            calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+            calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)  # type: ignore[arg-type]
 
     def test_mesh_invalid_triangle_index(self) -> None:
         """Test that out-of-bounds triangle index raises RobotModelError."""
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 5)]  # Index 5 is out of bounds
 
         with pytest.raises(RobotModelError):
@@ -338,7 +338,7 @@ class TestInertiaEdgeCases:
     def test_mesh_degenerate_zero_volume(self) -> None:
         """Test that mesh with zero volume raises RobotPhysicsError."""
         # All vertices coplanar (in XY plane)
-        vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 1.0, 0.0)]
         triangles = [(0, 1, 2), (1, 3, 2)]
 
         with pytest.raises(RobotPhysicsError, match="not watertight|Degenerate mesh"):
@@ -346,14 +346,14 @@ class TestInertiaEdgeCases:
 
     def test_mesh_nan_vertex(self) -> None:
         """Test that NaN vertex raises RobotMathError."""
-        vertices = [(0, 0, 0), (1, 0, float("nan")), (0, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, float("nan")), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
         with pytest.raises(RobotMathError, match="non-finite value"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
 
     def test_mesh_inf_vertex(self) -> None:
         """Test that Inf vertex raises RobotMathError."""
-        vertices = [(0, 0, 0), (1, 0, float("inf")), (0, 1, 0)]
+        vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, float("inf")), (0.0, 1.0, 0.0)]
         triangles = [(0, 1, 2)]
         with pytest.raises(RobotMathError, match="non-finite value"):
             calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)

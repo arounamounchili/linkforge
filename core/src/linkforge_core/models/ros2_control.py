@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
@@ -28,8 +28,8 @@ class Ros2ControlJoint:
                 target="JointName",
                 value=self.name,
             )
-        # For sensors, both can be empty initially, but at least one state interface is usually required.
-        # However, we'll allow empty for now to support incremental building.
+        # At least one interface is required to ensure the control block is functional.
+        # This prevents defining "empty" joints that ROS 2 control would reject.
         if not self.command_interfaces and not self.state_interfaces:
             raise RobotValidationError(
                 ValidationErrorCode.VALUE_EMPTY,
@@ -37,6 +37,10 @@ class Ros2ControlJoint:
                 target="Ros2ControlInterfaces",
                 value=self.name,
             )
+
+    def with_prefix(self, prefix: str) -> Ros2ControlJoint:
+        """Create a new control joint with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
 
 
 @dataclass
@@ -77,6 +81,15 @@ class Ros2Control:
                 value=self.hardware_plugin,
             )
 
+        # Ensure all joints have unique names within this system
+        joint_names = [j.name for j in self.joints]
+        if len(joint_names) != len(set(joint_names)):
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Duplicate joint names found in ROS2 control system '{self.name}'",
+                target="Ros2ControlJoints",
+            )
+
         # Hardware sensors are read-only and do not accept command interfaces
         if self.type == "sensor":
             for joint in self.joints:
@@ -96,3 +109,11 @@ class Ros2Control:
                 target="Ros2ControlJoints",
                 value=len(self.joints),
             )
+
+    def with_prefix(self, prefix: str) -> Ros2Control:
+        """Create a new control block with prefixed name and joints."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            joints=[j.with_prefix(prefix) for j in self.joints],
+        )

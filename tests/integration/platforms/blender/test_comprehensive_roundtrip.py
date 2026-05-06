@@ -165,12 +165,23 @@ def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path) -> None
             # Verify limits
             if joint1.limits:
                 assert joint2.limits is not None, f"Joint {joint_name}: missing limits"
-                assert abs(joint2.limits.lower - joint1.limits.lower) < 0.001, (
-                    f"Joint {joint_name}: lower limit mismatch"
-                )
-                assert abs(joint2.limits.upper - joint1.limits.upper) < 0.001, (
-                    f"Joint {joint_name}: upper limit mismatch"
-                )
+
+                # Helper to compare optional floats
+                def assert_optional_float_eq(
+                    val1: float | None,
+                    val2: float | None,
+                    name: str,
+                    _jn: str = joint_name,
+                ) -> None:
+                    if val1 is None:
+                        assert val2 is None, f"Joint {_jn}: {name} should be None"
+                    else:
+                        assert val2 is not None, f"Joint {_jn}: {name} should not be None"
+                        assert abs(val2 - val1) < 0.001, f"Joint {_jn}: {name} mismatch"
+
+                assert_optional_float_eq(joint1.limits.lower, joint2.limits.lower, "lower limit")
+                assert_optional_float_eq(joint1.limits.upper, joint2.limits.upper, "upper limit")
+
                 assert abs(joint2.limits.effort - joint1.limits.effort) < 0.001, (
                     f"Joint {joint_name}: effort limit mismatch"
                 )
@@ -198,30 +209,48 @@ def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path) -> None
                     f"Joint {joint_name}: mimic offset mismatch"
                 )
 
+            def assert_optional_float_eq(
+                val1: float | None,
+                val2: float | None,
+                field_name: str,
+                jn: str = joint_name,
+            ) -> None:
+                if val1 is None:
+                    assert val2 is None, f"Joint {jn}: {field_name} should be None"
+                else:
+                    assert val2 is not None, f"Joint {jn}: {field_name} should not be None"
+                    assert abs(val2 - val1) < 0.001, f"Joint {jn}: {field_name} mismatch"
+
             # Verify safety controller
             if joint1.safety_controller:
                 assert joint2.safety_controller is not None, (
                     f"Joint {joint_name}: missing safety controller"
                 )
-                assert (
-                    abs(
-                        joint2.safety_controller.soft_lower_limit
-                        - joint1.safety_controller.soft_lower_limit
-                    )
-                    < 0.001
+
+                sc1 = joint1.safety_controller
+                sc2 = joint2.safety_controller
+
+                assert_optional_float_eq(
+                    sc1.soft_lower_limit, sc2.soft_lower_limit, "soft_lower_limit"
                 )
-                assert (
-                    abs(joint2.safety_controller.k_position - joint1.safety_controller.k_position)
-                    < 0.001
+                assert_optional_float_eq(
+                    sc1.soft_upper_limit, sc2.soft_upper_limit, "soft_upper_limit"
+                )
+                assert_optional_float_eq(sc1.k_position, sc2.k_position, "k_position")
+                assert abs(sc2.k_velocity - sc1.k_velocity) < 0.001, (
+                    f"Joint {joint_name}: k_velocity mismatch"
                 )
 
             # Verify calibration
             if joint1.calibration:
                 assert joint2.calibration is not None, f"Joint {joint_name}: missing calibration"
-                if joint1.calibration.rising is not None:
-                    assert abs(joint2.calibration.rising - joint1.calibration.rising) < 0.001
-                if joint1.calibration.falling is not None:
-                    assert abs(joint2.calibration.falling - joint1.calibration.falling) < 0.001
+
+                assert_optional_float_eq(
+                    joint1.calibration.rising, joint2.calibration.rising, "calibration.rising"
+                )
+                assert_optional_float_eq(
+                    joint1.calibration.falling, joint2.calibration.falling, "calibration.falling"
+                )
 
         # ========== VERIFY TRANSMISSIONS ==========
         assert len(robot2.transmissions) == len(robot1.transmissions), "Transmission count mismatch"

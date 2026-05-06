@@ -27,6 +27,7 @@ from linkforge.linkforge_core.models import (
     Box,
     Cylinder,
     JointType,
+    Link,
     Mesh,
     SensorType,
     Sphere,
@@ -1229,13 +1230,27 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene) -> None:
     # Test success path with Gazebo
     bpy.context.scene.linkforge.use_ros2_control = True
     bpy.context.scene.linkforge.ros2_control_name = "DefaultBot"
+
+    # Create a valid joint for ros2_control validation
+    child_obj = bpy.data.objects.new("C", None)
+    bpy.context.collection.objects.link(child_obj)
+    child_obj.linkforge.is_robot_link = True
+
+    joint_obj = bpy.data.objects.new("DummyJoint", None)
+    bpy.context.collection.objects.link(joint_obj)
+    joint_obj.linkforge_joint.is_robot_joint = True
+    joint_obj.linkforge_joint.joint_name = "Dummy"
+    joint_obj.linkforge_joint.parent_link = link_obj
+    joint_obj.linkforge_joint.child_link = child_obj
+
     item = bpy.context.scene.linkforge.ros2_control_joints.add()
     item.name = "Dummy"
     bpy.context.scene.linkforge.gazebo_plugin_name = "gazebo_ros2_control"
     bpy.context.scene.linkforge.controllers_yaml_path = "/path/to/yaml"
+    # Use a lambda to return a Link with the correct name for each call
     with mock.patch(
         "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
-        return_value=None,
+        side_effect=lambda obj, *args, **kwargs: Link(name=obj.name),
     ):
         robot, errors = scene_to_robot(bpy.context)
         assert len(robot.gazebo_elements) > 0
@@ -1758,6 +1773,6 @@ def test_detect_primitive_type_tags() -> None:
     """Verify manual primitive type override via custom properties."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
-    obj["urdf_geometry_type"] = "SPHERE"
+    obj["source_geometry_type"] = "SPHERE"
 
     assert detect_primitive_type(obj) == "SPHERE"

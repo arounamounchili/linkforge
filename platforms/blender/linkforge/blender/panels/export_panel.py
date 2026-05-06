@@ -16,7 +16,7 @@ class LINKFORGE_PT_export_panel(Panel):
     """Validate & Export panel - robot configuration, validation, and export settings."""
 
     bl_label = "Validate & Export"
-    bl_description = "Step 4: Validate robot structure and export to URDF/XACRO"
+    bl_description = "Step 4: Validate robot structure and export to robot model file"
     bl_idname = "LINKFORGE_PT_export_panel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -202,7 +202,7 @@ class LINKFORGE_PT_export_panel(Panel):
             if export_row:
                 export_row.scale_y = 1.5
                 export_row.operator(
-                    "linkforge.export_urdf", text="Export URDF/XACRO", icon="EXPORT"
+                    "linkforge.export_robot_model", text="Export Robot Model", icon="EXPORT"
                 )
 
             # === COMPONENT BROWSER (Quick select all components) ===

@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from linkforge.linkforge_core import URDFGenerator
+from linkforge.linkforge_core.generators.urdf_generator import URDFGenerator
 from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
 
@@ -51,7 +51,7 @@ def test_simple_arm_roundtrip(examples_dir: Path) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir) / "exported.urdf"
 
-        generator = URDFGenerator(pretty_print=True, urdf_path=output_path)
+        generator = URDFGenerator(pretty_print=True, output_path=output_path)
         generator.write(robot, output_path)
 
         assert output_path.exists(), "Exported URDF file not created"
@@ -147,9 +147,10 @@ def test_joint_limits_preserved(examples_dir: Path) -> None:
 
     # Check that all joints have limits
     for joint in robot.joints:
-        if joint.type.name == "REVOLUTE" or joint.type.name == "PRISMATIC":
+        if joint.type.name in ("REVOLUTE", "PRISMATIC"):
             assert joint.limits is not None, f"Joint {joint.name} missing limits"
-            assert joint.limits.lower < joint.limits.upper, f"Invalid limits for {joint.name}"
+            if joint.limits.lower is not None and joint.limits.upper is not None:
+                assert joint.limits.lower < joint.limits.upper, f"Invalid limits for {joint.name}"
             assert joint.limits.effort > 0, f"Invalid effort for {joint.name}"
             assert joint.limits.velocity > 0, f"Invalid velocity for {joint.name}"
 

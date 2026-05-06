@@ -3,7 +3,9 @@
 from pathlib import Path
 
 import pytest
-from linkforge_core.exceptions import RobotModelError
+from linkforge_core.exceptions import RobotModelError, RobotParserIOError
+from linkforge_core.parsers.srdf_parser import SRDFParser
+from linkforge_core.parsers.urdf_parser import URDFParser
 from linkforge_core.validation.security import (
     find_sandbox_root,
     validate_mesh_path,
@@ -107,7 +109,7 @@ class TestValidateMeshPath:
         urdf_dir.mkdir()
 
         # URL-encoded path (space as %20)
-        encoded_path = "meshes/my%20file.stl"
+        encoded_path = Path("meshes/my%20file.stl")
         result = validate_mesh_path(encoded_path, urdf_dir)
 
         # Should decode to normal path
@@ -210,7 +212,7 @@ def test_find_sandbox_root_recursion_break() -> None:
     # Returns current (fake_root).
 
     # We need to type ignore or ensure it quacks like Path
-    res = find_sandbox_root(fake_filepath)
+    res = find_sandbox_root(fake_filepath)  # type: ignore[arg-type]
     assert res == fake_root
 
 
@@ -226,3 +228,48 @@ def test_package_uri_security_validation() -> None:
         validate_package_uri("package://pkg/./mesh.stl")
     with pytest.raises(RobotModelError):
         validate_package_uri("package://pkg//mesh.stl")
+
+
+class TestParserSecurity:
+    """Tests verifying the centralized security hardening in RobotXMLParser."""
+
+    def test_xacro_early_exit_on_oversized_file(self, tmp_path) -> None:
+        """Verify that parse_xacro exits early if the source file is too large.
+
+        This is critical because it prevents XACRO resolution (which is heavy)
+        from starting on potentially malicious large files.
+        """
+        huge_file = tmp_path / "huge.xacro"
+        huge_file.write_text("<robot/>" * 100)  # ~800 bytes
+
+        # Set limit to 100 bytes
+        parser = URDFParser(max_file_size=100)
+        with pytest.raises(RobotParserIOError, match="File too large"):
+            parser.parse_xacro(huge_file)
+
+    def test_urdf_parse_string_size_limit(self) -> None:
+        """Verify that URDF parse_string enforces size limits."""
+        parser = URDFParser(max_file_size=50)
+        content = "<robot>" + " " * 100 + "</robot>"
+        with pytest.raises(RobotParserIOError, match="Content too large"):
+            parser.parse_string(content)
+
+    def test_srdf_parse_string_size_limit(self) -> None:
+        """Verify that SRDF parse_string enforces size limits."""
+        parser = SRDFParser(max_file_size=50)
+        content = "<robot>" + " " * 100 + "</robot>"
+        with pytest.raises(RobotParserIOError, match="Content too large"):
+            parser.parse_string(content)
+
+    def test_non_existent_file_consistent_error(self) -> None:
+        """Verify that missing files produce consistent errors across parsers."""
+        urdf_parser = URDFParser()
+        srdf_parser = SRDFParser()
+
+        path = Path("non_existent_logic_test.xml")
+
+        with pytest.raises(RobotParserIOError, match="File not found"):
+            urdf_parser.parse(path)
+
+        with pytest.raises(RobotParserIOError, match="File not found"):
+            srdf_parser.parse(path)

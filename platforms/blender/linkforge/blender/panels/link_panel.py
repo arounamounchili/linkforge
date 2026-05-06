@@ -89,7 +89,7 @@ class LINKFORGE_PT_links(Panel):
         icon = "EMPTY_DATA" if is_virtual else "LINKED"
         box.label(text=title, icon=typing.cast(typing.Any, icon))
 
-        # Display Blender object name if it differs from persistent URDF name
+        # Display Blender object name if it differs from persistent robot model name
         if obj.name != props.link_name:
             sub = box.row()
             sub.active = False  # Make it subtle
@@ -135,7 +135,7 @@ class LINKFORGE_PT_links(Panel):
                 text=f"Detected Collision: {detected_type}", icon=typing.cast(typing.Any, icon_name)
             )
 
-            is_imported = typing.cast(bool, collision_obj.get("imported_from_urdf"))
+            is_imported = typing.cast(bool, collision_obj.get("imported_from_source"))
 
             # Show quality slider for mesh-based collisions.
             # If the user explicitly selects MESH mode, we show the slider even if
@@ -145,7 +145,7 @@ class LINKFORGE_PT_links(Panel):
             ):
                 box.separator()
                 row = box.row()
-                # Disable slider if imported from URDF (cannot be simplified via slider)
+                # Disable slider if imported from source (cannot be simplified via slider)
                 row.enabled = not is_imported
                 row.prop(props, "collision_quality", text="Collision Quality", slider=True)
 

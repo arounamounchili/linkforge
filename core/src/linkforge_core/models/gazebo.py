@@ -1,8 +1,8 @@
-"""Gazebo-specific URDF extensions and elements."""
+"""Gazebo simulation extensions and elements."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
@@ -11,8 +11,8 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 class GazeboElement:
     """Generic Gazebo element that can be applied to robot, link, or joint.
 
-    The <gazebo> tag in URDF allows specification of Gazebo-specific properties
-    that are not part of the standard URDF specification.
+    Simulation elements allow specification of Gazebo-specific properties
+    that are not part of the standard kinematic tree.
     """
 
     reference: str | None = None  # Link or joint name (None for robot-level)
@@ -47,6 +47,14 @@ class GazeboElement:
                 target="GazeboReference",
             )
 
+    def with_prefix(self, prefix: str) -> GazeboElement:
+        """Create a new gazebo element with prefixed reference and plugins."""
+        return replace(
+            self,
+            reference=f"{prefix}{self.reference}" if self.reference else None,
+            plugins=[p.with_prefix(prefix) for p in self.plugins],
+        )
+
 
 @dataclass(frozen=True)
 class GazeboPlugin:
@@ -72,3 +80,7 @@ class GazeboPlugin:
                 "Plugin filename cannot be empty",
                 target="PluginFilename",
             )
+
+    def with_prefix(self, prefix: str) -> GazeboPlugin:
+        """Create a new plugin with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")

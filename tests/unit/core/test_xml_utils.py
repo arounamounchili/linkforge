@@ -116,16 +116,23 @@ def test_parse_vector3_errors() -> None:
 
 def test_validate_xml_depth_exceeded() -> None:
     """Test XML depth validation with exceeding depth."""
+    import sys
+
     import pytest
 
-    # Create very deep XML
-    root = ET.Element("root")
-    curr = root
-    for _ in range(MAX_XML_DEPTH + 1):
-        curr = ET.SubElement(curr, "a")
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(old_limit, MAX_XML_DEPTH + 100))
+    try:
+        # Create very deep XML
+        root = ET.Element("root")
+        curr = root
+        for _ in range(MAX_XML_DEPTH + 1):
+            curr = ET.SubElement(curr, "a")
 
-    with pytest.raises(RobotModelError, match="exceeds limit"):
-        validate_xml_depth(root)
+        with pytest.raises(RobotModelError, match="exceeds limit"):
+            validate_xml_depth(root)
+    finally:
+        sys.setrecursionlimit(old_limit)
 
 
 def test_parsing_missing_attribute() -> None:
@@ -209,6 +216,7 @@ def test_create_xml_element_no_formatter() -> None:
     parent = ET.Element("p")
     create_xml_element(parent, "child", a=1, b=True)
     child = parent.find("child")
+    assert child is not None
     assert child.get("a") == "1"
     assert child.get("b") == "True"
 

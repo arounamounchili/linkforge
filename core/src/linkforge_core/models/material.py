@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
@@ -32,7 +32,7 @@ class Color:
         return (self.r, self.g, self.b, self.a)
 
     def __str__(self) -> str:
-        """String representation for URDF."""
+        """String representation."""
         return f"{self.r} {self.g} {self.b} {self.a}"
 
 
@@ -53,3 +53,7 @@ class Material:
                 target="MaterialDefinition",
                 value=self.name,
             )
+
+    def with_prefix(self, prefix: str) -> Material:
+        """Create a new material with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")

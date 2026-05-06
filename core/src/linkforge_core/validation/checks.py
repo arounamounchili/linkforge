@@ -9,6 +9,7 @@ allowing the caller to run any subset of checks independently.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
@@ -17,6 +18,7 @@ from .result import ValidationResult
 if TYPE_CHECKING:
     from ..models.link import Link
     from ..models.robot import Robot
+    from ..models.srdf import PlanningGroup
 
 
 class ValidationCheck(ABC):
@@ -161,8 +163,9 @@ class TreeStructureCheck(ValidationCheck):
     def _check_root(robot: Robot, result: ValidationResult) -> Link | None:
         """Return the root link, or None if it cannot be determined."""
         try:
-            root = robot.get_root_link()
-            if root is None:
+            return robot.root_link
+        except RobotValidationError as e:
+            if e.code == ValidationErrorCode.NO_ROOT:
                 result.add_error(
                     title="No root link",
                     message=(
@@ -172,28 +175,12 @@ class TreeStructureCheck(ValidationCheck):
                     code=ValidationErrorCode.NO_ROOT,
                     suggestion="Ensure exactly one link has no parent joint (the base/root link)",
                 )
-            return root
-        except RobotModelError as e:
-            if isinstance(e, RobotValidationError):
-                if e.code == ValidationErrorCode.MULTIPLE_ROOTS:
-                    result.add_error(
-                        title="Multiple root links",
-                        message=str(e),
-                        suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
-                    )
-                elif e.code == ValidationErrorCode.NO_ROOT:
-                    result.add_error(
-                        title="No root link",
-                        message=str(e),
-                        suggestion="Ensure exactly one link has no parent joint (the base/root link)",
-                    )
-                else:
-                    result.add_error(
-                        title="Root link error",
-                        message=str(e),
-                        code=e.code if hasattr(e, "code") else ValidationErrorCode.INVALID_VALUE,
-                        suggestion="Check the joint connections in your robot tree",
-                    )
+            elif e.code == ValidationErrorCode.MULTIPLE_ROOTS:
+                result.add_error(
+                    title="Multiple root links",
+                    message=str(e),
+                    suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
+                )
             else:
                 result.add_error(
                     title="Root link error",
@@ -201,24 +188,22 @@ class TreeStructureCheck(ValidationCheck):
                     suggestion="Check the joint connections in your robot tree",
                 )
             return None
+        except RobotModelError as e:
+            result.add_error(
+                title="Kinematic error",
+                message=str(e),
+            )
+            return None
 
     @staticmethod
-    def _check_connectivity(robot: Robot, root: object, result: ValidationResult) -> None:
+    def _check_connectivity(robot: Robot, root: Link, result: ValidationResult) -> None:
         child_counts: dict[str, int] = {}
         for joint in robot.joints:
             child_counts[joint.child] = child_counts.get(joint.child, 0) + 1
 
         for link in robot.links:
             count = child_counts.get(link.name, 0)
-            if link != root and count == 0:
-                result.add_error(
-                    title="Disconnected link",
-                    message=f"Link '{link.name}' is not connected to the kinematic tree",
-                    affected_objects=[link.name],
-                    code=ValidationErrorCode.DISCONNECTED,
-                    suggestion=f"Create a joint connecting '{link.name}' to another link in the tree",
-                )
-            elif count > 1:
+            if count > 1:
                 result.add_error(
                     title="Multiple parent joints",
                     message=(
@@ -227,6 +212,14 @@ class TreeStructureCheck(ValidationCheck):
                     affected_objects=[link.name],
                     code=ValidationErrorCode.MULTIPLE_ROOTS,
                     suggestion="Remove extra joints. Each link can only have one parent",
+                )
+            elif count == 0 and link.name != root.name:
+                result.add_error(
+                    title="Disconnected link",
+                    message=f"Link '{link.name}' is not connected to the kinematic tree",
+                    affected_objects=[link.name],
+                    code=ValidationErrorCode.MULTIPLE_ROOTS,
+                    suggestion="Add a joint to connect this link to the kinematic tree",
                 )
 
 
@@ -348,6 +341,125 @@ class MimicChainCheck(ValidationCheck):
                 current = next_joint.mimic.joint
 
 
+class SemanticCheck(ValidationCheck):
+    """Check for semantic robot description (SRDF) invariants."""
+
+    def run(self, robot: Robot, result: ValidationResult) -> None:
+        """Check SRDF invariants."""
+        if not robot.semantic:
+            return
+
+        semantic = robot.semantic
+        group_names = {g.name for g in semantic.groups}
+        link_names = {link.name for link in robot.links}
+        joint_names = {joint.name for joint in robot.joints}
+
+        # Check planning groups
+        for group in semantic.groups:
+            # Check links
+            for link_name in group.links:
+                if link_name not in link_names:
+                    result.add_error(
+                        title="Invalid planning group link",
+                        message=f"Group '{group.name}' references non-existent link '{link_name}'",
+                        affected_objects=[group.name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                    )
+            # Check joints
+            for joint_name in group.joints:
+                if joint_name not in joint_names:
+                    result.add_error(
+                        title="Invalid planning group joint",
+                        message=f"Group '{group.name}' references non-existent joint '{joint_name}'",
+                        affected_objects=[group.name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                    )
+            # Check subgroups and cycles
+            self._check_subgroup_cycles(group, semantic.groups, result)
+
+        # Check group states
+        for state in semantic.group_states:
+            if state.group not in group_names:
+                result.add_error(
+                    title="Invalid group state reference",
+                    message=f"State '{state.name}' references non-existent group '{state.group}'",
+                    affected_objects=[state.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+
+        # Check end effectors
+        for ee in semantic.end_effectors:
+            if ee.group not in group_names:
+                result.add_error(
+                    title="Invalid end effector group",
+                    message=f"End effector '{ee.name}' references non-existent group '{ee.group}'",
+                    affected_objects=[ee.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+            if ee.parent_link not in link_names:
+                result.add_error(
+                    title="Invalid end effector parent link",
+                    message=f"End effector '{ee.name}' references non-existent parent link '{ee.parent_link}'",
+                    affected_objects=[ee.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+            if ee.parent_group and ee.parent_group not in group_names:
+                result.add_error(
+                    title="Invalid end effector parent group",
+                    message=f"End effector '{ee.name}' references non-existent parent group '{ee.parent_group}'",
+                    affected_objects=[ee.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+
+        # Check passive joints
+        for pj in semantic.passive_joints:
+            if pj.name not in joint_names:
+                result.add_error(
+                    title="Invalid passive joint",
+                    message=f"Passive joint '{pj.name}' does not exist",
+                    affected_objects=[pj.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+
+    def _check_subgroup_cycles(
+        self, group: PlanningGroup, all_groups: Sequence[PlanningGroup], result: ValidationResult
+    ) -> None:
+        """Check for circular subgroup dependencies."""
+        group_map = {g.name for g in all_groups}
+        group_obj_map = {g.name: g for g in all_groups}
+
+        def _dfs(current_name: str, path: list[str]) -> bool:
+            current_group = group_obj_map.get(current_name)
+            if not current_group:
+                return False
+
+            for sg_name in current_group.subgroups:
+                if sg_name not in group_map:
+                    result.add_error(
+                        title="Invalid subgroup reference",
+                        message=f"Group '{current_name}' references non-existent subgroup '{sg_name}'",
+                        affected_objects=[current_name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                    )
+                    continue
+
+                if sg_name in path:
+                    cycle = " -> ".join(path[path.index(sg_name) :]) + f" -> {sg_name}"
+                    result.add_error(
+                        title="Circular subgroup dependency",
+                        message=f"Circular subgroup dependency detected: {cycle}",
+                        affected_objects=path[path.index(sg_name) :],
+                        code=ValidationErrorCode.HAS_CYCLE,
+                    )
+                    return True
+
+                if _dfs(sg_name, path + [sg_name]):
+                    return True
+            return False
+
+        _dfs(group.name, [group.name])
+
+
 __all__ = [
     "ValidationCheck",
     "HasLinksCheck",
@@ -358,4 +470,5 @@ __all__ = [
     "GeometryCheck",
     "Ros2ControlCheck",
     "MimicChainCheck",
+    "SemanticCheck",
 ]

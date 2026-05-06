@@ -53,7 +53,7 @@ For a technical breakdown of naming conventions and object types, see the [Robot
 While the Blender UI covers the most common workflow, LinkForge also provides a
 programmatic assembly API for engineers who need to build robots dynamically in Python.
 
-The `RobotAssembly` class wraps two objects into one coordinated interface:
+The `RobotBuilder` class wraps two objects into one coordinated interface:
 
 - **`Robot`** — the kinematic description (links, joints, sensors, physics)
 - **`SemanticRobotDescription`** — the semantic overlay (planning groups, named
@@ -73,11 +73,11 @@ multiple robot arms sharing a common world frame.
 need precise, programmatic control over every joint parameter.
 
 ```python
-from linkforge_core.composer.robot_assembly import RobotAssembly
+from linkforge_core.composer import RobotBuilder
 
 # Both patterns produce the same output: a validated Robot + SRDF ready for
 # export to URDF, SRDF, or any future format (MJCF, SDF).
-assembly = RobotAssembly("my_robot", ...)
+assembly = RobotBuilder("my_robot", ...)
 urdf_str = assembly.export_urdf()
 srdf_str = assembly.export_srdf()
 ```

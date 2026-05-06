@@ -180,6 +180,18 @@ class TestVisual:
         visual = Visual(geometry=geom, name="my_visual")
         assert visual.name == "my_visual"
 
+    def test_prefix(self) -> None:
+        """Test creating a visual with a prefix."""
+        geom = Box(size=Vector3(1, 1, 1))
+        mat = Material(name="red", color=Color(1, 0, 0))
+        vis = Visual(name="vis", geometry=geom, material=mat)
+        vis_pre = vis.with_prefix("p_")
+        assert vis_pre.name == "p_vis"
+
+        material = vis_pre.material
+        assert material is not None
+        assert material.name == "p_red"
+
 
 class TestCollision:
     """Tests for Collision class."""
@@ -202,6 +214,13 @@ class TestCollision:
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
         collision = Collision(geometry=geom, name="my_collision")
         assert collision.name == "my_collision"
+
+    def test_prefix(self) -> None:
+        """Test creating a collision with a prefix."""
+        geom = Box(size=Vector3(1, 1, 1))
+        col = Collision(name="col", geometry=geom)
+        col_pre = col.with_prefix("p_")
+        assert col_pre.name == "p_col"
 
 
 class TestLink:
@@ -289,3 +308,14 @@ class TestLink:
         assert link.collisions[0] == collision
         assert link.inertial == inertial
         assert link.mass == 5.0
+
+    def test_prefix(self) -> None:
+        """Test creating a link with a prefix."""
+        link = Link(name="base")
+        link.add_visual(Visual(name="v", geometry=Box(Vector3(1, 1, 1))))
+        link.add_collision(Collision(name="c", geometry=Box(Vector3(1, 1, 1))))
+
+        prefixed = link.with_prefix("r_")
+        assert prefixed.name == "r_base"
+        assert prefixed.visuals[0].name == "r_v"
+        assert prefixed.collisions[0].name == "r_c"

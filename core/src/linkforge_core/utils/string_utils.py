@@ -6,14 +6,14 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
 def sanitize_name(name: str, allow_hyphen: bool = True) -> str:
-    """Sanitize a name for URDF and Python identifier compatibility.
+    """Sanitize a name for robot model and Python identifier compatibility.
 
     Replaces invalid characters with underscores and ensures it doesn't
     start with a digit.
 
     Args:
         name: Original name
-        allow_hyphen: Whether to allow hyphens (valid in URDF, invalid in Python)
+        allow_hyphen: Whether to allow hyphens (valid in many formats like URDF/SDF, invalid in Python)
 
     Returns:
         Sanitized name
@@ -44,31 +44,31 @@ def sanitize_name(name: str, allow_hyphen: bool = True) -> str:
     return sanitized
 
 
-def is_valid_urdf_name(name: str, allow_hyphen: bool = True) -> bool:
-    """Check if a name is valid for URDF without modification.
+def is_valid_name(name: str, allow_hyphen: bool = True) -> bool:
+    """Check if a name is valid for robot components.
 
-    A valid URDF name:
+    A valid name:
     - Is not empty
     - Does not start with a digit
     - Contains only alphanumeric characters, underscores, and optionally hyphens
 
     Args:
         name: Name to validate
-        allow_hyphen: Whether to allow hyphens (valid in URDF, invalid in Python)
+        allow_hyphen: Whether to allow hyphens (valid in URDF/SDF, invalid in Python)
 
     Returns:
         True if name is valid, False otherwise
 
     Examples:
-        >>> is_valid_urdf_name("base_link")
+        >>> is_valid_name("base_link")
         True
-        >>> is_valid_urdf_name("base-link")
+        >>> is_valid_name("base-link")
         True
-        >>> is_valid_urdf_name("base-link", allow_hyphen=False)
+        >>> is_valid_name("base-link", allow_hyphen=False)
         False
-        >>> is_valid_urdf_name("2nd_link")
+        >>> is_valid_name("2nd_link")
         False
-        >>> is_valid_urdf_name("base link")
+        >>> is_valid_name("base link")
         False
     """
     if not name:

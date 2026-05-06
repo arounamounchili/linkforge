@@ -2,6 +2,7 @@
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
 
 from linkforge_core.generators.xml_base import RobotXMLGenerator
 from linkforge_core.models.geometry import Box, Cylinder, Mesh, Sphere, Transform, Vector3
@@ -12,10 +13,10 @@ from linkforge_core.models.robot import Robot
 class MockXMLGenerator(RobotXMLGenerator):
     """Minimal implementation of abstract RobotXMLGenerator for testing base functionality."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def generate(self, robot: Robot, **kwargs) -> str:
+    def generate(self, robot: Robot, **kwargs: Any) -> str:
         return "<robot></robot>"
 
 
@@ -180,9 +181,12 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
 
     from linkforge_core.parsers.xml_base import RobotXMLParser
 
-    class MockParser(RobotXMLParser):
-        def parse(self, *args, **kwargs):
-            pass
+    class MockParser(RobotXMLParser[Any]):
+        def parse(self, filepath: Path, **kwargs: Any) -> Any:
+            return None
+
+        def parse_string(self, content: str, **kwargs: Any) -> Any:
+            return None
 
     parser = MockParser()
     elem = ET.Element("geometry")
@@ -198,14 +202,13 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
 def test_xml_base_format_value_bool_coverage() -> None:
     """Test boolean formatting logic in RobotXMLGenerator."""
     import xml.etree.ElementTree as ET
-
-    from linkforge_core.generators.xml_base import RobotXMLGenerator
+    from typing import Any
 
     class MockGen(RobotXMLGenerator):
-        def generate(self, r, **k):
+        def generate(self, robot: Robot, **kwargs: Any) -> str:
             return ""
 
-        def generate_robot_element(self, r):
+        def generate_robot_element(self, robot: Robot) -> ET.Element:
             return ET.Element("r")
 
     gen = MockGen()
@@ -218,9 +221,12 @@ def test_xml_base_parser_geometry_nones() -> None:
     """Test geometry parsing fallback when elements are None."""
     from linkforge_core.parsers.xml_base import RobotXMLParser
 
-    class MockParser(RobotXMLParser):
-        def parse(self, p, **k):
-            pass
+    class MockParser(RobotXMLParser[Any]):
+        def parse(self, filepath: Path, **kwargs: Any) -> Any:
+            return None
+
+        def parse_string(self, content: str, **kwargs: Any) -> Any:
+            return None
 
     parser = MockParser()
     assert parser._parse_box(None) is None

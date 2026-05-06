@@ -51,7 +51,8 @@ def test_macro_generation_wheels() -> None:
     macros = root.findall(".//{http://www.ros.org/wiki/xacro}macro")
     assert len(macros) == 1, f"Expected 1 macro, found {len(macros)}"
     macro = macros[0]
-    assert "cyl" in macro.get("name")
+    name = macro.get("name")
+    assert name is not None and "cyl" in name
     assert macro.get("params") == "name parent xyz rpy"
 
     # 2. Check for macro calls
@@ -63,7 +64,8 @@ def test_macro_generation_wheels() -> None:
     # 3. Check call parameters
     for call in calls:
         assert call.get("parent") == "base_link"
-        assert "wheel" in call.get("name")
+        name = call.get("name")
+        assert name is not None and "wheel" in name
         assert call.get("xyz") is not None
 
     # 4. Check that original links are GONE (except base_link)

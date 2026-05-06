@@ -34,12 +34,12 @@ def test_execute_collision_preview_update_branches(clean_scene) -> None:
         link_ops._preview_last_request_time = 0.0
         assert execute_collision_preview_update() is None
 
-    # imported_from_urdf
-    col_obj["imported_from_urdf"] = True
+    # imported_from_source
+    col_obj["imported_from_source"] = True
     link_ops._preview_pending_object = link_obj
     link_ops._preview_last_request_time = 0.0
     assert execute_collision_preview_update() is None
-    col_obj["imported_from_urdf"] = False
+    col_obj["imported_from_source"] = False
 
 
 def test_regenerate_collision_mesh_validation(clean_scene) -> None:

@@ -6,6 +6,8 @@ import pytest
 from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
     CameraInfo,
+    ContactInfo,
+    ForceTorqueInfo,
     GazeboPlugin,
     GPSInfo,
     IMUInfo,
@@ -16,6 +18,16 @@ from linkforge_core.models import (
     Transform,
     Vector3,
 )
+
+
+class TestContactInfo:
+    """Tests for ContactInfo model."""
+
+    def test_prefix(self) -> None:
+        """Test creating a contact info with a prefix."""
+        contact = ContactInfo(collision="c1")
+        pre = contact.with_prefix("b_")
+        assert pre.collision == "b_c1"
 
 
 class TestSensorNoise:
@@ -217,6 +229,7 @@ class TestSensor:
         assert sensor.name == "front_camera"
         assert sensor.type == SensorType.CAMERA
         assert sensor.link_name == "camera_link"
+        assert sensor.camera_info is not None
         assert sensor.camera_info.width == 1920
 
     def test_lidar_sensor(self) -> None:
@@ -230,6 +243,7 @@ class TestSensor:
         )
         assert sensor.name == "lidar"
         assert sensor.type == SensorType.LIDAR
+        assert sensor.lidar_info is not None
         assert sensor.lidar_info.horizontal_samples == 1024
 
     def test_imu_sensor(self) -> None:
@@ -257,8 +271,41 @@ class TestSensor:
         )
         assert sensor.name == "gps"
         assert sensor.type == SensorType.GPS
+        assert sensor.gps_info is not None
 
-    def test_sensor_with_plugin(self) -> None:
+    def test_contact_sensor(self) -> None:
+        """Test creating a contact sensor."""
+        contact_info = ContactInfo(collision="my_link_collision")
+        sensor = Sensor(
+            name="contact",
+            type=SensorType.CONTACT,
+            link_name="link1",
+            contact_info=contact_info,
+        )
+        assert sensor.name == "contact"
+        assert sensor.contact_info is not None
+        assert sensor.contact_info.collision == "my_link_collision"
+
+    def test_force_torque_sensor(self) -> None:
+        """Test creating a force/torque sensor."""
+        ft_info = ForceTorqueInfo(frame="parent", measure_direction="parent_to_child")
+        sensor = Sensor(
+            name="ft_sensor",
+            type=SensorType.FORCE_TORQUE,
+            link_name="joint1",
+            force_torque_info=ft_info,
+        )
+        assert sensor.name == "ft_sensor"
+        assert sensor.force_torque_info is not None
+        assert sensor.force_torque_info.frame == "parent"
+
+    def test_force_torque_invalid_params(self) -> None:
+        """Test invalid F/T parameters."""
+        with pytest.raises(RobotModelError, match="Invalid F/T frame"):
+            ForceTorqueInfo(frame="invalid_frame")
+
+        with pytest.raises(RobotModelError, match="Invalid F/T direction"):
+            ForceTorqueInfo(measure_direction="invalid_dir")
         """Test sensor with plugin."""
         camera_info = CameraInfo()
         plugin = GazeboPlugin(name="camera_plugin", filename="libgazebo_ros_camera.so")
@@ -285,6 +332,7 @@ class TestSensor:
             camera_info=camera_info,
             origin=transform,
         )
+        assert sensor.origin is not None
         assert sensor.origin.xyz.x == pytest.approx(0.1)
         assert sensor.origin.xyz.z == pytest.approx(0.2)
 
@@ -324,6 +372,24 @@ class TestSensor:
                 link_name="gps_link",
             )
 
+    def test_contact_without_info(self) -> None:
+        """Test that contact sensor requires contact_info."""
+        with pytest.raises(RobotModelError):
+            Sensor(
+                name="contact",
+                type=SensorType.CONTACT,
+                link_name="link1",
+            )
+
+    def test_force_torque_without_info(self) -> None:
+        """Test that force_torque sensor requires force_torque_info."""
+        with pytest.raises(RobotModelError):
+            Sensor(
+                name="ft",
+                type=SensorType.FORCE_TORQUE,
+                link_name="joint1",
+            )
+
     def test_empty_name(self) -> None:
         """Test that empty name raises error."""
         with pytest.raises(RobotModelError):
@@ -355,6 +421,32 @@ class TestSensor:
                 update_rate=-10.0,
             )
 
+    def test_prefix(self) -> None:
+        """Test creating a sensor with a prefix."""
+        contact = ContactInfo(collision="c1")
+        plugin = GazeboPlugin(name="p1", filename="f1")
+        sensor = Sensor(
+            name="s1",
+            type=SensorType.CONTACT,
+            link_name="l1",
+            topic="/t1",
+            contact_info=contact,
+            plugin=plugin,
+        )
+
+        pre = sensor.with_prefix("b_")
+        assert pre.name == "b_s1"
+        assert pre.link_name == "b_l1"
+        assert pre.topic == "b_/t1"
+
+        contact_info = pre.contact_info
+        assert contact_info is not None
+        assert contact_info.collision == "b_c1"
+
+        plugin = pre.plugin
+        assert plugin is not None
+        assert plugin.name == "b_p1"
+
 
 def test_sensor_parsing_pose_robustness() -> None:
     """Verify that malformed or incomplete sensor pose elements are handled gracefully."""
@@ -374,5 +466,6 @@ def test_sensor_parsing_pose_robustness() -> None:
     elem = ET.fromstring(xml)
     sensor = parser._parse_sensor_from_gazebo(elem)
     # Pose should revert to identity or skip if invalid
+    assert sensor is not None
     assert sensor.origin is not None
     assert sensor.origin.xyz.x == 0

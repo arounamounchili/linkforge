@@ -98,6 +98,13 @@ class TestJointMimic:
         assert mimic.multiplier == 1.0
         assert mimic.offset == 0.0
 
+    def test_prefix(self) -> None:
+        """Test creating a mimic with a prefix."""
+        mimic = JointMimic(joint="other_joint", multiplier=2.0, offset=0.5)
+        pre = mimic.with_prefix("a_")
+        assert pre.joint == "a_other_joint"
+        assert pre.multiplier == 2.0
+
 
 class TestJointSafetyController:
     """Tests for JointSafetyController."""
@@ -118,9 +125,9 @@ class TestJointSafetyController:
     def test_default_values(self) -> None:
         """Test default values for safety controller."""
         safety = JointSafetyController()
-        assert safety.soft_lower_limit == 0.0
-        assert safety.soft_upper_limit == 0.0
-        assert safety.k_position == 0.0
+        assert safety.soft_lower_limit is None
+        assert safety.soft_upper_limit is None
+        assert safety.k_position is None
         assert safety.k_velocity == 0.0
 
 
@@ -166,6 +173,7 @@ class TestJoint:
             limits=JointLimits(lower=-math.pi, upper=math.pi),
         )
         assert joint.type == JointType.REVOLUTE
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 1
 
     def test_continuous_joint(self) -> None:
@@ -178,6 +186,7 @@ class TestJoint:
             axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.type == JointType.CONTINUOUS
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 1
 
     def test_prismatic_joint(self) -> None:
@@ -191,6 +200,7 @@ class TestJoint:
             limits=JointLimits(lower=0.0, upper=1.0),
         )
         assert joint.type == JointType.PRISMATIC
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 1
 
     def test_planar_joint(self) -> None:
@@ -203,6 +213,7 @@ class TestJoint:
             axis=Vector3(1.0, 0.0, 0.0),
         )
         assert joint.type == JointType.PLANAR
+        assert joint.axis is not None
         assert joint.degrees_of_freedom == 2
 
     def test_floating_joint(self) -> None:
@@ -362,6 +373,7 @@ class TestJoint:
             axis=Vector3(0.0, 0.0, 1.0),
             limits=JointLimits(lower=0.0, upper=1.0),
         )
+        assert joint.axis is not None
         assert joint.axis == Vector3(0.0, 0.0, 1.0)
 
     def test_default_origin(self) -> None:
@@ -488,7 +500,28 @@ class TestJoint:
             child="link2",
             axis=Vector3(1.0, 0.0, 0.0),
         )
+        assert joint.axis is not None
         assert joint.limits is None
+
+    def test_prefix(self) -> None:
+        """Test creating a joint with a prefix."""
+        mimic = JointMimic(joint="j1", multiplier=2.0)
+        joint = Joint(
+            name="j2",
+            type=JointType.FIXED,
+            parent="l1",
+            child="l2",
+            mimic=mimic,
+        )
+
+        pre = joint.with_prefix("a_")
+        assert pre.name == "a_j2"
+        assert pre.parent == "a_l1"
+        assert pre.child == "a_l2"
+
+        mimic = pre.mimic
+        assert mimic is not None
+        assert mimic.joint == "a_j1"
 
 
 class TestJointType:
@@ -546,6 +579,7 @@ class TestJointAxisNormalization:
             limits=JointLimits(lower=0.0, upper=1.0),
         )
         # Should remain unchanged
+        assert joint.axis is not None
         assert joint.axis.x == 1.0
         assert joint.axis.y == 0.0
         assert joint.axis.z == 0.0

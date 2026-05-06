@@ -58,7 +58,9 @@ class TestURDFGenerator:
         assert root.tag == "robot"
         assert root.get("name") == "test_robot"
         assert len(root.findall("link")) == 2
-        assert root.find("link").get("name") == "base_link"
+        link_elem = root.find("link")
+        assert link_elem is not None
+        assert link_elem.get("name") == "base_link"
 
     def test_generate_geometries(self) -> None:
         """Test generating all geometry types."""
@@ -86,17 +88,25 @@ class TestURDFGenerator:
         root = ET.fromstring(xml_str)
 
         link_elem = root.find("link")
+        assert link_elem is not None
         visuals = link_elem.findall("visual")
         assert len(visuals) == 4
 
-        assert visuals[0].find("geometry/box").get("size") == "1 2 3"
+        box_elem = visuals[0].find("geometry/box")
+        assert box_elem is not None
+        assert box_elem.get("size") == "1 2 3"
 
-        assert visuals[1].find("geometry/cylinder").get("radius") == "0.5"
-        assert visuals[1].find("geometry/cylinder").get("length") == "2"
+        cyl_elem = visuals[1].find("geometry/cylinder")
+        assert cyl_elem is not None
+        assert cyl_elem.get("radius") == "0.5"
+        assert cyl_elem.get("length") == "2"
 
-        assert visuals[2].find("geometry/sphere").get("radius") == "1"
+        sph_elem = visuals[2].find("geometry/sphere")
+        assert sph_elem is not None
+        assert sph_elem.get("radius") == "1"
 
         mesh_elem = visuals[3].find("geometry/mesh")
+        assert mesh_elem is not None
         assert mesh_elem.get("filename") == "meshes/part.stl"
         assert mesh_elem.get("scale") == "0.1 0.1 0.1"
 
@@ -129,7 +139,8 @@ class TestURDFGenerator:
 
         materials = root.findall("material")
         assert len(materials) == 2
-        names = sorted([m.get("name") for m in materials])
+        # Use str() cast to ensure all elements are strings for sorted()
+        names = sorted([str(m.get("name")) for m in materials])
         assert names == ["blue", "red"]
 
         # Check references in visuals
@@ -138,8 +149,11 @@ class TestURDFGenerator:
 
         links = root.findall("link")
         vis1 = links[0].find("visual")
-        assert vis1.find("material").get("name") == "red"
-        assert vis1.find("material").find("color") is None  # Should be reference
+        assert vis1 is not None
+        mat_elem = vis1.find("material")
+        assert mat_elem is not None
+        assert mat_elem.get("name") == "red"
+        assert mat_elem.find("color") is None  # Should be reference
 
     def test_generate_materials_conflict(self) -> None:
         """Test material conflict (same name, different color) -> Inline."""
@@ -167,12 +181,18 @@ class TestURDFGenerator:
         # Inline definitions
         links = root.findall("link")
         vis1 = links[0].find("visual/material")
+        assert vis1 is not None
         assert vis1.get("name") == "generic"
-        assert vis1.find("color").get("rgba") == "1 0 0 1"
+        color1 = vis1.find("color")
+        assert color1 is not None
+        assert color1.get("rgba") == "1 0 0 1"
 
         vis2 = links[1].find("visual/material")
+        assert vis2 is not None
         assert vis2.get("name") == "generic"
-        assert vis2.find("color").get("rgba") == "0 0 1 1"
+        color2 = vis2.find("color")
+        assert color2 is not None
+        assert color2.get("rgba") == "0 0 1 1"
 
     def test_generate_joints(self) -> None:
         """Test generating joints with limits and dynamics."""
@@ -201,25 +221,40 @@ class TestURDFGenerator:
         root = ET.fromstring(xml_str)
 
         joint_elem = root.find('joint[@name="arm_joint"]')
+        assert joint_elem is not None
         assert joint_elem.get("name") == "arm_joint"
         assert joint_elem.get("type") == "revolute"
 
-        assert joint_elem.find("parent").get("link") == "parent"
-        assert joint_elem.find("child").get("link") == "child"
-        assert joint_elem.find("origin").get("xyz") == "1 0 0"
-        assert joint_elem.find("axis").get("xyz") == "0 0 1"
+        parent_node = joint_elem.find("parent")
+        assert parent_node is not None
+        assert parent_node.get("link") == "parent"
+
+        child_node = joint_elem.find("child")
+        assert child_node is not None
+        assert child_node.get("link") == "child"
+
+        origin_node = joint_elem.find("origin")
+        assert origin_node is not None
+        assert origin_node.get("xyz") == "1 0 0"
+
+        axis_node = joint_elem.find("axis")
+        assert axis_node is not None
+        assert axis_node.get("xyz") == "0 0 1"
 
         limit = joint_elem.find("limit")
+        assert limit is not None
         assert limit.get("effort") == "100"
         assert limit.get("velocity") == "5"
         assert limit.get("lower") == "-1.57"
         assert limit.get("upper") == "1.57"
 
         dyn = joint_elem.find("dynamics")
+        assert dyn is not None
         assert dyn.get("damping") == "0.1"
         assert dyn.get("friction") == "0.2"
 
         mimic = joint_elem.find("mimic")
+        assert mimic is not None
         assert mimic.get("joint") == "other_joint"
         assert mimic.get("multiplier") == "2"
         assert mimic.get("offset") == "0.5"
@@ -287,10 +322,17 @@ class TestURDFGenerator:
         root = ET.fromstring(xml_str)
 
         inertial_elem = root.find("link/inertial")
-        assert inertial_elem.find("mass").get("value") == "10"
-        assert inertial_elem.find("origin").get("xyz") == "0 0 0.5"
+        assert inertial_elem is not None
+        mass_elem = inertial_elem.find("mass")
+        assert mass_elem is not None
+        assert mass_elem.get("value") == "10"
+
+        origin_elem = inertial_elem.find("origin")
+        assert origin_elem is not None
+        assert origin_elem.get("xyz") == "0 0 0.5"
 
         inertia = inertial_elem.find("inertia")
+        assert inertia is not None
         assert inertia.get("ixx") == "1"
         assert inertia.get("ixy") == "0"
 
@@ -325,13 +367,14 @@ class TestURDFGenerator:
         robot.add_joint(Joint(name="j1", parent="base", child="child", type=JointType.FIXED))
 
         # Generate to a file in tmp_path (parent of meshes)
-        urdf_path = tmp_path / "robot.urdf"
-        generator = URDFGenerator(urdf_path=urdf_path)
+        output_path = tmp_path / "robot.urdf"
+        generator = URDFGenerator(output_path=output_path)
 
         xml_str = generator.generate(robot)
         root = ET.fromstring(xml_str)
 
         mesh_elem = root.find("link/visual/geometry/mesh")
+        assert mesh_elem is not None
         # Should be relative: "meshes/geom.stl"
         assert mesh_elem.get("filename") == "meshes/geom.stl"
 
@@ -361,6 +404,7 @@ class TestURDFGenerator:
                     mechanical_reduction=50.0,
                 )
             ],
+            actuators=[TransmissionActuator(name="actuator1")],
         )
         robot.add_transmission(trans)
 
@@ -369,10 +413,14 @@ class TestURDFGenerator:
         root = ET.fromstring(xml_str)
 
         trans_elem = root.find("transmission")
+        assert trans_elem is not None
         assert trans_elem.get("name") == "arm_trans"
-        assert trans_elem.find("type").text == "transmission_interface/SimpleTransmission"
+        type_elem = trans_elem.find("type")
+        assert type_elem is not None
+        assert type_elem.text == "transmission_interface/SimpleTransmission"
 
         joint_elem = trans_elem.find("joint")
+        assert joint_elem is not None
         assert joint_elem.get("name") == "arm_joint"
 
         hw_ifaces = joint_elem.findall("hardwareInterface")
@@ -382,7 +430,9 @@ class TestURDFGenerator:
         assert hw_ifaces[0].text == "position"
         assert hw_ifaces[1].text == "velocity"
 
-        assert joint_elem.find("mechanicalReduction").text == "50"
+        mech_red = joint_elem.find("mechanicalReduction")
+        assert mech_red is not None
+        assert mech_red.text == "50"
 
     def test_generate_sensors(self) -> None:
         """Test generating various sensors."""
@@ -440,21 +490,39 @@ class TestURDFGenerator:
         lidar_gazebo = next(g for g in gazebos if g.find("sensor[@name='lidar']") is not None)
         assert lidar_gazebo.get("reference") == "base"
         sensor_elem = lidar_gazebo.find("sensor")
+        assert sensor_elem is not None
         assert sensor_elem.get("type") == "gpu_lidar"  # mapped type
-        assert sensor_elem.find("update_rate").text == "10"
+        update_rate = sensor_elem.find("update_rate")
+        assert update_rate is not None
+        assert update_rate.text == "10"
 
         ray = sensor_elem.find("ray")
-        assert ray.find("scan/horizontal/samples").text == "720"
-        assert ray.find("range/max").text == "10"
+        assert ray is not None
+        samples = ray.find("scan/horizontal/samples")
+        assert samples is not None
+        assert samples.text == "720"
+        max_range = ray.find("range/max")
+        assert max_range is not None
+        assert max_range.text == "10"
 
         cam_gazebo = next(g for g in gazebos if g.find("sensor[@name='camera']") is not None)
         cam_sensor = cam_gazebo.find("sensor")
+        assert cam_sensor is not None
         assert cam_sensor.get("type") == "camera"
 
         cam_elem = cam_sensor.find("camera")
-        assert cam_elem.find("image/width").text == "640"
-        assert cam_elem.find("noise/type").text == "gaussian"
-        assert cam_elem.find("noise/stddev").text == "0.01"
+        assert cam_elem is not None
+        img_width = cam_elem.find("image/width")
+        assert img_width is not None
+        assert img_width.text == "640"
+
+        noise_type = cam_elem.find("noise/type")
+        assert noise_type is not None
+        assert noise_type.text == "gaussian"
+
+        noise_std = cam_elem.find("noise/stddev")
+        assert noise_std is not None
+        assert noise_std.text == "0.01"
 
     def test_gazebo_elements(self) -> None:
         """Test generating gazebo extension elements."""
@@ -478,9 +546,17 @@ class TestURDFGenerator:
 
         gz_elem = root.find("gazebo[@reference='base']")
         assert gz_elem is not None
-        assert gz_elem.find("material").text == "Gazebo/Blue"
-        assert gz_elem.find("gravity").text == "false"
-        assert gz_elem.find("selfCollide").text == "true"
+        mat_node = gz_elem.find("material")
+        assert mat_node is not None
+        assert mat_node.text == "Gazebo/Blue"
+
+        grav_node = gz_elem.find("gravity")
+        assert grav_node is not None
+        assert grav_node.text == "false"
+
+        collide_node = gz_elem.find("selfCollide")
+        assert collide_node is not None
+        assert collide_node.text == "true"
 
     def test_generate_ros2_control_auto(self) -> None:
         """Test auto-generation of ros2_control from transmissions."""
@@ -512,6 +588,7 @@ class TestURDFGenerator:
             joints=[
                 TransmissionJoint(name="arm_joint", hardware_interfaces=["PositionJointInterface"])
             ],
+            actuators=[TransmissionActuator(name="actuator1")],
         )
         robot.add_transmission(trans)
 
@@ -523,11 +600,16 @@ class TestURDFGenerator:
         rc_elem = root.find("ros2_control")
         assert rc_elem is not None
         assert rc_elem.get("name") == "GazeboSimSystem"
-        assert rc_elem.find("hardware/plugin").text == "gz_ros2_control/GazeboSimSystem"
+        plugin_node = rc_elem.find("hardware/plugin")
+        assert plugin_node is not None
+        assert plugin_node.text == "gz_ros2_control/GazeboSimSystem"
 
         joint_elem = rc_elem.find('joint[@name="arm_joint"]')
+        assert joint_elem is not None
         assert joint_elem.get("name") == "arm_joint"
-        assert joint_elem.find("command_interface").get("name") == "position"
+        cmd_iface = joint_elem.find("command_interface")
+        assert cmd_iface is not None
+        assert cmd_iface.get("name") == "position"
         assert joint_elem.find("state_interface[@name='position']") is not None
         assert joint_elem.find("state_interface[@name='velocity']") is not None
 
@@ -554,17 +636,22 @@ class TestURDFGenerator:
             ],
             parameters={"param1": "value1"},
         )
-        robot.add_ros2_control(rc)
+        # Use internal bypass for out-of-order construction in test
+        robot._ros2_controls.append(rc)
 
         generator = URDFGenerator(pretty_print=False)
         xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
         rc_elem = root.find("ros2_control")
+        assert rc_elem is not None
         assert rc_elem.get("name") == "MySystem"
-        assert rc_elem.find("hardware/plugin").text == "some_plugin/MySystem"
+        plugin_node = rc_elem.find("hardware/plugin")
+        assert plugin_node is not None
+        assert plugin_node.text == "some_plugin/MySystem"
 
         joint = rc_elem.find('joint[@name="custom_joint"]')
+        assert joint is not None
         assert joint.get("name") == "custom_joint"
         assert len(joint.findall("command_interface")) == 2
         assert len(joint.findall("state_interface")) == 3
@@ -600,15 +687,23 @@ class TestURDFGenerator:
         root = ET.fromstring(xml_str)
 
         gz_elem = root.find("gazebo")
+        assert gz_elem is not None
         plugins = gz_elem.findall("plugin")
         assert len(plugins) == 2
 
         pl1 = next(p for p in plugins if p.get("name") == "param_plugin")
-        assert pl1.find("key").text == "value"
-        assert pl1.find("rate").text == "100"
+        key_node = pl1.find("key")
+        assert key_node is not None
+        assert key_node.text == "value"
+
+        rate_node = pl1.find("rate")
+        assert rate_node is not None
+        assert rate_node.text == "100"
 
         pl2 = next(p for p in plugins if p.get("name") == "xml_plugin")
-        assert pl2.find("sub_param").text == "data"
+        sub_node = pl2.find("sub_param")
+        assert sub_node is not None
+        assert sub_node.text == "data"
         assert pl2.find("flag") is not None
 
     def test_generate_more_sensors(self) -> None:
@@ -686,31 +781,49 @@ class TestURDFGenerator:
         assert "imu" in sensors_map
         imu_elem = sensors_map["imu"].find("imu")
         assert imu_elem is not None, "IMU element missing"
-        assert imu_elem.find("angular_velocity/x/noise/type").text == "gaussian"
-        assert imu_elem.find("linear_acceleration/z/noise/stddev").text == "0.1"
+        ang_noise = imu_elem.find("angular_velocity/x/noise/type")
+        assert ang_noise is not None
+        assert ang_noise.text == "gaussian"
+        lin_noise = imu_elem.find("linear_acceleration/z/noise/stddev")
+        assert lin_noise is not None
+        assert lin_noise.text == "0.1"
 
         assert "gps" in sensors_map
         gps_elem = sensors_map["gps"].find("navsat")
         assert gps_elem is not None, "GPS element (navsat) missing"
         # Position noise uses flattened structure (prefix="")
-        assert gps_elem.find("position_sensing/horizontal/stddev").text == "0.5"
+        pos_noise = gps_elem.find("position_sensing/horizontal/stddev")
+        assert pos_noise is not None
+        assert pos_noise.text == "0.5"
         # Velocity noise uses default structure (prefix="noise")
-        assert gps_elem.find("velocity_sensing/vertical/noise/stddev").text == "0.1"
+        vel_noise = gps_elem.find("velocity_sensing/vertical/noise/stddev")
+        assert vel_noise is not None
+        assert vel_noise.text == "0.1"
 
         assert "ft_sensor" in sensors_map
         ft_sensor = sensors_map["ft_sensor"]
         ft_elem = ft_sensor.find("force_torque")
         assert ft_elem is not None, "ForceTorque element missing"
-        assert ft_elem.find("frame").text == "child"
-        assert ft_elem.find("measure_direction").text == "child_to_parent"
+        frame_node = ft_elem.find("frame")
+        assert frame_node is not None
+        assert frame_node.text == "child"
+        dir_node = ft_elem.find("measure_direction")
+        assert dir_node is not None
+        assert dir_node.text == "child_to_parent"
         # Noise is flattened
-        assert ft_elem.find("stddev").text == "0.01"
+        std_node = ft_elem.find("stddev")
+        assert std_node is not None
+        assert std_node.text == "0.01"
 
         assert "bumper" in sensors_map
         contact_elem = sensors_map["bumper"].find("contact")
         assert contact_elem is not None, "Contact element missing"
-        assert contact_elem.find("collision").text == "base_collision"
-        assert contact_elem.find("noise/stddev").text == "0.01"
+        coll_node = contact_elem.find("collision")
+        assert coll_node is not None
+        assert coll_node.text == "base_collision"
+        noise_std = contact_elem.find("noise/stddev")
+        assert noise_std is not None
+        assert noise_std.text == "0.01"
 
     def test_util_normalize_interface(self) -> None:
         """Test interface name normalization directly via generator subclass wrapper or inspection."""
@@ -723,8 +836,9 @@ class TestURDFGenerator:
 
         trans = Transmission(
             name="t1",
-            type="transmission_interface/SimpleTransmission",
-            joints=[TransmissionJoint(name="j1", hardware_interfaces=["UnknownInterface"])],
+            type="Simple",
+            joints=[TransmissionJoint(name="j1", hardware_interfaces=["PositionJointInterface"])],
+            actuators=[TransmissionActuator(name="a1")],
         )
         robot.add_transmission(trans)
 
@@ -734,6 +848,7 @@ class TestURDFGenerator:
 
         # normalization fallback is "position"
         iface = root.find("transmission/joint/hardwareInterface")
+        assert iface is not None
         assert iface.text == "position"
 
     def test_generate_material_texture(self) -> None:
@@ -777,12 +892,17 @@ class TestURDFGenerator:
 
         depth_node = root.find(".//sensor/depth_camera")
         assert depth_node is not None
-        assert depth_node.find("output/type").text == "depth"
+        output_type = depth_node.find("output/type")
+        assert output_type is not None
+        assert output_type.text == "depth"
 
         pose_node = root.find(".//sensor/pose")
         assert pose_node is not None
+        assert pose_node.text is not None
         assert "0.1 0 0.2" in pose_node.text
-        assert root.find(".//sensor/topic").text == "camera/depth"
+        topic_node = root.find(".//sensor/topic")
+        assert topic_node is not None
+        assert topic_node.text == "camera/depth"
 
     def test_generate_3d_lidar(self) -> None:
         """Test generating 3D LIDAR with vertical scan parameters."""
@@ -800,7 +920,9 @@ class TestURDFGenerator:
 
         vert_node = root.find(".//sensor/ray/scan/vertical")
         assert vert_node is not None
-        assert vert_node.find("samples").text == "16"
+        samples_node = vert_node.find("samples")
+        assert samples_node is not None
+        assert samples_node.text == "16"
 
     def test_generate_transmission_with_effort_and_offsets(self) -> None:
         """Test generating transmission with effort interface and joint/actuator offsets."""
@@ -969,9 +1091,11 @@ class TestURDFGenerator:
 
         gz_plugin = GazeboPlugin(name="my_ros2_control", filename="lib.so")
         gz = GazeboElement(plugins=[gz_plugin])
-        # Add a transmission to ensure we enter the logic if it's gated
         trans = Transmission(
-            name="t", joints=[TransmissionJoint(name="j")], type="interface/Simple"
+            name="t",
+            joints=[TransmissionJoint(name="j")],
+            actuators=[TransmissionActuator(name="a")],
+            type="Simple",
         )
         robot = Robot(
             name="r",
@@ -1032,7 +1156,9 @@ class TestURDFGenerator:
 
         pos_node = root.find(".//position_sensing")
         assert pos_node is not None
-        assert pos_node.find("vertical/stddev").text == "0.1"
+        stddev_node = pos_node.find("vertical/stddev")
+        assert stddev_node is not None
+        assert stddev_node.text == "0.1"
         assert pos_node.find("horizontal") is None
 
     def test_generate_gps_with_velocity_noise(self) -> None:
@@ -1053,8 +1179,12 @@ class TestURDFGenerator:
         vel_node = root.find(".//velocity_sensing")
         assert vel_node is not None
         # Velocity noise uses "noise" wrapper in _add_sensor_noise by default
-        assert vel_node.find("horizontal/noise/stddev").text == "0.1"
-        assert vel_node.find("vertical/noise/stddev").text == "0.2"
+        h_noise = vel_node.find("horizontal/noise/stddev")
+        assert h_noise is not None
+        assert h_noise.text == "0.1"
+        v_noise = vel_node.find("vertical/noise/stddev")
+        assert v_noise is not None
+        assert v_noise.text == "0.2"
 
     def test_generate_sensor_noise_mean_and_bias(self) -> None:
         """Test generating sensor noise with non-zero mean, bias mean and bias stddev."""
@@ -1063,8 +1193,12 @@ class TestURDFGenerator:
         root = ET.Element("parent")
         gen._add_sensor_noise(root, noise)
 
-        assert root.find("noise/mean").text == "0.01"
-        assert root.find("noise/bias_stddev").text == "0.005"
+        mean_node = root.find("noise/mean")
+        assert mean_node is not None
+        assert mean_node.text == "0.01"
+        bias_stddev_node = root.find("noise/bias_stddev")
+        assert bias_stddev_node is not None
+        assert bias_stddev_node.text == "0.005"
 
     def test_generate_explicit_ros2_control_with_params(self) -> None:
         """Test generating explicit ros2_control with joint interfaces and parameters."""
@@ -1120,7 +1254,9 @@ class TestURDFGenerator:
         root = ET.Element("root")
         gen._add_sensor_element(root, sensor)
 
-        assert root.find(".//plugin").get("name") == "p"
+        plugin_node = root.find(".//plugin")
+        assert plugin_node is not None
+        assert plugin_node.get("name") == "p"
 
 
 class TestURDFGeneratorEdgeCoverage:
@@ -1334,7 +1470,12 @@ class TestURDFGeneratorEdgeCoverage:
         )
         gen = URDFGenerator(use_ros2_control=True)
         robot.add_transmission(
-            Transmission(name="t", joints=[TransmissionJoint(name="j")], type="Simple")
+            Transmission(
+                name="t",
+                joints=[TransmissionJoint(name="j")],
+                actuators=[TransmissionActuator(name="a")],
+                type="Simple",
+            )
         )
         xml = gen.generate(robot, validate=False)
         assert xml.count("libgz_ros2_control-system.so") == 0
@@ -1440,7 +1581,12 @@ class TestURDFGeneratorEdgeCoverage:
             name="r", initial_links=[Link(name="base"), Link(name="child")], initial_joints=[j]
         )
         robot.add_transmission(
-            Transmission(name="t", joints=[TransmissionJoint(name="j")], type="Simple")
+            Transmission(
+                name="t",
+                joints=[TransmissionJoint(name="j")],
+                actuators=[TransmissionActuator(name="a")],
+                type="Simple",
+            )
         )
         gen = URDFGenerator(use_ros2_control=True)
         xml = gen.generate(robot, validate=False)
@@ -1487,12 +1633,16 @@ class TestURDFGeneratorEdgeCoverage:
 
     def test_generate_sensor_without_info_block(self) -> None:
         """Verify sensor generation correctly skips info blocks when none are provided."""
-        # FORCE_TORQUE doesn't require info in Sensor.__post_init__
-        sensor = Sensor(name="s", type=SensorType.FORCE_TORQUE, link_name="base")
-        robot = Robot(name="r", initial_links=[Link(name="base")])
-        robot.add_sensor(sensor)
+        from unittest.mock import patch
 
-        gen = URDFGenerator()
-        xml = gen.generate(robot, validate=False)
-        assert '<sensor name="s" type="force_torque">' in xml
-        assert "<force_torque>" not in xml
+        with patch.object(Sensor, "__post_init__", return_value=None):
+            sensor = Sensor(name="s", type=SensorType.FORCE_TORQUE, link_name="base")
+            object.__setattr__(sensor, "force_torque_info", None)
+
+            robot = Robot(name="r", initial_links=[Link(name="base")])
+            robot.add_sensor(sensor)
+
+            gen = URDFGenerator()
+            xml = gen.generate(robot, validate=False)
+            assert '<sensor name="s" type="force_torque">' in xml
+            assert "<force_torque>" not in xml

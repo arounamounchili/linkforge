@@ -42,11 +42,12 @@ def test_full_robot_description_integration():
 
     assert robot.name == "panda"
     assert len(robot.links) == 2
-    assert robot.semantic is None  # Initially empty
+    assert not robot.semantic.groups  # Initially empty
+    assert not robot.semantic.virtual_joints
 
     # 2. Parse SRDF and update the same robot model
     srdf_parser = SRDFParser()
-    srdf_parser.parse_string(SAMPLE_SRDF, robot=robot)
+    robot.semantic = srdf_parser.parse_string(SAMPLE_SRDF)
 
     # 3. Verify Integration
     assert robot.semantic is not None
@@ -75,12 +76,12 @@ def test_srdf_parser_replaces_semantic_in_existing_robot():
 
     # First SRDF
     xml1 = '<robot name="test"><passive_joint name="pj1"/></robot>'
-    parser.parse_string(xml1, robot=robot)
+    robot.semantic = parser.parse_string(xml1)
     assert len(robot.semantic.passive_joints) == 1
 
     # Second SRDF should overwrite the SemanticRobotDescription object
     xml2 = '<robot name="test"><virtual_joint name="vj1" type="fixed" parent_frame="w" child_link="l"/></robot>'
-    parser.parse_string(xml2, robot=robot)
+    robot.semantic = parser.parse_string(xml2)
 
     assert len(robot.semantic.passive_joints) == 0
     assert len(robot.semantic.virtual_joints) == 1

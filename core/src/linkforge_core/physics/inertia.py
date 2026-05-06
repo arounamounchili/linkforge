@@ -286,7 +286,7 @@ def calculate_mesh_inertia_from_triangles(
     i_xz += mass * cx * cz
     i_yz += mass * cy * cz
 
-    # 4. Physicality check
+    # Physicality check
     # Check positive semi-definiteness using Sylvester's criterion (principal minors)
     delta1 = i_xx
     delta2 = i_xx * i_yy - i_xy**2
@@ -356,6 +356,13 @@ def calculate_mesh_inertia_approximation(mesh: Mesh, mass: float) -> InertiaTens
     Returns:
         Approximate inertia tensor using bounding box approximation
     """
+    logger.warning(
+        "Calculating fallback inertia for mesh '%s' based on its scale %s. "
+        "This treats the mesh as a bounding box of that size and may result in inaccurate physics simulation. "
+        "Please provide an explicit InertiaTensor for accurate physics.",
+        mesh.resource,
+        mesh.scale,
+    )
     if mass < MIN_MASS_STABILITY_THRESHOLD:
         return _get_stability_fallback()
 

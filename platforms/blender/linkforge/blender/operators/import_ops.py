@@ -1,4 +1,4 @@
-"""Blender Operators for importing robot models from URDF/XACRO.
+"""Blender Operators for importing robot models.
 
 This module implements the user-facing operators that handle the import of
 robot descriptions into the Blender environment.
@@ -27,7 +27,7 @@ else:
 logger = get_logger(__name__)
 
 
-class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
+class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[misc]
     """Import robot from URDF or XACRO file.
 
     This operator opens a file browser to select a robot description file,
@@ -35,9 +35,9 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
     and initiates an asynchronous import process into the Blender scene.
     """
 
-    bl_idname = "linkforge.import_urdf"
-    bl_label = "Import Robot"
-    bl_description = "Import robot from URDF or XACRO file (auto-detects format)"
+    bl_idname = "linkforge.import_robot_model"
+    bl_label = "Import Robot Model"
+    bl_description = "Import robot from supported formats (URDF, XACRO, etc.)"
 
     # Operator properties for ExportHelper/ImportHelper
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
@@ -72,31 +72,31 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         from ...linkforge_core.parsers import URDFParser
 
         # Parse URDF/XACRO file
-        urdf_path = Path(self.filepath)
+        source_path = Path(self.filepath)
 
         # Smart Directory Handling
         # If user selects a folder, try to find the main robot file automatically.
-        if urdf_path.is_dir():
+        if source_path.is_dir():
             candidates = [
-                urdf_path / f"{urdf_path.name}.urdf",
-                urdf_path / f"{urdf_path.name}.xacro",
-                urdf_path / f"{urdf_path.name}.urdf.xacro",
-                urdf_path / "robot.urdf",
-                urdf_path / "robot.xacro",
-                urdf_path / "robot.urdf.xacro",
+                source_path / f"{source_path.name}.urdf",
+                source_path / f"{source_path.name}.xacro",
+                source_path / f"{source_path.name}.urdf.xacro",
+                source_path / "robot.urdf",
+                source_path / "robot.xacro",
+                source_path / "robot.urdf.xacro",
             ]
 
             found = [f for f in candidates if f.is_file()]
-            valid_files = list(urdf_path.glob("*.urdf")) + list(urdf_path.glob("*.xacro"))
+            valid_files = list(source_path.glob("*.urdf")) + list(source_path.glob("*.xacro"))
 
             if found:
                 # Pick the first "best guess" match
-                urdf_path = found[0]
-                self.report({"INFO"}, f"Auto-detected robot description: {urdf_path.name}")
+                source_path = found[0]
+                self.report({"INFO"}, f"Auto-detected robot description: {source_path.name}")
             elif len(valid_files) == 1:
                 # If there's only one valid file in the folder, use it
-                urdf_path = valid_files[0]
-                self.report({"INFO"}, f"Auto-detected single robot file: {urdf_path.name}")
+                source_path = valid_files[0]
+                self.report({"INFO"}, f"Auto-detected single robot file: {source_path.name}")
             else:
                 self.report(
                     {"ERROR"},
@@ -105,17 +105,17 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
                 return {"CANCELLED"}
 
         # Validate that the path is now a file
-        if not urdf_path.is_file():
-            self.report({"ERROR"}, f"File not found: {urdf_path}")
+        if not source_path.is_file():
+            self.report({"ERROR"}, f"File not found: {source_path}")
             return {"CANCELLED"}
 
-        is_xacro = urdf_path.suffix == ".xacro" or urdf_path.name.endswith(".urdf.xacro")
+        is_xacro = source_path.suffix == ".xacro" or source_path.name.endswith(".urdf.xacro")
 
         # Detect Sandbox Root for security (allows sibling folders like meshes/)
         from ...linkforge_core.validation.security import find_sandbox_root
 
-        sandbox_root = find_sandbox_root(urdf_path)
-        logger.info(f"Importing robot from: {urdf_path}")
+        sandbox_root = find_sandbox_root(source_path)
+        logger.info(f"Importing robot from: {source_path}")
         logger.debug(f"Detected sandbox root: {sandbox_root}")
 
         # Smart Import Logic:
@@ -143,13 +143,13 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
                 try:
                     # Attempt standard URDF import
                     robot = URDFParser(sandbox_root=sandbox_root, resource_resolver=resolver).parse(
-                        urdf_path
+                        source_path
                     )
                 except XacroDetectedError:
                     # Explicitly detected Xacro, enable fallback
                     self.report(
                         {"WARNING"},
-                        "Detected XACRO content in .urdf file. Switching to XACRO parser...",
+                        "Detected XACRO content in robot model file. Switching to XACRO parser...",
                     )
                     is_xacro = True
                 except RobotParserError as e:
@@ -162,11 +162,11 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
                 # Convert XACRO to URDF using native XacroResolver
                 from ...linkforge_core.parsers import XacroResolver
 
-                self.report({"INFO"}, f"Processing XACRO file: {urdf_path.name}")
+                self.report({"INFO"}, f"Processing XACRO file: {source_path.name}")
 
                 # Pass the additional paths so XACRO includes can find package:// references
                 xacro_resolver = XacroResolver(search_paths=additional_paths)
-                urdf_string = xacro_resolver.resolve_file(urdf_path)
+                urdf_string = xacro_resolver.resolve_file(source_path)
 
                 # Parse URDF string with directory for mesh path validation
                 self.report({"INFO"}, "Parsing URDF...")
@@ -174,8 +174,8 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
                     sandbox_root=sandbox_root, resource_resolver=resolver
                 ).parse_string(
                     urdf_string,
-                    urdf_directory=urdf_path.parent,
-                    default_name=urdf_path.stem,
+                    source_directory=source_path.parent,
+                    default_name=source_path.stem,
                 )
         except RobotParserError as e:
             self.report({"ERROR"}, f"Import failed: {e}")
@@ -188,7 +188,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         if not robot.links and not robot.joints:
             self.report(
                 {"ERROR"},
-                f"The file '{urdf_path.name}' contains no links or joints. "
+                f"The file '{source_path.name}' contains no links or joints. "
                 "It may be a macro-only XACRO file. Please import the top-level robot description instead.",
             )
             return {"CANCELLED"}
@@ -218,7 +218,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
         # Import to scene (Asynchronous)
         from ..logic.asynchronous_builder import AsynchronousRobotBuilder
 
-        builder = AsynchronousRobotBuilder(robot, urdf_path, context)
+        builder = AsynchronousRobotBuilder(robot, source_path, context)
         builder.start()
 
         # We return FINISHED here, but the builder continues in the background via timers.
@@ -234,7 +234,7 @@ class LINKFORGE_OT_import_urdf(Operator, ImportHelper):  # type: ignore[misc]
 
 # Registration
 classes = [
-    LINKFORGE_OT_import_urdf,
+    LINKFORGE_OT_import_robot_model,
 ]
 
 

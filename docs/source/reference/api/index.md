@@ -25,7 +25,7 @@ LinkForge is organized into two main layers:
 
 Platform-independent robot modeling and URDF/XACRO processing.
 
-- **Composer**: `RobotAssembly` and `LinkBuilder` — the programmatic robot building API
+- **Composer**: `RobotBuilder` and `LinkBuilder` — the programmatic robot building API
 - **Models**: Data structures (`Robot`, `Link`, `Joint`, `Sensor`, `SemanticRobotDescription`, etc.)
 - **Parsers**: URDF/XACRO/SRDF → Python objects
 - **Generators**: Python objects → URDF/XACRO/SRDF
@@ -46,16 +46,16 @@ Blender-specific integration.
 
 ### Building a Robot Programmatically
 
-The `RobotAssembly` Composer is the recommended way to build robots in Python.
+The `RobotBuilder` Composer is the recommended way to build robots in Python.
 It handles validation, prefixing, and SRDF generation automatically.
 
 ```python
-from linkforge_core.composer.robot_assembly import RobotAssembly
+from linkforge_core.composer import RobotBuilder
 from linkforge_core.models import Robot
 from linkforge_core.models.geometry import Vector3
 from linkforge_core.models.joint import JointLimits
 
-assembly = RobotAssembly("my_robot", Robot(name="my_robot"))
+assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
 
 assembly.add_link("base_link").with_mass(5.0).connect_to("world", "world_joint").as_fixed()
 assembly.add_link("arm").with_mass(2.0).connect_to("base_link", "shoulder").as_revolute(

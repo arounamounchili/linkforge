@@ -62,6 +62,13 @@ Configure mass, inertia tensors, and manual Center of Mass offsets.
 Programmatically assemble robots, attach sub-models, and export URDF and SRDF using the Composer API.
 :::
 
+:::{grid-item-card} 📑 Semantic Data (SRDF)
+:link: srdf
+:link-type: doc
+
+Define planning groups, named poses, and collision filters for MoveIt.
+:::
+
 ::::
 
 ```{toctree}
@@ -74,5 +81,6 @@ control_dashboard
 collision_geometry
 joint_viz
 physics
+srdf
 troubleshooting
 ```

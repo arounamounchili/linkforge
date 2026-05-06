@@ -219,12 +219,12 @@ def test_material_default_fallback(clean_scene) -> None:
 
 
 def test_link_conversion_edge_cases(clean_scene) -> None:
-    """Verify link conversion with custom urdf_name and invalid objects."""
+    """Verify link conversion with custom source_name and invalid objects."""
     o = bpy.data.objects.new("Link", None)
     bpy.context.collection.objects.link(o)
     o.linkforge.is_robot_link = True
 
-    # 1. urdf_name on child
+    # 1. source_name on child
     child_mesh = bpy.data.meshes.new("VMesh")
     import bmesh
 
@@ -235,7 +235,7 @@ def test_link_conversion_edge_cases(clean_scene) -> None:
 
     child = bpy.data.objects.new("obj_visual", child_mesh)
     child.parent = o
-    child["urdf_name"] = "custom_vis"
+    child["source_name"] = "custom_vis"
     bpy.context.collection.objects.link(child)
 
     core = blender_link_to_core_with_origin(o)

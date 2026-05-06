@@ -18,28 +18,28 @@ from bpy.props import (
 )
 from bpy.types import Context, PropertyGroup
 
-from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_urdf_name
+from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 from ..utils.link_utils import should_rename_child
 from ..utils.scene_utils import clear_stats_cache
 from ..visualization.inertia_gizmos import tag_redraw
 
 
 def get_link_name(self: LinkPropertyGroup) -> str:
-    """Getter for link_name - returns the persistent URDF identity.
+    """Getter for link_name - returns the persistent source identity.
 
     Args:
         self: The LinkPropertyGroup instance.
 
     Returns:
-        The sanitized URDF name.
+        The sanitized robot component name.
     """
     # Prioritize the stored identity to avoid Blender's .001 suffixing
-    if self.urdf_name_stored:
-        return str(self.urdf_name_stored)
+    if self.source_name_stored:
+        return str(self.source_name_stored)
 
     if not self.id_data:
         return ""
-    return sanitize_urdf_name(str(self.id_data.name))
+    return sanitize_robot_name(str(self.id_data.name))
 
 
 def set_link_name(self: LinkPropertyGroup, value: str) -> None:
@@ -52,14 +52,14 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     if not value or not self.id_data:
         return
 
-    # Sanitize link name for URDF (remove invalid characters)
-    sanitized_name = sanitize_urdf_name(value)
+    # Sanitize link name for robot model (remove invalid characters)
+    sanitized_name = sanitize_robot_name(value)
 
     # Store the old name before updating for child renaming logic
-    old_urdf_name = self.urdf_name_stored or sanitize_urdf_name(self.id_data.name)
+    old_source_name = self.source_name_stored or sanitize_robot_name(self.id_data.name)
 
     # Store the persistent identity
-    self.urdf_name_stored = sanitized_name
+    self.source_name_stored = sanitized_name
 
     # Update object name to match link name
     # Blender will handle collisions by appending suffixes, but our stored name persists
@@ -69,13 +69,13 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
 
     # Update visual and collision children names IF they followed the standard naming pattern
     for child in self.id_data.children:
-        if should_rename_child(child.name, old_urdf_name):
+        if should_rename_child(child.name, old_source_name):
             # Surgical replacement
             if "_visual" in child.name:
-                suffix = child.name[len(old_urdf_name) + len("_visual") :]
+                suffix = child.name[len(old_source_name) + len("_visual") :]
                 new_name = f"{sanitized_name}_visual{suffix}"
             else:  # _collision
-                suffix = child.name[len(old_urdf_name) + len("_collision") :]
+                suffix = child.name[len(old_source_name) + len("_collision") :]
                 new_name = f"{sanitized_name}_collision{suffix}"
 
             if child.name != new_name:
@@ -111,7 +111,7 @@ def on_collision_quality_update(self: PropertyGroup, _context: Context) -> None:
     # Skip regeneration for imported URDF models to preserve external data
     try:
         # Use dictionary access for Blender ID properties
-        if collision_obj["imported_from_urdf"]:
+        if collision_obj["imported_from_source"]:
             return
     except (KeyError, TypeError):
         # Property doesn't exist, proceed with regeneration
@@ -154,17 +154,17 @@ class LinkPropertyGroup(PropertyGroup):
         default=False,
     )
 
-    # Persistent URDF Identity
-    # Decouples logical URDF naming from physical Blender object names (resilient to .001 suffixes)
-    urdf_name_stored: StringProperty(  # type: ignore
-        name="URDF Name",
-        description="Persistent URDF name. Prevents mapping breakage if Blender renames the object",
+    # Persistent source Identity
+    # Decouples logical robot model naming from physical Blender object names (resilient to .001 suffixes)
+    source_name_stored: StringProperty(  # type: ignore
+        name="Source Name",
+        description="Persistent source name. Prevents mapping breakage if Blender renames the object",
         default="",
     )
 
     link_name: StringProperty(  # type: ignore
         name="Link Name",
-        description="Name of the link in URDF (must be unique)",
+        description="Name of the link in robot model (must be unique)",
         maxlen=64,
         get=get_link_name,
         set=set_link_name,
@@ -287,7 +287,7 @@ class LinkPropertyGroup(PropertyGroup):
     # Material properties
     use_material: BoolProperty(  # type: ignore
         name="Export Material",
-        description="Export color/appearance to URDF (enabled by default for auto-created materials)",
+        description="Export color/appearance to robot model (enabled by default for auto-created materials)",
         default=False,  # Set dynamically by operator based on material creation
     )
 
@@ -297,7 +297,7 @@ __all__ = [
     "LinkPropertyGroup",
     "register",
     "unregister",
-    "sanitize_urdf_name",
+    "sanitize_robot_name",
 ]
 
 

@@ -66,8 +66,10 @@ def test_simple_transmission() -> None:
 
     # Verify joint
     joint_elem = trans_elem.find("joint")
+    assert joint_elem is not None
     assert joint_elem.get("name") == "joint1"
     hw_iface = joint_elem.find("hardwareInterface")
+    assert hw_iface is not None
     assert hw_iface.text == "effort"
 
 
@@ -149,6 +151,18 @@ def test_four_bar_linkage_transmission() -> None:
         )
     )
 
+    robot.add_link(Link(name="link2"))
+    robot.add_joint(
+        Joint(
+            name="joint2",
+            type=JointType.REVOLUTE,
+            parent="base_link",
+            child="link2",
+            axis=Vector3(1.0, 0.0, 0.0),
+            limits=JointLimits(lower=-1.57, upper=1.57, effort=100, velocity=1.0),
+        )
+    )
+
     # Add FOUR_BAR_LINKAGE transmission
     trans = Transmission(
         name="four_bar_trans",
@@ -157,16 +171,27 @@ def test_four_bar_linkage_transmission() -> None:
             TransmissionJoint(
                 name="joint1",
                 hardware_interfaces=["position"],
-                mechanical_reduction=2.0,  # Different reduction ratio
-                offset=0.1,  # Non-zero offset
-            )
+                mechanical_reduction=2.0,
+                offset=0.1,
+            ),
+            TransmissionJoint(
+                name="joint2",
+                hardware_interfaces=["position"],
+                mechanical_reduction=2.0,
+                offset=0.1,
+            ),
         ],
         actuators=[
             TransmissionActuator(
                 name="motor1",
                 hardware_interfaces=["position"],
                 mechanical_reduction=2.0,
-            )
+            ),
+            TransmissionActuator(
+                name="motor2",
+                hardware_interfaces=["position"],
+                mechanical_reduction=2.0,
+            ),
         ],
     )
     robot.add_transmission(trans)
@@ -184,12 +209,15 @@ def test_four_bar_linkage_transmission() -> None:
 
     # Verify mechanical reduction and offset
     joint_elem = trans_elem.find("joint")
+    assert joint_elem is not None
     reduction_elem = joint_elem.find("mechanicalReduction")
     assert reduction_elem is not None
+    assert reduction_elem.text is not None
     assert float(reduction_elem.text) == 2.0
 
     offset_elem = joint_elem.find("offset")
     assert offset_elem is not None
+    assert offset_elem.text is not None
     assert float(offset_elem.text) == 0.1
 
 
@@ -268,7 +296,9 @@ def test_all_hardware_interfaces() -> None:
     for i, interface in enumerate(["position", "velocity", "effort"]):
         trans_elem = transmissions[i]
         joint_elem = trans_elem.find("joint")
+        assert joint_elem is not None
         hw_iface = joint_elem.find("hardwareInterface")
+        assert hw_iface is not None
         assert hw_iface.text == interface
 
 
@@ -360,6 +390,9 @@ def test_ros1_hardware_interface_normalization() -> None:
 
     root = ET.fromstring(exported_urdf)
     trans_elem = root.find("transmission")
+    assert trans_elem is not None
     joint_elem = trans_elem.find("joint")
+    assert joint_elem is not None
     hw_iface = joint_elem.find("hardwareInterface")
+    assert hw_iface is not None
     assert hw_iface.text == "effort"  # Short form!

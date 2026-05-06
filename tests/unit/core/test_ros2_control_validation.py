@@ -9,7 +9,7 @@ def test_ros2_control_sensor_read_only_validation() -> None:
     """Test that hardware type 'sensor' cannot have command interfaces."""
     joint = Ros2ControlJoint(
         name="sensor_joint",
-        command_interfaces=["position"],  # Should cause error
+        command_interfaces=["position"],  # Sho uld cause error
         state_interfaces=["position"],
     )
 
@@ -78,7 +78,8 @@ def test_validator_detects_non_existent_ros2_control_joint() -> None:
         hardware_plugin="fake_plugin",
         joints=[Ros2ControlJoint(name="joint1", command_interfaces=["position"])],
     )
-    robot.add_ros2_control(rc)
+    # Bypass strict validation to create an invalid state for the validator
+    robot._ros2_controls.append(rc)
 
     validator = RobotValidator()
     result = validator.validate(robot)
@@ -163,3 +164,33 @@ def test_ros2_control_sensor_empty_joints() -> None:
     """Test that a sensor with no joints passes validation (e.g., IMU on a link)."""
     rc = Ros2Control(name="sens", type="sensor", hardware_plugin="mock", joints=[])
     assert len(rc.joints) == 0
+
+
+def test_ros2_control_duplicate_joint_validation() -> None:
+    """Test that duplicate joint names within a ROS2 control block are caught."""
+    j1 = Ros2ControlJoint(name="joint1", state_interfaces=["position"])
+    j2 = Ros2ControlJoint(name="joint1", state_interfaces=["velocity"])  # Duplicate name
+
+    with pytest.raises(RobotModelError, match="Duplicate joint names found"):
+        Ros2Control(
+            name="MySystem",
+            hardware_plugin="mock",
+            joints=[j1, j2],
+        )
+
+
+def test_ros2_control_joint_prefix() -> None:
+    """Test creating a ros2 control joint with a prefix."""
+    rj = Ros2ControlJoint(name="j1", state_interfaces=["position"])
+    pre = rj.with_prefix("r_")
+    assert pre.name == "r_j1"
+
+
+def test_ros2_control_prefix() -> None:
+    """Test creating a ros2 control block with a prefix."""
+    rj = Ros2ControlJoint(name="j1", state_interfaces=["position"])
+    rc = Ros2Control(name="c1", type="system", hardware_plugin="h1", joints=[rj])
+
+    pre = rc.with_prefix("r_")
+    assert pre.name == "r_c1"
+    assert pre.joints[0].name == "r_j1"

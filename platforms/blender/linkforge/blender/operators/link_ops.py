@@ -8,7 +8,7 @@ import typing
 
 from ...linkforge_core.logging_config import get_logger
 from ...linkforge_core.models.link import InertiaTensor
-from ..properties.link_props import sanitize_urdf_name
+from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
@@ -97,7 +97,7 @@ def execute_collision_preview_update() -> None | float:
         return None
 
     # Check if it's imported from URDF (don't regenerate imported collisions)
-    if collision_obj.get("imported_from_urdf", False):
+    if collision_obj.get("imported_from_source", False):
         return None
 
     # Regenerate collision mesh with new quality
@@ -673,7 +673,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
 
     This operator converts a standard Blender mesh into a LinkForge Robot
     Link by creating a parent Empty frame and establishing the required
-    hierarchy and naming conventions for URDF export.
+    hierarchy and naming conventions for robot model export.
     """
 
     bl_idname = "linkforge.create_link_from_mesh"
@@ -723,8 +723,8 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             return {"CANCELLED"}
         original_name = mesh_obj.name
 
-        # Sanitize name for URDF
-        link_name = sanitize_urdf_name(original_name)
+        # Sanitize name for robot model compatibility
+        link_name = sanitize_robot_name(original_name)
 
         # Ensure we have a valid name
         if not link_name:
@@ -758,7 +758,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             empty.scale = (1, 1, 1)
             empty.rotation_mode = "XYZ"
 
-            # Parent mesh to Empty with STRICT properties for URDF compatibility:
+            # Parent mesh to Empty with STRICT properties for model compatibility:
             # 1. Clear existing parent relationships (e.g. from previous imports) to prevent dependency cycles
             mesh_obj.parent_type = "OBJECT"
             mesh_obj.parent_bone = ""

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import InitVar, dataclass, field
+from dataclasses import InitVar, dataclass, field, replace
 
 from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
-from ..utils.string_utils import is_valid_urdf_name
+from ..utils.string_utils import is_valid_name
 from .geometry import Geometry, Transform
 from .material import Material
 
@@ -98,6 +98,14 @@ class Visual:
     material: Material | None = None
     name: str | None = None
 
+    def with_prefix(self, prefix: str) -> Visual:
+        """Create a new visual with a prefixed name and material."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}" if self.name else None,
+            material=self.material.with_prefix(prefix) if self.material else None,
+        )
+
 
 @dataclass(frozen=True)
 class Collision:
@@ -107,13 +115,18 @@ class Collision:
     origin: Transform = Transform.identity()
     name: str | None = None
 
+    def with_prefix(self, prefix: str) -> Collision:
+        """Create a new collision with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}" if self.name else None)
+
 
 @dataclass
 class Link:
     """Robot link (rigid body in the kinematic chain).
 
     A link is a rigid body with visual, collision, and inertial properties.
-    URDF allows multiple <visual> and <collision> elements per link.
+    The LinkForge model allows multiple visual and collision elements per link,
+    supporting high-fidelity formats like URDF and SDF.
     """
 
     name: str
@@ -135,8 +148,8 @@ class Link:
                 ValidationErrorCode.NAME_EMPTY, "Link name cannot be empty", target="LinkName"
             )
 
-        # URDF naming convention: lowercase with underscores
-        if not is_valid_urdf_name(self.name):
+        # Standard naming convention: alphanumeric and underscores
+        if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
                 "Invalid characters in link name",
@@ -150,14 +163,14 @@ class Link:
             self._collisions.extend(initial_collisions)
 
     @property
-    def visuals(self) -> Sequence[Visual]:
+    def visuals(self) -> list[Visual]:
         """Get visual representations."""
-        return tuple(self._visuals)
+        return list(self._visuals)
 
     @property
-    def collisions(self) -> Sequence[Collision]:
+    def collisions(self) -> list[Collision]:
         """Get collision representations."""
-        return tuple(self._collisions)
+        return list(self._collisions)
 
     def add_visual(self, visual: Visual) -> None:
         """Add a visual representation."""
@@ -171,3 +184,22 @@ class Link:
     def mass(self) -> float:
         """Get link mass (0.0 if no inertial properties are defined)."""
         return self.inertial.mass if self.inertial else 0.0
+
+    @property
+    def inertia(self) -> InertiaTensor:
+        """Get link inertia tensor (zero tensor if not defined)."""
+        return self.inertial.inertia if self.inertial else InertiaTensor.zero()
+
+    @property
+    def inertial_origin(self) -> Transform:
+        """Get inertial origin (identity if not defined)."""
+        return self.inertial.origin if self.inertial else Transform.identity()
+
+    def with_prefix(self, prefix: str) -> Link:
+        """Create a new link with a prefixed name and sub-elements."""
+        return Link(
+            name=f"{prefix}{self.name}",
+            initial_visuals=[v.with_prefix(prefix) for v in self._visuals],
+            initial_collisions=[c.with_prefix(prefix) for c in self._collisions],
+            inertial=self.inertial,
+        )

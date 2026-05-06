@@ -19,6 +19,7 @@ from .exceptions import (
     RobotParserError,
     XacroDetectedError,
 )
+from .utils.path_utils import normalize_uri_to_path, resolve_package_path
 
 if TYPE_CHECKING:
     from .models.robot import Robot
@@ -97,19 +98,32 @@ class RobotGenerator(ABC, Generic[T]):
             raise RobotGeneratorError(self.__class__.__name__, type(content))
 
 
-class RobotParser(ABC):
+class RobotParser(ABC, Generic[T]):
     """Abstract base class for all Robot Parsers."""
 
     @abstractmethod
-    def parse(self, filepath: Path, **kwargs: Any) -> Robot:
-        """Parse a file into a Robot model.
+    def parse(self, filepath: Path, **kwargs: Any) -> T:
+        """Parse a file into a model.
 
         Args:
             filepath: Path to the input file
             **kwargs: Format-specific parsing options
 
         Returns:
-            The generic Robot model (Intermediate Representation)
+            The parsed model (e.g. Robot, SemanticRobotDescription)
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    def parse_string(self, content: str, **kwargs: Any) -> T:
+        """Parse a string representation into a model.
+
+        Args:
+            content: The string content to parse
+            **kwargs: Format-specific parsing options
+
+        Returns:
+            The parsed model (e.g. Robot, SemanticRobotDescription)
         """
         pass  # pragma: no cover
 
@@ -147,9 +161,7 @@ class FileSystemResolver:
 
     def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
         """Resolve standard file paths, file:// URIs, and package:// URIs."""
-        from .utils.path_utils import resolve_package_path
-
-        # 1. Handle package:// URIs
+        # Handle package:// URIs
         if "package://" in uri or "package:/" in uri:
             # We use an empty Path if relative_to is not provided,
             # though package resolution usually doesn't strictly need it if ROS_PACKAGE_PATH is set.
@@ -160,16 +172,14 @@ class FileSystemResolver:
                 return resolved.absolute()
             raise FileNotFoundError(uri)
 
-        # 2. Handle file:// URIs
+        # Handle file:// URIs
         if uri.startswith("file://"):
-            from .utils.path_utils import normalize_uri_to_path
-
             path = normalize_uri_to_path(uri)
             if path.exists():
                 return path.absolute()
             raise FileNotFoundError(uri)
 
-        # 3. Handle standard paths (absolute or relative)
+        # Handle standard paths (absolute or relative)
         path = Path(uri)
         if path.is_absolute():
             if path.exists():

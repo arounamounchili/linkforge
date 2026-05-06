@@ -1,9 +1,9 @@
-"""Sensor models for URDF/Gazebo integration."""
+"""Sensor models for robotic simulation (Gazebo, SDF, URDF)."""
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
@@ -172,6 +172,10 @@ class ContactInfo:
     # Noise model for contact detection
     noise: SensorNoise | None = None
 
+    def with_prefix(self, prefix: str) -> ContactInfo:
+        """Create a new contact info with a prefixed collision reference."""
+        return replace(self, collision=f"{prefix}{self.collision}")
+
 
 @dataclass(frozen=True)
 class ForceTorqueInfo:
@@ -188,6 +192,23 @@ class ForceTorqueInfo:
 
     # Noise model for force/torque measurements
     noise: SensorNoise | None = None
+
+    def __post_init__(self) -> None:
+        """Validate F/T sensor parameters."""
+        if self.frame not in ("child", "parent", "sensor"):
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Invalid F/T frame '{self.frame}' (must be child, parent, or sensor)",
+                target="ForceTorqueFrame",
+                value=self.frame,
+            )
+        if self.measure_direction not in ("child_to_parent", "parent_to_child"):
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Invalid F/T direction '{self.measure_direction}'",
+                target="ForceTorqueDirection",
+                value=self.measure_direction,
+            )
 
 
 # GazeboPlugin is imported from gazebo module to avoid duplication
@@ -280,3 +301,28 @@ class Sensor:
                 target="SensorInfo",
                 value=self.name,
             )
+        elif self.type == SensorType.CONTACT and self.contact_info is None:
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Sensor '{self.name}' [type: {self.type.value}] requires contact_info",
+                target="SensorInfo",
+                value=self.name,
+            )
+        elif self.type == SensorType.FORCE_TORQUE and self.force_torque_info is None:
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Sensor '{self.name}' [type: {self.type.value}] requires force_torque_info",
+                target="SensorInfo",
+                value=self.name,
+            )
+
+    def with_prefix(self, prefix: str) -> Sensor:
+        """Create a new sensor with prefixed name, link, topic, contact_info, and plugin."""
+        return replace(
+            self,
+            name=f"{prefix}{self.name}",
+            link_name=f"{prefix}{self.link_name}",
+            topic=f"{prefix}{self.topic}" if self.topic else None,
+            contact_info=self.contact_info.with_prefix(prefix) if self.contact_info else None,
+            plugin=self.plugin.with_prefix(prefix) if self.plugin else None,
+        )

@@ -12,7 +12,48 @@ from ..models import Vector3
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
 ET.register_namespace("xacro", "http://www.ros.org/wiki/xacro")
 
-MAX_XML_DEPTH = 100
+XACRO_URIS = [
+    "http://www.ros.org/wiki/xacro",
+    "http://wiki.ros.org/xacro",
+]
+
+MAX_XML_DEPTH = 2000
+
+
+def strip_xml_namespace(tag: str) -> str:
+    """Strip XML namespace (Clark notation) from a tag string.
+
+    Example:
+        '{http://www.ros.org/wiki/xacro}macro' -> 'macro'
+        'robot' -> 'robot'
+
+    Args:
+        tag: The XML tag string to process.
+
+    Returns:
+        The local tag name without the namespace.
+    """
+    if tag.startswith("{"):
+        return tag.split("}", 1)[-1]
+    return tag
+
+
+def get_xml_namespace(tag: str) -> str | None:
+    """Extract XML namespace URI from a tag string in Clark notation.
+
+    Example:
+        '{http://www.ros.org/wiki/xacro}macro' -> 'http://www.ros.org/wiki/xacro'
+        'robot' -> None
+
+    Args:
+        tag: The XML tag string to process.
+
+    Returns:
+        The namespace URI if present, otherwise None.
+    """
+    if tag.startswith("{"):
+        return tag[1:].split("}", 1)[0]
+    return None
 
 
 def validate_xml_depth(element: ET.Element, depth: int = 0) -> None:
@@ -265,8 +306,8 @@ def parse_optional_bool(elem: ET.Element, tag: str, default: str = "false") -> b
     Returns:
         Boolean value if tag exists, else None
     """
-    if elem.find(tag) is not None:
-        return elem.findtext(tag, default).lower() == "true"
+    if elem.find(f"{{*}}{tag}") is not None:
+        return elem.findtext(f"{{*}}{tag}", default).lower() == "true"
     return None
 
 
@@ -285,8 +326,8 @@ def parse_optional_float(elem: ET.Element, tag: str, default: float | None = 0.0
         RobotMathError: If input value is invalid or out of range
         RobotValidationError: If parsing logic fails
     """
-    if elem.find(tag) is not None:
-        text = elem.findtext(tag)
+    if elem.find(f"{{*}}{tag}") is not None:
+        text = elem.findtext(f"{{*}}{tag}")
         return parse_float(text, tag, default=default)
     return None
 
