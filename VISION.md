@@ -70,5 +70,13 @@ We are building the infrastructure for the next generation of autonomy:
 
 ---
 
+## 🗺️ Vision 2030: The Universal Connector
+
+By 2030, the "monolithic robot" will be a thing of the past. We believe the robotics industry will evolve into a modular ecosystem where specialized companies build world-class components—legs, torsos, manipulators—that just work together.
+
+**LinkForge is the "USB Port" for this future.** By providing the universal Intermediate Representation (IR), we enable a global supply chain where any "LinkForge Certified" part can be plugged into any assembly with zero friction. We are building the economic infrastructure for the physical world.
+
+---
+
 > [!IMPORTANT]
 > **LinkForge** is built for developers who know that in robotics, **Physics is Truth**. We provide the infrastructure; you build the future.
