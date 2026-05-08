@@ -76,8 +76,12 @@ if HAS_BPY:
             from linkforge.blender.properties.robot_props import RobotPropertyGroup
 
             props = typing.cast(RobotPropertyGroup, scene.linkforge)
+            props.robot_name = "robot"
+            props.strict_mode = False
             props.use_ros2_control = False
             props.ros2_control_joints.clear()
+            props.gazebo_plugin_name = "libgazebo_ros2_control.so"
+            props.controllers_yaml_path = ""
 
         # Clear architectural statistics cache for test isolation
         from linkforge.blender.utils.scene_utils import clear_stats_cache

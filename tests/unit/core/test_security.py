@@ -126,7 +126,7 @@ def test_find_sandbox_root(tmp_path) -> None:
 
     assert find_sandbox_root(robot_file) == package_root
 
-    # 5. XACRO folder parent detection
+    # XACRO folder parent detection
     # If the parent folder is literally named 'xacro', it should go up one level
     xacro_dir = package_root / "xacro"
     xacro_dir.mkdir()
