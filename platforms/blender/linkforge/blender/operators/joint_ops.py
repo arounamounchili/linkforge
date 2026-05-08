@@ -130,7 +130,7 @@ class LINKFORGE_OT_create_joint(Operator):
         # Ensure matrices are up to date before triggering property callbacks
         # This prevents transform jumps when setting child_link (which sets parent)
         view_layer = context.view_layer
-        if view_layer:
+        if view_layer is not None:
             view_layer.update()
 
         # Auto-set child link to the selected link (parent must be set manually)
@@ -260,7 +260,7 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
 
         # Force property update to refresh enum items
         view_layer = context.view_layer
-        if view_layer:
+        if view_layer is not None:
             view_layer.update()
 
         # Try to set parent and child links with "Smart Choice" logic

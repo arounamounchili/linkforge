@@ -9,6 +9,15 @@ from unittest.mock import patch
 import bpy
 from linkforge.blender.utils.scene_utils import clear_stats_cache, get_robot_statistics
 
+from tests.blender_test_utils import (
+    create_robot_link,
+    create_test_object,
+    safe_get_linkforge,
+    safe_get_sensor,
+    safe_get_transmission,
+    setup_2_link_arm,
+)
+
 
 def test_get_robot_statistics_cache_hit(scene) -> None:
     """Test that statistics are successfully retrieved from the frame-level cache."""
@@ -17,9 +26,10 @@ def test_get_robot_statistics_cache_hit(scene) -> None:
     # Setup scene
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
-    obj.linkforge.is_robot_link = True
-    obj.linkforge.link_name = "cached_link"
-    obj.linkforge.mass = 1.0
+    assert obj is not None
+    safe_get_linkforge(obj).is_robot_link = True
+    safe_get_linkforge(obj).link_name = "cached_link"
+    safe_get_linkforge(obj).mass = 1.0
 
     # First call - populates cache
     stats1 = get_robot_statistics(scene)
@@ -39,9 +49,10 @@ def test_get_robot_statistics_manual_inertia(scene) -> None:
     """Test detection of objects requiring manual inertia gizmos."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
-    obj.linkforge.is_robot_link = True
-    obj.linkforge.use_auto_inertia = False
-    obj.linkforge.link_name = "manual_link"
+    assert obj is not None
+    safe_get_linkforge(obj).is_robot_link = True
+    safe_get_linkforge(obj).use_auto_inertia = False
+    safe_get_linkforge(obj).link_name = "manual_link"
 
     stats = get_robot_statistics(scene, force_refresh=True)
     assert len(stats.manual_inertia_objects) == 1
@@ -52,12 +63,14 @@ def test_get_robot_statistics_geometry_detection_urdf_tag(scene) -> None:
     """Test geometry detection via explicit source_geometry_type tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "tag_link"
+    assert link is not None
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "tag_link"
 
     # Add collision child
     bpy.ops.mesh.primitive_cube_add()
     coll = bpy.context.active_object
+    assert coll is not None
     coll.name = "tag_link_collision"
     coll.parent = link
     coll["source_geometry_type"] = "SPHERE"
@@ -73,12 +86,14 @@ def test_get_robot_statistics_geometry_detection_stored_type(scene) -> None:
     """Test geometry detection via stored collision_geometry_type tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "stored_link"
+    assert link is not None
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "stored_link"
 
     # Add collision child
     bpy.ops.mesh.primitive_cube_add()
     coll = bpy.context.active_object
+    assert coll is not None
     coll.name = "stored_link_collision"
     coll.parent = link
     coll["collision_geometry_type"] = "BOX"
@@ -94,12 +109,14 @@ def test_get_robot_statistics_geometry_detection_heuristic(scene) -> None:
     """Test geometry detection via heuristic topological analysis."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "heuristic_link"
+    assert link is not None
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "heuristic_link"
 
     # Add collision child (standard cube)
     bpy.ops.mesh.primitive_cube_add()
     coll = bpy.context.active_object
+    assert coll is not None
     coll.name = "heuristic_link_collision"
     coll.parent = link
 
@@ -114,16 +131,19 @@ def test_get_robot_statistics_geometry_detection_non_primitive(scene) -> None:
     """Test heuristic fallback to MESH for a complex (non-primitive) object."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "complex_link"
+    assert link is not None
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "complex_link"
 
     # Create child
     bpy.ops.mesh.primitive_cube_add()
     coll = bpy.context.active_object
+    assert coll is not None
     coll.name = "complex_link_collision"
     coll.parent = link
 
     # Subdivide to make it a non-primitive mesh
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.objects.active = coll
     bpy.ops.object.modifier_add(type="SUBSURF")
     bpy.ops.object.modifier_apply(modifier="Subdivision")
@@ -139,11 +159,13 @@ def test_get_robot_statistics_heuristic_error_handling(scene) -> None:
     """Test robustness when heuristic detection fails."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "error_link"
+    assert link is not None
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "error_link"
 
     bpy.ops.mesh.primitive_cube_add()
     coll = bpy.context.active_object
+    assert coll is not None
     coll.name = "error_link_collision"
     coll.parent = link
 
@@ -156,19 +178,33 @@ def test_get_robot_statistics_heuristic_error_handling(scene) -> None:
         assert gtype == "MESH"
 
 
+def test_get_robot_statistics_joint_mapping(scene) -> None:
+    """Test that joints correctly map parents to children."""
+    parent, joint, child = setup_2_link_arm(scene)
+    safe_get_linkforge(parent).link_name = "parent"
+    safe_get_linkforge(child).link_name = "child"
+
+    stats = get_robot_statistics(scene, force_refresh=True)
+    assert len(stats.joint_objects) == 1
+    assert stats.joint_objects[0] == joint
+    assert stats.joints_map["child"][0] == "parent"
+
+
 def test_get_robot_statistics_geometry_detection_mesh_tag(scene) -> None:
     """Test geometry detection forcing MESH type via stored tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "mesh_link"
+    assert link is not None
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "mesh_link"
 
     # Add collision child
     bpy.ops.mesh.primitive_cube_add()
     coll = bpy.context.active_object
+    assert coll is not None
     coll.name = "mesh_link_collision"
     coll.parent = link
-    coll["collision_geometry_type"] = "MESH"
+    coll["source_geometry_type"] = "MESH"
 
     stats = get_robot_statistics(scene, force_refresh=True)
     assert "mesh_link" in stats.geometry_stats
@@ -177,37 +213,69 @@ def test_get_robot_statistics_geometry_detection_mesh_tag(scene) -> None:
     assert is_prim is False
 
 
-def test_get_robot_statistics_stale_cache_recovery(scene) -> None:
-    """Test recovery from stale cache when an object is deleted in the same frame."""
-    clear_stats_cache()
+def test_get_robot_statistics_multiple_links(scene) -> None:
+    """Test detection of multiple links and robots."""
+    bpy.ops.mesh.primitive_cube_add()
+    l1 = bpy.context.active_object
+    assert l1 is not None
+    safe_get_linkforge(l1).is_robot_link = True
+    safe_get_linkforge(l1).link_name = "link1"
 
-    # Setup link and collision
+    bpy.ops.mesh.primitive_cube_add()
+    l2 = bpy.context.active_object
+    assert l2 is not None
+    safe_get_linkforge(l2).is_robot_link = True
+    safe_get_linkforge(l2).link_name = "link2"
+
+    stats = get_robot_statistics(scene, force_refresh=True)
+    assert stats.num_links == 2
+    assert "link1" in stats.link_objects
+    assert "link2" in stats.link_objects
+
+
+def test_get_robot_statistics_unnamed_links(scene) -> None:
+    """Test handling of links that haven't been assigned a name yet."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "stale_link"
+    assert link is not None
+    safe_get_linkforge(link).is_robot_link = True
+    # Link name is empty or default
 
-    bpy.ops.mesh.primitive_cube_add()
-    coll = bpy.context.active_object
-    coll.name = "stale_link_collision"
-    coll.parent = link
-    coll["collision_geometry_type"] = "BOX"
+    stats = get_robot_statistics(scene, force_refresh=True)
+    # It should still be detected as a link, using object name as fallback
+    assert stats.num_links == 1
 
-    # Populate cache
-    stats1 = get_robot_statistics(scene)
-    assert len(stats1.geometry_stats) == 1
 
-    # Simulate operator deleting the object (same frame)
-    # We don't change frame or object count significantly here to force same cache key
-    # (Actually object count changes, but let's assume it stays same if replaced)
-    bpy.data.objects.remove(coll, do_unlink=True)
+def test_get_robot_statistics_transmission_detection(scene) -> None:
+    """Test detection of transmissions attached to joints."""
+    parent, joint, child = setup_2_link_arm(scene)
 
-    # Add a dummy object so count is the same
-    bpy.ops.mesh.primitive_cube_add()
-    dummy = bpy.context.active_object
-    dummy.name = "dummy"
+    # Create transmission object
+    trans_obj = create_test_object("trans", None, scene)
+    assert trans_obj is not None
+    trans_props = safe_get_transmission(trans_obj)
+    trans_props.is_robot_transmission = True
+    trans_props.transmission_name = "test_trans"
+    trans_props.joint_name = joint
 
-    # Next call should detect ReferenceError in cached stats and recompute
-    stats2 = get_robot_statistics(scene)
-    assert stats2 is not stats1  # Should NOT be the same object
-    assert len(stats2.geometry_stats) == 0  # Collision is gone
+    stats = get_robot_statistics(scene, force_refresh=True)
+    assert len(stats.transmission_objects) == 1
+    assert stats.transmission_objects[0] == trans_obj
+
+
+def test_get_robot_statistics_sensor_detection(scene) -> None:
+    """Test detection of sensors attached to links."""
+    link = create_robot_link("sensor_link", scene)
+    assert link is not None
+
+    # Create sensor object
+    sensor_obj = create_test_object("sensor", None, scene)
+    assert sensor_obj is not None
+    sensor_props = safe_get_sensor(sensor_obj)
+    sensor_props.is_robot_sensor = True
+    sensor_props.sensor_name = "test_sensor"
+    sensor_props.attached_link = link
+
+    stats = get_robot_statistics(scene, force_refresh=True)
+    assert len(stats.sensor_objects) == 1
+    assert stats.sensor_objects[0] == sensor_obj

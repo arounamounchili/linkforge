@@ -48,6 +48,7 @@ from tests.blender_test_utils import (
     create_test_object,
     safe_get_joint,
     safe_get_linkforge,
+    safe_get_linkforge_scene,
     safe_get_sensor,
 )
 
@@ -73,6 +74,7 @@ def test_create_link_object_multi_collisions(scene) -> None:
 
     robot = Robot(name="test")
     obj = create_link_object(link, robot, Path("/tmp"))
+    assert obj is not None
 
     collisions = [c for c in obj.children if "_collision" in c.name]
     assert len(collisions) == 2
@@ -297,8 +299,11 @@ def test_import_robot_complex_tree(scene) -> None:
     branch2_obj = bpy.data.objects.get("branch2")
     leaf_obj = bpy.data.objects.get("leaf")
 
+    assert branch1_obj.parent is not None
     assert branch1_obj.parent.parent == root_obj  # Link -> Joint -> Parent Link
+    assert branch2_obj.parent is not None
     assert branch2_obj.parent.parent == root_obj
+    assert leaf_obj.parent is not None
     assert leaf_obj.parent.parent == branch1_obj
 
 
@@ -334,7 +339,7 @@ def test_import_robot_with_ros2_control_and_gazebo(scene) -> None:
     assert success is True
 
     # Verify scene properties
-    lp = scene.linkforge
+    lp = safe_get_linkforge_scene(scene)
     assert lp.use_ros2_control is True
     assert lp.ros2_control_name == "RealRobot"
     assert len(lp.ros2_control_joints) == 1
@@ -378,11 +383,13 @@ def test_create_sensor_object_imu_gps_camera(scene) -> None:
     # IMU
     imu = Sensor(name="imu_sensor", type=SensorType.IMU, link_name="base_link", imu_info=IMUInfo())
     obj_imu = create_sensor_object(imu, link_objects)
+    assert obj_imu is not None
     assert safe_get_sensor(obj_imu).sensor_type == "IMU"
 
     # GPS
     gps = Sensor(name="gps_sensor", type=SensorType.GPS, link_name="base_link", gps_info=GPSInfo())
     obj_gps = create_sensor_object(gps, link_objects)
+    assert obj_gps is not None
     assert safe_get_sensor(obj_gps).sensor_type == "GPS"
 
     # Camera
@@ -390,6 +397,7 @@ def test_create_sensor_object_imu_gps_camera(scene) -> None:
         name="cam_sensor", type=SensorType.CAMERA, link_name="base_link", camera_info=CameraInfo()
     )
     obj_cam = create_sensor_object(cam, link_objects)
+    assert obj_cam is not None
     assert safe_get_sensor(obj_cam).sensor_type == "CAMERA"
 
 
@@ -436,12 +444,19 @@ def test_import_mesh_file_stl(tmp_path, scene) -> None:
     # Create a dummy STL file using Blender
     bpy.ops.mesh.primitive_cube_add()
     stl_path = tmp_path / "test.stl"
-    # In modern Blender, stl_export might be in wm or export_mesh
-    if hasattr(bpy.ops.wm, "stl_export"):
-        bpy.ops.wm.stl_export(filepath=str(stl_path))
+
+    # In modern Blender (4.0+), use wm.stl_export.
+    # Use getattr for static analysis compatibility.
+    wm_ops = getattr(bpy.ops, "wm")
+    if hasattr(wm_ops, "stl_export"):
+        wm_ops.stl_export(filepath=str(stl_path))
     else:
-        # Fallback for older versions if needed, but we are on 4.5
-        bpy.ops.export_mesh.stl(filepath=str(stl_path))
+        # Fallback for legacy STL addon if present
+        export_ops = getattr(bpy.ops, "export_mesh", None)
+        if export_ops and hasattr(export_ops, "stl"):
+            export_ops.stl(filepath=str(stl_path))
+        else:
+            pytest.skip("No STL exporter found in this Blender environment")
 
     bpy.ops.object.delete()  # Cleanup cube
 
@@ -505,10 +520,15 @@ def test_create_link_object_with_mesh_visual(tmp_path, scene) -> None:
     # Create dummy STL
     bpy.ops.mesh.primitive_uv_sphere_add()
     mesh_path = tmp_path / "v.stl"
-    if hasattr(bpy.ops.wm, "stl_export"):
-        bpy.ops.wm.stl_export(filepath=str(mesh_path))
+    wm_ops = getattr(bpy.ops, "wm")
+    if hasattr(wm_ops, "stl_export"):
+        wm_ops.stl_export(filepath=str(mesh_path))
     else:
-        bpy.ops.export_mesh.stl(filepath=str(mesh_path))
+        export_ops = getattr(bpy.ops, "export_mesh", None)
+        if export_ops and hasattr(export_ops, "stl"):
+            export_ops.stl(filepath=str(mesh_path))
+        else:
+            pytest.skip("No STL exporter found")
     bpy.ops.object.delete()
 
     # Model
@@ -544,7 +564,7 @@ def test_import_mesh_file_unsupported(scene) -> None:
 
 def test_create_primitive_mesh_invalid(scene) -> None:
     """Test handling of unsupported geometry types."""
-    obj = create_primitive_mesh(None, "test")
+    obj = create_primitive_mesh(None, "test")  # type: ignore
     assert obj is None
 
 
@@ -645,8 +665,9 @@ def test_import_robot_with_legacy_transmissions_skipped(scene) -> None:
     assert success is True
 
     # Auto-conversion is now disabled/removed.
-    assert scene.linkforge.use_ros2_control is False
-    assert len(scene.linkforge.ros2_control_joints) == 0
+    scene_props = safe_get_linkforge_scene(scene)
+    assert scene_props.use_ros2_control is False
+    assert len(scene_props.ros2_control_joints) == 0
 
 
 def test_import_robot_skips_transmissions_when_ros2_control_exists(scene) -> None:
@@ -699,7 +720,7 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists(scene) -> Non
     assert success is True
 
     # ros2_control should take priority, transmission should be skipped
-    assert len(scene.linkforge.ros2_control_joints) == 1
+    assert len(safe_get_linkforge_scene(scene).ros2_control_joints) == 1
 
 
 def test_create_link_with_material(scene) -> None:
@@ -718,7 +739,9 @@ def test_create_link_with_material(scene) -> None:
     assert safe_get_linkforge(obj).use_material is True
     # Check that visual child has material
     visual_obj = next(c for c in obj.children if "_visual" in c.name)
-    assert visual_obj.data is not None and len(visual_obj.data.materials) > 0
+    assert visual_obj.type == "MESH"
+    assert visual_obj.data is not None
+    assert hasattr(visual_obj.data, "materials") and len(getattr(visual_obj.data, "materials")) > 0
 
 
 def test_create_joint_with_custom_axis(scene) -> None:
@@ -756,10 +779,15 @@ def test_create_link_with_collision_mesh(tmp_path, scene) -> None:
     # Create dummy STL
     bpy.ops.mesh.primitive_cube_add()
     mesh_path = tmp_path / "collision.stl"
-    if hasattr(bpy.ops.wm, "stl_export"):
-        bpy.ops.wm.stl_export(filepath=str(mesh_path))
+    wm_ops = getattr(bpy.ops, "wm")
+    if hasattr(wm_ops, "stl_export"):
+        wm_ops.stl_export(filepath=str(mesh_path))
     else:
-        bpy.ops.export_mesh.stl(filepath=str(mesh_path))
+        export_ops = getattr(bpy.ops, "export_mesh", None)
+        if export_ops and hasattr(export_ops, "stl"):
+            export_ops.stl(filepath=str(mesh_path))
+        else:
+            pytest.skip("No STL exporter found")
     bpy.ops.object.delete()
 
     # Model
@@ -776,7 +804,7 @@ def test_create_link_with_collision_mesh(tmp_path, scene) -> None:
     coll_obj = next(c for c in obj.children if "_collision" in c.name)
     assert coll_obj["imported_from_source"] is True
     assert coll_obj["collision_geometry_type"] == "MESH"
-    assert obj.linkforge.collision_quality == 100.0
+    assert safe_get_linkforge(obj).collision_quality == 100.0
 
 
 def test_create_primitive_mesh_cylinder_sphere(scene) -> None:
@@ -813,10 +841,12 @@ def test_joint_axis_standard_axes(scene) -> None:
     """Test joint axis detection for standard X, Y, Z axes."""
     bpy.ops.object.empty_add()
     p_obj = bpy.context.active_object
+    assert p_obj is not None
     p_obj.name = "p"
 
     bpy.ops.object.empty_add()
     c_obj = bpy.context.active_object
+    assert c_obj is not None
     c_obj.name = "c"
 
     link_objects = {"p": p_obj, "c": c_obj}
@@ -831,7 +861,8 @@ def test_joint_axis_standard_axes(scene) -> None:
         limits=JointLimits(0, 1, 10, 1),
     )
     obj_x = create_joint_object(j_x, link_objects)
-    assert obj_x.linkforge_joint.axis == "X"
+    assert obj_x is not None
+    assert safe_get_joint(obj_x).axis == "X"
 
     # Test Y axis
     j_y = Joint(
@@ -843,7 +874,8 @@ def test_joint_axis_standard_axes(scene) -> None:
         limits=JointLimits(0, 1, 10, 1),
     )
     obj_y = create_joint_object(j_y, link_objects)
-    assert obj_y.linkforge_joint.axis == "Y"
+    assert obj_y is not None
+    assert safe_get_joint(obj_y).axis == "Y"
 
 
 def test_import_robot_topological_sort(scene) -> None:
@@ -867,7 +899,9 @@ def test_import_robot_topological_sort(scene) -> None:
     mid = bpy.data.objects["mid"]
     leaf = bpy.data.objects["leaf"]
 
+    assert mid.parent is not None
     assert mid.parent.parent == root
+    assert leaf.parent is not None
     assert leaf.parent.parent == mid
 
 
@@ -901,7 +935,8 @@ def test_normalize_and_consolidate_imported_objects(scene) -> None:
     m2.location = (3.0, 3.0, 3.0)
     m2.parent = m1
 
-    bpy.context.view_layer.update()
+    if bpy.context.view_layer is not None:
+        bpy.context.view_layer.update()
 
     # Store names before they are potentially deleted
     root_name = root.name
@@ -914,7 +949,8 @@ def test_normalize_and_consolidate_imported_objects(scene) -> None:
     assert res is not None
     assert res.name == "consolidated"
     assert res.type == "MESH"
-    assert len(res.data.vertices) > 0
+    assert res.data is not None
+    assert hasattr(res.data, "vertices") and len(getattr(res.data, "vertices")) > 0
     # Check that root empty and original meshes are queued for deletion (implicitly cleaned by the function)
     assert root_name not in bpy.data.objects
     assert m1_name not in bpy.data.objects
@@ -950,9 +986,10 @@ def test_create_joint_object_mimic_logic(scene) -> None:
     )
 
     res = create_joint_object(joint, link_objects)
-    assert res.linkforge_joint.use_mimic is True
-
-    assert res.linkforge_joint.mimic_multiplier == 0.5
+    assert res is not None
+    res_props = safe_get_joint(res)
+    assert res_props.use_mimic is True
+    assert res_props.mimic_multiplier == 0.5
 
 
 def test_sensor_noise_properties(clean_scene, scene) -> None:
@@ -994,15 +1031,16 @@ def test_sensor_noise_properties(clean_scene, scene) -> None:
     for s in [lidar, imu, gps]:
         obj = create_sensor_object(s, link_map)
         assert obj is not None
-        assert obj.linkforge_sensor.use_noise is True
-        assert obj.linkforge_sensor.noise_type == "gaussian"
+        sensor_props = safe_get_sensor(obj)
+        assert sensor_props.use_noise is True
+        assert sensor_props.noise_type == "gaussian"
 
         if s.type == SensorType.LIDAR:
-            assert obj.linkforge_sensor.noise_stddev == pytest.approx(0.01)
+            assert sensor_props.noise_stddev == pytest.approx(0.01)
         elif s.type == SensorType.IMU:
-            assert obj.linkforge_sensor.noise_stddev == pytest.approx(0.001)
+            assert sensor_props.noise_stddev == pytest.approx(0.001)
         elif s.type == SensorType.GPS:
-            assert obj.linkforge_sensor.noise_stddev == pytest.approx(0.5)
+            assert sensor_props.noise_stddev == pytest.approx(0.5)
 
 
 def test_multi_visual_collision_naming(clean_scene, scene) -> None:
@@ -1068,10 +1106,15 @@ def test_import_mesh_file_removes_non_mesh_stragglers(tmp_path, scene) -> None:
     # Create a real STL file to import
     bpy.ops.mesh.primitive_cube_add()
     stl_path = tmp_path / "cube.stl"
-    if hasattr(bpy.ops.wm, "stl_export"):
-        bpy.ops.wm.stl_export(filepath=str(stl_path))
+    wm_ops = getattr(bpy.ops, "wm")
+    if hasattr(wm_ops, "stl_export"):
+        wm_ops.stl_export(filepath=str(stl_path))
     else:
-        bpy.ops.export_mesh.stl(filepath=str(stl_path))
+        export_ops = getattr(bpy.ops, "export_mesh", None)
+        if export_ops and hasattr(export_ops, "stl"):
+            export_ops.stl(filepath=str(stl_path))
+        else:
+            pytest.skip("No STL exporter found")
     bpy.ops.object.delete()
 
     # Wrap the real importer so we can inject a Camera side-effect during the call,

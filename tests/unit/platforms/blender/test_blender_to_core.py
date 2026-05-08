@@ -109,6 +109,7 @@ def test_detect_primitive_type_none_case(scene) -> None:
     """A complex mesh (Monkey) should return None for primitive detection."""
     bpy.ops.mesh.primitive_monkey_add()
     obj = bpy.context.active_object
+    assert obj is not None
     assert detect_primitive_type(obj) is None
 
 
@@ -249,14 +250,16 @@ def test_get_object_material_logic(scene) -> None:
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
     assert obj is not None
+    assert obj is not None
     mat = bpy.data.materials.new(name="PMat")
     mat.use_nodes = True
+    assert mat.node_tree is not None
     nodes = mat.node_tree.nodes
     bsdf = nodes.get("Principled BSDF")
     assert bsdf is not None
     socket = bsdf.inputs.get("Base Color")
     if socket and hasattr(socket, "default_value"):
-        socket.default_value = (0.1, 0.2, 0.3, 1.0)
+        setattr(socket, "default_value", (0.1, 0.2, 0.3, 1.0))  # noqa: B010
     assert obj.data is not None and hasattr(obj.data, "materials")
     obj.data.materials.append(mat)
 
@@ -351,7 +354,7 @@ def test_get_object_material_logic_nodes(scene) -> None:
         # Use "Base Color" input for standard Principled BSDF
         socket = bsdf.inputs.get("Base Color")
         if socket and hasattr(socket, "default_value"):
-            socket.default_value = (1.0, 0.0, 0.0, 1.0)
+            setattr(socket, "default_value", (1.0, 0.0, 0.0, 1.0))  # noqa: B010
 
     # Clear and assign explicitly
     if obj.data and hasattr(obj.data, "materials"):
@@ -410,6 +413,7 @@ def test_categorize_scene_objects_complex_hierarchy(scene) -> None:
     assert any(s.name == "camera" for s in sensors)
     assert len(joints_map) == 1
     assert joints_map["child_link"][0] == "base_link"  # Parent name
+    assert root_link is not None
     assert root_link[0] == "base_link"
 
 
@@ -503,6 +507,7 @@ def test_blender_sensor_to_core_all_types(scene) -> None:
     # Setup Parent Link
     bpy.ops.object.empty_add()
     parent = bpy.context.active_object
+    assert parent is not None
     # Setup Parent Link
     parent = create_test_object("sensor_link", None, scene)
     safe_get_linkforge(parent).is_robot_link = True
@@ -563,6 +568,7 @@ def test_detect_primitive_type_logic(scene) -> None:
     # Cube
     bpy.ops.mesh.primitive_cube_add()
     cube = bpy.context.active_object
+    assert cube is not None
     assert cube is not None
     assert detect_primitive_type(cube) == "BOX"
 
@@ -686,7 +692,9 @@ def test_extract_mesh_triangles_logic(scene) -> None:
     obj = bpy.context.active_object
     assert obj is not None
 
-    verts, tris = extract_mesh_triangles(obj)
+    mesh_data = extract_mesh_triangles(obj)
+    assert mesh_data is not None
+    verts, tris = mesh_data
 
     # Cube has 8 vertices and 12 triangles
     assert len(verts) == 8
@@ -775,7 +783,7 @@ def test_blender_link_to_core_geometry_and_material(scene) -> None:
         assert bsdf is not None
         socket = bsdf.inputs.get("Base Color")
         if socket and hasattr(socket, "default_value"):
-            socket.default_value = (1, 0, 0, 1)  # Red
+            setattr(socket, "default_value", (1, 0, 0, 1))  # Red  # noqa: B010
     if vis_obj.data and hasattr(vis_obj.data, "materials"):
         vis_obj.data.materials.append(mat)
 
@@ -1404,9 +1412,10 @@ def test_blender_link_mesh_inertia(clean_scene, scene) -> None:
     o = create_test_object("Geom", mesh)
     scene.collection.objects.link(o)
     o.parent = link_obj
-    o.linkforge.is_robot_visual = True
-    o.linkforge.is_robot_collision = True
-    o.linkforge.geometry_type = "MESH"  # Force mesh inertia branch
+    props = safe_get_linkforge(o)
+    props.is_robot_visual = True
+    props.is_robot_collision = True
+    props.geometry_type = "MESH"  # Force mesh inertia branch
 
     from pathlib import Path
 
@@ -1617,8 +1626,8 @@ def test_blender_to_core_small_gaps(clean_scene, scene) -> None:
     c1 = create_test_object("gaps_root_collision", m_col, scene)
     c1.parent = root
     c1.dimensions = (1, 1, 1)
-
-    bpy.context.view_layer.update()
+    if bpy.context.view_layer is not None:
+        bpy.context.view_layer.update()
 
     robot, _ = scene_to_robot(bpy.context, meshes_dir=Path("/tmp"), dry_run=True)
     # Check if we at least have our gaps_root link
@@ -1673,6 +1682,7 @@ def test_blender_to_core_missing_errors(clean_scene, scene) -> None:
     robot_props = MagicMock()
     robot_props.simplify_collision = True
     core = blender_link_to_core_with_origin(p, robot_props=robot_props)
+    assert core is not None
     assert len(core.collisions) == 1
 
     # get_object_geometry BOX fallback

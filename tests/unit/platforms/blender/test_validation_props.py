@@ -1,5 +1,7 @@
 import bpy
 
+from tests.blender_test_utils import safe_get_validation
+
 
 def test_validation_issue_line_splitting(scene) -> None:
     """Test correctly splitting long messages and suggestions into lines."""
@@ -7,7 +9,8 @@ def test_validation_issue_line_splitting(scene) -> None:
     # but we can test the property methods on a registered instance.
 
     wm = bpy.context.window_manager
-    res = wm.linkforge_validation
+    assert wm is not None
+    res = safe_get_validation(wm)
     res.clear()
 
     # Add an error
@@ -37,7 +40,8 @@ def test_validation_issue_line_splitting(scene) -> None:
 def test_validation_result_clearing(scene) -> None:
     """Test clearing validation results."""
     wm = bpy.context.window_manager
-    res = wm.linkforge_validation
+    assert wm is not None
+    res = safe_get_validation(wm)
 
     # Fill with some data
     res.has_results = True
@@ -56,7 +60,8 @@ def test_validation_result_clearing(scene) -> None:
 def test_validation_issue_objects_str(scene) -> None:
     """Test affected objects string formatting."""
     wm = bpy.context.window_manager
-    res = wm.linkforge_validation
+    assert wm is not None
+    res = safe_get_validation(wm)
     res.clear()
 
     issue = res.warnings.add()

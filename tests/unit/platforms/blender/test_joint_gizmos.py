@@ -10,6 +10,8 @@ from linkforge.blender.visualization.joint_gizmos import (
 )
 from mathutils import Vector
 
+from tests.blender_test_utils import safe_get_joint
+
 
 def test_generate_arrow_cone_vertices(scene) -> None:
     """Test the math behind arrow cone vertex generation."""
@@ -41,14 +43,16 @@ def test_generate_axis_geometry(scene) -> None:
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
-    obj.linkforge_joint.is_robot_joint = True
+    assert obj is not None
+    safe_get_joint(obj).is_robot_joint = True
 
     # Move and rotate object to ensure world space transformation is tested
     obj.location = (1.0, 2.0, 3.0)
     obj.rotation_euler = (0, 0, 0)  # No rotation for easy check
 
     # CRITICAL: Update view layer so matrix_world reflects the new location
-    bpy.context.view_layer.update()
+    if bpy.context.view_layer is not None:
+        bpy.context.view_layer.update()
 
     data = generate_axis_geometry(obj, axis_length=0.2)
 
@@ -71,7 +75,8 @@ def test_fix_existing_joints(scene) -> None:
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
-    obj.linkforge_joint.is_robot_joint = True
+    assert obj is not None
+    safe_get_joint(obj).is_robot_joint = True
     obj.empty_display_type = "CUBE"
 
     fix_existing_joints()
@@ -108,7 +113,8 @@ def test_draw_internal(mocker, scene) -> None:
     bpy.ops.object.delete()
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
-    obj.linkforge_joint.is_robot_joint = True
+    assert obj is not None
+    safe_get_joint(obj).is_robot_joint = True
 
     # Mock bpy.context locally for the joint_gizmos module
     mock_context = MagicMock()
@@ -169,12 +175,13 @@ def test_shader_fallback(mocker, scene) -> None:
 def test_generate_axis_geometry_invalid(scene) -> None:
     """Test generating geometry for invalid objects."""
     # None object
-    data = generate_axis_geometry(None)
+    data = generate_axis_geometry(None)  # type: ignore
     assert len(data["lines"]) == 0
 
     # Non-empty object (e.g., Mesh)
     bpy.ops.mesh.primitive_cube_add()
     cube = bpy.context.active_object
+    assert cube is not None
     data = generate_axis_geometry(cube)
     assert len(data["lines"]) == 0
 

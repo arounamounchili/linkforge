@@ -45,6 +45,7 @@ def test_export_mesh_operator_success(mocker, scene) -> None:
     """Test success paths for OBJ and GLB using module-level mocks."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
     path = Path("/tmp/test.obj")
 
     # Mock the operators in the module namespace to avoid real C calls
@@ -61,11 +62,13 @@ def test_export_link_mesh_logic(mocker, scene) -> None:
     """Test that export_link_mesh correctly calculates the geometric offset."""
     bpy.ops.mesh.primitive_cube_add(size=2.0, location=(5.0, 5.0, 5.0))
     obj = bpy.context.active_object
+    assert obj is not None
 
     # Shift vertices
-    for vert in obj.data.vertices:
+    for vert in obj.data.vertices:  # type: ignore
         vert.co += Vector((1, 0, 0))
 
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
 
     mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=True)
@@ -76,11 +79,13 @@ def test_export_link_mesh_logic(mocker, scene) -> None:
 
     # STL
     path, mat = export_link_mesh(obj, "link", "visual", "STL", meshes_dir)
+    assert path is not None
     assert path.suffix == ".stl"
-    assert tuple(mat.translation) == pytest.approx((6.0, 5.0, 5.0))
+    assert tuple(mat.translation) == pytest.approx((6.0, 5.0, 5.0))  # type: ignore
 
     # Fallback and Simplification
     path, _ = export_link_mesh(obj, "link", "visual", "FOO", meshes_dir)
+    assert path is not None
     assert path.suffix == ".obj"  # Default
 
     path, _ = export_link_mesh(obj, "link", "collision", "STL", meshes_dir, simplify=True)
@@ -93,11 +98,13 @@ def test_export_link_mesh_with_suffix(mocker, scene) -> None:
     """Test export_link_mesh with custom suffix."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=True)
 
     path, _ = export_link_mesh(obj, "link", "visual", "STL", Path("/tmp"), suffix="_custom")
 
+    assert path is not None
     assert "_custom" in path.name
     bpy.data.objects.remove(obj, do_unlink=True)
 
@@ -106,10 +113,12 @@ def test_export_link_mesh_dry_run(mocker, scene) -> None:
     """Test export_link_mesh in dry run mode."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     mock_stl = mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl")
 
     path, mat = export_link_mesh(obj, "link", "visual", "STL", Path("/tmp"), dry_run=True)
+    assert path is not None
 
     # Dry run should still return path and matrix but not call export
     assert path is not None
@@ -123,10 +132,12 @@ def test_create_simplified_mesh(scene) -> None:
     """Test simplification coverage."""
     bpy.ops.mesh.primitive_uv_sphere_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     assert create_simplified_mesh(None, 0.5) is None
     bpy.ops.object.empty_add()
     empty = bpy.context.active_object
+    assert empty is not None
     assert create_simplified_mesh(empty, 0.5) is None
 
     simplified = create_simplified_mesh(obj, 0.5)
@@ -141,6 +152,7 @@ def test_create_simplified_mesh_ratio_bounds(scene) -> None:
     """Test simplification with different ratio values."""
     bpy.ops.mesh.primitive_uv_sphere_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     # Very aggressive decimation
     simplified = create_simplified_mesh(obj, 0.1)
@@ -159,6 +171,7 @@ def test_export_link_mesh_error_dispatch(mocker, scene) -> None:
     """Test that export_link_mesh returns None on sub-function failure."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=False)
     path, mat = export_link_mesh(obj, "l", "v", "STL", Path("/tmp"))
@@ -171,6 +184,7 @@ def test_export_link_mesh_different_formats(mocker, scene) -> None:
     """Test export_link_mesh with all supported formats."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=True)
     mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_obj", return_value=True)
@@ -180,14 +194,17 @@ def test_export_link_mesh_different_formats(mocker, scene) -> None:
 
     # Test STL
     path, _ = export_link_mesh(obj, "link", "visual", "STL", meshes_dir)
+    assert path is not None
     assert path.suffix == ".stl"
 
     # Test OBJ
     path, _ = export_link_mesh(obj, "link", "visual", "OBJ", meshes_dir)
+    assert path is not None
     assert path.suffix == ".obj"
 
     # Test GLB
     path, _ = export_link_mesh(obj, "link", "visual", "GLB", meshes_dir)
+    assert path is not None
     assert path.suffix == ".glb"
 
     bpy.data.objects.remove(obj, do_unlink=True)

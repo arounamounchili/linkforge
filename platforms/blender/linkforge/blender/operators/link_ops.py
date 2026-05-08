@@ -800,7 +800,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             # Select the new link Empty
             bpy.ops.object.select_all(action="DESELECT")
             empty.select_set(True)
-            if context.view_layer:
+            if context.view_layer is not None:
                 context.view_layer.objects.active = empty
 
         self.report(
@@ -1275,11 +1275,11 @@ class LINKFORGE_OT_remove_link(Operator):
             bpy.data.objects.remove(link_obj, do_unlink=True)
 
             # Force update to ensure name namespace is freed in Blender
-            if context.view_layer:
+            if context.view_layer is not None:
                 context.view_layer.update()
 
             # Select the (first) restored visual object for consistency
-            if visual_children and context.view_layer:
+            if visual_children and context.view_layer is not None:
                 bpy.ops.object.select_all(action="DESELECT")
                 visual_children[0].select_set(True)
                 context.view_layer.objects.active = visual_children[0]

@@ -5,7 +5,7 @@ from __future__ import annotations
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
-def sanitize_name(name: str, allow_hyphen: bool = True) -> str:
+def sanitize_name(name: str | None, allow_hyphen: bool = True) -> str:
     """Sanitize a name for robot model and Python identifier compatibility.
 
     Replaces invalid characters with underscores and ensures it doesn't

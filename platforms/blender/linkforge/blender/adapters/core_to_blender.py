@@ -95,7 +95,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
                 obj.name = name
                 obj.dimensions = (geometry.size.x, geometry.size.y, geometry.size.z)
                 # Force update to ensure dimensions are applied correctly before return
-                if bpy.context.view_layer:
+                if bpy.context.view_layer is not None:
                     bpy.context.view_layer.update()
                 obj["source_geometry_type"] = "BOX"
 
@@ -105,7 +105,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
             if obj:
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.length)
-                if bpy.context.view_layer:
+                if bpy.context.view_layer is not None:
                     bpy.context.view_layer.update()
                 obj["source_geometry_type"] = "CYLINDER"
 
@@ -115,7 +115,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
             if obj:
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
-                if bpy.context.view_layer:
+                if bpy.context.view_layer is not None:
                     bpy.context.view_layer.update()
                 obj["source_geometry_type"] = "SPHERE"
 
@@ -307,7 +307,7 @@ def normalize_and_consolidate_imported_objects(
         obj.matrix_world = Matrix.Identity(4)
         obj.select_set(True)
 
-    if bpy.context.view_layer:
+    if bpy.context.view_layer is not None:
         bpy.context.view_layer.objects.active = mesh_list[0]
 
     # Bake axis/scale
@@ -330,7 +330,7 @@ def normalize_and_consolidate_imported_objects(
         with contextlib.suppress(RuntimeError, ReferenceError):
             bpy.data.objects.remove(obj, do_unlink=True)
 
-    if bpy.context.view_layer:
+    if bpy.context.view_layer is not None:
         bpy.context.view_layer.objects.active = final_obj
     return final_obj
 
@@ -1043,7 +1043,7 @@ def import_robot_to_scene(robot: Robot, source_path: Path, context: bpy.types.Co
 
     # Update scene to ensure all transforms are calculated correctly
     # This is critical for round-trip: ensures child link locations are properly evaluated
-    if context.view_layer:
+    if context.view_layer is not None:
         context.view_layer.update()
 
     # Build completion message

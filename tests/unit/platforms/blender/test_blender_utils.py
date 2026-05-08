@@ -2,16 +2,18 @@ import bpy
 from linkforge.blender.utils.property_helpers import find_property_owner
 from linkforge.blender.utils.transform_utils import clear_parent_keep_transform
 
+from tests.blender_test_utils import safe_get_linkforge
+
 
 def test_find_property_owner_strategies(scene) -> None:
     """Test find_property_owner with various strategies."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
+    assert obj is not None
     obj.name = "owner_obj"
-    obj.linkforge.is_robot_link = True
-
-    props = obj.linkforge
+    props = safe_get_linkforge(obj)
+    props.is_robot_link = True
 
     # Strategy 1: id_data (should work immediately)
     found = find_property_owner(bpy.context, props, "linkforge")
@@ -33,23 +35,27 @@ def test_clear_parent_keep_transform(scene) -> None:
     # Create parent with transform
     bpy.ops.object.empty_add()
     parent = bpy.context.active_object
+    assert parent is not None
     parent.location = (1, 2, 3)
     parent.rotation_euler = (0.5, 0, 0)
 
     # Create child
     bpy.ops.object.empty_add()
     child = bpy.context.active_object
+    assert child is not None
     child.parent = parent
     child.location = (0, 1, 0)
 
-    bpy.context.view_layer.update()
+    if bpy.context.view_layer is not None:
+        bpy.context.view_layer.update()
     world_matrix_before = child.matrix_world.copy()
 
     # Clear parent
     clear_parent_keep_transform(child)
 
     # Assert world matrix is preserved (within tolerance)
-    bpy.context.view_layer.update()
+    if bpy.context.view_layer is not None:
+        bpy.context.view_layer.update()
     world_matrix_after = child.matrix_world
 
     for i in range(4):

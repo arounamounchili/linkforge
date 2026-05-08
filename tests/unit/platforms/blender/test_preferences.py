@@ -13,6 +13,12 @@ from linkforge.blender.preferences import (
     update_sensor_empty_size,
 )
 
+from tests.blender_test_utils import (
+    safe_get_joint,
+    safe_get_linkforge,
+    safe_get_sensor,
+)
+
 
 def test_get_addon_id(scene) -> None:
     """Test that addon ID is correctly derived from package name."""
@@ -30,7 +36,8 @@ def test_update_joint_empty_size(scene) -> None:
     bpy.ops.object.delete()
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
-    obj.linkforge_joint.is_robot_joint = True
+    assert obj is not None
+    safe_get_joint(obj).is_robot_joint = True
     obj.empty_display_size = 0.1
 
     # Mock self (preferences)
@@ -52,7 +59,8 @@ def test_update_sensor_empty_size(scene) -> None:
     bpy.ops.object.delete()
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
-    obj.linkforge_sensor.is_robot_sensor = True
+    assert obj is not None
+    safe_get_sensor(obj).is_robot_sensor = True
     obj.empty_display_size = 0.1
 
     mock_prefs = MagicMock()
@@ -69,7 +77,8 @@ def test_update_link_empty_size(scene) -> None:
     bpy.ops.object.delete()
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
-    obj.linkforge.is_robot_link = True
+    assert obj is not None
+    safe_get_linkforge(obj).is_robot_link = True
     obj.empty_display_size = 0.1
 
     mock_prefs = MagicMock()

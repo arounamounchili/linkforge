@@ -1,5 +1,5 @@
 import contextlib
-from typing import Any
+import typing
 
 import bpy
 
@@ -19,288 +19,255 @@ def ensure_linkforge_registered():
         "linkforge_sensor",
         "linkforge_transmission",
     ]
-    scene_props = ["linkforge"]
 
-    # Exhaustive cleanup
-    with contextlib.suppress(Exception):
-        linkforge.blender.unregister()
+    # Quick check: are they all there?
+    all_present = all(hasattr(bpy.types.Object, p) for p in object_props) and hasattr(
+        bpy.types.WindowManager, "linkforge_validation"
+    )
 
-    for p in object_props:
-        with contextlib.suppress(AttributeError):
-            delattr(bpy.types.Object, p)
-    for p in scene_props:
-        with contextlib.suppress(AttributeError):
-            delattr(bpy.types.Scene, p)
-
-    # Fresh registration
-    linkforge.blender.register()
-
-    # Critical verification
-    for p in object_props:
-        if not hasattr(bpy.types.Object, p):
-            raise RuntimeError(f"Registration Failed: bpy.types.Object missing '{p}'")
-    for p in scene_props:
-        if not hasattr(bpy.types.Scene, p):
-            raise RuntimeError(f"Registration Failed: bpy.types.Scene missing '{p}'")
-
-
-def create_test_object(name: str, object_data: Any = None, scene: Any = None) -> bpy.types.Object:
-    """
-    Robust factory for creating Blender objects in a test environment.
-    Ensures LinkForge property groups are fully instantiated and RNA-dispatchable.
-    """
-    # Create the object instance
-    obj = bpy.data.objects.new(name, object_data)
-
-    # Link to scene collection (essential for RNA dispatch table initialization)
-    # ONLY if scene is explicitly provided, to avoid breaking tests that do manual linking
-    if scene and hasattr(scene, "collection"):
-        if not obj.users_collection:
-            scene.collection.objects.link(obj)
-
-        # Ensure view layer is updated so properties are accessible
-        if hasattr(scene, "view_layers"):
-            for vl in scene.view_layers:
-                vl.update()
-        elif hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
-            bpy.context.view_layer.update()
-
-    # Final Binding Health Check with Nuclear Recovery
-    # We actively probe the property group on the instance.
-    try:
-        # Accessing bl_rna forces Blender to finalize the instance-level binding
-        if not (hasattr(obj, "linkforge") and obj.linkforge and obj.linkforge.bl_rna):
-            raise AttributeError("RNA Binding Incomplete")
-    except (AttributeError, RuntimeError):
-        # Nuclear Recovery: Re-register the addon and refresh properties
-        import linkforge.blender
-
+    if not all_present:
+        # Force a clean re-registration cycle
         with contextlib.suppress(Exception):
             linkforge.blender.unregister()
         linkforge.blender.register()
 
-        # Verify class-level registration
-        if not hasattr(bpy.types.Object, "linkforge"):
-            raise RuntimeError(
-                "Fatal: linkforge property missing from bpy.types.Object after registration"
-            ) from None
 
-        # Force depsgraph update to push properties to instances
-        if scene and hasattr(scene, "view_layers"):
-            for vl in scene.view_layers:
-                vl.update()
-        elif hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
-            bpy.context.view_layer.update()
+def safe_get_linkforge(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+    """Safe accessor for the 'linkforge' property group on a Blender object."""
+    prop = getattr(obj, "linkforge", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
-        # Final Verification on the fresh wrapper
-        obj = bpy.data.objects[obj.name]
-        try:
-            if not (hasattr(obj, "linkforge") and obj.linkforge and obj.linkforge.bl_rna):
-                raise AttributeError("Final Binding Failure")
-        except (AttributeError, RuntimeError):
-            # This is the "Nuclear" error - it means the environment is broken
-            raise AttributeError(
-                f"Ironclad Registration Failure: Object '{obj.name}' lost LinkForge property binding "
-                "and could not be recovered. This usually indicates a conflict in the Blender environment."
-            ) from None
-
-    return obj
-
-
-def create_mesh_object(name: str, scene: Any = None) -> bpy.types.Object:
-    """Creates a simple mesh object (cube) for testing."""
-    mesh_data = bpy.data.meshes.new(f"{name}_mesh")
-    # Simple cube-like data
-    mesh_data.from_pydata([(1, 1, 1), (1, -1, 1), (-1, -1, 1), (-1, 1, 1)], [], [(0, 1, 2, 3)])
-    return create_test_object(name, mesh_data, scene)
-
-
-def safe_get_linkforge(obj: bpy.types.Object, scene: Any = None) -> Any:
-    """Safe accessor for the 'linkforge' property group with auto-recovery."""
-    try:
-        if hasattr(obj, "linkforge") and obj.linkforge and obj.linkforge.bl_rna:
-            return obj.linkforge
-    except (AttributeError, RuntimeError):
-        pass
-
-    # Environment Refresh & Re-fetch
+    # If missing, try a quick refresh
     _refresh_blender_environment(scene)
+    prop = getattr(obj, "linkforge", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
-    # Re-fetch the object wrapper by name to ensure we have a fresh RNA pointer
-    try:
-        fresh_obj = bpy.data.objects[obj.name]
-        prop = getattr(fresh_obj, "linkforge", None)
-        if prop and prop.bl_rna:
-            return prop
-    except (KeyError, AttributeError, RuntimeError):
-        pass
-
-    raise AttributeError(
-        f"Object '{obj.name}' missing 'linkforge' property after environment refresh."
-    )
+    raise AttributeError(f"Object '{obj.name}' missing 'linkforge' property group.")
 
 
-def safe_get_linkforge_scene(scene: bpy.types.Scene) -> Any:
-    """Safe accessor for the scene-level 'linkforge' property group."""
-    try:
-        if hasattr(scene, "linkforge") and scene.linkforge and scene.linkforge.bl_rna:
-            return scene.linkforge
-    except (AttributeError, RuntimeError):
-        pass
+def safe_get_joint(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+    """Safe accessor for the 'linkforge_joint' property group on a Blender object."""
+    prop = getattr(obj, "linkforge_joint", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
+    # If missing, try a quick refresh
     _refresh_blender_environment(scene)
+    prop = getattr(obj, "linkforge_joint", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
-    try:
-        fresh_scene = bpy.data.scenes[scene.name]
-        prop = getattr(fresh_scene, "linkforge", None)
-        if prop and prop.bl_rna:
-            return prop
-    except (KeyError, AttributeError, RuntimeError):
-        pass
-
-    raise AttributeError(
-        f"Scene '{scene.name}' missing 'linkforge' property after environment refresh."
-    )
+    raise AttributeError(f"Object '{obj.name}' missing 'linkforge_joint' property group.")
 
 
-def safe_get_joint(obj: bpy.types.Object, scene: Any = None) -> Any:
-    """Safe accessor for the 'linkforge_joint' property group."""
-    try:
-        if hasattr(obj, "linkforge_joint") and obj.linkforge_joint and obj.linkforge_joint.bl_rna:
-            return obj.linkforge_joint
-    except (AttributeError, RuntimeError):
-        pass
+def safe_get_linkforge_scene(scene: bpy.types.Scene) -> typing.Any:
+    """Safe accessor for the 'linkforge' property group on a Blender scene."""
+    prop = getattr(scene, "linkforge", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
+    # If missing, try a quick refresh
     _refresh_blender_environment(scene)
+    prop = getattr(scene, "linkforge", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
-    try:
-        fresh_obj = bpy.data.objects[obj.name]
-        prop = getattr(fresh_obj, "linkforge_joint", None)
-        if prop and prop.bl_rna:
-            return prop
-    except (KeyError, AttributeError, RuntimeError):
-        pass
-
-    raise AttributeError(
-        f"Object '{obj.name}' missing 'linkforge_joint' property after environment refresh."
-    )
+    raise AttributeError(f"Scene '{scene.name}' missing 'linkforge' property group.")
 
 
-def safe_get_sensor(obj: bpy.types.Object, scene: Any = None) -> Any:
-    """Safe accessor for the 'linkforge_sensor' property group."""
-    try:
-        if (
-            hasattr(obj, "linkforge_sensor")
-            and obj.linkforge_sensor
-            and obj.linkforge_sensor.bl_rna
-        ):
-            return obj.linkforge_sensor
-    except (AttributeError, RuntimeError):
-        pass
+def safe_get_transmission(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+    """Safe accessor for the 'linkforge_transmission' property group on a Blender object."""
+    prop = getattr(obj, "linkforge_transmission", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
+    # If missing, try a quick refresh
     _refresh_blender_environment(scene)
+    prop = getattr(obj, "linkforge_transmission", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
-    try:
-        fresh_obj = bpy.data.objects[obj.name]
-        prop = getattr(fresh_obj, "linkforge_sensor", None)
-        if prop and prop.bl_rna:
-            return prop
-    except (KeyError, AttributeError, RuntimeError):
-        pass
-
-    raise AttributeError(
-        f"Object '{obj.name}' missing 'linkforge_sensor' property after environment refresh."
-    )
+    raise AttributeError(f"Object '{obj.name}' missing 'linkforge_transmission' property group.")
 
 
-def safe_get_transmission(obj: bpy.types.Object, scene: Any = None) -> Any:
-    """Safe accessor for the 'linkforge_transmission' property group."""
-    try:
-        if (
-            hasattr(obj, "linkforge_transmission")
-            and obj.linkforge_transmission
-            and obj.linkforge_transmission.bl_rna
-        ):
-            return obj.linkforge_transmission
-    except (AttributeError, RuntimeError):
-        pass
+def safe_get_validation(wm: bpy.types.WindowManager) -> typing.Any:
+    """Safe accessor for the window manager 'linkforge_validation' property group."""
+    prop = getattr(wm, "linkforge_validation", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
+    # If missing, try a quick refresh
+    _refresh_blender_environment()
+    prop = getattr(wm, "linkforge_validation", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
+
+    raise AttributeError("WindowManager missing 'linkforge_validation' property group.")
+
+
+def safe_get_sensor(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+    """Safely retrieve or initialize sensor properties on an object."""
+    prop = getattr(obj, "linkforge_sensor", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
+
+    # If missing, try a quick refresh
     _refresh_blender_environment(scene)
+    prop = getattr(obj, "linkforge_sensor", None)
+    if prop and hasattr(prop, "bl_rna"):
+        return prop
 
-    try:
-        fresh_obj = bpy.data.objects[obj.name]
-        prop = getattr(fresh_obj, "linkforge_transmission", None)
-        if prop and prop.bl_rna:
-            return prop
-    except (KeyError, AttributeError, RuntimeError):
-        pass
-
-    raise AttributeError(
-        f"Object '{obj.name}' missing 'linkforge_transmission' property after environment refresh."
-    )
+    raise AttributeError(f"Object '{obj.name}' missing 'linkforge_sensor' property group.")
 
 
-def _refresh_blender_environment(scene: Any = None) -> None:
-    """Internal helper to refresh the Blender RNA state (Nuclear Recovery)."""
+def _refresh_blender_environment(scene: typing.Any = None) -> None:
+    """Trigger a clean re-registration of the LinkForge addon.
+
+    Used as a 'nuclear option' when Blender's internal RNA mapping gets lost
+    during intensive headless test runs.
+    """
     import linkforge.blender
-
-    # Fallback to the active scene if none provided
-    if not scene:
-        scene = bpy.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
 
     with contextlib.suppress(Exception):
         linkforge.blender.unregister()
     linkforge.blender.register()
 
-    # Force depsgraph update to push properties to instances
-    if scene and hasattr(scene, "view_layers"):
-        for vl in scene.view_layers:
-            vl.update()
-    elif hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
-        bpy.context.view_layer.update()
+
+def create_test_object(
+    name: str, data: typing.Any = None, scene: bpy.types.Scene | None = None
+) -> bpy.types.Object:
+    """Create a new Blender object.
+
+    Linking behavior:
+    - If 'scene' is provided: Links to the scene's collection (standard behavior).
+    - If 'scene' is None: Only creates in data (legacy/manual behavior).
+    """
+    # Clean up existing data-only object with same name if it exists (prevents .001)
+    if name in bpy.data.objects:
+        old_obj = bpy.data.objects[name]
+        if not old_obj.users_collection:
+            bpy.data.objects.remove(old_obj, do_unlink=True)
+
+    obj = bpy.data.objects.new(name, data)
+
+    if scene:
+        with contextlib.suppress(RuntimeError):
+            scene.collection.objects.link(obj)
+
+    return obj
+
+
+def create_mesh_object(name: str, scene: bpy.types.Scene | None = None) -> bpy.types.Object:
+    """Create a new mesh object."""
+    mesh = bpy.data.meshes.new(f"{name}_mesh")
+    return create_test_object(name, mesh, scene=scene)
 
 
 def create_simple_robot_scene(
-    scene_name: str = "RobotScene",
+    scene: bpy.types.Scene,
 ) -> tuple[bpy.types.Collection, bpy.types.Object, bpy.types.Object]:
-    """Helper to create a standard robot link-child hierarchy for testing.
+    """Create a minimal 2-link robot scene for integration tests.
 
-    Returns:
-        A tuple of (collection, parent_link, child_mesh)
+    Hierarchy: root_collection -> [parent_link, child_link, joint]
     """
-    # Create collection
-    collection = bpy.data.collections.new(scene_name)
+    collection = bpy.data.collections.new("TestRobot")
+    scene.collection.children.link(collection)
 
-    # Robustly get the target scene (context might be None in background)
-    target_scene = bpy.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
-    if not target_scene:
-        raise RuntimeError("No Blender scene available to link test collection")
+    parent = create_mesh_object("parent_link", scene=scene)
+    child = create_mesh_object("child_link", scene=scene)
 
-    target_scene.collection.children.link(collection)
+    # Parent child link far away to avoid origin overlaps
+    child.location = (0, 0, 1)
 
-    # Create parent link (Empty)
-    parent = create_test_object("parent_link", None, scene=target_scene)
-    if parent.name not in collection.objects:
-        collection.objects.link(parent)
+    # Setup joint
+    joint = create_test_object("joint", None, scene=scene)
 
-    # Set properties using the safe accessor
-    safe_get_linkforge(parent, scene=target_scene).is_robot_link = True
-
-    # Create child mesh
-    mesh_data = bpy.data.meshes.new("child_visual")
-    mesh_data.from_pydata(
-        [(0.25, 0.25, 0.25), (0.25, -0.25, 0.25), (-0.25, -0.25, 0.25), (-0.25, 0.25, 0.25)],
-        [],
-        [(0, 1, 2, 3)],
-    )
-    child = create_test_object("child_visual", mesh_data, scene=target_scene)
-    child.parent = parent
-
-    if child.name not in collection.objects:
-        collection.objects.link(child)
+    joint_props = safe_get_joint(joint, scene)
+    joint_props.is_robot_joint = True
+    joint_props.parent_link = parent
+    joint_props.child_link = child
 
     # Final update
-    if target_scene.view_layers:
-        target_scene.view_layers[0].update()
+    if scene.view_layers:
+        scene.view_layers[0].update()
 
     return collection, parent, child
+
+
+def create_robot_link(
+    name: str,
+    scene: bpy.types.Scene,
+    parent: bpy.types.Object | None = None,
+    with_visual: bool = True,
+) -> bpy.types.Object:
+    """High-level factory to create a LinkForge robot link.
+
+    Creates an Empty object as the link frame and optionally a child visual mesh.
+    """
+    link_obj = create_test_object(name, None, scene=scene)
+
+    safe_get_linkforge(link_obj, scene).is_robot_link = True
+
+    if parent:
+        link_obj.parent = parent
+
+    if with_visual:
+        mesh_obj = create_mesh_object(f"{name}_visual", scene=scene)
+        mesh_obj.parent = link_obj
+
+    if scene.view_layers:
+        scene.view_layers[0].update()
+
+    return link_obj
+
+
+def create_robot_joint(
+    name: str,
+    parent_link: bpy.types.Object,
+    child_link: bpy.types.Object,
+    scene: bpy.types.Scene,
+    joint_type: str = "REVOLUTE",
+) -> bpy.types.Object:
+    """High-level factory to create a LinkForge robot joint.
+
+    Handles object creation, parenting, and RNA property assignment.
+    """
+    joint_obj = create_test_object(name, None, scene=scene)
+
+    joint_props = safe_get_joint(joint_obj, scene)
+    joint_props.is_robot_joint = True
+    joint_props.joint_type = joint_type
+    joint_props.parent_link = parent_link
+    joint_props.child_link = child_link
+
+    # Joints are typically children of the child link in LinkForge convention
+    joint_obj.parent = child_link
+
+    if scene.view_layers:
+        scene.view_layers[0].update()
+
+    return joint_obj
+
+
+def setup_2_link_arm(
+    scene: bpy.types.Scene, prefix: str = "test_arm"
+) -> tuple[bpy.types.Object, bpy.types.Object, bpy.types.Object]:
+    """Sets up a minimal 2-link robotic arm hierarchy.
+
+    Structure: base_link -> joint -> child_link
+
+    Returns:
+        tuple: (base_link, joint, child_link)
+    """
+    base = create_robot_link(f"{prefix}_base", scene)
+    child = create_robot_link(f"{prefix}_child", scene)
+    child.location = (0, 0, 1)
+
+    joint = create_robot_joint(f"{prefix}_joint", base, child, scene)
+
+    if scene.view_layers:
+        scene.view_layers[0].update()
+
+    return base, joint, child

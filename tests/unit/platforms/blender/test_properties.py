@@ -6,7 +6,12 @@ for all LinkForge property groups.
 
 import bpy
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_linkforge_scene,
+    safe_get_sensor,
+    safe_get_transmission,
+)
 
 
 class TestControlProperties:
@@ -25,6 +30,7 @@ class TestControlProperties:
 
         # Add a parameter
         param = scene.test_params.add()
+        assert param is not None
         assert param.name == "param"
         assert param.value == "0.0"
 
@@ -49,6 +55,7 @@ class TestControlProperties:
 
         # Add an interface
         interface = scene.test_interfaces.add()
+        assert interface is not None
         assert interface.name == "position"
 
         # Test enum values
@@ -60,6 +67,7 @@ class TestControlProperties:
 
         # Test parameters collection
         param = interface.parameters.add()
+        assert param is not None
         param.name = "test"
         assert len(interface.parameters) == 1
 
@@ -78,6 +86,7 @@ class TestControlProperties:
 
         # Add a joint
         joint = scene.test_joints.add()
+        assert joint is not None
         assert joint.name == ""
 
         # Test command interface defaults
@@ -102,6 +111,7 @@ class TestControlProperties:
 
         # Test parameters
         param = joint.parameters.add()
+        assert param is not None
         param.name = "param1"
         assert len(joint.parameters) == 1
 
@@ -117,8 +127,9 @@ class TestSensorProperties:
         """Test SensorPropertyGroup default values."""
         # Create sensor object
         sensor_obj = create_test_object("test_sensor", None, scene)
+        assert sensor_obj is not None
 
-        sensor = sensor_obj.linkforge_sensor
+        sensor = safe_get_sensor(sensor_obj)
 
         # Test defaults
         assert sensor.is_robot_sensor is False
@@ -148,8 +159,9 @@ class TestSensorProperties:
     def test_sensor_name_property(self, clean_scene, scene) -> None:
         """Test sensor name getter/setter."""
         sensor_obj = create_test_object("my_sensor", None, scene)
+        assert sensor_obj is not None
 
-        sensor = sensor_obj.linkforge_sensor
+        sensor = safe_get_sensor(sensor_obj)
 
         # Test getter
         assert sensor.sensor_name == "my_sensor"
@@ -165,8 +177,9 @@ class TestSensorProperties:
     def test_sensor_types(self, clean_scene, scene) -> None:
         """Test all sensor types."""
         sensor_obj = create_test_object("test_sensor", None, scene)
+        assert sensor_obj is not None
 
-        sensor = sensor_obj.linkforge_sensor
+        sensor = safe_get_sensor(sensor_obj)
 
         # Test all sensor types
         sensor_types = ["CAMERA", "DEPTH_CAMERA", "LIDAR", "IMU", "GPS", "CONTACT", "FORCE_TORQUE"]
@@ -197,7 +210,7 @@ class TestRobotProperties:
 
         # Verify we can access scene properties without error
         assert scene is not None
-        assert scene.linkforge.show_ros2_control_parameters is True
+        assert safe_get_linkforge_scene(scene).show_ros2_control_parameters is True
 
 
 class TestTransmissionProperties:
@@ -207,8 +220,9 @@ class TestTransmissionProperties:
         """Test transmission property defaults."""
         # Create transmission object
         trans_obj = create_test_object("test_transmission", None, scene)
+        assert trans_obj is not None
 
-        trans = trans_obj.linkforge_transmission
+        trans = safe_get_transmission(trans_obj)
 
         # Test defaults
         assert trans.is_robot_transmission is False
@@ -228,8 +242,9 @@ class TestTransmissionProperties:
         """Test transmission types."""
         # Create transmission object
         trans_obj = create_test_object("test_transmission", None, scene)
+        assert trans_obj is not None
 
-        trans = trans_obj.linkforge_transmission
+        trans = safe_get_transmission(trans_obj)
 
         # Test type switching if available (use actual enum values)
         if hasattr(trans, "transmission_type"):

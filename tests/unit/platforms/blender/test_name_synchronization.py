@@ -1,6 +1,11 @@
 import bpy
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge,
+    safe_get_linkforge_scene,
+)
 
 
 def test_link_source_name_persistence(scene) -> None:
@@ -8,30 +13,31 @@ def test_link_source_name_persistence(scene) -> None:
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
     obj1 = bpy.context.active_object
+    assert obj1 is not None
 
     # Set name
-    obj1.linkforge.is_robot_link = True
-    obj1.linkforge.link_name = "base_link"
+    safe_get_linkforge(obj1).is_robot_link = True
+    safe_get_linkforge(obj1).link_name = "base_link"
     assert obj1.name == "base_link"
-    assert obj1.linkforge.link_name == "base_link"
-    assert obj1.linkforge.source_name_stored == "base_link"
+    assert safe_get_linkforge(obj1).link_name == "base_link"
+    assert safe_get_linkforge(obj1).source_name_stored == "base_link"
 
     # Simulate Blender renaming (e.g. by manual rename or suffixing)
     obj1.name = "chassis"
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
 
     # Getter should now return the SYNCED name
-    assert obj1.linkforge.link_name == "chassis"
+    assert safe_get_linkforge(obj1).link_name == "chassis"
 
     # Conflict resolution simulation
     bpy.ops.object.empty_add()
     obj2 = bpy.context.active_object
+    assert obj2 is not None
     # This should be renamed by Blender to base_link.001 if base_link existed,
     # but here we manually test the setter's behavior with a conflict
-    obj2.linkforge.link_name = "base_link"
-    assert obj2.linkforge.link_name == "base_link"
-    # The physical object name might be different due to Blender's internal state
-    # but the logical name must match our intent.
+    safe_get_linkforge(obj2).link_name = "base_link"
+    assert safe_get_linkforge(obj2).link_name == "base_link"
 
 
 def test_joint_source_name_persistence(scene) -> None:
@@ -39,20 +45,22 @@ def test_joint_source_name_persistence(scene) -> None:
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
-    obj.linkforge_joint.is_robot_joint = True
+    assert obj is not None
+    safe_get_joint(obj).is_robot_joint = True
 
     # Set name
-    obj.linkforge_joint.joint_name = "elbow_joint"
+    safe_get_joint(obj).joint_name = "elbow_joint"
     assert obj.name == "elbow_joint"
-    assert obj.linkforge_joint.joint_name == "elbow_joint"
-    assert obj.linkforge_joint.source_name_stored == "elbow_joint"
+    assert safe_get_joint(obj).joint_name == "elbow_joint"
+    assert safe_get_joint(obj).source_name_stored == "elbow_joint"
 
     # Simulate Blender suffixing
     obj.name = "elbow_joint.001"
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
 
     # Sync should have sanitized and updated both
-    assert obj.linkforge_joint.joint_name == "elbow_joint_001"
+    assert safe_get_joint(obj).joint_name == "elbow_joint_001"
     assert obj.name == "elbow_joint_001"
 
 
@@ -75,15 +83,15 @@ def test_reimport_name_matching(scene) -> None:
         "shoulder_link": create_test_object("shoulder_link", None, scene),
     }
 
-    for obj in links.values():
-        obj.linkforge.is_robot_link = True
+    for obj_link in links.values():
+        safe_get_linkforge(obj_link).is_robot_link = True
 
     obj = create_joint_object(joint_model, links)
 
     assert obj is not None
     # Verify persistent identity survives creation
-    assert obj.linkforge_joint.source_name_stored == "shoulder_joint"
-    assert obj.linkforge_joint.joint_name == "shoulder_joint"
+    assert safe_get_joint(obj).source_name_stored == "shoulder_joint"
+    assert safe_get_joint(obj).joint_name == "shoulder_joint"
 
     # Clean up
     bpy.data.objects.remove(obj)
@@ -103,9 +111,9 @@ def test_auto_linking_integration(scene) -> None:
     robot = Robot(name="test", initial_links=[l1, l2], initial_joints=[j1])
 
     # Setup scene-level ROS 2 control config
-
-    scene.linkforge.use_ros2_control = True
-    rc_joint = scene.linkforge.ros2_control_joints.add()
+    lf_scene = safe_get_linkforge_scene(scene)
+    lf_scene.use_ros2_control = True
+    rc_joint = lf_scene.ros2_control_joints.add()
     rc_joint.name = "j1"
     # Initially dangling
     rc_joint.joint_obj = None
@@ -114,19 +122,21 @@ def test_auto_linking_integration(scene) -> None:
 
     # Populate joint_objects with persistent identity
     joint_obj = create_test_object("j1.001", None, scene)
-    joint_obj.linkforge_joint.is_robot_joint = True
-    joint_obj.linkforge_joint.source_name_stored = "j1"
+    assert joint_obj is not None
+    safe_get_joint(joint_obj).is_robot_joint = True
+    safe_get_joint(joint_obj).source_name_stored = "j1"
 
     builder.joint_objects["j1"] = joint_obj
 
     # Trigger finalize logic for auto-linking
     builder._execute_task("finalize", None)
 
-    # Verify re-linking by robot model Identity (casting to Any to avoid dynamic property errors)
-    lp_final = scene.linkforge  # type: ignore[attr-defined]
+    # Verify re-linking by robot model Identity
+    lp_final = safe_get_linkforge_scene(scene)
     rc_joint = lp_final.ros2_control_joints[0]
 
     # Trigger one more update to ensure synchronization has finished
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
 
     assert rc_joint.joint_obj == joint_obj
@@ -134,4 +144,4 @@ def test_auto_linking_integration(scene) -> None:
 
     # Cleanup
     bpy.data.objects.remove(joint_obj)
-    scene.linkforge.ros2_control_joints.clear()
+    safe_get_linkforge_scene(scene).ros2_control_joints.clear()

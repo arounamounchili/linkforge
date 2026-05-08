@@ -10,12 +10,15 @@ def test_primitive_box_collision_scaling_fidelity(scene) -> None:
     # Create a 2m cube (default) and scale it to 4x3x1
     bpy.ops.mesh.primitive_cube_add(size=2.0)
     visual_obj = bpy.context.active_object
+    assert visual_obj is not None
     visual_obj.scale = (2.0, 1.5, 0.5)
-    bpy.context.view_layer.update()
+    if bpy.context.view_layer is not None:
+        bpy.context.view_layer.update()
 
     # Make it a link
-    bpy.ops.linkforge.create_link_from_mesh()
+    getattr(bpy.ops, "linkforge").create_link_from_mesh()
     link_obj = bpy.context.active_object
+    assert link_obj is not None
 
     # Generate BOX collision
     collision_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
@@ -33,11 +36,14 @@ def test_primitive_sphere_collision_scaling_fidelity(scene) -> None:
     """Verify sphere collision radius matches scaled visual dimensions."""
     bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0)  # 2m diameter
     visual_obj = bpy.context.active_object
+    assert visual_obj is not None
     visual_obj.scale = (2.0, 2.0, 2.0)  # 4m volume
-    bpy.context.view_layer.update()
+    if bpy.context.view_layer is not None:
+        bpy.context.view_layer.update()
 
-    bpy.ops.linkforge.create_link_from_mesh()
+    getattr(bpy.ops, "linkforge").create_link_from_mesh()
     link_obj = bpy.context.active_object
+    assert link_obj is not None
 
     collision_obj = create_collision_for_link(link_obj, "SPHERE", bpy.context)
 

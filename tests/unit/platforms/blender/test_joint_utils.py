@@ -4,6 +4,8 @@ import bpy
 from linkforge.blender.utils.joint_utils import resolve_mimic_joints
 from linkforge_core.models import Joint, JointLimits, JointMimic, JointType, Vector3
 
+from tests.blender_test_utils import safe_get_joint
+
 
 def test_resolve_mimic_joints_basic(scene) -> None:
     """Test basic mimic joint resolution."""
@@ -13,13 +15,15 @@ def test_resolve_mimic_joints_basic(scene) -> None:
 
     bpy.ops.object.empty_add()
     driver_obj = bpy.context.active_object
+    assert driver_obj is not None
     driver_obj.name = "driver_joint"
-    driver_obj.linkforge_joint.is_robot_joint = True
+    safe_get_joint(driver_obj).is_robot_joint = True
 
     bpy.ops.object.empty_add()
     follower_obj = bpy.context.active_object
+    assert follower_obj is not None
     follower_obj.name = "follower_joint"
-    follower_obj.linkforge_joint.is_robot_joint = True
+    safe_get_joint(follower_obj).is_robot_joint = True
 
     # Create joint models
     mimic = JointMimic(joint="driver_joint", multiplier=2.0, offset=0.5)
@@ -51,7 +55,7 @@ def test_resolve_mimic_joints_basic(scene) -> None:
     resolve_mimic_joints([driver_joint, follower_joint], joint_objects)
 
     # Verify the mimic joint was set
-    assert follower_obj.linkforge_joint.mimic_joint == driver_obj
+    assert safe_get_joint(follower_obj).mimic_joint == driver_obj
 
 
 def test_resolve_mimic_joints_missing_driver(scene) -> None:
@@ -61,8 +65,9 @@ def test_resolve_mimic_joints_missing_driver(scene) -> None:
 
     bpy.ops.object.empty_add()
     follower_obj = bpy.context.active_object
+    assert follower_obj is not None
     follower_obj.name = "follower_joint"
-    follower_obj.linkforge_joint.is_robot_joint = True
+    safe_get_joint(follower_obj).is_robot_joint = True
 
     # Create joint model with mimic referencing non-existent joint
     mimic = JointMimic(joint="nonexistent_joint", multiplier=1.0, offset=0.0)
@@ -83,7 +88,7 @@ def test_resolve_mimic_joints_missing_driver(scene) -> None:
     resolve_mimic_joints([follower_joint], joint_objects)
 
     # Mimic joint should not be set
-    assert follower_obj.linkforge_joint.mimic_joint is None
+    assert safe_get_joint(follower_obj).mimic_joint is None
 
 
 def test_resolve_mimic_joints_no_mimic(scene) -> None:
@@ -93,8 +98,9 @@ def test_resolve_mimic_joints_no_mimic(scene) -> None:
 
     bpy.ops.object.empty_add()
     joint_obj = bpy.context.active_object
+    assert joint_obj is not None
     joint_obj.name = "simple_joint"
-    joint_obj.linkforge_joint.is_robot_joint = True
+    safe_get_joint(joint_obj).is_robot_joint = True
 
     # Create joint without mimic
     limits = JointLimits(lower=-3.14, upper=3.14, effort=10.0, velocity=1.0)
@@ -112,7 +118,7 @@ def test_resolve_mimic_joints_no_mimic(scene) -> None:
     # Should complete without errors
     resolve_mimic_joints([simple_joint], joint_objects)
 
-    assert joint_obj.linkforge_joint.mimic_joint is None
+    assert safe_get_joint(joint_obj).mimic_joint is None
 
 
 def test_resolve_mimic_joints_empty_lists(scene) -> None:

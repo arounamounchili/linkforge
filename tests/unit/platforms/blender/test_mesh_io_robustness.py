@@ -18,6 +18,7 @@ def test_mesh_io_simplification(clean_scene, scene) -> None:
     """Test create_simplified_mesh and decimation."""
     bpy.ops.mesh.primitive_cube_add()
     o = bpy.context.active_object
+    assert o is not None
 
     # Non-mesh input
     assert create_simplified_mesh(None, 0.5) is None
@@ -36,6 +37,7 @@ def test_export_mesh_error_handling(clean_scene, tmp_path, scene) -> None:
     """Hit error paths in mesh exporters using Path mocks."""
     bpy.ops.mesh.primitive_monkey_add()
     o = bpy.context.active_object
+    assert o is not None
     filepath = tmp_path / "protected" / "mesh.stl"
 
     # Patch mkdir to prevent export from even starting (cleanest trigger)
@@ -51,7 +53,9 @@ def test_export_link_mesh_success_and_centering(clean_scene, tmp_path, scene) ->
     """Verify combined centering and export logic."""
     bpy.ops.mesh.primitive_cube_add(location=(1, 2, 3))
     o = bpy.context.active_object
+    assert o is not None
     # Ensure active for mode_set later
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.objects.active = o
     o.select_set(True)
 
@@ -71,6 +75,7 @@ def test_export_link_mesh_success_and_centering(clean_scene, tmp_path, scene) ->
     # Re-select for mode set
     bpy.ops.object.select_all(action="DESELECT")
     o.select_set(True)
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.objects.active = o
 
     # Move vertices far from origin in edit mode
@@ -130,6 +135,7 @@ def test_mesh_io_unexpected_errors(clean_scene, tmp_path, scene) -> None:
     """Hit edge cases."""
     bpy.ops.mesh.primitive_monkey_add()
     o = bpy.context.active_object
+    assert o is not None
     filepath = tmp_path / "dummy.stl"
 
     # (TypeError in STL)

@@ -43,7 +43,12 @@ from linkforge_core.models import (
 from linkforge_core.models.sensor import GPSInfo, IMUInfo
 from mathutils import Vector
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge_scene,
+    safe_get_sensor,
+)
 
 
 @pytest.fixture
@@ -113,10 +118,12 @@ def test_create_material_from_color(clean_scene, scene) -> None:
     assert mat.use_nodes
 
     # Verify BSDF color
+    assert mat.node_tree is not None
     nodes = mat.node_tree.nodes
     principled = nodes.get("Principled BSDF")
     if principled:
-        assert list(principled.inputs[0].default_value) == [1.0, 0.5, 0.0, 1.0]
+        default_val = getattr(principled.inputs[0], "default_value")
+        assert list(default_val) == [1.0, 0.5, 0.0, 1.0]
 
     # Check reuse
     mat_reuse = create_material_from_color(color, "TestMaterial")
@@ -137,17 +144,19 @@ def test_create_primitive_mesh(clean_scene, scene) -> None:
     # Cylinder
     cyl = Cylinder(radius=1.0, length=4.0)
     obj = create_primitive_mesh(cyl, "TestCylinder")
+    assert obj is not None
     assert obj.dimensions == Vector((2.0, 2.0, 4.0))  # radius * 2
     assert obj["source_geometry_type"] == "CYLINDER"
 
     # Sphere
     sphere = Sphere(radius=3.0)
     obj = create_primitive_mesh(sphere, "TestSphere")
+    assert obj is not None
     assert obj.dimensions == Vector((6.0, 6.0, 6.0))
     assert obj["source_geometry_type"] == "SPHERE"
 
     # Invalid geometry
-    assert create_primitive_mesh(None, "Fail") is None
+    assert create_primitive_mesh(None, "Fail") is None  # type: ignore
 
 
 def test_normalize_and_consolidate(clean_scene, scene) -> None:
@@ -155,12 +164,15 @@ def test_normalize_and_consolidate(clean_scene, scene) -> None:
     # Add temporary meshes
     bpy.ops.mesh.primitive_cube_add(location=(1, 1, 1))
     o1 = bpy.context.active_object
+    assert o1 is not None
     bpy.ops.mesh.primitive_cube_add(location=(-1, -1, -1))
     o2 = bpy.context.active_object
+    assert o2 is not None
 
     # Create a hierarchy
     bpy.ops.object.empty_add()
     parent = bpy.context.active_object
+    assert parent is not None
     o1.parent = parent
 
     # This should join them into one mesh named Consolidated at (0,0,0)
@@ -220,7 +232,7 @@ def test_create_joint_object(clean_scene, scene) -> None:
     assert obj.parent == parent_link
     assert child_link.parent == obj
     assert obj.location == Vector((0, 0, 0.5))
-    assert obj.linkforge_joint.axis == "Z"
+    assert safe_get_joint(obj).axis == "Z"
 
 
 def test_create_sensor_object(clean_scene, scene) -> None:
@@ -243,7 +255,7 @@ def test_create_sensor_object(clean_scene, scene) -> None:
     assert obj.name == "Camera1"
     assert obj.parent == link_obj
     assert obj.location == Vector((0.1, 0, 0))
-    assert obj.linkforge_sensor.sensor_type == "CAMERA"
+    assert safe_get_sensor(obj).sensor_type == "CAMERA"
 
 
 def test_import_robot_with_mimic_and_gazebo(clean_scene, scene) -> None:
@@ -284,11 +296,12 @@ def test_import_robot_with_mimic_and_gazebo(clean_scene, scene) -> None:
 
     assert "j2" in bpy.data.objects
     j2 = bpy.data.objects["j2"]
-    assert j2.linkforge_joint.use_mimic
-    assert j2.linkforge_joint.mimic_joint.name == "j1"
-    assert j2.linkforge_joint.mimic_multiplier == 2.0
+    j2_props = safe_get_joint(j2)
+    assert j2_props.use_mimic
+    assert j2_props.mimic_joint.name == "j1"
+    assert j2_props.mimic_multiplier == 2.0
 
-    assert clean_scene.linkforge.gazebo_plugin_name == "p3d_ros2_control"
+    assert safe_get_linkforge_scene(clean_scene).gazebo_plugin_name == "p3d_ros2_control"
 
 
 def test_create_material_no_tree(clean_scene, scene) -> None:
@@ -326,7 +339,7 @@ def test_import_robot_with_transmissions(clean_scene, scene) -> None:
         ],
     )
     import_robot_to_scene(robot, Path("robot.urdf"), bpy.context)
-    assert clean_scene.linkforge.robot_name == "TransBot"
+    assert safe_get_linkforge_scene(clean_scene).robot_name == "TransBot"
 
 
 def test_full_robot_import_integration(clean_scene, scene) -> None:
@@ -466,17 +479,18 @@ def test_full_robot_import_integration(clean_scene, scene) -> None:
     assert "base_link" in bpy.data.objects
     assert "tool_link" in bpy.data.objects
     assert "j1" in bpy.data.objects
-    assert clean_scene.linkforge.robot_name == "MegaBot"
-    assert clean_scene.linkforge.use_ros2_control
-    assert clean_scene.linkforge.ros2_control_name == "hardware"
-    assert len(clean_scene.linkforge.ros2_control_joints) == 1
+    scene_props = safe_get_linkforge_scene(clean_scene)
+    assert scene_props.robot_name == "MegaBot"
+    assert scene_props.use_ros2_control
+    assert scene_props.ros2_control_name == "hardware"
+    assert len(scene_props.ros2_control_joints) == 1
 
     # Check sensors
     assert "kinect_detailed" in bpy.data.objects
     assert "imu_sensor" in bpy.data.objects
     assert "gps_sensor" in bpy.data.objects
     assert "lidar_sensor" in bpy.data.objects
-    assert bpy.data.objects["lidar_sensor"].linkforge_sensor.lidar_range_max == 30.0
+    assert safe_get_sensor(bpy.data.objects["lidar_sensor"]).lidar_range_max == 30.0
 
     # Check consolidation (L2 has 2 visuals)
     # L2 object should have children or be joined depending on normalize_and_consolidate

@@ -1,9 +1,13 @@
 """Unit tests for Blender decorators using real environment."""
 
 import logging
+from typing import Any, Literal
 
 from linkforge.blender.utils.decorators import safe_execute
 from linkforge_core.exceptions import RobotModelError
+
+# Blender operator return type
+OpResult = set[Literal["CANCELLED", "FINISHED", "INTERFACE", "PASS_THROUGH", "RUNNING_MODAL"]]
 
 
 class SpyOperator:
@@ -27,7 +31,7 @@ class TestSafeExecute:
         context = {}
 
         @safe_execute
-        def successful_op(self, context):
+        def successful_op(self: Any, context: Any) -> OpResult:
             return {"FINISHED"}
 
         result = successful_op(op, context)
@@ -40,7 +44,7 @@ class TestSafeExecute:
         context = {}
 
         @safe_execute
-        def failing_op(self, context):
+        def failing_op(self: Any, context: Any) -> OpResult:
             raise RobotModelError("Test Error")
 
         result = failing_op(op, context)
@@ -60,7 +64,7 @@ class TestSafeExecute:
         context = {}
 
         @safe_execute
-        def failing_op(self, context):
+        def failing_op(self: Any, context: Any) -> OpResult:
             raise RuntimeError("Critical Failure")
 
         with caplog.at_level(logging.ERROR):

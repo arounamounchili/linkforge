@@ -184,7 +184,7 @@ class AsynchronousRobotBuilder:
             create_sensor_object(data, self.link_objects, self.collection)
 
         elif task_type == "finalize":
-            if self.context.view_layer:
+            if self.context.view_layer is not None:
                 self.context.view_layer.update()
 
             # Sync collision visibility

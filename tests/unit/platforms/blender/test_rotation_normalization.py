@@ -1,13 +1,16 @@
 import bpy
 
+from tests.blender_test_utils import safe_get_linkforge
+
 
 def test_rotation_mode_normalization_on_add_link(scene) -> None:
     """Verify that adding a new empty link frame forces XYZ rotation mode."""
     # Add link
-    bpy.ops.linkforge.add_empty_link()
+    bpy.ops.linkforge.add_empty_link()  # type: ignore[attr-defined]
     obj = bpy.context.active_object
+    assert obj is not None
 
-    assert obj.linkforge.is_robot_link is True
+    assert safe_get_linkforge(obj).is_robot_link is True
     assert obj.rotation_mode == "XYZ"
 
 
@@ -16,14 +19,16 @@ def test_rotation_mode_normalization_on_create_from_mesh(scene) -> None:
     # Create mesh with Quaternions
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
     obj.rotation_mode = "QUATERNION"
     obj.rotation_quaternion = (0.707, 0.707, 0, 0)  # 90 deg X
 
     # Convert to link
-    bpy.ops.linkforge.create_link_from_mesh()
+    bpy.ops.linkforge.create_link_from_mesh()  # type: ignore[attr-defined]
 
     # The mesh becomes a child of the Empty
     link_obj = bpy.context.active_object  # The Empty
+    assert link_obj is not None
     visual_obj = link_obj.children[0]
 
     assert link_obj.rotation_mode == "XYZ"

@@ -11,14 +11,19 @@ from linkforge.blender.operators.export_ops import (
     working_directory,
 )
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_linkforge,
+    safe_get_linkforge_scene,
+    safe_get_validation,
+)
 
 
 @pytest.mark.parametrize("export_format", ["URDF", "XACRO"])
 def test_export_urdf_execute(mocker, clean_scene, export_format, scene) -> None:
     """Test the basic export execution with real properties."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.export_format = export_format
     props.export_meshes = False
     props.validate_before_export = False
@@ -37,7 +42,7 @@ def test_export_urdf_execute(mocker, clean_scene, export_format, scene) -> None:
     # Add a root object to make scene_to_robot succeed
     root = create_test_object("root", None)
     scene.collection.objects.link(root)
-    root.linkforge.is_link = True
+    safe_get_linkforge(root).is_link = True
 
     # Execute
     result = LINKFORGE_OT_export_robot_model.execute(mock_self, bpy.context)
@@ -49,7 +54,7 @@ def test_export_urdf_execute(mocker, clean_scene, export_format, scene) -> None:
 def test_export_urdf_validation_failure(mocker, clean_scene, scene) -> None:
     """Test export cancellation when validation fails."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.validate_before_export = True
 
     mock_self = MagicMock()
@@ -66,7 +71,7 @@ def test_export_urdf_validation_failure(mocker, clean_scene, scene) -> None:
 def test_export_urdf_validation_build_error(mocker, clean_scene, scene) -> None:
     """Test build error during the validation dry-run."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.validate_before_export = True
 
     mock_self = MagicMock()
@@ -122,7 +127,9 @@ def test_validate_robot_operator(mocker, clean_scene, scene) -> None:
 
     result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
     assert result == {"FINISHED"}
-    assert bpy.context.window_manager.linkforge_validation.warning_count == 1
+    wm = bpy.context.window_manager
+    assert wm is not None
+    assert safe_get_validation(wm).warning_count == 1
 
     # Case 2: Invalid with errors
     val_res.is_valid = False
@@ -133,7 +140,9 @@ def test_validate_robot_operator(mocker, clean_scene, scene) -> None:
 
     result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
     assert result == {"CANCELLED"}
-    assert bpy.context.window_manager.linkforge_validation.error_count == 1
+    wm = bpy.context.window_manager
+    assert wm is not None
+    assert safe_get_validation(wm).error_count == 1
 
     # Case 3: Valid with no warnings
     val_res.is_valid = True
@@ -146,8 +155,11 @@ def test_validate_robot_operator(mocker, clean_scene, scene) -> None:
     assert result == {"FINISHED"}
 
     # Clear for next tests
-    bpy.context.window_manager.linkforge_validation.errors.clear()
-    bpy.context.window_manager.linkforge_validation.warnings.clear()
+    wm = bpy.context.window_manager
+    assert wm is not None
+    val_props = safe_get_validation(wm)
+    val_props.errors.clear()
+    val_props.warnings.clear()
 
 
 def test_validate_robot_multi_line_error(mocker, clean_scene, scene) -> None:
@@ -163,7 +175,9 @@ def test_validate_robot_multi_line_error(mocker, clean_scene, scene) -> None:
 
     result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
     assert result == {"FINISHED"}
-    props = bpy.context.window_manager.linkforge_validation
+    wm = bpy.context.window_manager
+    assert wm is not None
+    props = safe_get_validation(wm)
     assert props.error_count == 2
     assert props.errors[0].message == "Error 1"
     assert props.errors[1].message == "Error 2"
@@ -181,13 +195,15 @@ def test_validate_robot_direct_error(mocker, clean_scene, scene) -> None:
 
     result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
     assert result == {"FINISHED"}
-    assert bpy.context.window_manager.linkforge_validation.errors[0].message == "Direct error"
+    wm = bpy.context.window_manager
+    assert wm is not None
+    assert safe_get_validation(wm).errors[0].message == "Direct error"
 
 
 def test_export_urdf_exception_handling_advanced(mocker, clean_scene, scene) -> None:
     """Test the 'Configuration errors found' message shortening logic."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.export_format = "URDF"
     props.export_meshes = False
     props.validate_before_export = False
@@ -215,7 +231,7 @@ def test_export_urdf_invoke_branches(clean_scene, scene) -> None:
 
     # Correct extension for both formats
     for fmt, ext in [("XACRO", ".xacro"), ("URDF", ".urdf")]:
-        scene.linkforge.export_format = fmt
+        safe_get_linkforge_scene(scene).export_format = fmt
         with patch("bpy_extras.io_utils.ExportHelper.invoke", return_value={"FINISHED"}):
             LINKFORGE_OT_export_robot_model.invoke(mock_op, bpy.context, MagicMock())
             assert mock_op.filename_ext == ext
@@ -277,7 +293,7 @@ def test_export_utils_working_directory(tmp_path, scene) -> None:
 def test_export_urdf_extension_correction(mocker, clean_scene, scene) -> None:
     """Verify automatic correction of file extensions based on export format."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
 
     # Case 1: robot model format but .xacro extension
     props.export_format = "URDF"
@@ -317,12 +333,12 @@ def test_export_registration(scene) -> None:
 def test_export_check_logic(mocker, scene) -> None:
     """Verify if export can proceed based on current scene state."""
     # Success case
-    assert LINKFORGE_OT_export_robot_model.check(None, bpy.context) is True
+    assert LINKFORGE_OT_export_robot_model.check(None, bpy.context) is True  # type: ignore
 
     # Failure case (missing scene/props)
     bad_context = MagicMock()
     bad_context.scene = None
-    assert LINKFORGE_OT_export_robot_model.check(None, bad_context) is False
+    assert LINKFORGE_OT_export_robot_model.check(None, bad_context) is False  # type: ignore
 
 
 def test_export_main_entry(mocker, scene) -> None:

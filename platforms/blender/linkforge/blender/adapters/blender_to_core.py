@@ -380,6 +380,10 @@ def extract_mesh_triangles(
     # Ensure mesh has triangulated faces
     mesh.calc_loop_triangles()
 
+    if mesh.loop_triangles is None:
+        eval_obj.to_mesh_clear()
+        return None
+
     # We use the scale matrix (not full world matrix) to get correct dimensions
     # but keep the object centered at its local origin for proper inertia calculation
     # The inertia tensor is always computed relative to the object's center of mass
@@ -458,14 +462,15 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
             for node in blender_mat.node_tree.nodes:
                 if node.type == "BSDF_PRINCIPLED":
                     # Get Base Color input
-                    base_color_input = node.inputs["Base Color"]
-                    base_color = base_color_input.default_value
-                    color = Color(
-                        r=base_color[0],
-                        g=base_color[1],
-                        b=base_color[2],
-                        a=base_color[3] if len(base_color) > 3 else 1.0,
-                    )
+                    base_color_input = node.inputs.get("Base Color")
+                    if base_color_input and hasattr(base_color_input, "default_value"):
+                        base_color = base_color_input.default_value
+                        color = Color(
+                            r=base_color[0],
+                            g=base_color[1],
+                            b=base_color[2],
+                            a=base_color[3] if len(base_color) > 3 else 1.0,
+                        )
                     break
 
         # Fallback to viewport display color if no node shader
@@ -502,8 +507,8 @@ def blender_link_to_core_with_origin(
     if obj is None:
         return None
 
-    props = obj.linkforge
-    if not props.is_robot_link:
+    props = getattr(obj, "linkforge", None)
+    if not props or not getattr(props, "is_robot_link", False):
         return None
 
     link_name = props.link_name if props.link_name else obj.name
@@ -654,7 +659,7 @@ def blender_link_to_core_with_origin(
                         )
                     else:
                         # Fallback to bounding box if mesh extraction fails
-                        dimensions = geom_obj.dimensions
+                        dimensions = getattr(geom_obj, "dimensions", Vector3(0, 0, 0))
                         bbox_geom = Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z))
                         inertia_tensor = calculate_inertia(bbox_geom, props.mass)
                 else:
@@ -720,8 +725,8 @@ def blender_joint_to_core(obj: Any) -> Joint | None:
     if obj is None:
         return None
 
-    props = obj.linkforge_joint
-    if not props.is_robot_joint:
+    props = getattr(obj, "linkforge_joint", None)
+    if not props or not getattr(props, "is_robot_joint", False):
         return None
 
     joint_name = props.joint_name if props.joint_name else obj.name
@@ -819,21 +824,15 @@ def blender_joint_to_core(obj: Any) -> Joint | None:
     parent_obj = props.parent_link
     child_obj = props.child_link
 
+    parent_props = getattr(parent_obj, "linkforge", None)
     parent = (
-        (
-            parent_obj.linkforge.link_name
-            if parent_obj and parent_obj.linkforge.link_name
-            else parent_obj.name
-        )
+        (parent_props.link_name if parent_props and parent_props.link_name else parent_obj.name)
         if parent_obj
         else ""
     )
+    child_props = getattr(child_obj, "linkforge", None)
     child = (
-        (
-            child_obj.linkforge.link_name
-            if child_obj and child_obj.linkforge.link_name
-            else child_obj.name
-        )
+        (child_props.link_name if child_props and child_props.link_name else child_obj.name)
         if child_obj
         else ""
     )
@@ -893,8 +892,8 @@ def blender_transmission_to_core(obj: Any) -> Transmission | None:
     if obj is None:
         return None
 
-    props = obj.linkforge_transmission
-    if not props.is_robot_transmission:
+    props = getattr(obj, "linkforge_transmission", None)
+    if not props or not getattr(props, "is_robot_transmission", False):
         return None
 
     trans_name = props.transmission_name if props.transmission_name else obj.name
@@ -922,9 +921,10 @@ def blender_transmission_to_core(obj: Any) -> Transmission | None:
     if props.transmission_type in ("SIMPLE", "CUSTOM", "FOUR_BAR_LINKAGE"):
         joint_obj = props.joint_name
         if joint_obj:
+            joint_props = getattr(joint_obj, "linkforge_joint", None)
             joint_name = (
-                joint_obj.linkforge_joint.joint_name
-                if hasattr(joint_obj, "linkforge_joint") and joint_obj.linkforge_joint.joint_name
+                joint_props.joint_name
+                if joint_props and getattr(joint_props, "joint_name", "")
                 else ""
             ) or joint_obj.name
 
@@ -947,15 +947,13 @@ def blender_transmission_to_core(obj: Any) -> Transmission | None:
         j1_obj = props.joint1_name
         j2_obj = props.joint2_name
         if j1_obj and j2_obj:
+            j1_props = getattr(j1_obj, "linkforge_joint", None)
             j1_name = (
-                j1_obj.linkforge_joint.joint_name
-                if hasattr(j1_obj, "linkforge_joint") and j1_obj.linkforge_joint.joint_name
-                else ""
+                j1_props.joint_name if j1_props and getattr(j1_props, "joint_name", "") else ""
             ) or j1_obj.name
+            j2_props = getattr(j2_obj, "linkforge_joint", None)
             j2_name = (
-                j2_obj.linkforge_joint.joint_name
-                if hasattr(j2_obj, "linkforge_joint") and j2_obj.linkforge_joint.joint_name
-                else ""
+                j2_props.joint_name if j2_props and getattr(j2_props, "joint_name", "") else ""
             ) or j2_obj.name
 
             joints.append(
@@ -1026,14 +1024,16 @@ def _categorize_scene_objects(
             parent_obj = props.parent_link
             child_obj = props.child_link
 
+            parent_props = getattr(parent_obj, "linkforge", None)
             parent_name = (
-                parent_obj.linkforge.link_name
-                if parent_obj and hasattr(parent_obj, "linkforge")
+                parent_props.link_name
+                if parent_props and getattr(parent_props, "link_name", "")
                 else (parent_obj.name if parent_obj else "")
             )
+            child_props = getattr(child_obj, "linkforge", None)
             child_name = (
-                child_obj.linkforge.link_name
-                if child_obj and hasattr(child_obj, "linkforge")
+                child_props.link_name
+                if child_props and getattr(child_props, "link_name", "")
                 else (child_obj.name if child_obj else "")
             )
 
@@ -1076,7 +1076,7 @@ def _calculate_link_frames(
     """
     link_frames = {}  # link_name -> world matrix where link frame is
 
-    if root_link and Matrix:
+    if root_link is not None and Matrix:
         root_name, root_obj = root_link
         link_frames[root_name] = Matrix.Identity(4)
 
@@ -1138,7 +1138,9 @@ def scene_to_robot(
         return Robot(name="empty_robot"), []
 
     scene = context.scene
-    robot_props = scene.linkforge
+    robot_props = getattr(scene, "linkforge", None)
+    if not robot_props:
+        return Robot(name="robot"), ["Scene has no linkforge properties"]
     robot_name = robot_props.robot_name if robot_props.robot_name else "robot"
     strict_mode = robot_props.strict_mode  # Get strict mode from properties
     robot = Robot(name=robot_name)

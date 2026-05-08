@@ -33,21 +33,25 @@ def test_joint_hierarchy_links(scene) -> None:
 
     # Assign parent link
     safe_get_joint(joint).parent_link = parent_link
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
     assert joint.parent == parent_link
 
     # Assign child link
     safe_get_joint(joint).child_link = child_link
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
     assert child_link.parent == joint
 
     # Clear child link (should unparent the child)
     safe_get_joint(joint).child_link = None
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
     assert child_link.parent is None
 
     # Clear parent link
     safe_get_joint(joint).parent_link = None
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.update()
     assert joint.parent is None
 
@@ -66,9 +70,9 @@ def test_poll_filters(scene) -> None:
     none_obj = create_test_object("NoneObj", None, scene)
 
     # Poll Link
-    assert poll_robot_link(None, link_obj) is True
-    assert poll_robot_link(None, joint_obj) is False
-    assert poll_robot_link(None, none_obj) is False
+    assert poll_robot_link(None, link_obj) is True  # type: ignore
+    assert poll_robot_link(None, joint_obj) is False  # type: ignore
+    assert poll_robot_link(None, none_obj) is False  # type: ignore
 
     # Poll Joint (prevents self-mimicry)
     assert poll_robot_joint(safe_get_joint(joint_obj), joint_obj) is False

@@ -10,6 +10,7 @@ from tests.blender_test_utils import (
 def test_transmission_name_getter_setter(scene) -> None:
     """Test that transmission_name getter/setter work and sanitize names."""
     obj = create_test_object("Trans Name", None, scene)
+    assert obj is not None
     props = safe_get_transmission(obj)
     props.is_robot_transmission = True
 
@@ -25,10 +26,12 @@ def test_transmission_hierarchy_simple(scene) -> None:
     """Test that a simple transmission is reparented to its joint."""
     # Create joint
     joint_obj = create_test_object("joint_obj", None, scene)
+    assert joint_obj is not None
     safe_get_joint(joint_obj).is_robot_joint = True
 
     # Create transmission
     trans_obj = create_test_object("trans_obj", None, scene)
+    assert trans_obj is not None
     props = safe_get_transmission(trans_obj)
     props.is_robot_transmission = True
 
@@ -45,13 +48,16 @@ def test_transmission_hierarchy_differential(scene) -> None:
     """Test that a differential transmission is reparented to its first joint."""
     # Create joints
     j1 = create_test_object("joint1", None, scene)
+    assert j1 is not None
     safe_get_joint(j1).is_robot_joint = True
 
     j2 = create_test_object("joint2", None, scene)
+    assert j2 is not None
     safe_get_joint(j2).is_robot_joint = True
 
     # Create transmission
     trans_obj = create_test_object("diff_trans", None, scene)
+    assert trans_obj is not None
     props = safe_get_transmission(trans_obj)
     props.is_robot_transmission = True
     props.transmission_type = "DIFFERENTIAL"
@@ -69,16 +75,19 @@ def test_poll_robot_joint(scene) -> None:
 
     # Joint object
     j_obj = create_test_object("j_obj", None, scene)
+    assert j_obj is not None
     safe_get_joint(j_obj).is_robot_joint = True
 
     # Non-joint object
     n_obj = create_test_object("n_obj", None, scene)
+    assert n_obj is not None
 
     # Create transmission to check poll
     trans_obj = create_test_object("trans", None, scene)
+    assert trans_obj is not None
     props = safe_get_transmission(trans_obj)
 
     # poll_robot_joint(self, obj)
     assert poll_robot_joint(props, j_obj) is True
     assert poll_robot_joint(props, n_obj) is False
-    assert poll_robot_joint(props, None) is False
+    assert poll_robot_joint(props, None) is False  # type: ignore[arg-type]

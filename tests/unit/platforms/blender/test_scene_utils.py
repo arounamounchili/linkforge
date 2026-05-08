@@ -118,6 +118,7 @@ def test_move_to_collection_basic(scene) -> None:
     # Create a cube
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     # Create a new collection
     target_collection = bpy.data.collections.new("TestCollection")
@@ -143,6 +144,7 @@ def test_move_to_collection_already_in_target(scene) -> None:
 
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     # Move to target once
     move_to_collection(obj, target_collection)
@@ -161,7 +163,7 @@ def test_move_to_collection_none_object(scene) -> None:
     scene.collection.children.link(target_collection)
 
     # Should not raise error
-    move_to_collection(None, target_collection)
+    move_to_collection(None, target_collection)  # type: ignore[arg-type]
 
 
 def test_move_to_collection_none_collection(scene) -> None:
@@ -171,14 +173,15 @@ def test_move_to_collection_none_collection(scene) -> None:
 
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     # Should not raise error
-    move_to_collection(obj, None)
+    move_to_collection(obj, None)  # type: ignore[arg-type]
 
 
 def test_move_to_collection_both_none(scene) -> None:
     """Test with both None."""
-    move_to_collection(None, None)
+    move_to_collection(None, None)  # type: ignore[arg-type]
     # Should not raise error
 
 
@@ -190,6 +193,7 @@ def test_move_to_collection_multiple_collections(scene) -> None:
     # Create object
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
+    assert obj is not None
 
     # Create multiple collections and link object
     coll1 = bpy.data.collections.new("Collection1")
@@ -280,9 +284,10 @@ def test_get_robot_statistics_dof_calculation(scene) -> None:
 
     bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))
     child_link = bpy.context.active_object
+    assert child_link is not None
     child_link.name = "child_link"
-    child_link.linkforge.is_robot_link = True
-    child_link.linkforge.link_name = "child_link"
+    safe_get_linkforge(child_link).is_robot_link = True
+    safe_get_linkforge(child_link).link_name = "child_link"
 
     # REVOLUTE joint: 1 DOF
     joint1 = create_test_object("revolute_joint", None, scene)
@@ -324,9 +329,10 @@ def test_get_robot_statistics_root_link_detection(scene) -> None:
     """Test get_robot_statistics correctly identifies root link."""
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     base_link = bpy.context.active_object
+    assert base_link is not None
     base_link.name = "base_link"
-    base_link.linkforge.is_robot_link = True
-    base_link.linkforge.link_name = "base_link"
+    safe_get_linkforge(base_link).is_robot_link = True
+    safe_get_linkforge(base_link).link_name = "base_link"
 
     link1 = create_test_object("link1", None, scene)
     link1.location = (1, 0, 0)
@@ -625,11 +631,13 @@ def test_get_robot_statistics_joint_with_empty_link_names(scene) -> None:
 
     # joints_map shld contain the mapping based on the object names coz link_name is empty
     assert len(stats.joints_map) == 2
-    assert stats.joints_map.get("child_link")[0] == "parent_link"
-    assert stats.joints_map.get("child_link")[1] == joint1
+    assert "child_link" in stats.joints_map
+    assert stats.joints_map.get("child_link")[0] == "parent_link"  # type: ignore
+    assert stats.joints_map.get("child_link")[1] == joint1  # type: ignore
     # child has empty link_name -> keyed by its object name
-    assert stats.joints_map.get("empty_child")[0] == "valid_parent"
-    assert stats.joints_map.get("empty_child")[1] == joint2
+    assert "empty_child" in stats.joints_map
+    assert stats.joints_map.get("empty_child")[0] == "valid_parent"  # type: ignore
+    assert stats.joints_map.get("empty_child")[1] == joint2  # type: ignore
 
     # links shld be counted even if they have empty link_name
     assert stats.num_links == 4

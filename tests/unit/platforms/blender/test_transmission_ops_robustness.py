@@ -7,16 +7,22 @@ from linkforge.blender.operators.transmission_ops import (
     LINKFORGE_OT_delete_transmission,
 )
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_transmission,
+)
 
 
 def test_create_transmission_axes(clean_scene, scene) -> None:
     """Test transmission creation with all joint axis types."""
     # Setup Joint
     j = create_test_object("Joint", None)
+    assert j is not None
     scene.collection.objects.link(j)
-    j.linkforge_joint.is_robot_joint = True
+    safe_get_joint(j).is_robot_joint = True
 
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.objects.active = j
     j.select_set(True)
 
@@ -33,14 +39,15 @@ def test_create_transmission_axes(clean_scene, scene) -> None:
         j.select_set(True)
         bpy.context.view_layer.objects.active = j
 
-        j.linkforge_joint.axis = axis_type
+        safe_get_joint(j).axis = axis_type
         if axis_type == "CUSTOM":
-            j.linkforge_joint.custom_axis_x = 1.0
-            j.linkforge_joint.custom_axis_y = 1.0
-            j.linkforge_joint.custom_axis_z = 0.0
+            safe_get_joint(j).custom_axis_x = 1.0
+            safe_get_joint(j).custom_axis_y = 1.0
+            safe_get_joint(j).custom_axis_z = 0.0
 
-        bpy.ops.linkforge.create_transmission()
+        bpy.ops.linkforge.create_transmission()  # type: ignore[attr-defined]
         trans = bpy.context.active_object
+        assert trans is not None
         assert trans.name == f"{j.name}_trans"
         assert trans.parent == j
         # Cleanup for next iteration
@@ -55,13 +62,17 @@ def test_create_transmission_preferences(clean_scene, scene) -> None:
         mock_prefs.return_value = prefs
 
         j = create_test_object("Joint", None)
+        assert j is not None
         scene.collection.objects.link(j)
-        j.linkforge_joint.is_robot_joint = True
+        safe_get_joint(j).is_robot_joint = True
+
+        assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = j
         j.select_set(True)
 
-        bpy.ops.linkforge.create_transmission()
+        bpy.ops.linkforge.create_transmission()  # type: ignore[attr-defined]
         trans = bpy.data.objects.get(f"{j.name}_trans")
+        assert trans is not None
         assert trans.empty_display_size == pytest.approx(0.123)
 
 
@@ -71,28 +82,35 @@ def test_create_transmission_collection_sync(clean_scene, scene) -> None:
     scene.collection.children.link(custom_coll)
 
     j = create_test_object("Joint", None)
+    assert j is not None
     custom_coll.objects.link(j)
-    j.linkforge_joint.is_robot_joint = True
+    safe_get_joint(j).is_robot_joint = True
 
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.objects.active = j
     j.select_set(True)
 
-    bpy.ops.linkforge.create_transmission()
+    bpy.ops.linkforge.create_transmission()  # type: ignore[attr-defined]
     trans = bpy.data.objects.get(f"{j.name}_trans")
+    assert trans is not None
     assert trans in custom_coll.objects.values()
 
 
 def test_delete_transmission(clean_scene, scene) -> None:
     """Test deletion of transmission."""
     j = create_test_object("Joint", None)
+    assert j is not None
     scene.collection.objects.link(j)
-    j.linkforge_joint.is_robot_joint = True
+    safe_get_joint(j).is_robot_joint = True
+
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.objects.active = j
     j.select_set(True)
-    bpy.ops.linkforge.create_transmission()
+    bpy.ops.linkforge.create_transmission()  # type: ignore[attr-defined]
     trans = bpy.context.active_object
+    assert trans is not None
 
-    assert trans.linkforge_transmission.is_robot_transmission is True
+    assert safe_get_transmission(trans).is_robot_transmission is True
 
     # Poll failure: not selected or no active object
     bpy.ops.object.select_all(action="DESELECT")
@@ -102,7 +120,7 @@ def test_delete_transmission(clean_scene, scene) -> None:
     # Re-select for deletion
     trans.select_set(True)
     bpy.context.view_layer.objects.active = trans
-    bpy.ops.linkforge.delete_transmission()
+    bpy.ops.linkforge.delete_transmission()  # type: ignore[attr-defined]
 
 
 def test_transmission_logic_gaps(clean_scene, scene) -> None:
@@ -110,6 +128,7 @@ def test_transmission_logic_gaps(clean_scene, scene) -> None:
     # Non-EMPTY object poll failure
     bpy.ops.mesh.primitive_cube_add()
     cube = bpy.context.active_object
+    assert cube is not None
     assert LINKFORGE_OT_create_transmission.poll(bpy.context) is False
 
     # Selected but not joint poll failure
@@ -120,20 +139,23 @@ def test_transmission_logic_gaps(clean_scene, scene) -> None:
 def test_create_transmission_no_axis_fallback(clean_scene, scene) -> None:
     """Hit transmission fallback when no axis vec is detectable."""
     j = create_test_object("Joint", None)
+    assert j is not None
     scene.collection.objects.link(j)
-    j.linkforge_joint.is_robot_joint = True
+    safe_get_joint(j).is_robot_joint = True
 
     # Custom axis without setting actual values (0,0,0) - length will be 0
-    j.linkforge_joint.axis = "CUSTOM"
-    j.linkforge_joint.custom_axis_x = 0.0
-    j.linkforge_joint.custom_axis_y = 0.0
-    j.linkforge_joint.custom_axis_z = 0.0
+    safe_get_joint(j).axis = "CUSTOM"
+    safe_get_joint(j).custom_axis_x = 0.0
+    safe_get_joint(j).custom_axis_y = 0.0
+    safe_get_joint(j).custom_axis_z = 0.0
 
+    assert bpy.context.view_layer is not None
     bpy.context.view_layer.objects.active = j
     j.select_set(True)
 
-    bpy.ops.linkforge.create_transmission()
+    bpy.ops.linkforge.create_transmission()  # type: ignore[attr-defined]
     trans = bpy.context.active_object
+    assert trans is not None
     # Should have identity rotation (0,0,0) as fallback
     assert trans.rotation_euler.x == 0
     assert trans.rotation_euler.y == 0

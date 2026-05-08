@@ -1,19 +1,23 @@
 import bpy
 from linkforge.blender.operators.link_ops import create_collision_for_link
 
+from tests.blender_test_utils import safe_get_linkforge
+
 
 def test_collision_alignment_on_rotated_link(scene) -> None:
     """Verify that generating collision for a rotated link avoids 'Inverse Rotation' offsets."""
     # Setup a Link at a specific rotation (e.g. 90 deg X)
     bpy.ops.object.empty_add()
     link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
+    assert link_obj is not None
+    safe_get_linkforge(link_obj).is_robot_link = True
     link_obj.rotation_mode = "XYZ"
     link_obj.rotation_euler = (1.5708, 0, 0)  # 90 deg X
 
     # Add a Visual mesh at origin relative to link (Identity local)
     bpy.ops.mesh.primitive_cube_add(size=1.0)
     visual_obj = bpy.context.active_object
+    assert visual_obj is not None
     visual_obj.name = "test_visual"
     visual_obj.parent = link_obj
     visual_obj.matrix_parent_inverse.identity()

@@ -8,10 +8,13 @@ def test_inertial_origin_extraction(scene) -> None:
     # Setup real Blender object
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
+    assert obj is not None
     obj.name = "test_link"
 
     # Configure LinkForge properties (real PropertyGroup)
-    props = obj.linkforge
+    from tests.blender_test_utils import safe_get_linkforge
+
+    props = safe_get_linkforge(obj)
     props.is_robot_link = True
     props.link_name = "test_link"
     props.mass = 1.0

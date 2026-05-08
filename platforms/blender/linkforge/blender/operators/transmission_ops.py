@@ -107,7 +107,7 @@ class LINKFORGE_OT_create_transmission(Operator):
 
         # Ensure matrices are up to date before applying rotation logic
         view_layer = context.view_layer
-        if view_layer:
+        if view_layer is not None:
             view_layer.update()
 
         # ALIGNMENT: Point arrow along Joint Axis

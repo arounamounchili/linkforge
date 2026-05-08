@@ -2,22 +2,25 @@ from unittest.mock import patch
 
 import bpy
 
+from tests.blender_test_utils import safe_get_linkforge
+
 
 def test_link_name_getter_setter(scene) -> None:
     """Test that link_name getter/setter work and sanitize names."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
     obj = bpy.context.active_object
+    assert obj is not None
     obj.name = "Original Name"
-    obj.linkforge.is_robot_link = True
+    safe_get_linkforge(obj).is_robot_link = True
 
     # Getter should return sanitized name (preserves case, replaces spaces)
-    assert obj.linkforge.link_name == "Original_Name"
+    assert safe_get_linkforge(obj).link_name == "Original_Name"
 
     # Setter should update object name
-    obj.linkforge.link_name = "New-Link-Name!"
+    safe_get_linkforge(obj).link_name = "New-Link-Name!"
     assert obj.name == "New-Link-Name_"
-    assert obj.linkforge.link_name == "New-Link-Name_"
+    assert safe_get_linkforge(obj).link_name == "New-Link-Name_"
 
 
 def test_automatic_child_renaming(scene) -> None:
@@ -27,23 +30,26 @@ def test_automatic_child_renaming(scene) -> None:
     # Create parent link
     bpy.ops.object.empty_add()
     link_obj = bpy.context.active_object
+    assert link_obj is not None
     link_obj.name = "base_link"
-    link_obj.linkforge.is_robot_link = True
+    safe_get_linkforge(link_obj).is_robot_link = True
 
     # Create visual child
     bpy.ops.mesh.primitive_cube_add()
     vis_obj = bpy.context.active_object
+    assert vis_obj is not None
     vis_obj.name = "base_link_visual"
     vis_obj.parent = link_obj
 
     # Create collision child with suffix
     bpy.ops.mesh.primitive_cube_add()
     col_obj = bpy.context.active_object
+    assert col_obj is not None
     col_obj.name = "base_link_collision_01"
     col_obj.parent = link_obj
 
     # Rename the link
-    link_obj.linkforge.link_name = "chassis"
+    safe_get_linkforge(link_obj).link_name = "chassis"
 
     # Assert children are renamed
     assert link_obj.name == "chassis"
@@ -60,16 +66,18 @@ def test_collision_quality_update_trigger(scene) -> None:
         bpy.ops.object.select_all(action="DESELECT")
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
-        obj.linkforge.is_robot_link = True
+        assert obj is not None
+        safe_get_linkforge(obj).is_robot_link = True
 
         # Add a collision child (needed for the trigger logic inside update_collision_quality)
         bpy.ops.mesh.primitive_cube_add()
         col_obj = bpy.context.active_object
+        assert col_obj is not None
         col_obj.name = "test_collision"
         col_obj.parent = obj
 
         # Change quality
-        obj.linkforge.collision_quality = 75.0
+        safe_get_linkforge(obj).collision_quality = 75.0
 
         # Verify mock was called
         mock_update.assert_called_once()
@@ -93,17 +101,19 @@ def test_collision_quality_skip_imported(scene) -> None:
         bpy.ops.object.select_all(action="DESELECT")
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
-        obj.linkforge.is_robot_link = True
+        assert obj is not None
+        safe_get_linkforge(obj).is_robot_link = True
 
         # Add a collision child marked as imported
         bpy.ops.mesh.primitive_cube_add()
         col_obj = bpy.context.active_object
+        assert col_obj is not None
         col_obj.name = "imported_collision"
         col_obj.parent = obj
         col_obj["imported_from_source"] = True
 
         # Change quality
-        obj.linkforge.collision_quality = 20.0
+        safe_get_linkforge(obj).collision_quality = 20.0
 
         # Should NOT have been called
         assert call_count == 0
@@ -119,10 +129,11 @@ def test_auto_inertia_toggle(scene) -> None:
         bpy.ops.object.select_all(action="DESELECT")
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
-        obj.linkforge.is_robot_link = True
+        assert obj is not None
+        safe_get_linkforge(obj).is_robot_link = True
 
         # Turn off auto-inertia
-        obj.linkforge.use_auto_inertia = False
+        safe_get_linkforge(obj).use_auto_inertia = False
 
         # Verify mock was called
         mock_ensure.assert_called_once()

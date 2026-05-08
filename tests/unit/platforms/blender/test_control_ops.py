@@ -9,19 +9,25 @@ from linkforge.blender.operators.control_ops import (
     unregister,
 )
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge_scene,
+)
 
 
 def test_add_ros2_control_joint_execute(mocker, clean_scene, scene) -> None:
     """Test adding a joint using real collection properties."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_joints.clear()
 
     # Mock actual joint in scene for the new joint_obj reference fetch logic
     joint_obj = create_test_object("joint1", None)
-    joint_obj.linkforge_joint.is_robot_joint = True
-    joint_obj.linkforge_joint.joint_name = "joint1"
+    assert joint_obj is not None
+    joint_props = safe_get_joint(joint_obj)
+    joint_props.is_robot_joint = True
+    joint_props.joint_name = "joint1"
     scene.collection.objects.link(joint_obj)
 
     mock_self = MagicMock()
@@ -41,7 +47,7 @@ def test_add_ros2_control_joint_execute(mocker, clean_scene, scene) -> None:
 def test_remove_ros2_control_joint_execute(mocker, clean_scene, scene) -> None:
     """Test removing a joint using real collection properties."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_joints.clear()
 
     # Add a joint manually
@@ -63,7 +69,7 @@ def test_remove_ros2_control_joint_execute(mocker, clean_scene, scene) -> None:
 def test_move_ros2_control_joint_execute(mocker, clean_scene, scene) -> None:
     """Test moving a joint using real collection properties."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_joints.clear()
 
     # Add two joints
@@ -88,7 +94,7 @@ def test_move_ros2_control_joint_execute(mocker, clean_scene, scene) -> None:
 def test_control_ops_add_failures(mocker, clean_scene, scene) -> None:
     """Test add_ros2_control_joint error branches."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_joints.clear()
 
     # Duplicate check by name
@@ -104,8 +110,10 @@ def test_control_ops_add_failures(mocker, clean_scene, scene) -> None:
     # Duplicate check by object reference
     props.ros2_control_joints.clear()
     joint_obj = create_test_object("test_joint_obj", None)
-    joint_obj.linkforge_joint.is_robot_joint = True
-    joint_obj.linkforge_joint.joint_name = "new_name"  # Physical object name is new
+    assert joint_obj is not None
+    joint_props = safe_get_joint(joint_obj)
+    joint_props.is_robot_joint = True
+    joint_props.joint_name = "new_name"  # Physical object name is new
     scene.collection.objects.link(joint_obj)
 
     joint = props.ros2_control_joints.add()
@@ -120,7 +128,7 @@ def test_control_ops_add_failures(mocker, clean_scene, scene) -> None:
 def test_control_ops_remove_failures(clean_scene, scene) -> None:
     """Test remove_ros2_control_joint edge cases."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_joints.clear()
 
     # Invalid index
@@ -138,7 +146,7 @@ def test_control_ops_remove_failures(clean_scene, scene) -> None:
 def test_control_ops_move_variants(clean_scene, scene) -> None:
     """Test move_ros2_control_joint direction and boundary branches."""
 
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_joints.clear()
 
     # Need 3 joints to test move logic properly
@@ -183,7 +191,8 @@ def test_control_ops_move_variants(clean_scene, scene) -> None:
 def test_control_ops_polls_extended(clean_scene, scene) -> None:
     """Test poll success/fail cases."""
 
-    scene.linkforge.ros2_control_joints.clear()
+    props = safe_get_linkforge_scene(scene)
+    props.ros2_control_joints.clear()
 
     # Initial state: NO joints
     assert LINKFORGE_OT_add_ros2_control_joint.poll(bpy.context) is True
@@ -191,12 +200,12 @@ def test_control_ops_polls_extended(clean_scene, scene) -> None:
     assert LINKFORGE_OT_move_ros2_control_joint.poll(bpy.context) is False
 
     # Add one joint
-    scene.linkforge.ros2_control_joints.add()
+    props.ros2_control_joints.add()
     assert LINKFORGE_OT_remove_ros2_control_joint.poll(bpy.context) is True
     assert LINKFORGE_OT_move_ros2_control_joint.poll(bpy.context) is False
 
     # Add second joint
-    scene.linkforge.ros2_control_joints.add()
+    props.ros2_control_joints.add()
     assert LINKFORGE_OT_move_ros2_control_joint.poll(bpy.context) is True
 
 
