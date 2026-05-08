@@ -85,3 +85,18 @@ if HAS_BPY:
         clear_stats_cache()
 
         yield
+
+    @pytest.fixture
+    def mock_context(mocker, scene) -> typing.Any:
+        """Provide a mocked Blender context with the current scene and view_layer.
+
+        This eliminates the need to manually create context mocks in every operator test.
+        """
+        context = mocker.MagicMock()
+        context.scene = scene
+        context.view_layer = scene.view_layers[0] if hasattr(scene, "view_layers") else None
+        context.window_manager = bpy.context.window_manager
+        context.workspace = bpy.context.workspace
+        context.area = bpy.context.area
+        context.region = bpy.context.region
+        return context
