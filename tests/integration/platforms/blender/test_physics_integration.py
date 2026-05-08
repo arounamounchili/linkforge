@@ -1,32 +1,18 @@
 from __future__ import annotations
 
-from typing import Any
-
 import bpy
 import pytest
 from linkforge.blender.operators.link_ops import calculate_inertia_for_link
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import create_test_object, safe_get_linkforge
 
 
-def test_inertia_integration_flow() -> None:
-    """Verify end-to-end inertia calculation in Blender.
-
-    1. Create a link with a cube visual.
-    2. Trigger automated inertia calculation.
-    3. Verify properties match expected physical values.
-    """
-    # Create the link (Empty) manually instead of using bpy.ops.linkforge
+def test_inertia_integration_flow(clean_scene) -> None:
+    """Verify end-to-end inertia calculation in Blender."""
     scene = bpy.context.scene or bpy.data.scenes[0]
-    collection = scene.collection
-    assert collection is not None
-
-    link_obj = create_test_object("link", None)
-    assert link_obj is not None
-    collection.objects.link(link_obj)
-    link_lf: Any = getattr(link_obj, "linkforge")
+    link_obj = create_test_object("link", None, scene=scene)
+    link_lf = safe_get_linkforge(link_obj, scene=scene)
     link_lf.is_robot_link = True
-    assert link_lf.is_robot_link
 
     # Create a visual cube child
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
@@ -35,7 +21,7 @@ def test_inertia_integration_flow() -> None:
     visual_obj.name = "cube_visual"
     visual_obj.parent = link_obj
 
-    # Force LinkForge link name
+    # Force LinkForge link properties
     link_lf.link_name = "test_link"
     link_lf.mass = 1.0  # 1kg
 
@@ -52,20 +38,14 @@ def test_inertia_integration_flow() -> None:
     assert pytest.approx(link_lf.inertia_ixy, abs=1e-5) == 0.0
 
 
-def test_inertia_integration_with_offset() -> None:
+def test_inertia_integration_with_offset(clean_scene) -> None:
     """Verify that offset visuals are handled correctly via the Parallel Axis Theorem."""
     scene = bpy.context.scene or bpy.data.scenes[0]
-    collection = scene.collection
-    assert collection is not None
-
-    link_obj = create_test_object("link_offset", None)
-    assert link_obj is not None
-    collection.objects.link(link_obj)
-    link_lf: Any = getattr(link_obj, "linkforge")
+    link_obj = create_test_object("link_offset", None, scene=scene)
+    link_lf = safe_get_linkforge(link_obj, scene=scene)
     link_lf.is_robot_link = True
 
     # Visual cube offset from link origin
-    # Link at (0,0,0), visual at (10, 0, 0)
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=(10, 0, 0))
     visual_obj = bpy.context.active_object
     assert visual_obj is not None
@@ -79,8 +59,5 @@ def test_inertia_integration_with_offset() -> None:
     assert success is True
 
     # Ixx for a 2kg cube about its COM is 2 * (1/6) = 1/3 = 0.333...
-    # The world-to-local transform in extract_mesh_triangles should shift the geometry
-    # relative to the link frame, then our NumPy code shifts it back to COM.
-    # Therefore the inertia about COM should remain 1/3 regardless of the visual offset.
     expected = 2.0 / 6.0
     assert pytest.approx(link_lf.inertia_ixx, abs=1e-5) == expected

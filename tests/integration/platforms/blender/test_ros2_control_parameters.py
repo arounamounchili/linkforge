@@ -1,41 +1,30 @@
-"""Integration test for ros2_control hardware parameters and sensor type."""
-
-from typing import Any
+from __future__ import annotations
 
 import bpy
-from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge_core.parsers.urdf_parser import URDFParser
+
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge,
+)
 
 
 def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     """Test that choosing 'sensor' type exports read-only and includes parameters."""
     scene = bpy.context.scene or bpy.data.scenes[0]
-    props: Any = getattr(scene, "linkforge")
+    props = safe_get_linkforge(scene, scene=scene)
 
-    # Create a simple robot structure
-    bpy.ops.mesh.primitive_cube_add()
-    base_obj = bpy.context.active_object
-    assert base_obj is not None
-    base_obj.name = "base_link"
-    base_lf: Any = getattr(base_obj, "linkforge")
-    base_lf.is_robot_link = True
+    # Create a simple robot structure using standard patterns
+    base_obj = create_test_object("base_link", None, scene=scene)
+    safe_get_linkforge(base_obj, scene=scene).is_robot_link = True
 
-    bpy.ops.mesh.primitive_cube_add()
-    sensor_obj = bpy.context.active_object
-    assert sensor_obj is not None
-    sensor_obj.name = "sensor_link"
-    sensor_lf: Any = getattr(sensor_obj, "linkforge")
-    sensor_lf.is_robot_link = True
+    sensor_obj = create_test_object("sensor_link", None, scene=scene)
+    safe_get_linkforge(sensor_obj, scene=scene).is_robot_link = True
 
     # Create joint
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    joint_obj = bpy.context.active_object
-    assert joint_obj is not None
-    # Setup Link & Joint
-    scene = bpy.context.scene or bpy.data.scenes[0]
-    collection = scene.collection
-    assert collection is not None
-    joint_obj.name = "joint1"
-    joint_lf: Any = getattr(joint_obj, "linkforge_joint")
+    joint_obj = create_test_object("joint1", None, scene=scene)
+    joint_lf = safe_get_joint(joint_obj, scene=scene)
     joint_lf.is_robot_joint = True
     joint_lf.parent_link = base_obj
     joint_lf.child_link = sensor_obj
@@ -66,13 +55,15 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     jp.value = "4096"
 
     # Export to URDF (using the adapter to get the Robot model)
+    # Export to Robot model
     from pathlib import Path
 
     from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     robot, _ = scene_to_robot(bpy.context, Path("/tmp"), dry_run=True)
 
-    from linkforge.linkforge_core import URDFGenerator
+    # Generate URDF
+    from linkforge_core.generators.urdf_generator import URDFGenerator
 
     exported_urdf = URDFGenerator().generate(robot)
 

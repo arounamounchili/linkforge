@@ -9,35 +9,23 @@ import bpy
 import pytest
 from linkforge.blender.adapters.blender_to_core import blender_joint_to_core
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import create_test_object, safe_get_joint, safe_get_linkforge
 
 
 def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     """Verify that calibration and safety controller survive Blender to Core conversion."""
-    # Setup Links
-    p = create_test_object("Parent", None)
-    c = create_test_object("Child", None)
-
-    # Use bpy.data.scenes[0] if context.scene is None (common in background tests)
+    # Setup using standard pattern
     scene = bpy.context.scene or bpy.data.scenes[0]
-    collection = scene.collection
-    assert collection is not None
-    collection.objects.link(p)
-    collection.objects.link(c)
+    p = create_test_object("Parent", None, scene=scene)
+    c = create_test_object("Child", None, scene=scene)
 
-    # Use getattr to satisfy the linter for dynamic Blender properties
-    from typing import Any
-
-    p_lf: Any = getattr(p, "linkforge")
-    c_lf: Any = getattr(c, "linkforge")
-    p_lf.is_robot_link = True
-    c_lf.is_robot_link = True
+    safe_get_linkforge(p, scene=scene).is_robot_link = True
+    safe_get_linkforge(c, scene=scene).is_robot_link = True
 
     # Setup Joint with Enhanced Properties
-    j = create_test_object("Joint", None)
-    collection.objects.link(j)
+    j = create_test_object("Joint", None, scene=scene)
+    j_lf = safe_get_joint(j, scene=scene)
 
-    j_lf: Any = getattr(j, "linkforge_joint")
     j_lf.is_robot_joint = True
     j_lf.parent_link = p
     j_lf.child_link = c
@@ -69,7 +57,3 @@ def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     assert core_joint.calibration is not None
     assert pytest.approx(core_joint.calibration.rising) == 0.75
     assert pytest.approx(core_joint.calibration.falling) == -0.75
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])

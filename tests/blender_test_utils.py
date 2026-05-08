@@ -107,6 +107,78 @@ def create_test_object(name: str, object_data: Any = None, scene: Any = None) ->
     return obj
 
 
+def safe_get_linkforge(obj: bpy.types.Object, scene: Any = None) -> Any:
+    """Safe accessor for the 'linkforge' property group with auto-recovery."""
+    try:
+        if hasattr(obj, "linkforge") and obj.linkforge and obj.linkforge.bl_rna:
+            return obj.linkforge
+    except (AttributeError, RuntimeError):
+        pass
+
+    # Environment Refresh & Re-fetch
+    _refresh_blender_environment(scene)
+    return bpy.data.objects.get(obj.name).linkforge
+
+
+def safe_get_joint(obj: bpy.types.Object, scene: Any = None) -> Any:
+    """Safe accessor for the 'linkforge_joint' property group."""
+    try:
+        if hasattr(obj, "linkforge_joint") and obj.linkforge_joint and obj.linkforge_joint.bl_rna:
+            return obj.linkforge_joint
+    except (AttributeError, RuntimeError):
+        pass
+
+    _refresh_blender_environment(scene)
+    return bpy.data.objects.get(obj.name).linkforge_joint
+
+
+def safe_get_sensor(obj: bpy.types.Object, scene: Any = None) -> Any:
+    """Safe accessor for the 'linkforge_sensor' property group."""
+    try:
+        if (
+            hasattr(obj, "linkforge_sensor")
+            and obj.linkforge_sensor
+            and obj.linkforge_sensor.bl_rna
+        ):
+            return obj.linkforge_sensor
+    except (AttributeError, RuntimeError):
+        pass
+
+    _refresh_blender_environment(scene)
+    return bpy.data.objects.get(obj.name).linkforge_sensor
+
+
+def safe_get_transmission(obj: bpy.types.Object, scene: Any = None) -> Any:
+    """Safe accessor for the 'linkforge_transmission' property group."""
+    try:
+        if (
+            hasattr(obj, "linkforge_transmission")
+            and obj.linkforge_transmission
+            and obj.linkforge_transmission.bl_rna
+        ):
+            return obj.linkforge_transmission
+    except (AttributeError, RuntimeError):
+        pass
+
+    _refresh_blender_environment(scene)
+    return bpy.data.objects.get(obj.name).linkforge_transmission
+
+
+def _refresh_blender_environment(scene: Any = None) -> None:
+    """Internal helper to refresh the Blender RNA state (Nuclear Recovery)."""
+    import linkforge.blender
+
+    with contextlib.suppress(Exception):
+        linkforge.blender.unregister()
+    linkforge.blender.register()
+
+    if scene and hasattr(scene, "view_layers"):
+        for vl in scene.view_layers:
+            vl.update()
+    elif hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
+        bpy.context.view_layer.update()
+
+
 def create_simple_robot_scene(
     scene_name: str = "RobotScene",
 ) -> tuple[bpy.types.Collection, bpy.types.Object, bpy.types.Object]:
@@ -127,15 +199,14 @@ def create_simple_robot_scene(
 
     # Create parent link (Empty)
     parent = create_test_object("parent_link", None, scene=target_scene)
-    # Re-fetch to ensure fresh Python wrapper if recovery occurred
-    parent = bpy.data.objects[parent.name]
+    if parent.name not in collection.objects:
+        collection.objects.link(parent)
 
-    collection.objects.link(parent)
-    parent.linkforge.is_robot_link = True
+    # Set properties using the safe accessor
+    safe_get_linkforge(parent, scene=target_scene).is_robot_link = True
 
     # Create child mesh
     mesh_data = bpy.data.meshes.new("child_visual")
-    # Simple cube vertices
     mesh_data.from_pydata(
         [(0.25, 0.25, 0.25), (0.25, -0.25, 0.25), (-0.25, -0.25, 0.25), (-0.25, 0.25, 0.25)],
         [],
@@ -144,13 +215,11 @@ def create_simple_robot_scene(
     child = create_test_object("child_visual", mesh_data, scene=target_scene)
     child.parent = parent
 
-    # Ensure everything is linked to the right collection
     if child.name not in collection.objects:
         collection.objects.link(child)
 
-    # Robust update: use scene view layers instead of global context
-    if hasattr(target_scene, "view_layers") and target_scene.view_layers:
-        for vl in target_scene.view_layers:
-            vl.update()
+    # Final update
+    if target_scene.view_layers:
+        target_scene.view_layers[0].update()
 
     return collection, parent, child
