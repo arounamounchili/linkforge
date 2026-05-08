@@ -24,14 +24,14 @@ def test_generate_inertia_axes_geometry_values(scene) -> None:
 
 def test_draw_inertia_gizmos_execution(scene) -> None:
     """Execute the draw function to ensure no Python-level errors occur."""
-    # 1. Setup real objects
+    # Setup real objects
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj1 = bpy.context.active_object
     obj1.linkforge.is_robot_link = True
     obj1.linkforge.use_auto_inertia = False
     obj1.select_set(True)
 
-    # 2. Call draw (headless)
+    # Call draw (headless)
     # In a headless environment, this might do nothing or raise a Context/GPU error.
     # We just want to ensure our *logic* doesn't crash (e.g., AttributeErrors).
     try:

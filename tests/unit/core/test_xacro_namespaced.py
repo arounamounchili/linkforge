@@ -5,7 +5,7 @@ from linkforge_core.parsers.xacro_parser import XacroResolver
 
 
 def test_xacro_namespaced_load_yaml(tmp_path) -> None:
-    # 1. Create a mock package structure
+    # Create a mock package structure
     pkg_dir = tmp_path / "franka_description"
     pkg_dir.mkdir()
     (pkg_dir / "package.xml").write_text("<package><name>franka_description</name></package>")
@@ -17,7 +17,7 @@ def test_xacro_namespaced_load_yaml(tmp_path) -> None:
     yaml_file = data_dir / "inertials.yaml"
     yaml_file.write_text(yaml.dump(yaml_content))
 
-    # 2. Create a XACRO file that uses xacro.load_yaml
+    # Create a XACRO file that uses xacro.load_yaml
     xacro_content = """<?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test">
     <xacro:property name="props" value="${xacro.load_yaml('$(find franka_description)/robots/fp3/inertials.yaml')}"/>
@@ -31,11 +31,11 @@ def test_xacro_namespaced_load_yaml(tmp_path) -> None:
     xacro_file = pkg_dir / "robot.xacro"
     xacro_file.write_text(xacro_content)
 
-    # 3. Resolve
+    # Resolve
     resolver = XacroResolver(start_dir=pkg_dir)
     urdf_string = resolver.resolve_file(xacro_file)
 
-    # 4. Verify
+    # Verify
     root = ET.fromstring(urdf_string)
     mass_elem = root.find(".//mass")
     assert mass_elem is not None

@@ -36,7 +36,7 @@ SAMPLE_SRDF = """<?xml version="1.0"?>
 
 def test_full_robot_description_integration():
     """Verify that URDF and SRDF can be combined into a single Robot model."""
-    # 1. Parse URDF
+    # Parse URDF
     urdf_parser = URDFParser()
     robot = urdf_parser.parse_string(SAMPLE_URDF)
 
@@ -45,11 +45,11 @@ def test_full_robot_description_integration():
     assert not robot.semantic.groups  # Initially empty
     assert not robot.semantic.virtual_joints
 
-    # 2. Parse SRDF and update the same robot model
+    # Parse SRDF and update the same robot model
     srdf_parser = SRDFParser()
     robot.semantic = srdf_parser.parse_string(SAMPLE_SRDF)
 
-    # 3. Verify Integration
+    # Verify Integration
     assert robot.semantic is not None
     assert robot.semantic.virtual_joints[0].name == "virtual_joint"
     assert robot.semantic.groups[0].name == "panda_arm"
@@ -59,7 +59,7 @@ def test_full_robot_description_integration():
     srdf_joint_name = robot.semantic.groups[0].joints[0]
     assert any(j.name == srdf_joint_name for j in robot.joints)
 
-    # 4. Generate SRDF from the unified model
+    # Generate SRDF from the unified model
     generator = SRDFGenerator()
     generated_srdf = generator.generate(robot)
 

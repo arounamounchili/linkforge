@@ -5,12 +5,12 @@ from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with
 
 def test_inertial_origin_extraction(scene) -> None:
     """Verify that inertial origin properties are correctly converted to Core model using real Blender objects."""
-    # 1. Setup real Blender object
+    # Setup real Blender object
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
     obj.name = "test_link"
 
-    # 2. Configure LinkForge properties (real PropertyGroup)
+    # Configure LinkForge properties (real PropertyGroup)
     props = obj.linkforge
     props.is_robot_link = True
     props.link_name = "test_link"
@@ -29,10 +29,10 @@ def test_inertial_origin_extraction(scene) -> None:
     props.inertia_iyz = 0.0
     props.inertia_izz = 1.0
 
-    # 3. Call conversion
+    # Call conversion
     link = blender_link_to_core_with_origin(obj)
 
-    # 4. Assertions
+    # Assertions
     assert link is not None
     assert link.inertial is not None
 

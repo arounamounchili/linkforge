@@ -47,7 +47,7 @@ def test_macro_generation_wheels() -> None:
     # Verify
     root = ET.fromstring(xml_str)
 
-    # 1. Check for macro definition
+    # Check for macro definition
     macros = root.findall(".//{http://www.ros.org/wiki/xacro}macro")
     assert len(macros) == 1, f"Expected 1 macro, found {len(macros)}"
     macro = macros[0]
@@ -55,20 +55,20 @@ def test_macro_generation_wheels() -> None:
     assert name is not None and "cyl" in name
     assert macro.get("params") == "name parent xyz rpy"
 
-    # 2. Check for macro calls
+    # Check for macro calls
     # The macro name will be something like "cyl_0.100_0.050_black_macro"
     macro_name = macro.get("name")
     calls = root.findall(f".//{{http://www.ros.org/wiki/xacro}}{macro_name}")
     assert len(calls) == 4, f"Expected 4 macro calls, found {len(calls)}"
 
-    # 3. Check call parameters
+    # Check call parameters
     for call in calls:
         assert call.get("parent") == "base_link"
         name = call.get("name")
         assert name is not None and "wheel" in name
         assert call.get("xyz") is not None
 
-    # 4. Check that original links are GONE (except base_link)
+    # Check that original links are GONE (except base_link)
     links_in_xml = root.findall("link")
     link_names = [link.get("name") for link in links_in_xml]
     assert "base_link" in link_names

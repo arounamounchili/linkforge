@@ -110,7 +110,7 @@ def test_quadruped_roundtrip(examples_dir: Path) -> None:
     if not urdf_path.exists():
         pytest.skip(f"quadruped_robot.urdf not found at {urdf_path}")
 
-    # 1. Parse original URDF
+    # Parse original URDF
     robot = URDFParser().parse(urdf_path)
 
     # Verify structure
@@ -119,14 +119,14 @@ def test_quadruped_roundtrip(examples_dir: Path) -> None:
     assert len(robot.transmissions) == 0  # Replaced by ros2_control
     assert len(robot.ros2_controls) == 1  # 1 system tag
 
-    # 2. Generate URDF from model
+    # Generate URDF from model
     generator = URDFGenerator()
     generated_urdf = generator.generate(robot)
 
-    # 3. Parse generated URDF
+    # Parse generated URDF
     robot_roundtrip = URDFParser().parse_string(generated_urdf)
 
-    # 4. Compare
+    # Compare
     assert robot_roundtrip.name == robot.name
     assert len(robot_roundtrip.links) == len(robot.links)
     assert len(robot_roundtrip.joints) == len(robot.joints)

@@ -182,11 +182,11 @@ def test_xacro_template_conditional_include_static(tmp_path):
 
     resolver = XacroResolver(search_paths=[tmp_path])
 
-    # 1. Condition false
+    # Condition false
     res1 = resolver.resolve_file(main_file)
     assert "inc_link" not in res1
 
-    # 2. Condition true
+    # Condition true
     resolver2 = XacroResolver(search_paths=[tmp_path])
     resolver2.args["load"] = "1"
     res2 = resolver2.resolve_file(main_file)

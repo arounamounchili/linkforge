@@ -40,22 +40,22 @@ def test_joint_hierarchy_links(scene) -> None:
     child_link.name = "child_link"
     child_link.linkforge.is_robot_link = True
 
-    # 1. Assign parent link
+    # Assign parent link
     joint.linkforge_joint.parent_link = parent_link
     bpy.context.view_layer.update()
     assert joint.parent == parent_link
 
-    # 2. Assign child link
+    # Assign child link
     joint.linkforge_joint.child_link = child_link
     bpy.context.view_layer.update()
     assert child_link.parent == joint
 
-    # 3. Clear child link (should unparent the child)
+    # Clear child link (should unparent the child)
     joint.linkforge_joint.child_link = None
     bpy.context.view_layer.update()
     assert child_link.parent is None
 
-    # 4. Clear parent link
+    # Clear parent link
     joint.linkforge_joint.parent_link = None
     bpy.context.view_layer.update()
     assert joint.parent is None

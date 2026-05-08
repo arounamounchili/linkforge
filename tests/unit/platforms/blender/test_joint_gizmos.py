@@ -88,13 +88,13 @@ def test_update_viz_handle_switching(mocker, scene) -> None:
     # Mock preferences
     mock_prefs = mocker.patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs")
 
-    # 1. Test ENABLE
+    # Test ENABLE
     mock_prefs.return_value = type("Prefs", (), {"show_joint_axes": True})()
     update_viz_handle(bpy.context)
     mock_add.assert_called_once()
     assert bpy.app.driver_namespace["linkforge_joint_gizmo_handler"] == "handle_123"
 
-    # 2. Test DISABLE
+    # Test DISABLE
     mock_prefs.return_value.show_joint_axes = False
     update_viz_handle(bpy.context)
     mock_remove.assert_called()

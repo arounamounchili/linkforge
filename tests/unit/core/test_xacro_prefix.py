@@ -28,12 +28,12 @@ def test_xacro_namespace_prefix() -> None:
     generator = XACROGenerator(advanced_mode=True, extract_materials=True)
     xacro_str = generator.generate(robot)
 
-    # 1. Check for the standard namespace declaration
+    # Check for the standard namespace declaration
     assert 'xmlns:xacro="http://www.ros.org/wiki/xacro"' in xacro_str
 
-    # 2. Check that we DON'T have the generic ns0 declaration
+    # Check that we DON'T have the generic ns0 declaration
     assert "xmlns:ns0" not in xacro_str
 
-    # 3. Check for the xacro prefix in tags
+    # Check for the xacro prefix in tags
     assert "<xacro:property" in xacro_str
     assert "<ns0:property" not in xacro_str

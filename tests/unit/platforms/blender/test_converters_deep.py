@@ -27,12 +27,12 @@ def test_scene_to_robot_strict_mode(scene) -> None:
         "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
         side_effect=RobotModelError("Link error"),
     ):
-        # 1. Strict mode = True
+        # Strict mode = True
         scene.linkforge.strict_mode = True
         with pytest.raises(RobotModelError, match="Link error"):
             scene_to_robot(bpy.context)
 
-        # 2. Strict mode = False
+        # Strict mode = False
         scene.linkforge.strict_mode = False
         with pytest.raises(RobotModelError, match=r"Multiple configuration errors found"):
             scene_to_robot(bpy.context)

@@ -59,7 +59,7 @@ def test_robot_merge_integrity(base_robot, arm_robot):
         component=arm_robot, at_link="mount_point", joint_name="stand_to_arm", prefix="r1_"
     )
 
-    # 1. Check Kinematics
+    # Check Kinematics
     assert base_robot.has_link("base_link")
     assert base_robot.has_link("r1_arm_base")
     assert base_robot.has_link("r1_link1")
@@ -70,11 +70,11 @@ def test_robot_merge_integrity(base_robot, arm_robot):
     assert conn_joint.parent == "mount_point"
     assert conn_joint.child == "r1_arm_base"
 
-    # 2. Check Functional Elements
+    # Check Functional Elements
     assert base_robot.has_sensor("r1_camera")
     assert base_robot.sensor("r1_camera").link_name == "r1_link1"
 
-    # 3. Check Semantic Data
+    # Check Semantic Data
     semantic = base_robot.semantic
     assert len(semantic.groups) == 1
     assert semantic.groups[0].name == "r1_arm_group"

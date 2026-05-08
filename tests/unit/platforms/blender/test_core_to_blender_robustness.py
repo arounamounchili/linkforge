@@ -67,12 +67,12 @@ def test_resolve_mesh_path(tmp_path, scene) -> None:
     source_directory.mkdir()
     resolver = FileSystemResolver()
 
-    # 1. Local relative path (exists)
+    # Local relative path (exists)
     mesh_file = source_directory / "mesh.stl"
     mesh_file.touch()
     assert resolver.resolve("mesh.stl", relative_to=source_directory) == mesh_file.absolute()
 
-    # 2. Package URI (requires mock of resolve_package_path)
+    # Package URI (requires mock of resolve_package_path)
     with patch("linkforge.linkforge_core.base.resolve_package_path") as mock_resolve:
         mock_resolve.return_value = mesh_file
         # Note: resolve_package_path mock needs to return a Path that exists
@@ -81,18 +81,18 @@ def test_resolve_mesh_path(tmp_path, scene) -> None:
             == mesh_file.absolute()
         )
 
-    # 3. Non-existent path raises FileNotFoundError (new behavior)
+    # Non-existent path raises FileNotFoundError (new behavior)
     with pytest.raises(FileNotFoundError):
         resolver.resolve("/tmp/non_existent.obj", relative_to=source_directory)
 
-    # 4. file:// URI
+    # file:// URI
     file_uri = "file:///tmp/mesh.stl"
     # Create the file so it can be resolved (FileSystemResolver checks existence)
     mesh_tmp = Path("/tmp/mesh.stl")
     mesh_tmp.touch()
     assert resolver.resolve(file_uri, relative_to=source_directory) == mesh_tmp.absolute()
 
-    # 5. Windows style URI (mocking Windows environment is hard, but we can test the regex)
+    # Windows style URI (mocking Windows environment is hard, but we can test the regex)
     # FileSystemResolver uses re.sub and Path.
     # On Unix, file:///C:/path becomes /C:/path
     win_uri = "file:///C:/path/to/mesh.stl"
@@ -125,7 +125,7 @@ def test_create_material_from_color(clean_scene, scene) -> None:
 
 def test_create_primitive_mesh(clean_scene, scene) -> None:
     """Test creation of primitive meshes (Box, Cylinder, Sphere)."""
-    # 1. Box
+    # Box
     box = Box(size=Vector3(2.0, 2.0, 2.0))
     # DEBUG: box type: {type(box)}, isinstance(box, Box): {isinstance(box, Box)}
     obj = create_primitive_mesh(box, "TestBox")
@@ -134,19 +134,19 @@ def test_create_primitive_mesh(clean_scene, scene) -> None:
     assert obj.dimensions == Vector((2.0, 2.0, 2.0))
     assert obj["source_geometry_type"] == "BOX"
 
-    # 2. Cylinder
+    # Cylinder
     cyl = Cylinder(radius=1.0, length=4.0)
     obj = create_primitive_mesh(cyl, "TestCylinder")
     assert obj.dimensions == Vector((2.0, 2.0, 4.0))  # radius * 2
     assert obj["source_geometry_type"] == "CYLINDER"
 
-    # 3. Sphere
+    # Sphere
     sphere = Sphere(radius=3.0)
     obj = create_primitive_mesh(sphere, "TestSphere")
     assert obj.dimensions == Vector((6.0, 6.0, 6.0))
     assert obj["source_geometry_type"] == "SPHERE"
 
-    # 4. Invalid geometry
+    # Invalid geometry
     assert create_primitive_mesh(None, "Fail") is None
 
 

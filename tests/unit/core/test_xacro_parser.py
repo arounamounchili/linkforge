@@ -750,25 +750,25 @@ def test_xacro_load_data_errors(tmp_path) -> None:
     """Test error handling when loading YAML/JSON files."""
     resolver = XacroResolver(start_dir=tmp_path)
     with mock.patch("linkforge_core.parsers.xacro_parser.logger") as m:
-        # 1. Non-existent YAML
+        # Non-existent YAML
         ret_yaml = resolver._handle_load_yaml("nonexistent.yaml")
         assert ret_yaml == {}
         assert m.error.called
 
-        # 2. Non-existent JSON
+        # Non-existent JSON
         m.reset_mock()
         ret_json = resolver._handle_load_json("nonexistent.json")
         assert ret_json == {}
         assert m.error.called
 
-        # 3. Malformed YAML
+        # Malformed YAML
         m.reset_mock()
         bad_yaml = tmp_path / "bad.yaml"
         bad_yaml.write_text("!!invalid")
         resolver._handle_load_yaml("bad.yaml")
         assert m.error.called
 
-        # 4. Malformed JSON
+        # Malformed JSON
         m.reset_mock()
         bad_json = tmp_path / "bad.json"
         bad_json.write_text("{")

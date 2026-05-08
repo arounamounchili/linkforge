@@ -100,19 +100,19 @@ class TestMeshTopologyValidation:
         """Strict mode should raise RobotPhysicsError on topology issues."""
         vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 1)]
 
-        # 1. Boundary
+        # Boundary
         with pytest.raises(RobotPhysicsError, match="boundary edge"):
             validate_mesh_topology(vertices, [(0, 1, 2)], strict=True)
 
-        # 2. Duplicate
+        # Duplicate
         with pytest.raises(RobotPhysicsError, match="duplicate"):
             validate_mesh_topology(vertices, [(0, 1, 2), (0, 2, 1)], strict=True, level=2)
 
-        # 3. Degenerate
+        # Degenerate
         with pytest.raises(RobotPhysicsError, match="degenerate"):
             validate_mesh_topology(vertices, [(0, 1, 1)], strict=True, level=2)
 
-        # 4. Non-manifold
+        # Non-manifold
         triangles_non_manifold = [
             (0, 1, 2),
             (0, 2, 3),
@@ -127,12 +127,12 @@ class TestMeshTopologyValidation:
         with pytest.raises(RobotPhysicsError, match="non-manifold edge"):
             validate_mesh_topology(vertices_nm, triangles_non_manifold, strict=True, level=1)
 
-        # 5. Inconsistent winding
+        # Inconsistent winding
         triangles_inconsistent = [(0, 2, 1), (0, 1, 3), (0, 3, 2), (1, 3, 2)]
         with pytest.raises(RobotPhysicsError, match="inconsistent winding"):
             validate_mesh_topology(vertices, triangles_inconsistent, strict=True, level=2)
 
-        # 6. Unwelded
+        # Unwelded
         vertices_unwelded = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0, 0)]
         with pytest.raises(RobotPhysicsError, match="unwelded"):
             validate_mesh_topology(vertices_unwelded, triangles_inconsistent, strict=True, level=2)

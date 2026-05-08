@@ -13,12 +13,12 @@ def test_sensor_ops_create_sensor(scene) -> None:
 
     bpy.ops.linkforge.create_joint()
 
-    # 1. Test Poll (should pass with link selected)
+    # Test Poll (should pass with link selected)
     link_obj.select_set(True)
     bpy.context.view_layer.objects.active = link_obj
     assert bpy.ops.linkforge.create_sensor.poll() is True
 
-    # 2. Test Execute
+    # Test Execute
     bpy.ops.linkforge.create_sensor()
 
     sensor_obj = bpy.context.active_object
@@ -40,10 +40,10 @@ def test_sensor_ops_delete_sensor(scene) -> None:
     sensor_obj = bpy.context.active_object
     sensor_name = sensor_obj.name
 
-    # 1. Test Poll
+    # Test Poll
     assert bpy.ops.linkforge.delete_sensor.poll() is True
 
-    # 2. Test Execute
+    # Test Execute
     bpy.ops.linkforge.delete_sensor()
     assert sensor_name not in bpy.data.objects
 
@@ -53,10 +53,10 @@ def test_sensor_ops_poll_failures(scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    # 1. No active object
+    # No active object
     assert bpy.ops.linkforge.create_sensor.poll() is False
 
-    # 2. Active but not a joint
+    # Active but not a joint
     bpy.ops.mesh.primitive_cube_add()
     assert bpy.ops.linkforge.create_sensor.poll() is False
 

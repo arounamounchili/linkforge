@@ -21,7 +21,7 @@ def ensure_linkforge_registered():
     ]
     scene_props = ["linkforge"]
 
-    # 1. Exhaustive cleanup
+    # Exhaustive cleanup
     with contextlib.suppress(Exception):
         linkforge.blender.unregister()
 
@@ -32,10 +32,10 @@ def ensure_linkforge_registered():
         with contextlib.suppress(AttributeError):
             delattr(bpy.types.Scene, p)
 
-    # 2. Fresh registration
+    # Fresh registration
     linkforge.blender.register()
 
-    # 3. Critical verification
+    # Critical verification
     for p in object_props:
         if not hasattr(bpy.types.Object, p):
             raise RuntimeError(f"Registration Failed: bpy.types.Object missing '{p}'")
@@ -64,13 +64,13 @@ def create_test_object(name: str, object_data: Any = None, scene: Any = None) ->
         except (AttributeError, RuntimeError):
             return False
 
-    # 1. Create the object instance
+    # Create the object instance
     obj = bpy.data.objects.new(name, object_data)
     if obj.name not in bpy.data.objects:
         # Emergency retry if Blender database state is inconsistent
         obj = bpy.data.objects.new(name, object_data)
 
-    # 2. Link to scene collection (essential for RNA dispatch table initialization)
+    # Link to scene collection (essential for RNA dispatch table initialization)
     if scene and hasattr(scene, "collection"):
         with contextlib.suppress(RuntimeError):
             scene.collection.objects.link(obj)
@@ -81,7 +81,7 @@ def create_test_object(name: str, object_data: Any = None, scene: Any = None) ->
                 for vl in scene.view_layers:
                     vl.update()
 
-    # 3. Final Binding Health Check
+    # Final Binding Health Check
     if not verify_rna_health(obj):
         # Nuclear re-registration
         with contextlib.suppress(Exception):
@@ -116,16 +116,16 @@ def create_simple_robot_scene(
     Returns:
         A tuple of (collection, parent_link, child_mesh)
     """
-    # 1. Create collection
+    # Create collection
     collection = bpy.data.collections.new(scene_name)
     bpy.context.scene.collection.children.link(collection)
 
-    # 2. Create parent link (Empty)
+    # Create parent link (Empty)
     parent = create_test_object("parent_link", None, scene=bpy.context.scene)
     collection.objects.link(parent)
     parent.linkforge.is_robot_link = True
 
-    # 3. Create child mesh
+    # Create child mesh
     bpy.ops.mesh.primitive_cube_add(size=0.5)
     child = bpy.context.active_object
     child.name = "child_visual"

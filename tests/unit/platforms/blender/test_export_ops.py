@@ -256,10 +256,10 @@ def test_export_registration_recovery(mocker, scene) -> None:
     """Verify operator registration error recovery logic."""
     # Force a RobotModelError during registration for the FIRST class
     # The loop will:
-    # 1. Try register(cls1) -> ValueError
-    # 2. unregister(cls1)
-    # 3. register(cls1) -> None
-    # 4. Try register(cls2) -> None
+    # Try register(cls1) -> ValueError
+    # unregister(cls1)
+    # register(cls1) -> None
+    # Try register(cls2) -> None
     with patch("bpy.utils.register_class", side_effect=[ValueError, None, None]):
         register()
 

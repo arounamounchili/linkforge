@@ -91,7 +91,7 @@ def test_control_ops_add_failures(mocker, clean_scene, scene) -> None:
     props = scene.linkforge
     props.ros2_control_joints.clear()
 
-    # 1. Duplicate check by name
+    # Duplicate check by name
     joint = props.ros2_control_joints.add()
     joint.name = "duplicate_joint"
 
@@ -101,7 +101,7 @@ def test_control_ops_add_failures(mocker, clean_scene, scene) -> None:
     res = LINKFORGE_OT_add_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"CANCELLED"}
 
-    # 2. Duplicate check by object reference
+    # Duplicate check by object reference
     props.ros2_control_joints.clear()
     joint_obj = create_test_object("test_joint_obj", None)
     joint_obj.linkforge_joint.is_robot_joint = True
@@ -123,13 +123,13 @@ def test_control_ops_remove_failures(clean_scene, scene) -> None:
     props = scene.linkforge
     props.ros2_control_joints.clear()
 
-    # 1. Invalid index
+    # Invalid index
     props.ros2_control_active_joint_index = -1
     mock_self = MagicMock()
     res = LINKFORGE_OT_remove_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"CANCELLED"}
 
-    # 2. Out of bounds index
+    # Out of bounds index
     props.ros2_control_active_joint_index = 10
     res = LINKFORGE_OT_remove_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"CANCELLED"}
@@ -151,7 +151,7 @@ def test_control_ops_move_variants(clean_scene, scene) -> None:
 
     mock_self = MagicMock()
 
-    # 1. Move DOWN from index 1 to 2
+    # Move DOWN from index 1 to 2
     props.ros2_control_active_joint_index = 1
     mock_self.direction = "DOWN"
     res = LINKFORGE_OT_move_ros2_control_joint.execute(mock_self, bpy.context)
@@ -159,22 +159,22 @@ def test_control_ops_move_variants(clean_scene, scene) -> None:
     assert props.ros2_control_joints[2].name == "j2"
     assert props.ros2_control_active_joint_index == 2
 
-    # 2. Move DOWN from BOTTOM (should cancel)
+    # Move DOWN from BOTTOM (should cancel)
     res = LINKFORGE_OT_move_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"CANCELLED"}
 
-    # 3. Move UP from index 2 to 1
+    # Move UP from index 2 to 1
     mock_self.direction = "UP"
     res = LINKFORGE_OT_move_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"FINISHED"}
     assert props.ros2_control_joints[1].name == "j2"
 
-    # 4. Move UP from index 0 (should cancel)
+    # Move UP from index 0 (should cancel)
     props.ros2_control_active_joint_index = 0
     res = LINKFORGE_OT_move_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"CANCELLED"}
 
-    # 5. Invalid direction
+    # Invalid direction
     mock_self.direction = "SIDEWAYS"
     res = LINKFORGE_OT_move_ros2_control_joint.execute(mock_self, bpy.context)
     assert res == {"CANCELLED"}

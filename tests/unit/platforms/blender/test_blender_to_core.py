@@ -54,7 +54,7 @@ def test_matrix_to_transform_precision(scene) -> None:
 
 def test_get_object_geometry_sphere_cylinder(scene) -> None:
     """Verify auto-detection of sphere and cylinder primitives via get_object_geometry."""
-    # 1. Sphere
+    # Sphere
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5)
     s_obj = bpy.context.active_object
     geom_s, world_matrix = get_object_geometry(s_obj, geometry_type="AUTO")
@@ -62,7 +62,7 @@ def test_get_object_geometry_sphere_cylinder(scene) -> None:
     assert pytest.approx(geom_s.radius) == 0.5
     assert world_matrix == s_obj.matrix_world
 
-    # 2. Cylinder
+    # Cylinder
     bpy.ops.mesh.primitive_cylinder_add(radius=0.3, depth=1.0)
     c_obj = bpy.context.active_object
     geom_c, world_matrix = get_object_geometry(c_obj, geometry_type="AUTO")
@@ -103,21 +103,21 @@ def test_detect_primitive_type_none_case(scene) -> None:
 
 def test_blender_joint_to_core_conversion(scene) -> None:
     """Verify that a Blender joint object is correctly converted back to Core Joint."""
-    # 1. Setup Parent Link
+    # Setup Parent Link
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     p_obj = bpy.context.active_object
     p_obj.name = "parent_l"
     if hasattr(p_obj, "linkforge"):
         p_obj.linkforge.link_name = "parent_l"
 
-    # 2. Setup Child Link
+    # Setup Child Link
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     c_obj = bpy.context.active_object
     c_obj.name = "child_l"
     if hasattr(c_obj, "linkforge"):
         c_obj.linkforge.link_name = "child_l"
 
-    # 3. Setup Blender Joint
+    # Setup Blender Joint
     bpy.ops.object.empty_add(type="ARROWS")
     joint_obj = bpy.context.active_object
     joint_obj.name = "blender_j"
@@ -135,10 +135,10 @@ def test_blender_joint_to_core_conversion(scene) -> None:
         props.limit_lower = -1.0
         props.limit_upper = 1.0
 
-    # 4. Convert
+    # Convert
     joint = blender_joint_to_core(joint_obj)
 
-    # 5. Verify
+    # Verify
     assert joint is not None
     assert joint.name == "blender_j"
     assert joint.type == JointType.REVOLUTE
@@ -147,7 +147,7 @@ def test_blender_joint_to_core_conversion(scene) -> None:
 
 def test_blender_sensor_to_core_lidar(scene) -> None:
     """Verify that a Blender sensor object is correctly converted back to Core Sensor."""
-    # 1. Setup Parent Link
+    # Setup Parent Link
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     parent_obj = bpy.context.active_object
     parent_obj.name = "base_link"
@@ -155,7 +155,7 @@ def test_blender_sensor_to_core_lidar(scene) -> None:
         parent_obj.linkforge.is_robot_link = True
         parent_obj.linkforge.link_name = "base_link"
 
-    # 2. Setup Sensor Object
+    # Setup Sensor Object
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     sensor_obj = bpy.context.active_object
     sensor_obj.name = "my_lidar"
@@ -168,10 +168,10 @@ def test_blender_sensor_to_core_lidar(scene) -> None:
         props.update_rate = 50.0
         props.attached_link = parent_obj
 
-    # 3. Convert
+    # Convert
     sensor = blender_sensor_to_core(sensor_obj)
 
-    # 4. Verify
+    # Verify
     assert sensor is not None
     assert sensor.type == SensorType.LIDAR
     assert sensor.update_rate == 50.0
@@ -197,7 +197,7 @@ def test_blender_link_to_core_inertia(scene) -> None:
 
 def test_categorize_scene_objects_logic(scene) -> None:
     """Verify that scene objects are correctly categorized as links, joints, or sensors."""
-    # 1. Setup Scene
+    # Setup Scene
     bpy.ops.object.empty_add()
     l_obj = bpy.context.active_object
     l_obj.name = "l_link"
@@ -214,12 +214,12 @@ def test_categorize_scene_objects_logic(scene) -> None:
     if hasattr(t_obj, "linkforge_transmission"):
         t_obj.linkforge_transmission.is_robot_transmission = True
 
-    # 2. Call internal categorizer
+    # Call internal categorizer
     from linkforge.blender.adapters.blender_to_core import _categorize_scene_objects
 
     links, joints, sensors, transmissions, joints_map, root = _categorize_scene_objects(scene)
 
-    # 3. Verify
+    # Verify
     assert "l_link" in links
     assert j_obj in joints
     assert root[0] == "l_link"
@@ -227,7 +227,7 @@ def test_categorize_scene_objects_logic(scene) -> None:
 
 def test_calculate_link_frames_logic(scene) -> None:
     """Verify recursive frame calculation with real objects."""
-    # 1. Setup Hierarchy
+    # Setup Hierarchy
     bpy.ops.object.empty_add()
     root_obj = bpy.context.active_object
     root_obj.name = "root"
@@ -240,15 +240,15 @@ def test_calculate_link_frames_logic(scene) -> None:
 
     bpy.context.view_layer.update()
 
-    # 2. Setup structures
+    # Setup structures
     link_objects = {"root": root_obj, "child": child_obj}
     joints_map = {"child": ("root", None)}  # Dummy joint map entry
     root_link = ("root", root_obj)
 
-    # 3. Calculate
+    # Calculate
     frames = _calculate_link_frames(link_objects, joints_map, root_link)
 
-    # 4. Verify
+    # Verify
     assert "root" in frames
     assert "child" in frames
     # Child frame should be at (1,0,0) relative to root
@@ -304,13 +304,13 @@ def test_get_object_geometry_forced_primitives(scene) -> None:
     bpy.ops.mesh.primitive_cube_add(size=2.0)
     obj = bpy.context.active_object
 
-    # 1. Force Sphere (radius should be max dim / 2 = 1.0)
+    # Force Sphere (radius should be max dim / 2 = 1.0)
     geom_s, wm_s = get_object_geometry(obj, geometry_type="SPHERE")
     assert isinstance(geom_s, Sphere)
     assert wm_s == obj.matrix_world
     assert pytest.approx(geom_s.radius) == 1.0
 
-    # 2. Force Cylinder (z depth is 2.0, max x/y is 2.0 -> radius 1.0)
+    # Force Cylinder (z depth is 2.0, max x/y is 2.0 -> radius 1.0)
     geom_c, wm_c = get_object_geometry(obj, geometry_type="CYLINDER")
     assert isinstance(geom_c, Cylinder)
     assert wm_c == obj.matrix_world
@@ -369,19 +369,19 @@ def test_sanitize_name_logic(scene) -> None:
 
 def test_categorize_scene_objects_complex_hierarchy(scene) -> None:
     """Verify categorization of a full robot hierarchy with sensors and joints."""
-    # 1. Base Link
+    # Base Link
     bpy.ops.object.empty_add()
     base = bpy.context.active_object
     base.name = "base_link"
     base.linkforge.is_robot_link = True
 
-    # 2. Child Link
+    # Child Link
     bpy.ops.object.empty_add()
     child = bpy.context.active_object
     child.name = "child_link"
     child.linkforge.is_robot_link = True
 
-    # 3. Joint (Base -> Child)
+    # Joint (Base -> Child)
     bpy.ops.object.empty_add()
     joint = bpy.context.active_object
     joint.name = "base_to_child"
@@ -390,7 +390,7 @@ def test_categorize_scene_objects_complex_hierarchy(scene) -> None:
     joint.linkforge_joint.parent_link = base
     joint.linkforge_joint.child_link = child
 
-    # 4. Sensor on Child
+    # Sensor on Child
     bpy.ops.object.empty_add()
     sensor = bpy.context.active_object
     sensor.name = "camera"
@@ -425,7 +425,7 @@ def test_blender_joint_to_core_types(scene) -> None:
     child.name = "child_link"
     child.linkforge.is_robot_link = True
 
-    # 1. Prismatic
+    # Prismatic
     bpy.ops.object.empty_add()
     joint_obj = bpy.context.active_object
     joint_obj.name = "prismatic_joint"
@@ -446,7 +446,7 @@ def test_blender_joint_to_core_types(scene) -> None:
     assert joint.limits.lower == -1.0
     assert joint.limits.upper == 2.0
 
-    # 2. Continuous
+    # Continuous
     joint_obj.linkforge_joint.joint_type = "CONTINUOUS"
     joint = blender_joint_to_core(joint_obj)
     assert joint.type == JointType.CONTINUOUS
@@ -455,7 +455,7 @@ def test_blender_joint_to_core_types(scene) -> None:
 
 def test_blender_joint_to_core_advanced_props(scene) -> None:
     """Verify that safety controller and calibration are correctly synced to Core."""
-    # 1. Setup Links
+    # Setup Links
     bpy.ops.object.empty_add()
     p = bpy.context.active_object
     p.name = "p_link"
@@ -466,7 +466,7 @@ def test_blender_joint_to_core_advanced_props(scene) -> None:
     c.name = "c_link"
     c.linkforge.is_robot_link = True
 
-    # 2. Setup Joint
+    # Setup Joint
     bpy.ops.object.empty_add()
     joint_obj = bpy.context.active_object
     joint_obj.name = "advanced_j"
@@ -491,10 +491,10 @@ def test_blender_joint_to_core_advanced_props(scene) -> None:
     props.calibration_rising = 0.5
     props.use_calibration_falling = False
 
-    # 3. Convert
+    # Convert
     joint = blender_joint_to_core(joint_obj)
 
-    # 4. Verify
+    # Verify
     assert joint.safety_controller is not None
     assert joint.safety_controller.soft_lower_limit == -1.0
     assert joint.safety_controller.k_position == 100.0
@@ -514,7 +514,7 @@ def test_blender_sensor_to_core_all_types(scene) -> None:
     parent.name = "sensor_link"
     parent.linkforge.is_robot_link = True
 
-    # 1. IMU
+    # IMU
     bpy.ops.object.empty_add()
     imu_obj = bpy.context.active_object
     imu_obj.name = "imu_sensor"
@@ -531,7 +531,7 @@ def test_blender_sensor_to_core_all_types(scene) -> None:
     assert sensor.always_on is True
     assert sensor.visualize is True
 
-    # 2. Camera
+    # Camera
     bpy.ops.object.empty_add()
     cam_obj = bpy.context.active_object
     cam_obj.name = "camera_sensor"
@@ -548,7 +548,7 @@ def test_blender_sensor_to_core_all_types(scene) -> None:
     assert pytest.approx(sensor.camera_info.horizontal_fov) == 1.047
     assert sensor.camera_info.width == 800
 
-    # 3. Lidar
+    # Lidar
     bpy.ops.object.empty_add()
     lidar_obj = bpy.context.active_object
     lidar_obj.name = "lidar_sensor"
@@ -568,17 +568,17 @@ def test_detect_primitive_type_logic(scene) -> None:
     """Verify primitive detection heuristics."""
     from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
-    # 1. Cube
+    # Cube
     bpy.ops.mesh.primitive_cube_add()
     cube = bpy.context.active_object
     assert detect_primitive_type(cube) == "BOX"
 
-    # 2. Sphere (UV Sphere default)
+    # Sphere (UV Sphere default)
     bpy.ops.mesh.primitive_uv_sphere_add()
     sphere = bpy.context.active_object
     assert detect_primitive_type(sphere) == "SPHERE"
 
-    # 3. Cylinder
+    # Cylinder
     bpy.ops.mesh.primitive_cylinder_add()
     cyl = bpy.context.active_object
     # Scale it to be clearly cylindrical (tall) to avoid being ambiguous with sphere
@@ -586,7 +586,7 @@ def test_detect_primitive_type_logic(scene) -> None:
     bpy.context.view_layer.update()  # Ensure dimensions update
     assert detect_primitive_type(cyl) == "CYLINDER"
 
-    # 4. Complex Mesh (Monkey/Suzanne)
+    # Complex Mesh (Monkey/Suzanne)
     bpy.ops.mesh.primitive_monkey_add()
     monkey = bpy.context.active_object
     assert detect_primitive_type(monkey) is None
@@ -633,12 +633,12 @@ def test_get_object_geometry_decimation(tmp_path, scene) -> None:
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16)
     obj = bpy.context.active_object
 
-    # 1. Without simplify
+    # Without simplify
     g1, wm1 = get_object_geometry(
         obj, geometry_type="MESH", simplify=False, meshes_dir=tmp_path, link_name="l1"
     )
 
-    # 2. With simplify (decimate to 10%)
+    # With simplify (decimate to 10%)
     g2, wm2 = get_object_geometry(
         obj,
         geometry_type="MESH",
@@ -667,7 +667,7 @@ def test_get_object_geometry_dry_run(tmp_path, scene) -> None:
 
 def test_scene_to_robot_conversion(scene) -> None:
     """Verify that an entire Blender scene is converted to a Core Robot."""
-    # 1. Setup a minimal link structure
+    # Setup a minimal link structure
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     link_obj = bpy.context.active_object
     link_obj.name = "base_link"
@@ -675,11 +675,11 @@ def test_scene_to_robot_conversion(scene) -> None:
         link_obj.linkforge.is_robot_link = True
         link_obj.linkforge.link_name = "base_link"
 
-    # 2. Convert
+    # Convert
     # Unpack tuple: (robot, errors)
     robot, errors = scene_to_robot(bpy.context)
 
-    # 3. Verify
+    # Verify
     assert robot is not None
     assert len(robot.links) >= 1
     assert any(link.name == "base_link" for link in robot.links)
@@ -714,7 +714,7 @@ def test_blender_link_to_core_complex(scene) -> None:
     # Ensure a clean state
     bpy.ops.object.select_all(action="DESELECT")
 
-    # 1. Setup Link Empty
+    # Setup Link Empty
     bpy.ops.object.empty_add()
     link_obj = bpy.context.active_object
     link_obj.name = "base_link"
@@ -722,14 +722,14 @@ def test_blender_link_to_core_complex(scene) -> None:
         link_obj.linkforge.is_robot_link = True
         link_obj.linkforge.link_name = "base_link"
 
-    # 2. Add Visual Child
+    # Add Visual Child
     bpy.ops.mesh.primitive_cube_add(size=1.0)
     vis_obj = bpy.context.active_object
     vis_obj.name = "base_link_visual"
     vis_obj.parent = link_obj
     vis_obj.location = (1, 0, 0)
 
-    # 3. Add Collision Child
+    # Add Collision Child
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5)
     coll_obj = bpy.context.active_object
     coll_obj.name = "base_link_collision"
@@ -739,10 +739,10 @@ def test_blender_link_to_core_complex(scene) -> None:
     # Update view layer to ensure matrices are correct
     bpy.context.view_layer.update()
 
-    # 4. Convert
+    # Convert
     link = blender_link_to_core_with_origin(link_obj)
 
-    # 5. Verify
+    # Verify
     assert link is not None
     assert len(link.visuals) == 1
     assert len(link.collisions) == 1
@@ -756,13 +756,13 @@ def test_blender_link_to_core_geometry_and_material(scene) -> None:
     from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
     from linkforge.linkforge_core.models import GeometryType
 
-    # 1. Link Setup
+    # Link Setup
     bpy.ops.object.empty_add()
     link_obj = bpy.context.active_object
     link_obj.name = "material_link"
     link_obj.linkforge.is_robot_link = True
 
-    # 2. Visual with Material
+    # Visual with Material
     bpy.ops.mesh.primitive_cube_add(size=1.0)
     vis_obj = bpy.context.active_object
     vis_obj.name = "vis_cube_visual"
@@ -778,7 +778,7 @@ def test_blender_link_to_core_geometry_and_material(scene) -> None:
     bsdf.inputs["Base Color"].default_value = (1, 0, 0, 1)  # Red
     vis_obj.data.materials.append(mat)
 
-    # 3. Collision with Cylinder
+    # Collision with Cylinder
     bpy.ops.mesh.primitive_cylinder_add()
     coll_obj = bpy.context.active_object
     coll_obj.name = "coll_cyl_collision"
@@ -788,10 +788,10 @@ def test_blender_link_to_core_geometry_and_material(scene) -> None:
 
     bpy.context.view_layer.update()
 
-    # 4. Convert
+    # Convert
     link = blender_link_to_core_with_origin(link_obj)
 
-    # 5. Verify Visual
+    # Verify Visual
     assert len(link.visuals) == 1
     vis = link.visuals[0]
     assert vis.geometry.type == GeometryType.BOX
@@ -800,7 +800,7 @@ def test_blender_link_to_core_geometry_and_material(scene) -> None:
     assert pytest.approx(vis.material.color.r) == 1.0
     assert pytest.approx(vis.material.color.g) == 0.0
 
-    # 6. Verify Collision
+    # Verify Collision
     assert len(link.collisions) == 1
     coll = link.collisions[0]
     assert coll.geometry.type == GeometryType.CYLINDER
@@ -1362,7 +1362,7 @@ def test_blender_joint_advanced_cases(clean_scene, scene) -> None:
     core = blender_joint_to_core(j)
     assert core.axis.z == 1.0  # Fallback
 
-    # 1. Safety Controller
+    # Safety Controller
     j.linkforge_joint.use_safety_controller = True
     j.linkforge_joint.safety_soft_lower_limit = -1.23
     j.linkforge_joint.safety_soft_upper_limit = 1.23
@@ -1373,7 +1373,7 @@ def test_blender_joint_advanced_cases(clean_scene, scene) -> None:
     assert pytest.approx(core.safety_controller.soft_lower_limit) == -1.23
     assert pytest.approx(core.safety_controller.k_position) == 100.0
 
-    # 2. Calibration
+    # Calibration
     j.linkforge_joint.use_calibration = True
     j.linkforge_joint.use_calibration_rising = True
     j.linkforge_joint.calibration_rising = 0.55

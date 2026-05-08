@@ -12,10 +12,10 @@ def test_joint_ops_create_joint(mock_context, scene) -> None:
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
 
-    # 1. Test Poll
+    # Test Poll
     assert bpy.ops.linkforge.create_joint.poll() is True
 
-    # 2. Test Execute
+    # Test Execute
     bpy.ops.linkforge.create_joint()
     joint_obj = bpy.context.active_object
     assert "_joint" in joint_obj.name
@@ -68,7 +68,7 @@ def test_joint_ops_auto_detect(mock_context, scene) -> None:
 
 def test_joint_ops_robustness_no_links(mock_context, scene) -> None:
     """Test auto-detect and creation with no valid links."""
-    # 1. Auto-detect with no links
+    # Auto-detect with no links
     bpy.ops.object.empty_add()
     joint_obj = bpy.context.active_object
     joint_obj.linkforge_joint.is_robot_joint = True
@@ -77,7 +77,7 @@ def test_joint_ops_robustness_no_links(mock_context, scene) -> None:
     bpy.ops.linkforge.auto_detect_parent_child()
     assert joint_obj.linkforge_joint.child_link is None
 
-    # 2. Create joint on non-link object (should fail poll)
+    # Create joint on non-link object (should fail poll)
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
     bpy.ops.mesh.primitive_monkey_add()

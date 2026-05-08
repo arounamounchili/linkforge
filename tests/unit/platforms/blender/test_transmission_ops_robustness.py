@@ -107,12 +107,12 @@ def test_delete_transmission(clean_scene, scene) -> None:
 
 def test_transmission_logic_gaps(clean_scene, scene) -> None:
     """Hit remaining logic gaps in transmission_ops."""
-    # 1. Non-EMPTY object poll failure
+    # Non-EMPTY object poll failure
     bpy.ops.mesh.primitive_cube_add()
     cube = bpy.context.active_object
     assert LINKFORGE_OT_create_transmission.poll(bpy.context) is False
 
-    # 2. Selected but not joint poll failure
+    # Selected but not joint poll failure
     cube.select_set(True)
     assert LINKFORGE_OT_create_transmission.poll(bpy.context) is False
 

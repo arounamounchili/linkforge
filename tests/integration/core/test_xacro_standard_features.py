@@ -17,7 +17,7 @@ def test_xacro_standard_parities() -> None:
         config_dir.mkdir()
         urdf_dir.mkdir()
 
-        # 1. Create a nested YAML config
+        # Create a nested YAML config
         yaml_content = """
 kinematics:
   base:
@@ -33,7 +33,7 @@ kinematics:
         yaml_file = config_dir / "kinematics.yaml"
         yaml_file.write_text(yaml_content)
 
-        # 2. Create a XACRO file using dot-access and $(eval)
+        # Create a XACRO file using dot-access and $(eval)
         xacro_content = f"""<?xml version="1.0"?>
 <robot name="compat_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:arg name="use_eval" default="true"/>
@@ -67,7 +67,7 @@ kinematics:
         xacro_file = urdf_dir / "robot.xacro"
         xacro_file.write_text(xacro_content)
 
-        # 3. Resolve and verify
+        # Resolve and verify
         parser = URDFParser()
         robot = parser.parse_xacro(xacro_file)
 

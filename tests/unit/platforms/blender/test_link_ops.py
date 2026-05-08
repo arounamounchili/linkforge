@@ -292,12 +292,12 @@ def test_execute_collision_preview_no_obj(scene) -> None:
     """Test that preview update handles missing pending object."""
     from linkforge.blender.operators import link_ops
 
-    # 1. Pending object is None
+    # Pending object is None
     link_ops._preview_pending_object = None
     link_ops._preview_last_request_time = 0.0  # Reset
     assert execute_collision_preview_update() is None
 
-    # 2. Pending object exists but is not in bpy.data.objects (deleted)
+    # Pending object exists but is not in bpy.data.objects (deleted)
     obj = create_test_object("DeletedObj", None)
     link_ops._preview_pending_object = obj
     # Object is not linked to any collection, so it won't be in bpy.data.objects.
@@ -312,7 +312,7 @@ def test_execute_collision_preview_complex_scenarios(scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    # 1. No collision object found
+    # No collision object found
     obj = create_test_object("test_obj", None)
     scene.collection.objects.link(obj)
     link_ops._preview_pending_object = obj
@@ -320,7 +320,7 @@ def test_execute_collision_preview_complex_scenarios(scene) -> None:
 
     assert execute_collision_preview_update() is None
 
-    # 2. No view layer (Simulation of missing context)
+    # No view layer (Simulation of missing context)
     mesh = bpy.data.meshes.new("col_mesh")
     col = create_test_object("test_obj_collision", mesh)
     scene.collection.objects.link(col)
@@ -408,7 +408,7 @@ def test_remove_link_child_selected(scene) -> None:
 
 def test_link_ops_edge_cases(mocker, scene) -> None:
     """Hit remaining edge cases in link_ops.py."""
-    # 1. LINKFORGE_OT_generate_collision with no links
+    # LINKFORGE_OT_generate_collision with no links
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
@@ -428,7 +428,7 @@ def test_link_ops_edge_cases(mocker, scene) -> None:
         # But let's try calling it normally with the patch
         bpy.ops.linkforge.generate_collision()
 
-    # 2. LINKFORGE_OT_calculate_inertia with child selected
+    # LINKFORGE_OT_calculate_inertia with child selected
     bpy.ops.mesh.primitive_cube_add()
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
@@ -440,7 +440,7 @@ def test_link_ops_edge_cases(mocker, scene) -> None:
     bpy.ops.linkforge.calculate_inertia()
     assert link_obj.linkforge.inertia_ixx > 0
 
-    # 3. LINKFORGE_OT_add_material_slot
+    # LINKFORGE_OT_add_material_slot
     # Ensure it's active
     link_obj.select_set(True)
     bpy.context.view_layer.objects.active = link_obj
@@ -460,17 +460,17 @@ def test_link_ops_low_level_edge_cases(mocker, scene) -> None:
     bpy.ops.mesh.primitive_cube_add()
     cube = bpy.context.active_object
 
-    # 1. _create_primitive_collision with UNKNOWN type
+    # _create_primitive_collision with UNKNOWN type
     result = _create_primitive_collision(cube, "UNKNOWN", (1, 1, 1), bpy.context)
     assert result[0] is None  # Returns (None, Vector)
 
-    # 2. _merge_visual_meshes with object having NO mesh data
+    # _merge_visual_meshes with object having NO mesh data
     # Create fake link_obj too
     link_dummy = create_test_object("LinkDummy", None)
     empty = create_test_object("Empty", None)
     assert _merge_visual_meshes([empty], link_dummy, bpy.context) is None
 
-    # 3. create_collision_for_link with failed primitive creation
+    # create_collision_for_link with failed primitive creation
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
     mocker.patch(
@@ -493,20 +493,20 @@ def test_link_ops_operator_polls_and_cancellation(mocker, scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    # 1. remove_link poll failed (no active object)
+    # remove_link poll failed (no active object)
     assert bpy.ops.linkforge.remove_link.poll() is False
 
-    # 2. generate_collision poll failed (active but not a link)
+    # generate_collision poll failed (active but not a link)
     bpy.ops.mesh.primitive_cube_add()
     cube = bpy.context.active_object
     cube.select_set(True)
     bpy.context.view_layer.objects.active = cube
     assert bpy.ops.linkforge.generate_collision.poll() is False
 
-    # 3. toggle_collision_visibility poll
+    # toggle_collision_visibility poll
     assert bpy.ops.linkforge.toggle_collision_visibility.poll() is False
 
-    # 4. generate_collision_all cancellation (no scene context mocked)
+    # generate_collision_all cancellation (no scene context mocked)
     # We already tested this somewhat, but let's hit the link loop failure
     bpy.ops.linkforge.add_empty_link()
     mocker.patch(
@@ -700,7 +700,7 @@ def test_link_ops_material_slot_logic_variants(scene) -> None:
     scene.collection.objects.link(link_obj)
     link_obj.linkforge.is_robot_link = True
 
-    # 1. Error: No visual mesh found
+    # Error: No visual mesh found
     bpy.context.view_layer.objects.active = link_obj
     link_obj.select_set(True)
     if bpy.ops.linkforge.add_material_slot.poll():
@@ -709,7 +709,7 @@ def test_link_ops_material_slot_logic_variants(scene) -> None:
         with contextlib.suppress(RuntimeError):
             bpy.ops.linkforge.add_material_slot()
 
-    # 2. Success: Visual mesh selected
+    # Success: Visual mesh selected
     mesh = bpy.data.meshes.new("cube_mesh")
     visual_obj = create_test_object("VisualMesh_direct_visual", mesh)
     scene.collection.objects.link(visual_obj)
@@ -775,14 +775,14 @@ def test_link_ops_toggle_visibility_nested(scene) -> None:
 
 def test_link_ops_poll_and_execute_failures(scene) -> None:
     """Hit error return paths and poll failures."""
-    # 1. create_link_from_mesh poll failures
+    # create_link_from_mesh poll failures
     not_a_mesh = create_test_object("NotAMesh", None)
     scene.collection.objects.link(not_a_mesh)
     bpy.context.view_layer.objects.active = not_a_mesh
     not_a_mesh.select_set(True)
     assert bpy.ops.linkforge.create_link_from_mesh.poll() is False
 
-    # 2. add_material_slot direct mesh with NO parent link
+    # add_material_slot direct mesh with NO parent link
     mesh = bpy.data.meshes.new("orph_mesh")
     orph_obj = create_test_object("Orphan_visual", mesh)
     scene.collection.objects.link(orph_obj)
@@ -810,13 +810,13 @@ def test_generate_collision_empty_frame_error(scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    # 1. Create an empty link frame (no visual child)
+    # Create an empty link frame (no visual child)
     bpy.ops.linkforge.add_empty_link()
     link_obj = bpy.context.active_object
     assert link_obj.linkforge.is_robot_link is True
     assert len(link_obj.children) == 0
 
-    # 2. Run the operator (should raise RuntimeError with our specific message)
+    # Run the operator (should raise RuntimeError with our specific message)
     with pytest.raises(RuntimeError, match="No visual meshes found"):
         bpy.ops.linkforge.generate_collision()
 
@@ -852,7 +852,7 @@ def test_update_collision_quality_realtime(scene) -> None:
     scene.collection.objects.link(collision_obj)
     collision_obj.parent = link_obj
 
-    # 1. Test Fallback (No modifier, type MESH -> Should add modifier)
+    # Test Fallback (No modifier, type MESH -> Should add modifier)
     assert len(collision_obj.modifiers) == 0
     update_collision_quality_realtime(link_obj, collision_obj)
 
@@ -860,12 +860,12 @@ def test_update_collision_quality_realtime(scene) -> None:
     assert decimate_mod is not None
     assert decimate_mod.ratio == 0.5
 
-    # 2. Test Fast Path (Update existing modifier)
+    # Test Fast Path (Update existing modifier)
     link_obj.linkforge.collision_quality = 25.0
     update_collision_quality_realtime(link_obj, collision_obj)
     assert decimate_mod.ratio == 0.25
 
-    # 3. Test Fallback (Non-mesh -> Should schedule full update)
+    # Test Fallback (Non-mesh -> Should schedule full update)
     # Use an Empty object as the collision object (type is EMPTY)
     empty_col = create_test_object("Empty_collision", None)
     scene.collection.objects.link(empty_col)

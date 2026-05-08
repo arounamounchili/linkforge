@@ -11,7 +11,7 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     scene = bpy.context.scene or bpy.data.scenes[0]
     props: Any = getattr(scene, "linkforge")
 
-    # 1. Create a simple robot structure
+    # Create a simple robot structure
     bpy.ops.mesh.primitive_cube_add()
     base_obj = bpy.context.active_object
     assert base_obj is not None
@@ -40,7 +40,7 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     joint_lf.parent_link = base_obj
     joint_lf.child_link = sensor_obj
 
-    # 2. Configure ros2_control
+    # Configure ros2_control
     props.use_ros2_control = True
     props.ros2_control_name = "MySensorSystem"
     props.ros2_control_type = "sensor"
@@ -65,7 +65,7 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     jp.name = "encoder_res"
     jp.value = "4096"
 
-    # 3. Export to URDF (using the adapter to get the Robot model)
+    # Export to URDF (using the adapter to get the Robot model)
     from pathlib import Path
 
     from linkforge.blender.adapters.blender_to_core import scene_to_robot
@@ -76,7 +76,7 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
 
     exported_urdf = URDFGenerator().generate(robot)
 
-    # 4. Verify URDF Content
+    # Verify URDF Content
     # We use the parser to verify the structure easily
     parsed_robot = URDFParser().parse_string(exported_urdf)
     assert len(parsed_robot.ros2_controls) == 1
@@ -115,7 +115,7 @@ def test_ros2_control_sensor_and_parameters_export(clean_scene) -> None:
     assert joint_param_xml is not None
     assert joint_param_xml.text == "4096"
 
-    # 5. ROUNDTRIP VERIFICATION: Import back to Blender and check properties
+    # ROUNDTRIP VERIFICATION: Import back to Blender and check properties
     # Clear current scene properties to simulate fresh import
     props.ros2_control_parameters.clear()
     props.ros2_control_joints.clear()

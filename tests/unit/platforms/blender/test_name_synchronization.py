@@ -9,21 +9,21 @@ def test_link_source_name_persistence(scene) -> None:
     bpy.ops.object.empty_add()
     obj1 = bpy.context.active_object
 
-    # 1. Set name
+    # Set name
     obj1.linkforge.is_robot_link = True
     obj1.linkforge.link_name = "base_link"
     assert obj1.name == "base_link"
     assert obj1.linkforge.link_name == "base_link"
     assert obj1.linkforge.source_name_stored == "base_link"
 
-    # 2. Simulate Blender renaming (e.g. by manual rename or suffixing)
+    # Simulate Blender renaming (e.g. by manual rename or suffixing)
     obj1.name = "chassis"
     bpy.context.view_layer.update()
 
     # Getter should now return the SYNCED name
     assert obj1.linkforge.link_name == "chassis"
 
-    # 3. Conflict resolution simulation
+    # Conflict resolution simulation
     bpy.ops.object.empty_add()
     obj2 = bpy.context.active_object
     # This should be renamed by Blender to base_link.001 if base_link existed,
@@ -41,13 +41,13 @@ def test_joint_source_name_persistence(scene) -> None:
     obj = bpy.context.active_object
     obj.linkforge_joint.is_robot_joint = True
 
-    # 1. Set name
+    # Set name
     obj.linkforge_joint.joint_name = "elbow_joint"
     assert obj.name == "elbow_joint"
     assert obj.linkforge_joint.joint_name == "elbow_joint"
     assert obj.linkforge_joint.source_name_stored == "elbow_joint"
 
-    # 2. Simulate Blender suffixing
+    # Simulate Blender suffixing
     obj.name = "elbow_joint.001"
     bpy.context.view_layer.update()
 

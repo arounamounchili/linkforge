@@ -12,10 +12,10 @@ def test_transmission_ops_create_transmission(scene) -> None:
     joint_obj = bpy.ops.linkforge.create_joint()
     joint_obj = bpy.context.active_object
 
-    # 1. Test Poll (should pass with joint selected)
+    # Test Poll (should pass with joint selected)
     assert bpy.ops.linkforge.create_transmission.poll() is True
 
-    # 2. Test alignment logic (X axis)
+    # Test alignment logic (X axis)
     joint_obj.linkforge_joint.axis = "X"
     bpy.ops.linkforge.create_transmission()
     trans_x = bpy.context.active_object
@@ -27,14 +27,14 @@ def test_transmission_ops_create_transmission(scene) -> None:
     joint_obj.select_set(True)
     bpy.context.view_layer.objects.active = joint_obj
 
-    # 4. Test alignment logic (Y axis)
+    # Test alignment logic (Y axis)
     joint_obj.linkforge_joint.axis = "Y"
     bpy.ops.object.select_all(action="DESELECT")
     joint_obj.select_set(True)
     bpy.context.view_layer.objects.active = joint_obj
     bpy.ops.linkforge.create_transmission()
 
-    # 5. Test alignment logic (Z axis)
+    # Test alignment logic (Z axis)
     joint_obj.linkforge_joint.axis = "Z"
     bpy.ops.object.select_all(action="DESELECT")
     joint_obj.select_set(True)
@@ -44,7 +44,7 @@ def test_transmission_ops_create_transmission(scene) -> None:
     trans_z = bpy.context.active_object
     assert trans_z.parent == joint_obj
 
-    # 6. Test no axis alignment (axis set to CUSTOM with zero vector)
+    # Test no axis alignment (axis set to CUSTOM with zero vector)
     # Reselect joint
     bpy.ops.object.select_all(action="DESELECT")
     joint_obj.select_set(True)
@@ -69,10 +69,10 @@ def test_transmission_ops_delete_transmission(scene) -> None:
     trans_obj = bpy.context.active_object
     trans_name = trans_obj.name
 
-    # 1. Test Poll
+    # Test Poll
     assert bpy.ops.linkforge.delete_transmission.poll() is True
 
-    # 2. Test Execute
+    # Test Execute
     bpy.ops.linkforge.delete_transmission()
     assert trans_name not in bpy.data.objects
 
@@ -82,10 +82,10 @@ def test_transmission_ops_poll_failures(scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    # 1. No active object
+    # No active object
     assert bpy.ops.linkforge.create_transmission.poll() is False
 
-    # 2. Active but not a joint
+    # Active but not a joint
     bpy.ops.mesh.primitive_cube_add()
     assert bpy.ops.linkforge.create_transmission.poll() is False
 

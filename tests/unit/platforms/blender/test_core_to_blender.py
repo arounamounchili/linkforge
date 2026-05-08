@@ -87,7 +87,7 @@ def test_create_link_object_zero_mass(scene) -> None:
 
 def test_create_link_object_primitives(scene) -> None:
     """Test creating a Link object with multiple primitive visuals and collisions."""
-    # 1. Setup Core Link
+    # Setup Core Link
     box_geom = Box(size=Vector3(1, 1, 1))
     sphere_geom = Sphere(radius=0.5)
 
@@ -101,14 +101,14 @@ def test_create_link_object_primitives(scene) -> None:
         inertial=Inertial(mass=1.0),
     )
 
-    # 2. Build in Blender
+    # Build in Blender
     collection = bpy.data.collections.new("TestCol")
     scene.collection.children.link(collection)
 
     robot = Robot(name="test")
     obj = create_link_object(link, robot, Path("/tmp"), collection=collection)
 
-    # 3. Verify
+    # Verify
     assert obj is not None
     assert obj.name == "test_link_p"
 
@@ -119,7 +119,7 @@ def test_create_link_object_primitives(scene) -> None:
 
 def test_create_joint_object_fixed(scene) -> None:
     """Test creation of a Joint object in Blender."""
-    # 1. Setup Link objects
+    # Setup Link objects
     bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
     parent_obj = bpy.context.active_object
     parent_obj.name = "parent_l"
@@ -130,7 +130,7 @@ def test_create_joint_object_fixed(scene) -> None:
 
     link_objects = {"parent_l": parent_obj, "child_l": child_obj}
 
-    # 2. Setup Core Joint
+    # Setup Core Joint
     joint = Joint(
         name="test_j",
         type=JointType.FIXED,
@@ -139,10 +139,10 @@ def test_create_joint_object_fixed(scene) -> None:
         origin=Transform(xyz=Vector3(0.5, 0, 0)),
     )
 
-    # 3. Build in Blender
+    # Build in Blender
     joint_obj = create_joint_object(joint, link_objects)
 
-    # 4. Verify
+    # Verify
     assert joint_obj is not None
     assert joint_obj.parent == parent_obj
     assert pytest.approx(joint_obj.location.x) == 0.5
@@ -150,7 +150,7 @@ def test_create_joint_object_fixed(scene) -> None:
 
 def test_create_joint_object_complex(scene) -> None:
     """Test creation of a revolute Joint with limits and axis in Blender."""
-    # 1. Setup Links
+    # Setup Links
     bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
     parent_obj = bpy.context.active_object
     parent_obj.name = "p_link"
@@ -161,7 +161,7 @@ def test_create_joint_object_complex(scene) -> None:
 
     link_objects = {"p_link": parent_obj, "c_link": child_obj}
 
-    # 2. Setup Core Joint
+    # Setup Core Joint
     joint = Joint(
         name="rev_joint",
         type=JointType.REVOLUTE,
@@ -172,10 +172,10 @@ def test_create_joint_object_complex(scene) -> None:
         dynamics=JointDynamics(damping=0.1, friction=0.05),
     )
 
-    # 3. Build
+    # Build
     joint_obj = create_joint_object(joint, link_objects)
 
-    # 4. Verify properties
+    # Verify properties
     assert joint_obj is not None
     props = joint_obj.linkforge_joint
     assert props.joint_type == "REVOLUTE"
@@ -191,7 +191,7 @@ def test_create_joint_object_advanced_props(scene) -> None:
     """Verify that safety controller and calibration are correctly synced to Blender properties."""
     from linkforge.linkforge_core.models import JointCalibration, JointSafetyController
 
-    # 1. Setup Links
+    # Setup Links
     bpy.ops.object.empty_add()
     p_obj = bpy.context.active_object
     p_obj.name = "p_link_adv"
@@ -200,7 +200,7 @@ def test_create_joint_object_advanced_props(scene) -> None:
     c_obj.name = "c_link_adv"
     link_objects = {"p_link_adv": p_obj, "c_link_adv": c_obj}
 
-    # 2. Setup Core Joint
+    # Setup Core Joint
     safety = JointSafetyController(
         soft_lower_limit=-1.0, soft_upper_limit=1.0, k_position=100.0, k_velocity=10.0
     )
@@ -216,10 +216,10 @@ def test_create_joint_object_advanced_props(scene) -> None:
         calibration=calib,
     )
 
-    # 3. Build in Blender
+    # Build in Blender
     joint_obj = create_joint_object(joint, link_objects)
 
-    # 4. Verify properties
+    # Verify properties
     props = joint_obj.linkforge_joint
     assert props.use_safety_controller is True
     assert props.safety_soft_lower_limit == -1.0
@@ -233,7 +233,7 @@ def test_create_joint_object_advanced_props(scene) -> None:
 
 def test_import_robot_to_scene_full(scene) -> None:
     """Test the full robot import entry point with a simple chain."""
-    # 1. Create Robot Model
+    # Create Robot Model
     l1 = Link(name="base_link")
     l2 = Link(name="tool_link")
     j1 = Joint(name="j1", type=JointType.FIXED, parent="base_link", child="tool_link")
@@ -241,10 +241,10 @@ def test_import_robot_to_scene_full(scene) -> None:
     # Correct Robot instantiation using initial_links/initial_joints
     robot = Robot(name="mini_robot", initial_links=[l1, l2], initial_joints=[j1])
 
-    # 2. Import
+    # Import
     result = import_robot_to_scene(robot, Path("dummy.urdf"), bpy.context)
 
-    # 3. Verify
+    # Verify
     assert result is True
     assert "base_link" in bpy.data.objects
     assert "tool_link" in bpy.data.objects
@@ -348,13 +348,13 @@ def test_import_robot_with_ros2_control_and_gazebo(scene) -> None:
 
 def test_create_sensor_object_lidar(scene) -> None:
     """Test creation of a LIDAR sensor in Blender."""
-    # 1. Setup parent link object
+    # Setup parent link object
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     link_obj = bpy.context.active_object
     link_obj.name = "base_link"
     link_objects = {"base_link": link_obj}
 
-    # 2. Setup Sensor Model
+    # Setup Sensor Model
     sensor = Sensor(
         name="top_lidar",
         type=SensorType.LIDAR,
@@ -363,10 +363,10 @@ def test_create_sensor_object_lidar(scene) -> None:
         origin=Transform(xyz=Vector3(0, 0, 0.5)),
     )
 
-    # 3. Build
+    # Build
     sensor_obj = create_sensor_object(sensor, link_objects)
 
-    # 4. Verify
+    # Verify
     assert sensor_obj is not None
     assert sensor_obj.parent == link_obj
     assert pytest.approx(sensor_obj.location.z) == 0.5
@@ -383,17 +383,17 @@ def test_create_sensor_object_imu_gps_camera(scene) -> None:
     link_obj.linkforge.is_robot_link = True
     link_objects = {"base_link": link_obj}
 
-    # 1. IMU
+    # IMU
     imu = Sensor(name="imu_sensor", type=SensorType.IMU, link_name="base_link", imu_info=IMUInfo())
     obj_imu = create_sensor_object(imu, link_objects)
     assert obj_imu.linkforge_sensor.sensor_type == "IMU"
 
-    # 2. GPS
+    # GPS
     gps = Sensor(name="gps_sensor", type=SensorType.GPS, link_name="base_link", gps_info=GPSInfo())
     obj_gps = create_sensor_object(gps, link_objects)
     assert obj_gps.linkforge_sensor.sensor_type == "GPS"
 
-    # 3. Camera
+    # Camera
     cam = Sensor(
         name="cam_sensor", type=SensorType.CAMERA, link_name="base_link", camera_info=CameraInfo()
     )
@@ -440,7 +440,7 @@ def test_import_robot_with_mimic(scene) -> None:
 
 def test_import_mesh_file_stl(tmp_path, scene) -> None:
     """Test importing a real STL mesh file."""
-    # 1. Create a dummy STL file using Blender
+    # Create a dummy STL file using Blender
     bpy.ops.mesh.primitive_cube_add()
     stl_path = tmp_path / "test.stl"
     # In modern Blender, stl_export might be in wm or export_mesh
@@ -452,10 +452,10 @@ def test_import_mesh_file_stl(tmp_path, scene) -> None:
 
     bpy.ops.object.delete()  # Cleanup cube
 
-    # 2. Import it
+    # Import it
     obj = import_mesh_file(stl_path, "imported_stl")
 
-    # 3. Verify
+    # Verify
     assert obj is not None
     assert obj.name == "imported_stl"
     assert obj.type == "MESH"
@@ -502,14 +502,14 @@ def test_create_joint_object_continuous_floating(scene) -> None:
     c_obj.name = "c_c"
     link_objects = {"p_c": p_obj, "c_c": c_obj}
 
-    # 1. Continuous
+    # Continuous
     j_cont = Joint(
         name="cont", type=JointType.CONTINUOUS, parent="p_c", child="c_c", axis=Vector3(1, 0, 0)
     )
     obj_cont = create_joint_object(j_cont, link_objects)
     assert obj_cont.linkforge_joint.joint_type == "CONTINUOUS"
 
-    # 2. Floating
+    # Floating
     j_float = Joint(name="float_j", type=JointType.FLOATING, parent="p_c", child="c_c")
     obj_float = create_joint_object(j_float, link_objects)
     assert obj_float.linkforge_joint.joint_type == "FLOATING"
@@ -517,7 +517,7 @@ def test_create_joint_object_continuous_floating(scene) -> None:
 
 def test_create_link_object_with_mesh_visual(tmp_path, scene) -> None:
     """Test creating a link that uses a mesh file for visual."""
-    # 1. Create dummy STL
+    # Create dummy STL
     bpy.ops.mesh.primitive_uv_sphere_add()
     mesh_path = tmp_path / "v.stl"
     if hasattr(bpy.ops.wm, "stl_export"):
@@ -526,16 +526,16 @@ def test_create_link_object_with_mesh_visual(tmp_path, scene) -> None:
         bpy.ops.export_mesh.stl(filepath=str(mesh_path))
     bpy.ops.object.delete()
 
-    # 2. Model
+    # Model
     mesh_geom = Mesh(resource="v.stl")
     visual = Visual(geometry=mesh_geom)
     link = Link(name="mesh_link", initial_visuals=[visual])
 
-    # 3. Build (providing tmp_path as source_directory)
+    # Build (providing tmp_path as source_directory)
     robot = Robot(name="test")
     obj = create_link_object(link, robot, tmp_path)
 
-    # 4. Verify
+    # Verify
     assert obj is not None
     visual_obj = next(c for c in obj.children if "_visual" in c.name)
     assert visual_obj.type == "MESH"
@@ -979,7 +979,7 @@ def test_create_joint_object_mimic_logic(scene) -> None:
 
 def test_sensor_noise_properties(clean_scene, scene) -> None:
     """Verify sensor noise property mapping for LIDAR, IMU, and GPS."""
-    # 1. LIDAR with noise
+    # LIDAR with noise
     lidar = Sensor(
         name="Lidar",
         type=SensorType.LIDAR,
@@ -989,7 +989,7 @@ def test_sensor_noise_properties(clean_scene, scene) -> None:
         ),
     )
 
-    # 2. IMU with noise
+    # IMU with noise
     imu = Sensor(
         name="IMU",
         type=SensorType.IMU,
@@ -999,7 +999,7 @@ def test_sensor_noise_properties(clean_scene, scene) -> None:
         ),
     )
 
-    # 3. GPS with noise
+    # GPS with noise
     gps = Sensor(
         name="GPS",
         type=SensorType.GPS,

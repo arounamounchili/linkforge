@@ -5,7 +5,7 @@ from tests.core_test_utils import assert_robots_equal, perform_urdf_roundtrip
 
 
 def test_urdf_roundtrip():
-    # 1. Build a complex robot
+    # Build a complex robot
     builder = RobotBuilder("test_robot")
     builder.link("base_link").visual(box(1, 1, 1)).collision().mass(1.0).root()
     builder.link("link1", parent="base_link").visual(cylinder(0.1, 0.5)).collision().mass(
@@ -16,10 +16,10 @@ def test_urdf_roundtrip():
 
     robot = builder.build()
 
-    # 2. Roundtrip
+    # Roundtrip
     robot_parsed = perform_urdf_roundtrip(robot)
 
-    # 3. Verify equality
+    # Verify equality
     assert_robots_equal(robot, robot_parsed)
 
     # Check specific joint properties (extra verification)
@@ -37,7 +37,7 @@ def test_srdf_roundtrip():
     from linkforge_core.generators.srdf_generator import SRDFGenerator
     from linkforge_core.parsers.srdf_parser import SRDFParser
 
-    # 1. Build a robot with semantic description
+    # Build a robot with semantic description
     builder = RobotBuilder("test_robot")
     builder.link("base_link").visual(box(1, 1, 1)).collision().mass(1.0).root()
     builder.link("link1", parent="base_link").visual(cylinder(0.1, 0.5)).collision().mass(
@@ -61,15 +61,15 @@ def test_srdf_roundtrip():
 
     robot = builder.build()
 
-    # 2. Generate SRDF
+    # Generate SRDF
     generator = SRDFGenerator(pretty_print=True)
     srdf_str = generator.generate(robot)
 
-    # 3. Parse SRDF back
+    # Parse SRDF back
     parser = SRDFParser()
     semantic_parsed = parser.parse_string(srdf_str)
 
-    # 4. Verify equality
+    # Verify equality
     assert len(semantic_parsed.groups) == 2
     assert len(semantic_parsed.virtual_joints) == 1
     assert len(semantic_parsed.enabled_collisions) == 1

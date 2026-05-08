@@ -665,17 +665,17 @@ class TestURDFParser:
     def test_xacro_detection_detailed(self, parser, tmp_path) -> None:
         """Test various XACRO artifacts triggering detection."""
 
-        # 1. Attribute substitution
+        # Attribute substitution
         with pytest.raises(XacroDetectedError, match="XACRO file detected"):
             parser.parse_string('<robot name="${name}"/>')
 
-        # 2. Xacro namespace in tag
+        # Xacro namespace in tag
         with pytest.raises(XacroDetectedError, match="XACRO file detected"):
             parser.parse_string(
                 '<robot xmlns:xacro="http://ros.org/wiki/xacro"><xacro:macro/></robot>'
             )
 
-        # 3. File content check
+        # File content check
         xacro_file = tmp_path / "test.urdf"
         xacro_file.write_text('<robot xmlns:xacro="http://..."/>')
 
@@ -684,7 +684,7 @@ class TestURDFParser:
 
     def test_invalid_values_and_defaults(self) -> None:
         """Test negative values and missing defaults logic."""
-        # 1. Negative inertia
+        # Negative inertia
         xml = """
         <robot name="bad_inertia">
             <link name="base">
@@ -753,11 +753,11 @@ class TestURDFParser:
 
     def test_security_exceptions(self, parser, tmp_path) -> None:
         """Test security exception re-raising."""
-        # 1. Package URI validation - Parse geometry swallows RobotModelError and returns None
+        # Package URI validation - Parse geometry swallows RobotModelError and returns None
         xml = '<geometry><mesh filename="package://../traversal"/></geometry>'
         assert parser._parse_geometry_element(ET.fromstring(xml), base_directory=tmp_path) is None
 
-        # 2. File URI validation - Parse geometry swallows RobotModelError and returns None
+        # File URI validation - Parse geometry swallows RobotModelError and returns None
         xml2 = '<geometry><mesh filename="file:///etc/passwd"/></geometry>'
         assert parser._parse_geometry_element(ET.fromstring(xml2), base_directory=tmp_path) is None
 
@@ -786,7 +786,7 @@ class TestURDFParser:
 
     def test_coverage_edge_cases(self, parser) -> None:
         """Test remaining edge cases for 100% coverage."""
-        # 1. Parse Origin with values
+        # Parse Origin with values
         xml = '<origin xyz="1 2 3" rpy="0.1 0.2 0.3"/>'
         origin = parser._parse_origin_element(ET.fromstring(xml))
         assert origin.xyz.x == 1.0
@@ -858,7 +858,7 @@ class TestURDFParser:
         assert isinstance(geom, Mesh)
         assert geom.scale.x == -1.0
 
-        # 3. Material Errors
+        # Material Errors
         # Invalid RGBA length
         xml = '<material name="bad"><color rgba="1 1"/></material>'
         assert parser._parse_material_element(ET.fromstring(xml), {}) is None
@@ -870,29 +870,29 @@ class TestURDFParser:
         xml = '<material name="empty"/>'
         assert parser._parse_material_element(ET.fromstring(xml), {}) is None
 
-        # 4. Transmission Errors
+        # Transmission Errors
         # Invalid mechanicalReduction
         xml = '<joint name="j1"><mechanicalReduction>not_number</mechanicalReduction></joint>'
         # parse_float raises RobotMathError for non-numeric strings
         with pytest.raises(RobotModelError, match="Invalid float format 'not_number'"):
             parser._parse_transmission_component(ET.fromstring(xml), "joint")
 
-        # 5. Gazebo Sensor missing reference
+        # Gazebo Sensor missing reference
         xml = '<gazebo><sensor name="s" type="camera"/></gazebo>'  # No reference attr
         assert parser._parse_sensor_from_gazebo(ET.fromstring(xml)) is None
 
-        # 6. Parse String errors
+        # Parse String errors
         parser = URDFParser()
         with pytest.raises(RobotParserError, match="Unexpected error in URDF XML"):
             parser.parse_string("<robot>unclosed tags")
 
-        # 7. Joint with explicit Axis
+        # Joint with explicit Axis
         xml = '<joint name="j1" type="continuous"><parent link="p"/><child link="c"/><axis xyz="0 1 0"/></joint>'
         joint = parser._parse_joint(ET.fromstring(xml))
         assert joint.axis is not None
         assert joint.axis.y == 1.0
 
-        # 8. Gazebo Plugin parsing
+        # Gazebo Plugin parsing
         xml = """
         <plugin name="p" filename="lib.so">
             <param>value</param>
@@ -905,7 +905,7 @@ class TestURDFParser:
         assert plugin.raw_xml is not None
         assert "<param>value</param>" in plugin.raw_xml
 
-        # 9. ROS2 Control misc parameters
+        # ROS2 Control misc parameters
         xml = """
         <ros2_control name="c" type="system">
             <hardware><plugin>H</plugin></hardware>

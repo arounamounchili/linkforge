@@ -6,13 +6,13 @@ def test_full_robot_build_and_export():
     """Integration test: Build a complex robot and verify its components."""
     builder = RobotBuilder("complex_bot")
 
-    # 1. Setup materials
+    # Setup materials
     builder.material("red", color=(1, 0, 0, 1))
 
-    # 2. Setup control
+    # Setup control
     builder.ros2_control("arm_control", "fake_hw/RobotSystem")
 
-    # 3. Build tree
+    # Build tree
     (
         builder.link("base")
         .visual(box(0.5, 0.5, 0.2), material="red")
@@ -31,14 +31,14 @@ def test_full_robot_build_and_export():
         .commit()
     )
 
-    # 3. Add Semantic info
+    # Add Semantic info
     builder.semantic.group("arm_group", links=["base", "arm_1"], joints=["base_to_arm_1"])
     builder.semantic.end_effector("my_hand", group="arm_group", parent_link="hand")
     builder.semantic.virtual_joint("world_fix", child_link="base")
 
     robot = builder.build()
 
-    # 4. Verify IR Integrity
+    # Verify IR Integrity
     assert robot.name == "complex_bot"
     assert len(robot.links) == 3
     assert len(robot.joints) == 2
@@ -46,14 +46,14 @@ def test_full_robot_build_and_export():
     assert len(robot._ros2_controls) == 1
     assert len(robot.semantic.groups) == 1
 
-    # 5. Verify Physics
+    # Verify Physics
     arm = robot.link("arm_1")
     assert arm.inertial is not None
     assert arm.inertial.mass == 1.0
     # Cylinder inertia should be non-zero
     assert arm.inertial.inertia.ixx > 0
 
-    # 6. Verify Export (Pseudo-integration)
+    # Verify Export (Pseudo-integration)
     # Since we are in core, we test if the model is ready for export
     assert robot.joint("base_to_arm_1").type == JointType.REVOLUTE
     assert robot.joint("arm_1_to_hand").type == JointType.FIXED

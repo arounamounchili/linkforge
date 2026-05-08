@@ -18,13 +18,13 @@ def test_builder_prepare_tasks(scene) -> None:
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
 
     # Expected tasks:
-    # 1. setup_scene
-    # 2. create_collection
-    # 3. create_link (base_link)
-    # 4. create_link (link1)
-    # 5. create_joint (joint1)
-    # 6. resolve_mimics
-    # 7. finalize
+    # setup_scene
+    # create_collection
+    # create_link (base_link)
+    # create_link (link1)
+    # create_joint (joint1)
+    # resolve_mimics
+    # finalize
 
     task_types = [t[0] for t in builder.tasks]
     assert "setup_scene" in task_types

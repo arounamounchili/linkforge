@@ -368,7 +368,7 @@ class TestXACROGenerator:
         robot = Robot(name="r")
         robot.add_link(Link(name="base"))
 
-        # 1. Properties only
+        # Properties only
         gen = XACROGenerator(split_files=True, extract_dimensions=True, generate_macros=False)
         # Add repeated geometry to force property
         robot.links[0].add_visual(Visual(geometry=Box(size=Vector3(1, 1, 1))))
@@ -863,9 +863,9 @@ class TestXACROGeneratorEdgeCoverage:
         """Verify the prefix finder handles cases with no clear underscore separator."""
         gen = XACROGenerator()
         # _find_common_prefix with mismatching lengths and partial matches
-        # 1. Underscore suffix match (most common)
+        # Underscore suffix match (most common)
         assert gen._find_common_prefix(["fl_wheel", "fr_wheel"]) == "wheel"
-        # 2. Fallback to character prefix (no common underscore suffix)
+        # Fallback to character prefix (no common underscore suffix)
         assert gen._find_common_prefix(["link1", "link2"]) == "link"
         assert gen._find_common_prefix(["a", "abc"]) == "a"
         assert gen._find_common_prefix(["abc", "a"]) == "a"
@@ -946,13 +946,13 @@ class TestXACROGeneratorEdgeCoverage:
         import tempfile
         from pathlib import Path
 
-        # 1. use_ros2_control = False (disable control generation)
+        # use_ros2_control = False (disable control generation)
         robot = Robot(name="r")
         robot.add_link(Link(name="l"))
         gen = XACROGenerator(use_ros2_control=False)
         assert "<ros2_control" not in gen.generate(robot)
 
-        # 2. Split files with empty gazebo tag (verify filtering logic)
+        # Split files with empty gazebo tag (verify filtering logic)
         robot2 = Robot(name="r2")
         robot2.add_link(Link(name="base"))
         # Gazebo element with no plugins
@@ -966,7 +966,7 @@ class TestXACROGeneratorEdgeCoverage:
             content = file_path.read_text()
             assert "<gazebo" in content
 
-        # 3. Joint limit variations (lower=None, upper=None) and geometry signatures
+        # Joint limit variations (lower=None, upper=None) and geometry signatures
         robot3 = Robot(name="r3")
         robot3.add_link(Link(name="base"))
         # Cylinder and Sphere visuals AND collisions

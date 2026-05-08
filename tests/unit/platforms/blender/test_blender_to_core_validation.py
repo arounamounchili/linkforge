@@ -65,7 +65,7 @@ def test_scene_to_robot_non_strict_errors(mock_context, scene) -> None:
 
 def test_detect_primitive_type_robustness(scene) -> None:
     """Test detect_primitive_type with complex/invalid mesh edge cases."""
-    # 1. Non-quad box
+    # Non-quad box
     m = bpy.data.meshes.new("NonQuadBox")
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
@@ -75,14 +75,14 @@ def test_detect_primitive_type_robustness(scene) -> None:
     o = create_test_object("NonQuadBox", m, scene)
     assert detect_primitive_type(o) is None
 
-    # 2. Distorted Sphere
+    # Distorted Sphere
     bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0)
     sphere = bpy.context.active_object
     sphere.dimensions = (1.0, 1.0, 5.0)
     bpy.context.view_layer.update()
     assert detect_primitive_type(sphere) is None
 
-    # 3. None/Empty
+    # None/Empty
     assert detect_primitive_type(None) is None
     assert detect_primitive_type(create_test_object("Empty", None)) is None
 
@@ -100,7 +100,7 @@ def test_joint_to_core_edge_cases(scene) -> None:
     props.parent_link = p
     props.child_link = c
 
-    # 1. Zero Custom Axis -> Fallback to Z
+    # Zero Custom Axis -> Fallback to Z
     props.axis = "CUSTOM"
     props.custom_axis_x = 0.0
     props.custom_axis_y = 0.0
@@ -108,7 +108,7 @@ def test_joint_to_core_edge_cases(scene) -> None:
     core = blender_joint_to_core(j)
     assert core.axis.z == 1.0
 
-    # 2. Continuous with limits (strips range, keeps effort/vel)
+    # Continuous with limits (strips range, keeps effort/vel)
     props.joint_type = "CONTINUOUS"
     props.use_limits = True
     props.limit_effort = 100.0
@@ -122,7 +122,7 @@ def test_ros2_control_conversion_logic(scene) -> None:
     """Verify ROS2 control type-specific stripping and defaults."""
     scene.linkforge.ros2_control_name = "test"
 
-    # 1. Sensor type strips command interfaces
+    # Sensor type strips command interfaces
     scene.linkforge.ros2_control_type = "sensor"
     item = scene.linkforge.ros2_control_joints.add()
     item.name = "joint1"
@@ -133,7 +133,7 @@ def test_ros2_control_conversion_logic(scene) -> None:
     assert core.type == "sensor"
     assert len(core.joints[0].command_interfaces) == 0
 
-    # 2. Actuator type limited to one joint
+    # Actuator type limited to one joint
     scene.linkforge.ros2_control_type = "actuator"
     scene.linkforge.ros2_control_joints.add().name = "joint2"
     with mock.patch("linkforge.blender.adapters.blender_to_core.logger") as mock_log:
@@ -167,7 +167,7 @@ def test_sensor_attachment_logic(mock_context, scene) -> None:
     link.linkforge.is_robot_link = True
     link.matrix_world = Matrix.Translation((1, 1, 1))
 
-    # 1. Valid attachment with origin offset (tested via scene_to_robot)
+    # Valid attachment with origin offset (tested via scene_to_robot)
     s = create_test_object("Camera", None, scene)
     s.linkforge_sensor.is_robot_sensor = True
     s.linkforge_sensor.attached_link = link
@@ -176,7 +176,7 @@ def test_sensor_attachment_logic(mock_context, scene) -> None:
     robot, _ = scene_to_robot(mock_context)
     assert robot.sensors[0].origin.xyz == Vector3(1.0, 1.0, 1.0)
 
-    # 2. Missing attachment error
+    # Missing attachment error
     s.linkforge_sensor.attached_link = None
     with pytest.raises(RobotValidationError, match="not attached to any link"):
         blender_sensor_to_core(s)

@@ -3,7 +3,7 @@ import bpy
 
 def test_operator_empty_xacro_naming(tmp_path) -> None:
     """Test that the Blender operator uses the filename as fallback and reports no links."""
-    # 1. Create a macro-only XACRO file
+    # Create a macro-only XACRO file
     xacro_content = """<?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
     <xacro:macro name="test_macro">
@@ -14,7 +14,7 @@ def test_operator_empty_xacro_naming(tmp_path) -> None:
     xacro_file = tmp_path / "my_robot_model.xacro"
     xacro_file.write_text(xacro_content)
 
-    # 2. Call the operator and capture the builder
+    # Call the operator and capture the builder
     # We can't easily capture the builder from the operator call,
     # so we'll instantiate the builder manually to test the naming logic in the Blender context.
     from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
@@ -27,20 +27,20 @@ def test_operator_empty_xacro_naming(tmp_path) -> None:
     expected_name = xacro_file.parent.name
     assert robot.name == expected_name
 
-    # 3. Use the builder manually (synchronously for the test)
+    # Use the builder manually (synchronously for the test)
     builder = AsynchronousRobotBuilder(robot, xacro_file, bpy.context)
 
     # Process all tasks
     while not builder.is_finished:
         builder.process_next_chunk()
 
-    # 4. Verify collection naming
+    # Verify collection naming
     collection_name = expected_name
     assert collection_name in bpy.data.collections
 
     collection = bpy.data.collections[collection_name]
 
-    # 5. Verify it is empty
+    # Verify it is empty
     assert len(collection.objects) == 0
 
     # Clean up

@@ -14,7 +14,7 @@ from tests.blender_test_utils import create_test_object
 
 def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     """Verify that calibration and safety controller survive Blender to Core conversion."""
-    # 1. Setup Links
+    # Setup Links
     p = create_test_object("Parent", None)
     c = create_test_object("Child", None)
 
@@ -33,7 +33,7 @@ def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     p_lf.is_robot_link = True
     c_lf.is_robot_link = True
 
-    # 2. Setup Joint with Enhanced Properties
+    # Setup Joint with Enhanced Properties
     j = create_test_object("Joint", None)
     collection.objects.link(j)
 
@@ -57,11 +57,11 @@ def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     j_lf.use_calibration_falling = True
     j_lf.calibration_falling = -0.75
 
-    # 3. Convert to Core
+    # Convert to Core
     core_joint = blender_joint_to_core(j)
     assert core_joint is not None, "Failed to convert Blender joint to Core"
 
-    # 4. Verify
+    # Verify
     assert core_joint.safety_controller is not None
     assert pytest.approx(core_joint.safety_controller.soft_lower_limit) == -1.5
     assert pytest.approx(core_joint.safety_controller.k_position) == 200.0

@@ -3,7 +3,7 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_round_trip_safety_calibration() -> None:
-    # 1. Start with URDF XML
+    # Start with URDF XML
     original_xml = """<?xml version='1.0' encoding='utf-8'?>
 <robot name="round_trip_bot">
   <link name="base_link"/>
@@ -19,7 +19,7 @@ def test_round_trip_safety_calibration() -> None:
   </joint>
 </robot>"""
 
-    # 2. Parse into Robot model
+    # Parse into Robot model
     parser = URDFParser()
     robot = parser.parse_string(original_xml)
 
@@ -31,11 +31,11 @@ def test_round_trip_safety_calibration() -> None:
     assert joint.calibration is not None
     assert joint.calibration.rising == 0.5
 
-    # 3. Generate back to XML
+    # Generate back to XML
     generator = URDFGenerator(pretty_print=True)
     generated_xml = generator.generate(robot)
 
-    # 4. Re-parse and verify
+    # Re-parse and verify
     robot2 = parser.parse_string(generated_xml)
     joint2 = robot2.get_joint("joint1")
     assert joint2 is not None
