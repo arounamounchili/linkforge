@@ -36,7 +36,7 @@ def mock_workspace():
         yield source_directory, pkg_dir
 
 
-def test_resolve_package_path_upward(mock_workspace) -> None:
+def test_resolve_package_path_upward(mock_workspace, scene) -> None:
     source_directory, pkg_dir = mock_workspace
     uri = "package://robot_pkg/meshes/base.stl"
 
@@ -48,7 +48,7 @@ def test_resolve_package_path_upward(mock_workspace) -> None:
     assert resolved.exists()
 
 
-def test_resolve_package_path_ros_env(mock_workspace) -> None:
+def test_resolve_package_path_ros_env(mock_workspace, scene) -> None:
     source_directory, pkg_dir = mock_workspace
     uri = "package://robot_pkg/meshes/base.stl"
 
@@ -60,7 +60,7 @@ def test_resolve_package_path_ros_env(mock_workspace) -> None:
         assert str(resolved).startswith(str(pkg_dir))
 
 
-def test_resolve_mesh_path_package_uri(mock_workspace) -> None:
+def test_resolve_mesh_path_package_uri(mock_workspace, scene) -> None:
     source_directory, pkg_dir = mock_workspace
     uri_path = Path("package://robot_pkg/meshes/base.stl")
 
@@ -69,7 +69,7 @@ def test_resolve_mesh_path_package_uri(mock_workspace) -> None:
     assert resolved.is_absolute()
 
 
-def test_resolve_mesh_path_relative(mock_workspace) -> None:
+def test_resolve_mesh_path_relative(mock_workspace, scene) -> None:
     source_directory, pkg_dir = mock_workspace
     rel_path = "../meshes/base.stl"
 

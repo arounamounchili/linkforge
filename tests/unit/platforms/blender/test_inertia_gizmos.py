@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import bpy
 
 
-def test_generate_inertia_axes_geometry() -> None:
+def test_generate_inertia_axes_geometry(scene) -> None:
     """Test generating inertia axes geometry for a link."""
     from linkforge.blender.visualization.inertia_gizmos import generate_inertia_axes_geometry
 
@@ -30,7 +30,7 @@ def test_generate_inertia_axes_geometry() -> None:
     assert len(geometry["line_colors"]) == len(geometry["lines"])
 
 
-def test_generate_inertia_axes_geometry_none_object() -> None:
+def test_generate_inertia_axes_geometry_none_object(scene) -> None:
     """Test geometry generation with None object."""
     from linkforge.blender.visualization.inertia_gizmos import generate_inertia_axes_geometry
 
@@ -40,7 +40,7 @@ def test_generate_inertia_axes_geometry_none_object() -> None:
     assert geometry["line_colors"] == []
 
 
-def test_generate_inertia_axes_geometry_with_rotation() -> None:
+def test_generate_inertia_axes_geometry_with_rotation(scene) -> None:
     """Test geometry generation with rotated inertia frame."""
     from linkforge.blender.visualization.inertia_gizmos import generate_inertia_axes_geometry
 
@@ -61,7 +61,7 @@ def test_generate_inertia_axes_geometry_with_rotation() -> None:
     assert len(geometry["lines"]) > 0
 
 
-def test_draw_inertia_gizmos(mocker) -> None:
+def test_draw_inertia_gizmos(mocker, scene) -> None:
     """Test the main draw function with GPU mocking."""
     # Mock preferences
     mock_prefs = MagicMock()
@@ -100,7 +100,7 @@ def test_draw_inertia_gizmos(mocker) -> None:
     mock_shader.bind.assert_called_once()
 
 
-def test_draw_inertia_gizmos_disabled(mocker) -> None:
+def test_draw_inertia_gizmos_disabled(mocker, scene) -> None:
     """Test draw function when gizmos are disabled."""
     # Mock preferences with gizmos disabled
     mock_prefs = MagicMock()
@@ -119,7 +119,7 @@ def test_draw_inertia_gizmos_disabled(mocker) -> None:
     mock_batch.assert_not_called()
 
 
-def test_draw_inertia_gizmos_auto_inertia(mocker) -> None:
+def test_draw_inertia_gizmos_auto_inertia(mocker, scene) -> None:
     """Test that auto-inertia links are skipped."""
     mock_prefs = MagicMock()
     mock_prefs.show_inertia_gizmos = True
@@ -147,7 +147,7 @@ def test_draw_inertia_gizmos_auto_inertia(mocker) -> None:
     mock_batch.assert_not_called()
 
 
-def test_draw_inertia_gizmos_no_objects(mocker) -> None:
+def test_draw_inertia_gizmos_no_objects(mocker, scene) -> None:
     """Test draw with no objects in scene."""
     mock_prefs = MagicMock()
     mock_prefs.show_inertia_gizmos = True
@@ -169,7 +169,7 @@ def test_draw_inertia_gizmos_no_objects(mocker) -> None:
     mock_batch.assert_not_called()
 
 
-def test_ensure_inertia_handler(mocker) -> None:
+def test_ensure_inertia_handler(mocker, scene) -> None:
     """Test handler registration."""
     mock_add = mocker.patch("bpy.types.SpaceView3D.draw_handler_add")
     mocker.patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw")
@@ -187,7 +187,7 @@ def test_ensure_inertia_handler(mocker) -> None:
     mock_add.assert_called_once()
 
 
-def test_ensure_inertia_handler_already_registered(mocker) -> None:
+def test_ensure_inertia_handler_already_registered(mocker, scene) -> None:
     """Test that handler registration is idempotent."""
     mock_add = mocker.patch("bpy.types.SpaceView3D.draw_handler_add")
     mocker.patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw")
@@ -207,7 +207,7 @@ def test_ensure_inertia_handler_already_registered(mocker) -> None:
     ig_module._draw_handle = None
 
 
-def test_check_manual_inertia_on_load() -> None:
+def test_check_manual_inertia_on_load(scene) -> None:
     """Test checking for manual inertia on file load."""
     # Create link with manual inertia
     bpy.ops.object.select_all(action="SELECT")
@@ -226,7 +226,7 @@ def test_check_manual_inertia_on_load() -> None:
     assert result is None
 
 
-def test_check_manual_inertia_on_load_no_manual() -> None:
+def test_check_manual_inertia_on_load_no_manual(scene) -> None:
     """Test when no manual inertia links exist."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -244,7 +244,7 @@ def test_check_manual_inertia_on_load_no_manual() -> None:
     assert result is None
 
 
-def test_unregister(mocker) -> None:
+def test_unregister(mocker, scene) -> None:
     """Test unregistration cleans up handlers."""
     mock_remove = mocker.patch("bpy.types.SpaceView3D.draw_handler_remove")
     mocker.patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw")

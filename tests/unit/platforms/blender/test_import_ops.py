@@ -9,7 +9,7 @@ from linkforge.blender.operators.import_ops import (
 from linkforge.linkforge_core.exceptions import RobotModelError
 
 
-def test_import_robot_logic_paths(tmp_path) -> None:
+def test_import_robot_logic_paths(tmp_path, scene) -> None:
     """Test import operator logic by calling the unbound method."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     mock_self.report = MagicMock()
@@ -31,7 +31,7 @@ def test_import_robot_logic_paths(tmp_path) -> None:
         assert result == {"FINISHED"}
 
 
-def test_import_invalid_path_logic() -> None:
+def test_import_invalid_path_logic(scene) -> None:
     """Test handling of invalid paths or missing directories."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     mock_self.filepath = "/non/existent/path.urdf"
@@ -46,7 +46,7 @@ def test_import_invalid_path_logic() -> None:
     mock_self.report.assert_called_with({"ERROR"}, ANY)
 
 
-def test_import_robot_xacro_fallback(tmp_path) -> None:
+def test_import_robot_xacro_fallback(tmp_path, scene) -> None:
     """Test switching to Xacro parser if Xacro content is detected."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     mock_self.report = MagicMock()
@@ -80,7 +80,7 @@ def test_import_robot_xacro_fallback(tmp_path) -> None:
         mock_self.report.assert_any_call({"WARNING"}, ANY)
 
 
-def test_import_source_directory_handling_more(tmp_path) -> None:
+def test_import_source_directory_handling_more(tmp_path, scene) -> None:
     """Test standard directory handling branches."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     mock_self.report = MagicMock()
@@ -106,7 +106,7 @@ def test_import_source_directory_handling_more(tmp_path) -> None:
         mock_self.report.assert_any_call({"INFO"}, ANY)
 
 
-def test_import_source_directory_candidates(tmp_path) -> None:
+def test_import_source_directory_candidates(tmp_path, scene) -> None:
     """Test candidate detection when importing a directory."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     mock_self.report = MagicMock()
@@ -141,7 +141,7 @@ def test_import_source_directory_candidates(tmp_path) -> None:
         mock_self.report.assert_any_call({"ERROR"}, ANY)
 
 
-def test_import_robot_invoke_check() -> None:
+def test_import_robot_invoke_check(scene) -> None:
     """Test invoke and check methods using class methods on mock."""
     mock_op = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     assert LINKFORGE_OT_import_robot_model.check(mock_op, bpy.context) is True
@@ -152,7 +152,7 @@ def test_import_robot_invoke_check() -> None:
         assert result == {"RUNNING_MODAL"}
 
 
-def test_import_registration() -> None:
+def test_import_registration(scene) -> None:
     """Test operator registration and error recovery branches."""
     unregister()
     register()
@@ -167,7 +167,7 @@ def test_import_registration() -> None:
     register()
 
 
-def test_import_xacro_resolution_error(tmp_path) -> None:
+def test_import_xacro_resolution_error(tmp_path, scene) -> None:
     """Test error handling during XACRO resolution."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     mock_self.report = MagicMock()
@@ -189,7 +189,7 @@ def test_import_xacro_resolution_error(tmp_path) -> None:
         assert "PackageNotFoundError" in mock_self.report.call_args[0][1]
 
 
-def test_import_path_conversion_error(tmp_path) -> None:
+def test_import_path_conversion_error(tmp_path, scene) -> None:
     """Test error handling during URDF path conversion."""
     mock_self = MagicMock(spec=LINKFORGE_OT_import_robot_model)
     mock_self.report = MagicMock()
@@ -209,7 +209,7 @@ def test_import_path_conversion_error(tmp_path) -> None:
         mock_self.report.assert_called_with({"ERROR"}, ANY)
 
 
-def test_import_main_entry() -> None:
+def test_import_main_entry(scene) -> None:
     """Verify execution of module entry point logic."""
     with (
         patch("linkforge.blender.operators.import_ops.register"),

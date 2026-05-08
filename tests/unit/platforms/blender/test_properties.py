@@ -6,16 +6,18 @@ for all LinkForge property groups.
 
 import bpy
 
+from tests.blender_test_utils import create_test_object
+
 
 class TestControlProperties:
     """Tests for ros2_control property groups."""
 
-    def test_ros2_control_parameter_property(self) -> None:
+    def test_ros2_control_parameter_property(self, scene) -> None:
         """Test Ros2ControlParameterProperty creation and defaults."""
         from linkforge.blender.properties import control_props
 
         # Create a test scene property collection
-        scene = bpy.context.scene
+
         if not hasattr(scene, "test_params"):
             bpy.types.Scene.test_params = bpy.props.CollectionProperty(
                 type=control_props.Ros2ControlParameterProperty
@@ -36,11 +38,10 @@ class TestControlProperties:
         scene.test_params.clear()
         del bpy.types.Scene.test_params
 
-    def test_ros2_control_interface_property(self) -> None:
+    def test_ros2_control_interface_property(self, scene) -> None:
         """Test Ros2ControlInterfaceProperty creation and defaults."""
         from linkforge.blender.properties import control_props
 
-        scene = bpy.context.scene
         if not hasattr(scene, "test_interfaces"):
             bpy.types.Scene.test_interfaces = bpy.props.CollectionProperty(
                 type=control_props.Ros2ControlInterfaceProperty
@@ -66,11 +67,10 @@ class TestControlProperties:
         scene.test_interfaces.clear()
         del bpy.types.Scene.test_interfaces
 
-    def test_ros2_control_joint_property(self) -> None:
+    def test_ros2_control_joint_property(self, scene) -> None:
         """Test Ros2ControlJointProperty creation and defaults."""
         from linkforge.blender.properties import control_props
 
-        scene = bpy.context.scene
         if not hasattr(scene, "test_joints"):
             bpy.types.Scene.test_joints = bpy.props.CollectionProperty(
                 type=control_props.Ros2ControlJointProperty
@@ -113,11 +113,10 @@ class TestControlProperties:
 class TestSensorProperties:
     """Tests for sensor property groups."""
 
-    def test_sensor_property_defaults(self, clean_scene) -> None:
+    def test_sensor_property_defaults(self, clean_scene, scene) -> None:
         """Test SensorPropertyGroup default values."""
         # Create sensor object
-        sensor_obj = bpy.data.objects.new("test_sensor", None)
-        bpy.context.scene.collection.objects.link(sensor_obj)
+        sensor_obj = create_test_object("test_sensor", None, scene)
 
         sensor = sensor_obj.linkforge_sensor
 
@@ -146,10 +145,9 @@ class TestSensorProperties:
         # Cleanup
         bpy.data.objects.remove(sensor_obj)
 
-    def test_sensor_name_property(self, clean_scene) -> None:
+    def test_sensor_name_property(self, clean_scene, scene) -> None:
         """Test sensor name getter/setter."""
-        sensor_obj = bpy.data.objects.new("my_sensor", None)
-        bpy.context.scene.collection.objects.link(sensor_obj)
+        sensor_obj = create_test_object("my_sensor", None, scene)
 
         sensor = sensor_obj.linkforge_sensor
 
@@ -164,10 +162,9 @@ class TestSensorProperties:
         # Cleanup
         bpy.data.objects.remove(sensor_obj)
 
-    def test_sensor_types(self, clean_scene) -> None:
+    def test_sensor_types(self, clean_scene, scene) -> None:
         """Test all sensor types."""
-        sensor_obj = bpy.data.objects.new("test_sensor", None)
-        bpy.context.scene.collection.objects.link(sensor_obj)
+        sensor_obj = create_test_object("test_sensor", None, scene)
 
         sensor = sensor_obj.linkforge_sensor
 
@@ -184,9 +181,8 @@ class TestSensorProperties:
 class TestRobotProperties:
     """Tests for robot property groups."""
 
-    def test_robot_property_exists(self, clean_scene) -> None:
+    def test_robot_property_exists(self, clean_scene, scene) -> None:
         """Test robot property exists on scene."""
-        scene = bpy.context.scene
 
         # Robot properties should be registered by addon
         # Check for common property names
@@ -196,9 +192,8 @@ class TestRobotProperties:
             or hasattr(scene, "robot")
         )
 
-    def test_robot_property_access(self, clean_scene) -> None:
+    def test_robot_property_access(self, clean_scene, scene) -> None:
         """Test accessing robot properties."""
-        scene = bpy.context.scene
 
         # Verify we can access scene properties without error
         assert scene is not None
@@ -208,11 +203,10 @@ class TestRobotProperties:
 class TestTransmissionProperties:
     """Tests for transmission property groups."""
 
-    def test_transmission_property_defaults(self, clean_scene) -> None:
+    def test_transmission_property_defaults(self, clean_scene, scene) -> None:
         """Test transmission property defaults."""
         # Create transmission object
-        trans_obj = bpy.data.objects.new("test_transmission", None)
-        bpy.context.scene.collection.objects.link(trans_obj)
+        trans_obj = create_test_object("test_transmission", None, scene)
 
         trans = trans_obj.linkforge_transmission
 
@@ -230,11 +224,10 @@ class TestTransmissionProperties:
         # Cleanup
         bpy.data.objects.remove(trans_obj)
 
-    def test_transmission_types(self, clean_scene) -> None:
+    def test_transmission_types(self, clean_scene, scene) -> None:
         """Test transmission types."""
         # Create transmission object
-        trans_obj = bpy.data.objects.new("test_transmission", None)
-        bpy.context.scene.collection.objects.link(trans_obj)
+        trans_obj = create_test_object("test_transmission", None, scene)
 
         trans = trans_obj.linkforge_transmission
 

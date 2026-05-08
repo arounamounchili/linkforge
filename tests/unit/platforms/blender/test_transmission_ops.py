@@ -1,7 +1,7 @@
 import bpy
 
 
-def test_transmission_ops_create_transmission() -> None:
+def test_transmission_ops_create_transmission(scene) -> None:
     """Test LINKFORGE_OT_create_transmission operator."""
     # Setup: Create link and joint
     bpy.ops.object.select_all(action="SELECT")
@@ -56,7 +56,7 @@ def test_transmission_ops_create_transmission() -> None:
     bpy.ops.linkforge.create_transmission()
 
 
-def test_transmission_ops_delete_transmission() -> None:
+def test_transmission_ops_delete_transmission(scene) -> None:
     """Test LINKFORGE_OT_delete_transmission operator."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -77,7 +77,7 @@ def test_transmission_ops_delete_transmission() -> None:
     assert trans_name not in bpy.data.objects
 
 
-def test_transmission_ops_poll_failures() -> None:
+def test_transmission_ops_poll_failures(scene) -> None:
     """Hit poll failures for transmission operators."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -90,7 +90,7 @@ def test_transmission_ops_poll_failures() -> None:
     assert bpy.ops.linkforge.create_transmission.poll() is False
 
 
-def test_transmission_ops_main_entry(mocker) -> None:
+def test_transmission_ops_main_entry(mocker, scene) -> None:
     """Simulate module main entry."""
     from linkforge.blender.operators import transmission_ops
 

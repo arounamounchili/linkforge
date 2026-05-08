@@ -10,25 +10,16 @@ from linkforge.blender.adapters.blender_to_core import (
 from linkforge.linkforge_core.exceptions import RobotModelError
 from linkforge.linkforge_core.models import CameraInfo, Link, Sensor, SensorType
 
+from tests.blender_test_utils import create_test_object
+
 if typing.TYPE_CHECKING:
     from linkforge.blender.properties.robot_props import RobotPropertyGroup
-    from linkforge.blender.properties.sensor_props import SensorPropertyGroup
 
 
-def test_scene_to_robot_strict_mode() -> None:
+def test_scene_to_robot_strict_mode(scene) -> None:
     """Test that strict mode correctly raises vs collects errors."""
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    import linkforge.blender
-
-    linkforge.blender.register()
-    scene = bpy.context.scene
-    assert scene is not None
-    props = typing.cast("RobotPropertyGroup", scene.linkforge)
-    props.robot_name = "test_robot"
-
-    # Create a link
-    bpy.ops.object.empty_add()
-    obj = bpy.context.active_object
+    scene.linkforge.robot_name = "test_robot"
+    obj = create_test_object("broken_link", None, scene)
     obj.linkforge.is_robot_link = True
     obj.linkforge.link_name = "broken_link"
 
@@ -47,28 +38,24 @@ def test_scene_to_robot_strict_mode() -> None:
             scene_to_robot(bpy.context)
 
 
-def test_sensor_origin_correction() -> None:
+def test_sensor_origin_correction(scene) -> None:
     """Test that sensors correctly calculate world offset relative to links."""
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    import linkforge.blender
-
-    linkforge.blender.register()
-
     # Parent Link at (1, 1, 1)
-    bpy.ops.object.empty_add(location=(1, 1, 1))
-    link_obj = bpy.context.active_object
-    link_obj.name = "base_link"
+    link_obj = create_test_object("base_link", None, scene)
+    link_obj.location = (1.0, 1.0, 1.0)
     link_obj.linkforge.is_robot_link = True
     link_obj.linkforge.link_name = "base_link"
 
     # Sensor at (2, 2, 2)
-    bpy.ops.object.empty_add(location=(2, 2, 2))
-    sensor_obj = bpy.context.active_object
-    assert sensor_obj is not None
-    sensor_props = typing.cast("SensorPropertyGroup", sensor_obj.linkforge_sensor)
-    sensor_props.is_robot_sensor = True
-    sensor_props.attached_link = link_obj
-    sensor_props.sensor_type = "CAMERA"
+    sensor_obj = create_test_object("Sensor", None, scene)
+    sensor_obj.location = (2.0, 2.0, 2.0)
+
+    # Ensure matrices are updated after setting locations
+    bpy.context.view_layer.update()
+
+    sensor_obj.linkforge_sensor.is_robot_sensor = True
+    sensor_obj.linkforge_sensor.attached_link = link_obj
+    sensor_obj.linkforge_sensor.sensor_type = "CAMERA"
 
     bpy.context.view_layer.update()
 
@@ -91,13 +78,9 @@ def test_sensor_origin_correction() -> None:
         assert (vec.x, vec.y, vec.z) == pytest.approx((1.0, 1.0, 1.0))
 
 
-def test_ros2_control_conversion() -> None:
+def test_ros2_control_conversion(scene) -> None:
     """Test conversion of global ROS2 control properties."""
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    import linkforge.blender
-
-    linkforge.blender.register()
-    props = bpy.context.scene.linkforge
+    props = scene.linkforge
     props.use_ros2_control = True
     props.ros2_control_name = "RealRobot"
     props.ros2_control_type = "system"
@@ -116,13 +99,10 @@ def test_ros2_control_conversion() -> None:
     assert len(ctrl.joints) == 1
 
 
-def test_gazebo_plugin_extraction() -> None:
+def test_gazebo_plugin_extraction(scene) -> None:
     """Test extraction of Gazebo ros2_control plugin when configured."""
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    import linkforge.blender
+    props = scene.linkforge
 
-    linkforge.blender.register()
-    scene = bpy.context.scene
     assert scene is not None
     props = typing.cast("RobotPropertyGroup", scene.linkforge)
     props.use_ros2_control = True

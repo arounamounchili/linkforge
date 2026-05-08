@@ -13,7 +13,7 @@ from linkforge.blender.adapters.mesh_io import (
 from mathutils import Vector
 
 
-def test_get_mesh_filename() -> None:
+def test_get_mesh_filename(scene) -> None:
     """Test mesh filename generation with various inputs."""
     assert get_mesh_filename("base_link", "visual", "STL") == "base_link_visual.stl"
     assert (
@@ -24,7 +24,7 @@ def test_get_mesh_filename() -> None:
     assert get_mesh_filename("link", "visual", "STL", suffix="My Mesh") == "link_visualMy_Mesh.stl"
 
 
-def test_get_mesh_filename_edge_cases() -> None:
+def test_get_mesh_filename_edge_cases(scene) -> None:
     """Test mesh filename generation with edge cases."""
     # Special characters in link name
     assert get_mesh_filename("my-link/test", "visual", "STL") == "my-link_test_visual.stl"
@@ -34,14 +34,14 @@ def test_get_mesh_filename_edge_cases() -> None:
     assert get_mesh_filename("link", "collision", "OBJ", suffix="") == "link_collision.obj"
 
 
-def test_export_mesh_internal_dispatch_logic() -> None:
+def test_export_mesh_internal_dispatch_logic(scene) -> None:
     """Test that individual export functions handle None inputs safely."""
     assert export_mesh_stl(None, Path("/tmp/none.stl")) is False
     assert export_mesh_obj(None, Path("/tmp/none.obj")) is False
     assert export_mesh_glb(None, Path("/tmp/none.glb")) is False
 
 
-def test_export_mesh_operator_success(mocker) -> None:
+def test_export_mesh_operator_success(mocker, scene) -> None:
     """Test success paths for OBJ and GLB using module-level mocks."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -57,7 +57,7 @@ def test_export_mesh_operator_success(mocker) -> None:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def test_export_link_mesh_logic(mocker) -> None:
+def test_export_link_mesh_logic(mocker, scene) -> None:
     """Test that export_link_mesh correctly calculates the geometric offset."""
     bpy.ops.mesh.primitive_cube_add(size=2.0, location=(5.0, 5.0, 5.0))
     obj = bpy.context.active_object
@@ -89,7 +89,7 @@ def test_export_link_mesh_logic(mocker) -> None:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def test_export_link_mesh_with_suffix(mocker) -> None:
+def test_export_link_mesh_with_suffix(mocker, scene) -> None:
     """Test export_link_mesh with custom suffix."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -102,7 +102,7 @@ def test_export_link_mesh_with_suffix(mocker) -> None:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def test_export_link_mesh_dry_run(mocker) -> None:
+def test_export_link_mesh_dry_run(mocker, scene) -> None:
     """Test export_link_mesh in dry run mode."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -119,7 +119,7 @@ def test_export_link_mesh_dry_run(mocker) -> None:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def test_create_simplified_mesh() -> None:
+def test_create_simplified_mesh(scene) -> None:
     """Test simplification coverage."""
     bpy.ops.mesh.primitive_uv_sphere_add()
     obj = bpy.context.active_object
@@ -137,7 +137,7 @@ def test_create_simplified_mesh() -> None:
     bpy.data.objects.remove(empty, do_unlink=True)
 
 
-def test_create_simplified_mesh_ratio_bounds() -> None:
+def test_create_simplified_mesh_ratio_bounds(scene) -> None:
     """Test simplification with different ratio values."""
     bpy.ops.mesh.primitive_uv_sphere_add()
     obj = bpy.context.active_object
@@ -155,7 +155,7 @@ def test_create_simplified_mesh_ratio_bounds() -> None:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def test_export_link_mesh_error_dispatch(mocker) -> None:
+def test_export_link_mesh_error_dispatch(mocker, scene) -> None:
     """Test that export_link_mesh returns None on sub-function failure."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -167,7 +167,7 @@ def test_export_link_mesh_error_dispatch(mocker) -> None:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def test_export_link_mesh_different_formats(mocker) -> None:
+def test_export_link_mesh_different_formats(mocker, scene) -> None:
     """Test export_link_mesh with all supported formats."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object

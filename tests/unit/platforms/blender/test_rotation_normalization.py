@@ -1,7 +1,7 @@
 import bpy
 
 
-def test_rotation_mode_normalization_on_add_link() -> None:
+def test_rotation_mode_normalization_on_add_link(scene) -> None:
     """Verify that adding a new empty link frame forces XYZ rotation mode."""
     # Add link
     bpy.ops.linkforge.add_empty_link()
@@ -11,7 +11,7 @@ def test_rotation_mode_normalization_on_add_link() -> None:
     assert obj.rotation_mode == "XYZ"
 
 
-def test_rotation_mode_normalization_on_create_from_mesh() -> None:
+def test_rotation_mode_normalization_on_create_from_mesh(scene) -> None:
     """Verify that converting a mesh with Quaternions to a Link forces XYZ mode."""
     # Create mesh with Quaternions
     bpy.ops.mesh.primitive_cube_add()

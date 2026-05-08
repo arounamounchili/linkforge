@@ -33,8 +33,8 @@ else:
 logger = get_logger(__name__)
 
 # Global state for debounced collision preview updates
-_preview_pending_object = None
-_preview_last_request_time = 0.0
+_preview_pending_object: bpy.types.Object | None = None
+_preview_last_request_time: float = 0.0
 
 # Debounce delay for collision preview updates (in seconds)
 COLLISION_PREVIEW_DEBOUNCE_DELAY = 0.3

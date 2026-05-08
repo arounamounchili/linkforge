@@ -6,6 +6,8 @@ import bpy
 import pytest
 from linkforge.blender.operators.link_ops import calculate_inertia_for_link
 
+from tests.blender_test_utils import create_test_object
+
 
 def test_inertia_integration_flow() -> None:
     """Verify end-to-end inertia calculation in Blender.
@@ -19,7 +21,7 @@ def test_inertia_integration_flow() -> None:
     collection = scene.collection
     assert collection is not None
 
-    link_obj = bpy.data.objects.new("link", None)
+    link_obj = create_test_object("link", None)
     assert link_obj is not None
     collection.objects.link(link_obj)
     link_lf: Any = getattr(link_obj, "linkforge")
@@ -56,7 +58,7 @@ def test_inertia_integration_with_offset() -> None:
     collection = scene.collection
     assert collection is not None
 
-    link_obj = bpy.data.objects.new("link_offset", None)
+    link_obj = create_test_object("link_offset", None)
     assert link_obj is not None
     collection.objects.link(link_obj)
     link_lf: Any = getattr(link_obj, "linkforge")

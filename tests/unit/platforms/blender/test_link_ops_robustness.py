@@ -1,3 +1,4 @@
+import typing
 from unittest.mock import MagicMock, patch
 
 import bpy
@@ -8,16 +9,19 @@ from linkforge.blender.operators.link_ops import (
     regenerate_collision_mesh,
 )
 
+from tests.blender_test_utils import create_test_object
 
-def test_execute_collision_preview_update_branches(clean_scene) -> None:
+if typing.TYPE_CHECKING:
+    pass
+
+
+def test_execute_collision_preview_update_branches(clean_scene, scene) -> None:
     """Hit edge cases."""
-    link_obj = bpy.data.objects.new("Link", None)
-    bpy.context.collection.objects.link(link_obj)
-    link_obj.linkforge.is_robot_link = True
+    link_obj = create_test_object("Link", None, scene)
+    typing.cast(typing.Any, link_obj).linkforge.is_robot_link = True
 
     col_mesh = bpy.data.meshes.new("col")
-    col_obj = bpy.data.objects.new("Link_collision", col_mesh)
-    bpy.context.collection.objects.link(col_obj)
+    col_obj = create_test_object("Link_collision", col_mesh, scene)
     col_obj.parent = link_obj
 
     # No view_layer
@@ -42,20 +46,19 @@ def test_execute_collision_preview_update_branches(clean_scene) -> None:
     col_obj["imported_from_source"] = False
 
 
-def test_regenerate_collision_mesh_validation(clean_scene) -> None:
+def test_regenerate_collision_mesh_validation(clean_scene, scene) -> None:
     """Hit edge cases validation in regenerate."""
     # Passing None or non-link object
     regenerate_collision_mesh(None, "AUTO", bpy.context)
 
-    o = bpy.data.objects.new("NotLink", None)
+    o = create_test_object("NotLink", None, scene)
     regenerate_collision_mesh(o, "AUTO", bpy.context)
 
 
-def test_create_collision_failure_branches(clean_scene) -> None:
+def test_create_collision_failure_branches(clean_scene, scene) -> None:
     """Hit edge cases collision creation failure."""
-    link_obj = bpy.data.objects.new("Link", None)
-    bpy.context.collection.objects.link(link_obj)
-    link_obj.linkforge.is_robot_link = True
+    link_obj = create_test_object("Link", None, scene)
+    typing.cast(typing.Any, link_obj).linkforge.is_robot_link = True
 
     # Force _create_primitive_collision to fail (return None)
     with patch(
@@ -65,24 +68,22 @@ def test_create_collision_failure_branches(clean_scene) -> None:
         assert create_collision_for_link(link_obj, "BOX", bpy.context) is None
 
 
-def test_generate_collision_all_skip(clean_scene) -> None:
+def test_generate_collision_all_skip(clean_scene, scene) -> None:
     """Hit edge cases skipping links with no visuals."""
-    link_obj = bpy.data.objects.new("EmptyLink", None)
-    bpy.context.collection.objects.link(link_obj)
-    link_obj.linkforge.is_robot_link = True
+    link_obj = create_test_object("EmptyLink", None, scene)
+    typing.cast(typing.Any, link_obj).linkforge.is_robot_link = True
 
     # link_obj has no children, so generate_collision_all should skip it
-    bpy.ops.linkforge.generate_collision_all()
+    typing.cast(typing.Any, bpy.ops).linkforge.generate_collision_all()
     assert not any("_collision" in obj.name for obj in bpy.data.objects)
 
 
-def test_add_material_slot_skip(clean_scene) -> None:
+def test_add_material_slot_skip(clean_scene, scene) -> None:
     """Hit edge cases skipping if no visual."""
-    link_obj = bpy.data.objects.new("MatLink", None)
-    bpy.context.collection.objects.link(link_obj)
-    link_obj.linkforge.is_robot_link = True
+    link_obj = create_test_object("MatLink", None, scene)
+    typing.cast(typing.Any, link_obj).linkforge.is_robot_link = True
 
-    bpy.context.view_layer.objects.active = link_obj
+    scene.view_layers[0].objects.active = link_obj
     # add_material_slot should do nothing/return if no visual found
     with pytest.raises(RuntimeError, match="No visual mesh found"):
-        bpy.ops.linkforge.add_material_slot()
+        typing.cast(typing.Any, bpy.ops).linkforge.add_material_slot()

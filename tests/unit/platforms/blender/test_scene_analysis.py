@@ -10,7 +10,7 @@ import bpy
 from linkforge.blender.utils.scene_utils import clear_stats_cache, get_robot_statistics
 
 
-def test_get_robot_statistics_cache_hit() -> None:
+def test_get_robot_statistics_cache_hit(scene) -> None:
     """Test that statistics are successfully retrieved from the frame-level cache."""
     clear_stats_cache()
 
@@ -22,20 +22,20 @@ def test_get_robot_statistics_cache_hit() -> None:
     obj.linkforge.mass = 1.0
 
     # First call - populates cache
-    stats1 = get_robot_statistics(bpy.context.scene)
+    stats1 = get_robot_statistics(scene)
     assert stats1.num_links == 1
 
     # Second call - should hit cache (O(1) retrieval)
-    stats2 = get_robot_statistics(bpy.context.scene)
+    stats2 = get_robot_statistics(scene)
     assert stats1 is stats2  # Identity check proves cache hit
 
     # Third call with force_refresh - should NOT hit cache
-    stats3 = get_robot_statistics(bpy.context.scene, force_refresh=True)
+    stats3 = get_robot_statistics(scene, force_refresh=True)
     assert stats1 is not stats3
     assert stats3.num_links == 1
 
 
-def test_get_robot_statistics_manual_inertia() -> None:
+def test_get_robot_statistics_manual_inertia(scene) -> None:
     """Test detection of objects requiring manual inertia gizmos."""
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -43,12 +43,12 @@ def test_get_robot_statistics_manual_inertia() -> None:
     obj.linkforge.use_auto_inertia = False
     obj.linkforge.link_name = "manual_link"
 
-    stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
+    stats = get_robot_statistics(scene, force_refresh=True)
     assert len(stats.manual_inertia_objects) == 1
     assert stats.manual_inertia_objects[0] == obj
 
 
-def test_get_robot_statistics_geometry_detection_urdf_tag() -> None:
+def test_get_robot_statistics_geometry_detection_urdf_tag(scene) -> None:
     """Test geometry detection via explicit source_geometry_type tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -62,14 +62,14 @@ def test_get_robot_statistics_geometry_detection_urdf_tag() -> None:
     coll.parent = link
     coll["source_geometry_type"] = "SPHERE"
 
-    stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
+    stats = get_robot_statistics(scene, force_refresh=True)
     assert "tag_link" in stats.geometry_stats
     obj, gtype, is_prim = stats.geometry_stats["tag_link"]
     assert gtype == "SPHERE"
     assert is_prim is True
 
 
-def test_get_robot_statistics_geometry_detection_stored_type() -> None:
+def test_get_robot_statistics_geometry_detection_stored_type(scene) -> None:
     """Test geometry detection via stored collision_geometry_type tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -83,14 +83,14 @@ def test_get_robot_statistics_geometry_detection_stored_type() -> None:
     coll.parent = link
     coll["collision_geometry_type"] = "BOX"
 
-    stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
+    stats = get_robot_statistics(scene, force_refresh=True)
     assert "stored_link" in stats.geometry_stats
     obj, gtype, is_prim = stats.geometry_stats["stored_link"]
     assert gtype == "BOX"
     assert is_prim is True
 
 
-def test_get_robot_statistics_geometry_detection_heuristic() -> None:
+def test_get_robot_statistics_geometry_detection_heuristic(scene) -> None:
     """Test geometry detection via heuristic topological analysis."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -103,14 +103,14 @@ def test_get_robot_statistics_geometry_detection_heuristic() -> None:
     coll.name = "heuristic_link_collision"
     coll.parent = link
 
-    stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
+    stats = get_robot_statistics(scene, force_refresh=True)
     assert "heuristic_link" in stats.geometry_stats
     obj, gtype, is_prim = stats.geometry_stats["heuristic_link"]
     assert gtype == "BOX"
     assert is_prim is True
 
 
-def test_get_robot_statistics_geometry_detection_non_primitive() -> None:
+def test_get_robot_statistics_geometry_detection_non_primitive(scene) -> None:
     """Test heuristic fallback to MESH for a complex (non-primitive) object."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -128,14 +128,14 @@ def test_get_robot_statistics_geometry_detection_non_primitive() -> None:
     bpy.ops.object.modifier_add(type="SUBSURF")
     bpy.ops.object.modifier_apply(modifier="Subdivision")
 
-    stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
+    stats = get_robot_statistics(scene, force_refresh=True)
     assert "complex_link" in stats.geometry_stats
     _, gtype, is_prim = stats.geometry_stats["complex_link"]
     assert gtype == "MESH"
     assert is_prim is False
 
 
-def test_get_robot_statistics_heuristic_error_handling() -> None:
+def test_get_robot_statistics_heuristic_error_handling(scene) -> None:
     """Test robustness when heuristic detection fails."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -150,13 +150,13 @@ def test_get_robot_statistics_heuristic_error_handling() -> None:
     with patch(
         "linkforge.blender.utils.scene_utils.detect_primitive_type", side_effect=ValueError("Boom")
     ):
-        stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
+        stats = get_robot_statistics(scene, force_refresh=True)
         assert "error_link" in stats.geometry_stats
         _, gtype, _ = stats.geometry_stats["error_link"]
         assert gtype == "MESH"
 
 
-def test_get_robot_statistics_geometry_detection_mesh_tag() -> None:
+def test_get_robot_statistics_geometry_detection_mesh_tag(scene) -> None:
     """Test geometry detection forcing MESH type via stored tag."""
     bpy.ops.mesh.primitive_cube_add()
     link = bpy.context.active_object
@@ -170,14 +170,14 @@ def test_get_robot_statistics_geometry_detection_mesh_tag() -> None:
     coll.parent = link
     coll["collision_geometry_type"] = "MESH"
 
-    stats = get_robot_statistics(bpy.context.scene, force_refresh=True)
+    stats = get_robot_statistics(scene, force_refresh=True)
     assert "mesh_link" in stats.geometry_stats
     _, gtype, is_prim = stats.geometry_stats["mesh_link"]
     assert gtype == "MESH"
     assert is_prim is False
 
 
-def test_get_robot_statistics_stale_cache_recovery() -> None:
+def test_get_robot_statistics_stale_cache_recovery(scene) -> None:
     """Test recovery from stale cache when an object is deleted in the same frame."""
     clear_stats_cache()
 
@@ -194,7 +194,7 @@ def test_get_robot_statistics_stale_cache_recovery() -> None:
     coll["collision_geometry_type"] = "BOX"
 
     # Populate cache
-    stats1 = get_robot_statistics(bpy.context.scene)
+    stats1 = get_robot_statistics(scene)
     assert len(stats1.geometry_stats) == 1
 
     # Simulate operator deleting the object (same frame)
@@ -208,6 +208,6 @@ def test_get_robot_statistics_stale_cache_recovery() -> None:
     dummy.name = "dummy"
 
     # Next call should detect ReferenceError in cached stats and recompute
-    stats2 = get_robot_statistics(bpy.context.scene)
+    stats2 = get_robot_statistics(scene)
     assert stats2 is not stats1  # Should NOT be the same object
     assert len(stats2.geometry_stats) == 0  # Collision is gone

@@ -1,7 +1,9 @@
 import bpy
 
+from tests.blender_test_utils import create_test_object
 
-def test_link_source_name_persistence() -> None:
+
+def test_link_source_name_persistence(scene) -> None:
     """Test that link_name remains persistent even if Blender renames the object."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -32,7 +34,7 @@ def test_link_source_name_persistence() -> None:
     # but the logical name must match our intent.
 
 
-def test_joint_source_name_persistence() -> None:
+def test_joint_source_name_persistence(scene) -> None:
     """Test that joint_name remains persistent even if Blender renames the object."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -54,7 +56,7 @@ def test_joint_source_name_persistence() -> None:
     assert obj.name == "elbow_joint_001"
 
 
-def test_reimport_name_matching() -> None:
+def test_reimport_name_matching(scene) -> None:
     """Test that the importer correctly sets persistent names using real data."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
     from linkforge.linkforge_core.models import Joint, JointLimits, JointType, Vector3
@@ -69,8 +71,8 @@ def test_reimport_name_matching() -> None:
     )
 
     links = {
-        "base_link": bpy.data.objects.new("base_link", None),
-        "shoulder_link": bpy.data.objects.new("shoulder_link", None),
+        "base_link": create_test_object("base_link", None, scene),
+        "shoulder_link": create_test_object("shoulder_link", None, scene),
     }
 
     for obj in links.values():
@@ -87,7 +89,7 @@ def test_reimport_name_matching() -> None:
     bpy.data.objects.remove(obj)
 
 
-def test_auto_linking_integration() -> None:
+def test_auto_linking_integration(scene) -> None:
     """Test that the builder auto-links real ROS 2 Control pointers by robot model identity."""
     from pathlib import Path
 
@@ -101,7 +103,7 @@ def test_auto_linking_integration() -> None:
     robot = Robot(name="test", initial_links=[l1, l2], initial_joints=[j1])
 
     # Setup scene-level ROS 2 control config
-    scene = bpy.context.scene
+
     scene.linkforge.use_ros2_control = True
     rc_joint = scene.linkforge.ros2_control_joints.add()
     rc_joint.name = "j1"
@@ -111,7 +113,7 @@ def test_auto_linking_integration() -> None:
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/fake.urdf"), bpy.context)
 
     # Populate joint_objects with persistent identity
-    joint_obj = bpy.data.objects.new("j1.001", None)
+    joint_obj = create_test_object("j1.001", None, scene)
     joint_obj.linkforge_joint.is_robot_joint = True
     joint_obj.linkforge_joint.source_name_stored = "j1"
 

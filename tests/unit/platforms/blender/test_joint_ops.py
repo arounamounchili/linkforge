@@ -3,7 +3,7 @@ from unittest.mock import patch
 import bpy
 
 
-def test_joint_ops_create_joint() -> None:
+def test_joint_ops_create_joint(scene) -> None:
     """Test LINKFORGE_OT_create_joint operator."""
     # Setup: Create a link
     bpy.ops.object.select_all(action="SELECT")
@@ -32,7 +32,7 @@ def test_joint_ops_create_joint() -> None:
     assert joint_obj.linkforge_joint.child_link == link_obj
 
 
-def test_joint_ops_delete_joint() -> None:
+def test_joint_ops_delete_joint(scene) -> None:
     """Test LINKFORGE_OT_delete_joint operator."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -48,7 +48,7 @@ def test_joint_ops_delete_joint() -> None:
     assert bpy.ops.linkforge.delete_joint.poll() is True
 
     # 2. Test synchronization with ROS2 Control (Mock scene properties)
-    scene = bpy.context.scene
+
     # Assuming ros2_control_joints is accessible
     if hasattr(scene.linkforge, "ros2_control_joints"):
         item = scene.linkforge.ros2_control_joints.add()
@@ -64,7 +64,7 @@ def test_joint_ops_delete_joint() -> None:
         assert len(scene.linkforge.ros2_control_joints) == 0
 
 
-def test_joint_ops_auto_detect() -> None:
+def test_joint_ops_auto_detect(scene) -> None:
     """Test LINKFORGE_OT_auto_detect_parent_child operator."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -99,7 +99,7 @@ def test_joint_ops_auto_detect() -> None:
     assert joint_obj.linkforge_joint.parent_link == parent_link
 
 
-def test_joint_ops_auto_detect_edge_cases(mocker) -> None:
+def test_joint_ops_auto_detect_edge_cases(mocker, scene) -> None:
     """Test edge cases for auto-detect."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -149,7 +149,7 @@ def test_joint_ops_auto_detect_edge_cases(mocker) -> None:
     assert joint_obj.linkforge_joint.parent_link is not None
 
 
-def test_joint_ops_poll_failures() -> None:
+def test_joint_ops_poll_failures(scene) -> None:
     """Hit poll failures for joint operators."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -168,7 +168,7 @@ def test_joint_ops_poll_failures() -> None:
     assert bpy.ops.linkforge.auto_detect_parent_child.poll() is False
 
 
-def test_joint_ops_create_joint_edge_cases(mocker) -> None:
+def test_joint_ops_create_joint_edge_cases(mocker, scene) -> None:
     """Hit error paths in create_joint."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -193,7 +193,7 @@ def test_joint_ops_create_joint_edge_cases(mocker) -> None:
         pass
 
 
-def test_joint_ops_main_entry(mocker) -> None:
+def test_joint_ops_main_entry(mocker, scene) -> None:
     """Simulate module main entry."""
     from linkforge.blender.operators import joint_ops
 

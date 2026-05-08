@@ -1,12 +1,14 @@
 import bpy
 
+from tests.blender_test_utils import create_test_object
+
 
 def test_link_name_sync():
     """Verify that renaming a basic object updates the LinkForge link name."""
     from typing import Any
 
     # 1. Create a link
-    obj = bpy.data.objects.new("base_link", None)
+    obj = create_test_object("base_link", None)
     scene = bpy.context.scene or bpy.data.scenes[0]
     collection = scene.collection
     assert collection is not None
@@ -32,7 +34,7 @@ def test_link_child_renaming():
     from typing import Any
 
     # 1. Setup a link with some meshes
-    parent = bpy.data.objects.new("base_link", None)
+    parent = create_test_object("base_link", None)
     scene = bpy.context.scene or bpy.data.scenes[0]
     collection = scene.collection
     assert collection is not None
@@ -43,13 +45,13 @@ def test_link_child_renaming():
 
     # Standard naming (should rename)
     v_mesh = bpy.data.meshes.new("base_link_visual")
-    visual = bpy.data.objects.new("base_link_visual", v_mesh)
+    visual = create_test_object("base_link_visual", v_mesh)
     collection.objects.link(visual)
     visual.parent = parent
 
     # Custom naming (should stay the same)
     c_mesh = bpy.data.meshes.new("camera_lens")
-    custom = bpy.data.objects.new("camera_lens", c_mesh)
+    custom = create_test_object("camera_lens", c_mesh)
     collection.objects.link(custom)
     custom.parent = parent
 
@@ -69,7 +71,7 @@ def test_joint_name_sync():
     from typing import Any
 
     # 1. Create a joint object
-    obj = bpy.data.objects.new("arm_joint", None)
+    obj = create_test_object("arm_joint", None)
     scene = bpy.context.scene or bpy.data.scenes[0]
     collection = scene.collection
     assert collection is not None
@@ -93,7 +95,7 @@ def test_sensor_name_sync():
     from typing import Any
 
     # 1. Create a lidar
-    obj = bpy.data.objects.new("lidar", None)
+    obj = create_test_object("lidar", None)
     scene = bpy.context.scene or bpy.data.scenes[0]
     collection = scene.collection
     assert collection is not None
@@ -117,7 +119,7 @@ def test_transmission_name_sync():
     from typing import Any
 
     # 1. Create a transmission
-    obj = bpy.data.objects.new("drive_train", None)
+    obj = create_test_object("drive_train", None)
     scene = bpy.context.scene or bpy.data.scenes[0]
     collection = scene.collection
     assert collection is not None
@@ -141,7 +143,7 @@ def test_name_sanitization():
     from typing import Any
 
     # 1. Create a link
-    obj = bpy.data.objects.new("link", None)
+    obj = create_test_object("link", None)
     scene = bpy.context.scene or bpy.data.scenes[0]
     collection = scene.collection
     assert collection is not None
@@ -165,7 +167,7 @@ def test_naming_guards():
     from typing import Any
 
     # 1. Empty name should be ignored
-    obj = bpy.data.objects.new("link", None)
+    obj = create_test_object("link", None)
     scene = bpy.context.scene or bpy.data.scenes[0]
     collection = scene.collection
     assert collection is not None
@@ -176,7 +178,7 @@ def test_naming_guards():
     assert obj_lf.link_name == "link"
 
     # 2. Non-robot objects should be ignored by the sync handler
-    obj2 = bpy.data.objects.new("random_prop", None)
+    obj2 = create_test_object("random_prop", None)
     collection.objects.link(obj2)
     obj2.name = "static_mesh"
     view_layer = bpy.context.view_layer
@@ -198,7 +200,7 @@ def test_sensor_and_transmission_guards():
     assert collection is not None
 
     # 1. Sensor empty name
-    obj = bpy.data.objects.new("sensor", None)
+    obj = create_test_object("sensor", None)
     collection.objects.link(obj)
     obj_lf_s: Any = getattr(obj, "linkforge_sensor")
     obj_lf_s.is_robot_sensor = True
@@ -206,7 +208,7 @@ def test_sensor_and_transmission_guards():
     assert obj_lf_s.sensor_name == "sensor"
 
     # 2. Transmission empty name
-    obj2 = bpy.data.objects.new("transmission", None)
+    obj2 = create_test_object("transmission", None)
     collection.objects.link(obj2)
     obj_lf_t: Any = getattr(obj2, "linkforge_transmission")
     obj_lf_t.is_robot_transmission = True
@@ -214,7 +216,7 @@ def test_sensor_and_transmission_guards():
     assert obj_lf_t.transmission_name == "transmission"
 
     # 3. Joint empty name
-    obj3 = bpy.data.objects.new("joint", None)
+    obj3 = create_test_object("joint", None)
     collection.objects.link(obj3)
     obj_lf_j: Any = getattr(obj3, "linkforge_joint")
     obj_lf_j.is_robot_joint = True

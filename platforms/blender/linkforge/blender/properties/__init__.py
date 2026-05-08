@@ -31,12 +31,29 @@ modules = [
 
 
 def register() -> None:
-    """Register all property groups."""
+    """Register all property groups and patch global types."""
     for module in modules:
         module.register()
 
 
 def unregister() -> None:
-    """Unregister all property groups."""
+    """Unregister all property groups and unpatch global types."""
+    import contextlib
+
+    import bpy
+
+    # 1. Unpatch global types first to break references
+    obj_props = ["linkforge", "linkforge_joint", "linkforge_sensor", "linkforge_transmission"]
+    scene_props = ["linkforge"]
+
+    for p in obj_props:
+        with contextlib.suppress(AttributeError):
+            delattr(bpy.types.Object, p)
+    for p in scene_props:
+        with contextlib.suppress(AttributeError):
+            delattr(bpy.types.Scene, p)
+
+    # 2. Unregister classes in reverse order
     for module in reversed(modules):
-        module.unregister()
+        with contextlib.suppress(Exception):
+            module.unregister()

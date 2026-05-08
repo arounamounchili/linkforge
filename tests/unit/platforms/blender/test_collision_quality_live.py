@@ -6,7 +6,7 @@ from linkforge.blender.operators.link_ops import (
 )
 
 
-def test_collision_quality_live_modifier_persistence() -> None:
+def test_collision_quality_live_modifier_persistence(scene) -> None:
     """Verify that generating a mesh collision preserves the Decimate modifier."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -32,7 +32,7 @@ def test_collision_quality_live_modifier_persistence() -> None:
     assert decimate_mod.decimate_type == "COLLAPSE"
 
 
-def test_update_collision_quality_realtime_success() -> None:
+def test_update_collision_quality_realtime_success(scene) -> None:
     """Verify that the realtime update modifies the existing Decimate modifier."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
@@ -56,7 +56,7 @@ def test_update_collision_quality_realtime_success() -> None:
     assert decimate_mod.ratio == pytest.approx(0.2)
 
 
-def test_update_collision_quality_realtime_fallback() -> None:
+def test_update_collision_quality_realtime_fallback(scene) -> None:
     """Verify fallback to debounced regeneration if modifier is missing."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()

@@ -2,7 +2,7 @@ import bpy
 from mathutils import Vector
 
 
-def test_transmission_name_getter_setter() -> None:
+def test_transmission_name_getter_setter(scene) -> None:
     """Test that transmission_name getter/setter work and sanitize names."""
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.empty_add()
@@ -18,7 +18,7 @@ def test_transmission_name_getter_setter() -> None:
     assert obj.name == "New-Trans_"
 
 
-def test_transmission_hierarchy_simple() -> None:
+def test_transmission_hierarchy_simple(scene) -> None:
     """Test that a simple transmission is reparented to its joint."""
     bpy.ops.object.select_all(action="DESELECT")
 
@@ -43,7 +43,7 @@ def test_transmission_hierarchy_simple() -> None:
     assert all(abs(c) < 1e-6 for c in trans_obj.rotation_euler)
 
 
-def test_transmission_hierarchy_differential() -> None:
+def test_transmission_hierarchy_differential(scene) -> None:
     """Test that a differential transmission is reparented to its first joint."""
     bpy.ops.object.select_all(action="DESELECT")
 
@@ -72,7 +72,7 @@ def test_transmission_hierarchy_differential() -> None:
     assert trans_obj.parent == j1
 
 
-def test_poll_robot_joint() -> None:
+def test_poll_robot_joint(scene) -> None:
     """Test that only robot joint objects are filtered."""
     from linkforge.blender.properties.transmission_props import poll_robot_joint
 

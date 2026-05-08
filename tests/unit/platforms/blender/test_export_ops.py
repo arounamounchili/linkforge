@@ -11,11 +11,13 @@ from linkforge.blender.operators.export_ops import (
     working_directory,
 )
 
+from tests.blender_test_utils import create_test_object
+
 
 @pytest.mark.parametrize("export_format", ["URDF", "XACRO"])
-def test_export_urdf_execute(mocker, clean_scene, export_format) -> None:
+def test_export_urdf_execute(mocker, clean_scene, export_format, scene) -> None:
     """Test the basic export execution with real properties."""
-    scene = bpy.context.scene
+
     props = scene.linkforge
     props.export_format = export_format
     props.export_meshes = False
@@ -33,8 +35,8 @@ def test_export_urdf_execute(mocker, clean_scene, export_format) -> None:
     mocker.patch("linkforge.linkforge_core.XACROGenerator")
 
     # Add a root object to make scene_to_robot succeed
-    root = bpy.data.objects.new("root", None)
-    bpy.context.collection.objects.link(root)
+    root = create_test_object("root", None)
+    scene.collection.objects.link(root)
     root.linkforge.is_link = True
 
     # Execute
@@ -44,9 +46,9 @@ def test_export_urdf_execute(mocker, clean_scene, export_format) -> None:
     mock_self.report.assert_called_with({"INFO"}, mocker.ANY)
 
 
-def test_export_urdf_validation_failure(mocker, clean_scene) -> None:
+def test_export_urdf_validation_failure(mocker, clean_scene, scene) -> None:
     """Test export cancellation when validation fails."""
-    scene = bpy.context.scene
+
     props = scene.linkforge
     props.validate_before_export = True
 
@@ -61,9 +63,9 @@ def test_export_urdf_validation_failure(mocker, clean_scene) -> None:
     assert "Cannot export: 1 validation error(s)" in mock_self.report.call_args[0][1]
 
 
-def test_export_urdf_validation_build_error(mocker, clean_scene) -> None:
+def test_export_urdf_validation_build_error(mocker, clean_scene, scene) -> None:
     """Test build error during the validation dry-run."""
-    scene = bpy.context.scene
+
     props = scene.linkforge
     props.validate_before_export = True
 
@@ -82,7 +84,7 @@ def test_export_urdf_validation_build_error(mocker, clean_scene) -> None:
     assert "Unexpected crash during model build" in mock_self.report.call_args[0][1]
 
 
-def test_validate_robot_operator(mocker, clean_scene) -> None:
+def test_validate_robot_operator(mocker, clean_scene, scene) -> None:
     """Test the validation operator with errors and warnings."""
     mock_self = MagicMock()
     mock_self.report = MagicMock()
@@ -150,7 +152,7 @@ def test_validate_robot_operator(mocker, clean_scene) -> None:
     bpy.context.window_manager.linkforge_validation.warnings.clear()
 
 
-def test_validate_robot_multi_line_error(mocker, clean_scene) -> None:
+def test_validate_robot_multi_line_error(mocker, clean_scene, scene) -> None:
     """Test parsing of multi-line build errors."""
     mock_self = MagicMock()
     mock_self.report = MagicMock()
@@ -169,7 +171,7 @@ def test_validate_robot_multi_line_error(mocker, clean_scene) -> None:
     assert props.errors[1].message == "Error 2"
 
 
-def test_validate_robot_direct_error(mocker, clean_scene) -> None:
+def test_validate_robot_direct_error(mocker, clean_scene, scene) -> None:
     """Test parsing of build errors without prefix."""
     mock_self = MagicMock()
     mock_self.report = MagicMock()
@@ -184,9 +186,9 @@ def test_validate_robot_direct_error(mocker, clean_scene) -> None:
     assert bpy.context.window_manager.linkforge_validation.errors[0].message == "Direct error"
 
 
-def test_export_urdf_exception_handling_advanced(mocker, clean_scene) -> None:
+def test_export_urdf_exception_handling_advanced(mocker, clean_scene, scene) -> None:
     """Test the 'Configuration errors found' message shortening logic."""
-    scene = bpy.context.scene
+
     props = scene.linkforge
     props.export_format = "URDF"
     props.export_meshes = False
@@ -209,13 +211,13 @@ def test_export_urdf_exception_handling_advanced(mocker, clean_scene) -> None:
     assert "Unexpected internal error" in mock_self.report.call_args[0][1]
 
 
-def test_export_urdf_invoke_branches(clean_scene) -> None:
+def test_export_urdf_invoke_branches(clean_scene, scene) -> None:
     """Test invoke branches."""
     mock_op = MagicMock(spec=LINKFORGE_OT_export_robot_model)
 
     # Correct extension for both formats
     for fmt, ext in [("XACRO", ".xacro"), ("URDF", ".urdf")]:
-        bpy.context.scene.linkforge.export_format = fmt
+        scene.linkforge.export_format = fmt
         with patch("bpy_extras.io_utils.ExportHelper.invoke", return_value={"FINISHED"}):
             LINKFORGE_OT_export_robot_model.invoke(mock_op, bpy.context, MagicMock())
             assert mock_op.filename_ext == ext
@@ -228,7 +230,7 @@ def test_export_urdf_invoke_branches(clean_scene) -> None:
     assert result == {"CANCELLED"}
 
 
-def test_export_urdf_execute_missing_props(mocker) -> None:
+def test_export_urdf_execute_missing_props(mocker, scene) -> None:
     """Test execute with missing scene properties."""
     mock_self = MagicMock()
     mock_self.report = MagicMock()
@@ -239,7 +241,7 @@ def test_export_urdf_execute_missing_props(mocker) -> None:
     assert result == {"CANCELLED"}
 
 
-def test_validate_robot_not_initialized(mocker) -> None:
+def test_validate_robot_not_initialized(mocker, scene) -> None:
     """Test validation when system not initialized."""
     mock_self = MagicMock()
     mock_self.report = MagicMock()
@@ -250,7 +252,7 @@ def test_validate_robot_not_initialized(mocker) -> None:
     assert result == {"CANCELLED"}
 
 
-def test_export_registration_recovery(mocker) -> None:
+def test_export_registration_recovery(mocker, scene) -> None:
     """Verify operator registration error recovery logic."""
     # Force a RobotModelError during registration for the FIRST class
     # The loop will:
@@ -262,7 +264,7 @@ def test_export_registration_recovery(mocker) -> None:
         register()
 
 
-def test_export_utils_working_directory(tmp_path) -> None:
+def test_export_utils_working_directory(tmp_path, scene) -> None:
     """Test working_directory utility."""
     original_cwd = os.getcwd()
     new_dir = tmp_path / "workdir"
@@ -274,9 +276,9 @@ def test_export_utils_working_directory(tmp_path) -> None:
     assert os.getcwd() == original_cwd
 
 
-def test_export_urdf_extension_correction(mocker, clean_scene) -> None:
+def test_export_urdf_extension_correction(mocker, clean_scene, scene) -> None:
     """Verify automatic correction of file extensions based on export format."""
-    scene = bpy.context.scene
+
     props = scene.linkforge
 
     # Case 1: robot model format but .xacro extension
@@ -302,7 +304,7 @@ def test_export_urdf_extension_correction(mocker, clean_scene) -> None:
     assert mock_self.filepath.endswith(".xacro")
 
 
-def test_export_registration() -> None:
+def test_export_registration(scene) -> None:
     """Test register/unregister."""
     # Ensure starting state
     if hasattr(bpy.types, "LINKFORGE_OT_export_robot_model"):
@@ -314,7 +316,7 @@ def test_export_registration() -> None:
     register()
 
 
-def test_export_check_logic(mocker) -> None:
+def test_export_check_logic(mocker, scene) -> None:
     """Verify if export can proceed based on current scene state."""
     # Success case
     assert LINKFORGE_OT_export_robot_model.check(None, bpy.context) is True
@@ -325,7 +327,7 @@ def test_export_check_logic(mocker) -> None:
     assert LINKFORGE_OT_export_robot_model.check(None, bad_context) is False
 
 
-def test_export_main_entry(mocker) -> None:
+def test_export_main_entry(mocker, scene) -> None:
     """Verify execution of module entry point logic."""
     # Simulate module entry point execution.
     with (

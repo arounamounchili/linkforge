@@ -11,6 +11,8 @@ from linkforge.linkforge_core import URDFGenerator
 from linkforge.linkforge_core.models import Cylinder, Link, Robot, Transform, Visual
 from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
 
+from tests.blender_test_utils import create_test_object
+
 
 def test_inertia_integration_with_offset():
     """Verify that offset visuals are handled correctly via the Parallel Axis Theorem."""
@@ -20,7 +22,7 @@ def test_inertia_integration_with_offset():
     collection = scene.collection
     assert collection is not None
 
-    link_obj = bpy.data.objects.new("link", None)
+    link_obj = create_test_object("link", None)
     assert link_obj is not None
     collection.objects.link(link_obj)
     link_lf: Any = getattr(link_obj, "linkforge")
@@ -36,7 +38,7 @@ def test_inertia_integration_flow():
     assert collection is not None
 
     # Create the link (Empty) manually instead of using bpy.ops.linkforge
-    link_obj = bpy.data.objects.new("link", None)
+    link_obj = create_test_object("link", None)
     assert link_obj is not None
     collection.objects.link(link_obj)
     link_lf: Any = getattr(link_obj, "linkforge")
@@ -128,19 +130,19 @@ def test_ros2_control_parameter_extraction():
     collection = scene.collection
     assert collection is not None
 
-    p = bpy.data.objects.new("Parent", None)
+    p = create_test_object("Parent", None)
     assert p is not None
     collection.objects.link(p)
     p_lf: Any = getattr(p, "linkforge")
     p_lf.is_robot_link = True
 
-    c = bpy.data.objects.new("Child", None)
+    c = create_test_object("Child", None)
     assert c is not None
     collection.objects.link(c)
     c_lf: Any = getattr(c, "linkforge")
     c_lf.is_robot_link = True
 
-    j = bpy.data.objects.new("Joint", None)
+    j = create_test_object("Joint", None)
     assert j is not None
     collection.objects.link(j)
     j_lf: Any = getattr(j, "linkforge_joint")

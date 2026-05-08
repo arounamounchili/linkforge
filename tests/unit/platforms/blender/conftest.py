@@ -4,11 +4,12 @@ import pytest
 
 try:
     import bpy
-    from bpy.app.handlers import persistent as _bpy_persistent  # noqa: F401
 
     HAS_BPY = True
 except (ImportError, AttributeError):
     HAS_BPY = False
+
+from tests.blender_test_utils import create_test_object
 
 if HAS_BPY:
     import linkforge.blender
@@ -22,23 +23,30 @@ if HAS_BPY:
         """
         linkforge.blender.register()
 
+    @pytest.fixture(scope="module", autouse=True)
+    def ensure_registered():
+        """Ensure LinkForge properties are registered and fully active for the module."""
+        from tests.blender_test_utils import ensure_linkforge_registered
+
+        ensure_linkforge_registered()
+        yield
+
+    @pytest.fixture
+    def scene(ensure_registered) -> bpy.types.Scene:
+        """Provide a robust Blender scene for testing."""
+        target_scene = bpy.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
+        assert target_scene is not None, "No Blender scene available for testing"
+
+        # Final sanity check on an actual instance
+        temp_obj = create_test_object("RegistrationCheck", None)
+        has_prop = hasattr(temp_obj, "linkforge")
+        bpy.data.objects.remove(temp_obj, do_unlink=True)
+
+        assert has_prop, "LinkForge properties not active on Blender Objects"
+        return target_scene
+
     @pytest.fixture(autouse=True)
-    def ensure_registered() -> None:
-        """Verify addon registration before each test.
-
-        Blender's internal state can occasionally reset (e.g., during factory
-        resets). This fixture checks for the presence of LinkForge properties
-        on core types and re-registers the addon if they are missing.
-        """
-        needs_re_reg = not hasattr(bpy.types.Object, "linkforge") or not hasattr(
-            bpy.types.Scene, "linkforge"
-        )
-
-        if needs_re_reg:
-            linkforge.blender.register()
-
-    @pytest.fixture(autouse=True)
-    def clean_scene() -> typing.Generator[None, None, None]:
+    def clean_scene(scene: bpy.types.Scene) -> typing.Generator[None, None, None]:
         """Prepare a clean Blender environment for each test.
 
         Actions performed:
@@ -64,8 +72,7 @@ if HAS_BPY:
                 bpy.data.collections.remove(col, do_unlink=True)
 
         # Reset Scene properties
-        scene = bpy.context.scene
-        if scene and hasattr(scene, "linkforge"):
+        if hasattr(scene, "linkforge"):
             from linkforge.blender.properties.robot_props import RobotPropertyGroup
 
             props = typing.cast(RobotPropertyGroup, scene.linkforge)

@@ -21,14 +21,13 @@ if HAS_BPY:
         """Ensure the addon is registered at the start of the session."""
         linkforge.blender.register()
 
-    @pytest.fixture(autouse=True)
-    def ensure_registered() -> None:
-        """Check and re-register properties if they were lost."""
-        needs_re_reg = not hasattr(bpy.types.Object, "linkforge") or not hasattr(
-            bpy.types.Scene, "linkforge"
-        )
-        if needs_re_reg:
-            linkforge.blender.register()
+    @pytest.fixture(scope="module", autouse=True)
+    def ensure_registered():
+        """Ensure LinkForge properties are registered and fully active."""
+        from tests.blender_test_utils import ensure_linkforge_registered
+
+        ensure_linkforge_registered()
+        yield
 
     @pytest.fixture(autouse=True)
     def clean_scene() -> typing.Generator[None, None, None]:

@@ -9,7 +9,7 @@ from linkforge.blender.visualization.inertia_gizmos import (
 )
 
 
-def test_generate_inertia_axes_geometry_values() -> None:
+def test_generate_inertia_axes_geometry_values(scene) -> None:
     """Test correct geometry generation logic with a real object (Pure Logic)."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
@@ -22,7 +22,7 @@ def test_generate_inertia_axes_geometry_values() -> None:
     assert len(data["line_colors"]) == 104
 
 
-def test_draw_inertia_gizmos_execution() -> None:
+def test_draw_inertia_gizmos_execution(scene) -> None:
     """Execute the draw function to ensure no Python-level errors occur."""
     # 1. Setup real objects
     bpy.ops.object.empty_add(type="PLAIN_AXES")
@@ -46,7 +46,7 @@ def test_draw_inertia_gizmos_execution() -> None:
             raise e
 
 
-def test_ensure_inertia_handler_logic() -> None:
+def test_ensure_inertia_handler_logic(scene) -> None:
     """Test handler registration logic directly."""
     # Clear any existing handle
     import linkforge.blender.visualization.inertia_gizmos as ig
@@ -72,7 +72,7 @@ def test_ensure_inertia_handler_logic() -> None:
         ig._draw_handle = old_handle
 
 
-def test_check_manual_inertia_on_load_logic() -> None:
+def test_check_manual_inertia_on_load_logic(scene) -> None:
     """Test scanning of real objects checks."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     obj = bpy.context.active_object
@@ -82,7 +82,7 @@ def test_check_manual_inertia_on_load_logic() -> None:
     check_manual_inertia_on_load(None)
 
 
-def test_lifecycle_register_unregister() -> None:
+def test_lifecycle_register_unregister(scene) -> None:
     """Test register and unregister functions safely."""
     # This interacts with real bpy.app.handlers
     register()

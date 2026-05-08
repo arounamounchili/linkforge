@@ -91,7 +91,7 @@ class AsynchronousRobotBuilder:
         logger.info(f"Starting asynchronous import of '{self.robot.name}'...")
 
         # Setup background state
-        scene = self.context.scene
+        scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
         if scene and hasattr(scene, "linkforge"):
             scene.linkforge.is_importing = True
             scene.linkforge.abort_import = False
@@ -106,8 +106,7 @@ class AsynchronousRobotBuilder:
 
     def process_next_chunk(self) -> float | None:
         """Process a chunk of tasks. Return interval or None to stop."""
-        scene = self.context.scene
-
+        scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
         # Check for cancellation
         if scene and hasattr(scene, "linkforge") and scene.linkforge.abort_import:
             logger.warning("Import aborted by user.")
@@ -214,7 +213,7 @@ class AsynchronousRobotBuilder:
         self.is_finished = True
 
         # Clear background state
-        scene = self.context.scene
+        scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
         if scene and hasattr(scene, "linkforge"):
             scene.linkforge.is_importing = False
             scene.linkforge.import_status = ""

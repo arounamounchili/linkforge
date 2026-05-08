@@ -9,12 +9,14 @@ import bpy
 import pytest
 from linkforge.blender.adapters.blender_to_core import blender_joint_to_core
 
+from tests.blender_test_utils import create_test_object
+
 
 def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     """Verify that calibration and safety controller survive Blender to Core conversion."""
     # 1. Setup Links
-    p = bpy.data.objects.new("Parent", None)
-    c = bpy.data.objects.new("Child", None)
+    p = create_test_object("Parent", None)
+    c = create_test_object("Child", None)
 
     # Use bpy.data.scenes[0] if context.scene is None (common in background tests)
     scene = bpy.context.scene or bpy.data.scenes[0]
@@ -32,7 +34,7 @@ def test_enhanced_joint_conversion_roundtrip(clean_scene) -> None:
     c_lf.is_robot_link = True
 
     # 2. Setup Joint with Enhanced Properties
-    j = bpy.data.objects.new("Joint", None)
+    j = create_test_object("Joint", None)
     collection.objects.link(j)
 
     j_lf: Any = getattr(j, "linkforge_joint")

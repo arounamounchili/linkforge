@@ -5,18 +5,18 @@ from linkforge.blender.operators.joint_ops import (
     LINKFORGE_OT_create_joint,
 )
 
+from tests.blender_test_utils import create_test_object
 
-def test_create_joint_from_child_mesh(clean_scene) -> None:
+
+def test_create_joint_from_child_mesh(clean_scene, scene) -> None:
     """Verify creating a joint when a link's child mesh is selected."""
     # Link Empty
-    link = bpy.data.objects.new("Base", None)
-    bpy.context.collection.objects.link(link)
+    link = create_test_object("Base", None, scene)
     link.linkforge.is_robot_link = True
 
     # Child Mesh
     mesh_data = bpy.data.meshes.new("BaseMesh")
-    child = bpy.data.objects.new("Base_visual", mesh_data)
-    bpy.context.collection.objects.link(child)
+    child = create_test_object("Base_visual", mesh_data, scene)
     child.parent = link
 
     # Select child instead of link
@@ -33,13 +33,17 @@ def test_create_joint_from_child_mesh(clean_scene) -> None:
     assert joint.linkforge_joint.child_link == link
 
 
-def test_create_joint_collection_sync(clean_scene) -> None:
+def test_create_joint_collection_sync(clean_scene, scene) -> None:
     """Verify joint is moved to link's collection."""
     custom_coll = bpy.data.collections.new("RobotColl")
-    bpy.context.scene.collection.children.link(custom_coll)
+    scene.collection.children.link(custom_coll)
 
-    link = bpy.data.objects.new("Link", None)
+    link = create_test_object("Link", None, scene)
+    # Move to custom collection
     custom_coll.objects.link(link)
+    # create_test_object linked it to scene.collection by default, so we unlink from there if needed
+    # but for this test, having it in both or just custom is fine as long as we verify custom_coll
+
     link.linkforge.is_robot_link = True
 
     # Active is the link
@@ -51,7 +55,7 @@ def test_create_joint_collection_sync(clean_scene) -> None:
     assert joint in custom_coll.objects.values()
 
 
-def test_create_joint_preferences_size(clean_scene) -> None:
+def test_create_joint_preferences_size(clean_scene, scene) -> None:
     """Verify joint display size from preferences."""
     with patch("linkforge.blender.preferences.get_addon_prefs") as mock_prefs:
         # Create a mock object for preferences
@@ -59,8 +63,7 @@ def test_create_joint_preferences_size(clean_scene) -> None:
         prefs.joint_empty_size = 0.5
         mock_prefs.return_value = prefs
 
-        link = bpy.data.objects.new("Link", None)
-        bpy.context.collection.objects.link(link)
+        link = create_test_object("Link", None, scene)
         link.linkforge.is_robot_link = True
         bpy.context.view_layer.objects.active = link
         link.select_set(True)
@@ -70,10 +73,9 @@ def test_create_joint_preferences_size(clean_scene) -> None:
         assert joint.empty_display_size == 0.5
 
 
-def test_delete_joint_ros2_control_sync(clean_scene) -> None:
+def test_delete_joint_ros2_control_sync(clean_scene, scene) -> None:
     """Verify joint is removed from ROS2 control list if exists."""
-    link = bpy.data.objects.new("Link", None)
-    bpy.context.collection.objects.link(link)
+    link = create_test_object("Link", None, scene)
     link.linkforge.is_robot_link = True
 
     bpy.context.view_layer.objects.active = link
@@ -83,14 +85,14 @@ def test_delete_joint_ros2_control_sync(clean_scene) -> None:
     joint_name = joint.name
 
     # Add to ROS2 control
-    scene_props = bpy.context.scene.linkforge
+    scene_props = scene.linkforge
     rc_joint = scene_props.ros2_control_joints.add()
     rc_joint.name = joint_name
 
     assert len(scene_props.ros2_control_joints) == 1
 
 
-def test_auto_detect_parent_child_failure(clean_scene) -> None:
+def test_auto_detect_parent_child_failure(clean_scene, scene) -> None:
     """Test auto-detection failure when no meshes are present."""
     # Satisfy poll: needs active joint Empty
     bpy.ops.object.empty_add(type="PLAIN_AXES")
@@ -102,7 +104,7 @@ def test_auto_detect_parent_child_failure(clean_scene) -> None:
     assert res == {"CANCELLED"}
 
 
-def test_delete_transmission_error(clean_scene) -> None:
+def test_delete_transmission_error(clean_scene, scene) -> None:
     """Hit error path in delete_transmission."""
     bpy.ops.object.empty_add(type="PLAIN_AXES")
     trans = bpy.context.active_object
@@ -125,7 +127,7 @@ def test_delete_transmission_error(clean_scene) -> None:
         LINKFORGE_OT_delete_transmission().execute(None)
 
 
-def test_auto_detect_single_link(clean_scene) -> None:
+def test_auto_detect_single_link(clean_scene, scene) -> None:
     """Hit the single-link branch in auto-detect."""
     bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
     link = bpy.context.active_object
@@ -140,11 +142,10 @@ def test_auto_detect_single_link(clean_scene) -> None:
     assert joint.linkforge_joint.child_link == link
 
 
-def test_auto_detect_error_paths(clean_scene) -> None:
+def test_auto_detect_error_paths(clean_scene, scene) -> None:
     """Hit error paths in auto-detect."""
     # 1. No links warning
-    j = bpy.data.objects.new("Joint", None)
-    bpy.context.collection.objects.link(j)
+    j = create_test_object("Joint", None, scene)
     j.linkforge_joint.is_robot_joint = True
     bpy.context.view_layer.objects.active = j
     j.select_set(True)
