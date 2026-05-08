@@ -17,8 +17,8 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
+from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 
-from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 from ..utils.link_utils import should_rename_child
 from ..utils.scene_utils import clear_stats_cache
 from ..visualization.inertia_gizmos import tag_redraw

@@ -1,13 +1,17 @@
 import bpy
 
+from tests.blender_test_utils import (
+    create_mesh_object,
+    safe_get_sensor,
+)
 
-def test_sensor_ops_create_sensor(scene) -> None:
+
+def test_sensor_ops_create_sensor(mock_context, scene) -> None:
     """Test LINKFORGE_OT_create_sensor operator."""
-    # Setup: Create a link and a joint
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
-    bpy.ops.mesh.primitive_cube_add()
+    # Setup: Create a link
+    obj = create_mesh_object("link_sensor", scene)
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
 
@@ -24,17 +28,16 @@ def test_sensor_ops_create_sensor(scene) -> None:
     sensor_obj = bpy.context.active_object
     assert "_sensor" in sensor_obj.name
     assert sensor_obj.type == "EMPTY"
-    assert sensor_obj.linkforge_sensor.is_robot_sensor is True
+    assert safe_get_sensor(sensor_obj).is_robot_sensor is True
     assert sensor_obj.parent == link_obj
 
 
-def test_sensor_ops_delete_sensor(scene) -> None:
+def test_sensor_ops_delete_sensor(mock_context, scene) -> None:
     """Test LINKFORGE_OT_delete_sensor operator."""
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
     # Create sensor
-    bpy.ops.mesh.primitive_cube_add()
+    obj = create_mesh_object("link_for_sensor_del", scene)
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
     bpy.ops.linkforge.create_link_from_mesh()
     bpy.ops.linkforge.create_sensor()
     sensor_obj = bpy.context.active_object
@@ -48,7 +51,7 @@ def test_sensor_ops_delete_sensor(scene) -> None:
     assert sensor_name not in bpy.data.objects
 
 
-def test_sensor_ops_poll_failures(scene) -> None:
+def test_sensor_ops_poll_failures(mock_context, scene) -> None:
     """Hit poll failures for sensor operators."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()

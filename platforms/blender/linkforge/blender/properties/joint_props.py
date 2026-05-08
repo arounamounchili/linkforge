@@ -20,7 +20,8 @@ from bpy.types import Context, PropertyGroup
 if typing.TYPE_CHECKING:
     from .link_props import LinkPropertyGroup
 
-from ...linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
+from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
+
 from ..utils.property_helpers import find_property_owner
 from ..utils.scene_utils import clear_stats_cache
 

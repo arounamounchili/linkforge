@@ -3,7 +3,7 @@
 import logging
 
 from linkforge.blender.utils.decorators import safe_execute
-from linkforge.linkforge_core.exceptions import RobotModelError
+from linkforge_core.exceptions import RobotModelError
 
 
 class SpyOperator:

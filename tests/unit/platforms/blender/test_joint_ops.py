@@ -1,14 +1,19 @@
-"""Tests for joint management operators."""
-
-from __future__ import annotations
-
 import bpy
+
+from tests.blender_test_utils import (
+    create_mesh_object,
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge_scene,
+)
 
 
 def test_joint_ops_create_joint(mock_context, scene) -> None:
     """Test LINKFORGE_OT_create_joint operator."""
     # Create a link
-    bpy.ops.mesh.primitive_cube_add()
+    obj = create_mesh_object("link", scene)
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
     bpy.ops.linkforge.create_link_from_mesh()
     link_obj = bpy.context.active_object
 
@@ -19,21 +24,24 @@ def test_joint_ops_create_joint(mock_context, scene) -> None:
     bpy.ops.linkforge.create_joint()
     joint_obj = bpy.context.active_object
     assert "_joint" in joint_obj.name
-    assert joint_obj.linkforge_joint.is_robot_joint is True
-    assert joint_obj.linkforge_joint.child_link == link_obj
+    assert safe_get_joint(joint_obj).is_robot_joint is True
+    assert safe_get_joint(joint_obj).child_link == link_obj
 
 
 def test_joint_ops_delete_joint(mock_context, scene) -> None:
     """Test LINKFORGE_OT_delete_joint operator and ROS2 Control sync."""
-    bpy.ops.mesh.primitive_cube_add()
+    obj = create_mesh_object("link_del", scene)
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
     bpy.ops.linkforge.create_link_from_mesh()
     bpy.ops.linkforge.create_joint()
     joint_obj = bpy.context.active_object
     joint_name = joint_obj.name
 
     # Setup ROS2 control sync
-    scene.linkforge.use_ros2_control = True
-    item = scene.linkforge.ros2_control_joints.add()
+    lf_scene = safe_get_linkforge_scene(scene)
+    lf_scene.use_ros2_control = True
+    item = lf_scene.ros2_control_joints.add()
     item.name = joint_name
 
     # Execute delete
@@ -45,13 +53,19 @@ def test_joint_ops_delete_joint(mock_context, scene) -> None:
 def test_joint_ops_auto_detect(mock_context, scene) -> None:
     """Test LINKFORGE_OT_auto_detect_parent_child operator."""
     # Create link hierarchy
-    bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))  # Child
+    child_link_mesh = create_mesh_object("child", scene)
+    child_link_mesh.location = (1, 0, 0)
+    bpy.context.view_layer.objects.active = child_link_mesh
+    child_link_mesh.select_set(True)
     bpy.ops.linkforge.create_link_from_mesh()
-    child_link = bpy.context.active_object
+    child_link = bpy.context.active_object  # The newly created Empty
 
-    bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))  # Parent
+    parent_link_mesh = create_mesh_object("parent", scene)
+    parent_link_mesh.location = (0, 0, 0)
+    bpy.context.view_layer.objects.active = parent_link_mesh
+    parent_link_mesh.select_set(True)
     bpy.ops.linkforge.create_link_from_mesh()
-    parent_link = bpy.context.active_object
+    parent_link = bpy.context.active_object  # The newly created Empty
 
     # Create joint at child
     bpy.ops.object.select_all(action="DESELECT")
@@ -62,20 +76,21 @@ def test_joint_ops_auto_detect(mock_context, scene) -> None:
 
     # Auto-detect
     bpy.ops.linkforge.auto_detect_parent_child()
-    assert joint_obj.linkforge_joint.child_link == child_link
-    assert joint_obj.linkforge_joint.parent_link == parent_link
+    assert safe_get_joint(joint_obj).child_link == child_link
+    assert safe_get_joint(joint_obj).parent_link == parent_link
 
 
 def test_joint_ops_robustness_no_links(mock_context, scene) -> None:
     """Test auto-detect and creation with no valid links."""
     # Auto-detect with no links
-    bpy.ops.object.empty_add()
-    joint_obj = bpy.context.active_object
-    joint_obj.linkforge_joint.is_robot_joint = True
+    joint_obj = create_test_object("joint_lone", None, scene)
+    bpy.context.view_layer.objects.active = joint_obj
+    joint_obj.select_set(True)
+    safe_get_joint(joint_obj).is_robot_joint = True
 
     # Should not crash
     bpy.ops.linkforge.auto_detect_parent_child()
-    assert joint_obj.linkforge_joint.child_link is None
+    assert safe_get_joint(joint_obj).child_link is None
 
     # Create joint on non-link object (should fail poll)
     bpy.ops.object.select_all(action="SELECT")
@@ -86,23 +101,26 @@ def test_joint_ops_robustness_no_links(mock_context, scene) -> None:
 
 def test_joint_ops_robustness_zombie_cleanup(mock_context, scene) -> None:
     """Test that deleting a joint cleans up ROS2 control even if references are broken."""
-    scene.linkforge.use_ros2_control = True
-    item = scene.linkforge.ros2_control_joints.add()
+    lf_scene = safe_get_linkforge_scene(scene)
+    lf_scene.use_ros2_control = True
+    item = lf_scene.ros2_control_joints.add()
     item.name = "NonExistentJoint"
 
     # Selecting something else to allow delete_joint poll if possible,
     # but delete_joint usually requires a selected joint.
     # Let's create a real joint, rename it, and see if it still syncs by name.
-    bpy.ops.mesh.primitive_cube_add()
+    obj = create_mesh_object("zombie_link", scene)
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
     bpy.ops.linkforge.create_link_from_mesh()
     bpy.ops.linkforge.create_joint()
     joint_obj = bpy.context.active_object
 
     # Add to ROS2 control
     joint_name = joint_obj.name
-    item2 = scene.linkforge.ros2_control_joints.add()
+    item2 = lf_scene.ros2_control_joints.add()
     item2.name = joint_name
 
     bpy.ops.linkforge.delete_joint()
     # verify item2 is gone
-    assert not any(i.name == joint_name for i in scene.linkforge.ros2_control_joints)
+    assert not any(i.name == joint_name for i in lf_scene.ros2_control_joints)

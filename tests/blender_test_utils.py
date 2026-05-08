@@ -107,6 +107,14 @@ def create_test_object(name: str, object_data: Any = None, scene: Any = None) ->
     return obj
 
 
+def create_mesh_object(name: str, scene: Any = None) -> bpy.types.Object:
+    """Creates a simple mesh object (cube) for testing."""
+    mesh_data = bpy.data.meshes.new(f"{name}_mesh")
+    # Simple cube-like data
+    mesh_data.from_pydata([(1, 1, 1), (1, -1, 1), (-1, -1, 1), (-1, 1, 1)], [], [(0, 1, 2, 3)])
+    return create_test_object(name, mesh_data, scene)
+
+
 def safe_get_linkforge(obj: bpy.types.Object, scene: Any = None) -> Any:
     """Safe accessor for the 'linkforge' property group with auto-recovery."""
     try:
@@ -117,7 +125,42 @@ def safe_get_linkforge(obj: bpy.types.Object, scene: Any = None) -> Any:
 
     # Environment Refresh & Re-fetch
     _refresh_blender_environment(scene)
-    return bpy.data.objects.get(obj.name).linkforge
+
+    # Re-fetch the object wrapper by name to ensure we have a fresh RNA pointer
+    try:
+        fresh_obj = bpy.data.objects[obj.name]
+        prop = getattr(fresh_obj, "linkforge", None)
+        if prop and prop.bl_rna:
+            return prop
+    except (KeyError, AttributeError, RuntimeError):
+        pass
+
+    raise AttributeError(
+        f"Object '{obj.name}' missing 'linkforge' property after environment refresh."
+    )
+
+
+def safe_get_linkforge_scene(scene: bpy.types.Scene) -> Any:
+    """Safe accessor for the scene-level 'linkforge' property group."""
+    try:
+        if hasattr(scene, "linkforge") and scene.linkforge and scene.linkforge.bl_rna:
+            return scene.linkforge
+    except (AttributeError, RuntimeError):
+        pass
+
+    _refresh_blender_environment(scene)
+
+    try:
+        fresh_scene = bpy.data.scenes[scene.name]
+        prop = getattr(fresh_scene, "linkforge", None)
+        if prop and prop.bl_rna:
+            return prop
+    except (KeyError, AttributeError, RuntimeError):
+        pass
+
+    raise AttributeError(
+        f"Scene '{scene.name}' missing 'linkforge' property after environment refresh."
+    )
 
 
 def safe_get_joint(obj: bpy.types.Object, scene: Any = None) -> Any:
@@ -129,7 +172,18 @@ def safe_get_joint(obj: bpy.types.Object, scene: Any = None) -> Any:
         pass
 
     _refresh_blender_environment(scene)
-    return bpy.data.objects.get(obj.name).linkforge_joint
+
+    try:
+        fresh_obj = bpy.data.objects[obj.name]
+        prop = getattr(fresh_obj, "linkforge_joint", None)
+        if prop and prop.bl_rna:
+            return prop
+    except (KeyError, AttributeError, RuntimeError):
+        pass
+
+    raise AttributeError(
+        f"Object '{obj.name}' missing 'linkforge_joint' property after environment refresh."
+    )
 
 
 def safe_get_sensor(obj: bpy.types.Object, scene: Any = None) -> Any:
@@ -145,7 +199,18 @@ def safe_get_sensor(obj: bpy.types.Object, scene: Any = None) -> Any:
         pass
 
     _refresh_blender_environment(scene)
-    return bpy.data.objects.get(obj.name).linkforge_sensor
+
+    try:
+        fresh_obj = bpy.data.objects[obj.name]
+        prop = getattr(fresh_obj, "linkforge_sensor", None)
+        if prop and prop.bl_rna:
+            return prop
+    except (KeyError, AttributeError, RuntimeError):
+        pass
+
+    raise AttributeError(
+        f"Object '{obj.name}' missing 'linkforge_sensor' property after environment refresh."
+    )
 
 
 def safe_get_transmission(obj: bpy.types.Object, scene: Any = None) -> Any:
@@ -161,17 +226,33 @@ def safe_get_transmission(obj: bpy.types.Object, scene: Any = None) -> Any:
         pass
 
     _refresh_blender_environment(scene)
-    return bpy.data.objects.get(obj.name).linkforge_transmission
+
+    try:
+        fresh_obj = bpy.data.objects[obj.name]
+        prop = getattr(fresh_obj, "linkforge_transmission", None)
+        if prop and prop.bl_rna:
+            return prop
+    except (KeyError, AttributeError, RuntimeError):
+        pass
+
+    raise AttributeError(
+        f"Object '{obj.name}' missing 'linkforge_transmission' property after environment refresh."
+    )
 
 
 def _refresh_blender_environment(scene: Any = None) -> None:
     """Internal helper to refresh the Blender RNA state (Nuclear Recovery)."""
     import linkforge.blender
 
+    # Fallback to the active scene if none provided
+    if not scene:
+        scene = bpy.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
+
     with contextlib.suppress(Exception):
         linkforge.blender.unregister()
     linkforge.blender.register()
 
+    # Force depsgraph update to push properties to instances
     if scene and hasattr(scene, "view_layers"):
         for vl in scene.view_layers:
             vl.update()

@@ -12,8 +12,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from linkforge.linkforge_core.generators.urdf_generator import URDFGenerator
-from linkforge.linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge_core.generators.urdf_generator import URDFGenerator
+from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 def test_simple_arm_roundtrip(examples_dir: Path) -> None:

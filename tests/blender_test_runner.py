@@ -15,10 +15,12 @@ def setup_environment():
     # Get the project root directory
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-    # Add platforms/blender to sys.path
+    # Add platforms/blender and core/src to sys.path
     blender_path = os.path.join(project_root, "platforms", "blender")
-    if blender_path not in sys.path:
-        sys.path.insert(0, blender_path)
+    core_path = os.path.join(project_root, "core", "src")
+    for p in [blender_path, core_path]:
+        if p not in sys.path:
+            sys.path.insert(0, p)
 
     # Ensure pytest is available in Blender's Python
     if importlib.util.find_spec("pytest") is None:

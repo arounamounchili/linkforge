@@ -7,6 +7,8 @@ from linkforge.blender.utils.transform_utils import (
     set_parent_keep_transform,
 )
 
+from tests.blender_test_utils import create_test_object
+
 
 def test_set_parent_keep_transform_basic(scene) -> None:
     """Test parenting while preserving world transform."""
@@ -15,13 +17,11 @@ def test_set_parent_keep_transform_basic(scene) -> None:
     bpy.ops.object.delete()
 
     # Create parent and child objects
-    bpy.ops.object.empty_add(location=(1, 2, 3))
-    parent_obj = bpy.context.active_object
-    parent_obj.name = "Parent"
+    parent_obj = create_test_object("Parent", None, scene)
+    parent_obj.location = (1, 2, 3)
 
-    bpy.ops.object.empty_add(location=(5, 6, 7))
-    child_obj = bpy.context.active_object
-    child_obj.name = "Child"
+    child_obj = create_test_object("Child", None, scene)
+    child_obj.location = (5, 6, 7)
 
     # Store original world location
     original_world_loc = child_obj.matrix_world.translation.copy()
@@ -44,12 +44,13 @@ def test_set_parent_keep_transform_with_rotation(scene) -> None:
     bpy.ops.object.delete()
 
     # Create rotated parent
-    bpy.ops.object.empty_add(location=(0, 0, 0), rotation=(0, 0, 1.5708))  # 90 degrees Z
-    parent_obj = bpy.context.active_object
+    parent_obj = create_test_object("ParentRot", None, scene)
+    parent_obj.location = (0, 0, 0)
+    parent_obj.rotation_euler = (0, 0, 1.5708)  # 90 degrees Z
 
     # Create child at specific location
-    bpy.ops.object.empty_add(location=(1, 0, 0))
-    child_obj = bpy.context.active_object
+    child_obj = create_test_object("ChildAtLoc", None, scene)
+    child_obj.location = (1, 0, 0)
 
     original_world_loc = child_obj.matrix_world.translation.copy()
 
@@ -68,8 +69,7 @@ def test_set_parent_keep_transform_none_child(scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    bpy.ops.object.empty_add()
-    parent_obj = bpy.context.active_object
+    parent_obj = create_test_object("ParentNoneChild", None, scene)
 
     # Should not raise error
     set_parent_keep_transform(None, parent_obj)
@@ -80,8 +80,7 @@ def test_set_parent_keep_transform_none_parent(scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    bpy.ops.object.empty_add()
-    child_obj = bpy.context.active_object
+    child_obj = create_test_object("ChildNoneParent", None, scene)
 
     # Should not raise error
     set_parent_keep_transform(child_obj, None)
@@ -93,11 +92,11 @@ def test_clear_parent_keep_transform_basic(scene) -> None:
     bpy.ops.object.delete()
 
     # Create parent and child
-    bpy.ops.object.empty_add(location=(2, 3, 4))
-    parent_obj = bpy.context.active_object
+    parent_obj = create_test_object("ParentClear", None, scene)
+    parent_obj.location = (2, 3, 4)
 
-    bpy.ops.object.empty_add(location=(5, 6, 7))
-    child_obj = bpy.context.active_object
+    child_obj = create_test_object("ChildClear", None, scene)
+    child_obj.location = (5, 6, 7)
 
     # Set parent first
     child_obj.parent = parent_obj
@@ -128,8 +127,8 @@ def test_clear_parent_keep_transform_no_parent(scene) -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
-    bpy.ops.object.empty_add(location=(1, 2, 3))
-    obj = bpy.context.active_object
+    obj = create_test_object("NoParent", None, scene)
+    obj.location = (1, 2, 3)
 
     # Store location
     original_loc = obj.matrix_world.translation.copy()
@@ -149,13 +148,12 @@ def test_set_parent_with_scale(scene) -> None:
     bpy.ops.object.delete()
 
     # Create scaled parent
-    bpy.ops.object.empty_add(location=(0, 0, 0))
-    parent_obj = bpy.context.active_object
+    parent_obj = create_test_object("ScaledParent", None, scene)
     parent_obj.scale = (2.0, 2.0, 2.0)
 
     # Create child
-    bpy.ops.object.empty_add(location=(4, 0, 0))
-    child_obj = bpy.context.active_object
+    child_obj = create_test_object("ScaledChild", None, scene)
+    child_obj.location = (4, 0, 0)
 
     original_world_loc = child_obj.matrix_world.translation.copy()
 

@@ -12,6 +12,7 @@ Visualization Style:
 
 from __future__ import annotations
 
+import contextlib
 import math
 import typing
 from typing import Any
@@ -303,6 +304,7 @@ def unregister() -> None:
 
     # Remove draw handler
     if _draw_handle is not None:
-        bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
+        with contextlib.suppress(Exception):
+            bpy.types.SpaceView3D.draw_handler_remove(_draw_handle, "WINDOW")
         _draw_handle = None
         tag_redraw()

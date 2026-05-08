@@ -8,12 +8,17 @@ from linkforge.blender.visualization.inertia_gizmos import (
     unregister,
 )
 
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_linkforge,
+)
+
 
 def test_generate_inertia_axes_geometry_values(scene) -> None:
     """Test correct geometry generation logic with a real object (Pure Logic)."""
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj = bpy.context.active_object
-    obj.linkforge.inertia_origin_xyz = (1.0, 0.0, 0.0)
+    obj = create_test_object("inertia_test_obj", None, scene)
+    assert obj is not None
+    safe_get_linkforge(obj).inertia_origin_xyz = (1.0, 0.0, 0.0)
 
     data = generate_inertia_axes_geometry(obj)
 
@@ -25,21 +30,17 @@ def test_generate_inertia_axes_geometry_values(scene) -> None:
 def test_draw_inertia_gizmos_execution(scene) -> None:
     """Execute the draw function to ensure no Python-level errors occur."""
     # Setup real objects
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj1 = bpy.context.active_object
-    obj1.linkforge.is_robot_link = True
-    obj1.linkforge.use_auto_inertia = False
+    obj1 = create_test_object("obj1", None, scene)
+    assert obj1 is not None
+    props = safe_get_linkforge(obj1)
+    props.is_robot_link = True
+    props.use_auto_inertia = False
     obj1.select_set(True)
 
     # Call draw (headless)
-    # In a headless environment, this might do nothing or raise a Context/GPU error.
-    # We just want to ensure our *logic* doesn't crash (e.g., AttributeErrors).
     try:
         draw_inertia_gizmos()
     except Exception as e:
-        # If it's a GPU error (e.g. no context), that's expected in headless.
-        # But we caught it, so we executed the logic leading up to it.
-        # If it's a logic error (AttributeError), fail.
         if "gpu" in str(e).lower() or "context" in str(e).lower():
             pass
         else:
@@ -63,7 +64,7 @@ def test_ensure_inertia_handler_logic(scene) -> None:
         ensure_inertia_handler()
         assert ig._draw_handle == handle
     finally:
-        # Restore state to avoid polluting other tests
+        # Restore state
         if ig._draw_handle:
             import contextlib
 
@@ -74,16 +75,16 @@ def test_ensure_inertia_handler_logic(scene) -> None:
 
 def test_check_manual_inertia_on_load_logic(scene) -> None:
     """Test scanning of real objects checks."""
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj = bpy.context.active_object
-    obj.linkforge.is_robot_link = True
-    obj.linkforge.use_auto_inertia = False
+    obj = create_test_object("obj_load", None, scene)
+    assert obj is not None
+    props = safe_get_linkforge(obj)
+    props.is_robot_link = True
+    props.use_auto_inertia = False
 
     check_manual_inertia_on_load(None)
 
 
 def test_lifecycle_register_unregister(scene) -> None:
     """Test register and unregister functions safely."""
-    # This interacts with real bpy.app.handlers
     register()
     unregister()

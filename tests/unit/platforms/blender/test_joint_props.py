@@ -1,83 +1,69 @@
 import bpy
 from linkforge.blender.properties.joint_props import poll_robot_joint, poll_robot_link
 
+from tests.blender_test_utils import create_test_object, safe_get_joint, safe_get_linkforge
+
 
 def test_joint_name_getter_setter(scene) -> None:
     """Test that joint_name mirrors and sanitizes the object name."""
-    bpy.ops.object.select_all(action="DESELECT")
-    bpy.ops.object.empty_add()
-    obj = bpy.context.active_object
-    obj.name = "My Joint"
-    obj.linkforge_joint.is_robot_joint = True
+    obj = create_test_object("My Joint", None, scene)
+    safe_get_joint(obj).is_robot_joint = True
 
     # Getter should return sanitized name
-    assert obj.linkforge_joint.joint_name == "My_Joint"
+    assert safe_get_joint(obj).joint_name == "My_Joint"
 
     # Setter should update object name
-    obj.linkforge_joint.joint_name = "New-Joint-Name"
+    safe_get_joint(obj).joint_name = "New-Joint-Name"
     assert obj.name == "New-Joint-Name"
 
 
 def test_joint_hierarchy_links(scene) -> None:
     """Test that assigning parent/child links updates the hierarchy correctly."""
-    bpy.ops.object.select_all(action="DESELECT")
-
     # Create parent link
-    bpy.ops.object.empty_add()
-    parent_link = bpy.context.active_object
-    parent_link.name = "parent_link"
-    parent_link.linkforge.is_robot_link = True
+    parent_link = create_test_object("parent_link", None, scene)
+    safe_get_linkforge(parent_link).is_robot_link = True
 
     # Create joint
-    bpy.ops.object.empty_add()
-    joint = bpy.context.active_object
-    joint.name = "test_joint"
-    joint.linkforge_joint.is_robot_joint = True
+    joint = create_test_object("test_joint", None, scene)
+    safe_get_joint(joint).is_robot_joint = True
 
     # Create child link
-    bpy.ops.object.empty_add()
-    child_link = bpy.context.active_object
-    child_link.name = "child_link"
-    child_link.linkforge.is_robot_link = True
+    child_link = create_test_object("child_link", None, scene)
+    safe_get_linkforge(child_link).is_robot_link = True
 
     # Assign parent link
-    joint.linkforge_joint.parent_link = parent_link
+    safe_get_joint(joint).parent_link = parent_link
     bpy.context.view_layer.update()
     assert joint.parent == parent_link
 
     # Assign child link
-    joint.linkforge_joint.child_link = child_link
+    safe_get_joint(joint).child_link = child_link
     bpy.context.view_layer.update()
     assert child_link.parent == joint
 
     # Clear child link (should unparent the child)
-    joint.linkforge_joint.child_link = None
+    safe_get_joint(joint).child_link = None
     bpy.context.view_layer.update()
     assert child_link.parent is None
 
     # Clear parent link
-    joint.linkforge_joint.parent_link = None
+    safe_get_joint(joint).parent_link = None
     bpy.context.view_layer.update()
     assert joint.parent is None
 
 
 def test_poll_filters(scene) -> None:
     """Test the poll functions for links and joints."""
-    bpy.ops.object.select_all(action="DESELECT")
-
     # Robot link
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
+    link_obj = create_test_object("LinkObj", None, scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
 
     # Robot joint
-    bpy.ops.object.empty_add()
-    joint_obj = bpy.context.active_object
-    joint_obj.linkforge_joint.is_robot_joint = True
+    joint_obj = create_test_object("JointObj", None, scene)
+    safe_get_joint(joint_obj).is_robot_joint = True
 
     # Regular object
-    bpy.ops.object.empty_add()
-    none_obj = bpy.context.active_object
+    none_obj = create_test_object("NoneObj", None, scene)
 
     # Poll Link
     assert poll_robot_link(None, link_obj) is True
@@ -85,10 +71,9 @@ def test_poll_filters(scene) -> None:
     assert poll_robot_link(None, none_obj) is False
 
     # Poll Joint (prevents self-mimicry)
-    assert poll_robot_joint(joint_obj.linkforge_joint, joint_obj) is False
+    assert poll_robot_joint(safe_get_joint(joint_obj), joint_obj) is False
 
     # Create another joint
-    bpy.ops.object.empty_add()
-    other_joint = bpy.context.active_object
-    other_joint.linkforge_joint.is_robot_joint = True
-    assert poll_robot_joint(joint_obj.linkforge_joint, other_joint) is True
+    other_joint = create_test_object("OtherJoint", None, scene)
+    safe_get_joint(other_joint).is_robot_joint = True
+    assert poll_robot_joint(safe_get_joint(joint_obj), other_joint) is True

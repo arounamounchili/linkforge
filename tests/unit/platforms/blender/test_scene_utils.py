@@ -13,21 +13,27 @@ from linkforge.blender.utils.scene_utils import (
     move_to_collection,
 )
 
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge,
+    safe_get_sensor,
+    safe_get_transmission,
+)
+
 
 def test_is_robot_link_with_valid_link(scene) -> None:
     """Test is_robot_link returns True for valid robot link object."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-    obj.linkforge.is_robot_link = True
-    obj.linkforge.link_name = "test_link"
+    obj = create_test_object("test_link", None, scene)
+    safe_get_linkforge(obj).is_robot_link = True
+    safe_get_linkforge(obj).link_name = "test_link"
 
     assert is_robot_link(obj) is True
 
 
 def test_is_robot_link_with_non_link(scene) -> None:
     """Test is_robot_link returns False for non-link object."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
+    obj = create_test_object("non_link", None, scene)
 
     assert is_robot_link(obj) is False
 
@@ -39,54 +45,48 @@ def test_is_robot_link_with_none(scene) -> None:
 
 def test_is_robot_joint_with_valid_joint(scene) -> None:
     """Test is_robot_joint returns True for valid robot_joint object."""
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj = bpy.context.active_object
-    obj.linkforge_joint.is_robot_joint = True
-    obj.linkforge_joint.joint_name = "test_joint"
-    obj.linkforge_joint.joint_type = "REVOLUTE"
+    obj = create_test_object("test_joint", None, scene)
+    safe_get_joint(obj).is_robot_joint = True
+    safe_get_joint(obj).joint_name = "test_joint"
+    safe_get_joint(obj).joint_type = "REVOLUTE"
 
     assert is_robot_joint(obj) is True
 
 
 def test_is_robot_joint_with_mesh_object(scene) -> None:
     """Test is_robot_joint returns False for objects that cannot be robot_joints."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
+    obj = create_test_object("mesh_obj", None, scene)
 
     assert is_robot_joint(obj) is False
 
 
 def test_is_robot_joint_with_empty_not_marked(scene) -> None:
     """Test is_robot_joint returns False for non robot_joint objects."""
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj = bpy.context.active_object
+    obj = create_test_object("unmarked_empty", None, scene)
 
     assert is_robot_joint(obj) is False
 
 
 def test_is_robot_sensor_with_valid_sensor(scene) -> None:
     """Test is_robot_sensor returns True for valid robot_sensor object."""
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj = bpy.context.active_object
-    obj.linkforge_sensor.is_robot_sensor = True
-    obj.linkforge_sensor.sensor_name = "test_sensor"
-    obj.linkforge_sensor.sensor_type = "CAMERA"
+    obj = create_test_object("test_sensor", None, scene)
+    safe_get_sensor(obj).is_robot_sensor = True
+    safe_get_sensor(obj).sensor_name = "test_sensor"
+    safe_get_sensor(obj).sensor_type = "CAMERA"
 
     assert is_robot_sensor(obj) is True
 
 
 def test_is_robot_sensor_with_mesh_object(scene) -> None:
     """Test is_robot_sensor returns False for objects that cannot be robot_sensors."""
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
+    obj = create_test_object("mesh_sensor", None, scene)
 
     assert is_robot_sensor(obj) is False
 
 
 def test_is_robot_sensor_with_empty_not_marked(scene) -> None:
     """Test is_robot_sensor returns False for non robot_sensor objects."""
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj = bpy.context.active_object
+    obj = create_test_object("unmarked_sensor", None, scene)
 
     assert is_robot_sensor(obj) is False
 
@@ -94,10 +94,9 @@ def test_is_robot_sensor_with_empty_not_marked(scene) -> None:
 def test_is_robot_transmission_with_valid_transmission(scene) -> None:
     """Test is_robot_transmission returns True for valid transmission."""
     # Create an empty and mark it as a transmission
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    obj = bpy.context.active_object
-    obj.linkforge_transmission.is_robot_transmission = True
-    obj.linkforge_transmission.transmission_name = "test_transmission"
+    obj = create_test_object("test_transmission", None, scene)
+    safe_get_transmission(obj).is_robot_transmission = True
+    safe_get_transmission(obj).transmission_name = "test_transmission"
 
     assert is_robot_transmission(obj) is True
 
@@ -105,8 +104,7 @@ def test_is_robot_transmission_with_valid_transmission(scene) -> None:
 def test_is_robot_transmission_with_unmarked_object(scene) -> None:
     """Test is_robot_transmission returns False for unmarked object."""
     # Create an object but don't mark it as a transmission
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
+    obj = create_test_object("unmarked_mesh", None, scene)
 
     assert is_robot_transmission(obj) is False
 
@@ -244,26 +242,23 @@ def test_get_robot_statistics_none_scene(scene) -> None:
 
 def test_get_robot_statistics_with_links(scene) -> None:
     """Test get_robot_statistics counts links and calculates mass."""
-    bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-    link1 = bpy.context.active_object
-    link1.name = "base_link"
-    link1.linkforge.is_robot_link = True
-    link1.linkforge.link_name = "base_link"
-    link1.linkforge.mass = 5.0
+    link1 = create_test_object("base_link", None, scene)
+    link1.location = (0, 0, 0)
+    safe_get_linkforge(link1).is_robot_link = True
+    safe_get_linkforge(link1).link_name = "base_link"
+    safe_get_linkforge(link1).mass = 5.0
 
-    bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))
-    link2 = bpy.context.active_object
-    link2.name = "body_link"
-    link2.linkforge.is_robot_link = True
-    link2.linkforge.link_name = "body_link"
-    link2.linkforge.mass = 10.0
+    link2 = create_test_object("body_link", None, scene)
+    link2.location = (1, 0, 0)
+    safe_get_linkforge(link2).is_robot_link = True
+    safe_get_linkforge(link2).link_name = "body_link"
+    safe_get_linkforge(link2).mass = 10.0
 
-    bpy.ops.mesh.primitive_cube_add(location=(2, 0, 0))
-    link3 = bpy.context.active_object
-    link3.name = "gripper_link"
-    link3.linkforge.is_robot_link = True
-    link3.linkforge.link_name = "gripper_link"
-    link3.linkforge.mass = 2.5
+    link3 = create_test_object("gripper_link", None, scene)
+    link3.location = (2, 0, 0)
+    safe_get_linkforge(link3).is_robot_link = True
+    safe_get_linkforge(link3).link_name = "gripper_link"
+    safe_get_linkforge(link3).mass = 2.5
 
     stats = get_robot_statistics(scene)
 
@@ -278,11 +273,10 @@ def test_get_robot_statistics_with_links(scene) -> None:
 
 def test_get_robot_statistics_dof_calculation(scene) -> None:
     """Test get_robot_statistics correctly calculates DOF for different joint types."""
-    bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-    parent_link = bpy.context.active_object
-    parent_link.name = "parent_link"
-    parent_link.linkforge.is_robot_link = True
-    parent_link.linkforge.link_name = "parent_link"
+    parent_link = create_test_object("parent_link", None, scene)
+    parent_link.location = (0, 0, 0)
+    safe_get_linkforge(parent_link).is_robot_link = True
+    safe_get_linkforge(parent_link).link_name = "parent_link"
 
     bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))
     child_link = bpy.context.active_object
@@ -291,34 +285,34 @@ def test_get_robot_statistics_dof_calculation(scene) -> None:
     child_link.linkforge.link_name = "child_link"
 
     # REVOLUTE joint: 1 DOF
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0.5, 0, 0))
-    joint1 = bpy.context.active_object
-    joint1.linkforge_joint.is_robot_joint = True
-    joint1.linkforge_joint.joint_name = "revolute_joint"
-    joint1.linkforge_joint.joint_type = "REVOLUTE"
-    joint1.linkforge_joint.parent_link = parent_link
-    joint1.linkforge_joint.child_link = child_link
+    joint1 = create_test_object("revolute_joint", None, scene)
+    joint1.location = (0.5, 0, 0)
+    safe_get_joint(joint1).is_robot_joint = True
+    safe_get_joint(joint1).joint_name = "revolute_joint"
+    safe_get_joint(joint1).joint_type = "REVOLUTE"
+    safe_get_joint(joint1).parent_link = parent_link
+    safe_get_joint(joint1).child_link = child_link
 
     # PRISMATIC joint: 1 DOF
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(1.5, 0, 0))
-    joint2 = bpy.context.active_object
-    joint2.linkforge_joint.is_robot_joint = True
-    joint2.linkforge_joint.joint_name = "prismatic_joint"
-    joint2.linkforge_joint.joint_type = "PRISMATIC"
+    joint2 = create_test_object("prismatic_joint", None, scene)
+    joint2.location = (1.5, 0, 0)
+    safe_get_joint(joint2).is_robot_joint = True
+    safe_get_joint(joint2).joint_name = "prismatic_joint"
+    safe_get_joint(joint2).joint_type = "PRISMATIC"
 
     # PLANAR joint: 2 DOF
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(2.5, 0, 0))
-    joint3 = bpy.context.active_object
-    joint3.linkforge_joint.is_robot_joint = True
-    joint3.linkforge_joint.joint_name = "planar_joint"
-    joint3.linkforge_joint.joint_type = "PLANAR"
+    joint3 = create_test_object("planar_joint", None, scene)
+    joint3.location = (2.5, 0, 0)
+    safe_get_joint(joint3).is_robot_joint = True
+    safe_get_joint(joint3).joint_name = "planar_joint"
+    safe_get_joint(joint3).joint_type = "PLANAR"
 
     # FIXED joint: 0 DOF
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(3.5, 0, 0))
-    joint4 = bpy.context.active_object
-    joint4.linkforge_joint.is_robot_joint = True
-    joint4.linkforge_joint.joint_name = "fixed_joint"
-    joint4.linkforge_joint.joint_type = "FIXED"
+    joint4 = create_test_object("fixed_joint", None, scene)
+    joint4.location = (3.5, 0, 0)
+    safe_get_joint(joint4).is_robot_joint = True
+    safe_get_joint(joint4).joint_name = "fixed_joint"
+    safe_get_joint(joint4).joint_type = "FIXED"
 
     stats = get_robot_statistics(scene)
 
@@ -334,35 +328,32 @@ def test_get_robot_statistics_root_link_detection(scene) -> None:
     base_link.linkforge.is_robot_link = True
     base_link.linkforge.link_name = "base_link"
 
-    bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))
-    link1 = bpy.context.active_object
-    link1.name = "link1"
-    link1.linkforge.is_robot_link = True
-    link1.linkforge.link_name = "link1"
+    link1 = create_test_object("link1", None, scene)
+    link1.location = (1, 0, 0)
+    safe_get_linkforge(link1).is_robot_link = True
+    safe_get_linkforge(link1).link_name = "link1"
 
-    bpy.ops.mesh.primitive_cube_add(location=(2, 0, 0))
-    link2 = bpy.context.active_object
-    link2.name = "link2"
-    link2.linkforge.is_robot_link = True
-    link2.linkforge.link_name = "link2"
+    link2 = create_test_object("link2", None, scene)
+    link2.location = (2, 0, 0)
+    safe_get_linkforge(link2).is_robot_link = True
+    safe_get_linkforge(link2).link_name = "link2"
 
     # base_link -> link1
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0.5, 0, 0))
-    joint1 = bpy.context.active_object
-    joint1.linkforge_joint.is_robot_joint = True
-    joint1.linkforge_joint.joint_name = "joint1"
-    joint1.linkforge_joint.joint_type = "REVOLUTE"
-    joint1.linkforge_joint.parent_link = base_link
-    joint1.linkforge_joint.child_link = link1
+    joint1 = create_test_object("joint1", None, scene)
+    joint1.location = (0.5, 0, 0)
+    safe_get_joint(joint1).is_robot_joint = True
+    safe_get_joint(joint1).joint_name = "joint1"
+    safe_get_joint(joint1).joint_type = "REVOLUTE"
+    safe_get_joint(joint1).parent_link = base_link
+    safe_get_joint(joint1).child_link = link1
 
-    # link1 -> link2
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(1.5, 0, 0))
-    joint2 = bpy.context.active_object
-    joint2.linkforge_joint.is_robot_joint = True
-    joint2.linkforge_joint.joint_name = "joint2"
-    joint2.linkforge_joint.joint_type = "REVOLUTE"
-    joint2.linkforge_joint.parent_link = link1
-    joint2.linkforge_joint.child_link = link2
+    joint2 = create_test_object("joint2", None, scene)
+    joint2.location = (1.5, 0, 0)
+    safe_get_joint(joint2).is_robot_joint = True
+    safe_get_joint(joint2).joint_name = "joint2"
+    safe_get_joint(joint2).joint_type = "REVOLUTE"
+    safe_get_joint(joint2).parent_link = link1
+    safe_get_joint(joint2).child_link = link2
 
     stats = get_robot_statistics(scene)
 
@@ -374,21 +365,20 @@ def test_get_robot_statistics_root_link_detection(scene) -> None:
 
 def test_get_robot_statistics_with_sensors_and_transmissions(scene) -> None:
     """Test get_robot_statistics counts sensors and transmissions."""
-    bpy.ops.mesh.primitive_cube_add()
-    link = bpy.context.active_object
-    link.linkforge.is_robot_link = True
-    link.linkforge.link_name = "sensor_link"
+    link = create_test_object("sensor_link", None, scene)
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "sensor_link"
 
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(1, 0, 0))
-    sensor = bpy.context.active_object
-    sensor.linkforge_sensor.is_robot_sensor = True
-    sensor.linkforge_sensor.sensor_name = "camera_sensor"
-    sensor.linkforge_sensor.sensor_type = "CAMERA"
+    sensor = create_test_object("camera_sensor", None, scene)
+    sensor.location = (1, 0, 0)
+    safe_get_sensor(sensor).is_robot_sensor = True
+    safe_get_sensor(sensor).sensor_name = "camera_sensor"
+    safe_get_sensor(sensor).sensor_type = "CAMERA"
 
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(2, 0, 0))
-    transmission = bpy.context.active_object
-    transmission.linkforge_transmission.is_robot_transmission = True
-    transmission.linkforge_transmission.transmission_name = "transmission1"
+    transmission = create_test_object("transmission1", None, scene)
+    transmission.location = (2, 0, 0)
+    safe_get_transmission(transmission).is_robot_transmission = True
+    safe_get_transmission(transmission).transmission_name = "transmission1"
 
     stats = get_robot_statistics(scene)
 
@@ -401,26 +391,22 @@ def test_get_robot_statistics_with_sensors_and_transmissions(scene) -> None:
 
 def test_build_tree_from_stats_basic(scene) -> None:
     """Test build_tree_from_stats creates tree and joints mapping from stats."""
-    bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-    base = bpy.context.active_object
-    base.name = "base_link"
-    base.linkforge.is_robot_link = True
-    base.linkforge.link_name = "base_link"
+    base = create_test_object("base_link", None, scene)
+    safe_get_linkforge(base).is_robot_link = True
+    safe_get_linkforge(base).link_name = "base_link"
 
-    bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))
-    child = bpy.context.active_object
-    child.name = "child_link"
-    child.linkforge.is_robot_link = True
-    child.linkforge.link_name = "child_link"
+    child = create_test_object("child_link", None, scene)
+    child.location = (1, 0, 0)
+    safe_get_linkforge(child).is_robot_link = True
+    safe_get_linkforge(child).link_name = "child_link"
 
-    # parent=base_link, child=child_link
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0.5, 0, 0))
-    joint = bpy.context.active_object
-    joint.linkforge_joint.is_robot_joint = True
-    joint.linkforge_joint.joint_name = "joint1"
-    joint.linkforge_joint.joint_type = "REVOLUTE"
-    joint.linkforge_joint.parent_link = base
-    joint.linkforge_joint.child_link = child
+    joint = create_test_object("joint1", None, scene)
+    joint.location = (0.5, 0, 0)
+    safe_get_joint(joint).is_robot_joint = True
+    safe_get_joint(joint).joint_name = "joint1"
+    safe_get_joint(joint).joint_type = "REVOLUTE"
+    safe_get_joint(joint).parent_link = base
+    safe_get_joint(joint).child_link = child
 
     stats = get_robot_statistics(scene)
     tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
@@ -435,11 +421,10 @@ def test_build_tree_from_stats_basic(scene) -> None:
 
 def test_build_tree_from_stats_single_link(scene) -> None:
     """Test build_tree_from_stats handles no joint scene."""
-    bpy.ops.mesh.primitive_cube_add(location=(2, 0, 0))
-    only = bpy.context.active_object
-    only.name = "only_link"
-    only.linkforge.is_robot_link = True
-    only.linkforge.link_name = "only_link"
+    only = create_test_object("only_link", None, scene)
+    only.location = (2, 0, 0)
+    safe_get_linkforge(only).is_robot_link = True
+    safe_get_linkforge(only).link_name = "only_link"
 
     stats = get_robot_statistics(scene)
     tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
@@ -453,26 +438,23 @@ def test_build_tree_from_stats_single_link(scene) -> None:
 def test_build_tree_from_stats_parent_not_in_tree(scene) -> None:
     """If a joint refs a parent that is not a robot_link, it should be ignored."""
     # invalid parent
-    bpy.ops.mesh.primitive_cube_add(location=(10, 0, 0))
-    parent_nonlink = bpy.context.active_object
-    parent_nonlink.name = "maybe_parent"
-    parent_nonlink.linkforge.is_robot_link = False
-    parent_nonlink.linkforge.link_name = "maybe_parent"
+    parent_nonlink = create_test_object("maybe_parent", None, scene)
+    parent_nonlink.location = (10, 0, 0)
+    safe_get_linkforge(parent_nonlink).is_robot_link = False
+    safe_get_linkforge(parent_nonlink).link_name = "maybe_parent"
 
-    # valid child
-    bpy.ops.mesh.primitive_cube_add(location=(11, 0, 0))
-    child = bpy.context.active_object
-    child.name = "real_child"
-    child.linkforge.is_robot_link = True
-    child.linkforge.link_name = "real_child"
+    child = create_test_object("real_child", None, scene)
+    child.location = (11, 0, 0)
+    safe_get_linkforge(child).is_robot_link = True
+    safe_get_linkforge(child).link_name = "real_child"
 
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(10.5, 0, 0))
-    joint = bpy.context.active_object
-    joint.linkforge_joint.is_robot_joint = True
-    joint.linkforge_joint.joint_name = "joint1"
-    joint.linkforge_joint.joint_type = "REVOLUTE"
-    joint.linkforge_joint.parent_link = parent_nonlink
-    joint.linkforge_joint.child_link = child
+    joint = create_test_object("joint1", None, scene)
+    joint.location = (10.5, 0, 0)
+    safe_get_joint(joint).is_robot_joint = True
+    safe_get_joint(joint).joint_name = "joint1"
+    safe_get_joint(joint).joint_type = "REVOLUTE"
+    safe_get_joint(joint).parent_link = parent_nonlink
+    safe_get_joint(joint).child_link = child
 
     stats = get_robot_statistics(scene)
     tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
@@ -485,35 +467,31 @@ def test_build_tree_from_stats_parent_not_in_tree(scene) -> None:
 
 def test_build_tree_from_stats_no_root_when_all_links_are_children(scene) -> None:
     """If every link appears as a child in joints_map, root_link should be None."""
-    bpy.ops.mesh.primitive_cube_add(location=(20, 0, 0))
-    a = bpy.context.active_object
-    a.name = "link_a"
-    a.linkforge.is_robot_link = True
-    a.linkforge.link_name = "link_a"
+    a = create_test_object("link_a", None, scene)
+    a.location = (20, 0, 0)
+    safe_get_linkforge(a).is_robot_link = True
+    safe_get_linkforge(a).link_name = "link_a"
 
-    bpy.ops.mesh.primitive_cube_add(location=(21, 0, 0))
-    b = bpy.context.active_object
-    b.name = "link_b"
-    b.linkforge.is_robot_link = True
-    b.linkforge.link_name = "link_b"
+    b = create_test_object("link_b", None, scene)
+    b.location = (21, 0, 0)
+    safe_get_linkforge(b).is_robot_link = True
+    safe_get_linkforge(b).link_name = "link_b"
 
-    # a is child of b
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(20.5, 0, 0))
-    j1 = bpy.context.active_object
-    j1.linkforge_joint.is_robot_joint = True
-    j1.linkforge_joint.joint_name = "j1"
-    j1.linkforge_joint.joint_type = "REVOLUTE"
-    j1.linkforge_joint.parent_link = b
-    j1.linkforge_joint.child_link = a
+    j1 = create_test_object("j1", None, scene)
+    j1.location = (20.5, 0, 0)
+    safe_get_joint(j1).is_robot_joint = True
+    safe_get_joint(j1).joint_name = "j1"
+    safe_get_joint(j1).joint_type = "REVOLUTE"
+    safe_get_joint(j1).parent_link = b
+    safe_get_joint(j1).child_link = a
 
-    # b is child of a (=cycle)
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(21.5, 0, 0))
-    j2 = bpy.context.active_object
-    j2.linkforge_joint.is_robot_joint = True
-    j2.linkforge_joint.joint_name = "j2"
-    j2.linkforge_joint.joint_type = "REVOLUTE"
-    j2.linkforge_joint.parent_link = a
-    j2.linkforge_joint.child_link = b
+    j2 = create_test_object("j2", None, scene)
+    j2.location = (21.5, 0, 0)
+    safe_get_joint(j2).is_robot_joint = True
+    safe_get_joint(j2).joint_name = "j2"
+    safe_get_joint(j2).joint_type = "REVOLUTE"
+    safe_get_joint(j2).parent_link = a
+    safe_get_joint(j2).child_link = b
 
     stats = get_robot_statistics(scene)
     tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
@@ -525,26 +503,23 @@ def test_get_robot_statistics_excludes_invalid_mass(scene) -> None:
     """Test that links with <0 mass do not add up to total_mass.
     If a link has invalid its still counted in num_links but its mass is
     ignored in total_mass, since its not a valid physical link."""
-    bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-    link1 = bpy.context.active_object
-    link1.name = "valid_link"
-    link1.linkforge.is_robot_link = True
-    link1.linkforge.link_name = "valid_link"
-    link1.linkforge.mass = 10.0
+    link1 = create_test_object("valid_link", None, scene)
+    link1.location = (0, 0, 0)
+    safe_get_linkforge(link1).is_robot_link = True
+    safe_get_linkforge(link1).link_name = "valid_link"
+    safe_get_linkforge(link1).mass = 10.0
 
-    bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))
-    link2 = bpy.context.active_object
-    link2.name = "zero_mass_link"
-    link2.linkforge.is_robot_link = True
-    link2.linkforge.link_name = "zero_mass_link"
-    link2.linkforge.mass = 0.0
+    link2 = create_test_object("zero_mass_link", None, scene)
+    link2.location = (1, 0, 0)
+    safe_get_linkforge(link2).is_robot_link = True
+    safe_get_linkforge(link2).link_name = "zero_mass_link"
+    safe_get_linkforge(link2).mass = 0.0
 
-    bpy.ops.mesh.primitive_cube_add(location=(2, 0, 0))
-    link3 = bpy.context.active_object
-    link3.name = "negative_mass_link"
-    link3.linkforge.is_robot_link = True
-    link3.linkforge.link_name = "negative_mass_link"
-    link3.linkforge.mass = -5.0
+    link3 = create_test_object("negative_mass_link", None, scene)
+    link3.location = (2, 0, 0)
+    safe_get_linkforge(link3).is_robot_link = True
+    safe_get_linkforge(link3).link_name = "negative_mass_link"
+    safe_get_linkforge(link3).mass = -5.0
 
     stats = get_robot_statistics(scene)
 
@@ -561,21 +536,20 @@ def test_get_robot_statistics_joint_with_none_parent(scene) -> None:
 
     If parent_link is None, the joint shld be counted but not create a parent-child relation in joints_map.
     """
-    bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-    child_link = bpy.context.active_object
-    child_link.name = "child_link"
-    child_link.linkforge.is_robot_link = True
-    child_link.linkforge.link_name = "child_link"
-    child_link.linkforge.mass = 5.0
+    child_link = create_test_object("child_link", None, scene)
+    child_link.location = (0, 0, 0)
+    safe_get_linkforge(child_link).is_robot_link = True
+    safe_get_linkforge(child_link).link_name = "child_link"
+    safe_get_linkforge(child_link).mass = 5.0
 
     # invalid parent
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0.5, 0, 0))
-    joint = bpy.context.active_object
-    joint.linkforge_joint.is_robot_joint = True
-    joint.linkforge_joint.joint_name = "world_joint"
-    joint.linkforge_joint.joint_type = "FIXED"
-    joint.linkforge_joint.child_link = child_link
-    joint.linkforge_joint.parent_link = None
+    joint = create_test_object("world_joint", None, scene)
+    joint.location = (0.5, 0, 0)
+    safe_get_joint(joint).is_robot_joint = True
+    safe_get_joint(joint).joint_name = "world_joint"
+    safe_get_joint(joint).joint_type = "FIXED"
+    safe_get_joint(joint).child_link = child_link
+    safe_get_joint(joint).parent_link = None
 
     stats = get_robot_statistics(scene)
 
@@ -600,52 +574,48 @@ def test_get_robot_statistics_joint_with_empty_link_names(scene) -> None:
     If parent or child has an empty link_name, the joint should be counted
     but not create a relation in joints_map.
     """
-    bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-    parent_link = bpy.context.active_object
-    parent_link.name = "parent_link"
-    parent_link.linkforge.is_robot_link = True
-    parent_link.linkforge.link_name = ""  # no name link
-    parent_link.linkforge.mass = 10.0
+    parent_link = create_test_object("parent_link", None, scene)
+    parent_link.location = (0, 0, 0)
+    safe_get_linkforge(parent_link).is_robot_link = True
+    safe_get_linkforge(parent_link).link_name = ""  # no name link
+    safe_get_linkforge(parent_link).mass = 10.0
 
     # child has valid link name
-    bpy.ops.mesh.primitive_cube_add(location=(1, 0, 0))
-    child_link = bpy.context.active_object
-    child_link.name = "child_link"
-    child_link.linkforge.is_robot_link = True
-    child_link.linkforge.link_name = "child_link"
-    child_link.linkforge.mass = 5.0
+    child_link = create_test_object("child_link", None, scene)
+    child_link.location = (1, 0, 0)
+    safe_get_linkforge(child_link).is_robot_link = True
+    safe_get_linkforge(child_link).link_name = "child_link"
+    safe_get_linkforge(child_link).mass = 5.0
 
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0.5, 0, 0))
-    joint1 = bpy.context.active_object
-    joint1.linkforge_joint.is_robot_joint = True
-    joint1.linkforge_joint.joint_name = "joint_empty_parent"
-    joint1.linkforge_joint.joint_type = "REVOLUTE"
-    joint1.linkforge_joint.parent_link = parent_link  # shld cause it to be ignored
-    joint1.linkforge_joint.child_link = child_link
+    joint1 = create_test_object("joint_empty_parent", None, scene)
+    joint1.location = (0.5, 0, 0)
+    safe_get_joint(joint1).is_robot_joint = True
+    safe_get_joint(joint1).joint_name = "joint_empty_parent"
+    safe_get_joint(joint1).joint_type = "REVOLUTE"
+    safe_get_joint(joint1).parent_link = parent_link  # shld cause it to be ignored
+    safe_get_joint(joint1).child_link = child_link
 
     # valid named parent
-    bpy.ops.mesh.primitive_cube_add(location=(2, 0, 0))
-    valid_parent = bpy.context.active_object
-    valid_parent.name = "valid_parent"
-    valid_parent.linkforge.is_robot_link = True
-    valid_parent.linkforge.link_name = "valid_parent"
-    valid_parent.linkforge.mass = 8.0
+    valid_parent = create_test_object("valid_parent", None, scene)
+    valid_parent.location = (2, 0, 0)
+    safe_get_linkforge(valid_parent).is_robot_link = True
+    safe_get_linkforge(valid_parent).link_name = "valid_parent"
+    safe_get_linkforge(valid_parent).mass = 8.0
 
     # invalid child (empty link_name)
-    bpy.ops.mesh.primitive_cube_add(location=(3, 0, 0))
-    empty_child = bpy.context.active_object
-    empty_child.name = "empty_child"
-    empty_child.linkforge.is_robot_link = True
-    empty_child.linkforge.link_name = ""  # Empty string
-    empty_child.linkforge.mass = 3.0
+    empty_child = create_test_object("empty_child", None, scene)
+    empty_child.location = (3, 0, 0)
+    safe_get_linkforge(empty_child).is_robot_link = True
+    safe_get_linkforge(empty_child).link_name = ""  # Empty string
+    safe_get_linkforge(empty_child).mass = 3.0
 
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(2.5, 0, 0))
-    joint2 = bpy.context.active_object
-    joint2.linkforge_joint.is_robot_joint = True
-    joint2.linkforge_joint.joint_name = "joint_empty_child"
-    joint2.linkforge_joint.joint_type = "PRISMATIC"
-    joint2.linkforge_joint.parent_link = valid_parent
-    joint2.linkforge_joint.child_link = empty_child
+    joint2 = create_test_object("joint_empty_child", None, scene)
+    joint2.location = (2.5, 0, 0)
+    safe_get_joint(joint2).is_robot_joint = True
+    safe_get_joint(joint2).joint_name = "joint_empty_child"
+    safe_get_joint(joint2).joint_type = "PRISMATIC"
+    safe_get_joint(joint2).parent_link = valid_parent
+    safe_get_joint(joint2).child_link = empty_child
 
     stats = get_robot_statistics(scene)
 

@@ -59,7 +59,7 @@ def test_joint_source_name_persistence(scene) -> None:
 def test_reimport_name_matching(scene) -> None:
     """Test that the importer correctly sets persistent names using real data."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
-    from linkforge.linkforge_core.models import Joint, JointLimits, JointType, Vector3
+    from linkforge_core.models import Joint, JointLimits, JointType, Vector3
 
     joint_model = Joint(
         name="shoulder_joint",
@@ -94,7 +94,7 @@ def test_auto_linking_integration(scene) -> None:
     from pathlib import Path
 
     from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
-    from linkforge.linkforge_core.models import Joint, JointType, Link, Robot
+    from linkforge_core.models import Joint, JointType, Link, Robot
 
     # Setup robot and links
     l1 = Link(name="l1")

@@ -6,8 +6,9 @@ import contextlib
 import time
 import typing
 
-from ...linkforge_core.logging_config import get_logger
-from ...linkforge_core.models.link import InertiaTensor
+from linkforge_core.logging_config import get_logger
+from linkforge_core.models.link import InertiaTensor
+
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
@@ -509,12 +510,13 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
 
     # Import here to avoid circular dependency
-    from ...linkforge_core.models.geometry import Box, Cylinder, Sphere
-    from ...linkforge_core.physics import (
+    from linkforge_core.models.geometry import Box, Cylinder, Sphere
+    from linkforge_core.physics import (
         calculate_inertia,
         calculate_mesh_inertia_from_triangles,
         validate_mesh_topology,
     )
+
     from ..adapters.blender_to_core import extract_mesh_triangles
 
     # Calculate inertia from child meshes (new architecture: link Empty + children)
@@ -562,7 +564,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             # Primitive calculation expects dimensions
             if prim_type == "BOX":
                 # Convert mathutils.Vector to core Vector3
-                from ...linkforge_core.models.geometry import Vector3
+                from linkforge_core.models.geometry import Vector3
 
                 size = Vector3(dims.x, dims.y, dims.z)
                 tensor = calculate_inertia(Box(size=size), mass)
@@ -1345,16 +1347,17 @@ class LINKFORGE_OT_add_material_slot(Operator):
             link_name = typing.cast(typing.Any, obj.parent).linkforge.link_name
 
         # Append new material slot
-        typing.cast(bpy.types.Mesh, visual_obj.data).materials.append(None)
+        if visual_obj.data and hasattr(visual_obj.data, "materials"):
+            visual_obj.data.materials.append(None)
 
-        # Create and assign a default material immediately for better UX
-        mat_name = f"{link_name}_material"
-        mat = bpy.data.materials.get(mat_name)
-        if not mat:
-            mat = bpy.data.materials.new(name=mat_name)
-            mat.use_nodes = True
+            # Create and assign a default material immediately for better UX
+            mat_name = f"{link_name}_material"
+            mat = bpy.data.materials.get(mat_name)
+            if not mat:
+                mat = bpy.data.materials.new(name=mat_name)
+                mat.use_nodes = True
 
-        typing.cast(bpy.types.Mesh, visual_obj.data).materials[0] = mat
+            visual_obj.data.materials[0] = mat
 
         self.report({"INFO"}, "Created new material slot with default material")
         return {"FINISHED"}

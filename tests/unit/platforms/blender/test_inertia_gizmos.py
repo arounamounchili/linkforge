@@ -1,24 +1,20 @@
-"""Tests for inertia_gizmos visualization module."""
-
 from unittest.mock import MagicMock
 
 import bpy
+
+from tests.blender_test_utils import create_test_object, safe_get_linkforge
 
 
 def test_generate_inertia_axes_geometry(scene) -> None:
     """Test generating inertia axes geometry for a link."""
     from linkforge.blender.visualization.inertia_gizmos import generate_inertia_axes_geometry
 
-    # Clean scene
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
     # Create link with manual inertia
-    bpy.ops.object.empty_add(location=(1, 2, 3))
-    link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
-    link_obj.linkforge.use_auto_inertia = False
-    link_obj.linkforge.inertia_origin_xyz = (0.1, 0.2, 0.3)
+    link_obj = create_test_object("link_gizmo", None, scene)
+    link_obj.location = (1, 2, 3)
+    safe_get_linkforge(link_obj).is_robot_link = True
+    safe_get_linkforge(link_obj).use_auto_inertia = False
+    safe_get_linkforge(link_obj).inertia_origin_xyz = (0.1, 0.2, 0.3)
 
     # Generate geometry
     geometry = generate_inertia_axes_geometry(link_obj, axis_length=0.2)
@@ -44,16 +40,12 @@ def test_generate_inertia_axes_geometry_with_rotation(scene) -> None:
     """Test geometry generation with rotated inertia frame."""
     from linkforge.blender.visualization.inertia_gizmos import generate_inertia_axes_geometry
 
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
     # Create link with rotated inertia
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
-    link_obj.linkforge.use_auto_inertia = False
-    link_obj.linkforge.inertia_origin_xyz = (0, 0, 0)
-    link_obj.linkforge.inertia_origin_rpy = (1.57, 0, 0)  # 90 degrees X rotation
+    link_obj = create_test_object("link_rot", None, scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
+    safe_get_linkforge(link_obj).use_auto_inertia = False
+    safe_get_linkforge(link_obj).inertia_origin_xyz = (0, 0, 0)
+    safe_get_linkforge(link_obj).inertia_origin_rpy = (1.57, 0, 0)  # 90 degrees X rotation
 
     geometry = generate_inertia_axes_geometry(link_obj)
 
@@ -63,6 +55,8 @@ def test_generate_inertia_axes_geometry_with_rotation(scene) -> None:
 
 def test_draw_inertia_gizmos(mocker, scene) -> None:
     """Test the main draw function with GPU mocking."""
+    from unittest.mock import MagicMock
+
     # Mock preferences
     mock_prefs = MagicMock()
     mock_prefs.show_inertia_gizmos = True
@@ -82,13 +76,9 @@ def test_draw_inertia_gizmos(mocker, scene) -> None:
     mocker.patch("gpu.state.blend_set")
 
     # Create link with manual inertia
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
-    link_obj.linkforge.use_auto_inertia = False
+    link_obj = create_test_object("link_gpu", None, scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
+    safe_get_linkforge(link_obj).use_auto_inertia = False
 
     # Call draw function
     from linkforge.blender.visualization.inertia_gizmos import draw_inertia_gizmos
@@ -131,13 +121,9 @@ def test_draw_inertia_gizmos_auto_inertia(mocker, scene) -> None:
     mock_batch = mocker.patch("linkforge.blender.visualization.inertia_gizmos.batch_for_shader")
 
     # Create link with AUTO inertia (should be skipped)
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
-    link_obj.linkforge.use_auto_inertia = True  # AUTO - should skip
+    link_obj = create_test_object("link_auto", None, scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
+    safe_get_linkforge(link_obj).use_auto_inertia = True  # AUTO - should skip
 
     from linkforge.blender.visualization.inertia_gizmos import draw_inertia_gizmos
 
@@ -210,13 +196,9 @@ def test_ensure_inertia_handler_already_registered(mocker, scene) -> None:
 def test_check_manual_inertia_on_load(scene) -> None:
     """Test checking for manual inertia on file load."""
     # Create link with manual inertia
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
-    link_obj.linkforge.use_auto_inertia = False  # Manual inertia
+    link_obj = create_test_object("link_manual_load", None, scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
+    safe_get_linkforge(link_obj).use_auto_inertia = False  # Manual inertia
 
     from linkforge.blender.visualization.inertia_gizmos import check_manual_inertia_on_load
 
@@ -228,14 +210,10 @@ def test_check_manual_inertia_on_load(scene) -> None:
 
 def test_check_manual_inertia_on_load_no_manual(scene) -> None:
     """Test when no manual inertia links exist."""
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete()
-
     # Create link with auto inertia
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.linkforge.is_robot_link = True
-    link_obj.linkforge.use_auto_inertia = True  # Auto
+    link_obj = create_test_object("link_auto_load", None, scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
+    safe_get_linkforge(link_obj).use_auto_inertia = True  # Auto
 
     from linkforge.blender.visualization.inertia_gizmos import check_manual_inertia_on_load
 

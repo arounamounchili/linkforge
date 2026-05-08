@@ -19,11 +19,16 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
     scene_to_robot,
 )
-from linkforge.linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
-from linkforge.linkforge_core.models import JointType, Vector3
+from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+from linkforge_core.models import JointType, Vector3
 from mathutils import Matrix
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge,
+    safe_get_sensor,
+)
 
 
 def test_scene_to_robot_strict_mode(mock_context, scene) -> None:
@@ -32,7 +37,7 @@ def test_scene_to_robot_strict_mode(mock_context, scene) -> None:
 
     # Setup a root link
     root = create_test_object("Root", None, scene)
-    root.linkforge.is_robot_link = True
+    safe_get_linkforge(root).is_robot_link = True
 
     # Mock failure
     with (
@@ -51,7 +56,7 @@ def test_scene_to_robot_non_strict_errors(mock_context, scene) -> None:
 
     # Setup failing objects
     j_obj = create_test_object("BadJoint", None, scene)
-    j_obj.linkforge_joint.is_robot_joint = True
+    safe_get_joint(j_obj).is_robot_joint = True
 
     with (
         mock.patch(
@@ -78,8 +83,10 @@ def test_detect_primitive_type_robustness(scene) -> None:
     # Distorted Sphere
     bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0)
     sphere = bpy.context.active_object
-    sphere.dimensions = (1.0, 1.0, 5.0)
-    bpy.context.view_layer.update()
+    if sphere:
+        sphere.dimensions = (1.0, 1.0, 5.0)
+    if bpy.context.view_layer:
+        bpy.context.view_layer.update()
     assert detect_primitive_type(sphere) is None
 
     # None/Empty
@@ -87,15 +94,28 @@ def test_detect_primitive_type_robustness(scene) -> None:
     assert detect_primitive_type(create_test_object("Empty", None)) is None
 
 
+def test_blender_sensor_to_core_basic(scene) -> None:
+    """Verify basic sensor property extraction."""
+    # Setup link first
+    link = create_test_object("Link", None, scene)
+    safe_get_linkforge(link).is_robot_link = True
+    safe_get_linkforge(link).link_name = "SensorLink"
+
+    o = create_test_object("Lidar", None, scene)
+    safe_get_sensor(o).is_robot_sensor = True
+    safe_get_sensor(o).sensor_type = "LIDAR"
+    safe_get_sensor(o).attached_link = link
+
+
 def test_joint_to_core_edge_cases(scene) -> None:
     """Test custom axis fallbacks and dynamics logic."""
     p = create_test_object("Parent", None, scene)
     c = create_test_object("Child", None, scene)
-    p.linkforge.is_robot_link = True
-    c.linkforge.is_robot_link = True
+    safe_get_linkforge(p).is_robot_link = True
+    safe_get_linkforge(c).is_robot_link = True
 
     j = create_test_object("Joint", None, scene)
-    props = j.linkforge_joint
+    props = safe_get_joint(j)
     props.is_robot_joint = True
     props.parent_link = p
     props.child_link = c
@@ -106,15 +126,15 @@ def test_joint_to_core_edge_cases(scene) -> None:
     props.custom_axis_y = 0.0
     props.custom_axis_z = 0.0
     core = blender_joint_to_core(j)
-    assert core.axis.z == 1.0
+    assert core and core.axis and core.axis.z == 1.0
 
     # Continuous with limits (strips range, keeps effort/vel)
     props.joint_type = "CONTINUOUS"
     props.use_limits = True
     props.limit_effort = 100.0
     core = blender_joint_to_core(j)
-    assert core.type == JointType.CONTINUOUS
-    assert core.limits.lower is None
+    assert core and core.type == JointType.CONTINUOUS
+    assert core.limits and core.limits.lower is None
     assert core.limits.effort == 100.0
 
 
@@ -130,7 +150,8 @@ def test_ros2_control_conversion_logic(scene) -> None:
     item.state_position = True
 
     core = blender_ros2_control_to_core(scene.linkforge)
-    assert core.type == "sensor"
+    assert core and core.type == "sensor"
+    assert core.joints and len(core.joints) > 0
     assert len(core.joints[0].command_interfaces) == 0
 
     # Actuator type limited to one joint
@@ -138,7 +159,7 @@ def test_ros2_control_conversion_logic(scene) -> None:
     scene.linkforge.ros2_control_joints.add().name = "joint2"
     with mock.patch("linkforge.blender.adapters.blender_to_core.logger") as mock_log:
         core = blender_ros2_control_to_core(scene.linkforge)
-        assert len(core.joints) == 1
+        assert core and core.joints and len(core.joints) == 1
         assert mock_log.warning.called
 
 
@@ -158,38 +179,45 @@ def test_mesh_export_path(tmp_path, scene) -> None:
             meshes_dir=tmp_path,
             dry_run=False,
         )
-        assert "monkey.stl" in geom.resource
+        from linkforge_core.models import Mesh
+
+        assert isinstance(geom, Mesh)
+        assert geom.resource and "monkey.stl" in geom.resource
 
 
 def test_sensor_attachment_logic(mock_context, scene) -> None:
     """Verify sensor origin calculation and attachment errors."""
     link = create_test_object("Link", None, scene)
-    link.linkforge.is_robot_link = True
+    safe_get_linkforge(link).is_robot_link = True
     link.matrix_world = Matrix.Translation((1, 1, 1))
 
     # Valid attachment with origin offset (tested via scene_to_robot)
     s = create_test_object("Camera", None, scene)
-    s.linkforge_sensor.is_robot_sensor = True
-    s.linkforge_sensor.attached_link = link
+    safe_get_sensor(s).is_robot_sensor = True
+    safe_get_sensor(s).attached_link = link
     s.matrix_world = Matrix.Translation((2, 2, 2))
 
     robot, _ = scene_to_robot(mock_context)
-    assert robot.sensors[0].origin.xyz == Vector3(1.0, 1.0, 1.0)
+    assert robot and robot.sensors and len(robot.sensors) > 0
+    assert robot.sensors[0].origin and robot.sensors[0].origin.xyz == Vector3(1.0, 1.0, 1.0)
 
     # Missing attachment error
-    s.linkforge_sensor.attached_link = None
+    safe_get_sensor(s).attached_link = None
     with pytest.raises(RobotValidationError, match="not attached to any link"):
         blender_sensor_to_core(s)
 
 
-def test_manual_inertia_extraction(scene) -> None:
-    """Verify manual inertia property extraction."""
-    o = create_test_object("InertialLink", None, scene)
-    o.linkforge.is_robot_link = True
-    o.linkforge.use_auto_inertia = False
-    o.linkforge.inertia_origin_xyz = (0.5, 0.6, 0.7)
+def test_blender_link_to_core_basic(scene) -> None:
+    """Verify basic link property extraction."""
+    o = create_test_object("Link1", None, scene)
+    safe_get_linkforge(o).is_robot_link = True
+    safe_get_linkforge(o).link_name = "BaseLink"
+    safe_get_linkforge(o).mass = 5.0
+    safe_get_linkforge(o).use_auto_inertia = False
+    safe_get_linkforge(o).inertia_origin_xyz = (0.5, 0.6, 0.7)
 
     core = blender_link_to_core_with_origin(o)
+    assert core and core.inertial and core.inertial.origin
     assert core.inertial.origin.xyz.x == pytest.approx(0.5)
 
 
@@ -207,4 +235,5 @@ def test_adapter_fallbacks(scene) -> None:
 
     props = mock.MagicMock(use_material=True)
     mat = get_object_material(o, props)
+    assert mat and mat.color
     assert mat.color.r == 0.8

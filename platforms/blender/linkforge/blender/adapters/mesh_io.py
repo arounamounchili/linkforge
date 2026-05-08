@@ -9,10 +9,9 @@ from pathlib import Path
 from typing import Any
 
 import bpy
+from linkforge_core.logging_config import get_logger
+from linkforge_core.utils.string_utils import sanitize_name
 from mathutils import Matrix, Vector
-
-from ...linkforge_core.logging_config import get_logger
-from ...linkforge_core.utils.string_utils import sanitize_name
 
 logger = get_logger(__name__)
 

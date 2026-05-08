@@ -26,9 +26,9 @@ else:
 
 from dataclasses import dataclass
 
-from ...linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
-from ...linkforge_core.logging_config import get_logger
-from ...linkforge_core.models import (
+from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+from linkforge_core.logging_config import get_logger
+from linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -64,18 +64,18 @@ from ...linkforge_core.models import (
     Vector3,
     Visual,
 )
-from ...linkforge_core.models.transmission import (
+from linkforge_core.models.transmission import (
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
     TransmissionType,
 )
-from ...linkforge_core.physics import (
+from linkforge_core.physics import (
     calculate_inertia,
     calculate_mesh_inertia_from_triangles,
 )
-from ...linkforge_core.utils.math_utils import clean_float, normalize_vector
-from ...linkforge_core.utils.string_utils import sanitize_name
+from linkforge_core.utils.math_utils import clean_float, normalize_vector
+from linkforge_core.utils.string_utils import sanitize_name
 
 # Constants
 logger = get_logger(__name__)
@@ -315,7 +315,10 @@ def get_object_geometry(
 
     if actual_geometry_type == "BOX":
         # Use bounding box dimensions
-        dimensions = obj.dimensions
+        dimensions = getattr(obj, "dimensions", None)
+        if dimensions is None:
+            return None, Matrix.Identity(4)
+
         # Robustness Check: Skip zero-size objects (e.g. empties from failed imports)
         if dimensions.length < 1e-6:
             logger.warning(f"Skipping geometry for '{obj.name}': Dimensions are zero.")
@@ -325,14 +328,21 @@ def get_object_geometry(
 
     elif actual_geometry_type == "CYLINDER":
         # Approximate with bounding cylinder
-        dimensions = obj.dimensions
+        dimensions = getattr(obj, "dimensions", None)
+        if dimensions is None:
+            return None, Matrix.Identity(4)
+
         radius = max(dimensions.x, dimensions.y) / 2.0
         length = dimensions.z
         return Cylinder(radius=radius, length=length), geom_world_matrix
 
     elif actual_geometry_type == "SPHERE":
         # Approximate with bounding sphere
-        radius = max(obj.dimensions) / 2.0
+        dimensions = getattr(obj, "dimensions", None)
+        if dimensions is None:
+            return None, Matrix.Identity(4)
+
+        radius = max(dimensions) / 2.0
         return Sphere(radius=radius), geom_world_matrix
 
     return None, Matrix.Identity(4)
@@ -742,6 +752,18 @@ def blender_joint_to_core(obj: Any) -> Joint | None:
         else:
             axis = Vector3(nx, ny, nz)
 
+    # Defensive check: Ensure axis is not None for joint types that require it
+    if (
+        joint_type
+        in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS, JointType.PLANAR)
+        and axis is None
+    ):
+        logger.error(
+            f"Joint '{joint_name}' (type: {joint_type}) calculated axis is None. props.axis='{props.axis}'"
+        )
+        # Fallback to Z-axis instead of crashing later, though this shouldn't happen with the logic above
+        axis = Vector3(0.0, 0.0, 1.0)
+
     # Joint origin is already calculated relative to parent in blender_to_core.scene_to_robot
     # Just use the joint's world transform here, will be made relative in scene_to_robot
     origin = matrix_to_transform(obj.matrix_world)
@@ -991,14 +1013,16 @@ def _categorize_scene_objects(
 
     for obj in scene.objects:
         # Check for Link
-        if hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
-            link_name = obj.linkforge.link_name if obj.linkforge.link_name else obj.name
+        lf = getattr(obj, "linkforge", None)
+        if lf and getattr(lf, "is_robot_link", False):
+            link_name = lf.link_name if lf.link_name else obj.name
             link_objects[link_name] = obj
 
         # Check for Joint
-        elif hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint:
+        j_lf = getattr(obj, "linkforge_joint", None)
+        if j_lf and getattr(j_lf, "is_robot_joint", False):
             joint_objects.append(obj)
-            props = obj.linkforge_joint
+            props = j_lf
             parent_obj = props.parent_link
             child_obj = props.child_link
 
@@ -1017,14 +1041,13 @@ def _categorize_scene_objects(
                 joints_map[child_name] = (parent_name, obj)
 
         # Check for Sensor
-        elif hasattr(obj, "linkforge_sensor") and obj.linkforge_sensor.is_robot_sensor:
+        s_lf = getattr(obj, "linkforge_sensor", None)
+        if s_lf and getattr(s_lf, "is_robot_sensor", False):
             sensor_objects.append(obj)
 
         # Check for Transmission
-        elif (
-            hasattr(obj, "linkforge_transmission")
-            and obj.linkforge_transmission.is_robot_transmission
-        ):
+        t_lf = getattr(obj, "linkforge_transmission", None)
+        if t_lf and getattr(t_lf, "is_robot_transmission", False):
             transmission_objects.append(obj)
 
     # Find root link (link with no parent joint)
@@ -1233,7 +1256,7 @@ def scene_to_robot(
                         parameters=params,
                     )
                     # Note: We wrap the plugin in a GazeboElement without a reference (global)
-                    from ...linkforge_core.models.gazebo import GazeboElement
+                    from linkforge_core.models.gazebo import GazeboElement
 
                     robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
         except Exception as e:
@@ -1271,20 +1294,16 @@ def blender_sensor_to_core(obj: Any) -> Sensor | None:
     """
     if obj is None:
         return None
-
-    props = obj.linkforge_sensor
-    if not props.is_robot_sensor:
+    props = getattr(obj, "linkforge_sensor", None)
+    if not props or not props.is_robot_sensor:
         return None
 
     sensor_name = props.sensor_name if props.sensor_name else obj.name
     sensor_type = SensorType(props.sensor_type.lower())
     link_obj = props.attached_link
+    link_props = getattr(link_obj, "linkforge", None)
     link_name = (
-        (
-            link_obj.linkforge.link_name
-            if link_obj and link_obj.linkforge.link_name
-            else link_obj.name
-        )
+        (link_props.link_name if link_props and link_props.link_name else link_obj.name)
         if link_obj
         else ""
     )
@@ -1449,7 +1468,9 @@ def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
         parameters = {p.name: p.value for p in item.parameters if p.name}
 
         # Determine the correct joint name
-        joint_name = item.joint_obj.linkforge_joint.joint_name if item.joint_obj else item.name
+        joint_obj = getattr(item, "joint_obj", None)
+        joint_props = getattr(joint_obj, "linkforge_joint", None)
+        joint_name = joint_props.joint_name if joint_props else item.name
 
         if cmd_ifs or state_ifs:
             joints.append(

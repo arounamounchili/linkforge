@@ -16,10 +16,8 @@ from pathlib import Path
 # --- Health Checks ---
 def _check_health() -> bool:
     """Verify the extension environment and dependencies."""
-    # Since we no longer inject sys.path globally, we verify
-    # dependencies via local relative imports.
     try:
-        from . import linkforge_core  # noqa: F401
+        import linkforge_core  # noqa: F401
 
         return True
     except ImportError as e:

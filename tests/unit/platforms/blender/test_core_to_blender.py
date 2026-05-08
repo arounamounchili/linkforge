@@ -13,7 +13,7 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
-from linkforge.linkforge_core.models import (
+from linkforge_core.models import (
     Box,
     CameraInfo,
     Collision,
@@ -44,7 +44,12 @@ from linkforge.linkforge_core.models import (
     Visual,
 )
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
+    safe_get_linkforge,
+    safe_get_sensor,
+)
 
 
 def test_create_primitive_mesh_box(scene) -> None:
@@ -80,9 +85,10 @@ def test_create_link_object_zero_mass(scene) -> None:
     link = Link(name="dummy_link")  # No inertial
     robot = Robot(name="test")
     obj = create_link_object(link, robot, Path("/tmp"))
+    assert obj is not None
 
-    assert obj.linkforge.mass == 0.0
-    assert obj.linkforge.use_auto_inertia is False
+    assert safe_get_linkforge(obj).mass == 0.0
+    assert safe_get_linkforge(obj).use_auto_inertia is False
 
 
 def test_create_link_object_primitives(scene) -> None:
@@ -120,13 +126,9 @@ def test_create_link_object_primitives(scene) -> None:
 def test_create_joint_object_fixed(scene) -> None:
     """Test creation of a Joint object in Blender."""
     # Setup Link objects
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
-    parent_obj = bpy.context.active_object
-    parent_obj.name = "parent_l"
-
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(1, 0, 0))
-    child_obj = bpy.context.active_object
-    child_obj.name = "child_l"
+    parent_obj = create_test_object("parent_l", None, scene)
+    child_obj = create_test_object("child_l", None, scene)
+    child_obj.location = (1, 0, 0)
 
     link_objects = {"parent_l": parent_obj, "child_l": child_obj}
 
@@ -151,13 +153,9 @@ def test_create_joint_object_fixed(scene) -> None:
 def test_create_joint_object_complex(scene) -> None:
     """Test creation of a revolute Joint with limits and axis in Blender."""
     # Setup Links
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
-    parent_obj = bpy.context.active_object
-    parent_obj.name = "p_link"
-
-    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 1))
-    child_obj = bpy.context.active_object
-    child_obj.name = "c_link"
+    parent_obj = create_test_object("p_link", None, scene)
+    child_obj = create_test_object("c_link", None, scene)
+    child_obj.location = (0, 0, 1)
 
     link_objects = {"p_link": parent_obj, "c_link": child_obj}
 
@@ -177,7 +175,7 @@ def test_create_joint_object_complex(scene) -> None:
 
     # Verify properties
     assert joint_obj is not None
-    props = joint_obj.linkforge_joint
+    props = safe_get_joint(joint_obj)
     assert props.joint_type == "REVOLUTE"
     assert props.axis == "Z"
     assert props.use_limits is True
@@ -189,15 +187,11 @@ def test_create_joint_object_complex(scene) -> None:
 
 def test_create_joint_object_advanced_props(scene) -> None:
     """Verify that safety controller and calibration are correctly synced to Blender properties."""
-    from linkforge.linkforge_core.models import JointCalibration, JointSafetyController
+    from linkforge_core.models import JointCalibration, JointSafetyController
 
     # Setup Links
-    bpy.ops.object.empty_add()
-    p_obj = bpy.context.active_object
-    p_obj.name = "p_link_adv"
-    bpy.ops.object.empty_add()
-    c_obj = bpy.context.active_object
-    c_obj.name = "c_link_adv"
+    p_obj = create_test_object("p_link_adv", None, scene)
+    c_obj = create_test_object("c_link_adv", None, scene)
     link_objects = {"p_link_adv": p_obj, "c_link_adv": c_obj}
 
     # Setup Core Joint
@@ -220,7 +214,8 @@ def test_create_joint_object_advanced_props(scene) -> None:
     joint_obj = create_joint_object(joint, link_objects)
 
     # Verify properties
-    props = joint_obj.linkforge_joint
+    assert joint_obj is not None
+    props = safe_get_joint(joint_obj)
     assert props.use_safety_controller is True
     assert props.safety_soft_lower_limit == -1.0
     assert props.safety_k_position == 100.0
@@ -349,9 +344,7 @@ def test_import_robot_with_ros2_control_and_gazebo(scene) -> None:
 def test_create_sensor_object_lidar(scene) -> None:
     """Test creation of a LIDAR sensor in Blender."""
     # Setup parent link object
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    link_obj = bpy.context.active_object
-    link_obj.name = "base_link"
+    link_obj = create_test_object("base_link", None, scene)
     link_objects = {"base_link": link_obj}
 
     # Setup Sensor Model
@@ -370,35 +363,34 @@ def test_create_sensor_object_lidar(scene) -> None:
     assert sensor_obj is not None
     assert sensor_obj.parent == link_obj
     assert pytest.approx(sensor_obj.location.z) == 0.5
-    assert sensor_obj.linkforge_sensor.is_robot_sensor is True
-    assert sensor_obj.linkforge_sensor.sensor_type == "LIDAR"
+    props = safe_get_sensor(sensor_obj)
+    assert props.is_robot_sensor is True
+    assert props.sensor_type == "LIDAR"
 
 
 def test_create_sensor_object_imu_gps_camera(scene) -> None:
     """Verify that IMU, GPS, and Camera sensors are correctly created in Blender."""
     # Setup a dummy link for sensors to attach to
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.name = "base_link"
-    link_obj.linkforge.is_robot_link = True
+    link_obj = create_test_object("base_link", None, scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
     link_objects = {"base_link": link_obj}
 
     # IMU
     imu = Sensor(name="imu_sensor", type=SensorType.IMU, link_name="base_link", imu_info=IMUInfo())
     obj_imu = create_sensor_object(imu, link_objects)
-    assert obj_imu.linkforge_sensor.sensor_type == "IMU"
+    assert safe_get_sensor(obj_imu).sensor_type == "IMU"
 
     # GPS
     gps = Sensor(name="gps_sensor", type=SensorType.GPS, link_name="base_link", gps_info=GPSInfo())
     obj_gps = create_sensor_object(gps, link_objects)
-    assert obj_gps.linkforge_sensor.sensor_type == "GPS"
+    assert safe_get_sensor(obj_gps).sensor_type == "GPS"
 
     # Camera
     cam = Sensor(
         name="cam_sensor", type=SensorType.CAMERA, link_name="base_link", camera_info=CameraInfo()
     )
     obj_cam = create_sensor_object(cam, link_objects)
-    assert obj_cam.linkforge_sensor.sensor_type == "CAMERA"
+    assert safe_get_sensor(obj_cam).sensor_type == "CAMERA"
 
 
 def test_import_robot_with_mimic(scene) -> None:
@@ -433,9 +425,10 @@ def test_import_robot_with_mimic(scene) -> None:
     # Verify mimic link
     follower = bpy.data.objects["follower"]
     driver = bpy.data.objects["driver"]
-    assert follower.linkforge_joint.use_mimic is True
-    assert follower.linkforge_joint.mimic_joint == driver
-    assert pytest.approx(follower.linkforge_joint.mimic_multiplier) == 2.0
+    props = safe_get_joint(follower)
+    assert props.use_mimic is True
+    assert props.mimic_joint == driver
+    assert pytest.approx(props.mimic_multiplier) == 2.0
 
 
 def test_import_mesh_file_stl(tmp_path, scene) -> None:
@@ -463,13 +456,8 @@ def test_import_mesh_file_stl(tmp_path, scene) -> None:
 
 def test_create_joint_object_prismatic(scene) -> None:
     """Test creation of a PRISMATIC joint with limits and CUSTOM axis."""
-    bpy.ops.object.empty_add()
-    p_obj = bpy.context.active_object
-    p_obj.name = "p"
-
-    bpy.ops.object.empty_add()
-    c_obj = bpy.context.active_object
-    c_obj.name = "c"
+    p_obj = create_test_object("p", None, scene)
+    c_obj = create_test_object("c", None, scene)
 
     link_objects = {"p": p_obj, "c": c_obj}
 
@@ -484,7 +472,7 @@ def test_create_joint_object_prismatic(scene) -> None:
 
     obj = create_joint_object(joint, link_objects)
     assert obj is not None
-    props = obj.linkforge_joint
+    props = safe_get_joint(obj)
     assert props.joint_type == "PRISMATIC"
     assert props.axis == "CUSTOM"
     # Expect normalized 1/sqrt(2) approx 0.707
@@ -494,25 +482,22 @@ def test_create_joint_object_prismatic(scene) -> None:
 
 def test_create_joint_object_continuous_floating(scene) -> None:
     """Test creation of CONTINUOUS and FLOATING joints."""
-    bpy.ops.object.empty_add()
-    p_obj = bpy.context.active_object
-    p_obj.name = "p_c"
-    bpy.ops.object.empty_add()
-    c_obj = bpy.context.active_object
-    c_obj.name = "c_c"
+    p_obj = create_test_object("p_c", None, scene)
+    c_obj = create_test_object("c_c", None, scene)
     link_objects = {"p_c": p_obj, "c_c": c_obj}
 
-    # Continuous
     j_cont = Joint(
         name="cont", type=JointType.CONTINUOUS, parent="p_c", child="c_c", axis=Vector3(1, 0, 0)
     )
     obj_cont = create_joint_object(j_cont, link_objects)
-    assert obj_cont.linkforge_joint.joint_type == "CONTINUOUS"
+    assert obj_cont is not None
+    assert safe_get_joint(obj_cont).joint_type == "CONTINUOUS"
 
     # Floating
     j_float = Joint(name="float_j", type=JointType.FLOATING, parent="p_c", child="c_c")
     obj_float = create_joint_object(j_float, link_objects)
-    assert obj_float.linkforge_joint.joint_type == "FLOATING"
+    assert obj_float is not None
+    assert safe_get_joint(obj_float).joint_type == "FLOATING"
 
 
 def test_create_link_object_with_mesh_visual(tmp_path, scene) -> None:
@@ -565,9 +550,7 @@ def test_create_primitive_mesh_invalid(scene) -> None:
 
 def test_create_sensor_with_gazebo_plugin(scene) -> None:
     """Test that Gazebo plugins are preserved during import (no legacy filtering)."""
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.name = "base"
+    link_obj = create_test_object("base", None, scene)
     link_objects = {"base": link_obj}
 
     # Create sensor with legacy plugin
@@ -585,15 +568,14 @@ def test_create_sensor_with_gazebo_plugin(scene) -> None:
     obj = create_sensor_object(sensor, link_objects)
     assert obj is not None
     # All plugins should now be preserved (no legacy filtering)
-    assert obj.linkforge_sensor.use_gazebo_plugin is True
-    assert obj.linkforge_sensor.plugin_filename == "libgazebo_ros_camera.so"
+    props = safe_get_sensor(obj)
+    assert props.use_gazebo_plugin is True
+    assert props.plugin_filename == "libgazebo_ros_camera.so"
 
 
 def test_create_sensor_with_custom_plugin(scene) -> None:
     """Test that custom (non-legacy) plugins are preserved."""
-    bpy.ops.object.empty_add()
-    link_obj = bpy.context.active_object
-    link_obj.name = "base"
+    link_obj = create_test_object("base", None, scene)
     link_objects = {"base": link_obj}
 
     # Create sensor with custom plugin (not libgazebo_ros_*)
@@ -611,13 +593,14 @@ def test_create_sensor_with_custom_plugin(scene) -> None:
     obj = create_sensor_object(sensor, link_objects)
     assert obj is not None
     # Custom plugin should be preserved
-    assert obj.linkforge_sensor.use_gazebo_plugin is True
-    assert obj.linkforge_sensor.plugin_filename == "libmy_custom.so"
+    props = safe_get_sensor(obj)
+    assert props.use_gazebo_plugin is True
+    assert props.plugin_filename == "libmy_custom.so"
 
 
 def test_import_robot_with_legacy_transmissions_skipped(scene) -> None:
     """Test that legacy transmissions are skipped (no auto-conversion)."""
-    from linkforge.linkforge_core.models import (
+    from linkforge_core.models import (
         Transmission,
         TransmissionActuator,
         TransmissionJoint,
@@ -668,7 +651,7 @@ def test_import_robot_with_legacy_transmissions_skipped(scene) -> None:
 
 def test_import_robot_skips_transmissions_when_ros2_control_exists(scene) -> None:
     """Test that transmissions are skipped when ros2_control is present."""
-    from linkforge.linkforge_core.models import Transmission, TransmissionJoint
+    from linkforge_core.models import Transmission, TransmissionJoint
 
     l1 = Link(name="base")
     l2 = Link(name="arm")
@@ -687,7 +670,7 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists(scene) -> Non
     )
     rc = Ros2Control(name="RealRobot", type="system", hardware_plugin="fake_hw", joints=[rc_joint])
 
-    from linkforge.linkforge_core.models import TransmissionActuator
+    from linkforge_core.models import TransmissionActuator
 
     trans = Transmission(
         name="trans1",
@@ -721,7 +704,7 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists(scene) -> Non
 
 def test_create_link_with_material(scene) -> None:
     """Test link creation with visual material."""
-    from linkforge.linkforge_core.models import Material
+    from linkforge_core.models import Material
 
     color = Color(r=1.0, g=0.0, b=0.0, a=1.0)
     material = Material(name="RedMat", color=color)
@@ -732,21 +715,16 @@ def test_create_link_with_material(scene) -> None:
     obj = create_link_object(link, robot, Path("/tmp"))
 
     assert obj is not None
-    assert obj.linkforge.use_material is True
+    assert safe_get_linkforge(obj).use_material is True
     # Check that visual child has material
     visual_obj = next(c for c in obj.children if "_visual" in c.name)
-    assert len(visual_obj.data.materials) > 0
+    assert visual_obj.data is not None and len(visual_obj.data.materials) > 0
 
 
 def test_create_joint_with_custom_axis(scene) -> None:
     """Test joint creation with non-standard axis."""
-    bpy.ops.object.empty_add()
-    p_obj = bpy.context.active_object
-    p_obj.name = "p"
-
-    bpy.ops.object.empty_add()
-    c_obj = bpy.context.active_object
-    c_obj.name = "c"
+    p_obj = create_test_object("p", None, scene)
+    c_obj = create_test_object("c", None, scene)
 
     link_objects = {"p": p_obj, "c": c_obj}
 
@@ -762,7 +740,7 @@ def test_create_joint_with_custom_axis(scene) -> None:
 
     obj = create_joint_object(joint, link_objects)
     assert obj is not None
-    props = obj.linkforge_joint
+    props = safe_get_joint(obj)
     assert props.axis == "CUSTOM"
     assert props.custom_axis_x != 0.0
 
@@ -946,7 +924,7 @@ def test_normalize_and_consolidate_imported_objects(scene) -> None:
 def test_create_joint_object_mimic_logic(scene) -> None:
     """Test that mimics are correctly resolved even if created out of order."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
-    from linkforge.linkforge_core.models import Joint, JointMimic, JointType
+    from linkforge_core.models import Joint, JointMimic, JointType
 
     # Parent/Child link shells
     p = create_test_object("p", None, scene)
@@ -959,7 +937,7 @@ def test_create_joint_object_mimic_logic(scene) -> None:
     # Mocking the discovery of the driver joint in scene
     # The actual implementation looks for objects by name
 
-    from linkforge.linkforge_core.models import JointLimits
+    from linkforge_core.models import JointLimits
 
     joint = Joint(
         name="follower",
