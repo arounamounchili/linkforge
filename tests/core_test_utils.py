@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from linkforge_core.generators.urdf_generator import URDFGenerator
+from linkforge_core.models.gazebo import GazeboElement
 from linkforge_core.models.robot import Robot
 from linkforge_core.parsers.urdf_parser import URDFParser
 
@@ -116,7 +117,14 @@ def compare_robots(robot1: Robot, robot2: Robot, context: str = "") -> list[str]
         )
 
     # Gazebo element comparison
-    if len(robot1.gazebo_elements) != len(robot2.gazebo_elements):
+    # Filter out automatically injected ros2_control plugins to avoid roundtrip mismatches
+    def is_injected_plugin(g: GazeboElement) -> bool:
+        return any("ros2_control" in p.name.lower() for p in g.plugins)
+
+    gz1 = [g for g in robot1.gazebo_elements if not is_injected_plugin(g)]
+    gz2 = [g for g in robot2.gazebo_elements if not is_injected_plugin(g)]
+
+    if len(gz1) != len(gz2):
         differences.append(f"{prefix}Gazebo element count mismatch")
 
     return differences

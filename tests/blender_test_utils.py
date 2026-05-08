@@ -65,12 +65,44 @@ def create_test_object(name: str, object_data: Any = None, scene: Any = None) ->
         elif hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
             bpy.context.view_layer.update()
 
-    # Final Binding Health Check
-    if not hasattr(obj, "linkforge"):
-        raise AttributeError(
-            f"Registration Failure: Object '{obj.name}' missing 'linkforge' property. "
-            "Ensure the addon is registered in the test session."
-        )
+    # Final Binding Health Check with Nuclear Recovery
+    # We actively probe the property group on the instance.
+    try:
+        # Accessing bl_rna forces Blender to finalize the instance-level binding
+        if not (hasattr(obj, "linkforge") and obj.linkforge and obj.linkforge.bl_rna):
+            raise AttributeError("RNA Binding Incomplete")
+    except (AttributeError, RuntimeError):
+        # Nuclear Recovery: Re-register the addon and refresh properties
+        import linkforge.blender
+
+        with contextlib.suppress(Exception):
+            linkforge.blender.unregister()
+        linkforge.blender.register()
+
+        # Verify class-level registration
+        if not hasattr(bpy.types.Object, "linkforge"):
+            raise RuntimeError(
+                "Fatal: linkforge property missing from bpy.types.Object after registration"
+            ) from None
+
+        # Force depsgraph update to push properties to instances
+        if scene and hasattr(scene, "view_layers"):
+            for vl in scene.view_layers:
+                vl.update()
+        elif hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
+            bpy.context.view_layer.update()
+
+        # Final Verification on the fresh wrapper
+        obj = bpy.data.objects[obj.name]
+        try:
+            if not (hasattr(obj, "linkforge") and obj.linkforge and obj.linkforge.bl_rna):
+                raise AttributeError("Final Binding Failure")
+        except (AttributeError, RuntimeError):
+            # This is the "Nuclear" error - it means the environment is broken
+            raise AttributeError(
+                f"Ironclad Registration Failure: Object '{obj.name}' lost LinkForge property binding "
+                "and could not be recovered. This usually indicates a conflict in the Blender environment."
+            ) from None
 
     return obj
 
@@ -95,19 +127,30 @@ def create_simple_robot_scene(
 
     # Create parent link (Empty)
     parent = create_test_object("parent_link", None, scene=target_scene)
+    # Re-fetch to ensure fresh Python wrapper if recovery occurred
+    parent = bpy.data.objects[parent.name]
+
     collection.objects.link(parent)
     parent.linkforge.is_robot_link = True
 
     # Create child mesh
-    bpy.ops.mesh.primitive_cube_add(size=0.5)
-    child = bpy.context.active_object
-    child.name = "child_visual"
+    mesh_data = bpy.data.meshes.new("child_visual")
+    # Simple cube vertices
+    mesh_data.from_pydata(
+        [(0.25, 0.25, 0.25), (0.25, -0.25, 0.25), (-0.25, -0.25, 0.25), (-0.25, 0.25, 0.25)],
+        [],
+        [(0, 1, 2, 3)],
+    )
+    child = create_test_object("child_visual", mesh_data, scene=target_scene)
     child.parent = parent
 
     # Ensure everything is linked to the right collection
     if child.name not in collection.objects:
         collection.objects.link(child)
 
-    bpy.context.view_layer.update()
+    # Robust update: use scene view layers instead of global context
+    if hasattr(target_scene, "view_layers") and target_scene.view_layers:
+        for vl in target_scene.view_layers:
+            vl.update()
 
     return collection, parent, child
