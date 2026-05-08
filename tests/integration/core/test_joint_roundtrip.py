@@ -46,7 +46,7 @@ def test_round_trip_safety_calibration() -> None:
     assert joint2.calibration.rising == 0.5
     assert joint2.calibration.falling == 1.0
 
-    print("Round-trip verification successful!")
+    pass
 
 
 if __name__ == "__main__":

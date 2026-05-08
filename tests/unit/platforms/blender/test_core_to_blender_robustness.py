@@ -127,7 +127,7 @@ def test_create_primitive_mesh(clean_scene, scene) -> None:
     """Test creation of primitive meshes (Box, Cylinder, Sphere)."""
     # 1. Box
     box = Box(size=Vector3(2.0, 2.0, 2.0))
-    print(f"DEBUG: box type: {type(box)}, isinstance(box, Box): {isinstance(box, Box)}")
+    # DEBUG: box type: {type(box)}, isinstance(box, Box): {isinstance(box, Box)}
     obj = create_primitive_mesh(box, "TestBox")
     assert obj is not None
     assert obj.name == "TestBox"
@@ -481,7 +481,7 @@ def test_full_robot_import_integration(clean_scene, scene) -> None:
     # Check consolidation (L2 has 2 visuals)
     # L2 object should have children or be joined depending on normalize_and_consolidate
     # Actually normalize_and_consolidate joins them if they are meshes.
-    print(f"DEBUG: Objects in scene: {[o.name for o in bpy.data.objects]}")
+    # DEBUG: Objects in scene: {[o.name for o in bpy.data.objects]}
 
 
 def test_import_mesh_file_robustness(tmp_path, scene) -> None:

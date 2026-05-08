@@ -170,9 +170,7 @@ class TestMeshInertiaVerification:
         expected = 1.0 / 6.0
 
         # Mesh calculation should be close to analytical (within 10%)
-        print(f"Mesh Ixx: {mesh_inertia.ixx}, Expected: {expected}")
-        print(f"Mesh Iyy: {mesh_inertia.iyy}, Expected: {expected}")
-        print(f"Mesh Izz: {mesh_inertia.izz}, Expected: {expected}")
+        pass
 
         assert mesh_inertia.ixx == pytest.approx(expected, rel=0.1)
         assert mesh_inertia.iyy == pytest.approx(expected, rel=0.1)
@@ -215,9 +213,7 @@ class TestMeshInertiaVerification:
         box = Box(size=Vector3(2.0, 3.0, 4.0))
         box_inertia = calculate_box_inertia(box, mass)
 
-        print(f"Mesh Ixx: {mesh_inertia.ixx}, Box Ixx: {box_inertia.ixx}")
-        print(f"Mesh Iyy: {mesh_inertia.iyy}, Box Iyy: {box_inertia.iyy}")
-        print(f"Mesh Izz: {mesh_inertia.izz}, Box Izz: {box_inertia.izz}")
+        pass
 
         # Should match within 10%
         assert mesh_inertia.ixx == pytest.approx(box_inertia.ixx, rel=0.1)

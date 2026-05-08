@@ -161,20 +161,20 @@ def test_mesh_export_path(tmp_path, scene) -> None:
         assert "monkey.stl" in geom.resource
 
 
-def test_sensor_attachment_logic(scene) -> None:
+def test_sensor_attachment_logic(mock_context, scene) -> None:
     """Verify sensor origin calculation and attachment errors."""
     link = create_test_object("Link", None, scene)
     link.linkforge.is_robot_link = True
     link.matrix_world = Matrix.Translation((1, 1, 1))
 
-    # 1. Valid attachment with origin offset
+    # 1. Valid attachment with origin offset (tested via scene_to_robot)
     s = create_test_object("Camera", None, scene)
     s.linkforge_sensor.is_robot_sensor = True
     s.linkforge_sensor.attached_link = link
     s.matrix_world = Matrix.Translation((2, 2, 2))
 
-    core = blender_sensor_to_core(s)
-    assert core.origin.xyz == Vector3(1.0, 1.0, 1.0)
+    robot, _ = scene_to_robot(mock_context)
+    assert robot.sensors[0].origin.xyz == Vector3(1.0, 1.0, 1.0)
 
     # 2. Missing attachment error
     s.linkforge_sensor.attached_link = None

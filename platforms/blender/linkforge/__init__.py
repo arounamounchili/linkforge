@@ -30,11 +30,12 @@ def _check_health() -> bool:
 
 _check_health()
 
-# Import blender module if bpy is available (inside Blender)
+# Import blender module if bpy is available and seems like real Blender
 try:
     import bpy
 
-    IS_BLENDER = True
+    # Harder check: fake-bpy-module doesn't always have app or version
+    IS_BLENDER = hasattr(bpy, "app") and hasattr(bpy.app, "version")
 except ImportError:
     IS_BLENDER = False
 

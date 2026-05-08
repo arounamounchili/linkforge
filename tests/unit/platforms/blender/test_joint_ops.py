@@ -99,9 +99,10 @@ def test_joint_ops_robustness_zombie_cleanup(mock_context, scene) -> None:
     joint_obj = bpy.context.active_object
 
     # Add to ROS2 control
+    joint_name = joint_obj.name
     item2 = scene.linkforge.ros2_control_joints.add()
-    item2.name = joint_obj.name
+    item2.name = joint_name
 
     bpy.ops.linkforge.delete_joint()
     # verify item2 is gone
-    assert not any(i.name == joint_obj.name for i in scene.linkforge.ros2_control_joints)
+    assert not any(i.name == joint_name for i in scene.linkforge.ros2_control_joints)

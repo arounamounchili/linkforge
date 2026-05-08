@@ -58,16 +58,16 @@ def test_split_files_and_reimport_simulated() -> None:
 
         # 5. Verify properties file (should have properties)
         mat_content = (tmp_path / "test_bot_properties.xacro").read_text()
-        print(f"Properties content:\n{mat_content}")
+        pass
         assert '<xacro:property name="black"' in mat_content
         assert 'value="0.1 0.1 0.1 1"' in mat_content
 
         # 6. Verify macros file (should have the macro)
         macro_content = (tmp_path / "test_bot_macros.xacro").read_text()
-        print(f"Macros content:\n{macro_content}")
+        pass
         assert '<xacro:macro name="cylinder_' in macro_content
 
-    print("\nVerified: All 4 advanced settings work correctly together!")
+    pass
 
 
 if __name__ == "__main__":

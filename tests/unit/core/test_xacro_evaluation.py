@@ -38,7 +38,7 @@ class TestXacroEvaluation:
             p.write_text(xml_content, encoding="utf-8")
 
             urdf_str = resolver.resolve_file(p)
-            print(f"Cleanup Result: {urdf_str}")
+            pass
 
             # Assertions
             assert '<link name="valid_link"' in urdf_str
