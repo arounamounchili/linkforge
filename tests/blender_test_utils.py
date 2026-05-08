@@ -85,10 +85,16 @@ def create_simple_robot_scene(
     """
     # Create collection
     collection = bpy.data.collections.new(scene_name)
-    bpy.context.scene.collection.children.link(collection)
+
+    # Robustly get the target scene (context might be None in background)
+    target_scene = bpy.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
+    if not target_scene:
+        raise RuntimeError("No Blender scene available to link test collection")
+
+    target_scene.collection.children.link(collection)
 
     # Create parent link (Empty)
-    parent = create_test_object("parent_link", None, scene=bpy.context.scene)
+    parent = create_test_object("parent_link", None, scene=target_scene)
     collection.objects.link(parent)
     parent.linkforge.is_robot_link = True
 
