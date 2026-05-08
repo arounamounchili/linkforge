@@ -106,3 +106,35 @@ def create_test_object(name: str, object_data: Any = None, scene: Any = None) ->
             )
 
     return obj
+
+
+def create_simple_robot_scene(
+    scene_name: str = "RobotScene",
+) -> tuple[bpy.types.Collection, bpy.types.Object, bpy.types.Object]:
+    """Helper to create a standard robot link-child hierarchy for testing.
+
+    Returns:
+        A tuple of (collection, parent_link, child_mesh)
+    """
+    # 1. Create collection
+    collection = bpy.data.collections.new(scene_name)
+    bpy.context.scene.collection.children.link(collection)
+
+    # 2. Create parent link (Empty)
+    parent = create_test_object("parent_link", None, scene=bpy.context.scene)
+    collection.objects.link(parent)
+    parent.linkforge.is_robot_link = True
+
+    # 3. Create child mesh
+    bpy.ops.mesh.primitive_cube_add(size=0.5)
+    child = bpy.context.active_object
+    child.name = "child_visual"
+    child.parent = parent
+
+    # Ensure everything is linked to the right collection
+    if child.name not in collection.objects:
+        collection.objects.link(child)
+
+    bpy.context.view_layer.update()
+
+    return collection, parent, child

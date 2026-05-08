@@ -1,9 +1,7 @@
 from linkforge_core.composer import RobotBuilder, box, cylinder
-from linkforge_core.generators.srdf_generator import SRDFGenerator
-from linkforge_core.generators.urdf_generator import URDFGenerator
 from linkforge_core.models.geometry import Vector3
-from linkforge_core.parsers.srdf_parser import SRDFParser
-from linkforge_core.parsers.urdf_parser import URDFParser
+
+from tests.core_test_utils import assert_robots_equal, perform_urdf_roundtrip
 
 
 def test_urdf_roundtrip():
@@ -18,20 +16,13 @@ def test_urdf_roundtrip():
 
     robot = builder.build()
 
-    # 2. Generate URDF
-    generator = URDFGenerator(pretty_print=True)
-    urdf_str = generator.generate(robot)
+    # 2. Roundtrip
+    robot_parsed = perform_urdf_roundtrip(robot)
 
-    # 3. Parse URDF back
-    parser = URDFParser()
-    robot_parsed = parser.parse_string(urdf_str)
+    # 3. Verify equality
+    assert_robots_equal(robot, robot_parsed)
 
-    # 4. Verify equality
-    assert robot_parsed.name == robot.name
-    assert len(robot_parsed.links) == len(robot.links)
-    assert len(robot_parsed.joints) == len(robot.joints)
-
-    # Check specific joint properties
+    # Check specific joint properties (extra verification)
     joint = robot_parsed.get_joint("base_link_to_link1")
     assert joint is not None
     assert joint.axis == Vector3(0.0, 0.0, 1.0)
@@ -41,6 +32,11 @@ def test_urdf_roundtrip():
 
 
 def test_srdf_roundtrip():
+    # SRDF roundtrip still uses manual parsing for now as core_test_utils
+    # currently focuses on URDF.
+    from linkforge_core.generators.srdf_generator import SRDFGenerator
+    from linkforge_core.parsers.srdf_parser import SRDFParser
+
     # 1. Build a robot with semantic description
     builder = RobotBuilder("test_robot")
     builder.link("base_link").visual(box(1, 1, 1)).collision().mass(1.0).root()
