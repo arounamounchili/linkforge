@@ -8,6 +8,7 @@ import bpy
 
 from tests.blender_test_utils import (
     create_test_object,
+    safe_get_linkforge,
     safe_get_linkforge_scene,
     safe_get_sensor,
     safe_get_transmission,
@@ -256,3 +257,30 @@ class TestTransmissionProperties:
 
         # Cleanup
         bpy.data.objects.remove(trans_obj)
+
+
+class TestPropertyHelpers:
+    """Tests for Blender property helper utilities."""
+
+    def test_find_property_owner_strategies(self, scene) -> None:
+        """Test find_property_owner with various strategies."""
+        from linkforge.blender.utils.property_helpers import find_property_owner
+
+        bpy.ops.object.select_all(action="DESELECT")
+        bpy.ops.object.empty_add()
+        obj = bpy.context.active_object
+        assert obj is not None
+        obj.name = "owner_obj"
+        props = safe_get_linkforge(obj)
+        props.is_robot_link = True
+
+        # Strategy 1: id_data (should work immediately)
+        found = find_property_owner(bpy.context, props, "linkforge")
+        assert found == obj
+
+        # Strategy 2: Active object
+        # Strategy 1 is built-in to Blender PropertyGroups
+        assert props.id_data == obj
+
+        # Check with non-existent property
+        assert find_property_owner(bpy.context, props, "invalid_attr") is None
