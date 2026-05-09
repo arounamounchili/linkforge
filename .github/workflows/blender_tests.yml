@@ -43,6 +43,9 @@ jobs:
         run: |
           uv sync --all-groups --all-extras
 
+      - name: Install just
+        uses: taiki-e/install-action@just
+
       - name: Setup Blender
         uses: ./.github/actions/setup-blender
         with:
