@@ -242,9 +242,6 @@ def create_robot_joint(
     joint_props.parent_link = parent_link
     joint_props.child_link = child_link
 
-    # Joints are typically children of the child link in LinkForge convention
-    joint_obj.parent = child_link
-
     if scene.view_layers:
         scene.view_layers[0].update()
 
