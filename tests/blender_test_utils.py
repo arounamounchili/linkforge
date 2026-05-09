@@ -321,3 +321,23 @@ def cleanup_blender_scene(scene: typing.Any | None = None) -> None:
     from linkforge.blender.utils.scene_utils import clear_stats_cache
 
     clear_stats_cache()
+
+
+def safe_update(scene: typing.Any | None = None) -> None:
+    """Bulletproof scene update that handles NoneType contexts in headless mode.
+
+    Attempts to resolve the scene from context, then falls back to global data.
+    """
+    import bpy
+
+    # 1. Use provided scene
+    # 2. Fallback to context scene
+    # 3. Fallback to first scene in data
+    target_scene = (
+        scene
+        or getattr(bpy.context, "scene", None)
+        or (bpy.data.scenes[0] if bpy.data.scenes else None)
+    )
+
+    if target_scene and hasattr(target_scene, "view_layers") and len(target_scene.view_layers) > 0:
+        target_scene.view_layers[0].update()

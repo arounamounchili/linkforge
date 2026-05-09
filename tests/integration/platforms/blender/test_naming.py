@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import bpy
 import pytest
 
 from tests.blender_test_utils import (
     create_test_object,
     safe_get_linkforge,
     safe_get_sensor,
+    safe_update,
 )
 
 # Name Synchronization
@@ -23,8 +23,7 @@ class TestNaming:
 
         # Rename in Blender
         obj.name = "chassis"
-        if bpy.context.scene.view_layers:
-            bpy.context.scene.view_layers[0].update()
+        safe_update()
 
         assert obj_lf.link_name == "chassis"
 
@@ -36,8 +35,7 @@ class TestNaming:
 
         # Rename with spaces
         obj.name = "front left wheel"
-        if bpy.context.scene.view_layers:
-            bpy.context.scene.view_layers[0].update()
+        safe_update()
 
         assert obj_lf.link_name == "front_left_wheel"
         assert obj.name == "front_left_wheel"
