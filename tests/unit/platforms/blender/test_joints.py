@@ -109,6 +109,8 @@ class TestJointVisualization:
 
         obj = create_test_object("test_gizmo", None, scene)
         obj.location = Vector((1.0, 2.0, 3.0))
+        if blender_context.view_layer:
+            blender_context.view_layer.update()
         props = safe_get_joint(obj)
         props.is_robot_joint = True
         props.axis = "CUSTOM"

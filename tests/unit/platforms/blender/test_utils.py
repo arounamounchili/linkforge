@@ -22,29 +22,59 @@ from tests.blender_test_utils import (
 
 
 class TestNameSynchronization:
-    def test_link_name_persistence(self, scene, blender_context) -> None:
-        """Test that link_name remains synced even if Blender renames the object."""
-        obj = create_test_object("base_link", None, scene)
+    def test_link_name_tracks_object_rename(self, scene, blender_context) -> None:
+        """Test that link_name auto-syncs when Blender renames the object.
+
+        The name_sync_handler deliberately propagates obj.name → link_name
+        so that robot identities stay consistent after Outliner renames.
+        """
+        import bpy
+
+        if "sync_link" in bpy.data.objects:
+            bpy.data.objects.remove(bpy.data.objects["sync_link"], do_unlink=True)
+            bpy.data.orphans_purge()
+
+        obj = create_test_object("sync_link", None, scene)
         lf = safe_get_linkforge(obj)
         lf.is_robot_link = True
-        lf.link_name = "base_link"
+        lf.link_name = "sync_link"
 
-        # Simulate Blender renaming (e.g., adding a suffix)
-        obj.name = "base_link.001"
+        # Initial state: names should match
+        assert lf.link_name == "sync_link"
+
+        # Simulate Blender renaming — the handler should propagate the new name
+        obj.name = "sync_link_renamed"
         safe_update(scene)
 
-        # Getter should return the synced name (which remains persistent)
-        assert safe_get_linkforge(obj).link_name == "base_link"
+        # The handler should have updated link_name to match the new obj.name
+        assert safe_get_linkforge(obj).link_name == "sync_link_renamed"
 
-    def test_joint_name_persistence(self, scene, blender_context) -> None:
-        """Test that joint_name remains synced even if Blender renames the object."""
-        obj = create_test_object("joint", None, scene)
-        safe_get_joint(obj).is_robot_joint = True
-        safe_get_joint(obj).joint_name = "joint"
+    def test_joint_name_tracks_object_rename(self, scene, blender_context) -> None:
+        """Test that joint_name auto-syncs when Blender renames the object.
 
-        obj.name = "joint.002"
+        The name_sync_handler deliberately propagates obj.name → joint_name
+        so that joint identities stay consistent after Outliner renames.
+        """
+        import bpy
+
+        if "sync_joint" in bpy.data.objects:
+            bpy.data.objects.remove(bpy.data.objects["sync_joint"], do_unlink=True)
+            bpy.data.orphans_purge()
+
+        obj = create_test_object("sync_joint", None, scene)
+        jf = safe_get_joint(obj)
+        jf.is_robot_joint = True
+        jf.joint_name = "sync_joint"
+
+        # Initial state: names should match
+        assert jf.joint_name == "sync_joint"
+
+        # Simulate Blender renaming — the handler should propagate the new name
+        obj.name = "sync_joint_renamed"
         safe_update(scene)
-        assert safe_get_joint(obj).joint_name == "joint"
+
+        # The handler should have updated joint_name to match the new obj.name
+        assert safe_get_joint(obj).joint_name == "sync_joint_renamed"
 
 
 # Sanitization and Fidelity

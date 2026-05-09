@@ -8,25 +8,16 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 try:
     import numpy as np  # type: ignore[import-not-found]
 except ImportError:
     np = None
 
-if TYPE_CHECKING:
-    # Type stubs for Blender types when type checking
-    bpy: Any
-    Matrix: Any
-    Vector: Any
-    from .context import IBlenderContext
-else:
-    import bpy
-    from mathutils import Matrix
-
 from dataclasses import dataclass
 
+import bpy
 from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (
@@ -77,6 +68,9 @@ from linkforge_core.physics import (
 )
 from linkforge_core.utils.math_utils import clean_float, normalize_vector
 from linkforge_core.utils.string_utils import sanitize_name
+from mathutils import Matrix
+
+from .context import IBlenderContext
 
 # Constants
 logger = get_logger(__name__)
@@ -1123,7 +1117,9 @@ def scene_to_robot(
 
     # Auto-wrap for legacy compatibility
     if not isinstance(context, IBlenderContext):
-        context = BlenderContext(context)
+        import bpy
+
+        context = BlenderContext(bpy)
 
     if context is None:
         return Robot(name="empty_robot"), []

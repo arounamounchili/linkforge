@@ -110,8 +110,8 @@ def create_primitive_mesh(
                 obj.name = name
                 obj.dimensions = (geometry.size.x, geometry.size.y, geometry.size.z)
                 # Force update to ensure dimensions are applied correctly before return
-                if bpy.context.view_layer is not None:
-                    bpy.context.view_layer.update()
+                if context.view_layer is not None:
+                    context.view_layer.update()
                 obj["source_geometry_type"] = "BOX"
 
         elif isinstance(geometry, Cylinder):
@@ -320,9 +320,9 @@ def normalize_and_consolidate_imported_objects(
         obj.select_set(True)
 
     # In real Blender, we set the active object on the view layer.
-    # In mock, we can just skip or implement a simple active setter.
-    if hasattr(context, "set_active_object"):
-        context.set_active_object(mesh_list[0])
+    vl = context.view_layer
+    if vl:
+        vl.objects.active = mesh_list[0]
 
     # Bake axis/scale
     context.ops.object.transform_apply(location=False, rotation=True, scale=True)
@@ -344,8 +344,9 @@ def normalize_and_consolidate_imported_objects(
         with contextlib.suppress(RuntimeError, ReferenceError):
             context.data.objects.remove(obj, do_unlink=True)
 
-    if hasattr(context, "set_active_object"):
-        context.set_active_object(final_obj)
+    vl = context.view_layer
+    if vl:
+        vl.objects.active = final_obj
     return final_obj
 
 

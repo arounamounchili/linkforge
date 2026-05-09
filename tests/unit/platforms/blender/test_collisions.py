@@ -60,7 +60,7 @@ class TestCollisionQuality:
 class TestCollisionScaling:
     def test_box_collision_scaling(self, scene, blender_context) -> None:
         """Verify that a scaled cube results in a matching collision primitive."""
-        link_obj = create_mesh_object("scaled_link", scene=scene)
+        link_obj = create_mesh_object("scaled_link", scene=scene, with_cube=True)
         link_obj.scale = (2.0, 1.5, 0.5)
         safe_update(scene)
 

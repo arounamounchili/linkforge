@@ -52,9 +52,10 @@ class TestTransmissionOperations:
         # Execute logic directly
         from linkforge.blender.operators.transmission_ops import delete_transmission_for_object
 
+        trans_name = trans.name
         delete_transmission_for_object(trans, blender_context)
 
-        assert trans.name not in [o.name for o in blender_context.data.objects]
+        assert trans_name not in [o.name for o in blender_context.data.objects]
 
 
 # Transmission Hierarchy and Logic

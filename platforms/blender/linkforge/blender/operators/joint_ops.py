@@ -93,8 +93,9 @@ class LINKFORGE_OT_create_joint(Operator):
 
         # Create Empty at link's location (ARROWS shows RGB colored axes)
         with context_and_mode_guard(context):
-            bpy.ops.object.empty_add(type="ARROWS", location=location)
-            joint_empty = context.active_object
+            ops = getattr(context, "ops", bpy.ops)
+            ops.object.empty_add(type="ARROWS", location=location)
+            joint_empty = getattr(context, "active_object", bpy.context.active_object)
             if not joint_empty:
                 return {"CANCELLED"}
             joint_empty.name = f"{typing.cast('LinkPropertyGroup', getattr(link_obj, 'linkforge')).link_name}_joint"
@@ -198,7 +199,8 @@ class LINKFORGE_OT_delete_joint(Operator):
 
         # Delete the Empty entirely
         with context_and_mode_guard(context):
-            bpy.data.objects.remove(obj, do_unlink=True)
+            data = getattr(context, "data", bpy.data)
+            data.objects.remove(obj, do_unlink=True)
 
         self.report({"INFO"}, f"Deleted joint '{joint_name}'")
         clear_stats_cache()

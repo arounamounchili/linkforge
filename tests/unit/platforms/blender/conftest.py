@@ -20,14 +20,20 @@ try:
 except (ImportError, AttributeError):
     is_real_blender = False
 
-if not is_real_blender:
+import contextlib
+
+if is_real_blender:
+    # Always force registration of linkforge properties to ensure test stability
+    import linkforge.blender
+
+    with contextlib.suppress(Exception):
+        linkforge.blender.register()
+else:
     bpy = setup_mock_bpy()
     # Force registration of linkforge properties in the mock environment
     import linkforge.blender
 
     linkforge.blender.register()
-else:
-    HAS_BPY = True
 
 
 @pytest.fixture
@@ -49,17 +55,31 @@ def scene(blender_context):
 def clean_scene(blender_context):
     """Automatically cleans the scene before each test."""
 
-    # Clear objects list (real bpy collections don't have .clear())
-    if hasattr(blender_context.scene, "objects"):
-        objs = blender_context.scene.objects
-        if hasattr(objs, "clear") and not is_real_blender:
-            objs.clear()
-        else:
-            # Real Blender removal
-            import bpy
+    # Real Blender removal of all objects and underlying data
+    import bpy
 
-            for obj in list(objs):
-                bpy.data.objects.remove(obj, do_unlink=True)
+    # Clear scene-level LinkForge property collections (persisted on bpy.data.scenes)
+    scene = bpy.context.scene
+    if hasattr(scene, "linkforge"):
+        lf = scene.linkforge
+        if hasattr(lf, "ros2_control_joints"):
+            lf.ros2_control_joints.clear()
+        if hasattr(lf, "ros2_control_parameters"):
+            lf.ros2_control_parameters.clear()
+
+    for data_type in ["objects", "meshes", "materials", "armatures", "actions", "collections"]:
+        data_block = getattr(bpy.data, data_type)
+        for item in list(data_block):
+            try:
+                # Don't remove the Scene Collection or the Scene itself
+                if data_type == "collections" and item.name == "Scene Collection":
+                    continue
+                data_block.remove(item, do_unlink=True)
+            except (ReferenceError, RuntimeError, AttributeError):
+                pass
+
+    # Nuclear purge of any orphan data
+    bpy.data.orphans_purge()
 
     # Clear architectural statistics cache for test isolation
     os.environ["LINKFORGE_DISABLE_CACHE"] = "1"

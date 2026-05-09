@@ -166,9 +166,18 @@ def create_test_object(
     return obj
 
 
-def create_mesh_object(name: str, scene: typing.Any | None = None) -> typing.Any:
-    """Create a new mesh object."""
+def create_mesh_object(
+    name: str, scene: typing.Any | None = None, with_cube: bool = False
+) -> typing.Any:
+    """Create a new mesh object, optionally with a unit cube."""
     mesh = bpy.data.meshes.new(f"{name}_mesh")
+    if with_cube:
+        import bmesh
+
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=2.0)
+        bm.to_mesh(mesh)
+        bm.free()
     return create_test_object(name, mesh, scene=scene)
 
 

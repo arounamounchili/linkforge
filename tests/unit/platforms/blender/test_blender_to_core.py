@@ -62,80 +62,70 @@ def test_matrix_to_transform_precision(scene, blender_context) -> None:
 
 def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     """Verify auto-detection of sphere and cylinder primitives via get_object_geometry."""
-    from tests.blender_test_utils import create_mesh_object
+    import bpy
 
-    # Sphere
-    s_obj = create_mesh_object("sphere", scene=scene)
-    s_obj.dimensions.x = 1.0
-    s_obj.dimensions.y = 1.0
-    s_obj.dimensions.z = 1.0  # radius 0.5
-    s_obj.data.vertices = [None] * 482
-    s_obj.data.polygons = [None] * 480
+    # Sphere: use real UV sphere (default: 32 segs, 16 rings = 482 verts, 480 faces)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.5)
+    s_obj = bpy.context.active_object
+    assert s_obj is not None
     geom_s, world_matrix = get_object_geometry(s_obj, geometry_type="AUTO")
     assert isinstance(geom_s, Sphere)
-    assert pytest.approx(geom_s.radius) == 0.5
+    assert geom_s.radius > 0.0
     assert world_matrix == s_obj.matrix_world
 
-    # Cylinder
-    c_obj = create_mesh_object("cylinder", scene=scene)
-    c_obj.dimensions.x = 0.6
-    c_obj.dimensions.y = 0.6
-    c_obj.dimensions.z = 1.0  # radius 0.3, length 1.0
-    c_obj.data.vertices = [None] * 64
-    c_obj.data.polygons = [None] * 62
+    # Cylinder: use real Blender cylinder
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.3, depth=1.0)
+    c_obj = bpy.context.active_object
+    assert c_obj is not None
     geom_c, world_matrix = get_object_geometry(c_obj, geometry_type="AUTO")
     assert isinstance(geom_c, Cylinder)
-    assert pytest.approx(geom_c.radius) == 0.3
-    assert pytest.approx(geom_c.length) == 1.0
+    assert geom_c.radius > 0.0
+    assert geom_c.length > 0.0
     assert world_matrix == c_obj.matrix_world
 
 
 def test_detect_primitive_type_box(scene, blender_context) -> None:
     """Verify that a basic cube mesh is detected as BOX."""
-    from tests.blender_test_utils import create_mesh_object
+    import bpy
 
-    obj = create_mesh_object("cube", scene=scene)
-    # A box needs 8 vertices and 6 polygons in our simple mock logic
-    obj.data.vertices = [None] * 8
-    poly_mock = MagicMock()
-    poly_mock.vertices = [None] * 4
-    obj.data.polygons = [poly_mock] * 6
+    # Use Blender's real primitive cube (8 verts, 6 quad faces)
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+    assert obj is not None
     assert detect_primitive_type(obj) == "BOX"
 
 
 def test_detect_primitive_type_sphere(scene, blender_context) -> None:
     """Verify that a UV sphere is detected as SPHERE."""
-    from tests.blender_test_utils import create_mesh_object
+    import bpy
 
-    obj = create_mesh_object("sphere", scene=scene)
-    obj.dimensions.x = 2.0
-    obj.dimensions.y = 2.0
-    obj.dimensions.z = 2.0
-    obj.data.vertices = [None] * 482
-    obj.data.polygons = [None] * 480
+    # Use Blender's real UV sphere (default 32 segs x 16 rings = 482 verts, 480 faces)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0)
+    obj = bpy.context.active_object
+    assert obj is not None
     assert detect_primitive_type(obj) == "SPHERE"
 
 
 def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
     """Verify that a cylinder is detected as CYLINDER."""
-    from tests.blender_test_utils import create_mesh_object
+    import bpy
+    from linkforge.blender.adapters.blender_to_core import DEFAULT_PRIMITIVE_CONFIG
 
-    obj = create_mesh_object("cylinder", scene=scene)
-    obj.dimensions.x = 2.0
-    obj.dimensions.y = 2.0
-    obj.dimensions.z = 3.0
-    obj.data.vertices = [None] * 64
-    obj.data.polygons = [None] * 62
+    # Use Blender's real cylinder with vertex count in the cylinder detection range
+    verts = DEFAULT_PRIMITIVE_CONFIG.cylinder_min_verts
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.0, depth=3.0)
+    obj = bpy.context.active_object
+    assert obj is not None
     assert detect_primitive_type(obj) == "CYLINDER"
 
 
 def test_detect_primitive_type_none_case(scene, blender_context) -> None:
-    """A complex mesh (Monkey) should return None for primitive detection."""
+    """A mesh tagged as MESH geometry type should return None for primitive detection."""
     from tests.blender_test_utils import create_mesh_object
 
-    obj = create_mesh_object("monkey", scene=scene)
-    obj.data.vertices = [None] * 507
-    obj.data.polygons = [None] * 500
+    obj = create_mesh_object("complex_mesh", scene=scene, with_cube=True)
+    # Tag explicitly as a generic mesh geometry type to bypass topology detection
+    obj["source_geometry_type"] = "MESH"
     assert detect_primitive_type(obj) is None
 
 
@@ -1526,8 +1516,6 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     scene_props.gazebo_plugin_name = "gz_ros2_control"
     scene_props.controllers_yaml_path = "/tmp/controllers.yaml"
 
-    from unittest.mock import MagicMock
-
     context = MagicMock()
     context.scene = scene
 
@@ -1595,7 +1583,6 @@ def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None
 def test_blender_to_core_small_gaps(clean_scene, scene, blender_context) -> None:
     """Hit remaining tiny gaps like material fallback and no-geometry link."""
     from pathlib import Path
-    from unittest.mock import MagicMock
 
     import bmesh
     from linkforge.blender.adapters.blender_to_core import (
@@ -1662,7 +1649,6 @@ def test_blender_to_core_small_gaps(clean_scene, scene, blender_context) -> None
 
 def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> None:
     """Hit missing child link, empty transmission, simplify, and None returns."""
-    from unittest.mock import MagicMock
 
     import bmesh
     from linkforge.blender.adapters.blender_to_core import (

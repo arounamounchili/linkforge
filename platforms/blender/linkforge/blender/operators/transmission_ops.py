@@ -101,8 +101,9 @@ def create_transmission_for_joint(joint_obj: typing.Any, context: Context) -> bo
     location = joint_obj.matrix_world.translation.copy()
 
     # Create Empty at joint's location
-    bpy.ops.object.empty_add(type="SINGLE_ARROW", location=location)
-    transmission_empty = context.active_object
+    ops = getattr(context, "ops", bpy.ops)
+    ops.object.empty_add(type="SINGLE_ARROW", location=location)
+    transmission_empty = getattr(context, "active_object", bpy.context.active_object)
 
     if not transmission_empty:
         return False
@@ -222,7 +223,7 @@ class LINKFORGE_OT_delete_transmission(Operator):
         return {"FINISHED"} if success else {"CANCELLED"}
 
 
-def delete_transmission_for_object(obj: typing.Any, _context: Context) -> bool:
+def delete_transmission_for_object(obj: typing.Any, context: Context) -> bool:
     """Logic for deleting a transmission object.
 
     Args:
@@ -233,7 +234,8 @@ def delete_transmission_for_object(obj: typing.Any, _context: Context) -> bool:
         True if successful.
     """
     # Delete the object
-    bpy.data.objects.remove(obj, do_unlink=True)
+    data = getattr(context, "data", bpy.data)
+    data.objects.remove(obj, do_unlink=True)
 
     clear_stats_cache()
     return True

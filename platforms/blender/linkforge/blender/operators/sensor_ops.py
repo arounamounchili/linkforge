@@ -91,8 +91,9 @@ class LINKFORGE_OT_create_sensor(Operator):
 
         # Create Empty at 0,0,0 initially (we will snap it)
         with context_and_mode_guard(context):
-            bpy.ops.object.empty_add(type="SPHERE", location=(0, 0, 0))
-            sensor_empty = context.active_object
+            ops = getattr(context, "ops", bpy.ops)
+            ops.object.empty_add(type="SPHERE", location=(0, 0, 0))
+            sensor_empty = getattr(context, "active_object", bpy.context.active_object)
 
         # Ensure unique name
         link_name = (
@@ -184,7 +185,8 @@ class LINKFORGE_OT_delete_sensor(Operator):
 
         # Delete the object
         with context_and_mode_guard(context):
-            bpy.data.objects.remove(obj, do_unlink=True)
+            data = getattr(context, "data", bpy.data)
+            data.objects.remove(obj, do_unlink=True)
 
         self.report({"INFO"}, f"Deleted sensor '{sensor_name}'")
         clear_stats_cache()

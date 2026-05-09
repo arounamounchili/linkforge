@@ -86,9 +86,10 @@ def execute_collision_preview_update() -> None | float:
     if collision_obj is None:
         return None
 
-    # Use bpy.context.view_layer reliably
-    if not bpy.context.view_layer:
-        return None
+    # Force update to ensure matrices are ready
+    vl = bpy.context.view_layer
+    if vl:
+        vl.update()
 
     # Check if it's a primitive (don't regenerate primitives)
     from ..adapters.blender_to_core import detect_primitive_type
@@ -167,6 +168,10 @@ def create_collision_for_link(
     visual_children = [
         c for c in link_obj.children if "_visual" in c.name.lower() and c.type == "MESH"
     ]
+
+    # If no explicit visual children, check if the link object itself is a mesh
+    if not visual_children and link_obj.type == "MESH":
+        visual_children = [link_obj]
 
     if not visual_children:
         return None
@@ -262,19 +267,20 @@ def _create_primitive_collision(
 
     # Create primitive at world origin initially
     # We create them at unit size for predictable scaling via dimensions
+    ops = getattr(context, "ops", bpy.ops)
     if prim_type == "BOX":
         # Create cube (1x1x1)
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
+        ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
     elif prim_type == "SPHERE":
         # Create sphere (radius 0.5 = 1m diameter)
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(0, 0, 0))
+        ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(0, 0, 0))
     elif prim_type == "CYLINDER":
         # Create cylinder (radius 0.5, depth 1.0 = 1x1x1 volume)
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=1.0, location=(0, 0, 0))
+        ops.mesh.primitive_cylinder_add(radius=0.5, depth=1.0, location=(0, 0, 0))
     else:
         return None, mathutils.Vector((0, 0, 0))
 
-    collision_obj = context.active_object
+    collision_obj = getattr(context, "active_object", bpy.context.active_object)
 
     # CRITICAL: Match World Pose (Location/Rotation) first
     # We include local_center offset to align primitive with specific geometry volume
@@ -289,7 +295,7 @@ def _create_primitive_collision(
 
         # Apply scale to bake dimensions into geometry (Scale 1.0 standard)
         collision_obj.hide_viewport = False
-        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        ops.object.transform_apply(location=False, rotation=False, scale=True)
 
     # Name it
     if collision_obj:
@@ -349,13 +355,14 @@ def _merge_visual_meshes(
         dup.matrix_world = link_obj.matrix_world.inverted() @ visual_obj.matrix_world
 
         # Select and make active for transform application
-        bpy.ops.object.select_all(action="DESELECT")
+        ops = getattr(context, "ops", bpy.ops)
+        ops.object.select_all(action="DESELECT")
         dup.select_set(True)
-        vl = context.view_layer
+        vl = getattr(context, "view_layer", bpy.context.view_layer)
         if vl:
             vl.objects.active = dup
 
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         duplicates.append(dup)
 
@@ -368,16 +375,17 @@ def _merge_visual_meshes(
         return duplicates[0]
 
     # Multiple visuals - join them into single mesh
-    bpy.ops.object.select_all(action="DESELECT")
+    ops = getattr(context, "ops", bpy.ops)
+    ops.object.select_all(action="DESELECT")
     for dup in duplicates:
         dup.select_set(True)
-    vl = context.view_layer
+    vl = getattr(context, "view_layer", bpy.context.view_layer)
     if vl and duplicates:
         vl.objects.active = duplicates[0]
 
     # Join into single mesh
-    bpy.ops.object.join()
-    merged_obj = context.active_object
+    ops.object.join()
+    merged_obj = getattr(context, "active_object", bpy.context.active_object)
     if not merged_obj:
         return None
 
@@ -413,6 +421,9 @@ def _create_mesh_collision_compound(
 
     if merged_obj is None:
         return None
+
+    # Name it
+    merged_obj.name = f"{link_obj.name}_collision"
 
     # Store original visibility state to restore later
     old_hide_viewport = merged_obj.hide_viewport
@@ -579,6 +590,15 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             res = extract_mesh_triangles(target_obj, as_numpy=False)
             if res:
                 verts, faces = res
+
+                # Ensure mesh is not empty to avoid physics engine crashes
+                if not verts or not faces:
+                    logger.warning(
+                        f"Skipping inertia calculation for link '{link_obj.name}': "
+                        f"Visual object '{target_obj.name}' has no geometry (mesh is empty)."
+                    )
+                    return False
+
                 # Mandatory topology validation for mesh inertia
                 validate_mesh_topology(verts, faces, name=target_obj.name)
                 tensor = calculate_mesh_inertia_from_triangles(verts, faces, mass)
@@ -586,13 +606,13 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
         if tensor is not None:
             # Final validation for type-checker
             t: InertiaTensor = tensor
-            # Update Link properties
-            lf.inertia_ixx = t.ixx
-            lf.inertia_iyy = t.iyy
-            lf.inertia_izz = t.izz
-            lf.inertia_ixy = t.ixy
-            lf.inertia_ixz = t.ixz
-            lf.inertia_iyz = t.iyz
+            # Update Link properties (explicitly cast to float to avoid Blender property set errors)
+            lf.inertia_ixx = float(t.ixx)
+            lf.inertia_iyy = float(t.iyy)
+            lf.inertia_izz = float(t.izz)
+            lf.inertia_ixy = float(t.ixy)
+            lf.inertia_ixz = float(t.ixz)
+            lf.inertia_iyz = float(t.iyz)
             return True
 
         return False
@@ -633,7 +653,8 @@ class LINKFORGE_OT_add_empty_link(Operator):
             empty_size = getattr(addon_prefs, "link_empty_size", empty_size)
 
         # Create Empty object as link frame
-        empty = bpy.data.objects.new(link_name, None)
+        data = getattr(context, "data", bpy.data)
+        empty = data.objects.new(link_name, None)
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = empty_size
 
@@ -653,13 +674,12 @@ class LINKFORGE_OT_add_empty_link(Operator):
         typing.cast("LinkPropertyGroup", getattr(empty, "linkforge")).is_robot_link = True
 
         # Select the new link
-        bpy.ops.object.select_all(action="DESELECT")
+        ops = getattr(context, "ops", bpy.ops)
+        ops.object.select_all(action="DESELECT")
         empty.select_set(True)
-        vl = context.view_layer
+        vl = getattr(context, "view_layer", bpy.context.view_layer)
         if vl:
             vl.objects.active = empty
-        elif bpy.context.view_layer:
-            bpy.context.view_layer.objects.active = empty
 
         # Ensure name is sanitized
         typing.cast("LinkPropertyGroup", getattr(empty, "linkforge")).link_name = empty.name
@@ -745,7 +765,8 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         mesh_obj.name = f"{link_name}_visual"
 
         # Create Empty object as link frame
-        empty = bpy.data.objects.new(link_name, None)
+        data = getattr(context, "data", bpy.data)
+        empty = data.objects.new(link_name, None)
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = empty_size
         # Add to scene
@@ -782,9 +803,6 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             mesh_obj.rotation_euler = (0, 0, 0)
             # mesh_obj.scale is already correct (it was S, parent is 1, so S stays S)
 
-            # NOTE: We do NOT use set_parent_keep_transform here because we WANT
-            # to effectively "zero out" the local transform relative to the frame we just matched.
-
             # Mark Empty as robot link
             link_props = typing.cast("LinkPropertyGroup", getattr(empty, "linkforge"))
             link_props.is_robot_link = True
@@ -797,7 +815,8 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             link_props.use_auto_inertia = True
 
             # Select the new link Empty
-            bpy.ops.object.select_all(action="DESELECT")
+            ops = getattr(context, "ops", bpy.ops)
+            ops.object.select_all(action="DESELECT")
             empty.select_set(True)
             if context.view_layer is not None:
                 context.view_layer.objects.active = empty
