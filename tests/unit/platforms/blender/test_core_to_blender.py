@@ -1073,7 +1073,7 @@ def test_normalize_consolidate_empty_cleanup(clean_scene, scene, blender_context
     empty = create_test_object("EmptyContainer", None)
     scene.collection.objects.link(empty)
 
-    res = normalize_and_consolidate_imported_objects([empty], "Final")
+    res = normalize_and_consolidate_imported_objects(blender_context, [empty], "Final")
     assert res is None
     assert "EmptyContainer" not in bpy.data.objects
 
