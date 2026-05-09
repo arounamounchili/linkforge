@@ -11,11 +11,12 @@ from linkforge.blender.operators.link_ops import (
     create_collision_for_link,
 )
 
-from tests.blender_test_utils import create_mesh_object, create_test_object, safe_get_linkforge
-
-# =============================================================================
-# Collision Alignment
-# =============================================================================
+from tests.blender_test_utils import (
+    create_mesh_object,
+    create_test_object,
+    safe_get_linkforge,
+    safe_update,
+)
 
 
 class TestCollisionAlignment:
@@ -40,17 +41,11 @@ class TestCollisionAlignment:
         assert collision_obj.rotation_euler.x < 1e-5
 
 
-# =============================================================================
-# Collision Quality and Modifiers
-# =============================================================================
-
-
 class TestCollisionQuality:
     def test_collision_modifier_persistence(self, scene, blender_context) -> None:
         """Verify that generating mesh collision preserves Decimate modifier."""
-        bpy.ops.mesh.primitive_monkey_add()
-        bpy.ops.linkforge.create_link_from_mesh()
-        link_obj = bpy.context.active_object
+        link_obj = create_mesh_object("link_obj", scene=scene)
+        safe_get_linkforge(link_obj).is_robot_link = True
 
         safe_get_linkforge(link_obj).collision_quality = 50.0
         create_collision_for_link(link_obj, "MESH", bpy.context)
@@ -62,21 +57,14 @@ class TestCollisionQuality:
         assert decimate_mod.ratio == 0.5
 
 
-# =============================================================================
-# Primitive Collision Scaling
-# =============================================================================
-
-
 class TestCollisionScaling:
     def test_box_collision_scaling(self, scene, blender_context) -> None:
         """Verify that a scaled cube results in a matching collision primitive."""
-        bpy.ops.mesh.primitive_cube_add(size=2.0)
-        vis = bpy.context.active_object
-        vis.scale = (2.0, 1.5, 0.5)
-        bpy.context.view_layer.update()
+        link_obj = create_mesh_object("scaled_link", scene=scene)
+        link_obj.scale = (2.0, 1.5, 0.5)
+        safe_update(scene)
 
-        bpy.ops.linkforge.create_link_from_mesh()
-        link_obj = bpy.context.active_object
+        safe_get_linkforge(link_obj).is_robot_link = True
 
         collision_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
         # Dimensions should be 4x3x1
