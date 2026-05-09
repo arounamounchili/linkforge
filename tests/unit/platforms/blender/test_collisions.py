@@ -11,7 +11,7 @@ from linkforge.blender.operators.link_ops import (
     create_collision_for_link,
 )
 
-from tests.blender_test_utils import safe_get_linkforge
+from tests.blender_test_utils import create_mesh_object, create_test_object, safe_get_linkforge
 
 # =============================================================================
 # Collision Alignment
@@ -21,16 +21,12 @@ from tests.blender_test_utils import safe_get_linkforge
 class TestCollisionAlignment:
     def test_collision_alignment_on_rotated_link(self, scene, blender_context) -> None:
         """Verify that generating collision for a rotated link avoids offsets."""
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "link_obj"
-        link_obj = bpy.context.active_object
+        link_obj = create_test_object("link_obj", None, scene=scene)
         safe_get_linkforge(link_obj).is_robot_link = True
         link_obj.rotation_euler = (1.5708, 0, 0)  # 90 deg X
 
         # Add a Visual mesh
-        bpy.ops.mesh.primitive_cube_add(size=1.0)
-        visual_obj = bpy.context.active_object
-        visual_obj.name = "part_visual"
+        visual_obj = create_mesh_object("part_visual", scene=scene)
         visual_obj.parent = link_obj
         visual_obj.matrix_parent_inverse.identity()
 
