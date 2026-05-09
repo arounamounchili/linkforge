@@ -93,7 +93,10 @@ class LINKFORGE_OT_create_transmission(Operator):
         if not transmission_empty:
             self.report({"ERROR"}, "Failed to create transmission empty.")
             return {"CANCELLED"}
-        transmission_empty.name = f"{joint_name}_trans"
+
+        # Use joint_name property if set, otherwise fallback to object name (common in tests)
+        final_joint_name = joint_name if joint_name else joint_obj.name
+        transmission_empty.name = f"{final_joint_name}_trans"
 
         # Parent transmission to joint (matches import behavior)
         transmission_empty.parent = joint_obj

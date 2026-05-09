@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import bpy
 import pytest
-from mathutils import Vector
 
 from tests.blender_test_utils import (
     safe_get_joint,
@@ -74,8 +73,13 @@ class TestTransmissionLogic:
         # Assign joint to transmission (triggers update)
         props.joint_name = joint_obj
 
+        # In mock environments, we must manually trigger the update callback
+        from linkforge.blender.properties.transmission_props import update_transmission_hierarchy
+
+        update_transmission_hierarchy(props, blender_context)
+
         assert trans_obj.parent == joint_obj
-        assert trans_obj.location == Vector((0, 0, 0))
+        assert list(trans_obj.location) == [0, 0, 0]
 
     def test_poll_robot_joint(self, scene, blender_context) -> None:
         """Test filtering for robot joint objects in UI polls."""

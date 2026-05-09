@@ -159,6 +159,9 @@ def create_test_object(
     if scene:
         with contextlib.suppress(RuntimeError):
             scene.collection.objects.link(obj)
+        # For mock environments, manually track in scene.objects
+        if isinstance(getattr(scene, "objects", None), list):
+            scene.objects.append(obj)
 
     return obj
 

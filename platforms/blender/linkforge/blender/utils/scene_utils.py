@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import typing
 from dataclasses import dataclass, field
 from typing import Any
@@ -146,15 +147,21 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
     transmission_objects: list[Any] = []
 
     if scene:
-        # Check cache (keyed by scene memory address, frame, and object count)
-        # Including object count helps prevent stale data in test environments
+        disable_cache = os.environ.get("LINKFORGE_DISABLE_CACHE", "0") == "1"
+
+        objects = getattr(scene, "objects", [])
+        try:
+            obj_count = len(objects)
+        except (TypeError, AttributeError):
+            obj_count = 0
+
         cache_key = (
             id(scene),
             getattr(scene, "frame_current", 0),
-            len(getattr(scene, "objects", [])),
+            obj_count,
         )
 
-        if not force_refresh and cache_key in _stats_cache:
+        if not disable_cache and not force_refresh and cache_key in _stats_cache:
             cached_stats = _stats_cache[cache_key]
             # Defensive check: if an operator deleted an object in the same frame,
             # accessing it will raise a ReferenceError. We catch this and invalidate the cache.
