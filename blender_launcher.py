@@ -64,7 +64,12 @@ def main() -> None:
     command = [blender_path, "-b", "--python", runner_script]
     if len(sys.argv) > 1:
         command.append("--")
-        command.extend(sys.argv[1:])
+        # If the user provided '--' in the command line, skip it to avoid double '--'
+        # which confuses the internal test runner.
+        args_to_pass = sys.argv[1:]
+        if args_to_pass[0] == "--":
+            args_to_pass = args_to_pass[1:]
+        command.extend(args_to_pass)
 
     try:
         process = subprocess.run(command, check=False)
