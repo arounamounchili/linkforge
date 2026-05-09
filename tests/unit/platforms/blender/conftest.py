@@ -233,6 +233,12 @@ if not is_real_blender:
     mock_bpy.context.scene = mock_scene
     mock_bpy.data.scenes = [mock_scene]
 
+    # Harden view_layer mock
+    mock_view_layer = MagicMock(name="MockViewLayer")
+    mock_view_layer.objects = MagicMock(name="MockViewLayerObjects")
+    mock_view_layer.objects.active = None
+    mock_bpy.context.view_layer = mock_view_layer
+
     HAS_BPY = False
 else:
     HAS_BPY = True
