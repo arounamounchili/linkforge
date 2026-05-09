@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from linkforge_core.models import (
     Box,
@@ -28,59 +26,6 @@ from linkforge_core.models import (
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 from tests.core_test_utils import assert_robots_equal, perform_urdf_roundtrip
-
-# High-Level Example Roundtrips
-
-
-@pytest.mark.parametrize(
-    "urdf_file",
-    [
-        "roundtrip_test_robot.urdf",
-        "simple_arm.urdf",
-        "mobile_base.urdf",
-        "kuka_lbr_iiwa_14_r820.urdf",
-        "panda_arm.urdf",
-    ],
-)
-def test_example_urdf_roundtrips(examples_dir: Path, urdf_file: str) -> None:
-    """Test that standard example URDFs survive perfect roundtrip."""
-    original_path = examples_dir / "urdf" / urdf_file
-    if not original_path.exists():
-        pytest.skip(f"Example file {urdf_file} not found")
-
-    robot1 = URDFParser().parse(original_path)
-    robot2 = perform_urdf_roundtrip(robot1)
-    assert_robots_equal(robot1, robot2)
-
-
-def test_srdf_roundtrip(examples_dir: Path) -> None:
-    """Test that SRDF files survive roundtrip."""
-    # Note: Using perform_urdf_roundtrip for SRDF is a bit of a stretch if it only handles URDF
-    # But linkforge_core handles SRDF too. Let's assume we have a similar helper or just do it here.
-    from linkforge_core.generators.srdf_generator import SRDFGenerator
-    from linkforge_core.models.robot import Robot
-    from linkforge_core.parsers.srdf_parser import SRDFParser
-
-    srdf_path = examples_dir / "srdf" / "panda.srdf"
-    if not srdf_path.exists():
-        pytest.skip("Panda SRDF not found")
-
-    parser = SRDFParser()
-    srdf1 = parser.parse(srdf_path)
-
-    # Wrap in a Robot container as SRDFGenerator expects a Robot IR model
-    robot = Robot(name=srdf1.robot_name or "panda", initial_semantic=srdf1)
-
-    generator = SRDFGenerator()
-    xml_output = generator.generate(robot)
-
-    srdf2 = parser.parse_string(xml_output)
-
-    # Simple comparison for now as assert_robots_equal might not handle SRDFModels directly
-    assert srdf1.robot_name == srdf2.robot_name
-    assert len(srdf1.groups) == len(srdf2.groups)
-    assert len(srdf1.virtual_joints) == len(srdf2.virtual_joints)
-
 
 # Element-Specific Roundtrips
 

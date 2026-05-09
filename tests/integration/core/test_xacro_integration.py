@@ -25,26 +25,6 @@ def xacro_to_robot():
     return _parse
 
 
-@pytest.mark.parametrize(
-    "xacro_file",
-    [
-        "panda_arm_hand.urdf.xacro",
-        "mobile_base.xacro",
-        "simple_arm.xacro",
-    ],
-)
-def test_xacro_example_parsing(examples_dir: Path, xacro_file: str, xacro_to_robot) -> None:
-    """Test that Xacro examples parse correctly into a Robot model."""
-    xacro_path = examples_dir / "xacro" / xacro_file
-    if not xacro_path.exists():
-        pytest.skip(f"Xacro file {xacro_file} not found")
-
-    robot = xacro_to_robot(xacro_path)
-
-    assert isinstance(robot, Robot)
-    assert len(robot.links) > 0
-
-
 def test_xacro_includes_and_macros(tmp_path: Path, xacro_to_robot) -> None:
     """Test Xacro includes and macros with complex dependencies."""
     # Create macro file

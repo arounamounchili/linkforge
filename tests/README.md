@@ -33,7 +33,7 @@ python blender_launcher.py
 
 ## Best Practices for Contributors
 
-1. **Use Fixtures**: Place shared test resources (example URDFs, mock robots) in `tests/conftest.py`. Prefer the `examples_dir` fixture over local path strings.
+1. **Use Fixtures**: Place shared test resources (mock robots, custom builders) in `tests/conftest.py`. Prefer self-contained tests (inline strings or programmatic construction) over external file dependencies.
 2. **Platform Isolation**: If a test doesn't explicitly need a 3D viewport or `bpy` data structures, place it in `core`.
 3. **Roundtrip Integrity**: When adding support for a new URDF tag, always add a corresponding roundtrip test in `integration/platforms/blender/` to ensure export parity.
 4. **Mocking**: Use `unittest.mock` to simulate Blender's asynchronous timers or IO operations where possible.
