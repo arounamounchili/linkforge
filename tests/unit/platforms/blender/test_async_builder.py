@@ -1,7 +1,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import bpy
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
 from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Joint, JointType, Link, Robot
@@ -15,7 +14,7 @@ def test_builder_prepare_tasks(scene, blender_context) -> None:
 
     robot = Robot(name="test_robot", initial_links=[l1, l2], initial_joints=[j1])
 
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
+    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
     # Expected tasks:
     # setup_scene
@@ -48,7 +47,7 @@ def test_builder_execution_flow(scene, blender_context) -> None:
         ),
     ):
         builder = AsynchronousRobotBuilder(
-            robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=1
+            robot, Path("/tmp/robot.urdf"), blender_context, chunk_size=1
         )
 
         # Manually run chunks
@@ -71,7 +70,7 @@ def test_builder_abort(scene, blender_context) -> None:
     """Test that import can be aborted via scene property."""
     # Add a link to ensure there are tasks to process
     robot = Robot(name="test_robot", initial_links=[Link(name="base_link")])
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
+    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
     scene.linkforge.abort_import = True
 
@@ -85,7 +84,7 @@ def test_builder_abort(scene, blender_context) -> None:
 def test_builder_error_handling(scene, blender_context) -> None:
     """Test that exceptions in task execution are caught and reported."""
     robot = Robot(name="test_robot")
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
+    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
     # Force an error in _execute_task
     with patch.object(builder, "_execute_task", side_effect=RobotModelError("Boom")):
@@ -98,7 +97,7 @@ def test_builder_error_handling(scene, blender_context) -> None:
 def test_builder_timer_start(scene, blender_context) -> None:
     """Test that start() registers the timer."""
     robot = Robot(name="test_robot")
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
+    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
     with patch("bpy.app.timers.register") as mock_register:
         builder.start()
@@ -114,7 +113,9 @@ def test_builder_timer_callback_interval(scene, blender_context) -> None:
     # Add many tasks so it doesn't finish immediately
     robot = Robot(name="test_robot", initial_links=[Link(name=f"link{i}") for i in range(10)])
 
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=1)
+    builder = AsynchronousRobotBuilder(
+        robot, Path("/tmp/robot.urdf"), blender_context, chunk_size=1
+    )
 
     # Mock task execution to avoid real Blender calls
     with patch.object(builder, "_execute_task"):
@@ -142,7 +143,7 @@ def test_builder_full_completion(scene, blender_context) -> None:
     ):
         # Chunk size logic: set to 1 to run one by one if desired, or large to finish at once
         builder = AsynchronousRobotBuilder(
-            robot, Path("/tmp/robot.urdf"), bpy.context, chunk_size=100
+            robot, Path("/tmp/robot.urdf"), blender_context, chunk_size=100
         )
 
         # Run first chunk (should finish all since chunk_size=100 and only ~6 tasks)
@@ -167,7 +168,7 @@ def test_builder_with_joints_and_sensors(scene, blender_context) -> None:
 
     robot = Robot(name="robot", initial_links=[l1, l2], initial_joints=[j1], initial_sensors=[s1])
 
-    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
+    builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
     task_types = [t[0] for t in builder.tasks]
     assert "create_joint" in task_types
