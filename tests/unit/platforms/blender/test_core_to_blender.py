@@ -860,7 +860,7 @@ def test_joint_axis_standard_axes(scene, blender_context) -> None:
         axis=Vector3(1, 0, 0),
         limits=JointLimits(0, 1, 10, 1),
     )
-    obj_x = create_joint_object(j_x, link_objects)
+    obj_x = create_joint_object(blender_context, j_x, link_objects)
     assert obj_x is not None
     assert safe_get_joint(obj_x).axis == "X"
 
@@ -873,7 +873,7 @@ def test_joint_axis_standard_axes(scene, blender_context) -> None:
         axis=Vector3(0, 1, 0),
         limits=JointLimits(0, 1, 10, 1),
     )
-    obj_y = create_joint_object(j_y, link_objects)
+    obj_y = create_joint_object(blender_context, j_y, link_objects)
     assert obj_y is not None
     assert safe_get_joint(obj_y).axis == "Y"
 
@@ -944,7 +944,7 @@ def test_normalize_and_consolidate_imported_objects(scene, blender_context) -> N
     m2_name = m2.name
 
     # Consolidate
-    res = normalize_and_consolidate_imported_objects([root], "consolidated")
+    res = normalize_and_consolidate_imported_objects(blender_context, [root], "consolidated")
 
     assert res is not None
     assert res.name == "consolidated"
@@ -985,7 +985,7 @@ def test_create_joint_object_mimic_logic(scene, blender_context) -> None:
         mimic=JointMimic(joint="driver_joint", multiplier=0.5),
     )
 
-    res = create_joint_object(joint, link_objects)
+    res = create_joint_object(blender_context, joint, link_objects)
     assert res is not None
     res_props = safe_get_joint(res)
     assert res_props.use_mimic is True
