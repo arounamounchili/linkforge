@@ -58,7 +58,14 @@ class TestJointRobustness:
         j.parent = p
         c.parent = j
 
+        # Ensure mock properties exist (defensive for unit tests)
+        if not hasattr(j, "linkforge_joint"):
+            from unittest.mock import MagicMock
+
+            j.linkforge_joint = MagicMock()
+
         props = safe_get_joint(j)
+        assert props is not None, "Failed to initialize joint properties on mock object"
         props.is_robot_joint = True
         props.parent_link = p
         props.child_link = c
