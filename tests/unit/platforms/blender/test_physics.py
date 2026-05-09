@@ -4,15 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import bpy
 import pytest
 from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
 
-from tests.blender_test_utils import safe_get_linkforge
+from tests.blender_test_utils import create_test_object, safe_get_linkforge
 
-# =============================================================================
 # Inertia Visualization (Gizmos)
-# =============================================================================
 
 
 class TestInertiaGizmos:
@@ -49,31 +46,29 @@ class TestInertiaGizmos:
         mock_add.assert_called_once()
 
 
-# =============================================================================
 # Inertial Origin Extraction
-# =============================================================================
 
 
 class TestInertialOrigin:
     def test_inertial_origin_extraction(self, scene, blender_context) -> None:
         """Verify that inertial origin properties are correctly converted."""
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "test_link"
-        obj = bpy.context.active_object
+        obj = create_test_object("test_link", None, scene)
 
         props = safe_get_linkforge(obj)
         props.is_robot_link = True
         props.mass = 1.0
         props.use_auto_inertia = False
-        props.inertia_origin_xyz = (1.2, 3.4, 5.6)
-        props.inertia_origin_rpy = (0.1, 0.2, 0.3)
+        from mathutils import Vector
+
+        props.inertia_origin_xyz = Vector((1.2, 3.4, 5.6))
+        props.inertia_origin_rpy = Vector((0.1, 0.2, 0.3))
         # Set minimal valid inertia
         props.inertia_ixx = 1.0
         props.inertia_iyy = 1.0
         props.inertia_izz = 1.0
 
         link = blender_link_to_core_with_origin(obj)
-
+        assert link is not None, "blender_link_to_core_with_origin returned None"
         assert link.inertial is not None
         assert pytest.approx(link.inertial.origin.xyz.x) == 1.2
         assert pytest.approx(link.inertial.origin.rpy.z) == 0.3

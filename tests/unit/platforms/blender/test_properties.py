@@ -12,29 +12,26 @@ from linkforge.blender.preferences import (
 from linkforge.blender.utils.property_helpers import find_property_owner
 
 from tests.blender_test_utils import (
+    create_test_object,
+    safe_get_joint,
     safe_get_linkforge,
     safe_get_validation,
 )
 
-# =============================================================================
 # Property Helpers
-# =============================================================================
 
 
 class TestPropertyHelpers:
     def test_find_property_owner(self, scene, blender_context) -> None:
         """Test finding the owner object of a PropertyGroup."""
-        bpy.ops.object.empty_add()
-        obj = bpy.context.active_object
+        obj = create_test_object("test_owner", None, scene)
         props = safe_get_linkforge(obj)
 
         owner = find_property_owner(bpy.context, props, "linkforge")
         assert owner == obj
 
 
-# =============================================================================
 # Validation Properties
-# =============================================================================
 
 
 class TestValidationProperties:
@@ -62,22 +59,16 @@ class TestValidationProperties:
         assert res.has_results is False
 
 
-# =============================================================================
 # Addon Preferences
-# =============================================================================
 
 
 class TestPreferences:
     def test_update_joint_empty_size(self, scene, blender_context) -> None:
         """Test that updating joint size in prefs affects scene objects."""
-        bpy.ops.object.empty_add()
-        obj = bpy.context.active_object
-
-        def safe_get_joint(o):
-            return o.linkforge_joint  # Local helper
+        obj = create_test_object("test_joint_size", None, scene)
 
         # Ensure we are testing the linkforge joint props
-        obj.linkforge_joint.is_robot_joint = True
+        safe_get_joint(obj).is_robot_joint = True
         obj.empty_display_size = 0.1
 
         mock_prefs = MagicMock()

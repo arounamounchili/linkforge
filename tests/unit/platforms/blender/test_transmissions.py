@@ -6,22 +6,17 @@ import bpy
 import pytest
 
 from tests.blender_test_utils import (
+    create_test_object,
     safe_get_joint,
     safe_get_transmission,
 )
-
-# =============================================================================
-# Transmission Operations
-# =============================================================================
 
 
 class TestTransmissionOperations:
     def test_create_transmission(self, scene, blender_context) -> None:
         """Test creating a transmission for a joint."""
         # Setup Joint
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "Joint"
-        j = bpy.context.active_object
+        j = create_test_object("Joint", None, scene)
         safe_get_joint(j).is_robot_joint = True
 
         # Ensure active and selected
@@ -35,11 +30,15 @@ class TestTransmissionOperations:
         assert trans.parent == j
         assert safe_get_transmission(trans).is_robot_transmission
 
+    def test_transmission_defaults(self, scene, blender_context) -> None:
+        """Test transmission property defaults."""
+        trans = create_test_object("test_trans_defaults", None, scene)
+        props = safe_get_transmission(trans)
+        assert props.is_robot_transmission is False
+
     def test_delete_transmission(self, scene, blender_context) -> None:
         """Test deleting a transmission."""
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "Trans"
-        trans = bpy.context.active_object
+        trans = create_test_object("Trans", None, scene)
         safe_get_transmission(trans).is_robot_transmission = True
 
         trans.select_set(True)
@@ -49,24 +48,18 @@ class TestTransmissionOperations:
         assert "Trans" not in bpy.data.objects
 
 
-# =============================================================================
 # Transmission Hierarchy and Logic
-# =============================================================================
 
 
 class TestTransmissionLogic:
     def test_transmission_hierarchy_simple(self, scene, blender_context) -> None:
         """Test that a simple transmission is reparented to its joint."""
         # Create joint
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "joint_obj"
-        joint_obj = bpy.context.active_object
+        joint_obj = create_test_object("joint_obj", None, scene)
         safe_get_joint(joint_obj).is_robot_joint = True
 
         # Create transmission
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "trans_obj"
-        trans_obj = bpy.context.active_object
+        trans_obj = create_test_object("trans_obj", None, scene)
         props = safe_get_transmission(trans_obj)
         props.is_robot_transmission = True
 
