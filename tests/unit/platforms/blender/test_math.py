@@ -17,7 +17,7 @@ from tests.blender_test_utils import create_test_object
 
 
 class TestTransformUtilities:
-    def test_set_parent_keep_transform(self, scene) -> None:
+    def test_set_parent_keep_transform(self, scene, blender_context) -> None:
         """Test parenting while preserving world transform."""
         parent_obj = create_test_object("Parent", None, scene)
         parent_obj.location = (1, 2, 3)
@@ -32,7 +32,7 @@ class TestTransformUtilities:
         assert child_obj.parent == parent_obj
         assert child_obj.matrix_world.translation.x == pytest.approx(original_world_loc.x, abs=1e-4)
 
-    def test_clear_parent_keep_transform(self, scene) -> None:
+    def test_clear_parent_keep_transform(self, scene, blender_context) -> None:
         """Test clearing parent while preserving world transform."""
         parent_obj = create_test_object("ParentClear", None, scene)
         parent_obj.location = (2, 3, 4)
@@ -55,7 +55,7 @@ class TestTransformUtilities:
 
 
 class TestRotationNormalization:
-    def test_rotation_mode_normalization(self, scene) -> None:
+    def test_rotation_mode_normalization(self, scene, blender_context) -> None:
         """Verify that adding a new link frame forces XYZ rotation mode."""
         bpy.ops.linkforge.add_empty_link()
         obj = bpy.context.active_object

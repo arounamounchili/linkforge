@@ -16,7 +16,7 @@ from tests.blender_test_utils import safe_get_linkforge
 
 
 class TestInertiaGizmos:
-    def test_draw_inertia_gizmos_disabled(self, mocker, scene) -> None:
+    def test_draw_inertia_gizmos_disabled(self, mocker, scene, blender_context) -> None:
         """Test draw function when gizmos are disabled in preferences."""
         mock_prefs = MagicMock()
         mock_prefs.show_inertia_gizmos = False
@@ -33,7 +33,7 @@ class TestInertiaGizmos:
 
         mock_batch.assert_not_called()
 
-    def test_ensure_inertia_handler(self, mocker, scene) -> None:
+    def test_ensure_inertia_handler(self, mocker, scene, blender_context) -> None:
         """Test inertia draw handler registration."""
         mock_add = mocker.patch("bpy.types.SpaceView3D.draw_handler_add")
         mocker.patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw")
@@ -55,7 +55,7 @@ class TestInertiaGizmos:
 
 
 class TestInertialOrigin:
-    def test_inertial_origin_extraction(self, scene) -> None:
+    def test_inertial_origin_extraction(self, scene, blender_context) -> None:
         """Verify that inertial origin properties are correctly converted."""
         bpy.ops.object.empty_add()
         bpy.context.active_object.name = "test_link"

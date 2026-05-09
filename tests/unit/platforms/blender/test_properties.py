@@ -22,7 +22,7 @@ from tests.blender_test_utils import (
 
 
 class TestPropertyHelpers:
-    def test_find_property_owner(self, scene) -> None:
+    def test_find_property_owner(self, scene, blender_context) -> None:
         """Test finding the owner object of a PropertyGroup."""
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
@@ -38,7 +38,7 @@ class TestPropertyHelpers:
 
 
 class TestValidationProperties:
-    def test_validation_issue_line_splitting(self, scene) -> None:
+    def test_validation_issue_line_splitting(self, scene, blender_context) -> None:
         """Test correctly splitting long messages and suggestions into lines."""
         wm = bpy.context.window_manager
         res = safe_get_validation(wm)
@@ -53,7 +53,7 @@ class TestValidationProperties:
         for line in lines:
             assert len(line) <= 60
 
-    def test_validation_result_clearing(self, scene) -> None:
+    def test_validation_result_clearing(self, scene, blender_context) -> None:
         """Test clearing validation results."""
         wm = bpy.context.window_manager
         res = safe_get_validation(wm)
@@ -68,7 +68,7 @@ class TestValidationProperties:
 
 
 class TestPreferences:
-    def test_update_joint_empty_size(self, scene) -> None:
+    def test_update_joint_empty_size(self, scene, blender_context) -> None:
         """Test that updating joint size in prefs affects scene objects."""
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object

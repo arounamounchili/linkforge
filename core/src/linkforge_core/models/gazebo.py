@@ -66,7 +66,9 @@ class GazeboPlugin:
     name: str
     filename: str
     parameters: dict[str, str] = field(default_factory=dict)
-    raw_xml: str | None = None  # Store raw XML content for round-trip fidelity
+    raw_xml: str | None = field(
+        default=None, compare=False
+    )  # Store raw XML content for round-trip fidelity
 
     def __post_init__(self) -> None:
         """Validate plugin configuration."""

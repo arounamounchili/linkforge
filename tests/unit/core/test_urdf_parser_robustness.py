@@ -20,7 +20,7 @@ class MockXMLParser(RobotXMLParser[Any]):
         return None
 
 
-# --- Base Parser Robustness (RobotXMLParser) ---
+# Base Parser Robustness (RobotXMLParser)
 
 
 def test_xml_base_material_parsing_robustness() -> None:
@@ -76,7 +76,7 @@ def test_xml_base_geometry_error_handling() -> None:
         assert "(target: Vector3)" in mock_logger.warning.call_args[0][0]
 
 
-# --- URDF Parser Feature Robustness ---
+# URDF Parser Feature Robustness
 
 
 def test_urdf_parser_axis_normalization() -> None:

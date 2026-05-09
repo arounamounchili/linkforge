@@ -14,6 +14,7 @@ import bpy
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import Robot
 
+from ..adapters.context import IBlenderContext
 from ..adapters.core_to_blender import (
     create_joint_object,
     create_link_object,
@@ -32,7 +33,7 @@ class AsynchronousRobotBuilder:
         self,
         robot: Robot,
         source_path: Path,
-        context: bpy.types.Context,
+        context: IBlenderContext,
         chunk_size: int = 50,
     ):
         self.robot = robot
@@ -158,20 +159,22 @@ class AsynchronousRobotBuilder:
         """Execute a single unit of work."""
         if task_type == "setup_scene":
             if self.context.scene:
-                setup_scene_for_robot(self.context.scene, self.robot)
+                setup_scene_for_robot(self.context, self.robot)
 
         elif task_type == "create_collection":
-            self.collection = bpy.data.collections.new(self.robot.name)
+            self.collection = self.context.data.collections.new(self.robot.name)
             if self.context.scene:
                 self.context.scene.collection.children.link(self.collection)
 
         elif task_type == "create_link":
-            obj = create_link_object(data, self.robot, self.source_path.parent, self.collection)
+            obj = create_link_object(
+                self.context, data, self.robot, self.source_path.parent, self.collection
+            )
             if obj:
                 self.link_objects[data.name] = obj
 
         elif task_type == "create_joint":
-            obj = create_joint_object(data, self.link_objects, self.collection)
+            obj = create_joint_object(self.context, data, self.link_objects, self.collection)
             if obj:
                 self.joint_objects[data.name] = obj
 
@@ -181,7 +184,7 @@ class AsynchronousRobotBuilder:
             resolve_mimic_joints(joints_list, self.joint_objects)
 
         elif task_type == "create_sensor":
-            create_sensor_object(data, self.link_objects, self.collection)
+            create_sensor_object(self.context, data, self.link_objects, self.collection)
 
         elif task_type == "finalize":
             if self.context.view_layer is not None:

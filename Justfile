@@ -22,13 +22,17 @@ sync:
 # --- Test ---
 
 # Run all tests (Core + Blender)
-test: test-core test-blender
+test: test-core test-blender-logic test-blender
 
-# Run Core unit tests
+# Run Core unit tests (platform-independent)
 test-core:
     uv run pytest tests/unit/core tests/integration/core
 
-# Run Blender integration tests
+# Run Blender logic unit tests (Uses fake-bpy-module)
+test-blender-logic:
+    uv run pytest tests/unit/platforms/blender
+
+# Run Blender integration tests (Requires real Blender)
 test-blender:
     uv run python blender_launcher.py -- --cov=linkforge --cov-append
 

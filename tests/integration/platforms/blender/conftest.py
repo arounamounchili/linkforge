@@ -8,6 +8,7 @@ import pytest
 
 try:
     import bpy
+    import bpy.types
 
     HAS_BPY = True
 except ImportError:
@@ -30,18 +31,9 @@ if HAS_BPY:
         yield
 
     @pytest.fixture(autouse=True)
-    def clean_scene() -> typing.Generator[None, None, None]:
+    def blender_clean_scene() -> typing.Generator[None, None, None]:
         """Clear all objects and data from the scene before each test."""
-        # Delete all objects
-        for obj in bpy.data.objects:
-            bpy.data.objects.remove(obj, do_unlink=True)
+        from tests.blender_test_utils import cleanup_blender_scene
 
-        # Delete all mesh data
-        for mesh in bpy.data.meshes:
-            bpy.data.meshes.remove(mesh, do_unlink=True)
-
-        # Delete all materials
-        for mat in bpy.data.materials:
-            bpy.data.materials.remove(mat, do_unlink=True)
-
+        cleanup_blender_scene(bpy.context.scene)
         yield

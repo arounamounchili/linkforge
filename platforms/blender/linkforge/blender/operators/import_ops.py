@@ -216,9 +216,10 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             )
 
         # Import to scene (Asynchronous)
+        from ..adapters.context import BlenderContext
         from ..logic.asynchronous_builder import AsynchronousRobotBuilder
 
-        builder = AsynchronousRobotBuilder(robot, source_path, context)
+        builder = AsynchronousRobotBuilder(robot, source_path, BlenderContext(context))
         builder.start()
 
         # We return FINISHED here, but the builder continues in the background via timers.

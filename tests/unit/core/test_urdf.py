@@ -33,9 +33,7 @@ def generator() -> URDFGenerator:
     return URDFGenerator(pretty_print=False)
 
 
-# =============================================================================
 # URDF Parser Unit Tests
-# =============================================================================
 
 
 class TestURDFParserInternal:
@@ -94,9 +92,7 @@ class TestURDFParserInternal:
         assert joint.safety_controller.k_position == 15.0
 
 
-# =============================================================================
 # URDF Generator Unit Tests
-# =============================================================================
 
 
 class TestURDFGeneratorInternal:
@@ -131,9 +127,7 @@ class TestURDFGeneratorInternal:
         assert len(root.findall("material")) == 1
 
 
-# =============================================================================
 # Robustness and Security Unit Tests
-# =============================================================================
 
 
 class TestURDFRobustness:

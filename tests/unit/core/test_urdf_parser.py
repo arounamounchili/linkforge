@@ -784,8 +784,8 @@ class TestURDFParser:
         assert sensor.gps_info.position_sensing_horizontal_noise.mean == 0.1
         assert sensor.gps_info.velocity_sensing_vertical_noise is None
 
-    def test_coverage_edge_cases(self, parser) -> None:
-        """Test remaining edge cases for 100% coverage."""
+    def test_parse_origin_element(self, parser) -> None:
+        """Verify explicit parsing of individual origin elements."""
         # Parse Origin with values
         xml = '<origin xyz="1 2 3" rpy="0.1 0.2 0.3"/>'
         origin = parser._parse_origin_element(ET.fromstring(xml))
@@ -976,9 +976,7 @@ class TestURDFParser:
         ):
             parser.parse(path)
 
-
-class TestURDFParserEdgeCoverage:
-    """Parser behavior for sensors missing optional sub-elements."""
+    # Robustness and Edge Cases
 
     def test_parse_lidar_sensor_without_range_element(self) -> None:
         """Lidar sensor element missing a range sub-element uses default range values."""
@@ -1035,9 +1033,7 @@ class TestURDFParserEdgeCoverage:
         robot = parser.parse_string(xml)
         assert robot.name == "unnamed_robot"
 
-
-class TestURDFParserAdditionalEdgeCoverage:
-    """Parser behavior for inertial properties, transmissions, and mesh validation."""
+    # Mesh and Path Validation
 
     def test_mesh_path_validation_error_with_directory(self, tmp_path) -> None:
         """Non-package:// mesh path with source_directory triggers security validation."""
@@ -1145,9 +1141,7 @@ class TestURDFParserAdditionalEdgeCoverage:
         with pytest.raises(XacroDetectedError):
             parser.parse_string(xml)
 
-
-class TestURDFParserFileProtectionAndSensorCoverage:
-    """File size limits, ros2_control parameters, and IMU noise parsing."""
+    # System and Hardware Parameters
 
     def test_ros2_control_hardware_params_are_parsed(self) -> None:
         """Hardware <param> elements inside ros2_control are collected into the parameters dict."""

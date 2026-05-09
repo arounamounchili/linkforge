@@ -23,7 +23,7 @@ from tests.blender_test_utils import (
 
 
 class TestControlOperations:
-    def test_add_ros2_control_joint(self, scene) -> None:
+    def test_add_ros2_control_joint(self, scene, blender_context) -> None:
         """Test adding a ROS 2 control joint to the scene configuration."""
         props = safe_get_linkforge_scene(scene)
         props.ros2_control_joints.clear()
@@ -36,7 +36,7 @@ class TestControlOperations:
         assert len(props.ros2_control_joints) == 1
         assert props.ros2_control_joints[0].name == "j1"
 
-    def test_remove_ros2_control_joint(self, scene) -> None:
+    def test_remove_ros2_control_joint(self, scene, blender_context) -> None:
         """Test removing a ROS 2 control joint."""
         props = safe_get_linkforge_scene(scene)
         props.ros2_control_joints.clear()
@@ -55,7 +55,7 @@ class TestControlOperations:
 
 
 class TestSensorOperations:
-    def test_create_sensor(self, scene) -> None:
+    def test_create_sensor(self, scene, blender_context) -> None:
         """Test creating a sensor for a robot link."""
         bpy.ops.object.empty_add()
         bpy.context.active_object.name = "link_obj"

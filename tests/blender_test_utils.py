@@ -2,6 +2,7 @@ import contextlib
 import typing
 
 import bpy
+import bpy.types
 
 
 def ensure_linkforge_registered():
@@ -21,9 +22,12 @@ def ensure_linkforge_registered():
     ]
 
     # Quick check: are they all there?
-    all_present = all(hasattr(bpy.types.Object, p) for p in object_props) and hasattr(
-        bpy.types.WindowManager, "linkforge_validation"
-    )
+    if hasattr(bpy, "types") and hasattr(bpy.types, "Object"):
+        all_present = all(hasattr(bpy.types.Object, p) for p in object_props) and hasattr(
+            bpy.types.WindowManager, "linkforge_validation"
+        )
+    else:
+        all_present = False
 
     if not all_present:
         # Force a clean re-registration cycle
@@ -32,7 +36,7 @@ def ensure_linkforge_registered():
         linkforge.blender.register()
 
 
-def safe_get_linkforge(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+def safe_get_linkforge(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safe accessor for the 'linkforge' property group on a Blender object."""
     prop = getattr(obj, "linkforge", None)
     if prop and hasattr(prop, "bl_rna"):
@@ -47,7 +51,7 @@ def safe_get_linkforge(obj: bpy.types.Object, scene: typing.Any = None) -> typin
     raise AttributeError(f"Object '{obj.name}' missing 'linkforge' property group.")
 
 
-def safe_get_joint(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+def safe_get_joint(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safe accessor for the 'linkforge_joint' property group on a Blender object."""
     prop = getattr(obj, "linkforge_joint", None)
     if prop and hasattr(prop, "bl_rna"):
@@ -62,7 +66,7 @@ def safe_get_joint(obj: bpy.types.Object, scene: typing.Any = None) -> typing.An
     raise AttributeError(f"Object '{obj.name}' missing 'linkforge_joint' property group.")
 
 
-def safe_get_linkforge_scene(scene: bpy.types.Scene) -> typing.Any:
+def safe_get_linkforge_scene(scene: typing.Any) -> typing.Any:
     """Safe accessor for the 'linkforge' property group on a Blender scene."""
     prop = getattr(scene, "linkforge", None)
     if prop and hasattr(prop, "bl_rna"):
@@ -77,7 +81,7 @@ def safe_get_linkforge_scene(scene: bpy.types.Scene) -> typing.Any:
     raise AttributeError(f"Scene '{scene.name}' missing 'linkforge' property group.")
 
 
-def safe_get_transmission(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+def safe_get_transmission(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safe accessor for the 'linkforge_transmission' property group on a Blender object."""
     prop = getattr(obj, "linkforge_transmission", None)
     if prop and hasattr(prop, "bl_rna"):
@@ -92,7 +96,7 @@ def safe_get_transmission(obj: bpy.types.Object, scene: typing.Any = None) -> ty
     raise AttributeError(f"Object '{obj.name}' missing 'linkforge_transmission' property group.")
 
 
-def safe_get_validation(wm: bpy.types.WindowManager) -> typing.Any:
+def safe_get_validation(wm: typing.Any) -> typing.Any:
     """Safe accessor for the window manager 'linkforge_validation' property group."""
     prop = getattr(wm, "linkforge_validation", None)
     if prop and hasattr(prop, "bl_rna"):
@@ -107,7 +111,7 @@ def safe_get_validation(wm: bpy.types.WindowManager) -> typing.Any:
     raise AttributeError("WindowManager missing 'linkforge_validation' property group.")
 
 
-def safe_get_sensor(obj: bpy.types.Object, scene: typing.Any = None) -> typing.Any:
+def safe_get_sensor(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safely retrieve or initialize sensor properties on an object."""
     prop = getattr(obj, "linkforge_sensor", None)
     if prop and hasattr(prop, "bl_rna"):
@@ -136,8 +140,8 @@ def _refresh_blender_environment(scene: typing.Any = None) -> None:
 
 
 def create_test_object(
-    name: str, data: typing.Any = None, scene: bpy.types.Scene | None = None
-) -> bpy.types.Object:
+    name: str, data: typing.Any = None, scene: typing.Any | None = None
+) -> typing.Any:
     """Create a new Blender object.
 
     Linking behavior:
@@ -159,15 +163,15 @@ def create_test_object(
     return obj
 
 
-def create_mesh_object(name: str, scene: bpy.types.Scene | None = None) -> bpy.types.Object:
+def create_mesh_object(name: str, scene: typing.Any | None = None) -> typing.Any:
     """Create a new mesh object."""
     mesh = bpy.data.meshes.new(f"{name}_mesh")
     return create_test_object(name, mesh, scene=scene)
 
 
 def create_simple_robot_scene(
-    scene: bpy.types.Scene,
-) -> tuple[bpy.types.Collection, bpy.types.Object, bpy.types.Object]:
+    scene: typing.Any,
+) -> tuple[typing.Any, typing.Any, typing.Any]:
     """Create a minimal 2-link robot scene for integration tests.
 
     Hierarchy: root_collection -> [parent_link, child_link, joint]
@@ -198,10 +202,10 @@ def create_simple_robot_scene(
 
 def create_robot_link(
     name: str,
-    scene: bpy.types.Scene,
-    parent: bpy.types.Object | None = None,
+    scene: typing.Any,
+    parent: typing.Any | None = None,
     with_visual: bool = True,
-) -> bpy.types.Object:
+) -> typing.Any:
     """High-level factory to create a LinkForge robot link.
 
     Creates an Empty object as the link frame and optionally a child visual mesh.
@@ -225,11 +229,11 @@ def create_robot_link(
 
 def create_robot_joint(
     name: str,
-    parent_link: bpy.types.Object,
-    child_link: bpy.types.Object,
-    scene: bpy.types.Scene,
+    parent_link: typing.Any,
+    child_link: typing.Any,
+    scene: typing.Any,
     joint_type: str = "REVOLUTE",
-) -> bpy.types.Object:
+) -> typing.Any:
     """High-level factory to create a LinkForge robot joint.
 
     Handles object creation, parenting, and RNA property assignment.
@@ -249,8 +253,8 @@ def create_robot_joint(
 
 
 def setup_2_link_arm(
-    scene: bpy.types.Scene, prefix: str = "test_arm"
-) -> tuple[bpy.types.Object, bpy.types.Object, bpy.types.Object]:
+    scene: typing.Any, prefix: str = "test_arm"
+) -> tuple[typing.Any, typing.Any, typing.Any]:
     """Sets up a minimal 2-link robotic arm hierarchy.
 
     Structure: base_link -> joint -> child_link
@@ -268,3 +272,49 @@ def setup_2_link_arm(
         scene.view_layers[0].update()
 
     return base, joint, child
+
+
+def cleanup_blender_scene(scene: typing.Any | None = None) -> None:
+    """Surgically clean the Blender environment for test isolation.
+
+    Resets only relevant bpy.data collections and linkforge property groups
+    to avoid expensive addon re-registration cycles.
+    """
+    import bpy
+
+    # Delete all objects in all collections
+    for obj in list(bpy.data.objects):
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+    # Delete all mesh data
+    for mesh in list(bpy.data.meshes):
+        bpy.data.meshes.remove(mesh, do_unlink=True)
+
+    # Delete all materials
+    for mat in list(bpy.data.materials):
+        bpy.data.materials.remove(mat, do_unlink=True)
+
+    # Delete all actions (animations)
+    for action in list(bpy.data.actions):
+        bpy.data.actions.remove(action, do_unlink=True)
+
+    # Delete all collections (except master)
+    for col in list(bpy.data.collections):
+        if col.name not in ["Collection", "Scene Collection"]:
+            bpy.data.collections.remove(col, do_unlink=True)
+
+    # Reset Scene properties
+    target_scene = scene or bpy.context.scene
+    if target_scene and hasattr(target_scene, "linkforge"):
+        props = target_scene.linkforge
+        props.robot_name = "robot"
+        props.strict_mode = False
+        props.use_ros2_control = False
+        props.ros2_control_joints.clear()
+        props.gazebo_plugin_name = "libgazebo_ros2_control.so"
+        props.controllers_yaml_path = ""
+
+    # Clear architectural statistics cache for test isolation
+    from linkforge.blender.utils.scene_utils import clear_stats_cache
+
+    clear_stats_cache()

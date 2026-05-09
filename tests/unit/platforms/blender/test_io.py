@@ -21,7 +21,7 @@ from tests.blender_test_utils import (
 
 
 class TestRobotValidation:
-    def test_validate_robot_success(self, mocker, scene) -> None:
+    def test_validate_robot_success(self, mocker, scene, blender_context) -> None:
         """Test the validate_robot operator in a success scenario."""
         mock_self = MagicMock()
 
@@ -38,7 +38,7 @@ class TestRobotValidation:
         result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
         assert result == {"FINISHED"}
 
-    def test_validate_robot_failure(self, mocker, scene) -> None:
+    def test_validate_robot_failure(self, mocker, scene, blender_context) -> None:
         """Test the validate_robot operator in a failure scenario."""
         mock_self = MagicMock()
 
@@ -64,7 +64,7 @@ class TestRobotValidation:
 
 
 class TestRobotExport:
-    def test_export_urdf_extension_correction(self, mocker, scene) -> None:
+    def test_export_urdf_extension_correction(self, mocker, scene, blender_context) -> None:
         """Verify automatic correction of file extensions based on export format."""
         props = safe_get_linkforge_scene(scene)
         props.export_format = "URDF"
@@ -86,7 +86,7 @@ class TestRobotExport:
         # Should be corrected to .urdf
         assert mock_self.filepath.endswith(".urdf")
 
-    def test_export_invoke_branches(self, scene) -> None:
+    def test_export_invoke_branches(self, scene, blender_context) -> None:
         """Test invoke branches (format to extension mapping)."""
         mock_op = MagicMock(spec=LINKFORGE_OT_export_robot_model)
 

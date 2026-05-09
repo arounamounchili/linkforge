@@ -22,7 +22,7 @@ from tests.blender_test_utils import (
 
 
 class TestJointOperations:
-    def test_create_joint_object(self, scene) -> None:
+    def test_create_joint_object(self, scene, blender_context) -> None:
         """Test creating a joint object in Blender."""
         joint_obj = create_robot_joint("test_joint", None, None, scene)
         assert joint_obj.name.startswith("test_joint")
@@ -30,7 +30,7 @@ class TestJointOperations:
         assert joint_obj.empty_display_type == "PLAIN_AXES"
         assert safe_get_joint(joint_obj).is_robot_joint
 
-    def test_create_joint_with_parent(self, scene) -> None:
+    def test_create_joint_with_parent(self, scene, blender_context) -> None:
         """Test creating a joint with a parent link."""
         bpy.ops.object.select_all(action="DESELECT")
         bpy.ops.mesh.primitive_cube_add()
@@ -48,7 +48,7 @@ class TestJointOperations:
 
 
 class TestJointProperties:
-    def test_joint_property_defaults(self, scene) -> None:
+    def test_joint_property_defaults(self, scene, blender_context) -> None:
         """Test default values for joint properties."""
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
@@ -68,7 +68,7 @@ class TestJointProperties:
 
 
 class TestJointUtilities:
-    def test_joint_axis_properties(self, scene) -> None:
+    def test_joint_axis_properties(self, scene, blender_context) -> None:
         """Test setting and getting joint axis properties."""
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
@@ -78,14 +78,14 @@ class TestJointUtilities:
         props.custom_axis_z = 1.0
         assert props.custom_axis_z == 1.0
 
-    def test_joint_origin_calculation(self, scene) -> None:
+    def test_joint_origin_calculation(self, scene, blender_context) -> None:
         """Test joint origin persistence in properties."""
         bpy.ops.object.empty_add(location=(1, 2, 3))
         obj = bpy.context.active_object
         # Joint origin is usually the object's local transform relative to parent
         assert obj.location.x == 1.0
 
-    def test_is_robot_joint(self, scene) -> None:
+    def test_is_robot_joint(self, scene, blender_context) -> None:
         """Test joint identification utility."""
         from linkforge.blender.utils.scene_utils import is_robot_joint
 
@@ -103,7 +103,7 @@ class TestJointUtilities:
 
 
 class TestJointVisualization:
-    def test_generate_axis_geometry(self, scene) -> None:
+    def test_generate_axis_geometry(self, scene, blender_context) -> None:
         """Test generating geometry for joint axis visualization."""
         bpy.ops.object.empty_add(location=(1, 2, 3))
         obj = bpy.context.active_object
@@ -120,7 +120,7 @@ class TestJointVisualization:
         # Start point should be at origin (1, 2, 3)
         assert data["lines"][0] == pytest.approx((1.0, 2.0, 3.0))
 
-    def test_fix_existing_joints(self, scene) -> None:
+    def test_fix_existing_joints(self, scene, blender_context) -> None:
         """Test the iteration logic that forces PLAIN_AXES on joints."""
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
@@ -130,7 +130,7 @@ class TestJointVisualization:
         fix_existing_joints()
         assert obj.empty_display_type == "PLAIN_AXES"
 
-    def test_update_viz_handle_switching(self, mocker, scene) -> None:
+    def test_update_viz_handle_switching(self, mocker, scene, blender_context) -> None:
         """Test registering and unregistering the draw handler based on prefs."""
         mock_add = mocker.patch("bpy.types.SpaceView3D.draw_handler_add", return_value="handle_123")
         mock_remove = mocker.patch("bpy.types.SpaceView3D.draw_handler_remove")

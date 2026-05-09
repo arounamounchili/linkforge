@@ -17,7 +17,7 @@ from tests.blender_test_utils import (
 
 
 class TestTransmissionOperations:
-    def test_create_transmission(self, scene) -> None:
+    def test_create_transmission(self, scene, blender_context) -> None:
         """Test creating a transmission for a joint."""
         # Setup Joint
         bpy.ops.object.empty_add()
@@ -36,7 +36,7 @@ class TestTransmissionOperations:
         assert trans.parent == j
         assert safe_get_transmission(trans).is_robot_transmission
 
-    def test_delete_transmission(self, scene) -> None:
+    def test_delete_transmission(self, scene, blender_context) -> None:
         """Test deleting a transmission."""
         bpy.ops.object.empty_add()
         bpy.context.active_object.name = "Trans"
@@ -56,7 +56,7 @@ class TestTransmissionOperations:
 
 
 class TestTransmissionLogic:
-    def test_transmission_hierarchy_simple(self, scene) -> None:
+    def test_transmission_hierarchy_simple(self, scene, blender_context) -> None:
         """Test that a simple transmission is reparented to its joint."""
         # Create joint
         bpy.ops.object.empty_add()
@@ -77,7 +77,7 @@ class TestTransmissionLogic:
         assert trans_obj.parent == joint_obj
         assert trans_obj.location == Vector((0, 0, 0))
 
-    def test_poll_robot_joint(self, scene) -> None:
+    def test_poll_robot_joint(self, scene, blender_context) -> None:
         """Test filtering for robot joint objects in UI polls."""
         from linkforge.blender.properties.transmission_props import poll_robot_joint
 

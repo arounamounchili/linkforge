@@ -12,13 +12,11 @@ from tests.blender_test_utils import (
     safe_get_linkforge,
 )
 
-# =============================================================================
 # Physics and Inertia Integration
-# =============================================================================
 
 
 class TestPhysicsIntegration:
-    def test_inertia_calculation_workflow(self, clean_scene) -> None:
+    def test_inertia_calculation_workflow(self, blender_clean_scene) -> None:
         """Verify end-to-end inertia calculation in Blender."""
         scene = bpy.context.scene
         link_obj = create_test_object("link", None, scene=scene)
@@ -39,7 +37,7 @@ class TestPhysicsIntegration:
         # 1kg 1m cube Ixx = 1/6
         assert pytest.approx(link_lf.inertia_ixx, abs=1e-5) == 1.0 / 6.0
 
-    def test_inertia_with_offset_visual(self, clean_scene) -> None:
+    def test_inertia_with_offset_visual(self, blender_clean_scene) -> None:
         """Verify offset visuals affect inertia via Parallel Axis Theorem."""
         scene = bpy.context.scene
         link_obj = create_test_object("link_offset", None, scene=scene)
@@ -63,13 +61,11 @@ class TestPhysicsIntegration:
         assert pytest.approx(link_lf.inertia_ixx, abs=1e-5) == 2.0 / 6.0
 
 
-# =============================================================================
 # Joint Roundtrips
-# =============================================================================
 
 
 class TestJointIntegration:
-    def test_joint_creation_and_properties(self, clean_scene) -> None:
+    def test_joint_creation_and_properties(self, blender_clean_scene) -> None:
         """Verify joint creation and property persistence."""
         scene = bpy.context.scene
         p = create_test_object("Parent", None, scene=scene)

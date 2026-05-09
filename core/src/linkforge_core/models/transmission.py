@@ -76,6 +76,10 @@ class TransmissionJoint:
         """Create a new transmission joint with a prefixed name."""
         return replace(self, name=f"{prefix}{self.name}")
 
+    def normalized(self) -> TransmissionJoint:
+        """Return a new transmission joint with sorted interfaces."""
+        return replace(self, hardware_interfaces=sorted(self.hardware_interfaces))
+
 
 @dataclass(frozen=True)
 class TransmissionActuator:
@@ -116,6 +120,10 @@ class TransmissionActuator:
     def with_prefix(self, prefix: str) -> TransmissionActuator:
         """Create a new transmission actuator with a prefixed name."""
         return replace(self, name=f"{prefix}{self.name}")
+
+    def normalized(self) -> TransmissionActuator:
+        """Return a new transmission actuator with sorted interfaces."""
+        return replace(self, hardware_interfaces=sorted(self.hardware_interfaces))
 
 
 @dataclass(frozen=True)
@@ -223,6 +231,14 @@ class Transmission:
             name=f"{prefix}{self.name}",
             joints=[j.with_prefix(prefix) for j in self.joints],
             actuators=[a.with_prefix(prefix) for a in self.actuators],
+        )
+
+    def normalized(self) -> Transmission:
+        """Return a new transmission with sorted joints and actuators."""
+        return replace(
+            self,
+            joints=sorted([j.normalized() for j in self.joints], key=lambda x: x.name),
+            actuators=sorted([a.normalized() for a in self.actuators], key=lambda x: x.name),
         )
 
     @classmethod

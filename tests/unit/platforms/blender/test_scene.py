@@ -20,7 +20,7 @@ from tests.blender_test_utils import (
 
 
 class TestSceneAnalysis:
-    def test_get_robot_statistics_basic(self, scene) -> None:
+    def test_get_robot_statistics_basic(self, scene, blender_context) -> None:
         """Test gathering basic robot statistics from the scene."""
         # Create a link
         link_obj = create_test_object("link1", None, scene)
@@ -33,7 +33,7 @@ class TestSceneAnalysis:
         assert stats.total_mass == 1.5
         assert "link1" in stats.link_objects
 
-    def test_get_robot_statistics_excludes_invalid_mass(self, scene) -> None:
+    def test_get_robot_statistics_excludes_invalid_mass(self, scene, blender_context) -> None:
         """Test that links with negative mass do not add up to total_mass."""
         link1 = create_test_object("valid_link", None, scene)
         safe_get_linkforge(link1).is_robot_link = True
@@ -54,7 +54,7 @@ class TestSceneAnalysis:
 
 
 class TestTreeBuilding:
-    def test_build_tree_from_stats_basic(self, scene) -> None:
+    def test_build_tree_from_stats_basic(self, scene, blender_context) -> None:
         """Test building a kinematic tree from robot statistics."""
         parent = create_test_object("parent", None, scene)
         safe_get_linkforge(parent).is_robot_link = True

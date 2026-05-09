@@ -11,13 +11,11 @@ from tests.blender_test_utils import (
     safe_get_sensor,
 )
 
-# =============================================================================
 # Name Synchronization
-# =============================================================================
 
 
-class TestNameSync:
-    def test_link_outliner_rename_sync(self, clean_scene) -> None:
+class TestNaming:
+    def test_link_outliner_rename_sync(self, blender_clean_scene) -> None:
         """Verify that link outliner renames are synchronized to properties."""
         obj = create_test_object("base_link", None)
         obj_lf = safe_get_linkforge(obj)
@@ -29,7 +27,7 @@ class TestNameSync:
 
         assert obj_lf.link_name == "chassis"
 
-    def test_name_sanitization(self, clean_scene) -> None:
+    def test_name_sanitization(self, blender_clean_scene) -> None:
         """Verify that renames are sanitized for URDF compatibility."""
         obj = create_test_object("link", None)
         obj_lf = safe_get_linkforge(obj)
@@ -42,14 +40,8 @@ class TestNameSync:
         assert obj_lf.link_name == "front_left_wheel"
         assert obj.name == "front_left_wheel"
 
-
-# =============================================================================
-# Naming Edge Cases
-# =============================================================================
-
-
-class TestNamingRobustness:
-    def test_empty_name_guard(self, clean_scene) -> None:
+    # Robustness and Edge Cases
+    def test_empty_name_guard(self, blender_clean_scene) -> None:
         """Verify that empty names are rejected and revert to object name."""
         obj = create_test_object("my_sensor", None)
         obj_lf = safe_get_sensor(obj)

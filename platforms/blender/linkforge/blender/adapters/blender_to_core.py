@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     bpy: Any
     Matrix: Any
     Vector: Any
+    from .context import IBlenderContext
 else:
     import bpy
     from mathutils import Matrix
@@ -1109,34 +1110,23 @@ def _calculate_link_frames(
 
 
 def scene_to_robot(
-    context: Any,
+    context: IBlenderContext | bpy.types.Context,
     meshes_dir: Path | None = None,
     dry_run: bool = False,
 ) -> tuple[Robot, list[str]]:
     """Convert entire Blender scene to Core Robot.
 
-    This function orchestrates the conversion process by:
-    1. Categorizing scene objects (links, joints, sensors, transmissions)
-    2. Calculating link coordinate frames
-    3. Converting each object type to core models
-    4. Assembling the complete Robot model
-
-    Args:
-        context: Blender context
-        meshes_dir: Optional directory for exporting mesh files
-        dry_run: If True, don't write mesh files
-
-    Returns:
-        Tuple of (Core Robot model, list of error messages)
-
-    Note:
-        Error handling behavior is controlled by the robot's strict_mode property:
-        - strict_mode=False (default): Collects all errors and shows them together
-        - strict_mode=True: Fails immediately on first error (useful for debugging)
+    This function orchestrates the conversion process. Supports auto-wrapping of
+    legacy contexts for backward compatibility.
     """
+    from .context import BlenderContext
+
+    # Auto-wrap for legacy compatibility
+    if not isinstance(context, IBlenderContext):
+        context = BlenderContext(context)
+
     if context is None:
         return Robot(name="empty_robot"), []
-
     scene = context.scene
     robot_props = getattr(scene, "linkforge", None)
     if not robot_props:
@@ -1144,10 +1134,13 @@ def scene_to_robot(
     robot_name = robot_props.robot_name if robot_props.robot_name else "robot"
     strict_mode = robot_props.strict_mode  # Get strict mode from properties
     robot = Robot(name=robot_name)
-    # Get evaluated depsgraph once for the entire conversion
-    # This ensures all objects are evaluated at the same point in time
-    # and significantly improves performance for complex robots.
-    depsgraph = context.evaluated_depsgraph_get()
+
+    # Note: Evaluated depsgraph is only needed for real Blender runs.
+    # In Mock contexts, we can bypass this.
+    depsgraph = None
+    if hasattr(context, "evaluated_depsgraph_get"):
+        depsgraph = context.evaluated_depsgraph_get()
+
     conversion_errors: list[str] = []
 
     # Categorize scene objects

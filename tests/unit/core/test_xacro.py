@@ -1,6 +1,6 @@
 """Consolidated unit tests for Xacro Parser and Generator.
 
-This module provides comprehensive coverage for Xacro processing, including:
+This module provides comprehensive testing for Xacro processing, including:
 - XML Parsing and Macro expansion
 - Property evaluation and Math
 - File caching and security
@@ -27,9 +27,7 @@ def generator() -> XACROGenerator:
     return XACROGenerator()
 
 
-# =============================================================================
 # Xacro Resolver and Macro Tests
-# =============================================================================
 
 
 class TestXacroResolver:
@@ -67,9 +65,7 @@ class TestXacroResolver:
         assert root.find("link").get("name") == "base_link"
 
 
-# =============================================================================
 # Evaluation and Math Tests
-# =============================================================================
 
 
 class TestXacroEvaluation:
@@ -111,9 +107,7 @@ class TestXacroEvaluation:
         assert links[0].get("name") == "yes"
 
 
-# =============================================================================
 # Security and Infrastructure Tests
-# =============================================================================
 
 
 class TestXacroInfrastructure:

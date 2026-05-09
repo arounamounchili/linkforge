@@ -10,6 +10,7 @@ import os
 import typing
 from contextlib import contextmanager, suppress
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import bpy
 from bpy.types import Context, Event, Operator
@@ -18,7 +19,7 @@ from linkforge_core.logging_config import get_logger
 
 from ..utils.decorators import OperatorReturn, safe_execute
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from ..properties.robot_props import RobotPropertyGroup
     from ..properties.validation_props import ValidationResultProperty
 
@@ -53,17 +54,17 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     )
 
     # Type ignore to resolve 'misc' definition collision with Operator.check
-    def check(self, context: Context) -> typing.Any:
+    def check(self, context: Context) -> Any:
         """Verify if export can proceed based on current scene state."""
         return bool(context.scene and hasattr(context.scene, "linkforge"))
 
-    def invoke(self, context: Context, event: Event) -> typing.Any:
+    def invoke(self, context: Context, event: Event) -> Any:
         """Invoked before the file browser opens."""
         # Update file extension based on export format
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
 
-        robot_props = typing.cast(typing.Any, context.scene).linkforge
+        robot_props = typing.cast(Any, context.scene).linkforge
         if robot_props.export_format == "XACRO":
             self.filename_ext = ".xacro"
         else:
@@ -77,12 +78,16 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the export."""
         # Import here to avoid circular dependencies
-        from linkforge_core import URDFGenerator, XACROGenerator
+        from linkforge_core.generators import URDFGenerator, XACROGenerator
 
         from ..adapters.blender_to_core import scene_to_robot
+        from ..adapters.context import BlenderContext
 
         if not context.scene or not hasattr(context.scene, "linkforge"):
             return {"CANCELLED"}
+
+        # Wrap the raw Blender context in our adapter
+        lf_context = BlenderContext(bpy_instance=bpy)
         scene = context.scene
         robot_props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
 
@@ -108,9 +113,8 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
 
         # Validate if requested
         if robot_props.validate_before_export:
-            # First pass: Dry run to generate robot model without exporting meshes
             try:
-                robot_dry_run, _ = scene_to_robot(context, meshes_dir=meshes_dir, dry_run=True)
+                robot_dry_run, _ = scene_to_robot(lf_context, meshes_dir=meshes_dir, dry_run=True)
             except LinkForgeError as e:
                 self.report({"ERROR"}, f"Failed to build robot model: {e}")
                 return {"CANCELLED"}
@@ -137,7 +141,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         should_write_meshes = robot_props.export_meshes
         try:
             robot, _ = scene_to_robot(
-                context,
+                lf_context,
                 meshes_dir=meshes_dir,
                 dry_run=not should_write_meshes,
             )
@@ -197,8 +201,6 @@ class LINKFORGE_OT_validate_robot(Operator):
         """Execute validation."""
         from linkforge_core.validation import RobotValidator
 
-        from ..adapters.blender_to_core import scene_to_robot
-
         # Clear previous results
         if not context.window_manager or not hasattr(
             context.window_manager, "linkforge_validation"
@@ -212,8 +214,12 @@ class LINKFORGE_OT_validate_robot(Operator):
         validation_props.clear()
 
         # Convert scene to robot
+        from ..adapters.blender_to_core import scene_to_robot
+        from ..adapters.context import BlenderContext
+
+        lf_context = BlenderContext(bpy_instance=bpy)
         try:
-            robot, _ = scene_to_robot(context)
+            robot, _ = scene_to_robot(lf_context)
         except Exception as e:
             # Catch all build errors and report them in UI
             validation_props.has_results = True

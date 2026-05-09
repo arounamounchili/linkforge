@@ -7,7 +7,7 @@ from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import Joint, JointType, Link, Robot
 
 
-def test_builder_prepare_tasks(scene) -> None:
+def test_builder_prepare_tasks(scene, blender_context) -> None:
     """Test that tasks are correctly queued based on robot structure."""
     l1 = Link(name="base_link")
     l2 = Link(name="link1")
@@ -35,7 +35,7 @@ def test_builder_prepare_tasks(scene) -> None:
     assert "finalize" in task_types
 
 
-def test_builder_execution_flow(scene) -> None:
+def test_builder_execution_flow(scene, blender_context) -> None:
     """Test that process_next_chunk executes tasks and updates status."""
     l1 = Link(name="base_link")
     robot = Robot(name="test_robot", initial_links=[l1])
@@ -67,7 +67,7 @@ def test_builder_execution_flow(scene) -> None:
         assert scene.linkforge.import_status != ""
 
 
-def test_builder_abort(scene) -> None:
+def test_builder_abort(scene, blender_context) -> None:
     """Test that import can be aborted via scene property."""
     # Add a link to ensure there are tasks to process
     robot = Robot(name="test_robot", initial_links=[Link(name="base_link")])
@@ -82,7 +82,7 @@ def test_builder_abort(scene) -> None:
     assert "cancelled" in (builder.error or "").lower()
 
 
-def test_builder_error_handling(scene) -> None:
+def test_builder_error_handling(scene, blender_context) -> None:
     """Test that exceptions in task execution are caught and reported."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
@@ -95,7 +95,7 @@ def test_builder_error_handling(scene) -> None:
         assert builder.is_finished is True
 
 
-def test_builder_timer_start(scene) -> None:
+def test_builder_timer_start(scene, blender_context) -> None:
     """Test that start() registers the timer."""
     robot = Robot(name="test_robot")
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), bpy.context)
@@ -109,7 +109,7 @@ def test_builder_timer_start(scene) -> None:
         assert args[0] == builder.process_next_chunk
 
 
-def test_builder_timer_callback_interval(scene) -> None:
+def test_builder_timer_callback_interval(scene, blender_context) -> None:
     """Test that the callback returns a float interval while running."""
     # Add many tasks so it doesn't finish immediately
     robot = Robot(name="test_robot", initial_links=[Link(name=f"link{i}") for i in range(10)])
@@ -130,7 +130,7 @@ def test_builder_timer_callback_interval(scene) -> None:
     assert result is None  # Finished
 
 
-def test_builder_full_completion(scene) -> None:
+def test_builder_full_completion(scene, blender_context) -> None:
     """Test that builder runs all tasks and finishes correctly."""
     robot = Robot(name="test_robot", initial_links=[Link(name="link1")])
 
@@ -153,7 +153,7 @@ def test_builder_full_completion(scene) -> None:
         assert builder.error is None
 
 
-def test_builder_with_joints_and_sensors(scene) -> None:
+def test_builder_with_joints_and_sensors(scene, blender_context) -> None:
     """Test that builder correctly queues joints and sensors."""
     l1 = Link(name="l1")
     l2 = Link(name="l2")

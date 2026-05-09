@@ -25,9 +25,7 @@ def generator() -> SRDFGenerator:
     return SRDFGenerator()
 
 
-# =============================================================================
 # SRDF Model Tests
-# =============================================================================
 
 
 class TestSRDFModels:
@@ -45,9 +43,7 @@ class TestSRDFModels:
         assert srdf.groups[0].name == "arm"
 
 
-# =============================================================================
 # SRDF Parser Tests
-# =============================================================================
 
 
 class TestSRDFParser:
@@ -68,9 +64,7 @@ class TestSRDFParser:
         assert len(srdf.virtual_joints) == 1
 
 
-# =============================================================================
 # SRDF Generator Tests
-# =============================================================================
 
 
 class TestSRDFGenerator:

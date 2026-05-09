@@ -1,110 +1,164 @@
-import typing
+from __future__ import annotations
+
+import sys
+from unittest.mock import MagicMock
 
 import pytest
 
+# Check if we are running inside real Blender or a stubbed environment
 try:
     import bpy
 
-    HAS_BPY = True
+    # If it's a real Blender, bpy will have 'app'
+    is_real_blender = hasattr(bpy, "app")
 except (ImportError, AttributeError):
+    is_real_blender = False
+
+HAS_BPY = is_real_blender
+
+
+if not is_real_blender:
+
+    class BlenderBase:
+        """Shared base for all mocked Blender components."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+    # Unique dummy classes to avoid duplicate base class errors
+    class MockOperator(BlenderBase):
+        pass
+
+    class MockPanel(BlenderBase):
+        pass
+
+    class MockPropertyGroup(BlenderBase):
+        pass
+
+    class MockAddonPreferences(BlenderBase):
+        pass
+
+    class MockExportHelper(BlenderBase):
+        pass
+
+    class MockImportHelper(BlenderBase):
+        pass
+
+    # Mock bpy.types before any imports
+    mock_types = MagicMock()
+    mock_types.Operator = MockOperator
+    mock_types.Panel = MockPanel
+    mock_types.PropertyGroup = MockPropertyGroup
+    mock_types.AddonPreferences = MockAddonPreferences
+    mock_types.Header = BlenderBase
+    mock_types.Menu = BlenderBase
+    mock_types.UIList = BlenderBase
+
+    # Create the main bpy mock
+    mock_bpy = MagicMock()
+    mock_bpy.types = mock_types
+    mock_bpy.app = MagicMock()
+    mock_bpy.app.version = (4, 2, 0)
+
+    # Mock bpy.props
+    mock_props = MagicMock()
+    mock_props.IntProperty = MagicMock(return_value=0)
+    mock_props.StringProperty = MagicMock(return_value="")
+    mock_props.BoolProperty = MagicMock(return_value=False)
+    mock_props.FloatProperty = MagicMock(return_value=0.0)
+    mock_props.EnumProperty = MagicMock(return_value=None)
+    mock_props.PointerProperty = MagicMock(return_value=None)
+    mock_props.CollectionProperty = MagicMock(return_value=[])
+    mock_props.FloatVectorProperty = MagicMock(return_value=(0.0, 0.0, 0.0))
+    mock_bpy.props = mock_props
+
+    # Inject into sys.modules
+    sys.modules["bpy"] = mock_bpy
+    sys.modules["bpy.types"] = mock_types
+    sys.modules["bpy.props"] = mock_props
+
+    # Mock mathutils
+    mock_mathutils = MagicMock()
+    mock_mathutils.Vector = MagicMock
+    mock_mathutils.Matrix = MagicMock
+    mock_mathutils.Quaternion = MagicMock
+    mock_mathutils.Euler = MagicMock
+    sys.modules["mathutils"] = mock_mathutils
+
+    # Mock bpy_extras
+    mock_bpy_extras = MagicMock()
+    mock_io_utils = MagicMock()
+    mock_io_utils.ExportHelper = MockExportHelper
+    mock_io_utils.ImportHelper = MockImportHelper
+    mock_bpy_extras.io_utils = mock_io_utils
+    sys.modules["bpy_extras"] = mock_bpy_extras
+    sys.modules["bpy_extras.io_utils"] = mock_io_utils
+
+    # Mock gpu
+    sys.modules["gpu"] = MagicMock()
+    sys.modules["gpu_extras"] = MagicMock()
+    sys.modules["gpu_extras.batch"] = MagicMock()
+
+    # Define a basic scene for the mock
+    mock_scene = MagicMock(name="MockScene")
+    mock_scene.name = "Scene"
+    mock_scene.linkforge = MagicMock(name="LinkForgeProps")
+    mock_bpy.context.scene = mock_scene
+    mock_bpy.data.scenes = [mock_scene]
+
     HAS_BPY = False
+else:
+    HAS_BPY = True
 
-from tests.blender_test_utils import create_test_object
+# =============================================================================
+# FIXTURES
+# =============================================================================
 
-if HAS_BPY:
-    import linkforge.blender
 
-    @pytest.fixture(scope="session", autouse=True)
-    def register_addon() -> None:
-        """Register the LinkForge addon once for the entire test session.
+@pytest.fixture
+def blender_context():
+    """Unified fixture providing either a real or mock BlenderContext."""
+    import bpy
+    from linkforge.blender.adapters.context import BlenderContext
 
-        This ensures that all Blender operators and property groups are
-        globally available before any tests are executed.
-        """
-        linkforge.blender.register()
+    if is_real_blender:
+        return BlenderContext(bpy.context)
+    else:
+        # Create a robust mock that mimics BlenderContext
+        mock = MagicMock(name="MockBlenderContext")
+        mock.scene = bpy.context.scene
+        mock.data = bpy.data
+        mock.ops = bpy.ops
 
-    @pytest.fixture(scope="module", autouse=True)
-    def ensure_registered():
-        """Ensure LinkForge properties are registered and fully active for the module."""
-        from tests.blender_test_utils import ensure_linkforge_registered
+        # Simulate IBlenderContext methods
+        mock.get_objects.return_value = []
+        mock.get_active_object.return_value = None
 
-        ensure_linkforge_registered()
-        yield
+        return mock
 
-    @pytest.fixture
-    def scene(ensure_registered) -> bpy.types.Scene:
-        """Provide a robust Blender scene for testing."""
-        target_scene = bpy.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
-        assert target_scene is not None, "No Blender scene available for testing"
 
-        # Final sanity check on an actual instance
-        temp_obj = create_test_object("RegistrationCheck", None)
-        has_prop = hasattr(temp_obj, "linkforge")
-        bpy.data.objects.remove(temp_obj, do_unlink=True)
+@pytest.fixture
+def mock_blender_context(blender_context):
+    """Alias for blender_context for backward compatibility."""
+    return blender_context
 
-        assert has_prop, "LinkForge properties not active on Blender Objects"
-        return target_scene
 
-    @pytest.fixture(autouse=True)
-    def clean_scene(scene: bpy.types.Scene) -> typing.Generator[None, None, None]:
-        """Prepare a clean Blender environment for each test.
+@pytest.fixture
+def mock_context(blender_context):
+    """Alias for blender_context for legacy tests."""
+    return blender_context
 
-        Actions performed:
-        - Removes all objects and their linked data (meshes, materials).
-        - Clears all non-default collections.
-        - Resets LinkForge-specific global scene properties to default states.
-        """
-        # Delete all objects in all collections
+
+@pytest.fixture
+def scene(blender_context):
+    return blender_context.scene
+
+
+@pytest.fixture(autouse=True)
+def clean_scene(blender_context):
+    if is_real_blender:
+        import bpy
+
         for obj in list(bpy.data.objects):
             bpy.data.objects.remove(obj, do_unlink=True)
-
-        # Delete all mesh data
-        for mesh in list(bpy.data.meshes):
-            bpy.data.meshes.remove(mesh, do_unlink=True)
-
-        # Delete all materials
-        for mat in list(bpy.data.materials):
-            bpy.data.materials.remove(mat, do_unlink=True)
-
-        # Delete all actions (animations)
-        for action in list(bpy.data.actions):
-            bpy.data.actions.remove(action, do_unlink=True)
-
-        # Delete all collections (except master)
-        for col in list(bpy.data.collections):
-            if col.name not in ["Collection", "Scene Collection"]:
-                bpy.data.collections.remove(col, do_unlink=True)
-
-        # Reset Scene properties
-        if hasattr(scene, "linkforge"):
-            from linkforge.blender.properties.robot_props import RobotPropertyGroup
-
-            props = typing.cast(RobotPropertyGroup, scene.linkforge)
-            props.robot_name = "robot"
-            props.strict_mode = False
-            props.use_ros2_control = False
-            props.ros2_control_joints.clear()
-            props.gazebo_plugin_name = "libgazebo_ros2_control.so"
-            props.controllers_yaml_path = ""
-
-        # Clear architectural statistics cache for test isolation
-        from linkforge.blender.utils.scene_utils import clear_stats_cache
-
-        clear_stats_cache()
-
-        yield
-
-    @pytest.fixture
-    def mock_context(mocker, scene) -> typing.Any:
-        """Provide a mocked Blender context with the current scene and view_layer.
-
-        This eliminates the need to manually create context mocks in every operator test.
-        """
-        context = mocker.MagicMock()
-        context.scene = scene
-        context.view_layer = scene.view_layers[0] if hasattr(scene, "view_layers") else None
-        context.window_manager = bpy.context.window_manager
-        context.workspace = bpy.context.workspace
-        context.area = bpy.context.area
-        context.region = bpy.context.region
-        return context
+    yield

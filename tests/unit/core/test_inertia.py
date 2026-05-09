@@ -8,9 +8,7 @@ from linkforge_core.models import InertiaTensor
 from linkforge_core.models.geometry import Box, Sphere, Vector3
 from linkforge_core.physics.inertia import calculate_inertia
 
-# =============================================================================
 # Inertia Model Tests
-# =============================================================================
 
 
 class TestInertiaModels:
@@ -33,9 +31,7 @@ class TestInertiaModels:
             InertiaTensor(ixx=10.0, iyy=1.0, izz=1.0, ixy=0.0, ixz=0.0, iyz=0.0)
 
 
-# =============================================================================
 # Analytical Formula Verification
-# =============================================================================
 
 
 class TestInertiaFormulas:

@@ -199,8 +199,8 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
         mock_logger.warning.assert_called()
 
 
-def test_xml_base_format_value_bool_coverage() -> None:
-    """Test boolean formatting logic in RobotXMLGenerator."""
+def test_xml_base_format_value_bool() -> None:
+    """Verify boolean formatting logic in RobotXMLGenerator."""
     import xml.etree.ElementTree as ET
     from typing import Any
 

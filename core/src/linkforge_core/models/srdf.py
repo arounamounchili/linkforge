@@ -572,3 +572,36 @@ class SemanticRobotDescription:
             link_sphere_approximations=tuple(new_lsa),
             joint_properties=tuple(new_jp),
         )
+
+    def normalized(self) -> SemanticRobotDescription:
+        """Return a new description with all components sorted.
+
+        This ensures that structural equality checks are order-independent.
+        """
+        return replace(
+            self,
+            virtual_joints=tuple(sorted(self.virtual_joints, key=lambda x: x.name)),
+            groups=tuple(sorted(self.groups, key=lambda x: x.name)),
+            group_states=tuple(sorted(self.group_states, key=lambda x: (x.group, x.name))),
+            end_effectors=tuple(sorted(self.end_effectors, key=lambda x: x.name)),
+            passive_joints=tuple(sorted(self.passive_joints, key=lambda x: x.name)),
+            disabled_collisions=tuple(
+                sorted(
+                    self.disabled_collisions,
+                    key=lambda x: tuple(sorted([x.link1, x.link2])),
+                )
+            ),
+            enabled_collisions=tuple(
+                sorted(
+                    self.enabled_collisions,
+                    key=lambda x: tuple(sorted([x.link1, x.link2])),
+                )
+            ),
+            no_default_collision_links=tuple(sorted(self.no_default_collision_links)),
+            link_sphere_approximations=tuple(
+                sorted(self.link_sphere_approximations, key=lambda x: x.link)
+            ),
+            joint_properties=tuple(
+                sorted(self.joint_properties, key=lambda x: (x.joint_name, x.property_name))
+            ),
+        )

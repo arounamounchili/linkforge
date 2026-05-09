@@ -77,7 +77,7 @@ class Robot:
     version: str = "1.1"  # LinkForge IR Version
     materials: dict[str, Material] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
-    resource_resolver: IResourceResolver = field(default_factory=FileSystemResolver)
+    resource_resolver: IResourceResolver = field(default_factory=FileSystemResolver, compare=False)
 
     # Internal storage
     _links: list[Link] = field(default_factory=list, init=False)
@@ -91,25 +91,31 @@ class Robot:
     )
 
     # Fast lookup indices (name -> object)
-    _link_index: dict[str, Link] = field(default_factory=dict, init=False, repr=False)
-    _joint_index: dict[str, Joint] = field(default_factory=dict, init=False, repr=False)
-    _sensor_index: dict[str, Sensor] = field(default_factory=dict, init=False, repr=False)
+    _link_index: dict[str, Link] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    _joint_index: dict[str, Joint] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    _sensor_index: dict[str, Sensor] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
     _transmission_index: dict[str, Transmission] = field(
-        default_factory=dict, init=False, repr=False
+        default_factory=dict, init=False, repr=False, compare=False
     )
     _ros2_control_index: dict[str, Ros2Control] = field(
-        default_factory=dict, init=False, repr=False
+        default_factory=dict, init=False, repr=False, compare=False
     )
 
     # Adjacency maps for kinematic traversal
     _link_as_parent_index: dict[str, list[Joint]] = field(
-        default_factory=lambda: defaultdict(list), init=False, repr=False
+        default_factory=lambda: defaultdict(list), init=False, repr=False, compare=False
     )
     _link_as_child_index: dict[str, list[Joint]] = field(
-        default_factory=lambda: defaultdict(list), init=False, repr=False
+        default_factory=lambda: defaultdict(list), init=False, repr=False, compare=False
     )
 
-    _graph_cache: KinematicGraph | None = field(default=None, init=False, repr=False)
+    _graph_cache: KinematicGraph | None = field(default=None, init=False, repr=False, compare=False)
 
     # Init args
     initial_links: InitVar[Sequence[Link] | None] = None
@@ -191,12 +197,29 @@ class Robot:
         self._reindex()
 
     def clone(self) -> Robot:
-        """Create a deep copy of the robot.
+        """Create a deep copy of the robot model."""
 
-        Returns:
-            A new Robot instance with identical links, joints, and metadata.
-        """
         return copy.deepcopy(self)
+
+    def normalized(self) -> Robot:
+        """Return a new Robot with all components sorted by name.
+
+        This ensures that structural equality checks are order-independent.
+        """
+        robot = self.clone()
+        robot._links.sort(key=lambda x: x.name)
+        robot._joints.sort(key=lambda x: x.name)
+        robot._sensors.sort(key=lambda x: x.name)
+        robot._transmissions = sorted(
+            [t.normalized() for t in robot._transmissions], key=lambda x: x.name
+        )
+        robot._ros2_controls = sorted(
+            [rc.normalized() for rc in robot._ros2_controls], key=lambda x: x.name
+        )
+        robot._gazebo_elements.sort(key=lambda x: x.reference or "")
+        robot._semantic = robot._semantic.normalized()
+        robot._reindex()
+        return robot
 
     def prefix_all(self, prefix: str) -> None:
         """Add a namespace prefix to all components in the robot.

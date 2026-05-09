@@ -19,7 +19,7 @@ from tests.blender_test_utils import safe_get_linkforge
 
 
 class TestCollisionAlignment:
-    def test_collision_alignment_on_rotated_link(self, scene) -> None:
+    def test_collision_alignment_on_rotated_link(self, scene, blender_context) -> None:
         """Verify that generating collision for a rotated link avoids offsets."""
         bpy.ops.object.empty_add()
         bpy.context.active_object.name = "link_obj"
@@ -50,7 +50,7 @@ class TestCollisionAlignment:
 
 
 class TestCollisionQuality:
-    def test_collision_modifier_persistence(self, scene) -> None:
+    def test_collision_modifier_persistence(self, scene, blender_context) -> None:
         """Verify that generating mesh collision preserves Decimate modifier."""
         bpy.ops.mesh.primitive_monkey_add()
         bpy.ops.linkforge.create_link_from_mesh()
@@ -72,7 +72,7 @@ class TestCollisionQuality:
 
 
 class TestCollisionScaling:
-    def test_box_collision_scaling(self, scene) -> None:
+    def test_box_collision_scaling(self, scene, blender_context) -> None:
         """Verify that a scaled cube results in a matching collision primitive."""
         bpy.ops.mesh.primitive_cube_add(size=2.0)
         vis = bpy.context.active_object

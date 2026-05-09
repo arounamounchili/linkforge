@@ -6,7 +6,16 @@ import contextlib
 import typing
 from pathlib import Path
 
-import bpy
+if typing.TYPE_CHECKING:
+    # Type stubs for Blender types when type checking
+    bpy: typing.Any
+    Matrix: typing.Any
+    Vector: typing.Any
+    from .context import IBlenderContext
+else:
+    import bpy
+    from mathutils import Matrix
+
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (
     Box,
@@ -18,7 +27,6 @@ from linkforge_core.models import (
     Robot,
     Sphere,
 )
-from mathutils import Matrix
 
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
@@ -27,10 +35,13 @@ from ..utils.scene_utils import move_to_collection, sync_object_collections
 logger = get_logger(__name__)
 
 
-def create_material_from_color(color: Color, name: str) -> bpy.types.Material | None:
+def create_material_from_color(
+    context: IBlenderContext, color: Color, name: str
+) -> bpy.types.Material | None:
     """Create Blender material from Color model.
 
     Args:
+        context: Blender context adapter
         color: Color model
         name: Material name
 
@@ -39,11 +50,11 @@ def create_material_from_color(color: Color, name: str) -> bpy.types.Material | 
 
     """
     # Check if material already exists
-    if name in bpy.data.materials:
-        return bpy.data.materials[name]
+    if name in context.data.materials:
+        return context.data.materials[name]
 
     # Create new material
-    mat = bpy.data.materials.new(name=name)
+    mat = context.data.materials.new(name=name)
     mat.use_nodes = True
 
     # Get Principled BSDF node
@@ -68,7 +79,9 @@ def create_material_from_color(color: Color, name: str) -> bpy.types.Material | 
     return mat
 
 
-def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.types.Object | None:
+def create_primitive_mesh(
+    context: IBlenderContext, geometry: Box | Cylinder | Sphere, name: str
+) -> bpy.types.Object | None:
     """Create a Blender mesh object from primitive geometry.
 
     This function generates native Blender mesh primitives (Cube, Cylinder,
@@ -76,6 +89,7 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
     dimensions and format-specific metadata tags.
 
     Args:
+        context: Blender context adapter
         geometry: One of Box, Cylinder, or Sphere models.
         name: Name to assign to the created Blender object.
 
@@ -83,14 +97,14 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
         The created Blender Object or None if creation failed.
     """
     # Deselect all first
-    bpy.ops.object.select_all(action="DESELECT")
+    context.ops.object.select_all(action="DESELECT")
 
     obj = None
 
     try:
         if isinstance(geometry, Box):
-            bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))
-            obj = bpy.context.active_object
+            context.ops.mesh.primitive_cube_add(location=(0, 0, 0))
+            obj = context.get_active_object()
             if obj:
                 obj.name = name
                 obj.dimensions = (geometry.size.x, geometry.size.y, geometry.size.z)
@@ -100,23 +114,24 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
                 obj["source_geometry_type"] = "BOX"
 
         elif isinstance(geometry, Cylinder):
-            bpy.ops.mesh.primitive_cylinder_add(location=(0, 0, 0))
-            obj = bpy.context.active_object
+            context.ops.mesh.primitive_cylinder_add(location=(0, 0, 0))
+            obj = context.get_active_object()
             if obj:
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.length)
-                if bpy.context.view_layer is not None:
-                    bpy.context.view_layer.update()
+                # Force update to ensure dimensions are applied correctly
+                if hasattr(context.scene, "update"):
+                    context.scene.update()
                 obj["source_geometry_type"] = "CYLINDER"
 
         elif isinstance(geometry, Sphere):
-            bpy.ops.mesh.primitive_uv_sphere_add(location=(0, 0, 0))
-            obj = bpy.context.active_object
+            context.ops.mesh.primitive_uv_sphere_add(location=(0, 0, 0))
+            obj = context.get_active_object()
             if obj:
                 obj.name = name
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
-                if bpy.context.view_layer is not None:
-                    bpy.context.view_layer.update()
+                if hasattr(context.scene, "update"):
+                    context.scene.update()
                 obj["source_geometry_type"] = "SPHERE"
 
         else:
@@ -132,13 +147,16 @@ def create_primitive_mesh(geometry: Box | Cylinder | Sphere, name: str) -> bpy.t
     return obj
 
 
-def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
+def import_mesh_file(
+    context: IBlenderContext, mesh_path: Path, name: str
+) -> bpy.types.Object | None:
     """Import an external mesh file into the Blender scene.
 
     Supported formats include STL, OBJ, and GLB. This function utilizes
     modern Blender WM operators for improved performance and stability.
 
     Args:
+        context: Blender context adapter
         mesh_path: Absolute path to the mesh file.
         name: Name to assign to the imported object.
 
@@ -152,7 +170,7 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
     logger.info(f"Importing mesh: {mesh_path} as '{name}'")
 
     # Deselect all
-    bpy.ops.object.select_all(action="DESELECT")
+    context.ops.object.select_all(action="DESELECT")
 
     # Import based on file extension
     ext = mesh_path.suffix.lower()
@@ -185,8 +203,8 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
         return None
 
     # Snapshot objects and collections to identify stragglers afterward.
-    pre_import_objects = set(bpy.data.objects)
-    pre_import_collections = set(bpy.data.collections)
+    pre_import_objects = set(context.data.objects)
+    pre_import_collections = set(context.data.collections)
 
     # Dispatcher: Try each operator until one succeeds
     success = False
@@ -194,7 +212,7 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
         try:
             # Dynamically look up operator
             op_parts = op_name.split(".")
-            op = bpy.ops
+            op = context.ops
             for part in op_parts:
                 op = getattr(op, part)
 
@@ -216,25 +234,18 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
         return None
 
     try:
-        # Get all imported objects (should be selected)
-        imported_objects = list(bpy.context.selected_objects)
-        if not imported_objects:
-            logger.warning(f"Importer ran but no objects were found for '{mesh_path.name}'")
-            return None
-
         # Consolidate ALL new objects created by the importer.
-        # This catches stray nodes that CAD importers link but don't select.
-        new_objects = set(bpy.data.objects) - pre_import_objects
-        res_obj = normalize_and_consolidate_imported_objects(new_objects, name)
+        new_objects = set(context.data.objects) - pre_import_objects
+        res_obj = normalize_and_consolidate_imported_objects(context, new_objects, name)
 
         if res_obj:
             # CLEANUP: Handle unwanted collections created by certain importers (e.g. GLTF).
-            post_import_collections = set(bpy.data.collections)
+            post_import_collections = set(context.data.collections)
             new_collections = post_import_collections - pre_import_collections
 
             if new_collections:
-                # Ensure result object is in current active collection (not the importer's new one)
-                current_col = bpy.context.collection
+                # Ensure result object is in current active collection
+                current_col = context.scene.collection
                 if current_col and res_obj.name not in current_col.objects:
                     current_col.objects.link(res_obj)
 
@@ -245,7 +256,7 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
                         new_col.objects.unlink(res_obj)
 
                     # Remove the collection itself
-                    bpy.data.collections.remove(new_col, do_unlink=True)
+                    context.data.collections.remove(new_col, do_unlink=True)
 
                 logger.debug(f"Cleaned up {len(new_collections)} import collections.")
 
@@ -262,7 +273,7 @@ def import_mesh_file(mesh_path: Path, name: str) -> bpy.types.Object | None:
 
 
 def normalize_and_consolidate_imported_objects(
-    objects: typing.Iterable[bpy.types.Object], name: str
+    context: IBlenderContext, objects: typing.Iterable[bpy.types.Object], name: str
 ) -> bpy.types.Object | None:
     """Consolidation logic that processes all supplied objects (meshes → join, others → delete)."""
     if not objects:
@@ -297,26 +308,28 @@ def normalize_and_consolidate_imported_objects(
     if not mesh_objs:
         for obj in to_delete:
             with contextlib.suppress(RuntimeError, ReferenceError):
-                bpy.data.objects.remove(obj, do_unlink=True)
+                context.data.objects.remove(obj, do_unlink=True)
         return None
 
     # Prepare for join
     mesh_list = list(mesh_objs)
-    bpy.ops.object.select_all(action="DESELECT")
+    context.ops.object.select_all(action="DESELECT")
     for obj in mesh_list:
         obj.matrix_world = Matrix.Identity(4)
         obj.select_set(True)
 
-    if bpy.context.view_layer is not None:
-        bpy.context.view_layer.objects.active = mesh_list[0]
+    # In real Blender, we set the active object on the view layer.
+    # In mock, we can just skip or implement a simple active setter.
+    if hasattr(context, "set_active_object"):
+        context.set_active_object(mesh_list[0])
 
     # Bake axis/scale
-    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    context.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
     # Join
     final_obj = mesh_list[0]
     if len(mesh_list) > 1:
-        bpy.ops.object.join()
+        context.ops.object.join()
 
     # Final cleanup
     final_obj.name = name
@@ -325,13 +338,13 @@ def normalize_and_consolidate_imported_objects(
     final_obj.rotation_euler = (0, 0, 0)
     final_obj.scale = (1, 1, 1)
 
-    # Remove all containers/stragglers identified in Step 1
+    # Remove all containers/stragglers
     for obj in to_delete:
         with contextlib.suppress(RuntimeError, ReferenceError):
-            bpy.data.objects.remove(obj, do_unlink=True)
+            context.data.objects.remove(obj, do_unlink=True)
 
-    if bpy.context.view_layer is not None:
-        bpy.context.view_layer.objects.active = final_obj
+    if hasattr(context, "set_active_object"):
+        context.set_active_object(final_obj)
     return final_obj
 
 
@@ -350,6 +363,7 @@ def _get_geometry_type_str(geometry: Box | Cylinder | Sphere | Mesh) -> str:
 
 
 def create_link_object(
+    context: IBlenderContext,
     link: Link,
     robot: Robot,
     source_directory: Path,
@@ -358,6 +372,7 @@ def create_link_object(
     """Create Blender object from Link model with support for multiple visual/collision elements.
 
     Args:
+        context: Blender context adapter
         link: Link model
         robot: Robot model (for resolving resources)
         source_directory: Directory containing source file (for resolving relative paths)
@@ -368,8 +383,7 @@ def create_link_object(
 
     """
     # Create an Empty object to represent the link (always)
-    # Using bpy.data.objects.new is safer than bpy.ops in asynchronous/timer environments
-    link_obj = bpy.data.objects.new(link.name, None)
+    link_obj = context.data.objects.new(link.name, None)
     link_obj.empty_display_type = "PLAIN_AXES"
     link_obj.rotation_mode = "XYZ"
     link_obj.location = (0, 0, 0)
@@ -408,7 +422,7 @@ def create_link_object(
                 mesh_path = robot.resolve_resource(
                     visual.geometry.resource, relative_to=source_directory
                 )
-                visual_obj = import_mesh_file(mesh_path, visual_name)
+                visual_obj = import_mesh_file(context, mesh_path, visual_name)
             except FileNotFoundError as e:
                 logger.warning(f"Mesh not found for visual '{visual_name}': {e}")
                 visual_obj = None
@@ -419,7 +433,7 @@ def create_link_object(
                 visual_obj.scale = (scale.x, scale.y, scale.z)
         else:
             # Create primitive geometry
-            visual_obj = create_primitive_mesh(visual.geometry, visual_name)
+            visual_obj = create_primitive_mesh(context, visual.geometry, visual_name)
 
         if visual_obj:
             # Parent to link object
@@ -450,7 +464,9 @@ def create_link_object(
 
             # Apply material to visual mesh
             if visual.material and visual.material.color:
-                mat = create_material_from_color(visual.material.color, visual.material.name)
+                mat = create_material_from_color(
+                    context, visual.material.color, visual.material.name
+                )
                 if mat and visual_obj.data and hasattr(visual_obj.data, "materials"):
                     # Use a localized ignore or cast if hasattr is not enough for MyPy's Mesh union
                     mesh_data = typing.cast(bpy.types.Mesh, visual_obj.data)
@@ -476,7 +492,7 @@ def create_link_object(
                 mesh_path = robot.resolve_resource(
                     collision.geometry.resource, relative_to=source_directory
                 )
-                collision_obj = import_mesh_file(mesh_path, collision_name)
+                collision_obj = import_mesh_file(context, mesh_path, collision_name)
             except FileNotFoundError as e:
                 logger.warning(f"Mesh not found for collision '{collision_name}': {e}")
                 collision_obj = None
@@ -487,7 +503,7 @@ def create_link_object(
                 collision_obj.scale = (scale.x, scale.y, scale.z)
         else:
             # Create primitive geometry
-            collision_obj = create_primitive_mesh(collision.geometry, collision_name)
+            collision_obj = create_primitive_mesh(context, collision.geometry, collision_name)
 
         if collision_obj:
             # Parent to link object
@@ -598,6 +614,7 @@ def create_link_object(
 
 
 def create_joint_object(
+    context: IBlenderContext,
     joint: Joint,
     link_objects: dict[str, bpy.types.Object],
     collection: bpy.types.Collection | None = None,
@@ -605,6 +622,7 @@ def create_joint_object(
     """Create Empty object from Joint model.
 
     Args:
+        context: Blender context adapter
         joint: Joint model
         link_objects: Dictionary mapping link names to Blender objects
         collection: Blender Collection to add object to
@@ -619,8 +637,7 @@ def create_joint_object(
         empty_size = getattr(prefs, "joint_empty_size", empty_size)
 
     # Create Empty object (ARROWS shows RGB colored axes)
-    # Using bpy.data.objects.new for context safety
-    empty = bpy.data.objects.new(joint.name, None)
+    empty = context.data.objects.new(joint.name, None)
     empty.empty_display_type = "ARROWS"
     empty.empty_display_size = empty_size
     empty.rotation_mode = "XYZ"
@@ -633,8 +650,8 @@ def create_joint_object(
         else:
             # It's an object, sync to its collections
             sync_object_collections(empty, collection)
-    elif bpy.context.scene and bpy.context.scene.collection:
-        bpy.context.scene.collection.objects.link(empty)
+    elif context.scene and context.scene.collection:
+        context.scene.collection.objects.link(empty)
 
     # Set joint properties
     if hasattr(empty, "linkforge_joint"):
@@ -764,6 +781,7 @@ def create_joint_object(
 
 
 def create_sensor_object(
+    context: IBlenderContext,
     sensor: typing.Any,
     link_objects: dict[str, bpy.types.Object],
     collection: bpy.types.Collection | None = None,
@@ -771,6 +789,7 @@ def create_sensor_object(
     """Create Empty object from Sensor model.
 
     Args:
+        context: Blender context adapter
         sensor: Sensor model from core
         link_objects: Dictionary mapping link names to Blender objects
         collection: Blender Collection to add object to
@@ -785,8 +804,7 @@ def create_sensor_object(
         return None
 
     # Create Empty object for sensor (SPHERE for sensors)
-    # Using bpy.data.objects.new for context safety
-    empty = bpy.data.objects.new(sensor.name, None)
+    empty = context.data.objects.new(sensor.name, None)
     empty.empty_display_type = "SPHERE"
 
     # Set display size from preferences
@@ -905,16 +923,17 @@ def create_sensor_object(
     return empty
 
 
-def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
+def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
     """Initialize scene properties for a robot model.
 
     This populates the Centralized Control Dashboard, Gazebo settings,
     and metadata based on the robot model.
 
     Args:
-        scene: Blender Scene object
+        context: Blender context adapter
         robot: Robot model to extract settings from
     """
+    scene = context.scene
     # Set robot name in scene properties
     if hasattr(scene, "linkforge"):
         scene.linkforge.robot_name = robot.name
@@ -979,24 +998,28 @@ def setup_scene_for_robot(scene: bpy.types.Scene, robot: Robot) -> None:
                 break
 
 
-def import_robot_to_scene(robot: Robot, source_path: Path, context: bpy.types.Context) -> bool:
+def import_robot_to_scene(
+    robot: Robot, source_path: Path, context: IBlenderContext | bpy.types.Context
+) -> bool:
     """Import Robot model to Blender scene.
 
     Args:
         robot: Robot model
         source_path: Path to source file
-        context: Blender context
-
-    Returns:
-        True if import succeeded, False otherwise
-
+        context: Blender context (real or adapter)
     """
+    from .context import BlenderContext
+
+    # Auto-wrap for legacy compatibility
+    if not isinstance(context, IBlenderContext):
+        context = BlenderContext(context)
+
     # Setup global scene properties (ros2_control, metadata, etc.)
     if context.scene:
-        setup_scene_for_robot(context.scene, robot)
+        setup_scene_for_robot(context, robot)
 
     # Create collection for this robot
-    collection = bpy.data.collections.new(robot.name)
+    collection = context.data.collections.new(robot.name)
     if context.scene:
         context.scene.collection.children.link(collection)
 
@@ -1008,6 +1031,7 @@ def import_robot_to_scene(robot: Robot, source_path: Path, context: bpy.types.Co
 
     # Create link objects
     link_objects = {}
+    # Prepare logging info
     parts = [f"{len(robot.links)} links", f"{len(robot.joints)} joints"]
     if sensor_count > 0:
         parts.append(f"{sensor_count} sensors")
@@ -1015,17 +1039,15 @@ def import_robot_to_scene(robot: Robot, source_path: Path, context: bpy.types.Co
     logger.info(f"Importing robot '{robot.name}' ({', '.join(parts)})")
 
     for link in robot.links:
-        obj = create_link_object(link, robot, source_directory, collection)
+        obj = create_link_object(context, link, robot, source_directory, collection)
         if obj:
             link_objects[link.name] = obj
 
     # Create joint objects in topological order
     sorted_joints = robot.graph.get_topological_joints()
-
-    # Create joint objects in topological order
     joint_objects = {}
     for joint in sorted_joints:
-        joint_obj = create_joint_object(joint, link_objects, collection)
+        joint_obj = create_joint_object(context, joint, link_objects, collection)
         if joint_obj:
             joint_objects[joint.name] = joint_obj
 
@@ -1038,7 +1060,7 @@ def import_robot_to_scene(robot: Robot, source_path: Path, context: bpy.types.Co
     sensors_created = 0
     if hasattr(robot, "sensors") and robot.sensors:
         for sensor in robot.sensors:
-            if create_sensor_object(sensor, link_objects, collection):
+            if create_sensor_object(context, sensor, link_objects, collection):
                 sensors_created += 1
 
     # Update scene to ensure all transforms are calculated correctly

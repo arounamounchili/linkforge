@@ -20,14 +20,14 @@ from tests.blender_test_utils import create_robot_link, safe_get_linkforge
 
 
 class TestLinkOperations:
-    def test_create_link_object(self, scene) -> None:
+    def test_create_link_object(self, scene, blender_context) -> None:
         """Test creating a link object (empty) in Blender."""
         link_obj = create_robot_link("test_link", scene)
         assert link_obj.name.startswith("test_link")
         assert link_obj.type == "EMPTY"
         assert safe_get_linkforge(link_obj).is_robot_link
 
-    def test_create_collision_for_link(self, scene) -> None:
+    def test_create_collision_for_link(self, scene, blender_context) -> None:
         """Test generating a primitive collision for a link."""
         link_obj = create_robot_link("link_with_collision", scene)
 
@@ -50,7 +50,7 @@ class TestLinkOperations:
 
 
 class TestLinkProperties:
-    def test_link_name_sanitization(self, scene) -> None:
+    def test_link_name_sanitization(self, scene, blender_context) -> None:
         """Test that link_name property sanitizes input."""
         bpy.ops.object.empty_add()
         obj = bpy.context.active_object
@@ -65,7 +65,7 @@ class TestLinkProperties:
         safe_get_linkforge(obj).link_name = "New-Link-Name!"
         assert obj.name == "New-Link-Name_"
 
-    def test_automatic_child_renaming(self, scene) -> None:
+    def test_automatic_child_renaming(self, scene, blender_context) -> None:
         """Test that renaming a link object also renames its children."""
 
         link_obj = create_robot_link("base_link", scene)
@@ -89,7 +89,7 @@ class TestLinkProperties:
 
 
 class TestLinkRobustness:
-    def test_execute_collision_preview_update_branches(self, scene) -> None:
+    def test_execute_collision_preview_update_branches(self, scene, blender_context) -> None:
         """Test edge cases in collision preview update."""
         link_obj = create_robot_link("Link", scene)
 
@@ -104,7 +104,7 @@ class TestLinkRobustness:
             link_ops._preview_pending_object = link_obj
             assert execute_collision_preview_update() is None
 
-    def test_regenerate_collision_mesh_validation(self, scene) -> None:
+    def test_regenerate_collision_mesh_validation(self, scene, blender_context) -> None:
         """Test validation in regenerate_collision_mesh."""
         # Passing non-link object should not crash
         bpy.ops.mesh.primitive_cube_add()

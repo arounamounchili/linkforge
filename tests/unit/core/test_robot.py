@@ -376,9 +376,7 @@ class TestRobot:
         invalid_summary = robot.summary()
         assert "Status: INVALID" in invalid_summary
 
-
-class TestRobotCoverage:
-    """Additional tests to ensure 100% coverage of edge cases."""
+    # Edge Cases and Structural Validation
 
     def test_add_joint_parent_not_found(self) -> None:
         robot = Robot(name="test")

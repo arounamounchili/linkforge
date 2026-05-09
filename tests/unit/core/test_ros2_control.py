@@ -14,9 +14,7 @@ def parser() -> URDFParser:
     return URDFParser()
 
 
-# =============================================================================
 # ROS 2 Control Model Tests
-# =============================================================================
 
 
 class TestRos2ControlModels:
@@ -39,9 +37,7 @@ class TestRos2ControlModels:
         assert ctrl.type == "system"
 
 
-# =============================================================================
 # ROS 2 Control Parsing Tests
-# =============================================================================
 
 
 class TestRos2ControlParsing:

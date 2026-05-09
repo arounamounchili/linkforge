@@ -51,7 +51,6 @@ jobs:
           headless: 'true'
 
       - name: Run Blender Tests
-        run: |
-          BLENDER_PATH="$(pwd)/blender/blender"
-          export BLENDER_PATH
-          xvfb-run python blender_launcher.py
+        env:
+          BLENDER_PATH: ${{ github.workspace }}/blender/blender
+        run: xvfb-run just test-blender

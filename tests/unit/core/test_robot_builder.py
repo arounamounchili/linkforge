@@ -469,8 +469,8 @@ class TestRobotBuilder:
             for ge in builder.robot.gazebo_elements
         )
 
-    def test_export_validation_coverage(self) -> None:
-        """Test validation during export to hit coverage lines."""
+    def test_export_validation(self) -> None:
+        """Test validation during export to ensures integrity of generated URDF/SRDF."""
         builder = RobotBuilder("export_val")
         builder.link("base_ev").root()
 
@@ -486,8 +486,8 @@ class TestRobotBuilder:
         with pytest.raises(RobotValidationError):
             builder.export_srdf(validate=True)
 
-    def test_final_coverage_gaps(self) -> None:
-        """Cover remaining lines in robot_builder.py."""
+    def test_builder_edge_cases(self) -> None:
+        """Verify remaining builder edge cases and branching logic."""
         # LinkBuilder.build() (line 1037-1038)
         b1 = RobotBuilder("b1")
         robot = b1.link("base_b1").build()
@@ -518,8 +518,8 @@ class TestRobotBuilder:
         b5.export_urdf(validate=False)
         b5.export_srdf(validate=False)
 
-    def test_ros2_control_error_coverage(self) -> None:
-        """Test ros2_control error when no system is defined."""
+    def test_ros2_control_no_system_error(self) -> None:
+        """Verify error when ros2_control is added without a defined system."""
         builder = RobotBuilder("no_ctrl_sys")
         builder.link("base_ctrl").root()
 

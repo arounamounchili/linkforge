@@ -18,7 +18,7 @@ from linkforge_core.utils.path_utils import resolve_package_path
 
 
 class TestMeshIO:
-    def test_export_mesh_stl(self, scene, tmp_path) -> None:
+    def test_export_mesh_stl(self, scene, tmp_path, blender_context) -> None:
         """Test exporting a mesh to STL."""
         bpy.ops.mesh.primitive_cube_add()
         obj = bpy.context.active_object
@@ -27,7 +27,7 @@ class TestMeshIO:
         export_mesh_stl(obj, filepath)
         assert filepath.exists()
 
-    def test_export_mesh_obj(self, scene, tmp_path) -> None:
+    def test_export_mesh_obj(self, scene, tmp_path, blender_context) -> None:
         """Test exporting a mesh to OBJ."""
         bpy.ops.mesh.primitive_cube_add()
         obj = bpy.context.active_object
@@ -43,7 +43,7 @@ class TestMeshIO:
 
 
 class TestMeshNaming:
-    def test_single_visual_no_suffix(self, scene) -> None:
+    def test_single_visual_no_suffix(self, scene, blender_context) -> None:
         """Test that a single visual mesh has no suffix by default."""
         # This logic is typically handled in blender_to_core conversion
         # but we can verify the source_name preservation here if needed.
@@ -86,7 +86,7 @@ class TestMeshResolution:
 
 
 class TestMeshRobustness:
-    def test_export_mesh_failure_handling(self, scene, tmp_path) -> None:
+    def test_export_mesh_failure_handling(self, scene, tmp_path, blender_context) -> None:
         """Test that mesh export handles exceptions gracefully."""
         bpy.ops.mesh.primitive_monkey_add()
         obj = bpy.context.active_object

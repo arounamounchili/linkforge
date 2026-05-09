@@ -21,7 +21,7 @@ from tests.blender_test_utils import (
 
 
 class TestNameSynchronization:
-    def test_link_name_persistence(self, scene) -> None:
+    def test_link_name_persistence(self, scene, blender_context) -> None:
         """Test that link_name remains synced even if Blender renames the object."""
         bpy.ops.object.empty_add()
         bpy.context.active_object.name = "base_link"
@@ -36,7 +36,7 @@ class TestNameSynchronization:
         # Getter should return the synced name (likely sanitized)
         assert safe_get_linkforge(obj).link_name == "base_link_001"
 
-    def test_joint_name_persistence(self, scene) -> None:
+    def test_joint_name_persistence(self, scene, blender_context) -> None:
         """Test that joint_name remains synced even if Blender renames the object."""
         bpy.ops.object.empty_add()
         bpy.context.active_object.name = "joint"
@@ -55,7 +55,7 @@ class TestNameSynchronization:
 
 
 class TestSanitization:
-    def test_filename_sanitization(self, tmp_path, scene) -> None:
+    def test_filename_sanitization(self, tmp_path, scene, blender_context) -> None:
         """Verify that filename sanitization ensures compatibility."""
         bpy.ops.mesh.primitive_cube_add()
         obj = bpy.context.active_object
@@ -77,7 +77,7 @@ class TestSanitization:
 
 
 class TestDecorators:
-    def test_safe_execute_success(self, scene) -> None:
+    def test_safe_execute_success(self, scene, blender_context) -> None:
         """Test successful execution of a decorated function."""
         mock_self = MagicMock()
         mock_self.reports = []
@@ -90,7 +90,7 @@ class TestDecorators:
         assert my_op(mock_self, None) == {"FINISHED"}
         assert len(mock_self.reports) == 0
 
-    def test_safe_execute_failure(self, scene) -> None:
+    def test_safe_execute_failure(self, scene, blender_context) -> None:
         """Test error handling in a decorated function."""
         mock_self = MagicMock()
         mock_self.reports = []

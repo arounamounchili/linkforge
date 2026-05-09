@@ -1258,9 +1258,7 @@ class TestURDFGenerator:
         assert plugin_node is not None
         assert plugin_node.get("name") == "p"
 
-
-class TestURDFGeneratorEdgeCoverage:
-    """Generator behavior for sensors, mimic joints, and disabled features."""
+    # Robustness and Edge Cases
 
     def test_generate_without_ros2_control(self) -> None:
         """Generator skips ros2_control when disabled."""

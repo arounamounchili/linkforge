@@ -42,6 +42,14 @@ class Ros2ControlJoint:
         """Create a new control joint with a prefixed name."""
         return replace(self, name=f"{prefix}{self.name}")
 
+    def normalized(self) -> Ros2ControlJoint:
+        """Return a new joint with sorted interfaces for comparison."""
+        return replace(
+            self,
+            command_interfaces=sorted(self.command_interfaces),
+            state_interfaces=sorted(self.state_interfaces),
+        )
+
 
 @dataclass
 class Ros2Control:
@@ -116,4 +124,11 @@ class Ros2Control:
             self,
             name=f"{prefix}{self.name}",
             joints=[j.with_prefix(prefix) for j in self.joints],
+        )
+
+    def normalized(self) -> Ros2Control:
+        """Return a new control block with sorted joints for comparison."""
+        return replace(
+            self,
+            joints=sorted([j.normalized() for j in self.joints], key=lambda x: x.name),
         )

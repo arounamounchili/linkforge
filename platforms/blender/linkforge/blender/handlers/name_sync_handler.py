@@ -9,7 +9,15 @@ from __future__ import annotations
 import typing
 
 import bpy
-from bpy.app.handlers import persistent
+
+try:
+    from bpy.app.handlers import persistent
+except (ImportError, AttributeError):
+
+    def persistent(func: typing.Any) -> typing.Any:
+        """Dummy decorator for environments without real Blender handlers."""
+        return func
+
 
 if typing.TYPE_CHECKING:
     from ..properties.joint_props import JointPropertyGroup

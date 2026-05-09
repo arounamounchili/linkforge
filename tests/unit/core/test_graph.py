@@ -104,7 +104,7 @@ def test_graph_empty_input() -> None:
     assert graph.find_islands() == []
 
 
-def test_graph_diamond_dag_coverage() -> None:
+def test_graph_diamond_dag() -> None:
     """Verify diamond structure: A -> B, A -> C, B -> D, C -> D (no cycles)."""
     links = [Link(name="A"), Link(name="B"), Link(name="C"), Link(name="D")]
     joints = [

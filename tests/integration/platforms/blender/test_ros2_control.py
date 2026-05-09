@@ -9,13 +9,11 @@ from tests.blender_test_utils import (
     safe_get_linkforge_scene,
 )
 
-# =============================================================================
 # ROS 2 Control Parameter Extraction
-# =============================================================================
 
 
 class TestROS2ControlIntegration:
-    def test_ros2_control_parameters(self, clean_scene) -> None:
+    def test_ros2_control_parameters(self, blender_clean_scene) -> None:
         """Verify that joint parameters are correctly stored in the scene config."""
         scene = bpy.context.scene
         lf_scene = safe_get_linkforge_scene(scene)

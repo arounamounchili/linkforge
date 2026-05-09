@@ -112,8 +112,13 @@ git checkout -b feature/your-feature-name
 ### 3. Run Quality Checks
 
 ```bash
-# Run all tests
+# Run all tests (Core + Blender)
 just test
+
+# Run specific tiers
+just test-core           # Fast core logic
+just test-blender-logic  # Mocked platform logic
+just test-blender        # Full Blender integration
 
 # Run linter and type checker
 just check
@@ -155,15 +160,13 @@ git commit -s -m "feat: add your feature description"
 
 ### Running Tests
 
-LinkForge uses a **split-testing architecture** to maintain CI stability:
+LinkForge uses a **Tiered Testing Architecture** to balance speed and fidelity:
 
-```bash
-# 1. Run core tests (Standard Python)
-just test-core
-
-# 2. Run Blender integration tests (Requires Blender)
-just test-blender
-```
+| Tier | Command | Scope |
+|---|---|---|
+| **Core** | `just test-core` | Models, Kinematics, Parsers (Zero-deps) |
+| **Logic** | `just test-blender-logic` | Blender Adapters & Math (Mocked `bpy`) |
+| **Integration** | `just test-blender` | Real Scene Interaction (Real Blender) |
 
 See [Automated Testing](https://linkforge.readthedocs.io/en/latest/reference/testing/automated_testing.html) for our full strategy and coverage metrics.
 
@@ -242,18 +245,20 @@ def test_sensor_roundtrip():
 > [!TIP]
 > **Use Central Fixtures**: Always use the `examples_dir` fixture from `tests/conftest.py` when accessing example URDFs. Avoid hardcoding relative paths like `../../examples`.
 
-### Testing Philosophy ("Real Data over Mocks")
+We follow a **Tiered Mocking Strategy** based on the level of interaction:
 
-We prioritize testing with **real objects and environments** over mocking.
+1.  **Platform Logic Tests** (`unit/platforms/`): **Prefer Mocks**.
+    - For math and transformation logic in adapters, use `unittest.mock` to verify inputs/outputs.
+    - This allows for sub-second developer loops without booting Blender.
 
-1.  **Blender Tests**: Prefer real `bpy` objects and a headless Blender instance.
+2.  **Integration Tests** (`integration/platforms/`): **Prefer Real Data**.
+    - For scene manipulation and UI operators, use a real (headless) Blender instance.
     - Use `bpy.ops.object.empty_add()` to create real objects in your test fixtures.
-    - **Mock only when necessary**: GPU internals (`gpu.shader`, `gpu.matrix`), addon preferences in non-Blender pytest, and I/O error paths.
-    - **Avoid**: Mocking `bpy.types`, Blender data structures, or "dummy" property classes for happy-path tests.
+    - Use the `blender_clean_scene` fixture to ensure environment isolation.
 
-2.  **Core Tests**: Use real data models.
+3.  **Core Tests** (`unit/core/`): **Zero Dependencies**.
     - Instantiate real `Robot`, `Link`, or `Joint` objects.
-    - **Mock only for edge cases**: Missing optional dependencies, filesystem failures, or states that can't be constructed through normal validation.
+    - **Mock only for external edge cases**: Filesystem failures or missing optional dependencies.
 
 ### Debugging in Blender
 

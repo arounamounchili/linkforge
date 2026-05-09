@@ -24,7 +24,7 @@ from tests.blender_test_utils import (
 
 
 class TestConverterRobustness:
-    def test_scene_to_robot_strict_mode(self, mock_context, scene) -> None:
+    def test_scene_to_robot_strict_mode(self, mock_context, scene, blender_context) -> None:
         """Verify that strict_mode=True raises exceptions on conversion errors."""
         scene.linkforge.strict_mode = True
         root = create_test_object("Root", None, scene)
@@ -39,7 +39,7 @@ class TestConverterRobustness:
         ):
             scene_to_robot(mock_context)
 
-    def test_detect_primitive_type_robustness(self, scene) -> None:
+    def test_detect_primitive_type_robustness(self, scene, blender_context) -> None:
         """Test detect_primitive_type with invalid mesh edge cases."""
         # None object
         assert detect_primitive_type(None) is None
@@ -55,7 +55,7 @@ class TestConverterRobustness:
 
 
 class TestJointRobustness:
-    def test_joint_custom_axis_fallback(self, scene) -> None:
+    def test_joint_custom_axis_fallback(self, scene, blender_context) -> None:
         """Test custom axis fallbacks when values are zero."""
         p = create_test_object("Parent", None, scene)
         c = create_test_object("Child", None, scene)

@@ -29,9 +29,7 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 
 from tests.core_test_utils import assert_robots_equal, perform_urdf_roundtrip
 
-# =============================================================================
 # High-Level Example Roundtrips
-# =============================================================================
 
 
 @pytest.mark.parametrize(
@@ -80,9 +78,7 @@ def test_srdf_roundtrip(examples_dir: Path) -> None:
     assert len(srdf1.virtual_joints) == len(srdf2.virtual_joints)
 
 
-# =============================================================================
 # Element-Specific Roundtrips
-# =============================================================================
 
 
 def test_geometry_types_roundtrip() -> None:
@@ -135,7 +131,7 @@ def test_geometry_types_roundtrip() -> None:
         Joint(name="base_to_sphere", type=JointType.FIXED, parent="base", child="sphere_link")
     )
 
-    robot2 = perform_urdf_roundtrip(robot)
+    robot2 = perform_urdf_roundtrip(robot, use_ros2_control=False)
     assert_robots_equal(robot, robot2)
 
 
@@ -176,7 +172,7 @@ def test_joint_types_and_properties_roundtrip() -> None:
         )
     )
 
-    robot2 = perform_urdf_roundtrip(robot)
+    robot2 = perform_urdf_roundtrip(robot, use_ros2_control=False)
     assert_robots_equal(robot, robot2)
 
 
@@ -201,15 +197,13 @@ def test_visual_origin_normalization_roundtrip() -> None:
         Joint(name="j1", type=JointType.FIXED, parent="link_identity", child="link_none")
     )
 
-    robot2 = perform_urdf_roundtrip(robot)
+    robot2 = perform_urdf_roundtrip(robot, use_ros2_control=False)
     # Both should be equivalent to identity
     assert robot2.get_link("link_identity").visuals[0].origin == Transform.identity()
     assert robot2.get_link("link_none").visuals[0].origin == Transform.identity()
 
 
-# =============================================================================
 # Advanced Elements Roundtrips
-# =============================================================================
 
 
 def test_transmission_types_roundtrip() -> None:
@@ -264,7 +258,7 @@ def test_transmission_types_roundtrip() -> None:
         Transmission.create_differential("t2", "j2", "j3", mechanical_reduction=10.0)
     )
 
-    robot2 = perform_urdf_roundtrip(robot)
+    robot2 = perform_urdf_roundtrip(robot, use_ros2_control=False)
     assert_robots_equal(robot, robot2)
 
 
@@ -283,7 +277,7 @@ def test_gazebo_elements_roundtrip() -> None:
         GazeboElement(reference="l1", mu1=0.5, mu2=0.5, kp=1000, kd=10, material="Gazebo/Red")
     )
 
-    robot2 = perform_urdf_roundtrip(robot)
+    robot2 = perform_urdf_roundtrip(robot, use_ros2_control=False)
     assert_robots_equal(robot, robot2)
 
 
