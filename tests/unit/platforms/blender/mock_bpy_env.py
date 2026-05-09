@@ -72,6 +72,19 @@ class MockVector:
     def length(self):
         return math.sqrt(self.x**2 + self.y**2 + self.z**2)
 
+    def rotation_difference(self, other):
+        return MockQuaternion()
+
+
+class MockQuaternion:
+    """Mock for mathutils.Quaternion."""
+
+    def __init__(self, *args):
+        self.w, self.x, self.y, self.z = 1.0, 0.0, 0.0, 0.0
+
+    def to_euler(self, order="XYZ"):
+        return MockEuler(self.x, self.y, self.z, order)
+
 
 class MockEuler:
     """Mock for mathutils.Euler."""
@@ -543,6 +556,7 @@ def setup_mock_bpy():
     mock_mathutils.Vector = MockVector
     mock_mathutils.Matrix = MockMatrix
     mock_mathutils.Euler = MockEuler
+    mock_mathutils.Quaternion = MockQuaternion
 
     mock_extras = DynamicModule("bpy_extras")
     mock_io_utils = DynamicModule("bpy_extras.io_utils")
