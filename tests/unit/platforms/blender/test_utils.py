@@ -11,21 +11,18 @@ from linkforge.blender.utils.decorators import safe_execute
 from linkforge_core.exceptions import RobotModelError
 
 from tests.blender_test_utils import (
+    create_test_object,
     safe_get_joint,
     safe_get_linkforge,
 )
 
-# =============================================================================
 # Name Synchronization and Persistence
-# =============================================================================
 
 
 class TestNameSynchronization:
     def test_link_name_persistence(self, scene, blender_context) -> None:
         """Test that link_name remains synced even if Blender renames the object."""
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "base_link"
-        obj = bpy.context.active_object
+        obj = create_test_object("base_link", None, scene)
         safe_get_linkforge(obj).is_robot_link = True
         safe_get_linkforge(obj).link_name = "base_link"
 
@@ -38,9 +35,7 @@ class TestNameSynchronization:
 
     def test_joint_name_persistence(self, scene, blender_context) -> None:
         """Test that joint_name remains synced even if Blender renames the object."""
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "joint"
-        obj = bpy.context.active_object
+        obj = create_test_object("joint", None, scene)
         safe_get_joint(obj).is_robot_joint = True
         safe_get_joint(obj).joint_name = "joint"
 
@@ -49,16 +44,13 @@ class TestNameSynchronization:
         assert safe_get_joint(obj).joint_name == "joint_002"
 
 
-# =============================================================================
 # Sanitization and Fidelity
-# =============================================================================
 
 
 class TestSanitization:
     def test_filename_sanitization(self, tmp_path, scene, blender_context) -> None:
         """Verify that filename sanitization ensures compatibility."""
-        bpy.ops.mesh.primitive_cube_add()
-        obj = bpy.context.active_object
+        obj = create_test_object("cube_sanitization", None, scene)
 
         p, _ = export_link_mesh(
             obj=obj,
@@ -71,9 +63,7 @@ class TestSanitization:
         assert " " not in p.name
 
 
-# =============================================================================
 # Decorators
-# =============================================================================
 
 
 class TestDecorators:
