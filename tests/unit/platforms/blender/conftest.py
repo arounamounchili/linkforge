@@ -1,14 +1,9 @@
 import os
-import sys
 from unittest.mock import MagicMock
 
 import pytest
 
-# Ensure the local path is in sys.path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
-
+# Relative import from the mock environment package
 from .mock_bpy_env import setup_mock_bpy  # noqa: E402
 
 # -----------------------------------------------------------------------------
@@ -72,15 +67,3 @@ def clean_scene(blender_context):
 
     clear_stats_cache()
     yield
-
-
-@pytest.fixture
-def mock_context(blender_context):
-    """Legacy alias for blender_context."""
-    return blender_context
-
-
-@pytest.fixture
-def mock_blender_context(blender_context):
-    """Legacy alias for blender_context."""
-    return blender_context

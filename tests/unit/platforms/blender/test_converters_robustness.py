@@ -20,7 +20,7 @@ from tests.blender_test_utils import (
 
 
 class TestConverterRobustness:
-    def test_scene_to_robot_strict_mode(self, mock_context, scene, blender_context) -> None:
+    def test_scene_to_robot_strict_mode(self, scene, blender_context) -> None:
         """Verify that strict_mode=True raises exceptions on conversion errors."""
         scene.linkforge.strict_mode = True
         root = create_test_object("Root", None, scene)
@@ -33,7 +33,7 @@ class TestConverterRobustness:
             ),
             pytest.raises(RobotValidationError),
         ):
-            scene_to_robot(mock_context)
+            scene_to_robot(blender_context)
 
     def test_detect_primitive_type_robustness(self, scene, blender_context) -> None:
         """Test detect_primitive_type with invalid mesh edge cases."""
