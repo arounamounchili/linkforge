@@ -14,9 +14,7 @@ from linkforge.blender.operators.link_ops import (
 
 from tests.blender_test_utils import create_robot_link, safe_get_linkforge
 
-# =============================================================================
 # Link Operations
-# =============================================================================
 
 
 class TestLinkOperations:
@@ -27,14 +25,23 @@ class TestLinkOperations:
         assert link_obj.type == "EMPTY"
         assert safe_get_linkforge(link_obj).is_robot_link
 
+    def test_create_collision_no_geometry(self, scene, blender_context) -> None:
+        """Test robustness when creating collision for link with no geometry."""
+        link_obj = create_robot_link("empty_link", scene)
+
+        # No children, no geometry
+        col_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
+        assert link_obj.type == "EMPTY"
+        assert safe_get_linkforge(link_obj).is_robot_link
+
     def test_create_collision_for_link(self, scene, blender_context) -> None:
         """Test generating a primitive collision for a link."""
+        from tests.blender_test_utils import create_test_object
+
         link_obj = create_robot_link("link_with_collision", scene)
 
         # Add visual context for size detection
-        bpy.ops.mesh.primitive_cube_add(size=1.0)
-        vis = bpy.context.active_object
-        vis.name = "link_visual"
+        vis = create_test_object("link_visual", None, scene)
         vis.parent = link_obj
 
         col_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
@@ -44,17 +51,17 @@ class TestLinkOperations:
         assert "collision" in col_obj.name.lower()
 
 
-# =============================================================================
 # Link Properties
-# =============================================================================
 
 
 class TestLinkProperties:
-    def test_link_name_sanitization(self, scene, blender_context) -> None:
-        """Test that link_name property sanitizes input."""
-        bpy.ops.object.empty_add()
-        obj = bpy.context.active_object
-        assert obj is not None
+    def test_link_property_persistence(self, scene, blender_context) -> None:
+        """Test setting and getting link forge properties."""
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_props", None, scene)
+        props = safe_get_linkforge(obj)
+        assert props is not None
         obj.name = "Original Name"
         safe_get_linkforge(obj).is_robot_link = True
 
@@ -67,13 +74,12 @@ class TestLinkProperties:
 
     def test_automatic_child_renaming(self, scene, blender_context) -> None:
         """Test that renaming a link object also renames its children."""
+        from tests.blender_test_utils import create_test_object
 
         link_obj = create_robot_link("base_link", scene)
 
         # Create visual child
-        bpy.ops.mesh.primitive_cube_add()
-        vis_obj = bpy.context.active_object
-        vis_obj.name = "base_link_visual"
+        vis_obj = create_test_object("base_link_visual", None, scene)
         vis_obj.parent = link_obj
 
         # Rename the link
@@ -83,9 +89,7 @@ class TestLinkProperties:
         assert vis_obj.name.startswith("chassis_visual")
 
 
-# =============================================================================
-# Robustness and Edge Cases
-# =============================================================================
+# Link Utilities
 
 
 class TestLinkRobustness:

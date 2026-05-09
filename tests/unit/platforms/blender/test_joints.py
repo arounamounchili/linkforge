@@ -16,9 +16,7 @@ from tests.blender_test_utils import (
     safe_get_linkforge,
 )
 
-# =============================================================================
 # Joint Operations
-# =============================================================================
 
 
 class TestJointOperations:
@@ -32,26 +30,24 @@ class TestJointOperations:
 
     def test_create_joint_with_parent(self, scene, blender_context) -> None:
         """Test creating a joint with a parent link."""
-        bpy.ops.object.select_all(action="DESELECT")
-        bpy.ops.mesh.primitive_cube_add()
-        bpy.context.active_object.name = "parent_link"
-        parent = bpy.context.active_object
+        from tests.blender_test_utils import create_test_object
+
+        parent = create_test_object("parent_link", None, scene)
         safe_get_linkforge(parent).is_robot_link = True
         # structure: Parent -> Joint
         joint_obj = create_robot_joint("child_joint", parent, None, scene)
         assert joint_obj.parent == parent
 
 
-# =============================================================================
 # Joint Properties
-# =============================================================================
 
 
 class TestJointProperties:
     def test_joint_property_defaults(self, scene, blender_context) -> None:
         """Test default values for joint properties."""
-        bpy.ops.object.empty_add()
-        obj = bpy.context.active_object
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_obj", None, scene)
         props = safe_get_joint(obj)
 
         assert not props.is_robot_joint
@@ -62,16 +58,15 @@ class TestJointProperties:
         assert props.limit_upper == pytest.approx(3.14159, abs=1e-3)
 
 
-# =============================================================================
 # Joint Utilities
-# =============================================================================
 
 
 class TestJointUtilities:
     def test_joint_axis_properties(self, scene, blender_context) -> None:
         """Test setting and getting joint axis properties."""
-        bpy.ops.object.empty_add()
-        obj = bpy.context.active_object
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_axis", None, scene)
         props = safe_get_joint(obj)
 
         props.axis = "CUSTOM"
@@ -80,8 +75,12 @@ class TestJointUtilities:
 
     def test_joint_origin_calculation(self, scene, blender_context) -> None:
         """Test joint origin persistence in properties."""
-        bpy.ops.object.empty_add(location=(1, 2, 3))
-        obj = bpy.context.active_object
+        from mathutils import Vector
+
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_origin", None, scene)
+        obj.location = Vector((1.0, 2.0, 3.0))
         # Joint origin is usually the object's local transform relative to parent
         assert obj.location.x == 1.0
 
@@ -89,24 +88,27 @@ class TestJointUtilities:
         """Test joint identification utility."""
         from linkforge.blender.utils.scene_utils import is_robot_joint
 
-        bpy.ops.object.empty_add()
-        obj = bpy.context.active_object
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_is_joint", None, scene)
         assert not is_robot_joint(obj)
 
         safe_get_joint(obj).is_robot_joint = True
         assert is_robot_joint(obj)
 
 
-# =============================================================================
 # Joint Visualization (Gizmos)
-# =============================================================================
 
 
 class TestJointVisualization:
     def test_generate_axis_geometry(self, scene, blender_context) -> None:
         """Test generating geometry for joint axis visualization."""
-        bpy.ops.object.empty_add(location=(1, 2, 3))
-        obj = bpy.context.active_object
+        from mathutils import Vector
+
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_gizmo", None, scene)
+        obj.location = Vector((1.0, 2.0, 3.0))
         props = safe_get_joint(obj)
         props.is_robot_joint = True
         props.axis = "CUSTOM"
@@ -122,8 +124,9 @@ class TestJointVisualization:
 
     def test_fix_existing_joints(self, scene, blender_context) -> None:
         """Test the iteration logic that forces PLAIN_AXES on joints."""
-        bpy.ops.object.empty_add()
-        obj = bpy.context.active_object
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_fix", None, scene)
         safe_get_joint(obj).is_robot_joint = True
         obj.empty_display_type = "CUBE"
 
