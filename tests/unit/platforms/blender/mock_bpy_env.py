@@ -12,9 +12,12 @@ class DynamicModule(types.ModuleType):
     """Module that returns a MagicMock for any missing attribute."""
 
     def __getattr__(self, name):
-        m = MagicMock(name=name)
-        setattr(self, name, m)
-        return m
+        if name not in self.__dict__:
+            self.__dict__[name] = MagicMock(name=name)
+        return self.__dict__[name]
+
+    def __setattr__(self, name, value):
+        self.__dict__[name] = value
 
 
 class MockVector:
@@ -268,6 +271,9 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
 
 class MockCollection(list):
     """Mock for Blender's CollectionProperty items."""
+
+    prop_type = None
+    new = None
 
     def __init__(self, prop_type=None):
         super().__init__()

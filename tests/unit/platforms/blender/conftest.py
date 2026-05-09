@@ -9,7 +9,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-from mock_bpy_env import setup_mock_bpy  # noqa: E402
+from .mock_bpy_env import setup_mock_bpy  # noqa: E402
 
 # -----------------------------------------------------------------------------
 # BPY Mocking (Global)
