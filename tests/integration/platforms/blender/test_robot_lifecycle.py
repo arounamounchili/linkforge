@@ -7,6 +7,7 @@ import pytest
 from linkforge.blender.operators.link_ops import calculate_inertia_for_link
 
 from tests.blender_test_utils import (
+    create_mesh_object,
     create_test_object,
     safe_get_joint,
     safe_get_linkforge,
@@ -25,9 +26,7 @@ class TestPhysicsIntegration:
         link_lf.mass = 1.0
 
         # Add a visual mesh (1m cube)
-        bpy.ops.mesh.primitive_cube_add(size=1.0)
-        vis = bpy.context.active_object
-        vis.name = "link_visual"
+        vis = create_mesh_object("link_visual", scene=scene)
         vis.parent = link_obj
 
         # Calculate
@@ -46,9 +45,8 @@ class TestPhysicsIntegration:
         link_lf.mass = 2.0
 
         # Visual cube offset by 10m on X
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(10, 0, 0))
-        vis = bpy.context.active_object
-        vis.name = "offset_visual"
+        vis = create_mesh_object("offset_visual", scene=scene)
+        vis.location = (10, 0, 0)
         vis.parent = link_obj
 
         success = calculate_inertia_for_link(link_obj)
@@ -73,9 +71,7 @@ class TestJointIntegration:
         safe_get_linkforge(p).is_robot_link = True
         safe_get_linkforge(c).is_robot_link = True
 
-        bpy.ops.object.empty_add()
-        j = bpy.context.active_object
-        j.name = "Joint"
+        j = create_test_object("Joint", None, scene=scene)
         j_props = safe_get_joint(j)
         j_props.is_robot_joint = True
         j_props.parent_link = p
