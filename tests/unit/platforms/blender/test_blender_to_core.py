@@ -109,10 +109,8 @@ def test_detect_primitive_type_sphere(scene, blender_context) -> None:
 def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
     """Verify that a cylinder is detected as CYLINDER."""
     import bpy
-    from linkforge.blender.adapters.blender_to_core import DEFAULT_PRIMITIVE_CONFIG
 
-    # Use Blender's real cylinder with vertex count in the cylinder detection range
-    verts = DEFAULT_PRIMITIVE_CONFIG.cylinder_min_verts
+    # Use Blender's real cylinder (32 vertices matches the cylinder topology detection range)
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.0, depth=3.0)
     obj = bpy.context.active_object
     assert obj is not None

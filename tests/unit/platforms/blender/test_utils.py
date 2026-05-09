@@ -28,12 +28,6 @@ class TestNameSynchronization:
         The name_sync_handler deliberately propagates obj.name → link_name
         so that robot identities stay consistent after Outliner renames.
         """
-        import bpy
-
-        if "sync_link" in bpy.data.objects:
-            bpy.data.objects.remove(bpy.data.objects["sync_link"], do_unlink=True)
-            bpy.data.orphans_purge()
-
         obj = create_test_object("sync_link", None, scene)
         lf = safe_get_linkforge(obj)
         lf.is_robot_link = True
@@ -55,12 +49,6 @@ class TestNameSynchronization:
         The name_sync_handler deliberately propagates obj.name → joint_name
         so that joint identities stay consistent after Outliner renames.
         """
-        import bpy
-
-        if "sync_joint" in bpy.data.objects:
-            bpy.data.objects.remove(bpy.data.objects["sync_joint"], do_unlink=True)
-            bpy.data.orphans_purge()
-
         obj = create_test_object("sync_joint", None, scene)
         jf = safe_get_joint(obj)
         jf.is_robot_joint = True

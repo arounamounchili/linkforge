@@ -1,3 +1,4 @@
+import contextlib
 import os
 from unittest.mock import MagicMock
 
@@ -19,8 +20,6 @@ try:
     is_real_blender = hasattr(bpy, "app") and not isinstance(bpy.app, MagicMock)
 except (ImportError, AttributeError):
     is_real_blender = False
-
-import contextlib
 
 if is_real_blender:
     # Always force registration of linkforge properties to ensure test stability
