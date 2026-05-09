@@ -14,23 +14,6 @@ from linkforge.blender.operators.link_ops import (
 
 from tests.blender_test_utils import create_robot_link, safe_get_linkforge
 
-
-@pytest.fixture(name="scene")
-def scene_fixture(scene):
-    """Ensure a clean scene for each test."""
-    # Nuclear wipe of all data blocks
-    for obj in list(bpy.data.objects):
-        bpy.data.objects.remove(obj, do_unlink=True)
-    for block in list(bpy.data.meshes):
-        bpy.data.meshes.remove(block, do_unlink=True)
-    for block in list(bpy.data.actions):
-        bpy.data.actions.remove(block, do_unlink=True)
-    for coll in list(bpy.data.collections):
-        if coll.name != "Scene Collection":
-            bpy.data.collections.remove(coll)
-    return scene
-
-
 # =============================================================================
 # Link Operations
 # =============================================================================

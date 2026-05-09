@@ -55,20 +55,24 @@ if HAS_BPY:
         - Resets LinkForge-specific global scene properties to default states.
         """
         # Delete all objects in all collections
-        for obj in bpy.data.objects:
+        for obj in list(bpy.data.objects):
             bpy.data.objects.remove(obj, do_unlink=True)
 
         # Delete all mesh data
-        for mesh in bpy.data.meshes:
+        for mesh in list(bpy.data.meshes):
             bpy.data.meshes.remove(mesh, do_unlink=True)
 
         # Delete all materials
-        for mat in bpy.data.materials:
+        for mat in list(bpy.data.materials):
             bpy.data.materials.remove(mat, do_unlink=True)
 
+        # Delete all actions (animations)
+        for action in list(bpy.data.actions):
+            bpy.data.actions.remove(action, do_unlink=True)
+
         # Delete all collections (except master)
-        for col in bpy.data.collections:
-            if col.name != "Collection":
+        for col in list(bpy.data.collections):
+            if col.name not in ["Collection", "Scene Collection"]:
                 bpy.data.collections.remove(col, do_unlink=True)
 
         # Reset Scene properties
