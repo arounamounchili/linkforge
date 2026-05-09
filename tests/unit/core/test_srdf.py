@@ -87,10 +87,15 @@ class TestSRDFGenerator:
         root = ET.fromstring(xml_str)
         assert root.tag == "robot"
         assert root.get("name") == "gen_test"
-        assert root.find("group").get("name") == "hand"
+
+        # Safe element retrieval
+        group_tag = root.find("group")
+        assert group_tag is not None, f"Generated XML missing <group> tag: {xml_str}"
+        assert group_tag.get("name") == "hand"
 
         # Check disable_collisions
         dc = root.find("disable_collisions")
+        assert dc is not None, "Generated XML missing <disable_collisions> tag"
         assert dc.get("link1") == "l1"
         assert dc.get("link2") == "l2"
         assert dc.get("reason") == "adjacent"
