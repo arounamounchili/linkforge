@@ -48,8 +48,16 @@ class TestConverterRobustness:
 class TestJointRobustness:
     def test_joint_custom_axis_fallback(self, scene, blender_context) -> None:
         """Test custom axis fallbacks when values are zero."""
+        from unittest.mock import MagicMock
+
         p = create_test_object("Parent", None, scene)
         c = create_test_object("Child", None, scene)
+
+        # Ensure mocks are fully initialized for Parent/Child
+        for obj in [p, c]:
+            if not hasattr(obj, "linkforge"):
+                obj.linkforge = MagicMock()
+
         safe_get_linkforge(p).is_robot_link = True
         safe_get_linkforge(c).is_robot_link = True
 
@@ -60,8 +68,6 @@ class TestJointRobustness:
 
         # Ensure mock properties exist (defensive for unit tests)
         if not hasattr(j, "linkforge_joint"):
-            from unittest.mock import MagicMock
-
             j.linkforge_joint = MagicMock()
 
         props = safe_get_joint(j)
@@ -75,6 +81,7 @@ class TestJointRobustness:
         props.custom_axis_z = 0.0
 
         core = blender_joint_to_core(j)
+        assert core is not None, "Converter returned None for valid joint"
         assert core.axis.z == 1.0  # Default fallback
 
 
