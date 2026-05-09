@@ -1,7 +1,6 @@
 import math
 import sys
 import types
-from collections import UserList
 from unittest.mock import MagicMock
 
 # -----------------------------------------------------------------------------
@@ -316,26 +315,43 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         return MagicMock(name=key)
 
 
-class MockCollection(UserList):
+class MockCollection:
     """Mock for Blender's CollectionProperty items."""
 
     def __init__(self, prop_type=None):
-        super().__init__()
+        self._items = []
         self.prop_type = prop_type
+        self.new = None
+        self.new_from_object = None
 
     def add(self):
         item = self.prop_type() if self.prop_type else MagicMock()
-        self.append(item)
+        self._items.append(item)
         return item
 
     def remove(self, item, do_unlink=True):
         if isinstance(item, int):
-            self.pop(item)
-        elif item in self:
-            super().remove(item)
+            self._items.pop(item)
+        elif item in self._items:
+            self._items.remove(item)
 
     def clear(self):
-        self.data.clear()
+        self._items.clear()
+
+    def append(self, item):
+        self._items.append(item)
+
+    def __len__(self):
+        return len(self._items)
+
+    def __getitem__(self, i):
+        return self._items[i]
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __contains__(self, item):
+        return item in self._items
 
     @property
     def bl_rna(self):
@@ -344,15 +360,18 @@ class MockCollection(UserList):
     def __getattr__(self, key):
         if key.startswith("_"):
             raise AttributeError(key)
-        return MagicMock(name=key)
+        # Cache the MagicMock on the instance to allow subsequent assignment or access
+        val = MagicMock(name=key)
+        setattr(self, key, val)
+        return val
 
     def link(self, obj):
-        if obj not in self:
-            self.append(obj)
+        if obj not in self._items:
+            self._items.append(obj)
 
     def unlink(self, obj):
-        if obj in self:
-            self.remove(obj)
+        if obj in self._items:
+            self._items.remove(obj)
 
 
 class MockObject(MockPropertyGroup):
@@ -526,7 +545,7 @@ def setup_mock_bpy():
     def mock_empty_add(type_="PLAIN_AXES", location=(0, 0, 0), **kwargs):
         new_empty = MockObject(name="Empty")
         new_empty.type = "EMPTY"
-        new_empty.empty_display_type = type
+        new_empty.empty_display_type = type_
         new_empty.location = MockVector(location)
         mock_data.objects.append(new_empty)
         mock_context.active_object = new_empty
