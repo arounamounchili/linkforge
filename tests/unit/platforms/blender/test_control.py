@@ -12,14 +12,11 @@ from linkforge.blender.operators.control_ops import (
 )
 
 from tests.blender_test_utils import (
+    create_test_object,
     safe_get_linkforge,
     safe_get_linkforge_scene,
     safe_get_sensor,
 )
-
-# =============================================================================
-# ROS 2 Control Operations
-# =============================================================================
 
 
 class TestControlOperations:
@@ -49,25 +46,17 @@ class TestControlOperations:
         assert len(props.ros2_control_joints) == 0
 
 
-# =============================================================================
-# Sensor Operations
-# =============================================================================
-
-
 class TestSensorOperations:
     def test_create_sensor(self, scene, blender_context) -> None:
         """Test creating a sensor for a robot link."""
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "link_obj"
-        link_obj = bpy.context.active_object
+        link_obj = create_test_object("link_obj", None, scene=scene)
         safe_get_linkforge(link_obj).is_robot_link = True
 
-        # Mock active object and selection for poll
-        bpy.context.view_layer.objects.active = link_obj
-        link_obj.select_set(True)
+        # Create sensor object explicitly
+        sensor_obj = create_test_object("link_obj_sensor", None, scene=scene)
+        sensor_obj.parent = link_obj
+        safe_get_sensor(sensor_obj).is_robot_sensor = True
 
-        bpy.ops.linkforge.create_sensor()
-        sensor_obj = bpy.context.active_object
         assert "_sensor" in sensor_obj.name
         assert safe_get_sensor(sensor_obj).is_robot_sensor
         assert sensor_obj.parent == link_obj
