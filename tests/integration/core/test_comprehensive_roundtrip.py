@@ -58,6 +58,7 @@ def test_srdf_roundtrip(examples_dir: Path) -> None:
     # Note: Using perform_urdf_roundtrip for SRDF is a bit of a stretch if it only handles URDF
     # But linkforge_core handles SRDF too. Let's assume we have a similar helper or just do it here.
     from linkforge_core.generators.srdf_generator import SRDFGenerator
+    from linkforge_core.models.robot import Robot
     from linkforge_core.parsers.srdf_parser import SRDFParser
 
     srdf_path = examples_dir / "srdf" / "panda.srdf"
@@ -67,13 +68,16 @@ def test_srdf_roundtrip(examples_dir: Path) -> None:
     parser = SRDFParser()
     srdf1 = parser.parse(srdf_path)
 
+    # Wrap in a Robot container as SRDFGenerator expects a Robot IR model
+    robot = Robot(name=srdf1.robot_name or "panda", initial_semantic=srdf1)
+
     generator = SRDFGenerator()
-    xml_output = generator.generate(srdf1)
+    xml_output = generator.generate(robot)
 
     srdf2 = parser.parse_string(xml_output)
 
     # Simple comparison for now as assert_robots_equal might not handle SRDFModels directly
-    assert srdf1.name == srdf2.name
+    assert srdf1.robot_name == srdf2.robot_name
     assert len(srdf1.groups) == len(srdf2.groups)
     assert len(srdf1.virtual_joints) == len(srdf2.virtual_joints)
 
@@ -199,8 +203,8 @@ def test_visual_origin_normalization_roundtrip() -> None:
 
     robot2 = perform_urdf_roundtrip(robot, use_ros2_control=False)
     # Both should be equivalent to identity
-    assert robot2.get_link("link_identity").visuals[0].origin == Transform.identity()
-    assert robot2.get_link("link_none").visuals[0].origin == Transform.identity()
+    assert robot2.link("link_identity").visuals[0].origin == Transform.identity()
+    assert robot2.link("link_none").visuals[0].origin == Transform.identity()
 
 
 # Advanced Elements Roundtrips

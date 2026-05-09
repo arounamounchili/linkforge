@@ -58,7 +58,7 @@ def test_non_origin_base_link() -> None:
         )
     )
     robot = builder.build()
-    assert robot.get_link("base_link").visuals[0].origin.xyz.x == 10.0
+    assert robot.link("base_link").visuals[0].origin.xyz.x == 10.0
 
 
 def test_multi_visual_collision_building() -> None:
@@ -83,7 +83,7 @@ def test_multi_visual_collision_building() -> None:
     )
 
     robot = builder.build()
-    complex_link = robot.get_link("complex_link")
+    complex_link = robot.link("complex_link")
     assert len(complex_link.visuals) == 3
     assert len(complex_link.collisions) == 3
 
