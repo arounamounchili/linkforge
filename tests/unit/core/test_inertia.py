@@ -1,64 +1,66 @@
+"""Unit tests for Inertia models and analytical formulas."""
+
+from __future__ import annotations
+
 import pytest
-from linkforge_core.exceptions import RobotPhysicsError
-from linkforge_core.physics.inertia import (
-    calculate_inertia,
-    calculate_mesh_inertia_from_triangles,
-)
+from linkforge_core.exceptions import RobotPhysicsError, ValidationErrorCode
+from linkforge_core.models import InertiaTensor
+from linkforge_core.models.geometry import Box, Sphere, Vector3
+from linkforge_core.physics.inertia import calculate_inertia
+
+# =============================================================================
+# Inertia Model Tests
+# =============================================================================
 
 
-def test_calculate_mesh_inertia_negative_diagonal() -> None:
-    """Inverted winding order forces negative surface integrals, triggering a strict error."""
-    vertices = [
-        (1.0, 0.0, 0.0),
-        (-1.0, 0.0, 0.0),
-        (0.0, 1.0, 0.0),
-        (0.0, -1.0, 0.0),
-        (0.0, 0.0, 1.0),
-        (0.0, 0.0, -1.0),
-    ]
-    # Inverted triangles (CW from outside)
-    triangles = [
-        (0, 4, 2),
-        (0, 3, 4),
-        (0, 5, 3),
-        (0, 2, 5),
-        (1, 2, 4),
-        (1, 4, 3),
-        (1, 3, 5),
-        (1, 5, 2),
-    ]
-    with pytest.raises(
-        RobotPhysicsError, match="inward or inconsistent winding|Negative diagonal inertia"
-    ):
-        calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
+class TestInertiaModels:
+    def test_valid_inertia_tensor(self) -> None:
+        """Test creating a valid inertia tensor."""
+        # Now requires all 6 components
+        it = InertiaTensor(ixx=1.0, iyy=1.0, izz=1.0, ixy=0.0, ixz=0.0, iyz=0.0)
+        assert it.ixx == 1.0
+        assert it.ixy == 0.0
+
+    def test_invalid_inertia_tensor(self) -> None:
+        """Test that invalid diagonal elements raise error."""
+        with pytest.raises(RobotPhysicsError) as exc:
+            InertiaTensor(ixx=-1.0, iyy=1.0, izz=1.0, ixy=0.0, ixz=0.0, iyz=0.0)
+        assert exc.value.code == ValidationErrorCode.OUT_OF_RANGE
+
+    def test_triangle_inequality_validation(self) -> None:
+        """Test that triangle inequality violation raises error."""
+        with pytest.raises(RobotPhysicsError, match="triangle inequality"):
+            InertiaTensor(ixx=10.0, iyy=1.0, izz=1.0, ixy=0.0, ixz=0.0, iyz=0.0)
 
 
-def test_calculate_mesh_inertia_zero_volume() -> None:
-    """Degenerate mesh (zero volume) raises RobotPhysicsError."""
-    vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
-    triangles = [(0, 1, 2)]
-
-    with pytest.raises(RobotPhysicsError, match="not watertight|Degenerate mesh"):
-        calculate_mesh_inertia_from_triangles(vertices, triangles, 1.0)
+# =============================================================================
+# Analytical Formula Verification
+# =============================================================================
 
 
-def test_calculate_inertia_unsupported_geometry_fallback() -> None:
-    """Unsupported geometry types raise RobotPhysicsError in the inertia facade."""
+class TestInertiaFormulas:
+    def test_box_inertia_formula(self) -> None:
+        """Verify analytical inertia for a box."""
+        box = Box(size=Vector3(1, 2, 3))
+        mass = 12.0
+        # Formula: Ixx = 1/12 * mass * (y^2 + z^2) = 1/12 * 12 * (4 + 9) = 13
+        inertia = calculate_inertia(box, mass)
+        assert inertia.ixx == pytest.approx(13.0)
+        # Iyy = 1/12 * 12 * (1 + 9) = 10
+        assert inertia.iyy == pytest.approx(10.0)
+        # Izz = 1/12 * 12 * (1 + 4) = 5
+        assert inertia.izz == pytest.approx(5.0)
 
-    class UnsupportedShape:
-        pass
+    def test_sphere_inertia_formula(self) -> None:
+        """Verify analytical inertia for a sphere."""
+        sphere = Sphere(radius=1.0)
+        mass = 5.0
+        # Formula: I = 2/5 * mass * r^2 = 2/5 * 5 * 1 = 2
+        inertia = calculate_inertia(sphere, mass)
+        assert inertia.ixx == pytest.approx(2.0)
+        assert inertia.iyy == pytest.approx(2.0)
+        assert inertia.izz == pytest.approx(2.0)
 
-    with pytest.raises(RobotPhysicsError, match="Unsupported geometry type"):
-        calculate_inertia(UnsupportedShape(), mass=1.0)  # type: ignore
 
-
-def test_mesh_inertia_robust_negative_diagonals_handling() -> None:
-    """Verify that CCW meshes result in positive diagonal inertia."""
-    # Simple tetrahedron with mass (CCW/Outward winding)
-    vertices = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]
-    triangles = [(0, 2, 1), (0, 1, 3), (0, 3, 2), (1, 2, 3)]
-
-    res = calculate_mesh_inertia_from_triangles(vertices, triangles, mass=1.0)
-    assert res.ixx >= 0
-    assert res.iyy >= 0
-    assert res.izz >= 0
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

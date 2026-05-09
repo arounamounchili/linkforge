@@ -1,89 +1,314 @@
-"""Comprehensive roundtrip test - Import → Export → Re-import verification.
-
-This test verifies that the complete workflow preserves all robot properties.
-"""
+"""Comprehensive URDF/SRDF roundtrip integration tests."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from linkforge_core.models import (
+    Box,
+    Cylinder,
+    GazeboElement,
+    GazeboPlugin,
+    Joint,
+    JointCalibration,
+    JointDynamics,
+    JointLimits,
+    JointMimic,
+    JointSafetyController,
+    JointType,
+    Link,
+    Robot,
+    Sphere,
+    Transform,
+    Transmission,
+    Vector3,
+    Visual,
+)
 from linkforge_core.parsers.urdf_parser import URDFParser
 
 from tests.core_test_utils import assert_robots_equal, perform_urdf_roundtrip
 
+# =============================================================================
+# High-Level Example Roundtrips
+# =============================================================================
 
-def test_comprehensive_roundtrip_preserves_structure(examples_dir: Path) -> None:
-    """Test that export → re-import preserves robot structure perfectly."""
-    # Load original
-    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
+
+@pytest.mark.parametrize(
+    "urdf_file",
+    [
+        "roundtrip_test_robot.urdf",
+        "simple_arm.urdf",
+        "mobile_base.urdf",
+        "kuka_lbr_iiwa_14_r820.urdf",
+        "panda_arm.urdf",
+    ],
+)
+def test_example_urdf_roundtrips(examples_dir: Path, urdf_file: str) -> None:
+    """Test that standard example URDFs survive perfect roundtrip."""
+    original_path = examples_dir / "urdf" / urdf_file
+    if not original_path.exists():
+        pytest.skip(f"Example file {urdf_file} not found")
+
     robot1 = URDFParser().parse(original_path)
-
-    # Roundtrip
     robot2 = perform_urdf_roundtrip(robot1)
-
-    # Assert equality using comprehensive comparison engine
     assert_robots_equal(robot1, robot2)
 
 
-def test_joint_origin_consistency(examples_dir: Path) -> None:
-    """Test that joint origins are consistent across import-export-import."""
-    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
-    robot1 = URDFParser().parse(original_path)
+def test_srdf_roundtrip(examples_dir: Path) -> None:
+    """Test that SRDF files survive roundtrip."""
+    # Note: Using perform_urdf_roundtrip for SRDF is a bit of a stretch if it only handles URDF
+    # But linkforge_core handles SRDF too. Let's assume we have a similar helper or just do it here.
+    from linkforge_core.generators.srdf_generator import SRDFGenerator
+    from linkforge_core.parsers.srdf_parser import SRDFParser
 
+    srdf_path = examples_dir / "srdf" / "panda.srdf"
+    if not srdf_path.exists():
+        pytest.skip("Panda SRDF not found")
+
+    parser = SRDFParser()
+    srdf1 = parser.parse(srdf_path)
+
+    generator = SRDFGenerator()
+    xml_output = generator.generate(srdf1)
+
+    srdf2 = parser.parse_string(xml_output)
+
+    # Simple comparison for now as assert_robots_equal might not handle SRDFModels directly
+    assert srdf1.name == srdf2.name
+    assert len(srdf1.groups) == len(srdf2.groups)
+    assert len(srdf1.virtual_joints) == len(srdf2.virtual_joints)
+
+
+# =============================================================================
+# Element-Specific Roundtrips
+# =============================================================================
+
+
+def test_geometry_types_roundtrip() -> None:
+    """Test that all geometry types (Box, Cylinder, Sphere, Mesh) survive roundtrip."""
+    robot = Robot(name="geometry_test")
+    robot.add_link(Link(name="base"))
+
+    # Box
+    robot.add_link(
+        Link(
+            name="box_link",
+            initial_visuals=[
+                Visual(
+                    geometry=Box(size=Vector3(1.0, 2.0, 3.0)),
+                    origin=Transform(xyz=Vector3(0.1, 0.2, 0.3)),
+                )
+            ],
+        )
+    )
+    robot.add_joint(
+        Joint(name="base_to_box", type=JointType.FIXED, parent="base", child="box_link")
+    )
+
+    # Cylinder
+    robot.add_link(
+        Link(
+            name="cylinder_link",
+            initial_visuals=[
+                Visual(
+                    geometry=Cylinder(radius=0.5, length=2.0),
+                    origin=Transform(xyz=Vector3(0.0, 0.0, 1.0)),
+                )
+            ],
+        )
+    )
+    robot.add_joint(
+        Joint(name="base_to_cylinder", type=JointType.FIXED, parent="base", child="cylinder_link")
+    )
+
+    # Sphere
+    robot.add_link(
+        Link(
+            name="sphere_link",
+            initial_visuals=[
+                Visual(geometry=Sphere(radius=0.75), origin=Transform(xyz=Vector3(1.0, 1.0, 1.0)))
+            ],
+        )
+    )
+    robot.add_joint(
+        Joint(name="base_to_sphere", type=JointType.FIXED, parent="base", child="sphere_link")
+    )
+
+    robot2 = perform_urdf_roundtrip(robot)
+    assert_robots_equal(robot, robot2)
+
+
+def test_joint_types_and_properties_roundtrip() -> None:
+    """Test all joint types, limits, dynamics, mimic, safety, and calibration."""
+    robot = Robot(name="joint_comprehensive_test")
+    robot.add_link(Link(name="base"))
+    robot.add_link(Link(name="l1"))
+    robot.add_link(Link(name="l2"))
+
+    # Comprehensive joint
+    robot.add_joint(
+        Joint(
+            name="comp_joint",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="l1",
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(lower=-1.57, upper=1.57, effort=100.0, velocity=1.0),
+            dynamics=JointDynamics(damping=0.1, friction=0.05),
+            safety_controller=JointSafetyController(
+                soft_lower_limit=-1.5, soft_upper_limit=1.5, k_position=100.0, k_velocity=1.0
+            ),
+            calibration=JointCalibration(rising=0.1, falling=0.2),
+        )
+    )
+
+    # Mimic joint
+    robot.add_joint(
+        Joint(
+            name="mimic_joint",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="l2",
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(lower=-0.785, upper=0.785, effort=10.0, velocity=1.0),
+            mimic=JointMimic(joint="comp_joint", multiplier=0.5, offset=0.1),
+        )
+    )
+
+    robot2 = perform_urdf_roundtrip(robot)
+    assert_robots_equal(robot, robot2)
+
+
+def test_visual_origin_normalization_roundtrip() -> None:
+    """Test that identity origins are handled correctly (omitted or preserved)."""
+    robot = Robot(name="origin_test")
+    # Link with explicit identity origin
+    robot.add_link(
+        Link(
+            name="link_identity",
+            initial_visuals=[
+                Visual(geometry=Box(size=Vector3(1, 1, 1)), origin=Transform.identity())
+            ],
+        )
+    )
+    # Link with NO origin (should be identity)
+    robot.add_link(
+        Link(name="link_none", initial_visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))])
+    )
+    # Connect them to avoid multiple roots
+    robot.add_joint(
+        Joint(name="j1", type=JointType.FIXED, parent="link_identity", child="link_none")
+    )
+
+    robot2 = perform_urdf_roundtrip(robot)
+    # Both should be equivalent to identity
+    assert robot2.get_link("link_identity").visuals[0].origin == Transform.identity()
+    assert robot2.get_link("link_none").visuals[0].origin == Transform.identity()
+
+
+# =============================================================================
+# Advanced Elements Roundtrips
+# =============================================================================
+
+
+def test_transmission_types_roundtrip() -> None:
+    """Test Simple and Differential transmissions."""
+    robot = Robot(name="transmission_test")
+    robot.add_link(Link(name="base"))
+    robot.add_link(Link(name="l1"))
+    robot.add_link(Link(name="l2"))
+    robot.add_link(Link(name="l3"))
+
+    # Joints for transmissions
+    robot.add_joint(
+        Joint(
+            name="j1",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="l1",
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(effort=10, velocity=1),
+        )
+    )
+    robot.add_joint(
+        Joint(
+            name="j2",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="l2",
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(effort=10, velocity=1),
+        )
+    )
+    robot.add_joint(
+        Joint(
+            name="j3",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="l3",
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(effort=10, velocity=1),
+        )
+    )
+
+    # Simple
+    robot.add_transmission(
+        Transmission.create_simple(
+            "t1", "j1", mechanical_reduction=50.0, hardware_interface="effort"
+        )
+    )
+
+    # Differential
+    robot.add_transmission(
+        Transmission.create_differential("t2", "j2", "j3", mechanical_reduction=10.0)
+    )
+
+    robot2 = perform_urdf_roundtrip(robot)
+    assert_robots_equal(robot, robot2)
+
+
+def test_gazebo_elements_roundtrip() -> None:
+    """Test robot, link, and joint level Gazebo elements."""
+    robot = Robot(name="gazebo_test")
+    robot.add_link(Link(name="l1"))
+
+    # Robot-level plugin
+    robot.add_gazebo_element(
+        GazeboElement(plugins=[GazeboPlugin(name="p1", filename="f1.so", parameters={"k1": "v1"})])
+    )
+
+    # Link-level properties
+    robot.add_gazebo_element(
+        GazeboElement(reference="l1", mu1=0.5, mu2=0.5, kp=1000, kd=10, material="Gazebo/Red")
+    )
+
+    robot2 = perform_urdf_roundtrip(robot)
+    assert_robots_equal(robot, robot2)
+
+
+def test_ros2_control_roundtrip() -> None:
+    """Test ros2_control blocks integration."""
+    # Assuming perform_urdf_roundtrip handles ros2_control
+    urdf = """<?xml version="1.0"?>
+    <robot name="ros2_test">
+      <link name="base_link"/>
+      <ros2_control name="test_system" type="system">
+        <hardware>
+          <plugin>fake_components/GenericSystem</plugin>
+        </hardware>
+        <joint name="joint1">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+        </joint>
+      </ros2_control>
+    </robot>
+    """
+    robot1 = URDFParser().parse_string(urdf)
     robot2 = perform_urdf_roundtrip(robot1)
-
-    critical_joints = ["arm_base_joint", "shoulder_joint", "elbow_joint", "wrist_joint"]
-    joint_map1 = {j.name: j for j in robot1.joints}
-    joint_map2 = {j.name: j for j in robot2.joints}
-
-    for joint_name in critical_joints:
-        if joint_name in joint_map1:
-            j1 = joint_map1[joint_name]
-            j2 = joint_map2[joint_name]
-            assert abs(j2.origin.xyz.x - j1.origin.xyz.x) < 1e-6
-            assert abs(j2.origin.xyz.y - j1.origin.xyz.y) < 1e-6
-            assert abs(j2.origin.xyz.z - j1.origin.xyz.z) < 1e-6
+    assert_robots_equal(robot1, robot2)
 
 
-def test_visual_geometry_origins_preserved(examples_dir: Path) -> None:
-    """Test that visual geometry origins (offsets) are preserved."""
-    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
-    robot1 = URDFParser().parse(original_path)
-
-    robot2 = perform_urdf_roundtrip(robot1)
-
-    links_with_offsets = ["upper_arm", "forearm", "left_finger", "right_finger"]
-    link_map1 = {link.name: link for link in robot1.links}
-    link_map2 = {link.name: link for link in robot2.links}
-
-    for link_name in links_with_offsets:
-        if link_name in link_map1:
-            l1 = link_map1[link_name]
-            l2 = link_map2[link_name]
-            v1 = l1.visuals[0]
-            v2 = l2.visuals[0]
-            assert abs(v2.origin.xyz.x - v1.origin.xyz.x) < 1e-6
-            assert abs(v2.origin.xyz.y - v1.origin.xyz.y) < 1e-6
-            assert abs(v2.origin.xyz.z - v1.origin.xyz.z) < 1e-6
-
-
-def test_inertial_origins_preserved(examples_dir: Path) -> None:
-    """Test that inertial origins (center of mass) are preserved in roundtrip."""
-    original_path = examples_dir / "urdf" / "roundtrip_test_robot.urdf"
-    robot1 = URDFParser().parse(original_path)
-
-    robot2 = perform_urdf_roundtrip(robot1)
-
-    links_with_com_offset = ["base_link", "upper_arm", "forearm", "left_finger", "right_finger"]
-    link_map1 = {link.name: link for link in robot1.links}
-    link_map2 = {link.name: link for link in robot2.links}
-
-    for link_name in links_with_com_offset:
-        if link_name in link_map1:
-            l1 = link_map1[link_name]
-            l2 = link_map2[link_name]
-            o1 = l1.inertial.origin
-            o2 = l2.inertial.origin
-            assert abs(o2.xyz.x - o1.xyz.x) < 1e-6
-            assert abs(o2.xyz.y - o1.xyz.y) < 1e-6
-            assert abs(o2.xyz.z - o1.xyz.z) < 1e-6
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

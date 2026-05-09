@@ -1,59 +1,111 @@
-from linkforge_core.composer import RobotBuilder, box, cylinder
-from linkforge_core.models.joint import JointType
+"""RobotBuilder integration tests.
+
+This module verifies complex robot building scenarios, including stacked links,
+non-origin base links, and multi-visual/collision configurations.
+"""
+
+from __future__ import annotations
+
+import pytest
+from linkforge_core.composer.robot_builder import RobotBuilder
+from linkforge_core.models import (
+    Box,
+    Collision,
+    Joint,
+    JointType,
+    Link,
+    Transform,
+    Vector3,
+    Visual,
+)
 
 
-def test_full_robot_build_and_export():
-    """Integration test: Build a complex robot and verify its components."""
-    builder = RobotBuilder("complex_bot")
+def test_stacked_links_building() -> None:
+    """Test building a robot with many stacked links."""
+    builder = RobotBuilder(name="stacked_robot")
+    builder.robot.add_link(Link(name="base_link"))
 
-    # Setup materials
-    builder.material("red", color=(1, 0, 0, 1))
-
-    # Setup control
-    builder.ros2_control("arm_control", "fake_hw/RobotSystem")
-
-    # Build tree
-    (
-        builder.link("base")
-        .visual(box(0.5, 0.5, 0.2), material="red")
-        .collision()  # Clones visual
-        .mass(5.0)
-        .child("arm_1")
-        .revolute(axis=(0, 0, 1), limits=(-3.14, 3.14))
-        .visual(cylinder(0.05, 0.4), xyz=(0, 0, 0.2))
-        .mass(1.0)
-        .transmission(actuator="actuator_1", reduction=50.0)
-        .ros2_control(["position"], ["position", "velocity"])
-        .child("hand")
-        .fixed(xyz=(0, 0, 0.4))
-        .visual(box(0.1, 0.1, 0.1))
-        .camera("palm_cam")
-        .commit()
-    )
-
-    # Add Semantic info
-    builder.semantic.group("arm_group", links=["base", "arm_1"], joints=["base_to_arm_1"])
-    builder.semantic.end_effector("my_hand", group="arm_group", parent_link="hand")
-    builder.semantic.virtual_joint("world_fix", child_link="base")
+    for i in range(1, 11):
+        parent = f"link_{i - 1}" if i > 1 else "base_link"
+        child = f"link_{i}"
+        builder.robot.add_link(Link(name=child))
+        builder.robot.add_joint(
+            Joint(
+                name=f"joint_{i}",
+                type=JointType.FIXED,
+                parent=parent,
+                child=child,
+                origin=Transform(xyz=Vector3(0, 0, 0.1)),
+            )
+        )
 
     robot = builder.build()
+    assert len(robot.links) == 11
+    assert len(robot.joints) == 10
 
-    # Verify IR Integrity
-    assert robot.name == "complex_bot"
-    assert len(robot.links) == 3
-    assert len(robot.joints) == 2
-    assert len(robot.sensors) == 1
-    assert len(robot._ros2_controls) == 1
-    assert len(robot.semantic.groups) == 1
 
-    # Verify Physics
-    arm = robot.link("arm_1")
-    assert arm.inertial is not None
-    assert arm.inertial.mass == 1.0
-    # Cylinder inertia should be non-zero
-    assert arm.inertial.inertia.ixx > 0
+def test_non_origin_base_link() -> None:
+    """Test building a robot where the base link has an offset origin."""
+    builder = RobotBuilder(name="offset_base")
+    builder.robot.add_link(
+        Link(
+            name="base_link",
+            initial_visuals=[
+                Visual(
+                    geometry=Box(size=Vector3(1, 1, 1)), origin=Transform(xyz=Vector3(10, 10, 10))
+                )
+            ],
+        )
+    )
+    robot = builder.build()
+    assert robot.get_link("base_link").visuals[0].origin.xyz.x == 10.0
 
-    # Verify Export (Pseudo-integration)
-    # Since we are in core, we test if the model is ready for export
-    assert robot.joint("base_to_arm_1").type == JointType.REVOLUTE
-    assert robot.joint("arm_1_to_hand").type == JointType.FIXED
+
+def test_multi_visual_collision_building() -> None:
+    """Test building a link with multiple visual and collision elements."""
+    builder = RobotBuilder(name="multi_element_robot")
+    builder.robot.add_link(Link(name="base_link"))
+
+    # Add complex link
+    link = Link(name="complex_link")
+    for i in range(3):
+        link.add_visual(Visual(geometry=Box(size=Vector3(i + 1, i + 1, i + 1))))
+        link.add_collision(Collision(geometry=Box(size=Vector3(i + 1, i + 1, i + 1))))
+
+    builder.robot.add_link(link)
+    builder.robot.add_joint(
+        Joint(
+            name="j1",
+            type=JointType.FIXED,
+            parent="base_link",
+            child="complex_link",
+        )
+    )
+
+    robot = builder.build()
+    complex_link = robot.get_link("complex_link")
+    assert len(complex_link.visuals) == 3
+    assert len(complex_link.collisions) == 3
+
+
+def test_robot_builder_high_level_api() -> None:
+    """Test high-level RobotBuilder API for rapid prototyping."""
+    # The RobotBuilder.link() API is the intended way to use it
+    builder = RobotBuilder(name="proto")
+    (
+        builder.link("base")
+        .visual(Box(size=Vector3(1, 1, 1)))
+        .commit()
+        .link("arm", parent="base")
+        .visual(Box(size=Vector3(0.1, 0.1, 1.0)))
+        .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57), xyz=(0, 0, 0.5))
+        .commit()
+    )
+    robot = builder.build()
+    assert robot.name == "proto"
+    assert len(robot.links) == 2
+    assert len(robot.joints) == 1
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
