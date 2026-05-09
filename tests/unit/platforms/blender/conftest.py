@@ -77,6 +77,12 @@ if not is_real_blender:
 
         def __getattr__(self, name):
             # Fallback for attributes not explicitly defined
+            # If it's a known vector-like attribute, return a vector-like mock
+            if name in ["location", "rotation_euler", "scale", "dimensions"]:
+                m = MagicMock(name=name)
+                m.x = m.y = m.z = 0.0
+                m.__getitem__ = lambda s, i: 0.0
+                return m
             return MagicMock(name=name)
 
     class MockCollection(BlenderBase):
@@ -202,10 +208,38 @@ if not is_real_blender:
 
     # Mock mathutils
     mock_mathutils = MagicMock()
-    mock_mathutils.Vector = MagicMock()
-    mock_mathutils.Matrix = MagicMock()
+
+    def mock_vector(v=(0.0, 0.0, 0.0)):
+        m = MagicMock(spec=["x", "y", "z", "length"])
+        m.x, m.y, m.z = v
+        m.__getitem__ = lambda s, i: v[i]
+        m.__iter__ = lambda s: iter(v)
+        m.length = sum(x**2 for x in v) ** 0.5
+        return m
+
+    mock_mathutils.Vector = mock_vector
+
+    def mock_matrix_translation(v):
+        m = MagicMock()
+        m.to_translation.return_value = mock_vector(v)
+        m.to_euler.return_value = mock_vector((0.0, 0.0, 0.0))
+        return m
+
+    mock_mathutils.Matrix.Translation = mock_matrix_translation
+    mock_mathutils.Matrix.Identity = lambda n: mock_matrix_translation((0.0, 0.0, 0.0))
+    mock_mathutils.Matrix.Rotation = lambda a, n, axis: mock_matrix_translation((0.0, 0.0, 0.0))
+
     mock_mathutils.Quaternion = MagicMock()
     mock_mathutils.Euler = MagicMock()
+
+    def mock_euler(v, order="XYZ"):
+        m = mock_vector(v)
+        m.to_matrix = lambda: MagicMock()
+        m.to_matrix().to_4x4 = lambda: mock_matrix_translation((0.0, 0.0, 0.0))
+        return m
+
+    mock_mathutils.Euler.side_effect = mock_euler
+
     sys.modules["mathutils"] = mock_mathutils
 
     # Mock bpy_extras
