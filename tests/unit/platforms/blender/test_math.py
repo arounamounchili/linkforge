@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import bpy
 import pytest
 from linkforge.blender.utils.transform_utils import (
     clear_parent_keep_transform,
@@ -11,9 +10,7 @@ from linkforge.blender.utils.transform_utils import (
 
 from tests.blender_test_utils import create_test_object
 
-# =============================================================================
 # Transform Utilities
-# =============================================================================
 
 
 class TestTransformUtilities:
@@ -49,16 +46,15 @@ class TestTransformUtilities:
         assert child_obj.matrix_world.translation.x == pytest.approx(original_world_loc.x, abs=1e-4)
 
 
-# =============================================================================
 # Rotation Normalization
-# =============================================================================
 
 
 class TestRotationNormalization:
     def test_rotation_mode_normalization(self, scene, blender_context) -> None:
         """Verify that adding a new link frame forces XYZ rotation mode."""
-        bpy.ops.linkforge.add_empty_link()
-        obj = bpy.context.active_object
+        from tests.blender_test_utils import create_robot_link
+
+        obj = create_robot_link("test_rotation_link", scene)
         assert obj is not None
         assert obj.rotation_mode == "XYZ"
 
