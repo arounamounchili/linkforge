@@ -18,10 +18,6 @@ from tests.blender_test_utils import (
     safe_get_linkforge,
 )
 
-# =============================================================================
-# Conversion Robustness
-# =============================================================================
-
 
 class TestConverterRobustness:
     def test_scene_to_robot_strict_mode(self, mock_context, scene, blender_context) -> None:
@@ -49,11 +45,6 @@ class TestConverterRobustness:
         assert detect_primitive_type(empty) is None
 
 
-# =============================================================================
-# Joint Conversion Edge Cases
-# =============================================================================
-
-
 class TestJointRobustness:
     def test_joint_custom_axis_fallback(self, scene, blender_context) -> None:
         """Test custom axis fallbacks when values are zero."""
@@ -63,6 +54,10 @@ class TestJointRobustness:
         safe_get_linkforge(c).is_robot_link = True
 
         j = create_test_object("Joint", None, scene)
+        # Establish hierarchy for converter
+        j.parent = p
+        c.parent = j
+
         props = safe_get_joint(j)
         props.is_robot_joint = True
         props.parent_link = p
