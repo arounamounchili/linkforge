@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import bpy
 import pytest
 
 from tests.blender_test_utils import (
@@ -20,11 +19,16 @@ class TestTransmissionOperations:
         safe_get_joint(j).is_robot_joint = True
 
         # Ensure active and selected
-        bpy.context.view_layer.objects.active = j
+        # Use the adapter to manage state (works in both mock and real Blender)
+        blender_context.view_layer.objects.active = j
         j.select_set(True)
 
-        bpy.ops.linkforge.create_transmission()
-        trans = bpy.context.active_object
+        # Execute logic directly
+        from linkforge.blender.operators.transmission_ops import create_transmission_for_joint
+
+        create_transmission_for_joint(j, blender_context)
+
+        trans = blender_context.get_active_object()
         assert trans is not None
         assert trans.name == f"{j.name}_trans"
         assert trans.parent == j
@@ -41,11 +45,16 @@ class TestTransmissionOperations:
         trans = create_test_object("Trans", None, scene)
         safe_get_transmission(trans).is_robot_transmission = True
 
+        # Use the adapter to manage state
+        blender_context.view_layer.objects.active = trans
         trans.select_set(True)
-        bpy.context.view_layer.objects.active = trans
 
-        bpy.ops.linkforge.delete_transmission()
-        assert "Trans" not in bpy.data.objects
+        # Execute logic directly
+        from linkforge.blender.operators.transmission_ops import delete_transmission_for_object
+
+        delete_transmission_for_object(trans, blender_context)
+
+        assert trans.name not in [o.name for o in blender_context.data.objects]
 
 
 # Transmission Hierarchy and Logic
@@ -78,18 +87,14 @@ class TestTransmissionLogic:
         """Test filtering for robot joint objects in UI polls."""
         from linkforge.blender.properties.transmission_props import poll_robot_joint
 
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "j_obj"
-        j_obj = bpy.context.active_object
+        j_obj = create_test_object("j_obj", None, scene)
         safe_get_joint(j_obj).is_robot_joint = True
+        blender_context.view_layer.objects.active = j_obj
 
-        bpy.ops.mesh.primitive_cube_add()
-        bpy.context.active_object.name = "n_obj"
-        n_obj = bpy.context.active_object
+        n_obj = create_test_object("n_obj", None, scene)
 
-        bpy.ops.object.empty_add()
-        bpy.context.active_object.name = "trans"
-        trans_obj = bpy.context.active_object
+        trans_obj = create_test_object("trans", None, scene)
+        blender_context.view_layer.objects.active = trans_obj
         props = safe_get_transmission(trans_obj)
 
         assert poll_robot_joint(props, j_obj) is True

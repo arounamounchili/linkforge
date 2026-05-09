@@ -1,6 +1,7 @@
 import math
 import sys
 import types
+from collections import UserList
 from unittest.mock import MagicMock
 
 # -----------------------------------------------------------------------------
@@ -24,9 +25,12 @@ class MockVector:
     """Mock for mathutils.Vector."""
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
-        self.x = float(x)
-        self.y = float(y)
-        self.z = float(z)
+        if isinstance(x, (list, tuple, MockVector)):
+            self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
+        else:
+            self.x = float(x)
+            self.y = float(y)
+            self.z = float(z)
 
     def __getitem__(self, i):
         return [self.x, self.y, self.z][i]
@@ -73,10 +77,35 @@ class MockEuler:
     """Mock for mathutils.Euler."""
 
     def __init__(self, x=0.0, y=0.0, z=0.0, order="XYZ"):
-        self.x = float(x)
-        self.y = float(y)
-        self.z = float(z)
+        if isinstance(x, (list, tuple, MockEuler)):
+            self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
+            # If the first arg was a sequence, the second arg might be the order
+            if isinstance(y, str):
+                order = y
+        else:
+            self.x = float(x)
+            self.y = float(y)
+            self.z = float(z)
         self.order = order
+
+    def __getitem__(self, i):
+        return [self.x, self.y, self.z][i]
+
+    def __setitem__(self, i, v):
+        if i == 0:
+            self.x = v
+        elif i == 1:
+            self.y = v
+        elif i == 2:
+            self.z = v
+
+    def __iter__(self):
+        yield self.x
+        yield self.y
+        yield self.z
+
+    def __len__(self):
+        return 3
 
     def to_matrix(self):
         res = [[0.0] * 4 for _ in range(4)]
@@ -122,8 +151,13 @@ class MockMatrix:
         m.data[2][3] = vec[2]
         return m
 
-    def to_translation(self):
+    @property
+    def translation(self):
+        """Property alias for Blender mathutils.Matrix parity."""
         return MockVector(self.data[0][3], self.data[1][3], self.data[2][3])
+
+    def to_translation(self):
+        return self.translation
 
     def to_euler(self, order="XYZ"):
         if self.data[0][0] == 0.9:
@@ -269,11 +303,8 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         return MagicMock(name=key)
 
 
-class MockCollection(list):
+class MockCollection(UserList):
     """Mock for Blender's CollectionProperty items."""
-
-    prop_type = None
-    new = None
 
     def __init__(self, prop_type=None):
         super().__init__()
@@ -291,7 +322,16 @@ class MockCollection(list):
             super().remove(item)
 
     def clear(self):
-        del self[:]
+        self.data.clear()
+
+    @property
+    def bl_rna(self):
+        return MagicMock()
+
+    def __getattr__(self, key):
+        if key.startswith("_"):
+            raise AttributeError(key)
+        return MagicMock(name=key)
 
     def link(self, obj):
         if obj not in self:
@@ -300,9 +340,6 @@ class MockCollection(list):
     def unlink(self, obj):
         if obj in self:
             self.remove(obj)
-
-    def __getattr__(self, key):
-        return MagicMock(name=key)
 
 
 class MockObject(MockPropertyGroup):
@@ -318,6 +355,7 @@ class MockObject(MockPropertyGroup):
         self.rotation_euler = MockEuler()
         self.scale = MockVector(1, 1, 1)
         self.dimensions = MockVector(1, 1, 1)
+        self.matrix_parent_inverse = MockMatrix()
         self.parent = None
         self.children = MockCollection()
         self.users_collection = MockCollection()
@@ -332,6 +370,10 @@ class MockObject(MockPropertyGroup):
         return True
 
     def select_set(self, state):
+        pass
+
+    def transform(self, matrix):
+        """Mock for applying a transformation matrix."""
         pass
 
     def copy(self):
@@ -424,6 +466,7 @@ def setup_mock_bpy():
     mock_data.objects.new = lambda name, data=None: MockObject(name=name, data=data)
     mock_data.meshes = MockCollection()
     mock_data.meshes.new = lambda name: MockObject(name=name)
+    mock_data.meshes.new_from_object = lambda obj, **kwargs: MockObject(name=f"{obj.name}_mesh")
     mock_data.collections = MockCollection()
     mock_data.collections.new = lambda name: MockCollection()
     mock_data.scenes = MockCollection()
@@ -431,11 +474,27 @@ def setup_mock_bpy():
     mock_data.materials = MockCollection()
     mock_data.materials.new = lambda name: MockObject(name=name)
 
-    mock_context.scene = mock_data.scenes[0]
-    mock_context.scene.objects = mock_data.objects
-    mock_context.view_layer = mock_context.scene.view_layers[0]
+    # Initialize view_layer with a fallback to avoid NoneType errors
+    mock_view_layer = MagicMock(name="ViewLayer")
+    mock_view_layer.objects = mock_data.objects
+    mock_view_layer.update = lambda: None
+    mock_context.view_layer = mock_view_layer
+
+    if len(mock_data.scenes) > 0:
+        mock_context.scene = mock_data.scenes[0]
+        mock_context.scene.objects = mock_data.objects
+        if hasattr(mock_context.scene, "view_layers") and len(mock_context.scene.view_layers) > 0:
+            layer = mock_context.scene.view_layers[0]
+            if layer is not None:
+                mock_context.view_layer = layer
+                # Ensure the layer has objects and update
+                if not hasattr(mock_context.view_layer, "objects"):
+                    mock_context.view_layer.objects = mock_data.objects
+                if not hasattr(mock_context.view_layer, "update"):
+                    mock_context.view_layer.update = lambda: None
+
     mock_context.active_object = None
-    mock_context.evaluated_depsgraph_get = lambda: MagicMock()
+    mock_context.evaluated_depsgraph_get = lambda: MagicMock(name="Depsgraph")
     mock_context.window_manager = MockPropertyGroup()
 
     mock_app.driver_namespace = {}
@@ -445,7 +504,38 @@ def setup_mock_bpy():
     mock_bpy.types = mock_types
     mock_bpy.context = mock_context
     mock_bpy.data = mock_data
-    mock_bpy.ops = MagicMock()
+    mock_ops = DynamicModule("bpy.ops")
+    mock_ops.object = DynamicModule("bpy.ops.object")
+    mock_ops.mesh = DynamicModule("bpy.ops.mesh")
+    mock_ops.wm = DynamicModule("bpy.ops.wm")
+    mock_ops.export_scene = DynamicModule("bpy.ops.export_scene")
+
+    def mock_empty_add(type_="PLAIN_AXES", location=(0, 0, 0), **kwargs):
+        new_empty = MockObject(name="Empty")
+        new_empty.type = "EMPTY"
+        new_empty.empty_display_type = type
+        new_empty.location = MockVector(location)
+        mock_data.objects.append(new_empty)
+        mock_context.active_object = new_empty
+        if mock_context.view_layer:
+            mock_context.view_layer.objects.active = new_empty
+        return {"FINISHED"}
+
+    def mock_cube_add(location=(0, 0, 0), **kwargs):
+        new_cube = MockObject(name="Cube")
+        new_cube.type = "MESH"
+        new_cube.location = MockVector(location)
+        mock_data.objects.append(new_cube)
+        mock_context.active_object = new_cube
+        if mock_context.view_layer:
+            mock_context.view_layer.objects.active = new_cube
+        return {"FINISHED"}
+
+    mock_ops.object.empty_add = mock_empty_add
+    mock_ops.mesh.primitive_cube_add = mock_cube_add
+    mock_ops.object.select_all = lambda action="TOGGLE": {"FINISHED"}
+
+    mock_bpy.ops = mock_ops
     mock_bpy.app = mock_app
     mock_bpy.utils = MagicMock()
 

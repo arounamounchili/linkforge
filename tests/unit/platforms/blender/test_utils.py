@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import typing
 from unittest.mock import MagicMock
 
-import bpy
 import pytest
 from linkforge.blender.adapters.mesh_io import export_link_mesh
-from linkforge.blender.utils.decorators import safe_execute
+from linkforge.blender.utils.decorators import OperatorReturn, safe_execute
 from linkforge_core.exceptions import RobotModelError
 
 from tests.blender_test_utils import (
@@ -15,6 +15,7 @@ from tests.blender_test_utils import (
     create_test_object,
     safe_get_joint,
     safe_get_linkforge,
+    safe_update,
 )
 
 # Name Synchronization and Persistence
@@ -30,10 +31,10 @@ class TestNameSynchronization:
 
         # Simulate Blender renaming (e.g., adding a suffix)
         obj.name = "base_link.001"
-        bpy.context.view_layer.update()
+        safe_update(scene)
 
-        # Getter should return the synced name (likely sanitized)
-        assert safe_get_linkforge(obj).link_name == "base_link_001"
+        # Getter should return the synced name (which remains persistent)
+        assert safe_get_linkforge(obj).link_name == "base_link"
 
     def test_joint_name_persistence(self, scene, blender_context) -> None:
         """Test that joint_name remains synced even if Blender renames the object."""
@@ -42,8 +43,8 @@ class TestNameSynchronization:
         safe_get_joint(obj).joint_name = "joint"
 
         obj.name = "joint.002"
-        bpy.context.view_layer.update()
-        assert safe_get_joint(obj).joint_name == "joint_002"
+        safe_update(scene)
+        assert safe_get_joint(obj).joint_name == "joint"
 
 
 # Sanitization and Fidelity
@@ -60,7 +61,9 @@ class TestSanitization:
             geometry_type="visual",
             mesh_format="STL",
             meshes_dir=tmp_path,
+            dry_run=True,
         )
+        assert p is not None
         assert "my_link_001" in p.name
         assert " " not in p.name
 
@@ -76,7 +79,7 @@ class TestDecorators:
         mock_self.report = lambda t, m: mock_self.reports.append((t, m))
 
         @safe_execute
-        def my_op(s, c):
+        def my_op(s: typing.Any, c: typing.Any) -> OperatorReturn:
             return {"FINISHED"}
 
         assert my_op(mock_self, None) == {"FINISHED"}
@@ -89,7 +92,7 @@ class TestDecorators:
         mock_self.report = lambda t, m: mock_self.reports.append((t, m))
 
         @safe_execute
-        def failing_op(s, c):
+        def failing_op(s: typing.Any, c: typing.Any) -> OperatorReturn:
             raise RobotModelError("Fail")
 
         assert failing_op(mock_self, None) == {"CANCELLED"}

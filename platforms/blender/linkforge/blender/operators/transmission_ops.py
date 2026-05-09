@@ -72,105 +72,103 @@ class LINKFORGE_OT_create_transmission(Operator):
         if not obj:
             return {"CANCELLED"}
 
-        # Get preferred empty size from addon preferences
-        empty_size = 0.05  # Default fallback (matches TRANSMISSION_EMPTY_DISPLAY_SIZE)
-        from ..preferences import get_addon_prefs
+        # Use the standalone logic function
+        success = create_transmission_for_joint(obj, context)
+        return {"FINISHED"} if success else {"CANCELLED"}
 
-        addon_prefs = get_addon_prefs(context)
-        if addon_prefs:
-            empty_size = getattr(addon_prefs, "transmission_empty_size", empty_size)
 
-        # Get selected joint (guaranteed by poll())
-        joint_obj = obj
-        joint_props = typing.cast("JointPropertyGroup", getattr(obj, "linkforge_joint"))
-        joint_name = joint_props.joint_name
-        location = obj.matrix_world.translation.copy()
+def create_transmission_for_joint(joint_obj: typing.Any, context: Context) -> bool:
+    """Logic for creating a transmission for a specific joint.
 
-        # Create Empty at joint's location
-        # Use SINGLE_ARROW to represent actuation vector (matches importer)
-        bpy.ops.object.empty_add(type="SINGLE_ARROW", location=location)
-        transmission_empty = context.active_object
-        if not transmission_empty:
-            self.report({"ERROR"}, "Failed to create transmission empty.")
-            return {"CANCELLED"}
+    Args:
+        joint_obj: The Blender object representing the joint.
+        context: The current Blender context (or adapter).
 
-        # Use joint_name property if set, otherwise fallback to object name (common in tests)
-        final_joint_name = joint_name if joint_name else joint_obj.name
-        transmission_empty.name = f"{final_joint_name}_trans"
+    Returns:
+        True if successful.
+    """
+    import typing
 
-        # Parent transmission to joint (matches import behavior)
-        transmission_empty.parent = joint_obj
-        # STRICT ALIGNMENT:
-        # We want the transmission to be exactly at the joint origin.
-        # Identity inverse means Local (0,0,0) -> World (Joint Location).
-        transmission_empty.matrix_parent_inverse.identity()
+    import bpy
 
-        # Reset local position to be at joint origin
-        transmission_empty.location = (0, 0, 0)
+    # Get preferred empty size from addon preferences
+    empty_size = 0.05  # Default fallback
+    from ..preferences import get_addon_prefs
 
-        # Ensure matrices are up to date before applying rotation logic
-        view_layer = context.view_layer
-        if view_layer is not None:
-            view_layer.update()
+    addon_prefs = get_addon_prefs(context)
+    if addon_prefs:
+        empty_size = getattr(addon_prefs, "transmission_empty_size", empty_size)
 
-        # ALIGNMENT: Point arrow along Joint Axis
-        if hasattr(joint_obj, "linkforge_joint"):
-            jp = typing.cast("JointPropertyGroup", getattr(joint_obj, "linkforge_joint"))
-            axis_vec = None
-            if jp.axis == "X":
-                axis_vec = (1, 0, 0)
-            elif jp.axis == "Y":
-                axis_vec = (0, 1, 0)
-            elif jp.axis == "Z":
-                axis_vec = (0, 0, 1)
-            elif jp.axis == "CUSTOM":
-                axis_vec = (jp.custom_axis_x, jp.custom_axis_y, jp.custom_axis_z)
+    # Get selected joint
+    joint_props = typing.cast("JointPropertyGroup", getattr(joint_obj, "linkforge_joint"))
+    joint_name = joint_props.joint_name
+    location = joint_obj.matrix_world.translation.copy()
 
-            # Note: NEG_X/Y/Z are handled via CUSTOM in joint_props, so no need to check here
+    # Create Empty at joint's location
+    bpy.ops.object.empty_add(type="SINGLE_ARROW", location=location)
+    transmission_empty = context.active_object
+    if not transmission_empty:
+        return False
 
-            if axis_vec:
-                from mathutils import Vector
+    # Use joint_name property if set, otherwise fallback to object name
+    final_joint_name = joint_name if joint_name else joint_obj.name
+    transmission_empty.name = f"{final_joint_name}_trans"
 
-                vec = Vector(axis_vec)
-                if vec.length > 0:
-                    # 'TRACK' aligns Z axis (Arrow default) to vector
-                    rot_quat = Vector((0, 0, 1)).rotation_difference(vec)
-                    transmission_empty.rotation_euler = rot_quat.to_euler("XYZ")
-            else:
-                transmission_empty.rotation_euler = (0, 0, 0)
+    # Parent transmission to joint
+    transmission_empty.parent = joint_obj
+    transmission_empty.matrix_parent_inverse.identity()
+    transmission_empty.location = (0, 0, 0)
+
+    # Update view layer to ensure matrices are ready
+    view_layer = context.view_layer
+    if view_layer is not None:
+        view_layer.update()
+
+    # ALIGNMENT: Point arrow along Joint Axis
+    if hasattr(joint_obj, "linkforge_joint"):
+        jp = typing.cast("JointPropertyGroup", getattr(joint_obj, "linkforge_joint"))
+        axis_vec = None
+        if jp.axis == "X":
+            axis_vec = (1, 0, 0)
+        elif jp.axis == "Y":
+            axis_vec = (0, 1, 0)
+        elif jp.axis == "Z":
+            axis_vec = (0, 0, 1)
+        elif jp.axis == "CUSTOM":
+            axis_vec = (jp.custom_axis_x, jp.custom_axis_y, jp.custom_axis_z)
+
+        if axis_vec:
+            from mathutils import Vector
+
+            vec = Vector(axis_vec)
+            if vec.length > 0:
+                rot_quat = Vector((0, 0, 1)).rotation_difference(vec)
+                transmission_empty.rotation_euler = rot_quat.to_euler("XYZ")
         else:
             transmission_empty.rotation_euler = (0, 0, 0)
+    else:
+        transmission_empty.rotation_euler = (0, 0, 0)
 
-        # Move transmission to same collection as parent joint (for clean organization)
-        # Remove from all current collections
-        for coll in list(transmission_empty.users_collection):
-            coll.objects.unlink(transmission_empty)
-        # Add to parent's collection
-        if joint_obj.users_collection:
-            parent_collection = joint_obj.users_collection[0]
-            parent_collection.objects.link(transmission_empty)
+    # Move to same collection as parent
+    for coll in list(transmission_empty.users_collection):
+        coll.objects.unlink(transmission_empty)
+    if joint_obj.users_collection:
+        parent_collection = joint_obj.users_collection[0]
+        parent_collection.objects.link(transmission_empty)
 
-        # Set display size from preferences
-        transmission_empty.empty_display_size = empty_size
+    # Set display size and properties
+    transmission_empty.empty_display_size = empty_size
+    trans_props = typing.cast(
+        "TransmissionPropertyGroup", getattr(transmission_empty, "linkforge_transmission")
+    )
+    trans_props.is_robot_transmission = True
 
-        # Enable transmission properties
-        trans_props = typing.cast(
-            "TransmissionPropertyGroup", getattr(transmission_empty, "linkforge_transmission")
-        )
-        trans_props.is_robot_transmission = True
-        trans_props.transmission_name = sanitize_robot_name(transmission_empty.name)
+    trans_props.transmission_name = sanitize_robot_name(transmission_empty.name)
+    trans_props.transmission_type = "SIMPLE"
+    trans_props.joint_name = joint_obj
 
-        # Set default transmission type
-        trans_props.transmission_type = "SIMPLE"
-
-        # Auto-set joint (guaranteed by poll())
-        trans_props.joint_name = joint_obj
-
-        self.report(
-            {"INFO"}, f"Created transmission '{transmission_empty.name}' for joint '{joint_name}'"
-        )
-        clear_stats_cache()
-        return {"FINISHED"}
+    clear_stats_cache()
+    return True
 
 
 class LINKFORGE_OT_delete_transmission(Operator):
@@ -222,19 +220,28 @@ class LINKFORGE_OT_delete_transmission(Operator):
         if not obj:
             return {"CANCELLED"}
 
-        transmission_name = (
-            typing.cast(
-                "TransmissionPropertyGroup", getattr(obj, "linkforge_transmission")
-            ).transmission_name
-            or obj.name
-        )
+        # Use the standalone logic function
+        success = delete_transmission_for_object(obj, context)
+        return {"FINISHED"} if success else {"CANCELLED"}
 
-        # Delete the object
-        bpy.data.objects.remove(obj, do_unlink=True)
 
-        self.report({"INFO"}, f"Deleted transmission '{transmission_name}'")
-        clear_stats_cache()
-        return {"FINISHED"}
+def delete_transmission_for_object(obj: typing.Any, _context: Context) -> bool:
+    """Logic for deleting a transmission object.
+
+    Args:
+        obj: The transmission object to delete.
+        context: The current Blender context (or adapter).
+
+    Returns:
+        True if successful.
+    """
+    import bpy
+
+    # Delete the object
+    bpy.data.objects.remove(obj, do_unlink=True)
+
+    clear_stats_cache()
+    return True
 
 
 # Registration

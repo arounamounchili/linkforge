@@ -40,6 +40,16 @@ class IBlenderContext(typing.Protocol):
         ...
 
     @property
+    def active_object(self) -> Any | None:
+        """Currently active Blender object."""
+        ...
+
+    @property
+    def preferences(self) -> Any:
+        """Blender user preferences."""
+        ...
+
+    @property
     def window_manager(self) -> Any:
         """Blender window manager."""
         ...
@@ -84,6 +94,16 @@ class BlenderContext:
     def view_layer(self) -> Any:
         """Return the active view layer."""
         return self._bpy.context.view_layer
+
+    @property
+    def active_object(self) -> Any | None:
+        """Return the active object from context."""
+        return self._bpy.context.active_object
+
+    @property
+    def preferences(self) -> Any:
+        """Return the user preferences."""
+        return self._bpy.context.preferences
 
     @property
     def window_manager(self) -> Any:
