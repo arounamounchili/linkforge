@@ -144,7 +144,7 @@ def test_create_joint_object_fixed(scene, blender_context) -> None:
     )
 
     # Build in Blender
-    joint_obj = create_joint_object(joint, link_objects)
+    joint_obj = create_joint_object(blender_context, joint, link_objects)
 
     # Verify
     assert joint_obj is not None
@@ -173,7 +173,7 @@ def test_create_joint_object_complex(scene, blender_context) -> None:
     )
 
     # Build
-    joint_obj = create_joint_object(joint, link_objects)
+    joint_obj = create_joint_object(blender_context, joint, link_objects)
 
     # Verify properties
     assert joint_obj is not None
@@ -213,7 +213,7 @@ def test_create_joint_object_advanced_props(scene, blender_context) -> None:
     )
 
     # Build in Blender
-    joint_obj = create_joint_object(joint, link_objects)
+    joint_obj = create_joint_object(blender_context, joint, link_objects)
 
     # Verify properties
     assert joint_obj is not None
@@ -485,7 +485,7 @@ def test_create_joint_object_prismatic(scene, blender_context) -> None:
         limits=JointLimits(lower=0, upper=1.0, effort=10, velocity=1),
     )
 
-    obj = create_joint_object(joint, link_objects)
+    obj = create_joint_object(blender_context, joint, link_objects)
     assert obj is not None
     props = safe_get_joint(obj)
     assert props.joint_type == "PRISMATIC"
@@ -504,13 +504,13 @@ def test_create_joint_object_continuous_floating(scene, blender_context) -> None
     j_cont = Joint(
         name="cont", type=JointType.CONTINUOUS, parent="p_c", child="c_c", axis=Vector3(1, 0, 0)
     )
-    obj_cont = create_joint_object(j_cont, link_objects)
+    obj_cont = create_joint_object(blender_context, j_cont, link_objects)
     assert obj_cont is not None
     assert safe_get_joint(obj_cont).joint_type == "CONTINUOUS"
 
     # Floating
     j_float = Joint(name="float_j", type=JointType.FLOATING, parent="p_c", child="c_c")
-    obj_float = create_joint_object(j_float, link_objects)
+    obj_float = create_joint_object(blender_context, j_float, link_objects)
     assert obj_float is not None
     assert safe_get_joint(obj_float).joint_type == "FLOATING"
 
@@ -552,7 +552,7 @@ def test_create_material_existing(scene, blender_context) -> None:
     mat = bpy.data.materials.new(name=mat_name)
     color = Color(1, 0, 0, 1)
 
-    mat_out = create_material_from_color(color, mat_name)
+    mat_out = create_material_from_color(blender_context, color, mat_name)
     assert mat_out == mat
 
 
@@ -761,7 +761,7 @@ def test_create_joint_with_custom_axis(scene, blender_context) -> None:
         limits=JointLimits(0, 1, 10, 1),
     )
 
-    obj = create_joint_object(joint, link_objects)
+    obj = create_joint_object(blender_context, joint, link_objects)
     assert obj is not None
     props = safe_get_joint(obj)
     assert props.axis == "CUSTOM"
