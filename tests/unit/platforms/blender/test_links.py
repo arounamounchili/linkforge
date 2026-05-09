@@ -111,9 +111,9 @@ class TestLinkRobustness:
     def test_regenerate_collision_mesh_validation(self, scene, blender_context) -> None:
         """Test validation in regenerate_collision_mesh."""
         # Passing non-link object should not crash
-        bpy.ops.mesh.primitive_cube_add()
-        bpy.context.active_object.name = "NotALink"
-        obj = bpy.context.active_object
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("NotALink", None, scene)
         regenerate_collision_mesh(obj, "AUTO", bpy.context)
 
 
