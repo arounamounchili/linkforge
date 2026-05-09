@@ -23,7 +23,8 @@ class TestNaming:
 
         # Rename in Blender
         obj.name = "chassis"
-        bpy.context.view_layer.update()
+        if bpy.context.scene.view_layers:
+            bpy.context.scene.view_layers[0].update()
 
         assert obj_lf.link_name == "chassis"
 
@@ -35,7 +36,8 @@ class TestNaming:
 
         # Rename with spaces
         obj.name = "front left wheel"
-        bpy.context.view_layer.update()
+        if bpy.context.scene.view_layers:
+            bpy.context.scene.view_layers[0].update()
 
         assert obj_lf.link_name == "front_left_wheel"
         assert obj.name == "front_left_wheel"
