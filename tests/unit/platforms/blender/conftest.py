@@ -202,10 +202,10 @@ if not is_real_blender:
 
     # Mock mathutils
     mock_mathutils = MagicMock()
-    mock_mathutils.Vector = MagicMock
-    mock_mathutils.Matrix = MagicMock
-    mock_mathutils.Quaternion = MagicMock
-    mock_mathutils.Euler = MagicMock
+    mock_mathutils.Vector = MagicMock()
+    mock_mathutils.Matrix = MagicMock()
+    mock_mathutils.Quaternion = MagicMock()
+    mock_mathutils.Euler = MagicMock()
     sys.modules["mathutils"] = mock_mathutils
 
     # Mock bpy_extras
