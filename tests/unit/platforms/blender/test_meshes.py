@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import bpy
 import pytest
 from linkforge.blender.adapters.mesh_io import (
     export_mesh_obj,
@@ -12,16 +11,15 @@ from linkforge.blender.adapters.mesh_io import (
 )
 from linkforge_core.utils.path_utils import resolve_package_path
 
-# =============================================================================
+from tests.blender_test_utils import create_test_object
+
 # Mesh I/O Operations
-# =============================================================================
 
 
 class TestMeshIO:
     def test_export_mesh_stl(self, scene, tmp_path, blender_context) -> None:
         """Test exporting a mesh to STL."""
-        bpy.ops.mesh.primitive_cube_add()
-        obj = bpy.context.active_object
+        obj = create_test_object("test_cube_stl", None, scene)
         filepath = tmp_path / "test.stl"
 
         export_mesh_stl(obj, filepath)
@@ -29,17 +27,14 @@ class TestMeshIO:
 
     def test_export_mesh_obj(self, scene, tmp_path, blender_context) -> None:
         """Test exporting a mesh to OBJ."""
-        bpy.ops.mesh.primitive_cube_add()
-        obj = bpy.context.active_object
+        obj = create_test_object("test_cube_obj", None, scene)
         filepath = tmp_path / "test.obj"
 
         export_mesh_obj(obj, filepath)
         assert filepath.exists()
 
 
-# =============================================================================
 # Mesh Naming and Suffixes
-# =============================================================================
 
 
 class TestMeshNaming:
@@ -47,16 +42,12 @@ class TestMeshNaming:
         """Test that a single visual mesh has no suffix by default."""
         # This logic is typically handled in blender_to_core conversion
         # but we can verify the source_name preservation here if needed.
-        bpy.ops.mesh.primitive_cube_add()
-        bpy.context.active_object.name = "part"
-        obj = bpy.context.active_object
+        obj = create_test_object("part", None, scene)
         obj["source_name"] = "custom"
         assert obj["source_name"] == "custom"
 
 
-# =============================================================================
 # Path Resolution
-# =============================================================================
 
 
 class TestMeshResolution:
@@ -80,16 +71,13 @@ class TestMeshResolution:
         assert resolved.name == "test.stl"
 
 
-# =============================================================================
 # Robustness and Edge Cases
-# =============================================================================
 
 
 class TestMeshRobustness:
     def test_export_mesh_failure_handling(self, scene, tmp_path, blender_context) -> None:
         """Test that mesh export handles exceptions gracefully."""
-        bpy.ops.mesh.primitive_monkey_add()
-        obj = bpy.context.active_object
+        obj = create_test_object("monkey", None, scene)
         filepath = tmp_path / "dummy.stl"
 
         with patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm") as mock_wm:
