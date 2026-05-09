@@ -8,13 +8,12 @@ from pathlib import Path
 
 if typing.TYPE_CHECKING:
     # Type stubs for Blender types when type checking
-    bpy: typing.Any
-    Matrix: typing.Any
-    Vector: typing.Any
     from .context import IBlenderContext
 else:
     import bpy
     from mathutils import Matrix
+
+    from .context import IBlenderContext
 
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (

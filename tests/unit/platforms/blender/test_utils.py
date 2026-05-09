@@ -11,6 +11,7 @@ from linkforge.blender.utils.decorators import safe_execute
 from linkforge_core.exceptions import RobotModelError
 
 from tests.blender_test_utils import (
+    create_mesh_object,
     create_test_object,
     safe_get_joint,
     safe_get_linkforge,
@@ -23,8 +24,9 @@ class TestNameSynchronization:
     def test_link_name_persistence(self, scene, blender_context) -> None:
         """Test that link_name remains synced even if Blender renames the object."""
         obj = create_test_object("base_link", None, scene)
-        safe_get_linkforge(obj).is_robot_link = True
-        safe_get_linkforge(obj).link_name = "base_link"
+        lf = safe_get_linkforge(obj)
+        lf.is_robot_link = True
+        lf.link_name = "base_link"
 
         # Simulate Blender renaming (e.g., adding a suffix)
         obj.name = "base_link.001"
@@ -50,7 +52,7 @@ class TestNameSynchronization:
 class TestSanitization:
     def test_filename_sanitization(self, tmp_path, scene, blender_context) -> None:
         """Verify that filename sanitization ensures compatibility."""
-        obj = create_test_object("cube_sanitization", None, scene)
+        obj = create_mesh_object("cube_sanitization", scene)
 
         p, _ = export_link_mesh(
             obj=obj,

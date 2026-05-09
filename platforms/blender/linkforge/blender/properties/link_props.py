@@ -56,7 +56,9 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     sanitized_name = sanitize_robot_name(value)
 
     # Store the old name before updating for child renaming logic
-    old_source_name = self.source_name_stored or sanitize_robot_name(self.id_data.name)
+    old_source_name = getattr(self, "source_name_stored", "") or sanitize_robot_name(
+        self.id_data.name
+    )
 
     # Store the persistent identity
     self.source_name_stored = sanitized_name

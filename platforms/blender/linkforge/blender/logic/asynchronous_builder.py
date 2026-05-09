@@ -157,57 +157,62 @@ class AsynchronousRobotBuilder:
 
     def _execute_task(self, task_type: str, data: typing.Any) -> None:
         """Execute a single unit of work."""
-        if task_type == "setup_scene":
-            if self.context.scene:
-                setup_scene_for_robot(self.context, self.robot)
+        print(f"DEBUG: Executing task {task_type}")
+        try:
+            if task_type == "setup_scene":
+                if self.context.scene:
+                    setup_scene_for_robot(self.context, self.robot)
 
-        elif task_type == "create_collection":
-            self.collection = self.context.data.collections.new(self.robot.name)
-            if self.context.scene:
-                self.context.scene.collection.children.link(self.collection)
+            elif task_type == "create_collection":
+                self.collection = self.context.data.collections.new(self.robot.name)
+                if self.context.scene:
+                    self.context.scene.collection.children.link(self.collection)
 
-        elif task_type == "create_link":
-            obj = create_link_object(
-                self.context, data, self.robot, self.source_path.parent, self.collection
-            )
-            if obj:
-                self.link_objects[data.name] = obj
+            elif task_type == "create_link":
+                obj = create_link_object(
+                    self.context, data, self.robot, self.source_path.parent, self.collection
+                )
+                if obj:
+                    self.link_objects[data.name] = obj
 
-        elif task_type == "create_joint":
-            obj = create_joint_object(self.context, data, self.link_objects, self.collection)
-            if obj:
-                self.joint_objects[data.name] = obj
+            elif task_type == "create_joint":
+                obj = create_joint_object(self.context, data, self.link_objects, self.collection)
+                if obj:
+                    self.joint_objects[data.name] = obj
 
-        elif task_type == "resolve_mimics":
-            # Convert to list for type-safety with mimic resolver
-            joints_list = list(self.robot.joints)
-            resolve_mimic_joints(joints_list, self.joint_objects)
+            elif task_type == "resolve_mimics":
+                # Convert to list for type-safety with mimic resolver
+                joints_list = list(self.robot.joints)
+                resolve_mimic_joints(joints_list, self.joint_objects)
 
-        elif task_type == "create_sensor":
-            create_sensor_object(self.context, data, self.link_objects, self.collection)
+            elif task_type == "create_sensor":
+                create_sensor_object(self.context, data, self.link_objects, self.collection)
 
-        elif task_type == "finalize":
-            if self.context.view_layer is not None:
-                self.context.view_layer.update()
+            elif task_type == "finalize":
+                if self.context.view_layer is not None:
+                    self.context.view_layer.update()
 
-            # Sync collision visibility
-            scene = self.context.scene
-            if scene and hasattr(scene, "linkforge"):
-                # Force update collision visibility toggle
-                scene.linkforge.show_collisions = scene.linkforge.show_collisions
+                # Sync collision visibility
+                scene = self.context.scene
+                if scene and hasattr(scene, "linkforge"):
+                    # Force update collision visibility toggle
+                    scene.linkforge.show_collisions = scene.linkforge.show_collisions
 
-                # Auto-link ROS 2 Control joint pointers to newly created objects
-                # Match by persistent robot model identity (source_name_stored)
-                lp = scene.linkforge
-                if lp.use_ros2_control:
-                    for rc_joint in lp.ros2_control_joints:
-                        # Find the joint object in the current import set
-                        target_obj = self.joint_objects.get(rc_joint.name)
-                        if target_obj:
-                            rc_joint.joint_obj = target_obj
-                            logger.debug(
-                                f"Auto-linked ROS2 Control joint '{rc_joint.name}' to {target_obj.name}"
-                            )
+                    # Auto-link ROS 2 Control joint pointers to newly created objects
+                    # Match by persistent robot model identity (source_name_stored)
+                    lp = scene.linkforge
+                    if lp.use_ros2_control:
+                        for rc_joint in lp.ros2_control_joints:
+                            # Find the joint object in the current import set
+                            target_obj = self.joint_objects.get(rc_joint.name)
+                            if target_obj:
+                                rc_joint.joint_obj = target_obj
+                                logger.debug(
+                                    f"Auto-linked ROS2 Control joint '{rc_joint.name}' to {target_obj.name}"
+                                )
+        except Exception as e:
+            print(f"DEBUG: Task {task_type} failed: {e}")
+            raise e
 
     def finish(self) -> None:
         """Clean up and finalize."""

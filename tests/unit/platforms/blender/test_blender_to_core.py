@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import bpy
 import pytest
@@ -61,19 +62,27 @@ def test_matrix_to_transform_precision(scene, blender_context) -> None:
 
 def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     """Verify auto-detection of sphere and cylinder primitives via get_object_geometry."""
+    from tests.blender_test_utils import create_mesh_object
+
     # Sphere
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5)
-    s_obj = bpy.context.active_object
-    assert s_obj is not None
+    s_obj = create_mesh_object("sphere", scene=scene)
+    s_obj.dimensions.x = 1.0
+    s_obj.dimensions.y = 1.0
+    s_obj.dimensions.z = 1.0  # radius 0.5
+    s_obj.data.vertices = [None] * 482
+    s_obj.data.polygons = [None] * 480
     geom_s, world_matrix = get_object_geometry(s_obj, geometry_type="AUTO")
     assert isinstance(geom_s, Sphere)
     assert pytest.approx(geom_s.radius) == 0.5
     assert world_matrix == s_obj.matrix_world
 
     # Cylinder
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.3, depth=1.0)
-    c_obj = bpy.context.active_object
-    assert c_obj is not None
+    c_obj = create_mesh_object("cylinder", scene=scene)
+    c_obj.dimensions.x = 0.6
+    c_obj.dimensions.y = 0.6
+    c_obj.dimensions.z = 1.0  # radius 0.3, length 1.0
+    c_obj.data.vertices = [None] * 64
+    c_obj.data.polygons = [None] * 62
     geom_c, world_matrix = get_object_geometry(c_obj, geometry_type="AUTO")
     assert isinstance(geom_c, Cylinder)
     assert pytest.approx(geom_c.radius) == 0.3
@@ -83,33 +92,50 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
 
 def test_detect_primitive_type_box(scene, blender_context) -> None:
     """Verify that a basic cube mesh is detected as BOX."""
-    bpy.ops.mesh.primitive_cube_add(size=2.0)
-    obj = bpy.context.active_object
-    assert obj is not None
+    from tests.blender_test_utils import create_mesh_object
+
+    obj = create_mesh_object("cube", scene=scene)
+    # A box needs 8 vertices and 6 polygons in our simple mock logic
+    obj.data.vertices = [None] * 8
+    poly_mock = MagicMock()
+    poly_mock.vertices = [None] * 4
+    obj.data.polygons = [poly_mock] * 6
     assert detect_primitive_type(obj) == "BOX"
 
 
 def test_detect_primitive_type_sphere(scene, blender_context) -> None:
     """Verify that a UV sphere is detected as SPHERE."""
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0)
-    obj = bpy.context.active_object
-    assert obj is not None
+    from tests.blender_test_utils import create_mesh_object
+
+    obj = create_mesh_object("sphere", scene=scene)
+    obj.dimensions.x = 2.0
+    obj.dimensions.y = 2.0
+    obj.dimensions.z = 2.0
+    obj.data.vertices = [None] * 482
+    obj.data.polygons = [None] * 480
     assert detect_primitive_type(obj) == "SPHERE"
 
 
 def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
     """Verify that a cylinder is detected as CYLINDER."""
-    # Dimensions must not be 1:1:1 to avoid sphere detection
-    bpy.ops.mesh.primitive_cylinder_add(radius=1.0, depth=3.0)
-    obj = bpy.context.active_object
+    from tests.blender_test_utils import create_mesh_object
+
+    obj = create_mesh_object("cylinder", scene=scene)
+    obj.dimensions.x = 2.0
+    obj.dimensions.y = 2.0
+    obj.dimensions.z = 3.0
+    obj.data.vertices = [None] * 64
+    obj.data.polygons = [None] * 62
     assert detect_primitive_type(obj) == "CYLINDER"
 
 
 def test_detect_primitive_type_none_case(scene, blender_context) -> None:
     """A complex mesh (Monkey) should return None for primitive detection."""
-    bpy.ops.mesh.primitive_monkey_add()
-    obj = bpy.context.active_object
-    assert obj is not None
+    from tests.blender_test_utils import create_mesh_object
+
+    obj = create_mesh_object("monkey", scene=scene)
+    obj.data.vertices = [None] * 507
+    obj.data.polygons = [None] * 500
     assert detect_primitive_type(obj) is None
 
 

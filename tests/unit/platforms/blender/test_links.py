@@ -36,12 +36,13 @@ class TestLinkOperations:
 
     def test_create_collision_for_link(self, scene, blender_context) -> None:
         """Test generating a primitive collision for a link."""
-        from tests.blender_test_utils import create_test_object
 
         link_obj = create_robot_link("link_with_collision", scene)
 
         # Add visual context for size detection
-        vis = create_test_object("link_visual", None, scene)
+        from tests.blender_test_utils import create_mesh_object
+
+        vis = create_mesh_object("link_visual", scene)
         vis.parent = link_obj
 
         col_obj = create_collision_for_link(link_obj, "BOX", bpy.context)

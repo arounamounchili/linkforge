@@ -39,13 +39,13 @@ def ensure_linkforge_registered():
 def safe_get_linkforge(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safe accessor for the 'linkforge' property group on a Blender object."""
     prop = getattr(obj, "linkforge", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     # If missing, try a quick refresh
     _refresh_blender_environment(scene)
     prop = getattr(obj, "linkforge", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     raise AttributeError(f"Object '{obj.name}' missing 'linkforge' property group.")
@@ -54,13 +54,13 @@ def safe_get_linkforge(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
 def safe_get_joint(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safe accessor for the 'linkforge_joint' property group on a Blender object."""
     prop = getattr(obj, "linkforge_joint", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     # If missing, try a quick refresh
     _refresh_blender_environment(scene)
     prop = getattr(obj, "linkforge_joint", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     raise AttributeError(f"Object '{obj.name}' missing 'linkforge_joint' property group.")
@@ -69,13 +69,13 @@ def safe_get_joint(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
 def safe_get_linkforge_scene(scene: typing.Any) -> typing.Any:
     """Safe accessor for the 'linkforge' property group on a Blender scene."""
     prop = getattr(scene, "linkforge", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     # If missing, try a quick refresh
     _refresh_blender_environment(scene)
     prop = getattr(scene, "linkforge", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     raise AttributeError(f"Scene '{scene.name}' missing 'linkforge' property group.")
@@ -84,13 +84,13 @@ def safe_get_linkforge_scene(scene: typing.Any) -> typing.Any:
 def safe_get_transmission(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safe accessor for the 'linkforge_transmission' property group on a Blender object."""
     prop = getattr(obj, "linkforge_transmission", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     # If missing, try a quick refresh
     _refresh_blender_environment(scene)
     prop = getattr(obj, "linkforge_transmission", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     raise AttributeError(f"Object '{obj.name}' missing 'linkforge_transmission' property group.")
@@ -99,13 +99,13 @@ def safe_get_transmission(obj: typing.Any, scene: typing.Any = None) -> typing.A
 def safe_get_validation(wm: typing.Any) -> typing.Any:
     """Safe accessor for the window manager 'linkforge_validation' property group."""
     prop = getattr(wm, "linkforge_validation", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     # If missing, try a quick refresh
     _refresh_blender_environment()
     prop = getattr(wm, "linkforge_validation", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     raise AttributeError("WindowManager missing 'linkforge_validation' property group.")
@@ -114,13 +114,13 @@ def safe_get_validation(wm: typing.Any) -> typing.Any:
 def safe_get_sensor(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
     """Safely retrieve or initialize sensor properties on an object."""
     prop = getattr(obj, "linkforge_sensor", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     # If missing, try a quick refresh
     _refresh_blender_environment(scene)
     prop = getattr(obj, "linkforge_sensor", None)
-    if prop and hasattr(prop, "bl_rna"):
+    if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     raise AttributeError(f"Object '{obj.name}' missing 'linkforge_sensor' property group.")

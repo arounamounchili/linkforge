@@ -239,7 +239,7 @@ def test_import_robot_to_scene_full(scene, blender_context) -> None:
     robot = Robot(name="mini_robot", initial_links=[l1, l2], initial_joints=[j1])
 
     # Import
-    result = import_robot_to_scene(robot, Path("dummy.urdf"), bpy.context)
+    result = import_robot_to_scene(robot, Path("dummy.urdf"), blender_context)
 
     # Verify
     assert result is True
@@ -291,7 +291,7 @@ def test_import_robot_complex_tree(scene, blender_context) -> None:
     robot = Robot(name="tree_bot", initial_links=[l1, l2, l3, l4], initial_joints=[j1, j2, j3])
 
     # Needs source_path and context. Returns bool.
-    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
+    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
     assert success is True
     # Check hierarchy
     root_obj = bpy.data.objects.get("root")
@@ -335,7 +335,7 @@ def test_import_robot_with_ros2_control_and_gazebo(scene, blender_context) -> No
         initial_gazebo_elements=[gazebo],
     )
 
-    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
+    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
     assert success is True
 
     # Verify scene properties
@@ -428,7 +428,7 @@ def test_import_robot_with_mimic(scene, blender_context) -> None:
     robot = Robot(name="mimic_bot", initial_links=[l1, l2, l3], initial_joints=[j1, j2])
 
     # Import
-    import_robot_to_scene(robot, Path("dummy.urdf"), bpy.context)
+    import_robot_to_scene(robot, Path("dummy.urdf"), blender_context)
 
     # Verify mimic link
     follower = bpy.data.objects["follower"]
@@ -661,7 +661,7 @@ def test_import_robot_with_legacy_transmissions_skipped(scene, blender_context) 
     )
 
     # Import
-    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
+    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
     assert success is True
 
     # Auto-conversion is now disabled/removed.
@@ -716,7 +716,7 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists(scene, blende
         initial_transmissions=[trans],
     )
 
-    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
+    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
     assert success is True
 
     # ros2_control should take priority, transmission should be skipped
@@ -891,7 +891,7 @@ def test_import_robot_topological_sort(scene, blender_context) -> None:
 
     robot = Robot(name="chain_bot", initial_links=[l1, l2, l3], initial_joints=[j2, j1])
 
-    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), bpy.context)
+    success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
     assert success is True
 
     # Verify hierarchy is correct despite out-of-order definition
@@ -1093,9 +1093,7 @@ def test_import_robot_sensor_creation_failure(clean_scene, scene, blender_contex
         ],
     )
 
-    context = mock.MagicMock()
-    context.view_layer = bpy.context.view_layer
-
+    context = blender_context
     with mock.patch(
         "linkforge.blender.adapters.core_to_blender.create_sensor_object", return_value=None
     ):

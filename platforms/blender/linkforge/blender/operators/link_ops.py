@@ -164,7 +164,6 @@ def create_collision_for_link(
     Returns:
         The created collision object, or None if failed
     """
-    # Find ALL visual children (not just first one)
     visual_children = [
         c for c in link_obj.children if "_visual" in c.name.lower() and c.type == "MESH"
     ]

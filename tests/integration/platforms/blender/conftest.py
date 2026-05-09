@@ -12,7 +12,10 @@ try:
 
     HAS_BPY = True
 except ImportError:
-    HAS_BPY = False
+    from tests.unit.platforms.blender.mock_bpy_env import setup_mock_bpy
+
+    bpy = setup_mock_bpy()
+    HAS_BPY = True
 
 if HAS_BPY:
     import linkforge.blender
