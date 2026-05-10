@@ -172,23 +172,26 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
         # Fallback for mocked environments where isinstance might fail
         is_mesh = hasattr(mesh, "vertices") and hasattr(mesh, "polygons")
 
-    if not is_mesh:
+    if not is_mesh or mesh is None:
         return None
 
-    # Check for explicit geometry type tags
-    # This guarantees round-trip stability and prevents auto-detection failures
+    # Narrow type for Mypy
+    from typing import cast
+
+    mesh_obj = cast(bpy.types.Mesh, mesh)
+
     tags = ["source_geometry_type", "collision_geometry_type"]
     for tag in tags:
-        if obj.get(tag) is not None:  # type: ignore[func-returns-value]
-            geom_type = str(obj[tag])
-            if geom_type in ("BOX", "CYLINDER", "SPHERE"):
-                return geom_type
-            if geom_type == "MESH":
+        tag_val = obj.get(tag)
+        if isinstance(tag_val, str):
+            if tag_val in ("BOX", "CYLINDER", "SPHERE"):
+                return tag_val
+            if tag_val == "MESH":
                 return None
 
     # Count vertices and faces
-    vert_count = len(mesh.vertices)
-    face_count = len(mesh.polygons)
+    vert_count = len(mesh_obj.vertices)
+    face_count = len(mesh_obj.polygons)
 
     # Get config for primitive detection thresholds
     config = DEFAULT_PRIMITIVE_CONFIG
@@ -196,7 +199,9 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     # Match Box: 8 vertices, 6 quad faces
     if vert_count == config.cube_vert_count and face_count == config.cube_face_count:
         # Verify it's roughly box-shaped by checking if all faces are quads
-        all_quads = all(len(poly.vertices) == config.cube_verts_per_face for poly in mesh.polygons)
+        all_quads = all(
+            len(poly.vertices) == config.cube_verts_per_face for poly in mesh_obj.polygons
+        )
         if all_quads:
             return "BOX"
 
@@ -241,7 +246,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
 
 
 def get_object_geometry(
-    obj: Any,
+    obj: bpy.types.Object | None,
     geometry_type: str = "AUTO",
     link_name: str | None = None,
     geom_purpose: str = "visual",
@@ -350,7 +355,7 @@ def get_object_geometry(
 
 
 def extract_mesh_triangles(
-    obj: Any,
+    obj: bpy.types.Object | None,
     depsgraph: Any | None = None,
     as_numpy: bool = False,
 ) -> tuple[Any, Any] | None:
@@ -373,15 +378,15 @@ def extract_mesh_triangles(
     if depsgraph is None:
         depsgraph = bpy.context.evaluated_depsgraph_get()
     eval_obj = obj.evaluated_get(depsgraph)
-    mesh = eval_obj.to_mesh()
+    mesh_data = eval_obj.to_mesh()
 
-    if mesh is None:
+    if mesh_data is None:
         return None
 
     # Ensure mesh has triangulated faces
-    mesh.calc_loop_triangles()
+    mesh_data.calc_loop_triangles()
 
-    if mesh.loop_triangles is None:
+    if mesh_data.loop_triangles is None:
         eval_obj.to_mesh_clear()
         return None
 
@@ -393,15 +398,15 @@ def extract_mesh_triangles(
     # Fast O(N) extraction via NumPy
     if np is not None:
         # Fast vertex extraction via foreach_get
-        num_verts = len(mesh.vertices)
+        num_verts = len(mesh_data.vertices)
         verts = np.empty(num_verts * 3, dtype=np.float32)
-        mesh.vertices.foreach_get("co", verts)
+        mesh_data.vertices.foreach_get("co", verts)
         vertices_array = verts.reshape((-1, 3))
 
         # Fast face index extraction (triangles)
-        num_tris = len(mesh.loop_triangles)
+        num_tris = len(mesh_data.loop_triangles)
         tris = np.empty(num_tris * 3, dtype=np.int32)
-        mesh.loop_triangles.foreach_get("vertices", tris)
+        mesh_data.loop_triangles.foreach_get("vertices", tris)
         triangles_array = tris.reshape((-1, 3))
 
         # Apply scale
@@ -423,9 +428,9 @@ def extract_mesh_triangles(
     # Python fallback
     vertices = [
         (v.co.x * scale_matrix.x, v.co.y * scale_matrix.y, v.co.z * scale_matrix.z)
-        for v in mesh.vertices
+        for v in mesh_data.vertices
     ]
-    triangles = [tuple(t.vertices) for t in mesh.loop_triangles]
+    triangles = [tuple(t.vertices) for t in mesh_data.loop_triangles]
 
     # Cleanup memory
     eval_obj.to_mesh_clear()

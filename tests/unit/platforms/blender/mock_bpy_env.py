@@ -25,7 +25,9 @@ class MockVector(tuple):
     """Mock for mathutils.Vector."""
 
     def __new__(cls, x=0.0, y=0.0, z=0.0):
-        if isinstance(x, (list, tuple)):
+        if hasattr(x, "x") and hasattr(x, "y") and hasattr(x, "z"):
+            return super().__new__(cls, (float(x.x), float(x.y), float(x.z)))
+        if isinstance(x, (list, tuple)) and len(x) >= 3:
             return super().__new__(cls, (float(x[0]), float(x[1]), float(x[2])))
         return super().__new__(cls, (float(x), float(y), float(z)))
 
@@ -71,6 +73,13 @@ class MockQuaternion:
 
     def to_euler(self, order="XYZ"):
         return MockEuler(self.x, self.y, self.z, order)
+
+    def to_matrix(self):
+        """Mock for mathutils.Quaternion.to_matrix."""
+        res = [[0.0] * 3 for _ in range(3)]
+        for i in range(3):
+            res[i][i] = 1.0
+        return MockMatrix(res)
 
 
 class MockEuler:
@@ -338,7 +347,9 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         return key in self._values
 
     def get(self, key, default=None):
-        return self._values.get(key, default)
+        if hasattr(self, "_values") and key in self._values:
+            return self._values[key]
+        return default
 
     def clear(self):
         self._values.clear()
@@ -350,6 +361,8 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
     def __getattr__(self, key):
         if key.startswith("_") or key in ("id_data", "bl_rna"):
             raise AttributeError(key)
+        if hasattr(self, "_values") and key in self._values:
+            return self._values[key]
         return MagicMock(name=key)
 
 
@@ -367,6 +380,23 @@ class MockCollection:
         self._items.append(item)
         return item
 
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._items[key]
+        return self.get(key)
+
+    def __len__(self):
+        return len(self._items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def get(self, name, default=None):
+        for item in self._items:
+            if getattr(item, "name", None) == name:
+                return item
+        return default
+
     def remove(self, item, do_unlink=True):
         if isinstance(item, int):
             self._items.pop(item)
@@ -378,15 +408,6 @@ class MockCollection:
 
     def append(self, item):
         self._items.append(item)
-
-    def __len__(self):
-        return len(self._items)
-
-    def __getitem__(self, i):
-        return self._items[i]
-
-    def __iter__(self):
-        return iter(self._items)
 
     def __contains__(self, key):
         """Support 'in' operator for named items or objects."""
@@ -438,12 +459,31 @@ class MockMesh(MockPropertyGroup):
         pass
 
 
+class MockNodeInput(MockPropertyGroup):
+    """Mock for bpy.types.NodeSocket."""
+
+    def __init__(self, name="Input", **kwargs):
+        super().__init__(**kwargs)
+        self.name = name
+        self.default_value = (0.8, 0.8, 0.8, 1.0)
+
+
+class MockNode(MockPropertyGroup):
+    """Mock for bpy.types.Node."""
+
+    def __init__(self, name="Node", node_type="BSDF_PRINCIPLED", **kwargs):
+        super().__init__(**kwargs)
+        self.name = name
+        self.type = node_type
+        self.inputs = MockCollection(prop_type=MockNodeInput)
+
+
 class MockNodeTree(MockPropertyGroup):
     """Mock for bpy.types.NodeTree."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.nodes = MockCollection()
+        self.nodes = MockCollection(prop_type=MockNode)
 
 
 class MockMaterial(MockPropertyGroup):
@@ -452,8 +492,24 @@ class MockMaterial(MockPropertyGroup):
     def __init__(self, name="Material", **kwargs):
         super().__init__(**kwargs)
         self.name = name
-        self.use_nodes = False
+        self._use_nodes = False
         self.node_tree = MockNodeTree()
+        self.diffuse_color = (0.8, 0.8, 0.8, 1.0)
+
+    @property
+    def use_nodes(self):
+        return self._use_nodes
+
+    @use_nodes.setter
+    def use_nodes(self, value):
+        self._use_nodes = value
+        if value and len(self.node_tree.nodes) == 0:
+            # Create default Principled BSDF node
+            bsdf = self.node_tree.nodes.add()
+            bsdf.name = "Principled BSDF"
+            bsdf.type = "BSDF_PRINCIPLED"
+            # Add Base Color input
+            bsdf.inputs.add().name = "Base Color"
 
 
 class MockObject(MockPropertyGroup):
@@ -469,12 +525,11 @@ class MockObject(MockPropertyGroup):
         self.matrix_local = MockMatrix.Identity(4)
         self.matrix_basis = MockMatrix.Identity(4)
         self.matrix_parent_inverse = MockMatrix.Identity(4)
-        self.location = MockVector(0, 0, 0)
-        self.rotation_euler = MockEuler(0, 0, 0)
+        self._location = MockVector(0, 0, 0)
+        self._rotation_euler = MockEuler(0, 0, 0)
         self.rotation_mode = "XYZ"
-        self.scale = MockVector(1, 1, 1)
-        self.dimensions = MockVector(0, 0, 0)
-        self.material_slots = MockCollection(prop_type=MockMaterialSlot)
+        self._scale = MockVector(1, 1, 1)
+        self._base_dimensions = MockVector(0, 0, 0)
         self.constraints = MockCollection()
         self.modifiers = MockCollection()
         self.children = MockCollection()
@@ -484,6 +539,77 @@ class MockObject(MockPropertyGroup):
         self.empty_display_size = 0.5
         self.hide_viewport = False
         self.hide_render = False
+
+    @property
+    def location(self):
+        return self._location
+
+    @location.setter
+    def location(self, value):
+        self._location = MockVector(value)
+        # Update matrix_local/world (simplified for identity parent)
+        self.matrix_local.data[0][3] = self._location.x
+        self.matrix_local.data[1][3] = self._location.y
+        self.matrix_local.data[2][3] = self._location.z
+        self.matrix_world = self.matrix_local.copy()
+
+    @property
+    def rotation_euler(self):
+        return self._rotation_euler
+
+    @rotation_euler.setter
+    def rotation_euler(self, value):
+        self._rotation_euler = MockEuler(value)
+        # Update matrix_local/world (simplified)
+        rot_mat = self._rotation_euler.to_4x4()
+        rot_mat.data[0][3] = self._location.x
+        rot_mat.data[1][3] = self._location.y
+        rot_mat.data[2][3] = self._location.z
+        self.matrix_local = rot_mat
+        self.matrix_world = self.matrix_local.copy()
+
+    @property
+    def scale(self):
+        return self._scale
+
+    @scale.setter
+    def scale(self, value):
+        self._scale = MockVector(value)
+
+    @property
+    def dimensions(self):
+        return MockVector(
+            self._base_dimensions.x * self._scale.x,
+            self._base_dimensions.y * self._scale.y,
+            self._base_dimensions.z * self._scale.z,
+        )
+
+    @dimensions.setter
+    def dimensions(self, value):
+        v = MockVector(value)
+        if (
+            self._base_dimensions.x != 0
+            and self._base_dimensions.y != 0
+            and self._base_dimensions.z != 0
+        ):
+            self.scale = (
+                v.x / self._base_dimensions.x,
+                v.y / self._base_dimensions.y,
+                v.z / self._base_dimensions.z,
+            )
+        else:
+            # Fallback for uninitialized base dimensions: treat value as base at scale 1.0
+            self._base_dimensions = v
+            self.scale = (1.0, 1.0, 1.0)
+
+    @property
+    def material_slots(self):
+        slots = MockCollection(prop_type=MockMaterialSlot)
+        if self.data and hasattr(self.data, "materials"):
+            for mat in self.data.materials:
+                slot = slots.add()
+                slot.material = mat
+        return slots
 
     @property
     def parent(self):
@@ -571,6 +697,7 @@ def setup_mock_bpy():
     mock_types.Scene = MockScene
     mock_types.Collection = MockCollection
     mock_types.Operator = MockOperator
+    mock_types.MaterialSlot = MockMaterialSlot
     mock_types.Panel = object
     mock_types.Menu = object
     mock_types.AddonPreferences = object
@@ -629,7 +756,25 @@ def setup_mock_bpy():
     # Initialize view_layer with a fallback to avoid NoneType errors
     mock_view_layer = MagicMock(name="ViewLayer")
     mock_view_layer.objects = mock_data.objects
-    mock_view_layer.update = lambda: None
+
+    def _update_view_layer():
+        # Propagation pass: root to leaves
+        processed = set()
+
+        def update_obj(obj):
+            if obj in processed:
+                return
+            if obj.parent:
+                update_obj(obj.parent)
+                obj.matrix_world = obj.parent.matrix_world @ obj.matrix_local
+            else:
+                obj.matrix_world = obj.matrix_local.copy()
+            processed.add(obj)
+
+        for obj in mock_data.objects:
+            update_obj(obj)
+
+    mock_view_layer.update = _update_view_layer
     mock_context.view_layer = mock_view_layer
 
     if len(mock_data.scenes) > 0:
@@ -738,10 +883,25 @@ def setup_mock_bpy():
             mock_context.view_layer.objects.active = new_cyl
         return {"FINISHED"}
 
+    def mock_monkey_add(**kwargs):
+        mesh = MockMesh(name="MonkeyMesh")
+        # Suzanne has ~500 verts/faces, avoids primitive detection
+        for _ in range(507):
+            mesh.vertices.add()
+        for _ in range(500):
+            mesh.polygons.add()
+        new_monkey = MockObject(name="Suzanne", data=mesh)
+        mock_data.objects.append(new_monkey)
+        mock_context.active_object = new_monkey
+        if mock_context.view_layer:
+            mock_context.view_layer.objects.active = new_monkey
+        return {"FINISHED"}
+
     mock_ops.object.empty_add = mock_empty_add
     mock_ops.mesh.primitive_cube_add = mock_cube_add
     mock_ops.mesh.primitive_uv_sphere_add = mock_sphere_add
     mock_ops.mesh.primitive_cylinder_add = mock_cylinder_add
+    mock_ops.mesh.primitive_monkey_add = mock_monkey_add
     mock_ops.object.select_all = lambda action="TOGGLE": {"FINISHED"}
 
     mock_bpy.ops = mock_ops
