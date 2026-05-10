@@ -57,6 +57,9 @@ class MockVector(tuple):
     def __repr__(self):
         return f"Vector(({self.x}, {self.y}, {self.z}))"
 
+    def copy(self):
+        return MockVector(self.x, self.y, self.z)
+
     @property
     def length(self):
         return math.sqrt(self.x**2 + self.y**2 + self.z**2)
@@ -70,6 +73,11 @@ class MockQuaternion:
 
     def __init__(self, *args):
         self.w, self.x, self.y, self.z = 1.0, 0.0, 0.0, 0.0
+
+    def copy(self):
+        q = MockQuaternion()
+        q.w, q.x, q.y, q.z = self.w, self.x, self.y, self.z
+        return q
 
     def to_euler(self, order="XYZ"):
         return MockEuler(self.x, self.y, self.z, order)
@@ -128,6 +136,9 @@ class MockEuler:
 
     def __repr__(self):
         return f"Euler(({self.x}, {self.y}, {self.z}), '{self.order}')"
+
+    def copy(self):
+        return MockEuler(self.x, self.y, self.z, self.order)
 
 
 class MockMatrix:
