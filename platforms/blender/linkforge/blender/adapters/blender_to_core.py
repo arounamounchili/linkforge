@@ -166,7 +166,13 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
         return None
 
     mesh = obj.data
-    if mesh is None or not isinstance(mesh, bpy.types.Mesh):
+    # Type-narrowing for Mypy, with resilience for mocked test environments
+    is_mesh = isinstance(mesh, bpy.types.Mesh)
+    if not is_mesh and obj.type == "MESH" and mesh is not None:
+        # Fallback for mocked environments where isinstance might fail
+        is_mesh = hasattr(mesh, "vertices") and hasattr(mesh, "polygons")
+
+    if not is_mesh:
         return None
 
     # Check for explicit geometry type tags

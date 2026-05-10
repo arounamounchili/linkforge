@@ -1,6 +1,7 @@
 import math
 import sys
 import types
+from pathlib import Path
 from unittest.mock import MagicMock
 
 # -----------------------------------------------------------------------------
@@ -20,38 +21,25 @@ class DynamicModule(types.ModuleType):
         self.__dict__[name] = value
 
 
-class MockVector:
+class MockVector(tuple):
     """Mock for mathutils.Vector."""
 
-    def __init__(self, x=0.0, y=0.0, z=0.0):
-        if isinstance(x, (list, tuple, MockVector)):
-            self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
-        else:
-            self.x = float(x)
-            self.y = float(y)
-            self.z = float(z)
+    def __new__(cls, x=0.0, y=0.0, z=0.0):
+        if isinstance(x, (list, tuple)):
+            return super().__new__(cls, (float(x[0]), float(x[1]), float(x[2])))
+        return super().__new__(cls, (float(x), float(y), float(z)))
 
-    def __getitem__(self, i):
-        return [self.x, self.y, self.z][i]
+    @property
+    def x(self):
+        return self[0]
 
-    def __setitem__(self, i, v):
-        if i == 0:
-            self.x = v
-        elif i == 1:
-            self.y = v
-        elif i == 2:
-            self.z = v
+    @property
+    def y(self):
+        return self[1]
 
-    def __iter__(self):
-        yield self.x
-        yield self.y
-        yield self.z
-
-    def __len__(self):
-        return 3
-
-    def copy(self):
-        return MockVector(self.x, self.y, self.z)
+    @property
+    def z(self):
+        return self[2]
 
     def __add__(self, other):
         return MockVector(self.x + other[0], self.y + other[1], self.z + other[2])
@@ -141,12 +129,42 @@ class MockMatrix:
             self.data = [[0.0] * 4 for _ in range(4)]
             for i in range(4):
                 self.data[i][i] = 1.0
+        elif (
+            isinstance(data, (list, tuple)) and len(data) > 0 and isinstance(data[0], (list, tuple))
+        ):
+            # Support arbitrary sizes (2x2, 3x3, 4x4)
+            rows = len(data)
+            cols = len(data[0])
+            self.data = [[float(data[i][j]) for j in range(cols)] for i in range(rows)]
         else:
             self.data = data
 
     @staticmethod
     def Identity(n):  # noqa: N802
-        return MockMatrix()
+        m = MockMatrix([[0.0] * n for _ in range(n)])
+        for i in range(n):
+            m.data[i][i] = 1.0
+        return m
+
+    @staticmethod
+    def Rotation(angle, size, axis):  # noqa: N802
+        """Mock for mathutils.Matrix.Rotation using the to_euler hack."""
+        m = MockMatrix.Identity(size)
+        if size >= 2:
+            m.data[0][0] = 0.9  # Trigger the to_euler hack
+            if axis == "X":
+                m.data[0][1] = float(angle)
+                m.data[0][2] = 0.0
+                m.data[1][0] = 0.0
+            elif axis == "Y":
+                m.data[0][1] = 0.0
+                m.data[0][2] = float(angle)
+                m.data[1][0] = 0.0
+            elif axis == "Z":
+                m.data[0][1] = 0.0
+                m.data[0][2] = 0.0
+                m.data[1][0] = float(angle)
+        return m
 
     @staticmethod
     def Diagonal(vec):  # noqa: N802
@@ -171,13 +189,31 @@ class MockMatrix:
     def to_translation(self):
         return self.translation
 
+    def to_quaternion(self):
+        """Mock for mathutils.Matrix.to_quaternion."""
+        return MockQuaternion()
+
     def to_euler(self, order="XYZ"):
         if self.data[0][0] == 0.9:
             return MockEuler(self.data[0][1], self.data[0][2], self.data[1][0], order)
         return MockEuler(0.0, 0.0, 0.0, order)
 
     def to_4x4(self):
-        return self
+        if len(self.data) == 4:
+            return self
+        res = MockMatrix.Identity(4)
+        for i in range(min(len(self.data), 4)):
+            for j in range(min(len(self.data[0]), 4)):
+                res.data[i][j] = self.data[i][j]
+        return res
+
+    def to_3x3(self):
+        """Mock for mathutils.Matrix.to_3x3."""
+        res = [[0.0] * 3 for _ in range(3)]
+        for i in range(min(len(self.data), 3)):
+            for j in range(min(len(self.data[0]), 3)):
+                res.data[i][j] = self.data[i][j]
+        return MockMatrix(res)
 
     def identity(self):
         self.data = [[0.0] * 4 for _ in range(4)]
@@ -287,6 +323,8 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
 
     def __init__(self, **kwargs):
         self._values = {}
+        self.id_data = None
+        self.name = kwargs.get("name", "Unnamed")
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -310,7 +348,7 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         return MagicMock()
 
     def __getattr__(self, key):
-        if key.startswith("_"):
+        if key.startswith("_") or key in ("id_data", "bl_rna"):
             raise AttributeError(key)
         return MagicMock(name=key)
 
@@ -350,8 +388,11 @@ class MockCollection:
     def __iter__(self):
         return iter(self._items)
 
-    def __contains__(self, item):
-        return item in self._items
+    def __contains__(self, key):
+        """Support 'in' operator for named items or objects."""
+        if isinstance(key, str):
+            return any(getattr(item, "name", None) == key for item in self._items)
+        return key in self._items
 
     @property
     def bl_rna(self):
@@ -374,6 +415,47 @@ class MockCollection:
             self._items.remove(obj)
 
 
+class MockMaterialSlot(MockPropertyGroup):
+    """Mock for bpy.types.MaterialSlot."""
+
+    def __init__(self, material=None, **kwargs):
+        super().__init__(**kwargs)
+        self.material = material
+
+
+class MockMesh(MockPropertyGroup):
+    """Mock for bpy.types.Mesh."""
+
+    def __init__(self, name="Mesh", **kwargs):
+        super().__init__(**kwargs)
+        self.name = name
+        self.vertices = MockCollection()
+        self.polygons = MockCollection()
+        self.materials = MockCollection()
+
+    def transform(self, matrix):
+        """Mock for applying a transformation matrix to mesh data."""
+        pass
+
+
+class MockNodeTree(MockPropertyGroup):
+    """Mock for bpy.types.NodeTree."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.nodes = MockCollection()
+
+
+class MockMaterial(MockPropertyGroup):
+    """Mock for bpy.types.Material."""
+
+    def __init__(self, name="Material", **kwargs):
+        super().__init__(**kwargs)
+        self.name = name
+        self.use_nodes = False
+        self.node_tree = MockNodeTree()
+
+
 class MockObject(MockPropertyGroup):
     """Mock for bpy.types.Object."""
 
@@ -381,22 +463,42 @@ class MockObject(MockPropertyGroup):
         super().__init__(**kwargs)
         self.name = name
         self.data = data
-        self.type = "MESH" if data else "EMPTY"
-        self.matrix_world = MockMatrix()
-        self.location = MockVector()
-        self.rotation_euler = MockEuler()
+        self.type = "MESH" if (data and not isinstance(data, MagicMock)) else "EMPTY"
+        self._parent = None
+        self.matrix_world = MockMatrix.Identity(4)
+        self.matrix_local = MockMatrix.Identity(4)
+        self.matrix_basis = MockMatrix.Identity(4)
+        self.matrix_parent_inverse = MockMatrix.Identity(4)
+        self.location = MockVector(0, 0, 0)
+        self.rotation_euler = MockEuler(0, 0, 0)
+        self.rotation_mode = "XYZ"
         self.scale = MockVector(1, 1, 1)
-        self.dimensions = MockVector(1, 1, 1)
-        self.matrix_parent_inverse = MockMatrix()
-        self.parent = None
+        self.dimensions = MockVector(0, 0, 0)
+        self.material_slots = MockCollection(prop_type=MockMaterialSlot)
+        self.constraints = MockCollection()
+        self.modifiers = MockCollection()
         self.children = MockCollection()
         self.users_collection = MockCollection()
-        self.vertices = MockCollection()
-        self.polygons = MockCollection()
-        self.modifiers = MockCollection()
         self.bound_box = [(0.0, 0.0, 0.0)] * 8
         self.empty_display_type = "PLAIN_AXES"
+        self.empty_display_size = 0.5
         self.hide_viewport = False
+        self.hide_render = False
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, value):
+        # Update parent-child relationship for high-fidelity scene tree
+        if self._parent and hasattr(self._parent, "children") and self in self._parent.children:
+            self._parent.children.remove(self)
+
+        self._parent = value
+
+        if value and hasattr(value, "children") and self not in value.children:
+            value.children.append(self)
 
     def select_get(self):
         return True
@@ -464,6 +566,8 @@ def setup_mock_bpy():
 
     mock_types.PropertyGroup = MockPropertyGroup
     mock_types.Object = MockObject
+    mock_types.Mesh = MockMesh
+    mock_types.Material = MockMaterial
     mock_types.Scene = MockScene
     mock_types.Collection = MockCollection
     mock_types.Operator = MockOperator
@@ -495,16 +599,32 @@ def setup_mock_bpy():
     )
 
     mock_data.objects = MockCollection(prop_type=MockObject)
-    mock_data.objects.new = lambda name, data=None: MockObject(name=name, data=data)
-    mock_data.meshes = MockCollection()
-    mock_data.meshes.new = lambda name: MockObject(name=name)
-    mock_data.meshes.new_from_object = lambda obj, **kwargs: MockObject(name=f"{obj.name}_mesh")
-    mock_data.collections = MockCollection()
+    mock_data.objects.new = lambda name, data=None: mock_data.objects.new_item(name, data=data)
+
+    def _new_obj_item(name, data=None):
+        obj = MockObject(name=name, data=data)
+        mock_data.objects.append(obj)
+        return obj
+
+    mock_data.objects.new = _new_obj_item
+
+    mock_data.meshes = MockCollection(prop_type=MockMesh)
+    mock_data.meshes.new = lambda name: mock_data.meshes.new_item(name, cls=MockMesh)
+
+    def _new_mesh_item(name):
+        m = MockMesh(name=name)
+        mock_data.meshes.append(m)
+        return m
+
+    mock_data.meshes.new = _new_mesh_item
+
+    mock_data.meshes.new_from_object = lambda obj, **kwargs: _new_mesh_item(f"{obj.name}_mesh")
+    mock_data.collections = MockCollection(prop_type=MockCollection)
     mock_data.collections.new = lambda name: MockCollection()
-    mock_data.scenes = MockCollection()
+    mock_data.scenes = MockCollection(prop_type=MockScene)
     mock_data.scenes.append(MockScene(name="Scene"))
-    mock_data.materials = MockCollection()
-    mock_data.materials.new = lambda name: MockObject(name=name)
+    mock_data.materials = MockCollection(prop_type=MockMaterial)
+    mock_data.materials.new = lambda name: MockMaterial(name=name)
 
     # Initialize view_layer with a fallback to avoid NoneType errors
     mock_view_layer = MagicMock(name="ViewLayer")
@@ -542,6 +662,19 @@ def setup_mock_bpy():
     mock_ops.wm = DynamicModule("bpy.ops.wm")
     mock_ops.export_scene = DynamicModule("bpy.ops.export_scene")
 
+    # Mock high-fidelity exporters to satisfy existence checks
+    def mock_file_op(filepath=None, **kwargs):
+        if filepath:
+            Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+            Path(filepath).touch()
+        return {"FINISHED"}
+
+    mock_ops.wm.stl_export = mock_file_op
+    mock_ops.wm.obj_export = mock_file_op
+    mock_ops.wm.stl_import = mock_file_op
+    mock_ops.wm.obj_import = mock_file_op
+    mock_ops.export_scene.gltf = mock_file_op
+
     def mock_empty_add(type_="PLAIN_AXES", location=(0, 0, 0), **kwargs):
         new_empty = MockObject(name="Empty")
         new_empty.type = "EMPTY"
@@ -553,18 +686,62 @@ def setup_mock_bpy():
             mock_context.view_layer.objects.active = new_empty
         return {"FINISHED"}
 
-    def mock_cube_add(location=(0, 0, 0), **kwargs):
-        new_cube = MockObject(name="Cube")
-        new_cube.type = "MESH"
+    def mock_cube_add(size=2.0, location=(0, 0, 0), **kwargs):
+        mesh = MockMesh(name="CubeMesh")
+        # Add 8 vertices and 6 polygons for a box
+        for _ in range(8):
+            mesh.vertices.add()
+        for _ in range(6):
+            p = mesh.polygons.add()
+            p.vertices = [0, 1, 2, 3]  # Quad
+        new_cube = MockObject(name="Cube", data=mesh)
         new_cube.location = MockVector(location)
+        new_cube.dimensions = MockVector(size, size, size)
         mock_data.objects.append(new_cube)
+        mock_data.meshes.append(mesh)
         mock_context.active_object = new_cube
         if mock_context.view_layer:
             mock_context.view_layer.objects.active = new_cube
         return {"FINISHED"}
 
+    def mock_sphere_add(radius=1.0, location=(0, 0, 0), **kwargs):
+        mesh = MockMesh(name="SphereMesh")
+        # UV Sphere default (482 verts, 480 polys)
+        for _ in range(482):
+            mesh.vertices.add()
+        for _ in range(480):
+            mesh.polygons.add()
+        new_sphere = MockObject(name="Sphere", data=mesh)
+        new_sphere.location = MockVector(location)
+        new_sphere.dimensions = MockVector(radius * 2, radius * 2, radius * 2)
+        mock_data.objects.append(new_sphere)
+        mock_data.meshes.append(mesh)
+        mock_context.active_object = new_sphere
+        if mock_context.view_layer:
+            mock_context.view_layer.objects.active = new_sphere
+        return {"FINISHED"}
+
+    def mock_cylinder_add(radius=1.0, depth=2.0, location=(0, 0, 0), **kwargs):
+        mesh = MockMesh(name="CylinderMesh")
+        # Cylinder default (66 verts, 64 polys)
+        for _ in range(66):
+            mesh.vertices.add()
+        for _ in range(64):
+            mesh.polygons.add()
+        new_cyl = MockObject(name="Cylinder", data=mesh)
+        new_cyl.location = MockVector(location)
+        new_cyl.dimensions = MockVector(radius * 2, radius * 2, depth)
+        mock_data.objects.append(new_cyl)
+        mock_data.meshes.append(mesh)
+        mock_context.active_object = new_cyl
+        if mock_context.view_layer:
+            mock_context.view_layer.objects.active = new_cyl
+        return {"FINISHED"}
+
     mock_ops.object.empty_add = mock_empty_add
     mock_ops.mesh.primitive_cube_add = mock_cube_add
+    mock_ops.mesh.primitive_uv_sphere_add = mock_sphere_add
+    mock_ops.mesh.primitive_cylinder_add = mock_cylinder_add
     mock_ops.object.select_all = lambda action="TOGGLE": {"FINISHED"}
 
     mock_bpy.ops = mock_ops

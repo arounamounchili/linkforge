@@ -19,7 +19,9 @@ from tests.blender_test_utils import create_test_object
 class TestMeshIO:
     def test_export_mesh_stl(self, scene, tmp_path, blender_context) -> None:
         """Test exporting a mesh to STL."""
-        obj = create_test_object("test_cube_stl", None, scene)
+        from tests.blender_test_utils import create_mesh_object
+
+        obj = create_mesh_object("test_cube_stl", scene=scene, with_cube=True)
         filepath = tmp_path / "test.stl"
 
         export_mesh_stl(obj, filepath)
@@ -27,7 +29,9 @@ class TestMeshIO:
 
     def test_export_mesh_obj(self, scene, tmp_path, blender_context) -> None:
         """Test exporting a mesh to OBJ."""
-        obj = create_test_object("test_cube_obj", None, scene)
+        from tests.blender_test_utils import create_mesh_object
+
+        obj = create_mesh_object("test_cube_obj", scene=scene, with_cube=True)
         filepath = tmp_path / "test.obj"
 
         export_mesh_obj(obj, filepath)

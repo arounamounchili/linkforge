@@ -7,6 +7,7 @@ independent of the actual Blender environment or even fake-bpy-module.
 
 from unittest.mock import MagicMock
 
+import bpy
 import pytest
 from linkforge.blender.adapters.blender_to_core import (
     detect_primitive_type,
@@ -53,11 +54,11 @@ def test_detect_primitive_type_box_mocked() -> None:
 
     A box requires 8 vertices and 6 quad polygons.
     """
-    mock_obj = MagicMock()
+    mock_obj = bpy.types.Object(name="Box")
     mock_obj.type = "MESH"
 
-    # Mock mesh data
-    mock_mesh = MagicMock()
+    # Mock mesh data using high-fidelity MockMesh to satisfy isinstance checks
+    mock_mesh = bpy.types.Mesh(name="BoxMesh")
     mock_mesh.vertices = [MagicMock()] * 8
 
     # 6 faces, each with 4 vertices (quads)
@@ -78,12 +79,12 @@ def test_detect_primitive_type_sphere_mocked() -> None:
 
     A sphere is detected by vertex/face count and bounding box uniformity.
     """
-    mock_obj = MagicMock()
+    mock_obj = bpy.types.Object(name="Sphere")
     mock_obj.type = "MESH"
     mock_obj.dimensions = MagicMock(x=1.0, y=1.0, z=1.0)
 
     # UV Sphere default subdivision (e.g. 482 verts)
-    mock_mesh = MagicMock()
+    mock_mesh = bpy.types.Mesh(name="SphereMesh")
     mock_mesh.vertices = [MagicMock()] * 482
     mock_mesh.polygons = [MagicMock()] * 480
     mock_obj.data = mock_mesh
@@ -96,7 +97,7 @@ def test_detect_primitive_type_sphere_mocked() -> None:
 
 def test_detect_primitive_type_none_mocked() -> None:
     """Verify detect_primitive_type returns None for non-mesh types."""
-    mock_obj = MagicMock()
+    mock_obj = bpy.types.Object(name="Empty")
     mock_obj.type = "EMPTY"
 
     assert detect_primitive_type(mock_obj) is None
