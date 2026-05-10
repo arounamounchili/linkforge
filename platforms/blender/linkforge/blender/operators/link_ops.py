@@ -221,19 +221,19 @@ def create_collision_for_link(
         # Parent to link using Strict Alignment
         collision_obj.parent = link_obj
 
-        # Align with strict precision
         if reference_visual:
             # PRIMITIVE: Align with visual x local offset
             collision_obj.matrix_parent_inverse = reference_visual.matrix_parent_inverse.copy()
             collision_obj.matrix_local = (
                 reference_visual.matrix_local @ mathutils.Matrix.Translation(local_offset)
             )
+            # CRITICAL: Match World Dimensions LAST to override any scale from matrix_local
+            collision_obj.dimensions = reference_visual.dimensions.copy()
         else:
             # MESH: Already baked link-local, just reset transforms
             collision_obj.matrix_parent_inverse.identity()
             collision_obj.matrix_local.identity()
-
-        collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
+            collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
 
         # IMPORTANT: Ensure collision is actually a child in the collection hierarchy
         if context.collection and collision_obj.name not in context.collection.objects:
@@ -268,6 +268,9 @@ def _create_primitive_collision(
     # Create primitive at world origin initially
     # We create them at unit size for predictable scaling via dimensions
     ops = getattr(context, "ops", bpy.ops)
+    print(
+        f"DEBUG: ops.mesh={ops.mesh}, primitive_cube_add={getattr(ops.mesh, 'primitive_cube_add', 'MISSING')}"
+    )
     if prim_type == "BOX":
         # Create cube (1x1x1)
         ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
@@ -281,6 +284,9 @@ def _create_primitive_collision(
         return None, mathutils.Vector((0, 0, 0))
 
     collision_obj = getattr(context, "active_object", bpy.context.active_object)
+    print(
+        f"DEBUG: _create_primitive_collision: created {collision_obj.name if collision_obj else 'None'}, active={context.active_object.name if context.active_object else 'None'}"
+    )
 
     # CRITICAL: Match World Pose (Location/Rotation) first
     # We include local_center offset to align primitive with specific geometry volume

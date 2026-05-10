@@ -277,7 +277,6 @@ def test_get_object_material_logic(scene, blender_context) -> None:
     assert obj.data is not None and hasattr(obj.data, "materials")
     obj.data.materials.append(mat)
 
-    # Use real link properties
     link_props = safe_get_linkforge(obj)
     link_props.use_material = True
 
@@ -1224,6 +1223,7 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_conte
 
     item = scene.linkforge.ros2_control_joints.add()
     item.name = "Dummy"
+    item.cmd_position = True
     scene.linkforge.gazebo_plugin_name = "gazebo_ros2_control"
     scene.linkforge.controllers_yaml_path = "/path/to/yaml"
     # Use a lambda to return a Link with the correct name for each call

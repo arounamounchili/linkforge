@@ -14,6 +14,8 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
 )
 
+from .mock_bpy_env import MockVector
+
 
 def test_matrix_to_transform_mocked() -> None:
     """Verify matrix_to_transform works with a pure mock matrix object.
@@ -81,7 +83,10 @@ def test_detect_primitive_type_sphere_mocked() -> None:
     """
     mock_obj = bpy.types.Object(name="Sphere")
     mock_obj.type = "MESH"
-    mock_obj.dimensions = MagicMock(x=1.0, y=1.0, z=1.0)
+    # Set base dimensions so the setter below can calculate scale correctly
+    if hasattr(mock_obj, "_base_dimensions"):
+        mock_obj._base_dimensions = MockVector(1.0, 1.0, 1.0)
+    mock_obj.dimensions = MockVector(1.0, 1.0, 1.0)
 
     # UV Sphere default subdivision (e.g. 482 verts)
     mock_mesh = bpy.types.Mesh(name="SphereMesh")

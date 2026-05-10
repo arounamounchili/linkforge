@@ -59,6 +59,10 @@ def scene(blender_context):
 @pytest.fixture(autouse=True)
 def clean_scene(blender_context):
     """Automatically cleans the scene before each test."""
+    if not is_real_blender:
+        setup_mock_bpy()
+
+    # Real Blender removal of all objects and underlying data
 
     # Real Blender removal of all objects and underlying data
     import bpy
