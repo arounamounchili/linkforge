@@ -182,7 +182,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
 
     tags = ["source_geometry_type", "collision_geometry_type"]
     for tag in tags:
-        tag_val = obj.get(tag)
+        tag_val = obj.get(tag)  # type: ignore[func-returns-value]
         if isinstance(tag_val, str):
             if tag_val in ("BOX", "CYLINDER", "SPHERE"):
                 return tag_val
