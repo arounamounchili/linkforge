@@ -212,7 +212,7 @@ class MockMatrix:
         res = [[0.0] * 3 for _ in range(3)]
         for i in range(min(len(self.data), 3)):
             for j in range(min(len(self.data[0]), 3)):
-                res.data[i][j] = self.data[i][j]
+                res[i][j] = self.data[i][j]
         return MockMatrix(res)
 
     def identity(self):
