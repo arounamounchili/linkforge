@@ -124,7 +124,7 @@ Complete examples in `examples/` directory:
 - **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** - Technical reference for developers.
 - **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** - System design and internals.
 - **[CHANGELOG](CHANGELOG.md)** - Version history.
-- **Examples**: [examples/](https://github.com/arounamounchili/linkforge/tree/main/examples)
+- **Examples**: [examples/](examples/)
 
 ## 💻 Development
 
@@ -144,7 +144,7 @@ For complete instructions on testing, linting, and building the extension, pleas
 
 ## 🎓 Learning Resources
 
-- [Example Files](https://github.com/arounamounchili/linkforge/tree/main/examples) - Sample URDF files
+- [Example Files](examples/) - Sample URDF files
 - [Community Forum](https://github.com/arounamounchili/linkforge/discussions) - Ask questions
 
 ## 🗺️ Roadmap
