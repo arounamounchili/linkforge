@@ -1279,15 +1279,31 @@ mock_ops.wm = DynamicModule("bpy.ops.wm")
 mock_ops.export_scene = DynamicModule("bpy.ops.export_scene")
 mock_app = DynamicModule("bpy.app")
 
-# Register in sys.modules for global accessibility
-sys.modules["mathutils"] = mock_mathutils
-sys.modules["bpy"] = mock_bpy
-sys.modules["bpy.data"] = mock_data
-sys.modules["bpy.context"] = mock_context
-sys.modules["bpy.ops"] = mock_ops
-sys.modules["bpy.types"] = mock_bpy.types
-sys.modules["bpy.props"] = mock_bpy.props
-sys.modules["bpy.app"] = mock_app
+# Only register mocks in sys.modules if we are not in a real Blender environment.
+# Real Blender has a binary_path in bpy.app.
+_is_real_blender = False
+try:
+    import bpy as _real_bpy
+
+    if (
+        hasattr(_real_bpy, "app")
+        and hasattr(_real_bpy.app, "binary_path")
+        and _real_bpy.app.binary_path
+    ):
+        _is_real_blender = True
+except (ImportError, AttributeError):
+    pass
+
+if not _is_real_blender:
+    # Register in sys.modules for global accessibility
+    sys.modules["mathutils"] = mock_mathutils
+    sys.modules["bpy"] = mock_bpy
+    sys.modules["bpy.data"] = mock_data
+    sys.modules["bpy.context"] = mock_context
+    sys.modules["bpy.ops"] = mock_ops
+    sys.modules["bpy.types"] = mock_bpy.types
+    sys.modules["bpy.props"] = mock_bpy.props
+    sys.modules["bpy.app"] = mock_app
 
 
 def setup_mock_bpy():
@@ -1605,15 +1621,30 @@ def setup_mock_bpy():
 
         def from_mesh(self, mesh):
             self.verts.clear()
+            v_list = []
             for v in mesh.vertices:
                 bm_v = self.verts.add()
                 bm_v.co = MockVector(v.co) if hasattr(v, "co") else MockVector()
+                v_list.append(bm_v)
+
+            self.faces.clear()
+            for poly in mesh.polygons:
+                bm_f = self.faces.add()
+                bm_f.verts = [v_list[i] for i in poly.vertices if i < len(v_list)]
 
         def to_mesh(self, mesh):
             mesh.vertices.clear()
-            for v in self.verts:
+            v_map = {}
+            for i, v in enumerate(self.verts):
                 m_v = mesh.vertices.add()
                 m_v.co = MockVector(v.co)
+                v_map[v] = i
+
+            mesh.polygons.clear()
+            for f in self.faces:
+                m_p = mesh.polygons.add()
+                # Link vertices by index
+                m_p.vertices = [v_map.get(v, 0) for v in getattr(f, "verts", [])]
 
         def free(self):
             pass
@@ -1625,19 +1656,38 @@ def setup_mock_bpy():
         # Create 8 vertices for a cube
         s = size / 2.0
         coords = [
-            (-s, -s, -s),
-            (s, -s, -s),
-            (s, s, -s),
-            (-s, s, -s),
-            (-s, -s, s),
-            (s, -s, s),
-            (s, s, s),
-            (-s, s, s),
+            (-s, -s, -s),  # 0
+            (s, -s, -s),  # 1
+            (s, s, -s),  # 2
+            (-s, s, -s),  # 3
+            (-s, -s, s),  # 4
+            (s, -s, s),  # 5
+            (s, s, s),  # 6
+            (-s, s, s),  # 7
         ]
+        verts = []
         for c in coords:
             v = bm.verts.add()
             v.co = MockVector(c)
-        return ([bm.verts[-8:]], [bm.faces.add() for _ in range(6)])
+            verts.append(v)
+
+        # Define 6 faces (quads) to satisfy primitive detection logic
+        # Bottom, Top, Front, Right, Back, Left
+        face_indices = [
+            (0, 1, 2, 3),
+            (4, 5, 6, 7),
+            (0, 1, 5, 4),
+            (1, 2, 6, 5),
+            (2, 3, 7, 6),
+            (3, 0, 4, 7),
+        ]
+        faces = []
+        for indices in face_indices:
+            f = bm.faces.add()
+            f.verts = [verts[i] for i in indices]
+            faces.append(f)
+
+        return (verts, faces)
 
     mock_bmesh.ops.create_cube = mock_create_cube
     mock_bmesh.ops.create_uvsphere = lambda bm, **kwargs: (

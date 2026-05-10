@@ -5,6 +5,7 @@ logic using unittest.mock, ensuring that the core transformation logic remains
 independent of the actual Blender environment or even fake-bpy-module.
 """
 
+import typing
 from unittest.mock import MagicMock
 
 import bpy
@@ -14,7 +15,7 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
 )
 
-from .mock_bpy_env import MockVector
+from .mock_bpy_env import MockMesh, MockObject, MockVector
 
 
 def test_matrix_to_transform_mocked() -> None:
@@ -40,7 +41,9 @@ def test_matrix_to_transform_mocked() -> None:
     mock_matrix.to_euler.return_value = mock_euler
 
     # Call adapter
-    transform = matrix_to_transform(mock_matrix)
+    import mathutils
+
+    transform = matrix_to_transform(typing.cast(mathutils.Matrix, mock_matrix))
 
     # Verify
     assert transform.xyz.x == 1.0
@@ -56,22 +59,24 @@ def test_detect_primitive_type_box_mocked() -> None:
 
     A box requires 8 vertices and 6 quad polygons.
     """
-    mock_obj = bpy.types.Object(name="Box")
+    mock_obj = MockObject(name="Box")
     mock_obj.type = "MESH"
 
     # Mock mesh data using high-fidelity MockMesh to satisfy isinstance checks
-    mock_mesh = bpy.types.Mesh(name="BoxMesh")
-    mock_mesh.vertices = [MagicMock()] * 8
+    mock_mesh = MockMesh(name="BoxMesh")
+    mock_mesh.vertices.clear()
+    mock_mesh.vertices.extend([MagicMock()] * 8)
 
     # 6 faces, each with 4 vertices (quads)
     mock_poly = MagicMock()
     mock_poly.vertices = [0, 1, 2, 3]
-    mock_mesh.polygons = [mock_poly] * 6
+    mock_mesh.polygons.clear()
+    mock_mesh.polygons.extend([mock_poly] * 6)
 
     mock_obj.data = mock_mesh
 
     # Call logic
-    result = detect_primitive_type(mock_obj)
+    result = detect_primitive_type(typing.cast(bpy.types.Object, mock_obj))
 
     assert result == "BOX"
 
@@ -81,7 +86,7 @@ def test_detect_primitive_type_sphere_mocked() -> None:
 
     A sphere is detected by vertex/face count and bounding box uniformity.
     """
-    mock_obj = bpy.types.Object(name="Sphere")
+    mock_obj = MockObject(name="Sphere")
     mock_obj.type = "MESH"
     # Set base dimensions so the setter below can calculate scale correctly
     if hasattr(mock_obj, "_base_dimensions"):
@@ -89,23 +94,25 @@ def test_detect_primitive_type_sphere_mocked() -> None:
     mock_obj.dimensions = MockVector(1.0, 1.0, 1.0)
 
     # UV Sphere default subdivision (e.g. 482 verts)
-    mock_mesh = bpy.types.Mesh(name="SphereMesh")
-    mock_mesh.vertices = [MagicMock()] * 482
-    mock_mesh.polygons = [MagicMock()] * 480
+    mock_mesh = MockMesh(name="SphereMesh")
+    mock_mesh.vertices.clear()
+    mock_mesh.vertices.extend([MagicMock()] * 482)
+    mock_mesh.polygons.clear()
+    mock_mesh.polygons.extend([MagicMock()] * 480)
     mock_obj.data = mock_mesh
 
     # Call logic
-    result = detect_primitive_type(mock_obj)
+    result = detect_primitive_type(typing.cast(bpy.types.Object, mock_obj))
 
     assert result == "SPHERE"
 
 
 def test_detect_primitive_type_none_mocked() -> None:
     """Verify detect_primitive_type returns None for non-mesh types."""
-    mock_obj = bpy.types.Object(name="Empty")
+    mock_obj = MockObject(name="Empty")
     mock_obj.type = "EMPTY"
 
-    assert detect_primitive_type(mock_obj) is None
+    assert detect_primitive_type(typing.cast(bpy.types.Object, mock_obj)) is None
 
 
 if __name__ == "__main__":
