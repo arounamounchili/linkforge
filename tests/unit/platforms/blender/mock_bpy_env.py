@@ -1,8 +1,27 @@
-import math
 import sys
 import types
 from pathlib import Path
 from unittest.mock import MagicMock
+
+# -----------------------------------------------------------------------------
+# GLOBAL STATE CONTAINER
+# -----------------------------------------------------------------------------
+
+
+class MockState:
+    """Container for the global state of the mocked Blender environment."""
+
+    def __init__(self):
+        self.data = None
+        self.context = None
+        self.types = None
+        self.props = None
+        self.ops = None
+        self.app = None
+
+
+state = MockState()
+
 
 # -----------------------------------------------------------------------------
 # HIGH FIDELITY BLENDER MOCKS
@@ -81,6 +100,19 @@ class MockVector:
     def __sub__(self, other):
         return MockVector(self.x - other[0], self.y - other[1], self.z - other[2])
 
+    @property
+    def length(self):
+        return (self.x**2 + self.y**2 + self.z**2) ** 0.5
+
+    def copy(self):
+        return MockVector(self.x, self.y, self.z)
+
+    def normalized(self):
+        len_val = self.length
+        if len_val < 1e-6:
+            return MockVector(0, 0, 0)
+        return MockVector(self.x / len_val, self.y / len_val, self.z / len_val)
+
     def __mul__(self, other):
         if isinstance(other, (int, float)):
             return MockVector(self.x * other, self.y * other, self.z * other)
@@ -93,13 +125,6 @@ class MockVector:
 
     def __repr__(self):
         return f"Vector(({self.x}, {self.y}, {self.z}))"
-
-    def copy(self):
-        return MockVector(self.x, self.y, self.z)
-
-    @property
-    def length(self):
-        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
 
     def rotation_difference(self, other):
         return MockQuaternion()
@@ -127,57 +152,30 @@ class MockQuaternion:
         return MockMatrix(res)
 
 
-class MockEuler:
+class MockEuler(MockVector):
     """Mock for mathutils.Euler."""
 
-    def __init__(self, x=0.0, y=0.0, z=0.0, order="XYZ"):
-        if isinstance(x, (list, tuple, MockEuler)):
-            self.x, self.y, self.z = float(x[0]), float(x[1]), float(x[2])
-            # If the first arg was a sequence, the second arg might be the order
-            if isinstance(y, str):
-                order = y
+    def __init__(self, x=0, y=0, z=0, order="XYZ"):
+        if isinstance(x, (list, tuple, MockVector)):
+            super().__init__(x)
+            # If order was passed as second positional arg, it might be in 'y'
+            self.order = y if isinstance(y, str) else order
         else:
-            self.x = float(x)
-            self.y = float(y)
-            self.z = float(z)
-        self.order = order
-
-    def __getitem__(self, i):
-        return [self.x, self.y, self.z][i]
-
-    def __setitem__(self, i, v):
-        if i == 0:
-            self.x = v
-        elif i == 1:
-            self.y = v
-        elif i == 2:
-            self.z = v
-
-    def __iter__(self):
-        yield self.x
-        yield self.y
-        yield self.z
-
-    def __len__(self):
-        return 3
-
-    def to_matrix(self):
-        res = [[0.0] * 4 for _ in range(4)]
-        for i in range(4):
-            res[i][i] = 1.0
-        if abs(self.x) > 1e-6 or abs(self.y) > 1e-6 or abs(self.z) > 1e-6:
-            res[0][0] = 0.9
-            res[0][1], res[0][2], res[1][0] = self.x, self.y, self.z
-        return MockMatrix(res)
-
-    def to_4x4(self):
-        return self.to_matrix()
+            super().__init__(x, y, z)
+            self.order = order
 
     def __repr__(self):
         return f"Euler(({self.x}, {self.y}, {self.z}), '{self.order}')"
 
-    def copy(self):
-        return MockEuler(self.x, self.y, self.z, self.order)
+    def to_matrix(self):
+        m = MockMatrix.Identity(3)
+        m._euler_hint = self
+        return m
+
+    def to_4x4(self):
+        m = MockMatrix.Identity(4)
+        m._euler_hint = self
+        return m
 
 
 class MockMatrix:
@@ -259,12 +257,10 @@ class MockMatrix:
 
     def to_quaternion(self):
         """Mock for mathutils.Matrix.to_quaternion."""
-        return MockQuaternion()
+        return getattr(self, "_quaternion_hint", MockQuaternion())
 
     def to_euler(self, order="XYZ"):
-        if self.data[0][0] == 0.9:
-            return MockEuler(self.data[0][1], self.data[0][2], self.data[1][0], order)
-        return MockEuler(0.0, 0.0, 0.0, order)
+        return getattr(self, "_euler_hint", MockEuler(0, 0, 0, order=order))
 
     def to_4x4(self):
         if len(self.data) == 4:
@@ -447,6 +443,10 @@ RESERVED_RNA_PROPS = {
 DEFAULT_PROPERTY_VALUES = {
     "is_robot_link": False,
     "is_robot_joint": False,
+    "is_robot_visual": False,
+    "is_robot_collision": False,
+    "is_robot_sensor": False,
+    "is_robot_transmission": False,
     "is_robot_part": False,
     "mass": 0.0,
     "inertia_ixx": 0.0,
@@ -463,6 +463,10 @@ DEFAULT_PROPERTY_VALUES = {
     "limit_lower": 0.0,
     "limit_upper": 0.0,
     "ros2_control_active_joint_index": 0,
+    "link_name": "",
+    "joint_name": "",
+    "child_link": None,
+    "parent_link": None,
 }
 
 
@@ -505,7 +509,25 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         if key.startswith("_"):
             raise AttributeError(key)
 
-        # Safety for id_data and bl_rna if they are not found in __dict__ or properties
+        # 1. Check if we have a stored value (RNA-like behavior)
+        if key in self._values:
+            return self._values[key]
+
+        # 2. Force robot-detection properties to False if not set
+        if key.startswith("is_robot_"):
+            return False
+
+        # 2. Check defaults
+        if key in DEFAULT_PROPERTY_VALUES:
+            val = DEFAULT_PROPERTY_VALUES[key]
+            # Ensure math types are returned as fresh mocks/objects and stored
+            if isinstance(val, tuple) and len(val) == 3:
+                vec = MockVector(val)
+                self._values[key] = vec
+                return vec
+            return val
+
+        # 3. Handle special Blender behavior (id_data, bl_rna, get)
         if key == "id_data":
             return None
         if key == "bl_rna":
@@ -513,26 +535,25 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         if key == "get":
             return self._mock_get
 
-        # Critical Blender properties that should return None instead of MagicMock
-        if key in ("active_object", "object", "mesh", "material", "parent", "active_bone"):
+        # 4. Critical Blender properties that should return None instead of MagicMock
+        if key in (
+            "active_object",
+            "object",
+            "mesh",
+            "material",
+            "parent",
+            "active_bone",
+            "active_joint",
+        ):
             return None
-
-        if key in self._values:
-            return self._values[key]
-
-        if key in DEFAULT_PROPERTY_VALUES:
-            val = DEFAULT_PROPERTY_VALUES[key]
-            # Ensure math types are returned as fresh mocks/objects
-            if isinstance(val, tuple) and len(val) == 3:
-                return MockVector(val)
-            return val
 
         if key in RESERVED_RNA_PROPS:
             raise AttributeError(f"RNA property '{key}' not found on '{self.name}'")
 
-        # Fallback to MagicMock for UI, operators, and internal Blender properties
-        # to avoid breaking every single test that touches a minor API.
-        return MagicMock(name=key)
+        # Fallback to MagicMock but store it to ensure identity persistence
+        val = MagicMock(name=key)
+        self._values[key] = val
+        return val
 
     def _mock_get(self, key, default=None):
         """Simulate Blender's obj.get("prop") for custom properties."""
@@ -555,58 +576,50 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         return self._values.keys()
 
 
-class MockCollection:
+class MockCollection(list):
     """Mock for Blender's CollectionProperty items."""
 
-    def __init__(self, prop_type=None):
-        self._items = []
+    def __init__(self, items=None, prop_type=None):
+        super().__init__(items or [])
         self.prop_type = prop_type
         self.new = None
         self.new_from_object = None
 
     def add(self):
         item = self.prop_type() if self.prop_type else MockPropertyGroup()
-        self._items.append(item)
+        self.append(item)
         return item
 
     def __getitem__(self, key):
-        if isinstance(key, int):
-            return self._items[key]
-        return self.get(key)
-
-    def __len__(self):
-        return len(self._items)
-
-    def __iter__(self):
-        return iter(self._items)
+        if isinstance(key, (int, slice)):
+            return super().__getitem__(key)
+        # Search by name for string keys
+        for item in self:
+            if getattr(item, "name", None) == key:
+                return item
+        raise KeyError(key)
 
     def get(self, name, default=None):
-        for item in self._items:
+        for item in self:
             if getattr(item, "name", None) == name:
                 return item
         return default
 
     def remove(self, item, do_unlink=True):
         if isinstance(item, int):
-            if 0 <= item < len(self._items):
-                self._items.pop(item)
-        elif item in self._items:
-            self._items.remove(item)
-
-    def pop(self, index=-1):
-        return self._items.pop(index)
+            if 0 <= item < len(self):
+                self.pop(item)
+        elif item in self:
+            super().remove(item)
 
     def clear(self):
-        self._items.clear()
-
-    def append(self, item):
-        self._items.append(item)
+        super().clear()
 
     def __contains__(self, key):
         """Support 'in' operator for named items or objects."""
         if isinstance(key, str):
-            return any(getattr(item, "name", None) == key for item in self._items)
-        return key in self._items
+            return any(getattr(item, "name", None) == key for item in self)
+        return super().__contains__(key)
 
     @property
     def bl_rna(self):
@@ -621,12 +634,25 @@ class MockCollection:
         return val
 
     def link(self, obj):
-        if obj not in self._items:
-            self._items.append(obj)
+        if obj not in self:
+            self.append(obj)
 
     def unlink(self, obj):
-        if obj in self._items:
-            self._items.remove(obj)
+        if obj in self:
+            self.remove(obj)
+
+
+class MockHandlers:
+    """Mock for bpy.app.handlers."""
+
+    def __init__(self):
+        self.load_post = []
+        self.save_pre = []
+        self.save_post = []
+        self.depsgraph_update_post = []
+        self.depsgraph_update_pre = []
+        self.render_pre = []
+        self.render_post = []
 
 
 class MockMaterialSlot(MockPropertyGroup):
@@ -712,12 +738,12 @@ class MockObject(MockPropertyGroup):
 
     def __init__(self, name="Object", data=None, **kwargs):
         super().__init__(**kwargs)
-        self.name = name
+        self._name = name
         self.data = data
         self.type = "MESH" if (data and not isinstance(data, MagicMock)) else "EMPTY"
         self._parent = None
-        self.matrix_world = MockMatrix.Identity(4)
-        self.matrix_local = MockMatrix.Identity(4)
+        self._matrix_world = MockMatrix.Identity(4)
+        self._matrix_local = MockMatrix.Identity(4)
         self.matrix_basis = MockMatrix.Identity(4)
         self.matrix_parent_inverse = MockMatrix.Identity(4)
         self._location = MockVector(0, 0, 0)
@@ -736,13 +762,60 @@ class MockObject(MockPropertyGroup):
         self.hide_render = False
 
         # linkforge properties should only be pre-initialized if no descriptor exists on the class
-        # (to avoid overriding class descriptors like PointerProperty)
         if not any("linkforge" in c.__dict__ for c in type(self).__mro__):
             self.linkforge = MockPropertyGroup(name="linkforge")
+            self.linkforge.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
+            self.linkforge.ros2_control_parameters = MockCollection(prop_type=MockPropertyGroup)
         if not any("linkforge_scene" in c.__dict__ for c in type(self).__mro__):
             self.linkforge_scene = MockPropertyGroup(name="linkforge_scene")
+            self.linkforge_scene.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
         if not any("linkforge_joint" in c.__dict__ for c in type(self).__mro__):
             self.linkforge_joint = MockPropertyGroup(name="linkforge_joint")
+            self.linkforge_joint.is_robot_joint = False
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = str(value)
+        # Sync with linkforge properties if they exist
+        if hasattr(self, "linkforge") and hasattr(self.linkforge, "link_name"):
+            self.linkforge.link_name = str(value)
+        if hasattr(self, "linkforge_joint") and hasattr(self.linkforge_joint, "joint_name"):
+            self.linkforge_joint.joint_name = str(value)
+
+    @property
+    def matrix_world(self):
+        # In real Blender, world matrix depends on parent
+        if self.parent:
+            return self.parent.matrix_world @ self.matrix_local
+        return self._matrix_world
+
+    @matrix_world.setter
+    def matrix_world(self, value):
+        self._matrix_world = MockMatrix(value)
+
+    @property
+    def matrix_local(self):
+        return self._matrix_local
+
+    @matrix_local.setter
+    def matrix_local(self, value):
+        self._matrix_local = MockMatrix(value)
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, value):
+        if self._parent and hasattr(self._parent, "children") and self in self._parent.children:
+            self._parent.children.remove(self)
+        self._parent = value
+        if value and hasattr(value, "children") and self not in value.children:
+            value.children.append(self)
 
     @property
     def location(self):
@@ -751,11 +824,16 @@ class MockObject(MockPropertyGroup):
     @location.setter
     def location(self, value):
         self._location = MockVector(value)
-        # Update matrix_local/world (simplified for identity parent)
-        self.matrix_local.data[0][3] = self._location.x
-        self.matrix_local.data[1][3] = self._location.y
-        self.matrix_local.data[2][3] = self._location.z
-        self.matrix_world = self.matrix_local.copy()
+        self._update_matrix_local()
+
+    @property
+    def scale(self):
+        return self._scale
+
+    @scale.setter
+    def scale(self, value):
+        self._scale = MockVector(value)
+        self._update_matrix_local()
 
     @property
     def rotation_euler(self):
@@ -764,12 +842,14 @@ class MockObject(MockPropertyGroup):
     @rotation_euler.setter
     def rotation_euler(self, value):
         self._rotation_euler = MockEuler(value)
-        # Update matrix_local/world (simplified)
-        rot_mat = self._rotation_euler.to_4x4()
-        rot_mat.data[0][3] = self._location.x
-        rot_mat.data[1][3] = self._location.y
-        rot_mat.data[2][3] = self._location.z
-        self.matrix_local = rot_mat
+        self._update_matrix_local()
+
+    def _update_matrix_local(self):
+        """Update matrix_local based on location, rotation, and scale."""
+        # Simplified translation part
+        self.matrix_local.data[0][3] = self._location.x
+        self.matrix_local.data[1][3] = self._location.y
+        self.matrix_local.data[2][3] = self._location.z
         self.matrix_world = self.matrix_local.copy()
 
     @property
@@ -782,11 +862,20 @@ class MockObject(MockPropertyGroup):
 
     @property
     def dimensions(self):
+        # Calculate world scale (inherited from parents)
+        world_scale = self.scale.copy()
+        p = self.parent
+        while p:
+            world_scale.x *= p.scale.x
+            world_scale.y *= p.scale.y
+            world_scale.z *= p.scale.z
+            p = p.parent
+
         if hasattr(self, "_base_dimensions") and self._base_dimensions.length > 1e-6:
             return MockVector(
-                self._base_dimensions.x * self.scale.x,
-                self._base_dimensions.y * self.scale.y,
-                self._base_dimensions.z * self.scale.z,
+                self._base_dimensions.x * world_scale.x,
+                self._base_dimensions.y * world_scale.y,
+                self._base_dimensions.z * world_scale.z,
             )
         # Fallback to direct value if base is not set
         return self._values.get("dimensions", MockVector(0, 0, 0))
@@ -903,14 +992,66 @@ class MockIOHelper:
         return {"FINISHED"}
 
 
+# Module-level persistent mocks for cross-test access
+mock_data = MockPropertyGroup(name="Data")
+mock_context = MockPropertyGroup(name="Context")
+mock_app = DynamicModule("bpy.app")
+
+
 def setup_mock_bpy():
     """Initializes the entire Blender mock environment."""
-    mock_bpy = DynamicModule("bpy")
-    mock_props = DynamicModule("bpy.props")
-    mock_types = DynamicModule("bpy.types")
-    mock_context = MagicMock()
-    mock_data = MagicMock()
-    mock_app = MagicMock()
+    # Ensure modules exist in sys.modules
+    if "bpy" not in sys.modules:
+        sys.modules["bpy"] = DynamicModule("bpy")
+    if "bpy.props" not in sys.modules:
+        sys.modules["bpy.props"] = DynamicModule("bpy.props")
+    if "bpy.types" not in sys.modules:
+        sys.modules["bpy.types"] = DynamicModule("bpy.types")
+    if "mathutils" not in sys.modules:
+        sys.modules["mathutils"] = DynamicModule("mathutils")
+
+    mock_bpy = sys.modules["bpy"]
+    mock_props = sys.modules["bpy.props"]
+    mock_types = sys.modules["bpy.types"]
+    mock_mathutils = sys.modules["mathutils"]
+
+    # Refresh modules and objects
+    # Note: We preserve mock_types because Blender registrations are persistent
+    for mod in [mock_bpy, mock_props, mock_mathutils]:
+        for key in list(mod.__dict__.keys()):
+            if not key.startswith("__"):
+                del mod.__dict__[key]
+
+    mock_data.clear()
+    mock_context.clear()
+    mock_app = DynamicModule("bpy.app")
+    mock_app.timers = MagicMock(name="Timers")
+    mock_app.handlers = MockHandlers()
+    mock_app.version = (4, 2, 0)
+    mock_app.driver_namespace = {}
+
+    # Update global state for cross-module access
+    state.data = mock_data
+    state.context = mock_context
+    state.types = mock_types
+    state.props = mock_props
+    state.app = mock_app
+
+    # Assign to modules
+    mock_bpy.data = mock_data
+    mock_bpy.context = mock_context
+    mock_bpy.app = mock_app
+    mock_bpy.ops = DynamicModule("bpy.ops")
+    mock_bpy.utils = MagicMock(name="Utils")
+
+    # Map sub-modules in sys.modules
+    sys.modules["bpy.app"] = mock_app
+    sys.modules["bpy.app.handlers"] = mock_app.handlers
+    sys.modules["bpy.ops"] = mock_bpy.ops
+    sys.modules["bpy.data"] = mock_data
+    sys.modules["bpy.context"] = mock_context
+    sys.modules["bpy.props"] = mock_props
+    sys.modules["bpy.types"] = mock_types
 
     mock_types.PropertyGroup = MockPropertyGroup
     mock_types.Object = MockObject
@@ -948,7 +1089,6 @@ def setup_mock_bpy():
     )
 
     mock_data.objects = MockCollection(prop_type=MockObject)
-    mock_data.objects.new = lambda name, data=None: mock_data.objects.new_item(name, data=data)
 
     def _new_obj_item(name, data=None):
         obj = MockObject(name=name, data=data)
@@ -958,7 +1098,6 @@ def setup_mock_bpy():
     mock_data.objects.new = _new_obj_item
 
     mock_data.meshes = MockCollection(prop_type=MockMesh)
-    mock_data.meshes.new = lambda name: mock_data.meshes.new_item(name, cls=MockMesh)
 
     def _new_mesh_item(name):
         m = MockMesh(name=name)
@@ -966,14 +1105,31 @@ def setup_mock_bpy():
         return m
 
     mock_data.meshes.new = _new_mesh_item
-
     mock_data.meshes.new_from_object = lambda obj, **kwargs: _new_mesh_item(f"{obj.name}_mesh")
+
     mock_data.collections = MockCollection(prop_type=MockCollection)
     mock_data.collections.new = lambda name: MockCollection()
+
     mock_data.scenes = MockCollection(prop_type=MockScene)
-    mock_data.scenes.append(MockScene(name="Scene"))
+    active_scene = MockScene(name="Scene")
+    mock_data.scenes.append(active_scene)
+
     mock_data.materials = MockCollection(prop_type=MockMaterial)
-    mock_data.materials.new = lambda name: MockMaterial(name=name)
+
+    def _new_material_item(name):
+        mat = MockMaterial(name=name)
+        mock_data.materials.append(mat)
+        return mat
+
+    mock_data.materials.new = _new_material_item
+
+    # Initialize context with the active scene
+    mock_context.scene = active_scene
+    mock_context.active_object = None
+    mock_context.selected_objects = []
+    mock_context.view_layer = active_scene.view_layers[0]
+    mock_context.view_layer.objects = mock_data.objects
+    mock_context.evaluated_depsgraph_get = lambda: MagicMock(name="Depsgraph")
 
     # Initialize view_layer with a fallback to avoid NoneType errors
     mock_view_layer = MagicMock(name="ViewLayer")
