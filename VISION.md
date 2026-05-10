@@ -15,25 +15,28 @@ To build the **LLVM for Robotics**. We are eliminating the fundamental gap betwe
 
 ## 🌉 The Universal Robotics Bridge
 
-There is a fundamental "impedance mismatch" in the modern robotics workflow. LinkForge exists to eliminate it.
+There is a fundamental "impedance mismatch" in the modern robotics workflow. LinkForge exists to eliminate it by redefining how we treat robot descriptions.
 
 ### The Problem: "Executables" vs. "Source Code"
 Currently, the robotics ecosystem treats formats like URDF, SDF, and MJCF as the source of truth. However, these are actually **"Executables"**—lossy, environment-specific snapshots compiled from opaque CAD tools.
-When a design is exported, critical metadata (author intent, precise materials, motor curves) is lost. Furthermore, this is a one-way street: true "Round-Trip Engineering" (editing a simulation model and syncing it back to CAD) is nearly impossible.
+
+When you export a robot to URDF, you are "compiling" it. If you manually fix a joint limit in the XML, you cannot easily "decompile" that change back into your CAD model. Your design intent is lost in a one-way, destructive pipeline.
 
 ### The Solution: The `.lf` Standard
-LinkForge introduces the `.lf` file format—the **"Source Code"** for robotics. It acts as the high-fidelity translator ensuring your design intent is mathematically preserved across the entire development lifecycle:
+LinkForge introduces the `.lf` file format—the **"Source Code"** for robotics.
+*   **The Git for Robotics**: Just as Git tracks code changes, LinkForge tracks the physical intent of your robot.
+*   **Unified Truth**: The `.lf` format acts as a high-fidelity translator ensuring your design intent is mathematically preserved across the entire development lifecycle:
 
-**Design Systems** (Blender, FreeCAD, OnShape) ➜ **LinkForge Core (`.lf`)** ➜ **Simulation & Production** (ROS 2, MuJoCo, Isaac Sim, Real Hardware)
+**Design Systems** (Blender, FreeCAD) ➜ **LinkForge Core (`.lf`)** ➜ **Simulation & Production** (ROS 2, MuJoCo, Isaac Sim)
 
 ---
 
 ## 🔭 The "Digital Twin" North Star
 
 We believe a simulator should never be "close enough." It should be identical. Our North Star is the perfect **Digital Twin**:
-*   **True Round-Trip Engineering**: Import legacy models, validate them, edit them visually, and deploy them anywhere without data destruction.
-*   **Automated Linting**: Catch mechanical conflicts and kinematic errors *during* the design phase—reducing simulation failures and hardware rework.
-*   **Numerical Integrity**: Every mass calculation and inertia tensor is scientifically grounded, guaranteed by a core that enforces double-precision physics over approximations.
+*   **True Round-Trip Engineering**: Import legacy models, validate them, edit them visually, and redeploy them anywhere without data destruction.
+*   **Physics as Truth**: Every mass calculation and inertia tensor is scientifically grounded. If the physics are wrong, the Linter catches it *during* the design phase—long before it hits hardware.
+*   **Numerical Integrity**: We enforce double-precision physics over approximations, ensuring that your robot behaves the same way in MuJoCo as it does in the real world.
 
 ---
 
@@ -45,7 +48,7 @@ Why LinkForge is the infrastructure for the next generation of robotics:
 | :--- | :--- | :--- |
 | **Architecture** | Monolithic / Tied to one CAD tool | **Hexagonal / Multi-Host & Multi-Target** |
 | **Format** | XML-based, Lossy, Fragmented | **JSON/YAML `.lf` Standard (Metadata-Rich)** |
-| **Validation** | Post-Export (Fail in Sim) | **Automated Linting (Fail in Editor via LSP)** |
+| **Validation** | Post-Export (Fail in Sim) | **Automated Linting (Fail in Editor)** |
 | **Physics** | "Close Enough" Mesh Export | **Scientific Inertia & Mass Sanity** |
 | **Asset Loading** | Fragile Local File Paths | **Cloud-Native `lf://` URI Resolution** |
 
@@ -53,28 +56,27 @@ Why LinkForge is the infrastructure for the next generation of robotics:
 
 ## 🏗️ Technical Strategy: The Hexagonal Core
 
-LinkForge is engineered for the future. By utilizing a **Hexagonal Architecture (Ports & Adapters)**, we remain framework-independent:
-*   **Decoupled Intelligence**: Our "Robotics Brain" (`linkforge_core`) is completely isolated from specific UI hosts or simulation engines.
-*   **Model Once, Deploy Anywhere**: Write your robot once in `.lf`, and swappable adapters will generate the exact MJCF, URDF, or SDF needed for your specific runtime.
-*   **Scalable Adaptation**: As new tools and engines emerge, LinkForge is ready to bridge them without rewriting the fundamental physics core.
+LinkForge is the **"LLVM for Robotics."** By utilizing a **Hexagonal Architecture**, we remain framework-independent:
+*   **Decoupled Intelligence**: Our "Robotics Brain" (`linkforge_core`) is isolated from specific UI hosts or simulation engines.
+*   **Model Once, Deploy Anywhere**: Write your robot once in `.lf`, and swappable adapters generate the exact MJCF, URDF, or SDF needed for your specific runtime.
 
 ---
 
 ## 🚀 Future Horizons
 
 We are building the infrastructure for the next generation of autonomy:
-*   **🛡️ Kinematic Intelligence**: Built-in solvers to validate workspace reachability and mechanical interference inside the visual editor.
-*   **🧠 Intelligence-Driven Rigging**: Graph Neural Networks (GNNs) that leverage geometric analysis to automate joint and sensor placement based on mesh topology.
-*   **📦 The LinkForge Package Manager (LPM)**: A global, decentralized registry for verified robot parts.
-*   **🌊 High-Fidelity Noise Injection**: Modeling real-world sensor imperfections (drift, jitter, bias) directly in the IR to close the Sim-to-Real gap.
+*   **🛡️ Kinematic Intelligence**: Built-in solvers to validate workspace reachability inside the visual editor.
+*   **🧠 Intelligence-Driven Rigging**: Graph Neural Networks (GNNs) that automate joint placement based on mesh topology.
+*   **📦 The LinkForge Package Manager (LPM)**: A decentralized registry for verified robot components.
+*   **🌊 High-Fidelity Noise Injection**: Modeling real-world sensor imperfections directly in the IR to close the Sim-to-Real gap.
 
 ---
 
 ## 🗺️ Vision 2030: The Universal Connector
 
-By 2030, the "monolithic robot" will be a thing of the past. We believe the robotics industry will evolve into a modular ecosystem where specialized companies build world-class components—legs, torsos, manipulators—that just work together.
+By 2030, the "monolithic robot" will be a thing of the past. We believe the robotics industry will evolve into a modular ecosystem where specialized components—legs, torsos, manipulators—just work together.
 
-**LinkForge is the "USB Port" for this future.** By providing the universal Intermediate Representation (IR), we enable a global supply chain where any "LinkForge Certified" part can be plugged into any assembly with zero friction. We are building the economic infrastructure for the physical world.
+**LinkForge is the "USB Port" for this future.** By providing a universal Intermediate Representation (IR), we enable a global ecosystem where any **standard-compliant** part can be integrated into any assembly with zero friction. We are building the **foundational infrastructure** for the physical world.
 
 ---
 

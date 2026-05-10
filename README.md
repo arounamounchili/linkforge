@@ -14,7 +14,7 @@
 
 LinkForge brings the **"LLVM architecture" to Robotics**. It utilizes a universal, mathematical Intermediate Representation (IR) for physical robots—paving the way for the upcoming **`.lf` standard**.
 
-By treating robot descriptions as *Source Code* rather than compiled *Executables*, LinkForge bridges the gap between CAD, Simulation, and AI training with zero data loss. Currently featuring a native **Blender integration**, it acts as a strict safety net to guarantee your robot is rigorous, physics-compliant, and simulation-ready.
+By treating robot descriptions as **"Source Code"** rather than compiled **"Executables"**, LinkForge bridges the gap between CAD, Simulation, and AI training with zero data loss. Currently featuring a native **Blender integration**, it acts as a strict safety net to guarantee your robot is rigorous, physics-compliant, and simulation-ready.
 
  1.  **Model & Import**: Build natively or ingest legacy URDF/XACRO files losslessly.
  2.  **Lint & Validate**: Catch kinematic and physical errors before they hit your simulator.
@@ -165,19 +165,17 @@ For complete instructions on testing, linting, and building, see our [Contributi
 
 ### Phase 1: The Professional Bridge (Current)
 - [x] **v1.3.0**: Performance & Control (NumPy Acceleration, Depsgraph, & ROS2 Control).
-- [/] **v1.4.0**: Modular Assembly (Composer API, SRDF Generation).
+- [/] **v1.4.0**: Modular Synthesis (Composer API, Namespaced Merging, & SRDF Generation).
 - [ ] **v1.5.0**: Visual SRDF Editor in Blender & Semantic Assistant.
 - [ ] **v1.6.0**: LinkForge CLI & GitHub Actions for automated validation.
 
 ### Phase 2: Universal Interoperability (Upcoming)
-- [ ] **v1.7.0**: Official launch of the **`.lf` File Standard**.
-- [ ] **AI Update**: Native MuJoCo (MJCF) and Gazebo (SDF) exporters.
-- [ ] **IDE Integration**: VS Code Extension with real-time linting & 3D preview.
+- [ ] **v2.0.0**: Official launch of the **`.lf` File Standard**.
+- [ ] **v2.1.0**: **AI Engine Update** (Native MuJoCo/MJCF exporter).
+- [ ] **v2.2.0**: **Simulation Expansion** (Native Gazebo/SDF exporter).
 
-### Phase 3: The Intelligence Ecosystem (Future)
-- [ ] **CAD Expansion**: Connectors for FreeCAD and OnShape.
-- [ ] **LinkForge Package Manager (LPM)**: Decentralized cloud registry (`lf://`).
-- [ ] **Auto-Rigging**: Graph Neural Networks (GNNs) for automated joint placement.
+> [!TIP]
+> For a deep dive into our long-term technical strategy and the "Digital Twin" philosophy, see **[VISION.md](VISION.md)**.
 
 ## 🤝 Contributing
 

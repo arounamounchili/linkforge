@@ -65,6 +65,13 @@ fix:
 type-check:
     uv run mypy core/src/linkforge_core platforms/blender/linkforge
 
+# --- Documentation ---
+
+# Build documentation (Sphinx)
+docs:
+    cd docs && make html
+    @echo "📖 Documentation built at docs/build/html/index.html"
+
 # --- Maintenance ---
 
 # Clean build artifacts, caches, and OS junk
