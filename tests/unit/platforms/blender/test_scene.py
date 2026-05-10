@@ -14,9 +14,7 @@ from tests.blender_test_utils import (
     safe_get_linkforge,
 )
 
-# =============================================================================
 # Robot Statistics Analysis
-# =============================================================================
 
 
 class TestSceneAnalysis:
@@ -48,9 +46,7 @@ class TestSceneAnalysis:
         assert stats.total_mass == 10.0
 
 
-# =============================================================================
 # Kinematic Tree Building
-# =============================================================================
 
 
 class TestTreeBuilding:

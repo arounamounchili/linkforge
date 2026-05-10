@@ -15,9 +15,7 @@ from tests.blender_test_utils import (
     safe_get_linkforge_scene,
 )
 
-# =============================================================================
 # Robot Validation Operator
-# =============================================================================
 
 
 class TestRobotValidation:
@@ -58,9 +56,7 @@ class TestRobotValidation:
         assert result == {"CANCELLED"}
 
 
-# =============================================================================
 # Robot Export Operator
-# =============================================================================
 
 
 class TestRobotExport:
