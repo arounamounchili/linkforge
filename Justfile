@@ -19,6 +19,10 @@ build-blender:
 sync:
     uv run python platforms/blender/scripts/build.py sync
 
+# Link Blender extension for development (Blender 4.2+)
+develop:
+    uv run python platforms/blender/scripts/build.py develop
+
 # --- Test ---
 
 # Run all tests (Core + Blender)

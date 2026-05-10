@@ -127,20 +127,35 @@ just check
 just fix
 ```
 
-### 4. Test in Blender
+### 4. Live Testing in Blender (Development Mode)
+
+LinkForge uses a **Development Junction** system to link your workspace directly into Blender without needing to build and re-install packages.
 
 ```bash
-# Build extension
-just build
+# 1. Establish the link (Run once)
+just develop
 
-# Install in Blender:
-# 1. Open Blender
-# 2. Edit > Preferences > Get Extensions
-# 3. Dropdown (⌄) > Install from Disk
-# 4. Select dist/linkforge-blender-x.x.x-macos_arm64.zip (or your platform variant)
+# 2. Open Blender
+# 3. Edit > Preferences > Extensions
+# 4. Search for "LinkForge" and Enable it
 ```
 
-### 5. Commit Changes
+Any changes you make to the `.py` files in your editor will be instantly available in Blender (you only need to restart Blender or reload the extension).
+
+### 5. Testing the Release (Optional)
+
+If you want to verify the final user experience (including bundled wheels):
+
+```bash
+# 1. Build the production ZIPs
+just build
+
+# 2. In Blender: Edit > Preferences > Extensions
+# 3. Dropdown (⌄) > Install from Disk
+# 4. Select dist/linkforge-blender-x.x.x-macos_arm64.zip
+```
+
+### 6. Commit Changes
 
 ```bash
 git add .

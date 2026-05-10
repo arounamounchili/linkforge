@@ -15,60 +15,82 @@ from pathlib import Path
 
 # --- Health Checks ---
 def _check_health() -> bool:
-    """Verify the extension environment and dependencies."""
+    """Verify the extension environment and dependencies.
+
+    Supports both production (bundled .zip) and development (workspace clone) setups.
+    """
+    # 1. Standard Production Path (installed as a package)
     try:
         import linkforge_core  # noqa: F401
 
         return True
-    except ImportError as e:
-        print(f"LinkForge Initialization Warning: Core dependencies not found ({e}).")
-        print("This extension must be installed as a Blender Extension package.")
-        return False
+    except ImportError:
+        pass
+
+    # 2. Development Fallback: Search upwards for the core library in the workspace
+    try:
+        current = Path(__file__).resolve()
+        # Search up to 8 levels (sufficient for standard repo structures)
+        for _ in range(8):
+            if current.parent == current:  # Reached filesystem root
+                break
+
+            core_src = current / "core" / "src"
+            if (core_src / "linkforge_core").is_dir():
+                if str(core_src) not in sys.path:
+                    sys.path.insert(0, str(core_src))
+
+                try:
+                    import linkforge_core  # noqa: F401
+
+                    print(f"LinkForge: Dev mode enabled (Core loaded from {core_src})")
+                    return True
+                except ImportError:
+                    break
+            current = current.parent
+    except Exception:
+        pass
+
+    # 3. Dependency Diagnostics (for developers running from source)
+    try:
+        import yaml  # noqa: F401
+    except ImportError:
+        print("LinkForge Warning: 'PyYAML' dependency is missing. Please install it.")
+
+    # 4. Final failure reporting
+    print(f"LinkForge Error: 'linkforge_core' not found (Loaded from: {Path(__file__).resolve()})")
+    print("Action Required: Please ensure the extension is correctly installed.")
+    return False
 
 
-_check_health()
+if _check_health():
+    # Import blender module if bpy is available and seems like real Blender
+    try:
+        import bpy
 
-# Import blender module if bpy is available and seems like real Blender
-try:
-    import bpy
+        # Harder check: fake-bpy-module doesn't always have app or version
+        IS_BLENDER = hasattr(bpy, "app") and hasattr(bpy.app, "version")
+    except ImportError:
+        IS_BLENDER = False
 
-    # Harder check: fake-bpy-module doesn't always have app or version
-    IS_BLENDER = hasattr(bpy, "app") and hasattr(bpy.app, "version")
-except ImportError:
-    IS_BLENDER = False
+    if IS_BLENDER:
+        from . import blender
 
-if IS_BLENDER:
-    from . import blender
-else:
-    # Handle environment where bpy is not available (e.g., CI, non-Blender python)
-    # But for Mypy (with fake-bpy-module), we don't want to see this redefinition
-    import typing
+        def register() -> None:
+            """Register the extension with Blender."""
+            blender.register()
 
-    if not typing.TYPE_CHECKING:
-        bpy = None
-        blender = None
+        def unregister() -> None:
+            """Unregister the extension from Blender."""
+            blender.unregister()
 
+        # Entry point for Blender Extension system
+        if __name__ == "__main__":
+            register()
+    else:
+        # Handle non-Blender environment
+        import typing
 
-def register() -> None:
-    """Register the extension with Blender.
-
-    This function is called when the extension is enabled.
-    It registers all operators, panels, property groups, and other Blender types.
-    """
-    # Register Blender components
-    blender.register()
-
-
-def unregister() -> None:
-    """Unregister the extension from Blender.
-
-    This function is called when the extension is disabled.
-    It unregisters all operators, panels, property groups, and other Blender types.
-    """
-    # Unregister Blender components
-    blender.unregister()
-
-
-# Entry point for Blender Extension system
-if __name__ == "__main__":
-    register()
+        if not typing.TYPE_CHECKING:
+            bpy = None
+            blender = None

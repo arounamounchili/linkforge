@@ -30,7 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]  # platforms/blender/scripts/bui
 PLATFORM_DIR = REPO_ROOT / "platforms" / "blender"
 SOURCE_DIR = PLATFORM_DIR / "linkforge"
 CORE_DIR = REPO_ROOT / "core" / "src" / "linkforge_core"
-MANIFEST_PATH = PLATFORM_DIR / "blender_manifest.toml"
+MANIFEST_PATH = SOURCE_DIR / "blender_manifest.toml"
 WHEELS_DIR = PLATFORM_DIR / "wheels"
 DIST_DIR = REPO_ROOT / "dist"  # Keep dist in root for easy access
 
@@ -258,6 +258,93 @@ def build_extension() -> Path:
     return DIST_DIR
 
 
+def develop_extension() -> None:
+    """Setup the extension for development by symlinking into Blender's user extensions."""
+    import os
+
+    # 1. Try official Blender CLI first (for newer versions)
+    blender_path = os.environ.get("BLENDER_PATH", "blender")
+    if not shutil.which(blender_path):
+        mac_fallback = "/Applications/Blender.app/Contents/MacOS/Blender"
+        if Path(mac_fallback).exists():
+            blender_path = mac_fallback
+
+    if shutil.which(blender_path):
+        try:
+            # Check if develop command exists
+            result = subprocess.run(
+                [blender_path, "--command", "extension", "--help"], capture_output=True, text=True
+            )
+            if "develop" in result.stdout:
+                subprocess.run(
+                    [
+                        blender_path,
+                        "--command",
+                        "extension",
+                        "develop",
+                        "--link",
+                        str(PLATFORM_DIR),
+                    ],
+                    check=True,
+                )
+                print("\n✅ Extension linked successfully via Blender CLI.")
+                return
+        except Exception:
+            pass
+
+    # 2. Manual Symlink Fallback
+    print("🛠️  Setting up manual development symlink...")
+
+    # Determine extensions path
+    try:
+        res = subprocess.run(
+            [
+                blender_path,
+                "-b",
+                "--python-expr",
+                "import bpy; print('PATH=' + bpy.utils.user_resource('EXTENSIONS'))",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        ext_base = None
+        for line in res.stdout.splitlines():
+            if line.startswith("PATH="):
+                ext_base = Path(line.split("=", 1)[1])
+                break
+        if not ext_base:
+            print("❌ Error: Could not find Blender extensions path.")
+            sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error finding Blender extensions path: {e}")
+        sys.exit(1)
+
+    target_dir = ext_base / "user_default" / "linkforge"
+
+    if target_dir.exists():
+        if target_dir.is_symlink():
+            target_dir.unlink()
+        else:
+            shutil.rmtree(target_dir)
+
+    try:
+        # Link the entire source folder directly
+        # target_is_directory=True is required for Windows support
+        os.symlink(SOURCE_DIR, target_dir, target_is_directory=True)
+
+        # Clear __pycache__ to force re-read
+        pycache = target_dir / "__pycache__"
+        if pycache.exists():
+            shutil.rmtree(pycache)
+
+        print(f"\n✅ Created symlink: {target_dir} -> {SOURCE_DIR}")
+        print("🚀 Extension is now linked for development.")
+    except Exception as e:
+        print(f"❌ Error creating symlink: {e}")
+        sys.exit(1)
+
+
 def clean() -> None:
     """Clean build artifacts."""
     if DIST_DIR.exists():
@@ -278,8 +365,10 @@ if __name__ == "__main__":
         if DEP_CONFIG:
             update_manifest_wheels()
         build_extension()
+    elif cmd == "develop":
+        develop_extension()
     elif cmd == "clean":
         clean()
     else:
         print(f"Unknown command: {cmd}")
-        print("Usage: python3 scripts/build_blender.py [sync|build|clean]")
+        print("Usage: python3 scripts/build_blender.py [sync|build|develop|clean]")

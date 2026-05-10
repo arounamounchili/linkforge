@@ -68,13 +68,18 @@ By treating robot descriptions as *Source Code* rather than compiled *Executable
 2. Search for **"LinkForge"**
 3. Click **Install**
 
-### Method 2: Manual Installation
-1. Download the `.zip` package for your platform (e.g., `linkforge-x.x.x-windows-x64.zip`) from [Latest Releases](https://github.com/arounamounchili/linkforge/releases/latest)
-2. Open Blender → **Edit > Preferences > Get Extensions**
-3. Click dropdown (⌄) → **Install from Disk**
-4. Select the downloaded `.zip` file
+### Method 2: Split-Platform ZIP (Current Stable)
+1. Download the `.zip` for your specific platform (e.g., `linkforge-blender-x.x.x-macos_arm64.zip`) from [Latest Releases](https://github.com/arounamounchili/linkforge/releases/latest).
+2. Open Blender → **Edit > Preferences > Extensions**.
+3. Click the arrow icon (⌄) in the top right → **Install from Disk**.
+4. Select the downloaded `.zip` file and click **Install**.
+5. Enable the extension in the list.
 
-## 🎯 Quick Start
+### Method 3: Development Mode (For Contributors)
+If you want to contribute to LinkForge or use the latest source code:
+1. Clone the repository and install dependencies (see [Development Setup](#setup)).
+2. Run **`just develop`**. This will link your workspace directly into Blender.
+3. Restart Blender and enable **LinkForge** in Extensions.
 
 ### Creating a Robot from Scratch
 
@@ -131,16 +136,19 @@ Complete examples in `examples/` directory:
 ### Setup
 ```bash
 # 1. Install 'just' command runner (see Contributing Guide for OS-specific instructions)
-
+# 1. Install 'just' command runner
 # 2. Clone repository
 git clone https://github.com/arounamounchili/linkforge.git
 cd linkforge
 
-# 3. Install dependencies
+# 3. Install dependencies and setup venv
 just install
+
+# 4. Link to Blender for live development
+just develop
 ```
 
-For complete instructions on testing, linting, and building the extension, please see our [Contributing Guide](CONTRIBUTING.md#development-workflow).
+For complete instructions on testing, linting, and building, see our [Contributing Guide](CONTRIBUTING.md).
 
 ## 🎓 Learning Resources
 
