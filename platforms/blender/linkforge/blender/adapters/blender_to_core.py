@@ -166,14 +166,14 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
         return None
 
     mesh = obj.data
-    if mesh is None:
+    if mesh is None or not isinstance(mesh, bpy.types.Mesh):
         return None
 
     # Check for explicit geometry type tags
     # This guarantees round-trip stability and prevents auto-detection failures
     tags = ["source_geometry_type", "collision_geometry_type"]
     for tag in tags:
-        if tag in obj:
+        if obj.get(tag) is not None:  # type: ignore[func-returns-value]
             geom_type = str(obj[tag])
             if geom_type in ("BOX", "CYLINDER", "SPHERE"):
                 return geom_type
@@ -1071,7 +1071,7 @@ def _calculate_link_frames(
     """
     link_frames = {}  # link_name -> world matrix where link frame is
 
-    if root_link is not None and Matrix:
+    if root_link is not None and Matrix is not None:
         root_name, root_obj = root_link
         link_frames[root_name] = Matrix.Identity(4)
 
@@ -1174,7 +1174,7 @@ def scene_to_robot(
                     (parent_name := joint.parent)
                     and parent_name in link_frames
                     and joint.child in link_frames
-                    and Matrix
+                    and Matrix is not None
                 ):
                     parent_frame = link_frames[parent_name]
                     child_frame = link_frames[joint.child]
@@ -1195,7 +1195,12 @@ def scene_to_robot(
     for obj in sensor_objects:
         try:
             sensor = blender_sensor_to_core(obj)
-            if sensor and (link_name := sensor.link_name) and link_name in link_frames and Matrix:
+            if (
+                sensor
+                and (link_name := sensor.link_name)
+                and link_name in link_frames
+                and Matrix is not None
+            ):
                 link_obj = link_objects.get(link_name)
                 if link_obj and obj.parent == link_obj:
                     # Extract relative origin using matrix math (robust against 'Keep Transform')

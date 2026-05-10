@@ -157,7 +157,6 @@ class AsynchronousRobotBuilder:
 
     def _execute_task(self, task_type: str, data: typing.Any) -> None:
         """Execute a single unit of work."""
-        print(f"DEBUG: Executing task {task_type}")
         try:
             if task_type == "setup_scene":
                 if self.context.scene:
@@ -211,8 +210,8 @@ class AsynchronousRobotBuilder:
                                     f"Auto-linked ROS2 Control joint '{rc_joint.name}' to {target_obj.name}"
                                 )
         except Exception as e:
-            print(f"DEBUG: Task {task_type} failed: {e}")
-            raise e
+            logger.debug(f"Task {task_type} failed: {e}")
+            raise
 
     def finish(self) -> None:
         """Clean up and finalize."""
