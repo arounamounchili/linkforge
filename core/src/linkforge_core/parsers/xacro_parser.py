@@ -94,6 +94,11 @@ class XacroTemplate:
 TEMPLATE_CACHE: dict[Path, XacroTemplate] = {}
 
 
+def clear_xacro_cache() -> None:
+    """Clear the global XACRO structural template cache."""
+    TEMPLATE_CACHE.clear()
+
+
 class XacroResolver:
     """Lightweight XACRO resolver with macro and math support."""
 

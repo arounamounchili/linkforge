@@ -69,7 +69,10 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         Returns:
             Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
         """
-        from linkforge_core.parsers import URDFParser
+        from linkforge_core.parsers import URDFParser, clear_xacro_cache
+
+        # Clear XACRO cache to ensure changes on disk are picked up
+        clear_xacro_cache()
 
         # Parse URDF/XACRO file
         source_path = Path(self.filepath)
