@@ -1509,7 +1509,7 @@ def setup_mock_bpy():
     mock_bpy.types.Header = object
     mock_bpy.types.UIList = object
 
-    # 6. Global Math and Extra Modules
+    # Global Math and Extra Modules
     mock_mathutils = DynamicModule("mathutils")
     mock_mathutils.Vector = MockVector
     mock_mathutils.Matrix = MockMatrix

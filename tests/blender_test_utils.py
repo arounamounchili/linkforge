@@ -339,9 +339,7 @@ def safe_update(scene: typing.Any | None = None) -> None:
     """
     import bpy
 
-    # 1. Use provided scene
-    # 2. Fallback to context scene
-    # 3. Fallback to first scene in data
+    # Fallback order: provided scene -> context scene -> first scene in data
     target_scene = (
         scene
         or getattr(bpy.context, "scene", None)

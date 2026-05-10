@@ -61,8 +61,6 @@ def clean_scene(blender_context):
         setup_mock_bpy()
 
     # Real Blender removal of all objects and underlying data
-
-    # Real Blender removal of all objects and underlying data
     import bpy
 
     # Clear scene-level LinkForge property collections (persisted on bpy.data.scenes)

@@ -15,7 +15,7 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
 )
 
-from .mock_bpy_env import MockMesh, MockObject, MockVector
+from .mock_bpy_env import MockMatrix, MockMesh, MockObject, MockVector
 
 
 def test_matrix_to_transform_mocked() -> None:
@@ -24,21 +24,11 @@ def test_matrix_to_transform_mocked() -> None:
     This confirms the logic is decoupled from the mathutils.Matrix implementation.
     """
     # Setup mock matrix
-    mock_matrix = MagicMock()
-
-    # Mock translation return
-    mock_translation = MagicMock()
-    mock_translation.x = 1.0
-    mock_translation.y = 2.0
-    mock_translation.z = 3.0
-    mock_matrix.to_translation.return_value = mock_translation
-
-    # Mock euler return
-    mock_euler = MagicMock()
-    mock_euler.x = 0.1
-    mock_euler.y = 0.2
-    mock_euler.z = 0.3
-    mock_matrix.to_euler.return_value = mock_euler
+    mock_matrix = MockMatrix.Identity(4)
+    mock_matrix.data[0][3] = 1.0
+    mock_matrix.data[1][3] = 2.0
+    mock_matrix.data[2][3] = 3.0
+    mock_matrix._euler_hint = MockVector(0.1, 0.2, 0.3)
 
     # Call adapter
     import mathutils
