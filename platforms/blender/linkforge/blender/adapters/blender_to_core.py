@@ -448,9 +448,6 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
         Core Material or None
 
     """
-    print(
-        f"DEBUG: get_object_material for {obj.name}, props.use_material={getattr(props, 'use_material', 'N/A')}"
-    )
     if not props.use_material:
         return None
 
@@ -929,7 +926,6 @@ def blender_transmission_to_core(obj: Any) -> Transmission | None:
 
     if props.transmission_type in ("SIMPLE", "CUSTOM", "FOUR_BAR_LINKAGE"):
         joint_obj = props.joint_name
-        print(f"DEBUG: Transmission '{trans_name}' joint_obj: {repr(joint_obj)}")
         if joint_obj:
             joint_props = getattr(joint_obj, "linkforge_joint", None)
             joint_name = (
@@ -1019,7 +1015,6 @@ def _categorize_scene_objects(
     joints_map = {}  # child_link_name -> (parent_link_name, joint_empty_obj)
     root_link = None
 
-    print(f"DEBUG: scene.objects names: {[obj.name for obj in scene.objects]}")
     for obj in scene.objects:
         # Check for Link
         lf = getattr(obj, "linkforge", None)

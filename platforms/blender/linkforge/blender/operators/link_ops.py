@@ -268,9 +268,6 @@ def _create_primitive_collision(
     # Create primitive at world origin initially
     # We create them at unit size for predictable scaling via dimensions
     ops = getattr(context, "ops", bpy.ops)
-    print(
-        f"DEBUG: ops.mesh={ops.mesh}, primitive_cube_add={getattr(ops.mesh, 'primitive_cube_add', 'MISSING')}"
-    )
     if prim_type == "BOX":
         # Create cube (1x1x1)
         ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
@@ -284,9 +281,6 @@ def _create_primitive_collision(
         return None, mathutils.Vector((0, 0, 0))
 
     collision_obj = getattr(context, "active_object", bpy.context.active_object)
-    print(
-        f"DEBUG: _create_primitive_collision: created {collision_obj.name if collision_obj else 'None'}, active={context.active_object.name if context.active_object else 'None'}"
-    )
 
     # CRITICAL: Match World Pose (Location/Rotation) first
     # We include local_center offset to align primitive with specific geometry volume
