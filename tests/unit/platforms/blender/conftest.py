@@ -17,7 +17,13 @@ from .mock_bpy_env import setup_mock_bpy  # noqa: E402
 try:
     import bpy
 
-    is_real_blender = hasattr(bpy, "app") and not isinstance(bpy.app, MagicMock)
+    # Real Blender has a valid binary_path. fake-bpy-module usually has it empty or missing.
+    # We also check for 'version' to be sure it's a fully-formed app object.
+    is_real_blender = (
+        hasattr(bpy, "app")
+        and bool(getattr(bpy.app, "binary_path", ""))
+        and not isinstance(bpy.app, MagicMock)
+    )
 except (ImportError, AttributeError):
     is_real_blender = False
 
