@@ -126,9 +126,11 @@ class MockEuler:
 
     def to_matrix(self):
         res = [[0.0] * 4 for _ in range(4)]
-        res[0][0] = 0.9
-        res[3][3] = 1.0
-        res[0][1], res[0][2], res[1][0] = self.x, self.y, self.z
+        for i in range(4):
+            res[i][i] = 1.0
+        if abs(self.x) > 1e-6 or abs(self.y) > 1e-6 or abs(self.z) > 1e-6:
+            res[0][0] = 0.9
+            res[0][1], res[0][2], res[1][0] = self.x, self.y, self.z
         return MockMatrix(res)
 
     def to_4x4(self):
@@ -158,6 +160,15 @@ class MockMatrix:
             self.data = [[float(data[i][j]) for j in range(cols)] for i in range(rows)]
         else:
             self.data = data
+
+    def __getitem__(self, i):
+        return self.data[i]
+
+    def __setitem__(self, i, v):
+        self.data[i] = v
+
+    def __len__(self):
+        return len(self.data)
 
     @staticmethod
     def Identity(n):  # noqa: N802
@@ -241,7 +252,13 @@ class MockMatrix:
             self.data[i][i] = 1.0
 
     def inverted(self):
+        # High-fidelity inversion for translation
         inv = MockMatrix()
+        # Copy rotation part (simplified: assume identity or hack)
+        for i in range(3):
+            for j in range(3):
+                inv.data[i][j] = self.data[i][j]
+        # Invert translation
         for i in range(3):
             inv.data[i][3] = -self.data[i][3]
         return inv
@@ -338,15 +355,30 @@ class PropertyMetaclass(type):
                 val.name = key
 
 
+RESERVED_RNA_PROPS = {
+    "linkforge",
+    "linkforge_joint",
+    "linkforge_sensor",
+    "linkforge_transmission",
+    "linkforge_validation",
+}
+
+
 class MockPropertyGroup(metaclass=PropertyMetaclass):
     """Base class for mocked Blender PropertyGroups."""
 
     def __init__(self, **kwargs):
-        self._values = {}
-        self.id_data = None
-        self.name = kwargs.get("name", "Unnamed")
+        self.__dict__["_values"] = {}
+        self.__dict__["id_data"] = None
+        self.__dict__["name"] = kwargs.get("name", "Unnamed")
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def __setattr__(self, name, value):
+        if name.startswith("_") or name in ("id_data", "name"):
+            super().__setattr__(name, value)
+        else:
+            self._values[name] = value
 
     def __getitem__(self, key):
         return self._values.get(key)
@@ -358,9 +390,7 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         return key in self._values
 
     def get(self, key, default=None):
-        if hasattr(self, "_values") and key in self._values:
-            return self._values[key]
-        return default
+        return self._values.get(key, default)
 
     def clear(self):
         self._values.clear()
@@ -372,8 +402,14 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
     def __getattr__(self, key):
         if key.startswith("_") or key in ("id_data", "bl_rna"):
             raise AttributeError(key)
-        if hasattr(self, "_values") and key in self._values:
+        if key in self._values:
             return self._values[key]
+
+        if key in RESERVED_RNA_PROPS:
+            raise AttributeError(f"RNA property '{key}' not found on '{self.name}'")
+
+        # Fallback to MagicMock for UI, operators, and internal Blender properties
+        # to avoid breaking every single test that touches a minor API.
         return MagicMock(name=key)
 
 
@@ -387,7 +423,7 @@ class MockCollection:
         self.new_from_object = None
 
     def add(self):
-        item = self.prop_type() if self.prop_type else MagicMock()
+        item = self.prop_type() if self.prop_type else MockPropertyGroup()
         self._items.append(item)
         return item
 
@@ -410,9 +446,13 @@ class MockCollection:
 
     def remove(self, item, do_unlink=True):
         if isinstance(item, int):
-            self._items.pop(item)
+            if 0 <= item < len(self._items):
+                self._items.pop(item)
         elif item in self._items:
             self._items.remove(item)
+
+    def pop(self, index=-1):
+        return self._items.pop(index)
 
     def clear(self):
         self._items.clear()
@@ -519,8 +559,10 @@ class MockMaterial(MockPropertyGroup):
             bsdf = self.node_tree.nodes.add()
             bsdf.name = "Principled BSDF"
             bsdf.type = "BSDF_PRINCIPLED"
-            # Add Base Color input
-            bsdf.inputs.add().name = "Base Color"
+            # Add Base Color input with default_value
+            base_color = bsdf.inputs.add()
+            base_color.name = "Base Color"
+            base_color.default_value = (0.8, 0.8, 0.8, 1.0)
 
 
 class MockObject(MockPropertyGroup):
@@ -550,6 +592,12 @@ class MockObject(MockPropertyGroup):
         self.empty_display_size = 0.5
         self.hide_viewport = False
         self.hide_render = False
+
+        # Pre-initialize LinkForge property groups to satisfy safe_get_* helpers
+        self.linkforge = MockPropertyGroup(name="linkforge")
+        self.linkforge_joint = MockPropertyGroup(name="linkforge_joint")
+        self.linkforge_sensor = MockPropertyGroup(name="linkforge_sensor")
+        self.linkforge_transmission = MockPropertyGroup(name="linkforge_transmission")
 
     @property
     def location(self):
@@ -589,29 +637,29 @@ class MockObject(MockPropertyGroup):
 
     @property
     def dimensions(self):
-        return MockVector(
-            self._base_dimensions.x * self._scale.x,
-            self._base_dimensions.y * self._scale.y,
-            self._base_dimensions.z * self._scale.z,
-        )
+        if hasattr(self, "_base_dimensions") and self._base_dimensions.length > 1e-6:
+            return MockVector(
+                self._base_dimensions.x * self.scale.x,
+                self._base_dimensions.y * self.scale.y,
+                self._base_dimensions.z * self.scale.z,
+            )
+        return self._values.get("dimensions", MockVector(0, 0, 0))
 
     @dimensions.setter
     def dimensions(self, value):
         v = MockVector(value)
-        if (
-            self._base_dimensions.x != 0
-            and self._base_dimensions.y != 0
-            and self._base_dimensions.z != 0
-        ):
-            self.scale = (
-                v.x / self._base_dimensions.x,
-                v.y / self._base_dimensions.y,
-                v.z / self._base_dimensions.z,
+        self._values["dimensions"] = v
+        if hasattr(self, "_base_dimensions") and self._base_dimensions.length > 1e-6:
+            # Sync scale
+            self.scale = MockVector(
+                v.x / self._base_dimensions.x if self._base_dimensions.x > 0 else 1.0,
+                v.y / self._base_dimensions.y if self._base_dimensions.y > 0 else 1.0,
+                v.z / self._base_dimensions.z if self._base_dimensions.z > 0 else 1.0,
             )
         else:
-            # Fallback for uninitialized base dimensions: treat value as base at scale 1.0
+            # Treatment for uninitialized base dimensions: value is base at scale 1.0
             self._base_dimensions = v
-            self.scale = (1.0, 1.0, 1.0)
+            self.scale = MockVector(1, 1, 1)
 
     @property
     def material_slots(self):
@@ -662,10 +710,20 @@ class MockScene(MockPropertyGroup):
     def __init__(self, name="Scene", **kwargs):
         super().__init__(**kwargs)
         self.name = name
+        self.objects = MockCollection(prop_type=MockObject)
         self.collection = MockCollection()
-        self.objects = MockCollection()
+        self.collection.objects = self.objects
+        self.collection.children = MockCollection()
         self.view_layers = MockCollection()
         self.view_layers.append(MagicMock(name="ViewLayer"))
+        self.cursor = MagicMock(name="Cursor")
+        self.cursor.location = MockVector(0, 0, 0)
+        self.cursor.rotation_euler = MockEuler(0, 0, 0)
+
+        # Pre-initialize LinkForge properties
+        self.linkforge = MockPropertyGroup(name="linkforge")
+        self.linkforge.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.ros2_control_parameters = MockCollection(prop_type=MockPropertyGroup)
 
 
 class MockOperator:
@@ -785,22 +843,17 @@ def setup_mock_bpy():
         for obj in mock_data.objects:
             update_obj(obj)
 
+    # Initialize view_layer with a fallback to avoid NoneType errors
+    mock_view_layer = MagicMock(name="ViewLayer")
+    mock_view_layer.objects = mock_data.objects
     mock_view_layer.update = _update_view_layer
+
+    mock_scene = mock_data.scenes[0]
+    mock_scene.view_layers.clear()
+    mock_scene.view_layers.append(mock_view_layer)
+
     mock_context.view_layer = mock_view_layer
-
-    if len(mock_data.scenes) > 0:
-        mock_context.scene = mock_data.scenes[0]
-        mock_context.scene.objects = mock_data.objects
-        if hasattr(mock_context.scene, "view_layers") and len(mock_context.scene.view_layers) > 0:
-            layer = mock_context.scene.view_layers[0]
-            if layer is not None:
-                mock_context.view_layer = layer
-                # Ensure the layer has objects and update
-                if not hasattr(mock_context.view_layer, "objects"):
-                    mock_context.view_layer.objects = mock_data.objects
-                if not hasattr(mock_context.view_layer, "update"):
-                    mock_context.view_layer.update = lambda: None
-
+    mock_context.scene = mock_scene
     mock_context.active_object = None
     mock_context.evaluated_depsgraph_get = lambda: MagicMock(name="Depsgraph")
     mock_context.window_manager = MockPropertyGroup()
@@ -914,6 +967,11 @@ def setup_mock_bpy():
     mock_ops.mesh.primitive_cylinder_add = mock_cylinder_add
     mock_ops.mesh.primitive_monkey_add = mock_monkey_add
     mock_ops.object.select_all = lambda action="TOGGLE": {"FINISHED"}
+    mock_ops.object.transform_apply = lambda **kwargs: {"FINISHED"}
+    mock_ops.object.join = lambda: {"FINISHED"}
+    mock_ops.object.parent_set = lambda **kwargs: {"FINISHED"}
+    mock_ops.object.parent_clear = lambda **kwargs: {"FINISHED"}
+    mock_ops.object.delete = lambda **kwargs: {"FINISHED"}
 
     mock_bpy.ops = mock_ops
     mock_bpy.app = mock_app
@@ -943,7 +1001,43 @@ def setup_mock_bpy():
     sys.modules["gpu_extras"] = mock_gpu_extras
     sys.modules["gpu_extras.batch"] = mock_batch
     sys.modules["mathutils"] = mock_mathutils
-    sys.modules["bmesh"] = DynamicModule("bmesh")
+
+    # High-fidelity bmesh mock
+    class MockBMesh:
+        def __init__(self):
+            self.verts = MockCollection()
+            self.faces = MockCollection()
+
+        def from_mesh(self, mesh):
+            self.verts.clear()
+            for _v in mesh.vertices:
+                self.verts.add()
+
+        def to_mesh(self, mesh):
+            mesh.vertices.clear()
+            for _ in self.verts:
+                mesh.vertices.add()
+
+        def free(self):
+            pass
+
+    mock_bmesh = DynamicModule("bmesh")
+    mock_bmesh.new = lambda: MockBMesh()
+    mock_bmesh.ops = DynamicModule("bmesh.ops")
+
+    def _bm_create_cube(bm, **kwargs):
+        [bm.verts.add() for _ in range(8)]
+        [bm.faces.add() for _ in range(6)]
+
+    def _bm_create_sphere(bm, **kwargs):
+        [bm.verts.add() for _ in range(482)]
+        [bm.faces.add() for _ in range(480)]
+
+    mock_bmesh.ops.create_cube = _bm_create_cube
+    mock_bmesh.ops.create_uvsphere = _bm_create_sphere
+    mock_bmesh.ops.convex_hull = lambda bm, **kwargs: None
+
+    sys.modules["bmesh"] = mock_bmesh
     sys.modules["gpu"] = DynamicModule("gpu")
 
     return mock_bpy
