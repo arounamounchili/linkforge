@@ -6,8 +6,9 @@ This directory contains example URDF and Xacro files to demonstrate the capabili
 
 - **urdf/**: Standalone URDF XML models of various robots (mobile bases, quadrupeds).
 - **xacro/**: Modular models using Xacro macros and property evaluation.
-  - **macros/**: Reusable kinematic and inertial macros.
-  - **imports/**: Shared materials and global properties.
+  - `diff_drive_robot.xacro`: Main entry point for a modular mobile robot.
+  - `inertials.xacro`: Reusable kinematic and inertial macros.
+  - `materials.xacro`: Shared materials and global properties.
 
 ## Usage
 
@@ -18,5 +19,19 @@ from linkforge_core.parsers.urdf_parser import URDFParser
 
 parser = URDFParser()
 robot = parser.parse("examples/urdf/diff_drive_robot.urdf")
+print(robot.summary())
+```
+
+### Xacro Support
+
+LinkForge also supports Xacro files by automatically evaluating macros and properties during parsing:
+
+```python
+from pathlib import Path
+from linkforge_core.parsers.urdf_parser import URDFParser
+
+parser = URDFParser()
+# Resolve Xacro then parse into a Robot model
+robot = parser.parse_xacro(Path("examples/xacro/diff_drive_robot.xacro"))
 print(robot.summary())
 ```
