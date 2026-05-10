@@ -21,27 +21,59 @@ class DynamicModule(types.ModuleType):
         self.__dict__[name] = value
 
 
-class MockVector(tuple):
-    """Mock for mathutils.Vector."""
+class MockVector:
+    """Mock for mathutils.Vector (mutable)."""
 
-    def __new__(cls, x=0.0, y=0.0, z=0.0):
-        if hasattr(x, "x") and hasattr(x, "y") and hasattr(x, "z"):
-            return super().__new__(cls, (float(x.x), float(x.y), float(x.z)))
-        if isinstance(x, (list, tuple)) and len(x) >= 3:
-            return super().__new__(cls, (float(x[0]), float(x[1]), float(x[2])))
-        return super().__new__(cls, (float(x), float(y), float(z)))
+    def __init__(self, x=0.0, y=0.0, z=0.0):
+        if isinstance(x, (MockVector, list, tuple)) and len(x) >= 3:
+            if hasattr(x, "x"):
+                self._data = [float(x.x), float(x.y), float(x.z)]
+            else:
+                self._data = [float(x[0]), float(x[1]), float(x[2])]
+        elif hasattr(x, "__len__") and not isinstance(x, (str, bytes)) and len(x) >= 3:
+            self._data = [float(x[0]), float(x[1]), float(x[2])]
+        else:
+            # Fallback for single values
+            try:
+                self._data = [float(x), float(y), float(z)]
+            except (TypeError, ValueError):
+                self._data = [0.0, 0.0, 0.0]
 
     @property
     def x(self):
-        return self[0]
+        return self._data[0]
+
+    @x.setter
+    def x(self, v):
+        self._data[0] = float(v)
 
     @property
     def y(self):
-        return self[1]
+        return self._data[1]
+
+    @y.setter
+    def y(self, v):
+        self._data[1] = float(v)
 
     @property
     def z(self):
-        return self[2]
+        return self._data[2]
+
+    @z.setter
+    def z(self, v):
+        self._data[2] = float(v)
+
+    def __getitem__(self, i):
+        return self._data[i]
+
+    def __setitem__(self, i, v):
+        self._data[i] = float(v)
+
+    def __len__(self):
+        return 3
+
+    def __iter__(self):
+        return iter(self._data)
 
     def __add__(self, other):
         return MockVector(self.x + other[0], self.y + other[1], self.z + other[2])
@@ -49,8 +81,13 @@ class MockVector(tuple):
     def __sub__(self, other):
         return MockVector(self.x - other[0], self.y - other[1], self.z - other[2])
 
-    def __truediv__(self, other):
+    def __mul__(self, other):
         if isinstance(other, (int, float)):
+            return MockVector(self.x * other, self.y * other, self.z * other)
+        return self
+
+    def __truediv__(self, other):
+        if isinstance(other, (int, float)) and other != 0:
             return MockVector(self.x / other, self.y / other, self.z / other)
         return self
 
@@ -252,22 +289,31 @@ class MockMatrix:
             self.data[i][i] = 1.0
 
     def inverted(self):
-        # High-fidelity inversion for translation
+        # High-fidelity inversion for 4x4 transform matrices
         inv = MockMatrix()
-        # Copy rotation part (simplified: assume identity or hack)
+        # Transpose rotation part (assuming it's orthonormal)
         for i in range(3):
             for j in range(3):
-                inv.data[i][j] = self.data[i][j]
-        # Invert translation
+                inv.data[i][j] = self.data[j][i]
+        # inv_t = -R^T * t
+        t = [self.data[0][3], self.data[1][3], self.data[2][3]]
         for i in range(3):
-            inv.data[i][3] = -self.data[i][3]
+            dot = 0.0
+            for j in range(3):
+                dot += inv.data[i][j] * t[j]
+            inv.data[i][3] = -dot
         return inv
 
     def __matmul__(self, other):
         if isinstance(other, MockVector):
-            return MockVector(
-                other.x + self.data[0][3], other.y + self.data[1][3], other.z + self.data[2][3]
-            )
+            # 4x4 matrix * vector multiplication
+            res = [0.0, 0.0, 0.0, 0.0]
+            vec = [other.x, other.y, other.z, 1.0]
+            for i in range(4):
+                for j in range(4):
+                    res[i] += self.data[i][j] * vec[j]
+            return MockVector(res[0], res[1], res[2])
+
         if not isinstance(other, MockMatrix):
             return self
         res = [[0.0] * 4 for _ in range(4)]
@@ -289,25 +335,42 @@ class MockMatrix:
 
 
 class MockPropertyDescriptor:
-    """Mock for Blender's Property descriptors."""
+    """Mock for Blender property descriptors (IntProperty, PointerProperty, etc.)."""
 
-    def __init__(self, getter=None, setter=None, update=None, default=None, prop_type=None):
-        self.getter = getter
-        self.setter = setter
-        self.update = update
-        self.default = default
-        self.prop_type = prop_type
-        self.name = "unnamed_prop"
+    def __init__(self, **kwargs):
+        self.name = kwargs.get("name", "")
+        self.prop_type = kwargs.get("prop_type")
+        self.default = kwargs.get("default")
+        self.min = kwargs.get("min")
+        self.max = kwargs.get("max")
+        self.update = kwargs.get("update")
+        self.setter = kwargs.get("setter")
+
+    def __set_name__(self, owner, name):
+        self.name = name
 
     def __get__(self, obj, cls):
         if obj is None:
             return self
         if not hasattr(obj, "_values"):
             obj._values = {}
+
+        # If name is not set or default, try to find it from the class (dynamic attachment)
+        if not self.name or self.name == "unnamed_prop":
+            for k, v in cls.__dict__.items():
+                if v is self:
+                    self.name = k
+                    break
+
         if self.name not in obj._values:
             if self.prop_type:
                 try:
-                    val = self.prop_type()
+                    # Specialized behavior for collections
+                    if self.prop_type == MockCollection:
+                        val = MockCollection(prop_type=MockPropertyGroup)
+                    else:
+                        val = self.prop_type()
+
                     if hasattr(val, "id_data"):
                         val.id_data = obj
                     obj._values[self.name] = val
@@ -318,18 +381,30 @@ class MockPropertyDescriptor:
 
         if self.getter:
             return self.getter(obj)
-        return obj._values[self.name]
+        return obj._values.get(self.name)
 
     def __set__(self, obj, value):
         if obj is None:
             return
         if not hasattr(obj, "_values"):
             obj._values = {}
+
+        # Convert value to expected type if it's a known Blender math type
+        if self.prop_type == MockVector and not isinstance(value, MockVector):
+            value = MockVector(value)
+        elif self.prop_type == MockEuler and not isinstance(value, MockEuler):
+            value = MockEuler(value)
+
         obj._values[self.name] = value
         if self.setter:
             self.setter(obj, value)
         if self.update:
-            self.update(obj, None)
+            # Blender update callbacks receive (self, context)
+            # In mocks, context might be None
+            try:
+                self.update(obj, sys.modules.get("bpy").context)
+            except Exception:
+                self.update(obj, None)
 
 
 class PropertyMetaclass(type):
@@ -350,6 +425,10 @@ class PropertyMetaclass(type):
             if isinstance(val, MockPropertyDescriptor):
                 val.name = key
                 setattr(cls, key, val)
+            elif isinstance(val, type) and issubclass(val, (int, float, bool, str)):
+                # Handle simple type hints as properties
+                prop = MockPropertyDescriptor(name=key, default=val())
+                setattr(cls, key, prop)
         for key, val in attrs.items():
             if isinstance(val, MockPropertyDescriptor):
                 val.name = key
@@ -364,6 +443,29 @@ RESERVED_RNA_PROPS = {
 }
 
 
+# Map of property names to their default values to avoid truthy MagicMocks
+DEFAULT_PROPERTY_VALUES = {
+    "is_robot_link": False,
+    "is_robot_joint": False,
+    "is_robot_part": False,
+    "mass": 0.0,
+    "inertia_ixx": 0.0,
+    "inertia_iyy": 0.0,
+    "inertia_izz": 0.0,
+    "inertia_ixy": 0.0,
+    "inertia_ixz": 0.0,
+    "inertia_iyz": 0.0,
+    "collision_quality": 100.0,
+    "collision_geometry_type": "MESH",
+    "joint_type": "FIXED",
+    "axis": (0.0, 0.0, 1.0),
+    "use_limit": False,
+    "limit_lower": 0.0,
+    "limit_upper": 0.0,
+    "ros2_control_active_joint_index": 0,
+}
+
+
 class MockPropertyGroup(metaclass=PropertyMetaclass):
     """Base class for mocked Blender PropertyGroups."""
 
@@ -375,22 +477,22 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
             setattr(self, k, v)
 
     def __setattr__(self, name, value):
+        # 1. If it's a property or descriptor defined in the class (or parents), use it.
+        # This is critical for MockObject properties (location, dimensions, etc.)
+        # and MockPropertyDescriptor instances (Blender props).
+        for cls in type(self).__mro__:
+            if name in cls.__dict__:
+                prop = cls.__dict__[name]
+                if isinstance(prop, (property, MockPropertyDescriptor)):
+                    super().__setattr__(name, value)
+                    return
+
+        # 2. Handle internal mock state and known Blender attributes
         if name.startswith("_") or name in ("id_data", "name"):
             super().__setattr__(name, value)
         else:
+            # 3. Dynamic attributes go to _values to simulate RNA
             self._values[name] = value
-
-    def __getitem__(self, key):
-        return self._values.get(key)
-
-    def __setitem__(self, key, value):
-        self._values[key] = value
-
-    def __contains__(self, key):
-        return key in self._values
-
-    def get(self, key, default=None):
-        return self._values.get(key, default)
 
     def clear(self):
         self._values.clear()
@@ -400,10 +502,30 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         return MagicMock()
 
     def __getattr__(self, key):
-        if key.startswith("_") or key in ("id_data", "bl_rna"):
+        if key.startswith("_"):
             raise AttributeError(key)
+
+        # Safety for id_data and bl_rna if they are not found in __dict__ or properties
+        if key == "id_data":
+            return None
+        if key == "bl_rna":
+            return MagicMock(name="bl_rna")
+        if key == "get":
+            return self._mock_get
+
+        # Critical Blender properties that should return None instead of MagicMock
+        if key in ("active_object", "object", "mesh", "material", "parent", "active_bone"):
+            return None
+
         if key in self._values:
             return self._values[key]
+
+        if key in DEFAULT_PROPERTY_VALUES:
+            val = DEFAULT_PROPERTY_VALUES[key]
+            # Ensure math types are returned as fresh mocks/objects
+            if isinstance(val, tuple) and len(val) == 3:
+                return MockVector(val)
+            return val
 
         if key in RESERVED_RNA_PROPS:
             raise AttributeError(f"RNA property '{key}' not found on '{self.name}'")
@@ -411,6 +533,26 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         # Fallback to MagicMock for UI, operators, and internal Blender properties
         # to avoid breaking every single test that touches a minor API.
         return MagicMock(name=key)
+
+    def _mock_get(self, key, default=None):
+        """Simulate Blender's obj.get("prop") for custom properties."""
+        if key in self._values:
+            return self._values[key]
+        return default
+
+    def __getitem__(self, key):
+        if key in self._values:
+            return self._values[key]
+        raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        self._values[key] = value
+
+    def __contains__(self, key):
+        return key in self._values
+
+    def keys(self):
+        return self._values.keys()
 
 
 class MockCollection:
@@ -593,11 +735,14 @@ class MockObject(MockPropertyGroup):
         self.hide_viewport = False
         self.hide_render = False
 
-        # Pre-initialize LinkForge property groups to satisfy safe_get_* helpers
-        self.linkforge = MockPropertyGroup(name="linkforge")
-        self.linkforge_joint = MockPropertyGroup(name="linkforge_joint")
-        self.linkforge_sensor = MockPropertyGroup(name="linkforge_sensor")
-        self.linkforge_transmission = MockPropertyGroup(name="linkforge_transmission")
+        # linkforge properties should only be pre-initialized if no descriptor exists on the class
+        # (to avoid overriding class descriptors like PointerProperty)
+        if not any("linkforge" in c.__dict__ for c in type(self).__mro__):
+            self.linkforge = MockPropertyGroup(name="linkforge")
+        if not any("linkforge_scene" in c.__dict__ for c in type(self).__mro__):
+            self.linkforge_scene = MockPropertyGroup(name="linkforge_scene")
+        if not any("linkforge_joint" in c.__dict__ for c in type(self).__mro__):
+            self.linkforge_joint = MockPropertyGroup(name="linkforge_joint")
 
     @property
     def location(self):
@@ -643,6 +788,7 @@ class MockObject(MockPropertyGroup):
                 self._base_dimensions.y * self.scale.y,
                 self._base_dimensions.z * self.scale.z,
             )
+        # Fallback to direct value if base is not set
         return self._values.get("dimensions", MockVector(0, 0, 0))
 
     @dimensions.setter
@@ -650,16 +796,23 @@ class MockObject(MockPropertyGroup):
         v = MockVector(value)
         self._values["dimensions"] = v
         if hasattr(self, "_base_dimensions") and self._base_dimensions.length > 1e-6:
-            # Sync scale
-            self.scale = MockVector(
-                v.x / self._base_dimensions.x if self._base_dimensions.x > 0 else 1.0,
-                v.y / self._base_dimensions.y if self._base_dimensions.y > 0 else 1.0,
-                v.z / self._base_dimensions.z if self._base_dimensions.z > 0 else 1.0,
+            # Sync scale: scale = dimensions / base_dimensions
+            self._scale = MockVector(
+                v.x / self._base_dimensions.x if self._base_dimensions.x > 1e-6 else 1.0,
+                v.y / self._base_dimensions.y if self._base_dimensions.y > 1e-6 else 1.0,
+                v.z / self._base_dimensions.z if self._base_dimensions.z > 1e-6 else 1.0,
             )
         else:
             # Treatment for uninitialized base dimensions: value is base at scale 1.0
-            self._base_dimensions = v
-            self.scale = MockVector(1, 1, 1)
+            self._base_dimensions = v.copy()
+            self._scale = MockVector(1, 1, 1)
+
+        # Ensure matrix_world/local are updated to reflect scale changes
+        # (Simplified: assume identity rotation/translation for now)
+        self.matrix_local.data[0][0] = self._scale.x
+        self.matrix_local.data[1][1] = self._scale.y
+        self.matrix_local.data[2][2] = self._scale.z
+        self.matrix_world = self.matrix_local.copy()
 
     @property
     def material_slots(self):
@@ -904,7 +1057,11 @@ def setup_mock_bpy():
             p = mesh.polygons.add()
             p.vertices = [0, 1, 2, 3]  # Quad
         new_cube = MockObject(name="Cube", data=mesh)
+        new_cube.type = "MESH"
         new_cube.location = MockVector(location)
+        # Primitives are created with base size 1.0 (or 2.0 in some Blender versions)
+        # and then scaled or dimensions set.
+        new_cube._base_dimensions = MockVector(1.0, 1.0, 1.0)
         new_cube.dimensions = MockVector(size, size, size)
         mock_data.objects.append(new_cube)
         mock_data.meshes.append(mesh)
@@ -921,7 +1078,9 @@ def setup_mock_bpy():
         for _ in range(480):
             mesh.polygons.add()
         new_sphere = MockObject(name="Sphere", data=mesh)
+        new_sphere.type = "MESH"
         new_sphere.location = MockVector(location)
+        new_sphere._base_dimensions = MockVector(1.0, 1.0, 1.0)
         new_sphere.dimensions = MockVector(radius * 2, radius * 2, radius * 2)
         mock_data.objects.append(new_sphere)
         mock_data.meshes.append(mesh)
@@ -938,7 +1097,9 @@ def setup_mock_bpy():
         for _ in range(64):
             mesh.polygons.add()
         new_cyl = MockObject(name="Cylinder", data=mesh)
+        new_cyl.type = "MESH"
         new_cyl.location = MockVector(location)
+        new_cyl._base_dimensions = MockVector(1.0, 1.0, 1.0)
         new_cyl.dimensions = MockVector(radius * 2, radius * 2, depth)
         mock_data.objects.append(new_cyl)
         mock_data.meshes.append(mesh)
@@ -955,6 +1116,7 @@ def setup_mock_bpy():
         for _ in range(500):
             mesh.polygons.add()
         new_monkey = MockObject(name="Suzanne", data=mesh)
+        new_monkey.type = "MESH"
         mock_data.objects.append(new_monkey)
         mock_context.active_object = new_monkey
         if mock_context.view_layer:
