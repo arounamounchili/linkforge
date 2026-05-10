@@ -9,10 +9,7 @@ from __future__ import annotations
 
 import typing
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, runtime_checkable
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, runtime_checkable
 
 
 @runtime_checkable
