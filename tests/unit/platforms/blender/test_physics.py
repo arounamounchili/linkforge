@@ -5,7 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
+from linkforge.blender.adapters.translator import LinkTranslator
+from linkforge_core.composer import RobotBuilder
 
 from tests.blender_test_utils import create_test_object, safe_get_linkforge
 
@@ -67,8 +68,11 @@ class TestInertialOrigin:
         props.inertia_iyy = 1.0
         props.inertia_izz = 1.0
 
-        link = blender_link_to_core_with_origin(obj)
-        assert link is not None, "blender_link_to_core_with_origin returned None"
+        builder = RobotBuilder("test_robot")
+        lb = LinkTranslator().translate(obj, builder, blender_context)
+        if lb:
+            lb.commit()
+        link = builder.robot.get_link("test_link")
         assert link.inertial is not None
         assert pytest.approx(link.inertial.origin.xyz.x) == 1.2
         assert pytest.approx(link.inertial.origin.rpy.z) == 0.3

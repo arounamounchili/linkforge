@@ -18,6 +18,7 @@ except ImportError:
     HAS_BPY = True
 
 if HAS_BPY:
+    # Always force registration of linkforge properties to ensure test stability
     import linkforge.blender
 
     @pytest.fixture(scope="session", autouse=True)

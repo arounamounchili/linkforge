@@ -763,6 +763,26 @@ class MockHandlers:
         self.render_post = []
 
 
+class MockTimers:
+    """Mock for bpy.app.timers."""
+
+    def __init__(self):
+        self._timers = []
+
+    def register(self, func, first_interval=0.0):
+        """Register a timer function."""
+        self._timers.append(func)
+
+    def run_all(self):
+        """Execute all pending timers."""
+        while self._timers:
+            import contextlib
+
+            func = self._timers.pop(0)
+            with contextlib.suppress(Exception):
+                func()
+
+
 class MockMaterialSlot(MockPropertyGroup):
     def __init__(self, material=None, **kwargs):
         super().__init__(**kwargs)
@@ -1281,6 +1301,26 @@ def setup_mock_bpy():
     mock_view_layer = typing.cast(MockPropertyGroup, active_scene.view_layers[0])
     mock_view_layer.objects = mock_data.objects
 
+    def mock_view_layer_update():
+        """Trigger depsgraph handlers to simulate Blender's update cycle."""
+        # Create a mock depsgraph with updates for each object
+        mock_depsgraph = MagicMock(name="Depsgraph")
+        mock_depsgraph.updates = []
+        for obj in mock_data.objects:
+            update = MagicMock()
+            update.id = obj
+            mock_depsgraph.updates.append(update)
+
+        for handler in mock_app.handlers.depsgraph_update_post:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                handler(active_scene, mock_depsgraph)
+
+        # Also run any timers scheduled during the handlers (like deferred renames)
+        mock_app.timers.run_all()
+
+    mock_view_layer.update = mock_view_layer_update
     mock_context.view_layer = mock_view_layer
 
     class ObjectsCollection(MockCollection):
@@ -1301,7 +1341,7 @@ def setup_mock_bpy():
     mock_context.window_manager = MockPropertyGroup()
 
     # Setup handlers and timers
-    mock_app.timers = MagicMock(name="Timers")
+    mock_app.timers = MockTimers()
     mock_app.handlers = MockHandlers()
     mock_app.version = (4, 2, 0)
     mock_app.driver_namespace = {}

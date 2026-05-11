@@ -66,8 +66,28 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     # Update object name to match link name
     # Blender will handle collisions by appending suffixes, but our stored name persists
     if self.id_data.name != sanitized_name:
-        # Block handler loop: We only update if they differ already
-        self.id_data.name = sanitized_name
+        try:
+            self.id_data.name = sanitized_name
+        except AttributeError:
+            # We are likely in a depsgraph update where names are read-only.
+            import bpy
+
+            if not bpy.app.background and hasattr(bpy.app, "timers"):
+                # GUI mode: Use a standard timer
+                def deferred_rename() -> None:
+                    import contextlib
+
+                    if self.id_data:
+                        with contextlib.suppress(Exception):
+                            self.id_data.name = sanitized_name
+                    return None
+
+                bpy.app.timers.register(deferred_rename, first_interval=0.01)
+            else:
+                # Background mode: Use our internal queue
+                from ..handlers.name_sync_handler import PENDING_RENAMES
+
+                PENDING_RENAMES.append((self.id_data, sanitized_name))
 
     # Update visual and collision children names IF they followed the standard naming pattern
     for child in self.id_data.children:
@@ -257,6 +277,53 @@ class LinkPropertyGroup(PropertyGroup):
         precision=3,
         unit="ROTATION",
         update=update_inertia_viz,
+    )
+
+    # Gazebo / Simulation Properties
+    use_simulation_props: BoolProperty(  # type: ignore
+        name="Advanced Simulation",
+        description="Enable advanced physics settings (Gazebo/GZ)",
+        default=False,
+    )
+
+    self_collide: BoolProperty(  # type: ignore
+        name="Self Collide",
+        description="Whether this link can collide with other links in the same robot",
+        default=False,
+    )
+
+    gravity: BoolProperty(  # type: ignore
+        name="Gravity",
+        description="Whether this link is affected by gravity",
+        default=True,
+    )
+
+    mu1: FloatProperty(  # type: ignore
+        name="Friction mu1",
+        description="Static friction coefficient (Coulomb)",
+        default=1.0,
+        min=0.0,
+    )
+
+    mu2: FloatProperty(  # type: ignore
+        name="Friction mu2",
+        description="Dynamic friction coefficient",
+        default=1.0,
+        min=0.0,
+    )
+
+    kp: FloatProperty(  # type: ignore
+        name="Stiffness kp",
+        description="Contact stiffness",
+        default=1e12,
+        min=0.0,
+    )
+
+    kd: FloatProperty(  # type: ignore
+        name="Damping kd",
+        description="Contact damping",
+        default=1.0,
+        min=0.0,
     )
 
     collision_type: EnumProperty(  # type: ignore

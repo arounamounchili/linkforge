@@ -275,6 +275,32 @@ class LINKFORGE_PT_links(Panel):
             else:
                 box.label(text="No visual geometry", icon="INFO")
 
+        # Simulation Properties (Advanced)
+        box.separator()
+        row = box.row()
+        row.prop(
+            props,
+            "use_simulation_props",
+            icon="TRIA_DOWN" if props.use_simulation_props else "TRIA_RIGHT",
+            emboss=False,
+        )
+        row.label(text="Advanced Simulation", icon="WORLD")
+
+        if props.use_simulation_props:
+            sim_box = box.box()
+            sim_box.prop(props, "self_collide")
+            sim_box.prop(props, "gravity")
+
+            col = sim_box.column(align=True)
+            col.label(text="Friction:")
+            col.prop(props, "mu1", text="mu1 (Static)")
+            col.prop(props, "mu2", text="mu2 (Dynamic)")
+
+            col = sim_box.column(align=True)
+            col.label(text="Contact:")
+            col.prop(props, "kp", text="kp (Stiffness)")
+            col.prop(props, "kd", text="kd (Damping)")
+
         # Remove Link button (Danger Zone)
         box.separator()
         box.separator()

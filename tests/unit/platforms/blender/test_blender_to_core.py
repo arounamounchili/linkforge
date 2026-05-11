@@ -32,6 +32,8 @@ from linkforge.blender.adapters.blender_to_core import (
     sanitize_name,
     scene_to_robot,
 )
+from linkforge.blender.adapters.translator import JointTranslator, LinkTranslator
+from linkforge_core.composer import RobotBuilder
 from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.models import (
     Box,
@@ -43,6 +45,42 @@ from linkforge_core.models import (
     Sphere,
 )
 from mathutils import Euler, Matrix
+
+
+def translate_link_to_model(obj, context):
+    builder = RobotBuilder("test_robot")
+    lb = LinkTranslator().translate(obj, builder, context)
+    if lb:
+        lb.commit()
+    props = getattr(obj, "linkforge", None)
+    link_name = props.link_name if props and props.link_name else obj.name
+    return builder.robot.get_link(link_name)
+
+
+def translate_joint_to_model(obj, context, parent=None, child=None):
+    builder = RobotBuilder("test_robot")
+    p_name = None
+    if parent:
+        lb_p = LinkTranslator().translate(parent, builder, context)
+        if lb_p:
+            lb_p.root()
+        p_props = getattr(parent, "linkforge", None)
+        p_name = p_props.link_name if p_props and p_props.link_name else parent.name
+
+    lb_c = None
+    if child:
+        c_props = getattr(child, "linkforge", None)
+        c_name = c_props.link_name if c_props and c_props.link_name else child.name
+        lb_c = builder.link(c_name, parent=p_name)
+        LinkTranslator().translate(child, builder, context, lb=lb_c)
+
+    JointTranslator().translate(obj, builder, context, lb=lb_c)
+    if lb_c:
+        lb_c.commit()
+
+    props = getattr(obj, "linkforge_joint", None)
+    joint_name = props.joint_name if props and props.joint_name else obj.name
+    return builder.robot.get_joint(joint_name)
 
 
 def test_matrix_to_transform_precision(scene, blender_context) -> None:
@@ -196,6 +234,7 @@ def test_blender_link_to_core_inertia(scene, blender_context) -> None:
     props = safe_get_linkforge(obj)
     props.is_robot_link = True
     props.mass = 2.5
+    props.use_auto_inertia = False
     props.inertia_ixx = 1.0
     props.inertia_iyy = 1.0
     props.inertia_izz = 1.0
@@ -461,7 +500,7 @@ def test_blender_joint_to_core_types(scene, blender_context) -> None:
 
     # Continuous
     safe_get_joint(joint_obj).joint_type = "CONTINUOUS"
-    joint = blender_joint_to_core(joint_obj)
+    joint = translate_joint_to_model(joint_obj, blender_context, parent, child)
     assert joint is not None
     assert joint.type == JointType.CONTINUOUS
     # Continuous joints shouldn't have lower/upper limits in standard URDF but our model handles it.
@@ -1123,6 +1162,7 @@ def test_blender_link_inertial_origin(clean_scene, scene, blender_context) -> No
     obj = create_test_object("Link", None, scene)
     safe_get_linkforge(obj).is_robot_link = True
     safe_get_linkforge(obj).mass = 1.0
+    safe_get_linkforge(obj).use_auto_inertia = False
     safe_get_linkforge(obj).inertia_origin_xyz = (0.1, 0.2, 0.3)
     safe_get_linkforge(obj).inertia_origin_rpy = (0.0, 0.0, 0.5)
 
@@ -1196,7 +1236,7 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_conte
 
     with (
         mock.patch(
-            "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
+            "linkforge.blender.adapters.translator.LinkTranslator.translate",
             side_effect=RobotValidationError(ValidationErrorCode.INVALID_VALUE, "Failed link"),
         ),
         pytest.raises(
@@ -1613,6 +1653,7 @@ def test_blender_to_core_small_gaps(clean_scene, scene, blender_context) -> None
     assert core is not None
     assert len(core.visuals) == 0
     assert len(core.collisions) == 0
+    safe_get_linkforge(p).is_robot_link = False
 
     # Scene to robot integration with 1 full link
     root = create_test_object("GapsRoot", None, scene)

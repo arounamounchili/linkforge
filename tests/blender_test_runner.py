@@ -18,7 +18,7 @@ def setup_environment():
     # Add platforms/blender and core/src to sys.path
     blender_path = os.path.join(project_root, "platforms", "blender")
     core_path = os.path.join(project_root, "core", "src")
-    for p in [blender_path, core_path]:
+    for p in [project_root, blender_path, core_path]:
         if p not in sys.path:
             sys.path.insert(0, p)
 
@@ -53,7 +53,6 @@ def run_tests():
     """Execute pytest within the Blender environment."""
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     test_dirs = [
-        os.path.join(project_root, "tests", "unit", "platforms", "blender"),
         os.path.join(project_root, "tests", "integration", "platforms", "blender"),
     ]
 

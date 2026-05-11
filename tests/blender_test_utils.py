@@ -34,6 +34,10 @@ def ensure_linkforge_registered():
         with contextlib.suppress(Exception):
             linkforge.blender.unregister()
         linkforge.blender.register()
+    else:
+        # Even if properties are present, handlers might be missing (e.g. after mock reset)
+        # Calling register() again is safe as it checks for duplicate handlers.
+        linkforge.blender.register()
 
 
 def safe_get_linkforge(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
@@ -346,5 +350,21 @@ def safe_update(scene: typing.Any | None = None) -> None:
         or (bpy.data.scenes[0] if bpy.data.scenes else None)
     )
 
+    # Flush before to clear any previous pending renames
+    try:
+        from linkforge.blender.handlers import name_sync_handler
+
+        name_sync_handler.flush_deferred_renames()
+    except ImportError:
+        pass
+
     if target_scene and hasattr(target_scene, "view_layers") and len(target_scene.view_layers) > 0:
         target_scene.view_layers[0].update()
+
+    # Flush after to handle renames triggered by THIS update
+    try:
+        from linkforge.blender.handlers import name_sync_handler
+
+        name_sync_handler.flush_deferred_renames()
+    except ImportError:
+        pass

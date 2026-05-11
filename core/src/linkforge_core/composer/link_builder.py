@@ -363,6 +363,49 @@ class LinkBuilder:
         )
         return self._configure_joint(name, xyz, rpy)
 
+    def floating(
+        self,
+        name: str | None = None,
+        xyz: tuple[float, float, float] | None = None,
+        rpy: tuple[float, float, float] | None = None,
+    ) -> LinkBuilder:
+        """Configure the connection as a FLOATING (6 DOF) joint.
+
+        Args:
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
+        self._check_not_committed()
+        self._joint.type = JointType.FLOATING
+        return self._configure_joint(name, xyz, rpy)
+
+    def planar(
+        self,
+        axis: tuple[float, float, float],
+        name: str | None = None,
+        xyz: tuple[float, float, float] | None = None,
+        rpy: tuple[float, float, float] | None = None,
+    ) -> LinkBuilder:
+        """Configure the connection as a PLANAR joint.
+
+        Args:
+            axis: Plane normal unit vector.
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
+        self._check_not_committed()
+        self._joint.type = JointType.PLANAR
+        self._joint.axis = self._normalize_axis(axis)
+        return self._configure_joint(name, xyz, rpy)
+
     def dynamics(self, damping: float = 0.0, friction: float = 0.0) -> LinkBuilder:
         """Set the physical dynamics for the joint.
 
