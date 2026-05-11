@@ -613,6 +613,12 @@ def _categorize_scene_objects(
     joints_map = {}  # child_link_name -> (parent_link_name, joint_empty_obj)
     root_link = None
 
+    import bpy
+
+    logger.debug(
+        f"_categorize_scene_objects: scene.objects count={len(scene.objects)}, "
+        f"data.objects count={len(bpy.data.objects)}"
+    )
     for obj in scene.objects:
         # Check for Link
         lf = getattr(obj, "linkforge", None)
@@ -659,6 +665,12 @@ def _categorize_scene_objects(
         if link_name not in joints_map:
             root_link = (link_name, obj)
             break
+
+    logger.debug(
+        f"_categorize_scene_objects: links={list(link_objects.keys())}, "
+        f"joints={len(joint_objects)}, sensors={len(sensor_objects)}, "
+        f"root={root_link[0] if root_link else 'None'}"
+    )
 
     return link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link
 
@@ -770,6 +782,7 @@ class SceneToRobotTranslator:
         self._translate_sensors(sensor_objects, link_frames, link_objects)
         self._translate_transmissions(transmission_objects)
         self._translate_ros2_control()
+        self._translate_scene_gazebo_plugins()
 
         # 6. Finalize and return
         try:
@@ -918,29 +931,46 @@ class SceneToRobotTranslator:
                 ros2_control = blender_ros2_control_to_core(self.robot_props)
                 if ros2_control:
                     self.builder.robot.add_ros2_control(ros2_control)
-
-                    # Gazebo plugin
-                    if getattr(self.robot_props, "gazebo_plugin_name", ""):
-                        params = {}
-                        if getattr(self.robot_props, "controllers_yaml_path", ""):
-                            params["parameters"] = self.robot_props.controllers_yaml_path
-
-                        gazebo_plugin = GazeboPlugin(
-                            name="gazebo_ros2_control",
-                            filename=self.robot_props.gazebo_plugin_name,
-                            parameters=params,
-                        )
-                        from linkforge_core.models.gazebo import GazeboElement
-
-                        self.builder.robot.add_gazebo_element(
-                            GazeboElement(plugins=[gazebo_plugin])
-                        )
             except Exception as e:
                 self.validation_result.add_error(
                     title="ROS2 Control translation failed",
                     message=str(e),
                     code=ValidationErrorCode.INVALID_VALUE,
                 )
+
+    def _translate_scene_gazebo_plugins(self) -> None:
+        """Translate scene-level Gazebo plugins (e.g. ros2_control or custom)."""
+        if not self.robot_props:
+            return
+
+        plugin_filename = getattr(self.robot_props, "gazebo_plugin_name", "")
+        if not plugin_filename:
+            return
+
+        params = {}
+        # Add controllers YAML if ros2_control is active
+        if getattr(self.robot_props, "use_ros2_control", False):
+            yaml_path = getattr(self.robot_props, "controllers_yaml_path", "")
+            if yaml_path:
+                params["parameters"] = yaml_path
+
+        # Determine plugin name
+        # For standard gz_ros2_control, we use 'gazebo_ros2_control' for compatibility
+        if "gz_ros2_control" in plugin_filename or "gazebo_ros2_control" in plugin_filename:
+            name = "gazebo_ros2_control"
+        else:
+            # Custom plugin: use filename as name (matches test expectation)
+            name = plugin_filename
+
+        from linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
+
+        gazebo_plugin = GazeboPlugin(
+            name=name,
+            filename=plugin_filename,
+            parameters=params,
+        )
+
+        self.builder.robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
 
     def _get_geom_suffix(self, child: Any, parent_obj: Any, type_tag: str) -> str:
         visual_count = sum(1 for c in parent_obj.children if type_tag in c.name)

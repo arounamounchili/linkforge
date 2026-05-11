@@ -163,9 +163,17 @@ def create_test_object(
     if scene:
         with contextlib.suppress(RuntimeError):
             scene.collection.objects.link(obj)
-        # For mock environments, manually track in scene.objects
-        if isinstance(getattr(scene, "objects", None), list):
+        if hasattr(scene, "objects") and isinstance(scene.objects, list):
             scene.objects.append(obj)
+
+    # Set as active
+    if hasattr(bpy.context, "view_layer") and bpy.context.view_layer is not None:
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.view_layer.objects.active = obj
+
+    # Fallback/Direct set for mocks
+    with contextlib.suppress(AttributeError, RuntimeError):
+        bpy.context.active_object = obj
 
     return obj
 
@@ -182,7 +190,8 @@ def create_mesh_object(
         bmesh.ops.create_cube(bm, size=2.0)
         bm.to_mesh(mesh)
         bm.free()
-    return create_test_object(name, mesh, scene=scene)
+    obj = create_test_object(name, mesh, scene=scene)
+    return obj
 
 
 def create_simple_robot_scene(
@@ -301,6 +310,20 @@ def cleanup_blender_scene(scene: typing.Any | None = None) -> None:
     # Delete all objects in all collections
     for obj in list(bpy.data.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
+
+    # Reset context state to prevent leakage between tests
+    if hasattr(bpy.context, "active_object"):
+        # In mock environment, we can set it directly
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.active_object = None
+
+    if hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.view_layer.objects.active = None
+
+    if hasattr(bpy.context, "selected_objects"):
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.selected_objects.clear()
 
     # Delete all mesh data
     for mesh in list(bpy.data.meshes):

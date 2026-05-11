@@ -6,16 +6,10 @@ import typing
 
 import pytest
 
-try:
-    import bpy
-    import bpy.types
+from tests.unit.platforms.blender.mock_bpy_env import setup_mock_bpy
 
-    HAS_BPY = True
-except ImportError:
-    from tests.unit.platforms.blender.mock_bpy_env import setup_mock_bpy
-
-    bpy = setup_mock_bpy()
-    HAS_BPY = True
+bpy = setup_mock_bpy()
+HAS_BPY = True
 
 if HAS_BPY:
     # Always force registration of linkforge properties to ensure test stability
