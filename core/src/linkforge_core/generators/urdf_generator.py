@@ -880,23 +880,37 @@ class URDFGenerator(RobotXMLGenerator):
             parent: Parent XML element (robot)
             robot: Robot model
         """
-        if robot.links or robot.gazebo_elements:
-            parent.append(ET.Comment(" Gazebo "))
-
         grouped_elements: dict[str | None, list[GazeboElement]] = defaultdict(list)
         for gz in robot.gazebo_elements:
             grouped_elements[gz.reference].append(gz)
 
+        # 0. Check if we have any Gazebo content at all before adding header
+        default_physics = LinkPhysics()
+        has_modified_physics = any(lnk.physics != default_physics for lnk in robot.links)
+        if not robot.gazebo_elements and not has_modified_physics:
+            return
+
+        parent.append(ET.Comment(" Gazebo "))
+
         # 1. Handle Link-level Gazebo tags (Physics + Extensions)
+        # We only generate these if physics are non-default or if there are explicit elements
         for link in sorted(robot.links, key=lambda lnk: lnk.name):
+            has_explicit = link.name in grouped_elements
+            is_physics_modified = link.physics != default_physics
+
+            # Skip if nothing to export for this link
+            if not has_explicit and not is_physics_modified:
+                continue
+
             # Create a single tag for this link
             gz_tag = ET.SubElement(parent, "gazebo", reference=link.name)
 
-            # Add Physics (Universal Truth)
-            self._fill_link_physics(gz_tag, link.physics)
+            # Add Physics (only if modified or if tag already created for explicit elements)
+            if is_physics_modified:
+                self._fill_link_physics(gz_tag, link.physics)
 
             # Add any explicit Gazebo elements for this link
-            if link.name in grouped_elements:
+            if has_explicit:
                 for elem in grouped_elements[link.name]:
                     self._fill_gazebo_element(gz_tag, elem)
                 # Mark as handled

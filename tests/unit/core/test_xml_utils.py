@@ -1,7 +1,11 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from linkforge_core.exceptions import RobotModelError
+from linkforge_core.exceptions import (
+    RobotMathError,
+    RobotModelError,
+    RobotValidationError,
+)
 from linkforge_core.utils.xml_utils import (
     MAX_XML_DEPTH,
     parse_float,
@@ -85,7 +89,7 @@ def test_parsing_fallbacks() -> None:
     with pytest.raises(RobotModelError, match="Non-finite float value"):
         parse_float("inf")
     with pytest.raises(RobotModelError, match="outside reasonable range"):
-        parse_float("1e11")
+        parse_float("1e19")
     with pytest.raises(RobotModelError, match="Invalid float format"):
         parse_float("not-a-float")
 
@@ -224,7 +228,6 @@ def test_create_xml_element_no_formatter() -> None:
 def test_parse_vector3_exception_fallback() -> None:
     """Test Vector3 parsing fallback and error handling."""
     import pytest
-    from linkforge_core.exceptions import RobotMathError, RobotValidationError
     from linkforge_core.utils.xml_utils import parse_vector3
 
     # Hit RobotMathError (re-raised)

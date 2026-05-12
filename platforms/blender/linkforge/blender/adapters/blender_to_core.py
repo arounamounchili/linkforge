@@ -377,13 +377,13 @@ def extract_mesh_triangles(
     if np is not None:
         # Fast vertex extraction via foreach_get
         num_verts = len(mesh_data.vertices)
-        verts = np.empty(num_verts * 3, dtype=np.float32)
+        verts = np.zeros(num_verts * 3, dtype=np.float32)
         mesh_data.vertices.foreach_get("co", verts)
         vertices_array = verts.reshape((-1, 3))
 
         # Fast face index extraction (triangles)
         num_tris = len(mesh_data.loop_triangles)
-        tris = np.empty(num_tris * 3, dtype=np.int32)
+        tris = np.zeros(num_tris * 3, dtype=np.int32)
         mesh_data.loop_triangles.foreach_get("vertices", tris)
         triangles_array = tris.reshape((-1, 3))
 
@@ -676,9 +676,10 @@ class SceneToRobotTranslator:
             robot = Robot(name=self.robot_name)
 
         if self.validation_result.errors:
+            first_err = self.validation_result.errors[0]
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
-                f"Multiple configuration errors found ({len(self.validation_result.errors)})",
+                f"Multiple configuration errors found ({len(self.validation_result.errors)}). First: {first_err.title} - {first_err.message}",
             )
 
         return robot, self.validation_result
@@ -826,11 +827,22 @@ class SceneToRobotTranslator:
             return
 
         params = {}
+        is_standard_control = (
+            "gz_ros2_control" in plugin_filename or "gazebo_ros2_control" in plugin_filename
+        )
+
         # Add controllers YAML if ros2_control is active
         if getattr(self.robot_props, "use_ros2_control", False):
+            # Special case for standard gz_ros2_control: only add if we actually have joints to control
+            if is_standard_control and not self.builder.robot.ros2_control:
+                return
+
             yaml_path = getattr(self.robot_props, "controllers_yaml_path", "")
             if yaml_path:
                 params["parameters"] = yaml_path
+        elif is_standard_control:
+            # If standard control is NOT used, don't add the plugin at all
+            return
 
         # Determine plugin name
         # For standard gz_ros2_control, we use 'gazebo_ros2_control' for compatibility

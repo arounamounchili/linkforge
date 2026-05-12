@@ -23,3 +23,14 @@ DEFAULT_GRAVITY = True
 
 # Default self-collision inclusion
 DEFAULT_SELF_COLLIDE = False
+
+
+# Validation Limits (Sanity Checks)
+# ----------------------------
+
+# Maximum absolute value allowed for floats in robot models
+# 1e18 is safe for stiffness (kp) while preventing simulation-breaking overflows
+MAX_REASONABLE_FLOAT = 1e18
+
+# Maximum absolute value allowed for integers (IDs, sample counts, etc.)
+MAX_REASONABLE_INT = 1000000
