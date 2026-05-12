@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import bpy
 import pytest
 
@@ -18,10 +20,12 @@ class TestSensorsPluginsIntegration:
     def test_sensor_creation_and_export(self, blender_clean_scene, tmp_path) -> None:
         """Verify that a sensor added in Blender is correctly exported to URDF."""
         scene = bpy.context.scene
+        ops: Any = bpy.ops
 
         # 1. Create an Empty as link frame
-        bpy.ops.linkforge.add_empty_link()
+        ops.linkforge.add_empty_link()
         link = bpy.context.active_object
+        assert link is not None, "Failed to create or set active link frame"
         assert link.name == "base_link"
 
         # Ensure it has a name for the sensor naming logic
@@ -37,7 +41,7 @@ class TestSensorsPluginsIntegration:
         safe_update()
 
         # Execute sensor creation
-        res = bpy.ops.linkforge.create_sensor()
+        res = ops.linkforge.create_sensor()
         assert res == {"FINISHED"}
 
         # Find the sensor object (usually a child of the link)
@@ -53,7 +57,7 @@ class TestSensorsPluginsIntegration:
 
         # Export and verify XML
         export_path = tmp_path / "sensor_test.urdf"
-        res = bpy.ops.linkforge.export_robot_model(filepath=str(export_path))
+        res = ops.linkforge.export_robot_model(filepath=str(export_path))
         assert res == {"FINISHED"}
 
         urdf_content = export_path.read_text()
@@ -66,6 +70,7 @@ class TestSensorsPluginsIntegration:
         """Verify that a robot-level Gazebo plugin is correctly exported."""
         scene = bpy.context.scene
         lf_scene = safe_get_linkforge_scene(scene)
+        ops: Any = bpy.ops
 
         # Add a robot link so there is something to export
         create_robot_link("base_link", scene)
@@ -77,7 +82,7 @@ class TestSensorsPluginsIntegration:
         safe_update()
 
         export_path = tmp_path / "plugin_test.urdf"
-        res = bpy.ops.linkforge.export_robot_model(filepath=str(export_path))
+        res = ops.linkforge.export_robot_model(filepath=str(export_path))
         assert res == {"FINISHED"}
 
         urdf_content = export_path.read_text()

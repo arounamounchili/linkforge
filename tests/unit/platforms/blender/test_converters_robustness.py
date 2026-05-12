@@ -92,7 +92,9 @@ class TestJointRobustness:
         JointTranslator().translate(j, builder, blender_context, lb=lb_c)
         if lb_c:
             lb_c.commit()
+
         core = builder.robot.get_joint("Joint")
+        assert core is not None, "Joint 'Joint' not found in robot model"
         assert core.axis is not None, "Joint axis was not fell back to default"
         assert core.axis.z == 1.0  # Default fallback
 

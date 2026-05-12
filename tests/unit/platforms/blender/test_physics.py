@@ -72,7 +72,9 @@ class TestInertialOrigin:
         lb = LinkTranslator().translate(obj, builder, blender_context)
         if lb:
             lb.commit()
+
         link = builder.robot.get_link("test_link")
+        assert link is not None, "Link 'test_link' not found in robot model"
         assert link.inertial is not None
         assert pytest.approx(link.inertial.origin.xyz.x) == 1.2
         assert pytest.approx(link.inertial.origin.rpy.z) == 0.3

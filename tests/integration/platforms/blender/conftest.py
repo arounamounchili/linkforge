@@ -6,7 +6,7 @@ import typing
 
 import pytest
 
-from tests.unit.platforms.blender.mock_bpy_env import setup_mock_bpy
+from tests.mock_bpy_env import setup_mock_bpy
 
 bpy = setup_mock_bpy()
 HAS_BPY = True

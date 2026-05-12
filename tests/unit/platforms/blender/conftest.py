@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 # Relative import from the mock environment package
-from .mock_bpy_env import setup_mock_bpy  # noqa: E402
+from tests.mock_bpy_env import setup_mock_bpy  # noqa: E402
 
 # BPY Mocking (Global)
 # We initialize the mock once at the module level because Blender's RNA

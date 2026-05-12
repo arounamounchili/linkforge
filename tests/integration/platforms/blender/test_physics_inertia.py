@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import bpy
 import pytest
 
@@ -16,10 +18,12 @@ class TestPhysicsInertiaIntegration:
     def test_inertia_calculation_primitive_box(self, blender_clean_scene) -> None:
         """Verify inertia calculation for a primitive box matches theory."""
         scene = bpy.context.scene
+        ops: Any = bpy.ops
 
         # 1. Create an Empty as link frame
-        bpy.ops.linkforge.add_empty_link()
+        ops.linkforge.add_empty_link()
         link_obj = bpy.context.active_object
+        assert link_obj is not None, "Failed to create or set active link frame"
         assert link_obj.name == "base_link"
         lf = safe_get_linkforge(link_obj)
         lf.mass = 1.0
@@ -34,7 +38,7 @@ class TestPhysicsInertiaIntegration:
         safe_update()
 
         # Execute operator on the link frame
-        res = bpy.ops.linkforge.calculate_inertia()
+        res = ops.linkforge.calculate_inertia()
         assert res == {"FINISHED"}
 
         # Verify values
@@ -45,10 +49,11 @@ class TestPhysicsInertiaIntegration:
     def test_collision_mesh_generation_convex_hull(self, blender_clean_scene) -> None:
         """Verify that convex hull collision generation works and parents correctly."""
         scene = bpy.context.scene
-
+        ops: Any = bpy.ops
         # Create an Empty as link frame
-        bpy.ops.linkforge.add_empty_link()
+        ops.linkforge.add_empty_link()
         link_obj = bpy.context.active_object
+        assert link_obj is not None
         assert link_obj.name == "base_link"
 
         # Add a visual mesh child
@@ -63,7 +68,7 @@ class TestPhysicsInertiaIntegration:
         safe_update()
 
         # Execute collision generation (MESH mode is default for multi-visual or auto)
-        res = bpy.ops.linkforge.generate_collision()
+        res = ops.linkforge.generate_collision()
         assert res == {"FINISHED"}
 
         # Verify collision object exists
