@@ -17,11 +17,45 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
-from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
+from linkforge_core.constants import (
+    DEFAULT_CONTACT_KD,
+    DEFAULT_CONTACT_KP,
+    DEFAULT_FRICTION_MU,
+    DEFAULT_FRICTION_MU2,
+    DEFAULT_GRAVITY,
+    DEFAULT_SELF_COLLIDE,
+)
+from linkforge_core.utils.string_utils import (
+    format_scientific,
+    parse_scientific,
+)
+from linkforge_core.utils.string_utils import (
+    sanitize_name as sanitize_robot_name,
+)
 
 from ..utils.link_utils import should_rename_child
 from ..utils.scene_utils import clear_stats_cache
 from ..visualization.inertia_gizmos import tag_redraw
+
+
+def get_kp_scientific(self: LinkPropertyGroup) -> str:
+    """Getter for kp in scientific notation."""
+    return format_scientific(self.kp)
+
+
+def set_kp_scientific(self: LinkPropertyGroup, value: str) -> None:
+    """Setter for kp in scientific notation."""
+    self.kp = parse_scientific(value, self.kp)
+
+
+def get_kd_scientific(self: LinkPropertyGroup) -> str:
+    """Getter for kd in scientific notation."""
+    return format_scientific(self.kd)
+
+
+def set_kd_scientific(self: LinkPropertyGroup, value: str) -> None:
+    """Setter for kd in scientific notation."""
+    self.kd = parse_scientific(value, self.kd)
 
 
 def get_link_name(self: LinkPropertyGroup) -> str:
@@ -66,8 +100,28 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     # Update object name to match link name
     # Blender will handle collisions by appending suffixes, but our stored name persists
     if self.id_data.name != sanitized_name:
-        # Block handler loop: We only update if they differ already
-        self.id_data.name = sanitized_name
+        try:
+            self.id_data.name = sanitized_name
+        except AttributeError:
+            # We are likely in a depsgraph update where names are read-only.
+            import bpy
+
+            if not bpy.app.background and hasattr(bpy.app, "timers"):
+                # GUI mode: Use a standard timer
+                def deferred_rename() -> None:
+                    import contextlib
+
+                    if self.id_data:
+                        with contextlib.suppress(Exception):
+                            self.id_data.name = sanitized_name
+                    return None
+
+                bpy.app.timers.register(deferred_rename, first_interval=0.01)
+            else:
+                # Background mode: Use our internal queue
+                from ..handlers.name_sync_handler import PENDING_RENAMES
+
+                PENDING_RENAMES.append((self.id_data, sanitized_name))
 
     # Update visual and collision children names IF they followed the standard naming pattern
     for child in self.id_data.children:
@@ -257,6 +311,67 @@ class LinkPropertyGroup(PropertyGroup):
         precision=3,
         unit="ROTATION",
         update=update_inertia_viz,
+    )
+
+    # Gazebo / Simulation Properties
+    use_simulation_props: BoolProperty(  # type: ignore
+        name="Advanced Simulation",
+        description="Include advanced physics settings (Gazebo/GZ) in the exported model",
+        default=False,
+    )
+
+    self_collide: BoolProperty(  # type: ignore
+        name="Self Collide",
+        description="Whether this link can collide with other links in the same robot",
+        default=DEFAULT_SELF_COLLIDE,
+    )
+
+    gravity: BoolProperty(  # type: ignore
+        name="Gravity",
+        description="Whether this link is affected by gravity",
+        default=DEFAULT_GRAVITY,
+    )
+
+    mu: FloatProperty(  # type: ignore
+        name="Friction mu",
+        description="Static friction coefficient (Coulomb)",
+        default=DEFAULT_FRICTION_MU,
+        min=0.0,
+    )
+
+    mu2: FloatProperty(  # type: ignore
+        name="Friction mu2",
+        description="Dynamic friction coefficient",
+        default=DEFAULT_FRICTION_MU2,
+        min=0.0,
+    )
+
+    kp: FloatProperty(  # type: ignore
+        name="Stiffness kp",
+        description="Contact stiffness (N/m)",
+        default=DEFAULT_CONTACT_KP,
+        min=0.0,
+    )
+
+    kp_ui: StringProperty(  # type: ignore
+        name="Stiffness kp",
+        description="Contact stiffness (e.g. 1.0e+12)",
+        get=get_kp_scientific,
+        set=set_kp_scientific,
+    )
+
+    kd: FloatProperty(  # type: ignore
+        name="Damping kd",
+        description="Contact damping (N s/m)",
+        default=DEFAULT_CONTACT_KD,
+        min=0.0,
+    )
+
+    kd_ui: StringProperty(  # type: ignore
+        name="Damping kd",
+        description="Contact damping (e.g. 1.0e+00)",
+        get=get_kd_scientific,
+        set=set_kd_scientific,
     )
 
     collision_type: EnumProperty(  # type: ignore

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from ..base import IResourceResolver
+from ..constants import XACRO_URIS
 from ..exceptions import (
     RobotParserError,
     RobotParserIOError,
@@ -34,7 +35,6 @@ from ..models.srdf import (
 )
 from ..utils.xml_utils import (
     MAX_XML_DEPTH,
-    XACRO_URIS,
     get_xml_namespace,
     parse_float,
     strip_xml_namespace,

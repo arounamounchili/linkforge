@@ -18,7 +18,7 @@ from ..models.joint import (
     JointSafetyController,
     JointType,
 )
-from ..models.link import Collision, Inertial, InertiaTensor, Link, Visual
+from ..models.link import Collision, Inertial, InertiaTensor, Link, LinkPhysics, Visual
 from ..models.material import Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2ControlJoint
@@ -57,6 +57,7 @@ class _LinkState:
     visuals: list[Visual] = field(default_factory=list)
     collisions: list[Collision] = field(default_factory=list)
     sensors: list[Sensor] = field(default_factory=list)
+    physics: LinkPhysics = field(default_factory=LinkPhysics)
     gazebo_params: dict[str, Any] = field(default_factory=dict)
 
 
@@ -363,6 +364,49 @@ class LinkBuilder:
         )
         return self._configure_joint(name, xyz, rpy)
 
+    def floating(
+        self,
+        name: str | None = None,
+        xyz: tuple[float, float, float] | None = None,
+        rpy: tuple[float, float, float] | None = None,
+    ) -> LinkBuilder:
+        """Configure the connection as a FLOATING (6 DOF) joint.
+
+        Args:
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
+        self._check_not_committed()
+        self._joint.type = JointType.FLOATING
+        return self._configure_joint(name, xyz, rpy)
+
+    def planar(
+        self,
+        axis: tuple[float, float, float],
+        name: str | None = None,
+        xyz: tuple[float, float, float] | None = None,
+        rpy: tuple[float, float, float] | None = None,
+    ) -> LinkBuilder:
+        """Configure the connection as a PLANAR joint.
+
+        Args:
+            axis: Plane normal unit vector.
+            name: Unique joint name.
+            xyz: Joint origin translation.
+            rpy: Joint origin rotation.
+
+        Returns:
+            The LinkBuilder instance.
+        """
+        self._check_not_committed()
+        self._joint.type = JointType.PLANAR
+        self._joint.axis = self._normalize_axis(axis)
+        return self._configure_joint(name, xyz, rpy)
+
     def dynamics(self, damping: float = 0.0, friction: float = 0.0) -> LinkBuilder:
         """Set the physical dynamics for the joint.
 
@@ -431,21 +475,33 @@ class LinkBuilder:
         self._joint.calibration = JointCalibration(rising=rising, falling=falling)
         return self
 
-    def simulation(self, **kwargs: Any) -> LinkBuilder:
-        """Set Gazebo-specific simulation properties for this link.
+    def physics(self, **kwargs: Any) -> LinkBuilder:
+        """Set surface and contact physics properties for this link.
+
+        Supports both typed LinkPhysics fields and raw engine-specific parameters.
 
         Common arguments:
             self_collide (bool): Enable self-collision.
             gravity (bool): Enable gravity.
-            static (bool): Mark link as static.
-            mu1, mu2 (float): Friction coefficients.
+            mu, mu2 (float): Friction coefficients.
             kp, kd (float): Contact stiffness and damping.
 
         Returns:
             The LinkBuilder instance.
         """
         self._check_not_committed()
-        self._link.gazebo_params.update(kwargs)
+
+        phys_fields = {f.name for f in LinkPhysics.__dataclass_fields__.values()}
+        phys_updates = {k: v for k, v in kwargs.items() if k in phys_fields}
+
+        if phys_updates:
+            self._link.physics = replace(self._link.physics, **phys_updates)
+
+        # Store non-physics fields in gazebo_params
+        remaining_kwargs = {k: v for k, v in kwargs.items() if k not in phys_fields}
+        if remaining_kwargs:
+            self._link.gazebo_params.update(remaining_kwargs)
+
         return self
 
     def _configure_joint(
@@ -837,9 +893,10 @@ class LinkBuilder:
         l_state = self._link
         link = Link(
             name=self._link_name,
-            initial_visuals=l_state.visuals,
-            initial_collisions=l_state.collisions,
+            visuals=l_state.visuals,
+            collisions=l_state.collisions,
             inertial=inertial,
+            physics=l_state.physics,
         )
         self._builder.robot.add_link(link)
 
@@ -914,11 +971,16 @@ class LinkBuilder:
         else:
             target_system = self._builder.robot.ros2_controls[0]
 
-        target_system.joints.append(
-            Ros2ControlJoint(
-                name=joint.name,
-                command_interfaces=self._control_interfaces[0],
-                state_interfaces=self._control_interfaces[1],
-                parameters=self._control_interfaces[2],
-            )
+        new_system = replace(
+            target_system,
+            joints=(
+                *target_system.joints,
+                Ros2ControlJoint(
+                    name=joint.name,
+                    command_interfaces=self._control_interfaces[0],
+                    state_interfaces=self._control_interfaces[1],
+                    parameters=self._control_interfaces[2],
+                ),
+            ),
         )
+        self._builder.robot.update_ros2_control(new_system)

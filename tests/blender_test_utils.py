@@ -34,6 +34,10 @@ def ensure_linkforge_registered():
         with contextlib.suppress(Exception):
             linkforge.blender.unregister()
         linkforge.blender.register()
+    else:
+        # Even if properties are present, handlers might be missing (e.g. after mock reset)
+        # Calling register() again is safe as it checks for duplicate handlers.
+        linkforge.blender.register()
 
 
 def safe_get_linkforge(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
@@ -159,9 +163,17 @@ def create_test_object(
     if scene:
         with contextlib.suppress(RuntimeError):
             scene.collection.objects.link(obj)
-        # For mock environments, manually track in scene.objects
-        if isinstance(getattr(scene, "objects", None), list):
+        if hasattr(scene, "objects") and isinstance(scene.objects, list):
             scene.objects.append(obj)
+
+    # Set as active
+    if hasattr(bpy.context, "view_layer") and bpy.context.view_layer is not None:
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.view_layer.objects.active = obj
+
+    # Fallback/Direct set for mocks
+    with contextlib.suppress(AttributeError, RuntimeError):
+        bpy.context.active_object = obj
 
     return obj
 
@@ -178,7 +190,8 @@ def create_mesh_object(
         bmesh.ops.create_cube(bm, size=2.0)
         bm.to_mesh(mesh)
         bm.free()
-    return create_test_object(name, mesh, scene=scene)
+    obj = create_test_object(name, mesh, scene=scene)
+    return obj
 
 
 def create_simple_robot_scene(
@@ -298,6 +311,20 @@ def cleanup_blender_scene(scene: typing.Any | None = None) -> None:
     for obj in list(bpy.data.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
 
+    # Reset context state to prevent leakage between tests
+    if hasattr(bpy.context, "active_object"):
+        # In mock environment, we can set it directly
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.active_object = None
+
+    if hasattr(bpy.context, "view_layer") and bpy.context.view_layer:
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.view_layer.objects.active = None
+
+    if hasattr(bpy.context, "selected_objects"):
+        with contextlib.suppress(AttributeError, RuntimeError):
+            bpy.context.selected_objects.clear()
+
     # Delete all mesh data
     for mesh in list(bpy.data.meshes):
         bpy.data.meshes.remove(mesh, do_unlink=True)
@@ -346,5 +373,21 @@ def safe_update(scene: typing.Any | None = None) -> None:
         or (bpy.data.scenes[0] if bpy.data.scenes else None)
     )
 
+    # Flush before to clear any previous pending renames
+    try:
+        from linkforge.blender.handlers import name_sync_handler
+
+        name_sync_handler.flush_deferred_renames()
+    except ImportError:
+        pass
+
     if target_scene and hasattr(target_scene, "view_layers") and len(target_scene.view_layers) > 0:
         target_scene.view_layers[0].update()
+
+    # Flush after to handle renames triggered by THIS update
+    try:
+        from linkforge.blender.handlers import name_sync_handler
+
+        name_sync_handler.flush_deferred_renames()
+    except ImportError:
+        pass

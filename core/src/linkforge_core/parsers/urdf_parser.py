@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import io
 import xml.etree.ElementTree as ET
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ..base import IResourceResolver
+from ..constants import XACRO_URIS
 from ..exceptions import (
     RobotModelError,
     RobotParserIOError,
@@ -68,7 +70,6 @@ from ..models import (
 from ..utils.math_utils import normalize_vector
 from ..utils.xml_utils import (
     MAX_XML_DEPTH,
-    XACRO_URIS,
     get_xml_namespace,
     parse_float,
     parse_int,
@@ -142,8 +143,8 @@ class URDFParser(RobotXMLParser[Robot]):
 
         return Link(
             name=name,
-            initial_visuals=visuals,
-            initial_collisions=collisions,
+            visuals=visuals,
+            collisions=collisions,
             inertial=inertial,
         )
 
@@ -872,18 +873,12 @@ class URDFParser(RobotXMLParser[Robot]):
             reference=reference,
             properties=properties,
             plugins=valid_plugins,
-            material=gazebo_elem.findtext("{*}material"),
-            self_collide=parse_optional_bool(gazebo_elem, "selfCollide"),
+            material=gazebo_elem.findtext("material") or gazebo_elem.findtext("{*}material"),
             static=parse_optional_bool(gazebo_elem, "static"),
-            gravity=parse_optional_bool(gazebo_elem, "gravity", "true"),
             stop_cfm=parse_optional_float(gazebo_elem, "stopCfm"),
             stop_erp=parse_optional_float(gazebo_elem, "stopErp"),
             provide_feedback=parse_optional_bool(gazebo_elem, "provideFeedback"),
             implicit_spring_damper=parse_optional_bool(gazebo_elem, "implicitSpringDamper"),
-            mu1=parse_optional_float(gazebo_elem, "mu1"),
-            mu2=parse_optional_float(gazebo_elem, "mu2"),
-            kp=parse_optional_float(gazebo_elem, "kp"),
-            kd=parse_optional_float(gazebo_elem, "kd"),
         )
 
     def _detect_xacro_file(self, root: ET.Element, filepath: Path | None = None) -> None:
@@ -953,7 +948,7 @@ class URDFParser(RobotXMLParser[Robot]):
         delayed_transmissions: list[Transmission] = []
         delayed_ros2_controls: list[Ros2Control] = []
         delayed_sensors: list[Sensor] = []
-        delayed_gazebo_elements: list[GazeboElement] = []
+        delayed_gazebo_elements: list[tuple[GazeboElement, dict[str, Any]]] = []
 
         # Determine base directory for resolving relative mesh paths.
         source_directory = (
@@ -1016,7 +1011,22 @@ class URDFParser(RobotXMLParser[Robot]):
                             if sensor:
                                 delayed_sensors.append(sensor)
                             else:
-                                delayed_gazebo_elements.append(self._parse_gazebo_element(elem))
+                                # Extract physics fields before they are lost
+                                physics_data = {
+                                    "mu": parse_optional_float(elem, "mu1", default=None),
+                                    "mu2": parse_optional_float(elem, "mu2", default=None),
+                                    "kp": parse_optional_float(elem, "kp", default=None),
+                                    "kd": parse_optional_float(elem, "kd", default=None),
+                                    "self_collide": parse_optional_bool(elem, "selfCollide"),
+                                    "gravity": parse_optional_bool(elem, "gravity"),
+                                }
+                                # Filter out None values
+                                physics_data = {
+                                    k: v for k, v in physics_data.items() if v is not None
+                                }
+                                delayed_gazebo_elements.append(
+                                    (self._parse_gazebo_element(elem), physics_data)
+                                )
                         except (RobotModelError, ValueError, Exception) as e:
                             logger.warning(
                                 f"Skipping invalid gazebo element '{elem.get('name') or elem.get('reference')}': {e}"
@@ -1051,9 +1061,29 @@ class URDFParser(RobotXMLParser[Robot]):
             except Exception as e:
                 logger.warning(f"Skipping invalid sensor '{sensor.name}': {e}")
 
-        for gazebo_elem in delayed_gazebo_elements:
+        for gazebo_elem, physics_data in delayed_gazebo_elements:
             try:
-                robot.add_gazebo_element(gazebo_elem)
+                # 1. Apply physics data to link if reference is a link
+                if gazebo_elem.reference and robot.has_link(gazebo_elem.reference):
+                    link = robot.link(gazebo_elem.reference)
+                    # Create updated physics object (cast for replace compatibility)
+                    new_physics = replace(link.physics, **cast(dict[str, Any], physics_data))
+                    # Replace link with updated physics
+                    robot.add_link(replace(link, physics=new_physics), overwrite=True)
+
+                # 2. Add gazebo element if it has unique data (plugins, material, etc.)
+                # We skip "empty" gazebo elements that only contained physics
+                if (
+                    gazebo_elem.plugins
+                    or gazebo_elem.material
+                    or gazebo_elem.properties
+                    or gazebo_elem.static is not None
+                    or gazebo_elem.stop_cfm is not None
+                    or gazebo_elem.stop_erp is not None
+                    or gazebo_elem.provide_feedback is not None
+                    or gazebo_elem.implicit_spring_damper is not None
+                ):
+                    robot.add_gazebo_element(gazebo_elem)
             except Exception as e:
                 logger.warning(f"Skipping invalid gazebo element '{gazebo_elem.reference}': {e}")
 

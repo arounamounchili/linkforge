@@ -114,19 +114,20 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         # Validate if requested
         if robot_props.validate_before_export:
             try:
-                robot_dry_run, _ = scene_to_robot(lf_context, meshes_dir=meshes_dir, dry_run=True)
-            except LinkForgeError as e:
-                self.report({"ERROR"}, f"Failed to build robot model: {e}")
-                return {"CANCELLED"}
+                robot_dry_run, conversion_result = scene_to_robot(
+                    lf_context, meshes_dir=meshes_dir, dry_run=True
+                )
             except Exception as e:
-                self.report({"ERROR"}, f"Unexpected crash during model build: {e}")
-                logger.exception("Dry run build crashed")
+                self.report({"ERROR"}, f"Failed to build robot model: {e}")
                 return {"CANCELLED"}
 
             from linkforge_core.validation import RobotValidator
 
             validator = RobotValidator()
             result = validator.validate(robot_dry_run)
+
+            # Merge conversion issues
+            result.issues.extend(conversion_result.issues)
 
             if not result.is_valid:
                 self.report(
@@ -219,50 +220,26 @@ class LINKFORGE_OT_validate_robot(Operator):
 
         lf_context = BlenderContext(bpy_instance=bpy)
         try:
-            robot, _ = scene_to_robot(lf_context)
+            robot, conversion_result = scene_to_robot(lf_context)
         except Exception as e:
-            # Catch all build errors and report them in UI
+            # Catch unexpected fatal build errors
             validation_props.has_results = True
             validation_props.is_valid = False
             validation_props.error_count = 1
-            validation_props.warning_count = 0
+            error_prop = validation_props.errors.add()
+            error_prop.title = "Build Crash"
+            error_prop.message = str(e)
+            error_prop.error_code = "INTERNAL_ERROR"
 
-            # Parse existing error message to split into multiple errors
-            msg = str(e)
-            prefix = "Unable to build robot model."
-            error_lines = []
+            self.report({"ERROR"}, f"Model build crashed: {e}")
+            return {"CANCELLED"}
 
-            if prefix in msg:
-                # Remove the header line
-                parts = msg.split("\n", 1)
-                if len(parts) > 1:
-                    # Split the remaining block by lines (each line is likely an error)
-                    raw_errors = parts[1].strip().split("\n")
-                    error_lines = [line.strip() for line in raw_errors if line.strip()]
-            else:
-                error_lines = [msg]
-
-            validation_props.has_results = True
-            validation_props.is_valid = False
-            validation_props.error_count = len(error_lines)
-            validation_props.warning_count = 0
-
-            # Add each parsed line as a separate error
-            for err_text in error_lines:
-                error_prop = validation_props.errors.add()
-                error_prop.title = "Configuration Error"
-                error_prop.message = err_text
-                error_prop.suggestion = "Check the object properties and geometry."
-
-            self.report(
-                {"ERROR"},
-                f"Validation failed with {len(error_lines)} error(s). Check Validation Panel.",
-            )
-            return {"FINISHED"}
-
-        # Validate using new validator
+        # Validate using core validator
         validator = RobotValidator()
         result = validator.validate(robot)
+
+        # Merge conversion results (like mesh slivers found during build)
+        result.issues.extend(conversion_result.issues)
 
         # Store results in window manager
         validation_props.has_results = True

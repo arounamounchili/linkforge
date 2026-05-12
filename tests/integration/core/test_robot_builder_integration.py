@@ -50,7 +50,7 @@ def test_non_origin_base_link() -> None:
     builder.robot.add_link(
         Link(
             name="base_link",
-            initial_visuals=[
+            visuals=[
                 Visual(
                     geometry=Box(size=Vector3(1, 1, 1)), origin=Transform(xyz=Vector3(10, 10, 10))
                 )

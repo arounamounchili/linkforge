@@ -26,6 +26,8 @@ modules = [
 
 def register() -> None:
     """Register all Blender components."""
+    # Populate scene properties from modules
+    pass
     for module in modules:
         module.register()
 

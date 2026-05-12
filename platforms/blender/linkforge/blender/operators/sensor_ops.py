@@ -65,6 +65,7 @@ class LINKFORGE_OT_create_sensor(Operator):
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator."""
         obj = context.active_object
+
         if not obj or not (
             hasattr(obj, "linkforge") or (obj.parent and hasattr(obj.parent, "linkforge"))
         ):

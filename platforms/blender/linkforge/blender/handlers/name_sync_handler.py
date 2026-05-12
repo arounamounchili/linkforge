@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import typing
 
-import bpy
+if typing.TYPE_CHECKING:
+    import bpy
+from linkforge_core.utils.string_utils import sanitize_name
 
 try:
     from bpy.app.handlers import persistent
@@ -19,50 +21,79 @@ except (ImportError, AttributeError):
         return func
 
 
-if typing.TYPE_CHECKING:
-    from ..properties.joint_props import JointPropertyGroup
-    from ..properties.link_props import LinkPropertyGroup
+# Global queue for deferred renames (used primarily in background mode where timers don't run)
+PENDING_RENAMES: list[tuple[typing.Any, str]] = []
+
+
+def flush_deferred_renames() -> None:
+    """Execute all pending renames in the queue.
+
+    Used primarily in background mode or during tests to ensure synchronization
+    is complete after a depsgraph update.
+    """
+    global PENDING_RENAMES
+    remaining = []
+    while PENDING_RENAMES:
+        obj, new_name = PENDING_RENAMES.pop(0)
+        try:
+            if obj and hasattr(obj, "name"):
+                obj.name = new_name
+        except Exception:
+            # If it fails (likely read-only), keep it for next flush
+            remaining.append((obj, new_name))
+
+    PENDING_RENAMES.extend(remaining)
 
 
 @persistent  # type: ignore[misc]
-def on_depsgraph_update_post(_scene: bpy.types.Scene, _depsgraph: bpy.types.Depsgraph) -> None:
+def on_depsgraph_update_post(_scene: typing.Any, _depsgraph: typing.Any) -> None:
     """Synchronize LinkForge identities when objects are renamed in the Outliner.
 
-    This ensures that internal robot properties (link_name, joint_name) stay in
-    sync with the Blender object names.
-
-    Args:
-        scene: The current Blender scene.
-        _depsgraph: The dependency graph that triggered the update.
+    This handler detects renames in the depsgraph and updates the corresponding
+    LinkForge property groups. We only perform synchronization for robot components,
+    avoiding overhead on standard Blender objects.
     """
-    for obj in bpy.data.objects:
-        # Check Links
+    for update in _depsgraph.updates:
+        obj = update.id
+
+        # 1. Sync Link identities
         if hasattr(obj, "linkforge"):
-            lf: LinkPropertyGroup = obj.linkforge
-            if lf.is_robot_link and obj.name != lf.link_name:
-                lf.link_name = obj.name
+            lf = obj.linkforge
+            # Use getattr to safely check for robot link status, avoiding crashes on Scene properties
+            if getattr(lf, "is_robot_link", False):
+                sanitized = sanitize_name(obj.name)
+                if sanitized != lf.link_name or obj.name != sanitized:
+                    lf.link_name = sanitized
 
-        # Check Joints
+        # 2. Sync Joint identities
         if hasattr(obj, "linkforge_joint"):
-            jf: JointPropertyGroup = obj.linkforge_joint
-            if jf.is_robot_joint and obj.name != jf.joint_name:
-                jf.joint_name = obj.name
+            jf = obj.linkforge_joint
+            if getattr(jf, "is_robot_joint", False):
+                sanitized = sanitize_name(obj.name)
+                if sanitized != jf.joint_name or obj.name != sanitized:
+                    jf.joint_name = sanitized
 
-        # Check Sensors
+        # 3. Sync Sensor identities
         if hasattr(obj, "linkforge_sensor"):
             sf = obj.linkforge_sensor
-            if sf.is_robot_sensor and obj.name != sf.sensor_name:
-                sf.sensor_name = obj.name
+            if sf.is_robot_sensor:
+                sanitized = sanitize_name(obj.name)
+                if sanitized != sf.sensor_name:
+                    sf.sensor_name = sanitized
 
-        # Check Transmissions
+        # 4. Sync Transmission identities
         if hasattr(obj, "linkforge_transmission"):
             tf = obj.linkforge_transmission
-            if tf.is_robot_transmission and obj.name != tf.transmission_name:
-                tf.transmission_name = obj.name
+            if tf.is_robot_transmission:
+                sanitized = sanitize_name(obj.name)
+                if sanitized != tf.transmission_name:
+                    tf.transmission_name = sanitized
 
 
 def register() -> None:
-    """Register name sync handler."""
+    """Register name synchronization handlers."""
+    import bpy
+
     if on_depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(on_depsgraph_update_post)
 

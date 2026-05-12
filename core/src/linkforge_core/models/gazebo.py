@@ -1,7 +1,6 @@
-"""Gazebo simulation extensions and elements."""
-
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
@@ -17,25 +16,17 @@ class GazeboElement:
 
     reference: str | None = None  # Link or joint name (None for robot-level)
     properties: dict[str, str] = field(default_factory=dict)
-    plugins: list[GazeboPlugin] = field(default_factory=list)
+    plugins: Sequence[GazeboPlugin] = field(default_factory=tuple)
 
-    # Common properties for links
+    # Common properties for links (platform-specific)
     material: str | None = None  # Gazebo material (e.g., "Gazebo/Red")
-    self_collide: bool | None = None
     static: bool | None = None
-    gravity: bool | None = None
 
-    # Common properties for joints
+    # Common properties for joints (platform-specific)
     stop_cfm: float | None = None  # Constraint force mixing for joint stops
     stop_erp: float | None = None  # Error reduction parameter for joint stops
     provide_feedback: bool | None = None  # Enable force-torque feedback
     implicit_spring_damper: bool | None = None
-
-    # Friction parameters
-    mu1: float | None = None  # Friction coefficient in first friction direction
-    mu2: float | None = None  # Friction coefficient in second friction direction
-    kp: float | None = None  # Contact stiffness
-    kd: float | None = None  # Contact damping
 
     def __post_init__(self) -> None:
         """Validate Gazebo element."""
@@ -46,13 +37,14 @@ class GazeboElement:
                 "Gazebo reference cannot be empty",
                 target="GazeboReference",
             )
+        object.__setattr__(self, "plugins", tuple(self.plugins))
 
     def with_prefix(self, prefix: str) -> GazeboElement:
         """Create a new gazebo element with prefixed reference and plugins."""
         return replace(
             self,
             reference=f"{prefix}{self.reference}" if self.reference else None,
-            plugins=[p.with_prefix(prefix) for p in self.plugins],
+            plugins=tuple(p.with_prefix(prefix) for p in self.plugins),
         )
 
 

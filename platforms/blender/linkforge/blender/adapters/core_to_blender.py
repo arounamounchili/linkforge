@@ -24,6 +24,7 @@ from linkforge_core.models import (
     Cylinder,
     Joint,
     Link,
+    LinkPhysics,
     Mesh,
     Robot,
     Sphere,
@@ -581,7 +582,28 @@ def create_link_object(
             props.inertia_origin_xyz = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
             props.inertia_origin_rpy = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
-    elif hasattr(link_obj, "linkforge"):
+    # Set physics properties on link object (friction, stiffness, damping)
+    if hasattr(link_obj, "linkforge"):
+        props = link_obj.linkforge
+        phys = link.physics
+
+        # Map all physics values (so they are ready if user enables the toggle later)
+        props.mu = phys.mu
+        props.mu2 = phys.mu2
+        props.kp = phys.kp
+        props.kd = phys.kd
+        props.self_collide = phys.self_collide
+        props.gravity = phys.gravity
+
+        # Only enable the "Advanced Simulation" toggle if physics are non-default
+        # or if there is an explicit Gazebo extension (plugins, etc.) for this link.
+        is_physics_modified = phys != LinkPhysics()
+        has_gazebo_element = any(ge.reference == link.name for ge in robot.gazebo_elements)
+
+        props.use_simulation_props = is_physics_modified or has_gazebo_element
+
+    # Final check for massless links if no inertial data was provided
+    if not link.inertial and hasattr(link_obj, "linkforge"):
         # If link has no inertial data (e.g. a dummy root link), set mass to 0
         # and disable auto-inertia to avoid falling back to the default 1.0 kg.
         props = link_obj.linkforge

@@ -62,7 +62,9 @@ class TestXacroResolver:
         """
         resolved_xml = resolver.resolve_string(xml)
         root = ET.fromstring(resolved_xml)
-        assert root.find("link").get("name") == "base_link"
+        link = root.find("link")
+        assert link is not None
+        assert link.get("name") == "base_link"
 
 
 # Evaluation and Math Tests
@@ -84,7 +86,15 @@ class TestXacroEvaluation:
         resolved_xml = resolver.resolve_string(xml)
         root = ET.fromstring(resolved_xml)
         origin = root.find("link/visual/origin")
-        rpy = origin.get("rpy").split()
+        assert origin is not None, "Failed to find 'link/visual/origin' in resolved XML"
+
+        rpy_attr = origin.get("rpy")
+        assert rpy_attr is not None, (
+            f"rpy attribute missing from origin. Attributes: {origin.attrib}"
+        )
+
+        rpy = rpy_attr.split()
+        assert len(rpy) == 3, f"Expected 3 values in rpy, got {len(rpy)}: {rpy}"
         assert float(rpy[0]) == pytest.approx(1.570795)
 
     def test_boolean_logic(self, resolver) -> None:

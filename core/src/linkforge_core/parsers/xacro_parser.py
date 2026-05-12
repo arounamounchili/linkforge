@@ -18,6 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from ..constants import XACRO_PREFIX, XACRO_URIS
 from ..exceptions import (
     RobotParserError,
     RobotXacroError,
@@ -29,7 +30,6 @@ from ..utils.dependencies import get_yaml
 from ..utils.dict_utils import AttrDict
 from ..utils.path_utils import resolve_package_path
 from ..utils.xml_utils import (
-    XACRO_URIS,
     get_xml_namespace,
     serialize_xml,
     strip_xml_namespace,
@@ -70,8 +70,7 @@ MATH_CONTEXT["false"] = False
 # Internal XML tags used for structural processing
 _TAG_CONTAINER = "container"
 _TAG_SKIP = "skip"
-_PREFIX_XACRO = "xacro:"
-_KEYWORD_XACRO = "xacro"
+_PREFIX_XACRO = XACRO_PREFIX
 
 
 @dataclass
@@ -969,30 +968,35 @@ class XacroResolver:
             The fully serialized XML string, formatted for readability.
         """
 
-        # Recursively strip XML namespaces and filter out XACRO-specific elements
         def cleanup(elem: ET.Element) -> None:
-            # Strip XACRO attributes and any with URI namespaces (e.g., {uri}name)
+            # 1. Strip attributes: remove all xacro-specific and internal metadata
             for attr in list(elem.attrib.keys()):
-                if "xacro" in attr or attr.startswith("{"):
+                attr_ns = get_xml_namespace(attr)
+                attr_name = strip_xml_namespace(attr)
+                # Remove if it's a xacro attribute (by URI or prefix or if it's a known internal attr)
+                if attr_ns in XACRO_URIS or attr_name.startswith(_PREFIX_XACRO):
                     del elem.attrib[attr]
 
-            # Flatten tag by removing the {namespace} prefix for parser compatibility
+            # 2. Strip namespace from the tag itself to produce clean output
             if isinstance(elem.tag, str) and elem.tag.startswith("{"):
-                elem.tag = elem.tag.split("}", 1)[1]
+                elem.tag = strip_xml_namespace(elem.tag)
 
-            # Process children: filter out macros/properties and recurse into standard elements
+            # 3. Process children: filter out xacro tags and recurse
             for child in list(elem):
                 tag = child.tag
-
-                # Handle non-string tags (e.g. Comments) safely
                 if not isinstance(tag, str):
                     cleanup(child)
                     continue
 
-                # Aggressive filtering: Remove skip and any tag containing "xacro"
-                # We strip the namespace first to avoid false positives from the URI itself
-                clean_tag = tag.split("}", 1)[1] if tag.startswith("{") else tag
-                is_xacro = clean_tag == _TAG_SKIP or _KEYWORD_XACRO in clean_tag
+                ns = get_xml_namespace(tag)
+                clean_tag = strip_xml_namespace(tag)
+
+                # Identify XACRO elements for removal
+                is_xacro = (
+                    clean_tag == _TAG_SKIP
+                    or ns in XACRO_URIS
+                    or clean_tag.startswith(_PREFIX_XACRO)
+                )
 
                 if is_xacro:
                     elem.remove(child)

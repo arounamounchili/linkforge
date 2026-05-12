@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from enum import Enum
 
@@ -19,23 +20,6 @@ class TransmissionType(str, Enum):
     CUSTOM = "custom"
 
 
-class HardwareInterface(str, Enum):
-    """Standard hardware interface types in ros2_control."""
-
-    POSITION = "hardware_interface/PositionJointInterface"
-    VELOCITY = "hardware_interface/VelocityJointInterface"
-    EFFORT = "hardware_interface/EffortJointInterface"
-    POSITION_VELOCITY = "hardware_interface/PositionVelocityJointInterface"
-
-    # ROS2 control interfaces
-    COMMAND_POSITION = "position"
-    COMMAND_VELOCITY = "velocity"
-    COMMAND_EFFORT = "effort"
-    STATE_POSITION = "position"
-    STATE_VELOCITY = "velocity"
-    STATE_EFFORT = "effort"
-
-
 @dataclass(frozen=True)
 class TransmissionJoint:
     """Joint specification in a transmission.
@@ -44,7 +28,7 @@ class TransmissionJoint:
     """
 
     name: str
-    hardware_interfaces: list[str] = field(default_factory=lambda: ["position"])
+    hardware_interfaces: Sequence[str] = field(default_factory=lambda: ("position",))
     mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
@@ -71,6 +55,7 @@ class TransmissionJoint:
                 target="MechanicalReduction",
                 value=self.name,
             )
+        object.__setattr__(self, "hardware_interfaces", tuple(self.hardware_interfaces))
 
     def with_prefix(self, prefix: str) -> TransmissionJoint:
         """Create a new transmission joint with a prefixed name."""
@@ -78,7 +63,7 @@ class TransmissionJoint:
 
     def normalized(self) -> TransmissionJoint:
         """Return a new transmission joint with sorted interfaces."""
-        return replace(self, hardware_interfaces=sorted(self.hardware_interfaces))
+        return replace(self, hardware_interfaces=tuple(sorted(self.hardware_interfaces)))
 
 
 @dataclass(frozen=True)
@@ -89,7 +74,7 @@ class TransmissionActuator:
     """
 
     name: str
-    hardware_interfaces: list[str] = field(default_factory=lambda: ["position"])
+    hardware_interfaces: Sequence[str] = field(default_factory=lambda: ("position",))
     mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
@@ -116,6 +101,7 @@ class TransmissionActuator:
                 target="MechanicalReduction",
                 value=self.name,
             )
+        object.__setattr__(self, "hardware_interfaces", tuple(self.hardware_interfaces))
 
     def with_prefix(self, prefix: str) -> TransmissionActuator:
         """Create a new transmission actuator with a prefixed name."""
@@ -123,7 +109,7 @@ class TransmissionActuator:
 
     def normalized(self) -> TransmissionActuator:
         """Return a new transmission actuator with sorted interfaces."""
-        return replace(self, hardware_interfaces=sorted(self.hardware_interfaces))
+        return replace(self, hardware_interfaces=tuple(sorted(self.hardware_interfaces)))
 
 
 @dataclass(frozen=True)
@@ -136,8 +122,8 @@ class Transmission:
 
     name: str
     type: str  # Plugin name (e.g., TransmissionType enum or custom)
-    joints: list[TransmissionJoint] = field(default_factory=list)
-    actuators: list[TransmissionActuator] = field(default_factory=list)
+    joints: Sequence[TransmissionJoint] = field(default_factory=tuple)
+    actuators: Sequence[TransmissionActuator] = field(default_factory=tuple)
 
     # Additional parameters for complex transmissions
     parameters: dict[str, str] = field(default_factory=dict)
@@ -223,22 +209,24 @@ class Transmission:
                 target="DuplicateActuators",
                 value=self.name,
             )
+        object.__setattr__(self, "joints", tuple(self.joints))
+        object.__setattr__(self, "actuators", tuple(self.actuators))
 
     def with_prefix(self, prefix: str) -> Transmission:
         """Create a new transmission with prefixed name, joints, and actuators."""
         return replace(
             self,
             name=f"{prefix}{self.name}",
-            joints=[j.with_prefix(prefix) for j in self.joints],
-            actuators=[a.with_prefix(prefix) for a in self.actuators],
+            joints=tuple(j.with_prefix(prefix) for j in self.joints),
+            actuators=tuple(a.with_prefix(prefix) for a in self.actuators),
         )
 
     def normalized(self) -> Transmission:
         """Return a new transmission with sorted joints and actuators."""
         return replace(
             self,
-            joints=sorted([j.normalized() for j in self.joints], key=lambda x: x.name),
-            actuators=sorted([a.normalized() for a in self.actuators], key=lambda x: x.name),
+            joints=tuple(sorted([j.normalized() for j in self.joints], key=lambda x: x.name)),
+            actuators=tuple(sorted([a.normalized() for a in self.actuators], key=lambda x: x.name)),
         )
 
     @classmethod
@@ -269,20 +257,20 @@ class Transmission:
         return cls(
             name=name,
             type=TransmissionType.SIMPLE.value,
-            joints=[
+            joints=(
                 TransmissionJoint(
                     name=joint_name,
-                    hardware_interfaces=[hardware_interface],
+                    hardware_interfaces=(hardware_interface,),
                     mechanical_reduction=mechanical_reduction,
-                )
-            ],
-            actuators=[
+                ),
+            ),
+            actuators=(
                 TransmissionActuator(
                     name=actuator_name,
-                    hardware_interfaces=[hardware_interface],
+                    hardware_interfaces=(hardware_interface,),
                     mechanical_reduction=1.0,
-                )
-            ],
+                ),
+            ),
         )
 
     @classmethod
@@ -319,28 +307,28 @@ class Transmission:
         return cls(
             name=name,
             type=TransmissionType.DIFFERENTIAL.value,
-            joints=[
+            joints=(
                 TransmissionJoint(
                     name=joint1_name,
-                    hardware_interfaces=[hardware_interface],
+                    hardware_interfaces=(hardware_interface,),
                     mechanical_reduction=mechanical_reduction,
                 ),
                 TransmissionJoint(
                     name=joint2_name,
-                    hardware_interfaces=[hardware_interface],
+                    hardware_interfaces=(hardware_interface,),
                     mechanical_reduction=mechanical_reduction,
                 ),
-            ],
-            actuators=[
+            ),
+            actuators=(
                 TransmissionActuator(
                     name=actuator1_name,
-                    hardware_interfaces=[hardware_interface],
+                    hardware_interfaces=(hardware_interface,),
                     mechanical_reduction=1.0,
                 ),
                 TransmissionActuator(
                     name=actuator2_name,
-                    hardware_interfaces=[hardware_interface],
+                    hardware_interfaces=(hardware_interface,),
                     mechanical_reduction=1.0,
                 ),
-            ],
+            ),
         )

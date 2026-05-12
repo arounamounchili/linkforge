@@ -5,7 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from linkforge.blender.adapters.blender_to_core import blender_link_to_core_with_origin
+from linkforge.blender.adapters.translator import LinkTranslator
+from linkforge_core.composer import RobotBuilder
 
 from tests.blender_test_utils import create_test_object, safe_get_linkforge
 
@@ -67,11 +68,55 @@ class TestInertialOrigin:
         props.inertia_iyy = 1.0
         props.inertia_izz = 1.0
 
-        link = blender_link_to_core_with_origin(obj)
-        assert link is not None, "blender_link_to_core_with_origin returned None"
+        builder = RobotBuilder("test_robot")
+        lb = LinkTranslator().translate(obj, builder, blender_context)
+        if lb:
+            lb.commit()
+
+        link = builder.robot.get_link("test_link")
+        assert link is not None, "Link 'test_link' not found in robot model"
         assert link.inertial is not None
         assert pytest.approx(link.inertial.origin.xyz.x) == 1.2
         assert pytest.approx(link.inertial.origin.rpy.z) == 0.3
+
+
+class TestSimulationProperties:
+    """Tests for advanced simulation physics properties."""
+
+    def test_scientific_proxies(self) -> None:
+        """Test scientific notation conversion logic."""
+
+        # Create a mock instance (dataclass-like behavior for testing logic)
+        class MockProps:
+            def __init__(self):
+                self.kp = 0.0
+                self.kd = 0.0
+
+        from typing import Any
+
+        mock: Any = MockProps()
+        from linkforge.blender.properties.link_props import (
+            get_kd_scientific,
+            get_kp_scientific,
+            set_kd_scientific,
+            set_kp_scientific,
+        )
+
+        # Test KP (Large value)
+        mock.kp = 1.0e12
+        assert get_kp_scientific(mock) == "1.00e+12"
+
+        set_kp_scientific(mock, "5.5e+09")
+        assert mock.kp == 5.5e9
+        assert get_kp_scientific(mock) == "5.50e+09"
+
+        # Test KD (Small value)
+        mock.kd = 0.01
+        assert get_kd_scientific(mock) == "1.00e-02"
+
+        set_kd_scientific(mock, "1.0")
+        assert mock.kd == 1.0
+        assert get_kd_scientific(mock) == "1.00e+00"
 
 
 if __name__ == "__main__":

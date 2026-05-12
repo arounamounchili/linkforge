@@ -310,7 +310,7 @@ class TestURDFParser:
         assert trans.type == "transmission_interface/SimpleTransmission"
         assert len(trans.joints) == 1
         assert trans.joints[0].name == "joint1"
-        assert trans.joints[0].hardware_interfaces == ["position"]  # Normalized
+        assert trans.joints[0].hardware_interfaces == ("position",)  # Normalized
         assert len(trans.actuators) == 1
         assert trans.actuators[0].mechanical_reduction == 50.0
 
@@ -387,6 +387,9 @@ class TestURDFParser:
         assert len(robot.joints) == 1
         assert len(robot.transmissions) == 1
         assert len(robot.gazebo_elements) == 1
+
+        # Check that material stayed in GazeboElement
+        assert robot.gazebo_elements[0].material == "Gazebo/Blue"
 
         # Check global material resolution
         assert robot.links[0].visuals[0].material.name == "blue"
@@ -475,28 +478,40 @@ class TestURDFParser:
         assert sensor_contact.type == SensorType.CONTACT
 
     def test_parse_gazebo_element_properties(self, parser) -> None:
-        """Test parsing link-specific gazebo properties."""
+        """Test parsing link-specific gazebo properties into link.physics."""
         xml = """
-        <gazebo reference="link1">
-            <material>Gazebo/Red</material>
-            <mu1>0.5</mu1>
-            <selfCollide>true</selfCollide>
-            <gravity>false</gravity>
-            <kp>100000</kp>
-            <maxVel>0.01</maxVel>
-            <minDepth>0.001</minDepth>
-        </gazebo>
+        <robot name="r">
+            <link name="link1"/>
+            <gazebo reference="link1">
+                <material>Gazebo/Red</material>
+                <mu1>0.5</mu1>
+                <mu2>0.4</mu2>
+                <selfCollide>true</selfCollide>
+                <gravity>false</gravity>
+                <kp>100000</kp>
+                <kd>50</kd>
+                <maxVel>0.01</maxVel>
+                <minDepth>0.001</minDepth>
+            </gazebo>
+        </robot>
         """
-        elem = parser._parse_gazebo_element(ET.fromstring(xml))
+        robot = parser.parse_string(xml)
+        link = robot.link("link1")
+        phys = link.physics
 
-        assert elem.material == "Gazebo/Red"
-        assert elem.mu1 == 0.5
-        assert elem.self_collide is True
-        assert elem.gravity is False
-        assert elem.kp == 100000.0
-        # Check that generic properties captured extras
-        assert elem.properties["maxVel"] == "0.01"
-        assert elem.properties["minDepth"] == "0.001"
+        # Universal physics properties should be in Link.physics
+        assert phys.mu == 0.5
+        assert phys.mu2 == 0.4
+        assert phys.self_collide is True
+        assert phys.gravity is False
+        assert phys.kp == 100000.0
+        assert phys.kd == 50.0
+
+        # Gazebo-specific properties should be in GazeboElement
+        gz = robot.get_gazebo_elements("link1")[0]
+        assert gz.material == "Gazebo/Red"
+        assert gz.properties["maxVel"] == "0.01"
+        assert gz.properties["minDepth"] == "0.001"
 
     def test_urdf_parser_file_parsing(self, tmp_path) -> None:
         """Test parsing from a file using iterative parser."""
@@ -1024,7 +1039,9 @@ class TestURDFParser:
         </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
-        assert len(robot.gazebo_elements) == 1
+        # It should be 0 because mu1 is now part of Link.physics
+        assert len(robot.gazebo_elements) == 0
+        assert robot.link("base").physics.mu == 0.9
 
     def test_parse_robot_without_filepath_uses_unnamed_robot(self) -> None:
         """Parsing from a string without a filepath falls back to 'unnamed_robot' name."""
@@ -1180,7 +1197,7 @@ class TestURDFParser:
         </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
-        assert robot.ros2_controls[0].joints == []
+        assert robot.ros2_controls[0].joints == ()
 
     def test_imu_sensor_with_angular_velocity_x_noise(self) -> None:
         """IMU angular_velocity with an <x> noise element parses the noise correctly."""

@@ -15,7 +15,7 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
 )
 
-from .mock_bpy_env import MockMatrix, MockMesh, MockObject, MockVector
+from tests.mock_bpy_env import MockMatrix, MockMesh, MockObject, MockVector
 
 
 def test_matrix_to_transform_mocked() -> None:

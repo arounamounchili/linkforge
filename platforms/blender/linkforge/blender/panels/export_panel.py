@@ -7,8 +7,8 @@ import typing
 
 import bpy
 from bpy.types import Context, Panel, Scene, UILayout
+from linkforge_core.utils.dict_utils import filter_items_by_name
 
-from ..utils.filter_utils import filter_items_by_name
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
@@ -122,7 +122,12 @@ class LINKFORGE_PT_export_panel(Panel):
                         error_box = box.box()
                         for i in range(validation.error_count):
                             error = validation.get_error(i)
-                            error_box.label(text=error.title, icon="CANCEL")
+                            # Issue Title & Code
+                            row = error_box.row()
+                            row.label(text=error.title, icon="CANCEL")
+                            if error.error_code:
+                                row.label(text=f"[{error.error_code}]", icon="NONE")
+
                             if error.message_lines:
                                 for msg_line in error.message_lines:
                                     if msg_line.strip():
@@ -149,7 +154,12 @@ class LINKFORGE_PT_export_panel(Panel):
                         warn_box = box.box()
                         for i in range(validation.warning_count):
                             warning = validation.get_warning(i)
-                            warn_box.label(text=warning.title, icon="ERROR")
+                            # Issue Title & Code
+                            row = warn_box.row()
+                            row.label(text=warning.title, icon="ERROR")
+                            if warning.error_code:
+                                row.label(text=f"[{warning.error_code}]", icon="NONE")
+
                             if warning.message_lines:
                                 for msg_line in warning.message_lines:
                                     if msg_line.strip():

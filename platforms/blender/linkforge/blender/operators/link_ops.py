@@ -671,7 +671,9 @@ class LINKFORGE_OT_add_empty_link(Operator):
         empty.rotation_euler = scene.cursor.rotation_euler.copy()
 
         # Mark as robot link
-        typing.cast("LinkPropertyGroup", getattr(empty, "linkforge")).is_robot_link = True
+        lf = typing.cast("LinkPropertyGroup", getattr(empty, "linkforge"))
+        lf.is_robot_link = True
+        logger.debug(f"add_empty_link set {empty.name}.is_robot_link to {lf.is_robot_link}")
 
         # Select the new link
         ops = getattr(context, "ops", bpy.ops)
@@ -1431,6 +1433,7 @@ classes = [
 
 def register() -> None:
     """Register operators."""
+    logger.debug(f"link_ops.register called with {len(classes)} classes")
     for cls in classes:
         with contextlib.suppress(ValueError):
             bpy.utils.register_class(cls)

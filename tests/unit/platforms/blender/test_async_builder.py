@@ -12,7 +12,7 @@ def test_builder_prepare_tasks(scene, blender_context) -> None:
     l2 = Link(name="link1")
     j1 = Joint(name="joint1", type=JointType.FIXED, parent="base_link", child="link1")
 
-    robot = Robot(name="test_robot", initial_links=[l1, l2], initial_joints=[j1])
+    robot = Robot(name="test_robot", links=[l1, l2], joints=[j1])
 
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
@@ -37,7 +37,7 @@ def test_builder_prepare_tasks(scene, blender_context) -> None:
 def test_builder_execution_flow(scene, blender_context) -> None:
     """Test that process_next_chunk executes tasks and updates status."""
     l1 = Link(name="base_link")
-    robot = Robot(name="test_robot", initial_links=[l1])
+    robot = Robot(name="test_robot", links=[l1])
 
     with (
         patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot"),
@@ -69,7 +69,7 @@ def test_builder_execution_flow(scene, blender_context) -> None:
 def test_builder_abort(scene, blender_context) -> None:
     """Test that import can be aborted via scene property."""
     # Add a link to ensure there are tasks to process
-    robot = Robot(name="test_robot", initial_links=[Link(name="base_link")])
+    robot = Robot(name="test_robot", links=[Link(name="base_link")])
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
     scene.linkforge.abort_import = True
@@ -111,7 +111,7 @@ def test_builder_timer_start(scene, blender_context) -> None:
 def test_builder_timer_callback_interval(scene, blender_context) -> None:
     """Test that the callback returns a float interval while running."""
     # Add many tasks so it doesn't finish immediately
-    robot = Robot(name="test_robot", initial_links=[Link(name=f"link{i}") for i in range(10)])
+    robot = Robot(name="test_robot", links=[Link(name=f"link{i}") for i in range(10)])
 
     builder = AsynchronousRobotBuilder(
         robot, Path("/tmp/robot.urdf"), blender_context, chunk_size=1
@@ -133,7 +133,7 @@ def test_builder_timer_callback_interval(scene, blender_context) -> None:
 
 def test_builder_full_completion(scene, blender_context) -> None:
     """Test that builder runs all tasks and finishes correctly."""
-    robot = Robot(name="test_robot", initial_links=[Link(name="link1")])
+    robot = Robot(name="test_robot", links=[Link(name="link1")])
 
     # Mock all task executors
     with (
@@ -166,7 +166,7 @@ def test_builder_with_joints_and_sensors(scene, blender_context) -> None:
     # Use mock with proper interface or specify type if needed
     # Here we just need it in the sensors list
 
-    robot = Robot(name="robot", initial_links=[l1, l2], initial_joints=[j1], initial_sensors=[s1])
+    robot = Robot(name="robot", links=[l1, l2], joints=[j1], sensors=[s1])
 
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 

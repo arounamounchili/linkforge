@@ -6,10 +6,11 @@ from unittest import mock
 
 import pytest
 from linkforge.blender.adapters.blender_to_core import (
-    blender_joint_to_core,
     detect_primitive_type,
     scene_to_robot,
 )
+from linkforge.blender.adapters.translator import JointTranslator, LinkTranslator
+from linkforge_core.composer import RobotBuilder
 from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 
 from tests.blender_test_utils import (
@@ -28,7 +29,7 @@ class TestConverterRobustness:
 
         with (
             mock.patch(
-                "linkforge.blender.adapters.blender_to_core.blender_link_to_core_with_origin",
+                "linkforge.blender.adapters.translator.LinkTranslator.translate",
                 side_effect=RobotValidationError(ValidationErrorCode.INVALID_VALUE, "Link Fail"),
             ),
             pytest.raises(RobotValidationError),
@@ -81,8 +82,19 @@ class TestJointRobustness:
         props.custom_axis_y = 0.0
         props.custom_axis_z = 0.0
 
-        core = blender_joint_to_core(j)
-        assert core is not None, "Converter returned None for valid joint"
+        builder = RobotBuilder("test_robot")
+        lb_p = LinkTranslator().translate(p, builder, blender_context)
+        if lb_p:
+            lb_p.root()
+
+        lb_c = builder.link("Child", parent="Parent")
+        LinkTranslator().translate(c, builder, blender_context, lb=lb_c)
+        JointTranslator().translate(j, builder, blender_context, lb=lb_c)
+        if lb_c:
+            lb_c.commit()
+
+        core = builder.robot.get_joint("Joint")
+        assert core is not None, "Joint 'Joint' not found in robot model"
         assert core.axis is not None, "Joint axis was not fell back to default"
         assert core.axis.z == 1.0  # Default fallback
 

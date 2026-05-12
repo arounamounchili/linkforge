@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from linkforge_core.exceptions import RobotModelError
 from linkforge_core.models import (
-    HardwareInterface,
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
@@ -20,7 +19,7 @@ class TestTransmissionJoint:
         """Test creating a transmission joint with defaults."""
         joint = TransmissionJoint(name="joint1")
         assert joint.name == "joint1"
-        assert joint.hardware_interfaces == ["position"]
+        assert joint.hardware_interfaces == ("position",)
         assert joint.mechanical_reduction == 1.0
         assert joint.offset == 0.0
 
@@ -67,7 +66,7 @@ class TestTransmissionActuator:
         """Test creating a transmission actuator with defaults."""
         actuator = TransmissionActuator(name="motor1")
         assert actuator.name == "motor1"
-        assert actuator.hardware_interfaces == ["position"]
+        assert actuator.hardware_interfaces == ("position",)
         assert actuator.mechanical_reduction == 1.0
         assert actuator.offset == 0.0
 
@@ -153,7 +152,7 @@ class TestTransmission:
         assert len(trans.joints) == 1
         assert trans.joints[0].name == "shoulder_joint"
         assert trans.joints[0].mechanical_reduction == 100.0
-        assert trans.joints[0].hardware_interfaces == ["effort"]
+        assert trans.joints[0].hardware_interfaces == ("effort",)
         assert len(trans.actuators) == 1
         assert trans.actuators[0].name == "shoulder_joint_motor"
 
@@ -181,7 +180,7 @@ class TestTransmission:
         assert trans.joints[0].name == "left_wheel_joint"
         assert trans.joints[1].name == "right_wheel_joint"
         assert trans.joints[0].mechanical_reduction == 50.0
-        assert trans.joints[0].hardware_interfaces == ["velocity"]
+        assert trans.joints[0].hardware_interfaces == ("velocity",)
         assert len(trans.actuators) == 2
         assert trans.actuators[0].name == "left_wheel_joint_motor"
         assert trans.actuators[1].name == "right_wheel_joint_motor"
@@ -351,16 +350,3 @@ class TestTransmissionType:
             == "transmission_interface/FourBarLinkageTransmission"
         )
         assert TransmissionType.CUSTOM.value == "custom"
-
-
-class TestHardwareInterface:
-    """Tests for HardwareInterface enum."""
-
-    def test_enum_values(self) -> None:
-        """Test that enum has expected values."""
-        assert HardwareInterface.POSITION.value == "hardware_interface/PositionJointInterface"
-        assert HardwareInterface.VELOCITY.value == "hardware_interface/VelocityJointInterface"
-        assert HardwareInterface.EFFORT.value == "hardware_interface/EffortJointInterface"
-        assert HardwareInterface.COMMAND_POSITION.value == "position"
-        assert HardwareInterface.COMMAND_VELOCITY.value == "velocity"
-        assert HardwareInterface.COMMAND_EFFORT.value == "effort"

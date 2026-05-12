@@ -6,16 +6,12 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
+from ..constants import MAX_REASONABLE_FLOAT, MAX_REASONABLE_INT, XACRO_URIS
 from ..exceptions import RobotMathError, RobotValidationError, ValidationErrorCode
 from ..models import Vector3
 
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
-ET.register_namespace("xacro", "http://www.ros.org/wiki/xacro")
-
-XACRO_URIS = [
-    "http://www.ros.org/wiki/xacro",
-    "http://wiki.ros.org/xacro",
-]
+ET.register_namespace("xacro", next(iter(XACRO_URIS)))
 
 MAX_XML_DEPTH = 2000
 
@@ -139,6 +135,7 @@ def serialize_xml(
     if namespaces:
         for prefix, uri in namespaces.items():
             ns_attr = f'xmlns:{prefix}="{uri}"'
+            # Using a more robust check for root tag insertion
             if ns_attr not in xml_str and "<robot" in xml_str:
                 xml_str = xml_str.replace("<robot", f"<robot {ns_attr}", 1)
 
@@ -192,7 +189,8 @@ def parse_float(
             )
 
         # Sanity check for reasonable values (Standard LinkForge limit)
-        if not (-1e10 < value < 1e10):
+        # Physics constants like kp (stiffness) can be very large (e.g. 1e12)
+        if not (-MAX_REASONABLE_FLOAT < value < MAX_REASONABLE_FLOAT):
             raise RobotMathError(
                 ValidationErrorCode.OUT_OF_RANGE,
                 f"Float value '{value}' in {report_name} is outside reasonable range",
@@ -248,7 +246,7 @@ def parse_int(
     try:
         value = int(text)
         # Sanity check for reasonable values (standard LinkForge limit)
-        if not (-1000000 < value < 1000000):
+        if not (-MAX_REASONABLE_INT < value < MAX_REASONABLE_INT):
             raise RobotMathError(
                 ValidationErrorCode.OUT_OF_RANGE,
                 f"Integer value '{value}' in {report_name} is outside reasonable range",

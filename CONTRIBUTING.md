@@ -214,8 +214,8 @@ def test_link_creation():
     """Test creating a link with valid parameters."""
     link = Link(
         name="test_link",
-        initial_visuals=[],
-        initial_collisions=[],
+        visuals=[],
+        collisions=[],
         inertial=Inertial(mass=1.0, inertia=InertiaTensor.zero())
     )
     assert link.name == "test_link"

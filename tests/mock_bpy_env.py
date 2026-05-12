@@ -1,9 +1,10 @@
 import contextlib
+import re
 import sys
 import types
 import typing
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 
 class MockState:
@@ -22,7 +23,12 @@ state = MockState()
 class DynamicModule(types.ModuleType):
     def __getattr__(self, name):
         if name not in self.__dict__:
-            self.__dict__[name] = MagicMock(name=name)
+            # For category-like access in bpy.ops, return another DynamicModule
+            # to allow bpy.ops.any_category.any_operator()
+            if self.__name__.startswith("bpy.ops"):
+                self.__dict__[name] = DynamicModule(f"{self.__name__}.{name}")
+            else:
+                self.__dict__[name] = MagicMock(name=name)
         return self.__dict__[name]
 
     def __setattr__(self, name, value):
@@ -426,7 +432,8 @@ class MockPropertyDescriptor:
             obj._values[name] = self.default
             return self.default
 
-        return obj._values.get(name)
+        val = obj._values.get(name)
+        return val
 
     def __set__(self, obj, value):
         if obj is None:
@@ -522,11 +529,28 @@ DEFAULT_PROPERTY_VALUES = {
     "state_position": False,
     "state_velocity": False,
     "state_effort": False,
-    "gazebo_plugin_name": "",
-    "controllers_yaml_path": "",
+    "gazebo_plugin_name": "gz_ros2_control::GazeboSimROS2ControlPlugin",
+    "controllers_yaml_path": "$(find robot_description)/config/controllers.yaml",
     "robot_name": "robot",
     "strict_mode": False,
-    "use_ros2_control": False,
+    "use_ros2_control": True,
+    "export_format": "URDF",
+    "export_meshes": True,
+    "mesh_format": "OBJ",
+    "mesh_directory_name": "meshes",
+    "validate_before_export": True,
+    "xacro_advanced_mode": True,
+    "xacro_extract_materials": True,
+    "xacro_extract_dimensions": True,
+    "xacro_generate_macros": False,
+    "xacro_split_files": False,
+    "show_collisions": True,
+    "show_kinematic_tree": False,
+    "joint_name": "",
+    "link_name": "",
+    "sensor_name": "",
+    "transmission_name": "",
+    "use_material": True,
 }
 
 
@@ -568,7 +592,15 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
         if key in self._values:
             return self._values[key]
 
-        if key.startswith("is_robot_") or key.startswith("cmd_") or key.startswith("state_"):
+        if (
+            key.startswith("is_robot_")
+            or key.startswith("cmd_")
+            or key.startswith("state_")
+            or key.startswith("use_")
+        ):
+            # Try default values first
+            if key in DEFAULT_PROPERTY_VALUES:
+                return DEFAULT_PROPERTY_VALUES[key]
             return False
 
         if key in DEFAULT_PROPERTY_VALUES:
@@ -650,8 +682,15 @@ class MockCollection(list):
         self.name = name
         self.new_from_object = None
         self.id_data = None
+        self._id = id(self)
         self._objects = None
         self._children = None
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __eq__(self, other):
+        return isinstance(other, MockCollection) and self._id == other._id
 
     @property
     def objects(self):
@@ -674,8 +713,23 @@ class MockCollection(list):
         self._children = val
 
     def append(self, item):
-        if item not in self:
-            super().append(item)
+        if item in self:
+            return
+
+        # Handle Blender's unique naming behavior
+        if hasattr(item, "name") and item.name:
+            base_name = item.name
+            name = base_name
+            counter = 1
+            # Avoid infinite recursion by checking against private items list if needed,
+            # but super() check is enough for basic uniqueness.
+            existing_names = {obj.name for obj in self if obj != item and hasattr(obj, "name")}
+            while name in existing_names:
+                name = f"{base_name}.{counter:03d}"
+                counter += 1
+            item.name = name
+
+        super().append(item)
 
     def link(self, item):
         self.append(item)
@@ -711,15 +765,20 @@ class MockCollection(list):
         if isinstance(key, (int, slice)):
             return super().__getitem__(key)
         for item in self:
-            if getattr(item, "name", None) == key:
+            if hasattr(item, "name") and item.name == key:
                 return item
-        raise KeyError(key)
+        raise KeyError(f"Item '{key}' not found in collection '{self.name}'")
 
-    def get(self, name, default=None):
-        for item in self:
-            if getattr(item, "name", None) == name:
-                return item
-        return default
+    def __contains__(self, key):
+        if isinstance(key, str):
+            return any(hasattr(item, "name") and item.name == key for item in self)
+        return super().__contains__(key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, TypeError):
+            return default
 
     def remove(self, item, do_unlink=True):
         if isinstance(item, int):
@@ -728,13 +787,11 @@ class MockCollection(list):
         elif item in self:
             super().remove(item)
 
+    def keys(self):
+        return [item.name for item in self if hasattr(item, "name")]
+
     def clear(self):
         super().clear()
-
-    def __contains__(self, key):
-        if isinstance(key, str):
-            return any(getattr(item, "name", None) == key for item in self)
-        return super().__contains__(key)
 
     @property
     def bl_rna(self):
@@ -761,6 +818,32 @@ class MockHandlers:
         self.depsgraph_update_pre = []
         self.render_pre = []
         self.render_post = []
+
+
+class MockTimers:
+    """Mock for bpy.app.timers."""
+
+    def __init__(self):
+        self._timers = []
+
+    def register(self, func, first_interval=0.0):
+        """Register a timer function."""
+        self._timers.append(func)
+
+    def run_all(self):
+        """Execute all pending timers. Handles re-scheduling if a timer returns an interval."""
+        current_timers = list(self._timers)
+        self._timers.clear()
+
+        while current_timers:
+            func = current_timers.pop(0)
+            try:
+                result = func()
+                # If the timer returns a float or int, it wants to be re-scheduled
+                if isinstance(result, (int, float)):
+                    self._timers.append(func)
+            except Exception:
+                pass
 
 
 class MockMaterialSlot(MockPropertyGroup):
@@ -1175,6 +1258,35 @@ class MockOperator:
         pass
 
 
+class MockContext:
+    """High-fidelity mock for bpy.types.Context."""
+
+    def __init__(self):
+        self.scene = None
+        self.view_layer = None
+        self.ops = None
+        self.selected_objects = []
+        self.data = None
+        self.app = None
+        self.window_manager = MagicMock(name="WindowManager")
+        self.preferences = MagicMock(name="Preferences")
+
+    @property
+    def active_object(self):
+        if self.view_layer and hasattr(self.view_layer.objects, "active"):
+            return self.view_layer.objects.active
+        return None
+
+    @active_object.setter
+    def active_object(self, value):
+        if self.view_layer:
+            self.view_layer.objects.active = value
+
+    def __getattr__(self, name):
+        # Fallback to MagicMock for any other attributes
+        return MagicMock(name=name)
+
+
 class MockIOHelper:
     def invoke(self, context, event):
         return {"FINISHED"}
@@ -1186,7 +1298,18 @@ mock_mathutils.Matrix = MockMatrix
 mock_mathutils.Euler = MockEuler
 mock_mathutils.Quaternion = MockQuaternion
 
+mock_data = MockPropertyGroup(name="Data")
+mock_context = MagicMock(name="bpy.context")
+
+mock_ops = DynamicModule("bpy.ops")
+mock_ops.mesh = DynamicModule("bpy.ops.mesh")
+mock_ops.object = DynamicModule("bpy.ops.object")
+mock_ops.wm = DynamicModule("bpy.ops.wm")
+mock_ops.export_scene = DynamicModule("bpy.ops.export_scene")
+mock_ops.linkforge = DynamicModule("bpy.ops.linkforge")
+
 mock_bpy = DynamicModule("bpy")
+mock_bpy.ops = mock_ops
 mock_bpy.types = DynamicModule("bpy.types")
 mock_bpy.types.Object = MockObject
 mock_bpy.types.Mesh = MockMesh
@@ -1204,13 +1327,6 @@ mock_bpy.props.CollectionProperty = MockPropertyDescriptor
 mock_bpy.props.EnumProperty = MockPropertyDescriptor
 mock_bpy.props.FloatVectorProperty = MockPropertyDescriptor
 
-mock_data = MockPropertyGroup(name="Data")
-mock_context = MagicMock(name="bpy.context")
-mock_ops = DynamicModule("bpy.ops")
-mock_ops.mesh = DynamicModule("bpy.ops.mesh")
-mock_ops.object = DynamicModule("bpy.ops.object")
-mock_ops.wm = DynamicModule("bpy.ops.wm")
-mock_ops.export_scene = DynamicModule("bpy.ops.export_scene")
 mock_app = DynamicModule("bpy.app")
 
 _is_real_blender = False
@@ -1226,15 +1342,16 @@ try:
 except (ImportError, AttributeError):
     pass
 
-if not _is_real_blender:
-    sys.modules["mathutils"] = typing.cast(types.ModuleType, mock_mathutils)
-    sys.modules["bpy"] = typing.cast(types.ModuleType, mock_bpy)
-    sys.modules["bpy.data"] = typing.cast(types.ModuleType, mock_data)
-    sys.modules["bpy.context"] = typing.cast(types.ModuleType, mock_context)
-    sys.modules["bpy.ops"] = typing.cast(types.ModuleType, mock_ops)
-    sys.modules["bpy.types"] = typing.cast(types.ModuleType, mock_bpy.types)
-    sys.modules["bpy.props"] = typing.cast(types.ModuleType, mock_bpy.props)
-    sys.modules["bpy.app"] = typing.cast(types.ModuleType, mock_app)
+# Force promotion of mocks into sys.modules to ensure standalone execution
+# matches the high-fidelity mock environment even if real Blender is present.
+sys.modules["mathutils"] = typing.cast(types.ModuleType, mock_mathutils)
+sys.modules["bpy"] = typing.cast(types.ModuleType, mock_bpy)
+sys.modules["bpy.data"] = typing.cast(types.ModuleType, mock_data)
+sys.modules["bpy.context"] = typing.cast(types.ModuleType, mock_context)
+sys.modules["bpy.ops"] = typing.cast(types.ModuleType, mock_ops)
+sys.modules["bpy.types"] = typing.cast(types.ModuleType, mock_bpy.types)
+sys.modules["bpy.props"] = typing.cast(types.ModuleType, mock_bpy.props)
+sys.modules["bpy.app"] = typing.cast(types.ModuleType, mock_app)
 
 
 def setup_mock_bpy():
@@ -1251,57 +1368,80 @@ def setup_mock_bpy():
     mock_data.materials = MockCollection(prop_type=MockMaterial)
     mock_data.scenes = MockCollection(prop_type=MockScene)
 
-    mock_data.objects.clear()
-    mock_data.meshes.clear()
-    mock_data.materials.clear()
-    mock_data.collections.clear()
-
-    # Reset Global State for this test run
-    mock_data.objects.clear()
-    mock_data.meshes.clear()
-    mock_data.materials.clear()
-    mock_data.collections.clear()
-
     active_scene = MockScene(name="Scene")
     mock_data.scenes.clear()
     mock_data.scenes.append(active_scene)
 
     # Setup Context
+    global mock_context
+    mock_context = MagicMock(name="Context")
     mock_bpy.data = mock_data
     mock_bpy.context = mock_context
     mock_bpy.app = mock_app
-    mock_bpy.types = mock_bpy.types
-    mock_bpy.props = mock_bpy.props
 
     mock_context.scene = active_scene
-    mock_context.active_object = None
+    mock_view_layer = typing.cast(MockPropertyGroup, active_scene.view_layers[0])
+    mock_view_layer.objects = mock_data.objects
+    mock_context.view_layer = mock_view_layer
+
+    # Ensure active_object is always synced with view_layer
+    # We use a PropertyMock on the instance's class to handle it properly
+    type(mock_context).active_object = PropertyMock(
+        side_effect=lambda *args: getattr(mock_view_layer.objects, "active", None)
+    )
+
     mock_context.ops = mock_ops
     mock_context.selected_objects = []
 
-    mock_view_layer = typing.cast(MockPropertyGroup, active_scene.view_layers[0])
-    mock_view_layer.objects = mock_data.objects
+    def mock_view_layer_update():
+        """Trigger depsgraph handlers to simulate Blender's update cycle."""
+        # Create a mock depsgraph with updates for each object
+        mock_depsgraph = MagicMock(name="Depsgraph")
+        mock_depsgraph.updates = []
+        for obj in mock_data.objects:
+            update = MagicMock()
+            update.id = obj
+            mock_depsgraph.updates.append(update)
 
+        for handler in mock_app.handlers.depsgraph_update_post:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                handler(active_scene, mock_depsgraph)
+
+        # Also run any timers scheduled during the handlers (like deferred renames)
+        mock_app.timers.run_all()
+
+    mock_view_layer.update = mock_view_layer_update
     mock_context.view_layer = mock_view_layer
 
     class ObjectsCollection(MockCollection):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self._active = None
+
         @property
         def active(self):
-            return mock_context.active_object
+            return self._active
 
         @active.setter
         def active(self, val):
-            mock_context.active_object = val
+            self._active = val
 
     mock_view_layer.objects = ObjectsCollection(prop_type=MockObject)
     for obj in mock_data.objects:
         mock_view_layer.objects.append(obj)
     mock_data.objects = mock_view_layer.objects
 
+    # Sync scene objects with data objects
+    active_scene.objects = mock_data.objects
+    active_scene.collection.objects = mock_data.objects
+
     mock_context.evaluated_depsgraph_get = lambda: MagicMock(name="Depsgraph")
     mock_context.window_manager = MockPropertyGroup()
 
     # Setup handlers and timers
-    mock_app.timers = MagicMock(name="Timers")
+    mock_app.timers = MockTimers()
     mock_app.handlers = MockHandlers()
     mock_app.version = (4, 2, 0)
     mock_app.driver_namespace = {}
@@ -1338,7 +1478,9 @@ def setup_mock_bpy():
         return obj
 
     def mock_empty_add(type="PLAIN_AXES", location=(0, 0, 0), **kwargs):  # noqa: A002
-        obj = MockObject(name="Empty")
+        # Use name if passed (though real empty_add doesn't take one, some callers might mock it)
+        name = kwargs.get("name", "Empty")
+        obj = MockObject(name=name)
         obj.type = "EMPTY"
         obj.empty_display_type = type
         _setup_new_object(obj, location)
@@ -1454,6 +1596,21 @@ def setup_mock_bpy():
     mock_ops.object.parent_clear = lambda **kwargs: {"FINISHED"}
     mock_ops.object.delete = lambda **kwargs: {"FINISHED"}
 
+    def mock_add_empty_link(**kwargs):
+        name = kwargs.get("name", "base_link")
+        obj = MockObject(name=name)
+        obj.type = "EMPTY"
+        _setup_new_object(obj)
+        return {"FINISHED"}
+
+    if not hasattr(mock_ops, "linkforge"):
+        mock_ops.linkforge = DynamicModule("bpy.ops.linkforge")
+    mock_ops.linkforge.add_empty_link = mock_add_empty_link
+    mock_ops.linkforge.calculate_inertia = lambda **kwargs: {"FINISHED"}
+    mock_ops.linkforge.generate_collision = lambda **kwargs: {"FINISHED"}
+    mock_ops.linkforge.create_sensor = lambda **kwargs: {"FINISHED"}
+    mock_ops.linkforge.export_robot_model = lambda **kwargs: {"FINISHED"}
+
     mock_bpy.ops = mock_ops
 
     # Importer mocks to simulate object creation
@@ -1508,13 +1665,106 @@ def setup_mock_bpy():
     mock_bpy.types.Menu = object
     mock_bpy.types.Header = object
     mock_bpy.types.UIList = object
+    mock_bpy.types.AddonPreferences = object
+    mock_bpy.types.Operator = MockOperator
+    mock_bpy.types.PropertyGroup = MockPropertyGroup
 
-    # Global Math and Extra Modules
-    mock_mathutils = DynamicModule("mathutils")
-    mock_mathutils.Vector = MockVector
-    mock_mathutils.Matrix = MockMatrix
-    mock_mathutils.Euler = MockEuler
     mock_mathutils.Quaternion = MockQuaternion
+
+    mock_bpy.utils = DynamicModule("bpy.utils")
+
+    def mock_register_class(cls):
+        idname = getattr(cls, "bl_idname", None)
+        if not idname or "." not in idname:
+            return
+
+        category, name = idname.split(".")
+
+        # Ensure category exists in mock_ops and is a DynamicModule
+        cat_mod = getattr(mock_ops, category)
+        if not isinstance(cat_mod, DynamicModule):
+            cat_mod = DynamicModule(f"bpy.ops.{category}")
+            setattr(mock_ops, category, cat_mod)
+
+        # Discover properties in __dict__ or __annotations__
+        props: dict[str, dict[str, typing.Any] | MockPropertyDescriptor] = {}
+        # 1. Check annotations (for newer Python/Blender style)
+        for k, v in getattr(cls, "__annotations__", {}).items():
+            if isinstance(v, str) and "bpy.props." in v:
+                # If it's a string (due to from __future__ import annotations), we might need to "eval" or mock it
+                default_match = re.search(r"default\s*=\s*['\"]([^'\"]+)['\"]", v)
+                default_val = default_match.group(1) if default_match else None
+
+                # Numeric defaults
+                if not default_val:
+                    num_match = re.search(r"default\s*=\s*([\d\.]+)", v)
+                    if num_match:
+                        default_val = (
+                            float(num_match.group(1))
+                            if "." in num_match.group(1)
+                            else int(num_match.group(1))
+                        )
+
+                props[k] = {"default": default_val}
+            elif isinstance(v, MockPropertyDescriptor):
+                props[k] = v
+
+        # 2. Check __dict__ (standard assignment style)
+        for k, v in cls.__dict__.items():
+            if isinstance(v, MockPropertyDescriptor):
+                v._discover_name(None, cls)
+                props[k] = v
+
+        def operator_wrapper(**kwargs):
+            # Create instance
+            op_instance = cls()
+            # Ensure properties from annotations exist on instance if not there
+            for k, prop_info in props.items():
+                if not hasattr(op_instance, k):
+                    if k in kwargs:
+                        continue
+
+                    default_val = None
+                    if isinstance(prop_info, dict):
+                        default_val = prop_info.get("default")
+                    elif isinstance(prop_info, MockPropertyDescriptor):
+                        default_val = prop_info.default
+
+                    if default_val is not None:
+                        setattr(op_instance, k, default_val)
+                    else:
+                        # Fallback to MagicMock
+                        setattr(op_instance, k, MagicMock(name=k))
+
+            # Set properties from kwargs
+            for k, v in kwargs.items():
+                setattr(op_instance, k, v)
+
+            # Check poll
+            if not cls.poll(mock_context):
+                return {"CANCELLED"}
+
+            # Run execute
+            res = op_instance.execute(mock_context)
+
+            return res
+
+        setattr(cat_mod, name, operator_wrapper)
+
+    def mock_unregister_class(cls):
+        if not hasattr(cls, "bl_idname"):
+            return
+        idname = cls.bl_idname
+        if "." not in idname:
+            return
+        category, name = idname.split(".")
+        if hasattr(mock_ops, category):
+            cat_mod = getattr(mock_ops, category)
+            if hasattr(cat_mod, name):
+                delattr(cat_mod, name)
+
+    mock_bpy.utils.register_class = mock_register_class
+    mock_bpy.utils.unregister_class = mock_unregister_class
 
     mock_bmesh = DynamicModule("bmesh")
 
@@ -1612,6 +1862,7 @@ def setup_mock_bpy():
     sys.modules["bpy"] = typing.cast(types.ModuleType, mock_bpy)
     sys.modules["bpy.data"] = typing.cast(types.ModuleType, mock_data)
     sys.modules["bpy.context"] = typing.cast(types.ModuleType, mock_context)
+    mock_context.data = mock_data
     sys.modules["bpy.ops"] = typing.cast(types.ModuleType, mock_ops)
     sys.modules["bpy.props"] = typing.cast(types.ModuleType, mock_bpy.props)
     sys.modules["bpy.types"] = typing.cast(types.ModuleType, mock_bpy.types)

@@ -115,10 +115,10 @@ class TestURDFGeneratorInternal:
         robot = Robot(name="mat_robot")
         mat = Material(name="red", color=Color(1, 0, 0, 1))
         robot.add_link(
-            Link(name="l1", initial_visuals=[Visual(geometry=Box(Vector3(1, 1, 1)), material=mat)])
+            Link(name="l1", visuals=[Visual(geometry=Box(Vector3(1, 1, 1)), material=mat)])
         )
         robot.add_link(
-            Link(name="l2", initial_visuals=[Visual(geometry=Box(Vector3(1, 1, 1)), material=mat)])
+            Link(name="l2", visuals=[Visual(geometry=Box(Vector3(1, 1, 1)), material=mat)])
         )
 
         xml_str = generator.generate(robot, validate=False)

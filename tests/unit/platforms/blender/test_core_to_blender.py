@@ -31,6 +31,7 @@ from linkforge_core.models import (
     JointType,
     LidarInfo,
     Link,
+    LinkPhysics,
     Mesh,
     Robot,
     Ros2Control,
@@ -70,7 +71,7 @@ def test_create_link_object_multi_collisions(scene, blender_context) -> None:
     """Test link creation with multiple collision elements."""
     coll1 = Collision(geometry=Box(size=Vector3(1, 1, 1)), name="c1")
     coll2 = Collision(geometry=Sphere(radius=0.5), name="c2")
-    link = Link(name="multi_coll_link", initial_collisions=[coll1, coll2])
+    link = Link(name="multi_coll_link", collisions=[coll1, coll2])
 
     robot = Robot(name="test")
     obj = create_link_object(blender_context, link, robot, Path("/tmp"))
@@ -93,6 +94,46 @@ def test_create_link_object_zero_mass(scene, blender_context) -> None:
     assert safe_get_linkforge(obj).use_auto_inertia is False
 
 
+def test_create_link_object_physics(scene, blender_context) -> None:
+    """Verify that importing a Link with LinkPhysics correctly sets Blender properties."""
+    physics = LinkPhysics(mu=0.7, kp=2.0e10, kd=100.0)
+    link = Link(name="physics_link_import", physics=physics)
+    robot = Robot(name="test")
+
+    obj = create_link_object(blender_context, link, robot, Path("/tmp"))
+    assert obj is not None
+
+    # Verify Blender properties
+    props = safe_get_linkforge(obj)
+    assert pytest.approx(props.mu) == 0.7
+    assert pytest.approx(props.kp) == 2.0e10
+    assert pytest.approx(props.kd) == 100.0
+
+
+def test_create_link_object_physics_toggle(scene, blender_context) -> None:
+    """Verify that use_simulation_props is only True if physics are non-default."""
+    robot = Robot(name="test")
+
+    # 1. Default Physics -> Toggle should be FALSE
+    link_default = Link(name="default_link", physics=LinkPhysics())
+    obj_def = create_link_object(blender_context, link_default, robot, Path("/tmp"))
+    assert safe_get_linkforge(obj_def).use_simulation_props is False
+
+    # 2. Modified Physics -> Toggle should be TRUE
+    phys_mod = LinkPhysics(mu=0.5)  # Modified mu
+    link_mod = Link(name="mod_link", physics=phys_mod)
+    obj_mod = create_link_object(blender_context, link_mod, robot, Path("/tmp"))
+    assert safe_get_linkforge(obj_mod).use_simulation_props is True
+    assert pytest.approx(safe_get_linkforge(obj_mod).mu) == 0.5
+
+    # 3. Explicit Gazebo Element -> Toggle should be TRUE even if physics are default
+    link_gz = Link(name="gz_link", physics=LinkPhysics())
+    gz_elem = GazeboElement(reference="gz_link", static=True)  # Has static property
+    robot_gz = Robot(name="test_gz", links=[link_gz], gazebo_elements=[gz_elem])
+    obj_gz = create_link_object(blender_context, link_gz, robot_gz, Path("/tmp"))
+    assert safe_get_linkforge(obj_gz).use_simulation_props is True
+
+
 def test_create_link_object_primitives(scene, blender_context) -> None:
     """Test creating a Link object with multiple primitive visuals and collisions."""
     # Setup Core Link
@@ -104,8 +145,8 @@ def test_create_link_object_primitives(scene, blender_context) -> None:
 
     link = Link(
         name="test_link_p",
-        initial_visuals=[visual],
-        initial_collisions=[collision],
+        visuals=[visual],
+        collisions=[collision],
         inertial=Inertial(mass=1.0),
     )
 
@@ -235,8 +276,8 @@ def test_import_robot_to_scene_full(scene, blender_context) -> None:
     l2 = Link(name="tool_link")
     j1 = Joint(name="j1", type=JointType.FIXED, parent="base_link", child="tool_link")
 
-    # Correct Robot instantiation using initial_links/initial_joints
-    robot = Robot(name="mini_robot", initial_links=[l1, l2], initial_joints=[j1])
+    # Correct Robot instantiation using links/joints
+    robot = Robot(name="mini_robot", links=[l1, l2], joints=[j1])
 
     # Import
     result = import_robot_to_scene(robot, Path("dummy.urdf"), blender_context)
@@ -288,7 +329,7 @@ def test_import_robot_complex_tree(scene, blender_context) -> None:
         origin=Transform(xyz=Vector3(0, 0, 1)),
     )
 
-    robot = Robot(name="tree_bot", initial_links=[l1, l2, l3, l4], initial_joints=[j1, j2, j3])
+    robot = Robot(name="tree_bot", links=[l1, l2, l3, l4], joints=[j1, j2, j3])
 
     # Needs source_path and context. Returns bool.
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
@@ -329,10 +370,10 @@ def test_import_robot_with_ros2_control_and_gazebo(scene, blender_context) -> No
 
     robot = Robot(
         name="ctrl_bot",
-        initial_links=[l1, l2],
-        initial_joints=[j1],
-        initial_ros2_controls=[rc],
-        initial_gazebo_elements=[gazebo],
+        links=[l1, l2],
+        joints=[j1],
+        ros2_controls=[rc],
+        gazebo_elements=[gazebo],
     )
 
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
@@ -425,7 +466,7 @@ def test_import_robot_with_mimic(scene, blender_context) -> None:
         mimic=JointMimic(joint="driver", multiplier=2.0),
     )
 
-    robot = Robot(name="mimic_bot", initial_links=[l1, l2, l3], initial_joints=[j1, j2])
+    robot = Robot(name="mimic_bot", links=[l1, l2, l3], joints=[j1, j2])
 
     # Import
     import_robot_to_scene(robot, Path("dummy.urdf"), blender_context)
@@ -534,7 +575,7 @@ def test_create_link_object_with_mesh_visual(tmp_path, scene, blender_context) -
     # Model
     mesh_geom = Mesh(resource="v.stl")
     visual = Visual(geometry=mesh_geom)
-    link = Link(name="mesh_link", initial_visuals=[visual])
+    link = Link(name="mesh_link", visuals=[visual])
 
     # Build (providing tmp_path as source_directory)
     robot = Robot(name="test")
@@ -655,9 +696,9 @@ def test_import_robot_with_legacy_transmissions_skipped(scene, blender_context) 
 
     robot = Robot(
         name="legacy_bot",
-        initial_links=[l1, l2],
-        initial_joints=[j1],
-        initial_transmissions=[trans],
+        links=[l1, l2],
+        joints=[j1],
+        transmissions=[trans],
     )
 
     # Import
@@ -710,10 +751,10 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists(scene, blende
 
     robot = Robot(
         name="hybrid_bot",
-        initial_links=[l1, l2],
-        initial_joints=[j1],
-        initial_ros2_controls=[rc],
-        initial_transmissions=[trans],
+        links=[l1, l2],
+        joints=[j1],
+        ros2_controls=[rc],
+        transmissions=[trans],
     )
 
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
@@ -730,7 +771,7 @@ def test_create_link_with_material(scene, blender_context) -> None:
     color = Color(r=1.0, g=0.0, b=0.0, a=1.0)
     material = Material(name="RedMat", color=color)
     visual = Visual(geometry=Box(size=Vector3(1, 1, 1)), material=material)
-    link = Link(name="colored_link", initial_visuals=[visual])
+    link = Link(name="colored_link", visuals=[visual])
 
     robot = Robot(name="test")
     obj = create_link_object(blender_context, link, robot, Path("/tmp"))
@@ -793,7 +834,7 @@ def test_create_link_with_collision_mesh(tmp_path, scene, blender_context) -> No
     # Model
     mesh_geom = Mesh(resource="collision.stl")
     collision = Collision(geometry=mesh_geom)
-    link = Link(name="mesh_coll_link", initial_collisions=[collision])
+    link = Link(name="mesh_coll_link", collisions=[collision])
 
     # Build
     robot = Robot(name="test")
@@ -889,7 +930,7 @@ def test_import_robot_topological_sort(scene, blender_context) -> None:
     j2 = Joint(name="j2", parent="mid", child="leaf", type=JointType.FIXED)
     j1 = Joint(name="j1", parent="root", child="mid", type=JointType.FIXED)
 
-    robot = Robot(name="chain_bot", initial_links=[l1, l2, l3], initial_joints=[j2, j1])
+    robot = Robot(name="chain_bot", links=[l1, l2, l3], joints=[j2, j1])
 
     success = import_robot_to_scene(robot, Path("/tmp/robot.urdf"), blender_context)
     assert success is True
@@ -1049,8 +1090,8 @@ def test_multi_visual_collision_naming(clean_scene, scene, blender_context) -> N
 
     link = Link(
         name="multi_link",
-        initial_visuals=[Visual(geometry=box_geom), Visual(geometry=box_geom)],
-        initial_collisions=[Collision(geometry=box_geom), Collision(geometry=box_geom)],
+        visuals=[Visual(geometry=box_geom), Visual(geometry=box_geom)],
+        collisions=[Collision(geometry=box_geom), Collision(geometry=box_geom)],
     )
 
     robot = Robot(name="test")
@@ -1082,8 +1123,8 @@ def test_import_robot_sensor_creation_failure(clean_scene, scene, blender_contex
     """Verify import_robot_to_scene handles sensor creation failure."""
     robot = Robot(
         name="test_robot",
-        initial_links=[Link(name="base_link")],
-        initial_sensors=[
+        links=[Link(name="base_link")],
+        sensors=[
             Sensor(
                 name="BadSensor",
                 type=SensorType.CAMERA,

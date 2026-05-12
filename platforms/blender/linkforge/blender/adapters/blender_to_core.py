@@ -6,9 +6,14 @@ and LinkForge's core data models.
 
 from __future__ import annotations
 
-from dataclasses import replace
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from linkforge_core.composer import RobotBuilder
+    from linkforge_core.models import Robot
+    from linkforge_core.validation.result import ValidationResult
 
 try:
     import numpy as np  # type: ignore[import-not-found]
@@ -18,59 +23,32 @@ except ImportError:
 from dataclasses import dataclass
 
 import bpy
+from linkforge_core.composer import RobotBuilder
 from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (
     Box,
-    CameraInfo,
-    Collision,
     Color,
-    ContactInfo,
     Cylinder,
-    ForceTorqueInfo,
-    GazeboPlugin,
     Geometry,
-    GPSInfo,
-    IMUInfo,
-    Inertial,
-    InertiaTensor,
-    Joint,
-    JointCalibration,
-    JointDynamics,
-    JointLimits,
-    JointMimic,
-    JointSafetyController,
-    JointType,
-    LidarInfo,
-    Link,
     Material,
     Mesh,
     Robot,
-    Ros2Control,
-    Ros2ControlJoint,
-    Sensor,
-    SensorNoise,
-    SensorType,
     Sphere,
     Transform,
     Vector3,
-    Visual,
 )
-from linkforge_core.models.transmission import (
-    Transmission,
-    TransmissionActuator,
-    TransmissionJoint,
-    TransmissionType,
-)
-from linkforge_core.physics import (
-    calculate_inertia,
-    calculate_mesh_inertia_from_triangles,
-)
-from linkforge_core.utils.math_utils import clean_float, normalize_vector
+from linkforge_core.utils.math_utils import clean_float
 from linkforge_core.utils.string_utils import sanitize_name
+from linkforge_core.validation.result import ValidationResult
 from mathutils import Matrix
 
 from .context import IBlenderContext
+from .translator import (
+    Ros2ControlTranslator,
+    SensorTranslator,
+    TransmissionTranslator,
+)
 
 # Constants
 logger = get_logger(__name__)
@@ -399,13 +377,13 @@ def extract_mesh_triangles(
     if np is not None:
         # Fast vertex extraction via foreach_get
         num_verts = len(mesh_data.vertices)
-        verts = np.empty(num_verts * 3, dtype=np.float32)
+        verts = np.zeros(num_verts * 3, dtype=np.float32)
         mesh_data.vertices.foreach_get("co", verts)
         vertices_array = verts.reshape((-1, 3))
 
         # Fast face index extraction (triangles)
         num_tris = len(mesh_data.loop_triangles)
-        tris = np.empty(num_tris * 3, dtype=np.int32)
+        tris = np.zeros(num_tris * 3, dtype=np.int32)
         mesh_data.loop_triangles.foreach_get("vertices", tris)
         triangles_array = tris.reshape((-1, 3))
 
@@ -491,504 +469,6 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
     return Material(name=mat_name, color=color)
 
 
-def blender_link_to_core_with_origin(
-    obj: Any,
-    meshes_dir: Path | None = None,
-    robot_props: Any = None,
-    dry_run: bool = False,
-    depsgraph: Any | None = None,
-) -> Link | None:
-    """Convert Blender link (Empty with children) to Core Link with multiple visual/collision support.
-
-    Args:
-        obj: Blender Empty object with linkforge property group and visual/collision children
-        meshes_dir: Optional directory for exporting mesh files
-        robot_props: Robot property group with export settings
-        dry_run: If True, generate mesh paths but don't write files
-
-    Returns:
-        Core Link model or None
-
-    """
-    if obj is None:
-        return None
-
-    props = getattr(obj, "linkforge", None)
-    if not props or not getattr(props, "is_robot_link", False):
-        return None
-
-    link_name = props.link_name if props.link_name else obj.name
-
-    # Get mesh format from robot props
-    mesh_format = robot_props.mesh_format if robot_props else "STL"
-
-    # Find all visual and collision geometry objects (children with _visual or _collision in name)
-    visuals: list[Visual] = []
-    collisions: list[Collision] = []
-
-    visual_count = 0
-    collision_count = 0
-
-    # Pre-calculate totals for clean naming logic
-    total_visuals = sum(1 for c in obj.children if "_visual" in c.name)
-    total_collisions = sum(1 for c in obj.children if "_collision" in c.name)
-
-    for child in obj.children:
-        child_name = child.name
-
-        if "_visual" in child_name:
-            # Extract material
-            material = get_object_material(child, props)
-
-            # Determine unique suffix (use source_name if present, otherwise counter)
-            source_name = child.get("source_name", None)
-            if source_name:
-                suffix = f"_{sanitize_name(source_name)}"
-            elif total_visuals > 1:
-                suffix = f"_{visual_count}"
-            else:
-                suffix = ""
-
-            visual_count += 1
-
-            # Get geometry (auto-detect: primitives for simple shapes, mesh for complex)
-            visual_geom, geom_world_matrix = get_object_geometry(
-                obj=child,
-                geometry_type="AUTO",  # Auto-detect primitive vs mesh
-                link_name=link_name,
-                geom_purpose="visual",
-                meshes_dir=meshes_dir,
-                mesh_format=mesh_format,
-                simplify=False,
-                decimation_ratio=1.0,
-                dry_run=dry_run,
-                suffix=suffix,
-                depsgraph=depsgraph,
-            )
-
-            # Extract relative origin (Relative_Pose = Link_Inv @ Geometry_World_Pose)
-            relative_matrix = obj.matrix_world.inverted() @ geom_world_matrix
-            origin = matrix_to_transform(relative_matrix)
-
-            if visual_geom:
-                visuals.append(
-                    Visual(geometry=visual_geom, origin=origin, material=material, name=source_name)
-                )
-
-        elif "_collision" in child_name:
-            # Check if this collision was imported from URDF (skip simplification)
-            is_imported = child.get("imported_from_source", False)
-
-            # Determine simplification ratio based on collision quality setting
-            quality_percent = props.collision_quality
-            quality_ratio = quality_percent / 100.0  # Convert 0-100 to 0.0-1.0
-
-            # Only simplify if quality < 100% AND not imported
-            should_simplify = (quality_ratio < 1.0) and not is_imported
-
-            # Check if collision has stored geometry type
-            stored_geom_type = child.get("collision_geometry_type", "AUTO")
-
-            # Determine unique suffix
-            source_name = child.get("source_name", None)
-            if source_name:
-                suffix = f"_{sanitize_name(source_name)}"
-            elif total_collisions > 1:
-                suffix = f"_{collision_count}"
-            else:
-                suffix = ""
-
-            collision_count += 1
-
-            # Get geometry
-            collision_geom, geom_world_matrix = get_object_geometry(
-                obj=child,
-                geometry_type=stored_geom_type,
-                link_name=link_name,
-                geom_purpose="collision",
-                meshes_dir=meshes_dir,
-                mesh_format="STL",  # Collision always STL
-                simplify=should_simplify,
-                decimation_ratio=quality_ratio,
-                dry_run=dry_run,
-                suffix=suffix,
-                depsgraph=depsgraph,
-            )
-
-            # EXTRACT RELATIVE ORIGIN
-            relative_matrix = obj.matrix_world.inverted() @ geom_world_matrix
-            origin = matrix_to_transform(relative_matrix)
-
-            if collision_geom:
-                collisions.append(
-                    Collision(geometry=collision_geom, origin=origin, name=source_name)
-                )
-
-    # Inertial properties
-    inertial = None
-    if props.mass > 0:
-        if props.use_auto_inertia:
-            # Automated inertia calculation from geometry
-            # Priority order: Collision then Visual
-            geom_obj = None
-            geom = None
-
-            # First try collision
-            for child in obj.children:
-                if "_collision" in child.name and collisions:
-                    geom_obj = child
-                    geom = collisions[0].geometry
-                    break
-
-            # Fallback to visual if no collision
-            if geom_obj is None:
-                for child in obj.children:
-                    if "_visual" in child.name and visuals:
-                        geom_obj = child
-                        geom = visuals[0].geometry
-                        break
-
-            if geom and geom_obj:
-                # Calculate inertia based on geometry type
-                if isinstance(geom, Mesh) and geom_obj.type == "MESH":
-                    # Optimized NumPy implementation
-                    use_numpy = np is not None
-                    mesh_data = extract_mesh_triangles(
-                        geom_obj, depsgraph=depsgraph, as_numpy=use_numpy
-                    )
-
-                    if mesh_data:
-                        vertices, triangles = mesh_data
-                        # Uniform core implementation (Pure Python)
-                        inertia_tensor = calculate_mesh_inertia_from_triangles(
-                            vertices, triangles, props.mass
-                        )
-                    else:
-                        # Fallback to bounding box if mesh extraction fails
-                        dimensions = getattr(geom_obj, "dimensions", Vector3(0, 0, 0))
-                        bbox_geom = Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z))
-                        inertia_tensor = calculate_inertia(bbox_geom, props.mass)
-                else:
-                    # Use primitive geometry (Box, Sphere, Cylinder)
-                    inertia_tensor = calculate_inertia(geom, props.mass)
-            else:
-                # No geometry available - use default manual values
-                inertia_tensor = InertiaTensor(
-                    ixx=props.inertia_ixx,
-                    ixy=props.inertia_ixy,
-                    ixz=props.inertia_ixz,
-                    iyy=props.inertia_iyy,
-                    iyz=props.inertia_iyz,
-                    izz=props.inertia_izz,
-                )
-        else:
-            # Use manual inertia
-            inertia_tensor = InertiaTensor(
-                ixx=props.inertia_ixx,
-                ixy=props.inertia_ixy,
-                ixz=props.inertia_ixz,
-                iyy=props.inertia_iyy,
-                iyz=props.inertia_iyz,
-                izz=props.inertia_izz,
-            )
-
-        # Final safety check for type-checker (ensure not None)
-        final_inertia: InertiaTensor = (
-            inertia_tensor if inertia_tensor is not None else InertiaTensor.zero()
-        )
-
-        # Inertial properties (mass and inertia tensor)
-        # Use stored inertia origin from link properties
-        inertial_origin = Transform(
-            xyz=Vector3(
-                clean_float(props.inertia_origin_xyz[0]),
-                clean_float(props.inertia_origin_xyz[1]),
-                clean_float(props.inertia_origin_xyz[2]),
-            ),
-            rpy=Vector3(
-                clean_float(props.inertia_origin_rpy[0]),
-                clean_float(props.inertia_origin_rpy[1]),
-                clean_float(props.inertia_origin_rpy[2]),
-            ),
-        )
-        inertial = Inertial(mass=props.mass, origin=inertial_origin, inertia=final_inertia)
-
-    return Link(
-        name=link_name, initial_visuals=visuals, initial_collisions=collisions, inertial=inertial
-    )
-
-
-def blender_joint_to_core(obj: Any) -> Joint | None:
-    """Convert Blender Empty with JointPropertyGroup to Core Joint.
-
-    Args:
-        obj: Blender Empty object with linkforge_joint property group
-
-    Returns:
-        Core Joint model or None
-
-    """
-    if obj is None:
-        return None
-
-    props = getattr(obj, "linkforge_joint", None)
-    if not props or not getattr(props, "is_robot_joint", False):
-        return None
-
-    joint_name = props.joint_name if props.joint_name else obj.name
-
-    # Joint type
-    joint_type = JointType(props.joint_type.lower())
-
-    # Joint axis
-    # Valid axis for joints that support it
-    if joint_type in (JointType.FIXED, JointType.FLOATING):
-        # FIXED and FLOATING joints MUST NOT have an axis per robot model strict mode
-        axis = None
-    elif props.axis == "X":
-        axis = Vector3(1.0, 0.0, 0.0)
-    elif props.axis == "Y":
-        axis = Vector3(0.0, 1.0, 0.0)
-    elif props.axis == "Z":
-        axis = Vector3(0.0, 0.0, 1.0)
-    else:  # CUSTOM
-        # robot model spec requires unit vectors for joint axes - normalize custom axes
-        nx, ny, nz = normalize_vector(props.custom_axis_x, props.custom_axis_y, props.custom_axis_z)
-        if nx == 0 and ny == 0 and nz == 0:
-            # Zero vector - fallback to default Z-axis
-            logger.warning(
-                f"Joint '{joint_name}' has zero-length custom axis, using default Z-axis"
-            )
-            axis = Vector3(0.0, 0.0, 1.0)
-        else:
-            axis = Vector3(nx, ny, nz)
-
-    # Defensive check: Ensure axis is not None for joint types that require it
-    if (
-        joint_type
-        in (JointType.REVOLUTE, JointType.PRISMATIC, JointType.CONTINUOUS, JointType.PLANAR)
-        and axis is None
-    ):
-        logger.error(
-            f"Joint '{joint_name}' (type: {joint_type}) calculated axis is None. props.axis='{props.axis}'"
-        )
-        # Fallback to Z-axis instead of crashing later, though this shouldn't happen with the logic above
-        axis = Vector3(0.0, 0.0, 1.0)
-
-    # Joint origin is already calculated relative to parent in blender_to_core.scene_to_robot
-    # Just use the joint's world transform here, will be made relative in scene_to_robot
-    origin = matrix_to_transform(obj.matrix_world)
-
-    # Joint limits
-    # Per robot model spec:
-    # - REVOLUTE/PRISMATIC: limits are REQUIRED
-    # - CONTINUOUS: limits are OPTIONAL (only effort/velocity, no position limits)
-    # - FIXED/FLOATING/PLANAR: limits are NOT ALLOWED
-    limits = None
-    if joint_type in (JointType.REVOLUTE, JointType.PRISMATIC):
-        # Always export limits for REVOLUTE and PRISMATIC (required by robot model spec)
-        limits = JointLimits(
-            lower=props.limit_lower,
-            upper=props.limit_upper,
-            effort=props.limit_effort,
-            velocity=props.limit_velocity,
-        )
-    elif joint_type == JointType.CONTINUOUS and props.use_limits:
-        # Optional limits for CONTINUOUS (only effort/velocity, no position limits)
-        limits = JointLimits(
-            effort=props.limit_effort,
-            velocity=props.limit_velocity,
-        )
-
-    # Dynamics
-    dynamics = None
-    if props.use_dynamics:
-        dynamics = JointDynamics(
-            damping=props.dynamics_damping,
-            friction=props.dynamics_friction,
-        )
-
-    # Mimic
-    mimic = None
-    if props.use_mimic and props.mimic_joint:
-        mimic_obj = props.mimic_joint
-        mimic_joint_name = ""
-        if mimic_obj:
-            if hasattr(mimic_obj, "linkforge_joint") and mimic_obj.linkforge_joint.joint_name:
-                mimic_joint_name = mimic_obj.linkforge_joint.joint_name
-            else:
-                mimic_joint_name = sanitize_name(mimic_obj.name)
-
-        if mimic_joint_name:
-            mimic = JointMimic(
-                joint=mimic_joint_name,
-                multiplier=props.mimic_multiplier,
-                offset=props.mimic_offset,
-            )
-
-    # Handle PointerProperty for parent/child links
-    parent_obj = props.parent_link
-    child_obj = props.child_link
-
-    parent_props = getattr(parent_obj, "linkforge", None)
-    parent = (
-        (parent_props.link_name if parent_props and parent_props.link_name else parent_obj.name)
-        if parent_obj
-        else ""
-    )
-    child_props = getattr(child_obj, "linkforge", None)
-    child = (
-        (child_props.link_name if child_props and child_props.link_name else child_obj.name)
-        if child_obj
-        else ""
-    )
-
-    if not parent:
-        raise RobotValidationError(
-            ValidationErrorCode.NOT_FOUND,
-            "Joint has no parent link. Please select a Parent Link.",
-            target="ParentLink",
-            value=joint_name,
-        )
-    if not child:
-        raise RobotValidationError(
-            ValidationErrorCode.NOT_FOUND,
-            "Joint has no child link. Please select a Child Link.",
-            target="ChildLink",
-            value=joint_name,
-        )
-
-    return Joint(
-        name=joint_name,
-        type=joint_type,
-        parent=parent,
-        child=child,
-        origin=origin,
-        axis=axis,
-        limits=limits,
-        dynamics=dynamics,
-        mimic=mimic,
-        safety_controller=JointSafetyController(
-            soft_lower_limit=props.safety_soft_lower_limit,
-            soft_upper_limit=props.safety_soft_upper_limit,
-            k_position=props.safety_k_position,
-            k_velocity=props.safety_k_velocity,
-        )
-        if props.use_safety_controller
-        else None,
-        calibration=JointCalibration(
-            rising=props.calibration_rising if props.use_calibration_rising else None,
-            falling=props.calibration_falling if props.use_calibration_falling else None,
-        )
-        if props.use_calibration
-        else None,
-    )
-
-
-def blender_transmission_to_core(obj: Any) -> Transmission | None:
-    """Convert Blender Empty with TransmissionPropertyGroup to Core Transmission.
-
-    Args:
-        obj: Blender Empty object with linkforge_transmission property group
-
-    Returns:
-        Core Transmission model or None
-
-    """
-    if obj is None:
-        return None
-
-    props = getattr(obj, "linkforge_transmission", None)
-    if not props or not getattr(props, "is_robot_transmission", False):
-        return None
-
-    trans_name = props.transmission_name if props.transmission_name else obj.name
-
-    # Transmission type mapping
-    trans_type_map = {
-        "SIMPLE": TransmissionType.SIMPLE.value,
-        "DIFFERENTIAL": TransmissionType.DIFFERENTIAL.value,
-        "FOUR_BAR_LINKAGE": TransmissionType.FOUR_BAR_LINKAGE.value,
-        "CUSTOM": props.custom_type if props.custom_type else TransmissionType.CUSTOM.value,
-    }
-    trans_type = trans_type_map.get(props.transmission_type, TransmissionType.SIMPLE.value)
-
-    # Hardware interface mapping
-    hw_if_map = {
-        "POSITION": "position",
-        "VELOCITY": "velocity",
-        "EFFORT": "effort",
-    }
-    hw_if = hw_if_map.get(props.hardware_interface, "position")
-
-    joints = []
-    actuators = []
-
-    if props.transmission_type in ("SIMPLE", "CUSTOM", "FOUR_BAR_LINKAGE"):
-        joint_obj = props.joint_name
-        if joint_obj:
-            joint_props = getattr(joint_obj, "linkforge_joint", None)
-            joint_name = (
-                joint_props.joint_name
-                if joint_props and getattr(joint_props, "joint_name", "")
-                else ""
-            ) or joint_obj.name
-
-            joints.append(
-                TransmissionJoint(
-                    name=joint_name,
-                    hardware_interfaces=[hw_if],
-                    mechanical_reduction=props.mechanical_reduction,
-                    offset=props.offset,
-                )
-            )
-
-            act_name = (
-                props.actuator_name
-                if props.use_custom_actuator_name and props.actuator_name
-                else f"{joint_name}_motor"
-            )
-            actuators.append(TransmissionActuator(name=act_name, hardware_interfaces=[hw_if]))
-    elif props.transmission_type == "DIFFERENTIAL":
-        j1_obj = props.joint1_name
-        j2_obj = props.joint2_name
-        if j1_obj and j2_obj:
-            j1_props = getattr(j1_obj, "linkforge_joint", None)
-            j1_name = (
-                j1_props.joint_name if j1_props and getattr(j1_props, "joint_name", "") else ""
-            ) or j1_obj.name
-            j2_props = getattr(j2_obj, "linkforge_joint", None)
-            j2_name = (
-                j2_props.joint_name if j2_props and getattr(j2_props, "joint_name", "") else ""
-            ) or j2_obj.name
-
-            joints.append(
-                TransmissionJoint(
-                    name=j1_name,
-                    hardware_interfaces=[hw_if],
-                    mechanical_reduction=props.mechanical_reduction,
-                )
-            )
-            joints.append(
-                TransmissionJoint(
-                    name=j2_name,
-                    hardware_interfaces=[hw_if],
-                    mechanical_reduction=props.mechanical_reduction,
-                )
-            )
-
-            a1_name = props.actuator1_name if props.actuator1_name else f"{j1_name}_motor"
-            a2_name = props.actuator2_name if props.actuator2_name else f"{j2_name}_motor"
-
-            actuators.append(TransmissionActuator(name=a1_name, hardware_interfaces=[hw_if]))
-            actuators.append(TransmissionActuator(name=a2_name, hardware_interfaces=[hw_if]))
-
-    if not joints:
-        return None
-
-    return Transmission(name=trans_name, type=trans_type, joints=joints, actuators=actuators)
-
-
 def _categorize_scene_objects(
     scene: Any,
 ) -> tuple[
@@ -1015,6 +495,12 @@ def _categorize_scene_objects(
     joints_map = {}  # child_link_name -> (parent_link_name, joint_empty_obj)
     root_link = None
 
+    import bpy
+
+    logger.debug(
+        f"_categorize_scene_objects: scene.objects count={len(scene.objects)}, "
+        f"data.objects count={len(bpy.data.objects)}"
+    )
     for obj in scene.objects:
         # Check for Link
         lf = getattr(obj, "linkforge", None)
@@ -1061,6 +547,12 @@ def _categorize_scene_objects(
         if link_name not in joints_map:
             root_link = (link_name, obj)
             break
+
+    logger.debug(
+        f"_categorize_scene_objects: links={list(link_objects.keys())}, "
+        f"joints={len(joint_objects)}, sensors={len(sensor_objects)}, "
+        f"root={root_link[0] if root_link else 'None'}"
+    )
 
     return link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link
 
@@ -1114,16 +606,269 @@ def _calculate_link_frames(
     return link_frames
 
 
+class SceneToRobotTranslator:
+    """Orchestrates the conversion of a Blender scene to a Core Robot model.
+
+    This class follows the SOLID principles by encapsulating the translation logic
+    and leveraging the RobotBuilder (Composer) API for structural integrity.
+    """
+
+    def __init__(
+        self,
+        context: IBlenderContext,
+        meshes_dir: Path | None = None,
+        dry_run: bool = False,
+        depsgraph: Any | None = None,
+    ):
+        self.context = context
+        self.meshes_dir = meshes_dir
+        self.dry_run = dry_run
+        self.depsgraph = depsgraph
+
+        # Get robot properties from scene
+        self.robot_props = getattr(context.scene, "linkforge", None)
+        if not self.robot_props:
+            raise RobotValidationError(
+                ValidationErrorCode.NOT_FOUND, "Scene has no LinkForge properties"
+            )
+
+        self.robot_name = self.robot_props.robot_name if self.robot_props.robot_name else "robot"
+        self.builder = RobotBuilder(self.robot_name)
+        self.validation_result = ValidationResult(robot_name=self.robot_name)
+
+    def translate(self) -> tuple[Robot, ValidationResult]:
+        """Perform the translation and return the built Robot model."""
+        # 1. Categorize scene objects
+        link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root = (
+            _categorize_scene_objects(self.context.scene)
+        )
+
+        # 2. Calculate coordinate frames (needed for joint relative origins)
+        link_frames = _calculate_link_frames(link_objects, joints_map, root)
+
+        # 3. Translate Materials globally (Centralized management)
+        self._translate_global_materials(link_objects)
+
+        # 4. Build Kinematic Tree recursively (The "Composer" way)
+        if root:
+            root_name, _ = root
+            self._build_link_recursive(root_name, None, link_objects, joints_map, link_frames)
+        else:
+            self.validation_result.add_error(
+                title="No root link",
+                message="No root link found in scene. Ensure at least one link has no parent joint.",
+                code=ValidationErrorCode.NO_ROOT,
+            )
+
+        # 5. Translate orphaned components (Sensors, Transmissions)
+        self._translate_sensors(sensor_objects, link_frames, link_objects)
+        self._translate_transmissions(transmission_objects)
+        self._translate_ros2_control()
+        self._translate_scene_gazebo_plugins()
+
+        # 6. Finalize and return
+        try:
+            robot = self.builder.build()
+        except Exception as e:
+            self.validation_result.add_error(
+                title="Build failed", message=str(e), code=ValidationErrorCode.INVALID_VALUE
+            )
+            robot = Robot(name=self.robot_name)
+
+        if self.validation_result.errors:
+            first_err = self.validation_result.errors[0]
+            raise RobotValidationError(
+                ValidationErrorCode.INVALID_VALUE,
+                f"Multiple configuration errors found ({len(self.validation_result.errors)}). First: {first_err.title} - {first_err.message}",
+            )
+
+        return robot, self.validation_result
+
+    def _translate_global_materials(self, link_objects: dict[str, Any]) -> None:
+        """Collect and register all unique materials used in the robot."""
+        processed_mats = set()
+        for link_obj in link_objects.values():
+            props = getattr(link_obj, "linkforge", None)
+            if props and props.use_material:
+                for child in link_obj.children:
+                    if "_visual" in child.name and child.type == "MESH":
+                        mat = get_object_material(child, props)
+                        if mat and mat.name not in processed_mats:
+                            # Register material in the robot model to satisfy LinkBuilder validation
+                            if mat.name not in self.builder.robot.materials:
+                                self.builder.robot.materials[mat.name] = mat
+                            # Register with builder
+                            color_tuple = (
+                                (mat.color.r, mat.color.g, mat.color.b, mat.color.a)
+                                if mat.color
+                                else (0.8, 0.8, 0.8, 1.0)
+                            )
+                            self.builder.material(mat.name, color=color_tuple)
+                            processed_mats.add(mat.name)
+
+    def _build_link_recursive(
+        self,
+        link_name: str,
+        parent_lb: Any,
+        link_objects: dict[str, Any],
+        joints_map: dict[str, tuple[str, Any]],
+        link_frames: dict[str, Any],
+    ) -> None:
+        """Recursively build links and joints using specialized translators."""
+        if link_name not in link_objects:
+            return
+
+        obj = link_objects[link_name]
+
+        try:
+            # 1. Start link in composer
+            from .translator import JointTranslator, LinkTranslator
+
+            if parent_lb is None:
+                lb = self.builder.link(link_name)
+            else:
+                joint_info = joints_map.get(link_name)
+                if not joint_info:
+                    return
+                _parent_name, joint_obj = joint_info
+                joint_props = getattr(joint_obj, "linkforge_joint", None)
+                joint_name = joint_props.joint_name if joint_props else joint_obj.name
+                lb = parent_lb.child(link_name, joint_name=joint_name)
+
+                # Configure Joint
+                joint_translator = JointTranslator()
+                joint_translator.translate(
+                    obj=joint_obj,
+                    builder=self.builder,
+                    context=self.context,
+                    validation_result=self.validation_result,
+                    lb=lb,
+                    link_frames=link_frames,
+                )
+
+            # 2. Configure Link
+            link_translator = LinkTranslator()
+            link_translator.translate(
+                obj=obj,
+                builder=self.builder,
+                context=self.context,
+                meshes_dir=self.meshes_dir,
+                dry_run=self.dry_run,
+                depsgraph=self.depsgraph,
+                validation_result=self.validation_result,
+                lb=lb,
+            )
+
+            # 3. Recurse to children
+            for child_name, (p_name, _j_obj) in joints_map.items():
+                if p_name == link_name:
+                    self._build_link_recursive(
+                        child_name, lb, link_objects, joints_map, link_frames
+                    )
+
+            # 4. Commit link
+            lb.commit()
+
+        except Exception as e:
+            if self.robot_props and getattr(self.robot_props, "strict_mode", False):
+                raise
+            self.validation_result.add_error(
+                title=f"Link translation failed: {link_name}",
+                message=str(e),
+                code=ValidationErrorCode.INVALID_VALUE,
+                affected_objects=[link_name],
+            )
+
+    def _translate_sensors(
+        self, sensor_objects: list[Any], link_frames: dict[str, Any], _link_objects: dict[str, Any]
+    ) -> None:
+        """Translate sensors using specialized SensorTranslator."""
+
+        sensor_translator = SensorTranslator()
+        for obj in sensor_objects:
+            sensor_translator.translate(
+                obj=obj,
+                builder=self.builder,
+                context=self.context,
+                validation_result=self.validation_result,
+                link_frames=link_frames,
+            )
+
+    def _translate_transmissions(self, transmission_objects: list[Any]) -> None:
+        """Translate transmissions using specialized TransmissionTranslator."""
+
+        transmission_translator = TransmissionTranslator()
+        for obj in transmission_objects:
+            transmission_translator.translate(
+                obj=obj,
+                builder=self.builder,
+                context=self.context,
+                validation_result=self.validation_result,
+            )
+
+    def _translate_ros2_control(self) -> None:
+        """Translate ROS2 Control settings from robot properties."""
+        if self.robot_props and getattr(self.robot_props, "use_ros2_control", False):
+            translator = Ros2ControlTranslator()
+            translator.translate(
+                obj=self.robot_props,
+                builder=self.builder,
+                context=self.context,
+                validation_result=self.validation_result,
+            )
+
+    def _translate_scene_gazebo_plugins(self) -> None:
+        """Translate scene-level Gazebo plugins (e.g. ros2_control or custom)."""
+        if not self.robot_props:
+            return
+
+        plugin_filename = getattr(self.robot_props, "gazebo_plugin_name", "")
+        if not plugin_filename:
+            return
+
+        params = {}
+        is_standard_control = (
+            "gz_ros2_control" in plugin_filename or "gazebo_ros2_control" in plugin_filename
+        )
+
+        # Add controllers YAML if ros2_control is active
+        if getattr(self.robot_props, "use_ros2_control", False):
+            # Special case for standard gz_ros2_control: only add if we actually have joints to control
+            if is_standard_control and not self.builder.robot.ros2_controls:
+                return
+
+            yaml_path = getattr(self.robot_props, "controllers_yaml_path", "")
+            if yaml_path:
+                params["parameters"] = yaml_path
+        elif is_standard_control:
+            # If standard control is NOT used, don't add the plugin at all
+            return
+
+        # Determine plugin name
+        # For standard gz_ros2_control, we use 'gazebo_ros2_control' for compatibility
+        if "gz_ros2_control" in plugin_filename or "gazebo_ros2_control" in plugin_filename:
+            name = "gazebo_ros2_control"
+        else:
+            # Custom plugin: use filename as name (matches test expectation)
+            name = plugin_filename
+
+        from linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
+
+        gazebo_plugin = GazeboPlugin(
+            name=name,
+            filename=plugin_filename,
+            parameters=params,
+        )
+
+        self.builder.robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
+
+
 def scene_to_robot(
     context: IBlenderContext | bpy.types.Context,
     meshes_dir: Path | None = None,
     dry_run: bool = False,
-) -> tuple[Robot, list[str]]:
-    """Convert entire Blender scene to Core Robot.
-
-    This function orchestrates the conversion process. Supports auto-wrapping of
-    legacy contexts for backward compatibility.
-    """
+) -> tuple[Robot, ValidationResult]:
+    """Convert entire Blender scene to Core Robot using the Translator orchestrator."""
     from .context import BlenderContext
 
     # Auto-wrap for legacy compatibility
@@ -1132,379 +877,5 @@ def scene_to_robot(
 
         context = BlenderContext(bpy)
 
-    if context is None:
-        return Robot(name="empty_robot"), []
-    scene = context.scene
-    robot_props = getattr(scene, "linkforge", None)
-    if not robot_props:
-        return Robot(name="robot"), ["Scene has no linkforge properties"]
-    robot_name = robot_props.robot_name if robot_props.robot_name else "robot"
-    strict_mode = robot_props.strict_mode  # Get strict mode from properties
-    robot = Robot(name=robot_name)
-
-    # Note: Evaluated depsgraph is only needed for real Blender runs.
-    # In Mock contexts, we can bypass this.
-    depsgraph = None
-    if hasattr(context, "evaluated_depsgraph_get"):
-        depsgraph = context.evaluated_depsgraph_get()
-
-    conversion_errors: list[str] = []
-
-    # Categorize scene objects
-    link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link = (
-        _categorize_scene_objects(scene)
-    )
-
-    # Calculate link coordinate frames
-    link_frames = _calculate_link_frames(link_objects, joints_map, root_link)
-
-    # Process Links
-    for _link_name, obj in link_objects.items():
-        try:
-            # Create link
-            link = blender_link_to_core_with_origin(
-                obj, meshes_dir, robot_props, dry_run=dry_run, depsgraph=depsgraph
-            )
-            if link:
-                robot.add_link(link)
-        except Exception as e:
-            if strict_mode:
-                raise  # Fail immediately in strict mode
-            conversion_errors.append(f"Link '{obj.name}': {e}")
-
-    # Process Joints
-    for obj in joint_objects:
-        try:
-            joint = blender_joint_to_core(obj)
-            if joint:
-                # Calculate joint origin relative to parent link frame
-                # IMPORTANT: Joint origin should represent where the CHILD LINK's frame is,
-                # not where the joint Empty object is positioned in Blender
-                # This ensures export always reflects actual Blender scene state
-                if (
-                    (parent_name := joint.parent)
-                    and parent_name in link_frames
-                    and joint.child in link_frames
-                    and Matrix is not None
-                ):
-                    parent_frame = link_frames[parent_name]
-                    child_frame = link_frames[joint.child]
-                    parent_frame_inv = parent_frame.inverted()
-                    # Use child link's frame position as joint origin
-                    joint_relative = parent_frame_inv @ child_frame
-                    corrected_origin = matrix_to_transform(joint_relative)
-                    # Create new joint with corrected origin (Joint is frozen dataclass)
-                    joint = replace(joint, origin=corrected_origin)
-
-                robot.add_joint(joint)
-        except Exception as e:
-            if strict_mode:
-                raise  # Fail immediately in strict mode
-            conversion_errors.append(f"Joint '{obj.name}': {e}")
-
-    # Process Sensors
-    for obj in sensor_objects:
-        try:
-            sensor = blender_sensor_to_core(obj)
-            if (
-                sensor
-                and (link_name := sensor.link_name)
-                and link_name in link_frames
-                and Matrix is not None
-            ):
-                link_obj = link_objects.get(link_name)
-                if link_obj and obj.parent == link_obj:
-                    # Extract relative origin using matrix math (robust against 'Keep Transform')
-                    sensor_relative = link_obj.matrix_world.inverted() @ obj.matrix_world
-                    corrected_origin = matrix_to_transform(sensor_relative)
-                    sensor = replace(sensor, origin=corrected_origin)
-                else:
-                    # Not direct child, but link_name is specified (custom mount)
-                    link_frame_inv = link_frames[link_name].inverted()
-                    sensor_relative = link_frame_inv @ obj.matrix_world
-                    corrected_origin = matrix_to_transform(sensor_relative)
-                    sensor = replace(sensor, origin=corrected_origin)
-
-                robot.add_sensor(sensor)
-        except Exception as e:
-            if strict_mode:
-                raise  # Fail immediately in strict mode
-            conversion_errors.append(f"Sensor '{obj.name}': {e}")
-
-    # Process Transmissions
-    for obj in transmission_objects:
-        try:
-            transmission = blender_transmission_to_core(obj)
-            if transmission:
-                robot.add_transmission(transmission)
-        except Exception as e:
-            if strict_mode:
-                raise
-            conversion_errors.append(f"Transmission '{obj.name}': {e}")
-
-    # Process centralized ROS2 Control
-    if robot_props.use_ros2_control:
-        try:
-            ros2_control = blender_ros2_control_to_core(robot_props)
-            if ros2_control:
-                robot.add_ros2_control(ros2_control)
-
-                # Add Gazebo ros2_control plugin if configured (ONLY if we have valid control config)
-                if robot_props.gazebo_plugin_name:
-                    params = {}
-                    if robot_props.controllers_yaml_path:
-                        params["parameters"] = robot_props.controllers_yaml_path
-
-                    # Map UI string directly. Conventionally users input the exact plugin tag content,
-                    # e.g., gz_ros2_control::GazeboSimROS2ControlPlugin, or libgazebo_ros2_control.so.
-                    gazebo_plugin = GazeboPlugin(
-                        name="gazebo_ros2_control",
-                        filename=robot_props.gazebo_plugin_name,
-                        parameters=params,
-                    )
-                    # Note: We wrap the plugin in a GazeboElement without a reference (global)
-                    from linkforge_core.models.gazebo import GazeboElement
-
-                    robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
-        except Exception as e:
-            if strict_mode:
-                raise
-            conversion_errors.append(f"ROS2 Control System: {e}")
-
-    # If there were any conversion errors (only reached if strict_mode=False)
-    if conversion_errors:
-        error_summary = "\n".join(f"  - {err}" for err in conversion_errors)
-        # In non-strict mode, always raise with all collected errors
-        raise RobotValidationError(
-            ValidationErrorCode.INVALID_VALUE,
-            f"Multiple configuration errors found:\n{error_summary}",
-            target="RobotConversion",
-            value=robot_name,
-        )
-
-    return robot, conversion_errors
-
-
-def blender_sensor_to_core(obj: Any) -> Sensor | None:
-    """Convert a Blender sensor Empty and its properties to a Core Sensor model.
-
-    This function extracts sensor-specific configuration (Lidar, Camera, IMU)
-    from Blender custom properties and maps them to the structured LinkForge
-    core models for export.
-
-    Args:
-        obj: The Blender Empty object representing the sensor.
-
-    Returns:
-        A Core Sensor model if successful, or None if the object is invalid.
-
-    """
-    if obj is None:
-        return None
-    props = getattr(obj, "linkforge_sensor", None)
-    if not props or not props.is_robot_sensor:
-        return None
-
-    sensor_name = props.sensor_name if props.sensor_name else obj.name
-    sensor_type = SensorType(props.sensor_type.lower())
-    link_obj = props.attached_link
-    link_props = getattr(link_obj, "linkforge", None)
-    link_name = (
-        (link_props.link_name if link_props and link_props.link_name else link_obj.name)
-        if link_obj
-        else ""
-    )
-
-    if not link_name:
-        raise RobotValidationError(
-            ValidationErrorCode.NOT_FOUND,
-            "Sensor is not attached to any link. Please select a parent link.",
-            target="SensorAttachment",
-            value=sensor_name,
-        )
-
-    # Build sensor origin from object transform
-    origin = matrix_to_transform(obj.matrix_world)
-
-    # Type-specific info
-    camera_info = None
-    lidar_info = None
-    imu_info = None
-    gps_info = None
-    contact_info = None
-    force_torque_info = None
-
-    # Noise model
-    noise = None
-    if props.use_noise:
-        noise = SensorNoise(
-            type=props.noise_type,
-            mean=props.noise_mean,
-            stddev=props.noise_stddev,
-        )
-
-    # Camera info
-    if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA):
-        camera_info = CameraInfo(
-            horizontal_fov=props.camera_horizontal_fov,
-            width=props.camera_width,
-            height=props.camera_height,
-            format=props.camera_format,
-            near_clip=props.camera_near_clip,
-            far_clip=props.camera_far_clip,
-            noise=noise,
-        )
-
-    # LIDAR info
-    elif sensor_type == SensorType.LIDAR:
-        lidar_info = LidarInfo(
-            horizontal_samples=props.lidar_horizontal_samples,
-            horizontal_min_angle=props.lidar_horizontal_min_angle,
-            horizontal_max_angle=props.lidar_horizontal_max_angle,
-            vertical_samples=props.lidar_vertical_samples,
-            range_min=props.lidar_range_min,
-            range_max=props.lidar_range_max,
-            noise=noise,
-        )
-
-    # IMU info
-    elif sensor_type == SensorType.IMU:
-        imu_info = IMUInfo(
-            angular_velocity_noise=noise,
-            linear_acceleration_noise=noise,
-        )
-
-    # GPS info
-    elif sensor_type == SensorType.GPS:
-        gps_info = GPSInfo(
-            position_sensing_horizontal_noise=noise,
-            velocity_sensing_horizontal_noise=noise,
-        )
-
-    # Contact info
-    elif sensor_type == SensorType.CONTACT:
-        collision_name = props.contact_collision
-        if not collision_name:
-            # Fallback: try to guess standard name
-            collision_name = f"{link_name}_collision"
-        contact_info = ContactInfo(collision=collision_name, noise=noise)
-
-    # Force/Torque info
-    elif sensor_type == SensorType.FORCE_TORQUE:
-        force_torque_info = ForceTorqueInfo(noise=noise)
-
-    # Gazebo plugin
-    plugin = None
-    if props.use_gazebo_plugin and props.plugin_filename:
-        plugin = GazeboPlugin(
-            name=f"{sensor_name}_plugin",
-            filename=props.plugin_filename,
-        )
-
-    # Topic name
-    topic = props.topic_name if props.topic_name else None
-
-    return Sensor(
-        name=sensor_name,
-        type=sensor_type,
-        link_name=link_name,
-        origin=origin,
-        update_rate=props.update_rate,
-        always_on=props.always_on,
-        visualize=props.visualize,
-        camera_info=camera_info,
-        lidar_info=lidar_info,
-        imu_info=imu_info,
-        gps_info=gps_info,
-        contact_info=contact_info,
-        force_torque_info=force_torque_info,
-        plugin=plugin,
-        topic=topic,
-    )
-
-
-def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
-    """Convert centralized Blender ros2_control properties to Core model.
-
-    Args:
-        props: RobotPropertyGroup containing ros2_control settings
-
-    Returns:
-        Core Ros2Control model or None
-    """
-    if not props or not props.ros2_control_name:
-        return None
-
-    joints: list[Ros2ControlJoint] = []
-    for item in props.ros2_control_joints:
-        cmd_ifs = []
-        if item.cmd_position:
-            cmd_ifs.append("position")
-        if item.cmd_velocity:
-            cmd_ifs.append("velocity")
-        if item.cmd_effort:
-            cmd_ifs.append("effort")
-
-        state_ifs = []
-        if item.state_position:
-            state_ifs.append("position")
-        if item.state_velocity:
-            state_ifs.append("velocity")
-        if item.state_effort:
-            state_ifs.append("effort")
-
-        # Intelligent defaults: if one side is empty but the other isn't,
-        # apply 'position' as a sensible default to ensure validity.
-        # NOTE: sensor hardware types cannot have command interfaces.
-        if props.ros2_control_type == "sensor":
-            if cmd_ifs:
-                logger.warning(
-                    f"ROS2 Control: Hardware type 'sensor' cannot have command interfaces. "
-                    f"Stripping {cmd_ifs} from joint '{item.name}'."
-                )
-                cmd_ifs = []
-            if not state_ifs:
-                state_ifs.append("position")
-        else:
-            if state_ifs and not cmd_ifs:
-                cmd_ifs.append("position")
-            elif cmd_ifs and not state_ifs:
-                state_ifs.append("position")
-
-        # Extract joint-level parameters
-        parameters = {p.name: p.value for p in item.parameters if p.name}
-
-        # Determine the correct joint name
-        joint_obj = getattr(item, "joint_obj", None)
-        joint_props = getattr(joint_obj, "linkforge_joint", None)
-        joint_name = joint_props.joint_name if joint_props else item.name
-
-        if cmd_ifs or state_ifs:
-            joints.append(
-                Ros2ControlJoint(
-                    name=joint_name,
-                    command_interfaces=cmd_ifs,
-                    state_interfaces=state_ifs,
-                    parameters=parameters,
-                )
-            )
-
-    # ROS 2 Specification: 'actuator' types must have exactly one joint.
-    # Handle gracefully by taking only the first if multiple are configured.
-    if props.ros2_control_type == "actuator" and len(joints) > 1:
-        logger.warning(
-            f"ROS2 Control: Hardware type 'actuator' is limited to exactly one joint by ROS 2 "
-            f"specification. Truncating {len(joints)} joints to only include '{joints[0].name}'."
-        )
-        joints = joints[:1]
-
-    if not joints:
-        return None
-
-    return Ros2Control(
-        name=props.ros2_control_name,
-        type=props.ros2_control_type,
-        hardware_plugin=props.hardware_plugin,
-        joints=joints,
-        parameters={p.name: p.value for p in props.ros2_control_parameters if p.name},
-    )
+    translator = SceneToRobotTranslator(context, meshes_dir, dry_run)
+    return translator.translate()

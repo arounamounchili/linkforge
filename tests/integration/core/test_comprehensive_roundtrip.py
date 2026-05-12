@@ -39,7 +39,7 @@ def test_geometry_types_roundtrip() -> None:
     robot.add_link(
         Link(
             name="box_link",
-            initial_visuals=[
+            visuals=[
                 Visual(
                     geometry=Box(size=Vector3(1.0, 2.0, 3.0)),
                     origin=Transform(xyz=Vector3(0.1, 0.2, 0.3)),
@@ -55,7 +55,7 @@ def test_geometry_types_roundtrip() -> None:
     robot.add_link(
         Link(
             name="cylinder_link",
-            initial_visuals=[
+            visuals=[
                 Visual(
                     geometry=Cylinder(radius=0.5, length=2.0),
                     origin=Transform(xyz=Vector3(0.0, 0.0, 1.0)),
@@ -71,7 +71,7 @@ def test_geometry_types_roundtrip() -> None:
     robot.add_link(
         Link(
             name="sphere_link",
-            initial_visuals=[
+            visuals=[
                 Visual(geometry=Sphere(radius=0.75), origin=Transform(xyz=Vector3(1.0, 1.0, 1.0)))
             ],
         )
@@ -132,15 +132,11 @@ def test_visual_origin_normalization_roundtrip() -> None:
     robot.add_link(
         Link(
             name="link_identity",
-            initial_visuals=[
-                Visual(geometry=Box(size=Vector3(1, 1, 1)), origin=Transform.identity())
-            ],
+            visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)), origin=Transform.identity())],
         )
     )
     # Link with NO origin (should be identity)
-    robot.add_link(
-        Link(name="link_none", initial_visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))])
-    )
+    robot.add_link(Link(name="link_none", visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))]))
     # Connect them to avoid multiple roots
     robot.add_joint(
         Joint(name="j1", type=JointType.FIXED, parent="link_identity", child="link_none")
@@ -214,17 +210,18 @@ def test_transmission_types_roundtrip() -> None:
 def test_gazebo_elements_roundtrip() -> None:
     """Test robot, link, and joint level Gazebo elements."""
     robot = Robot(name="gazebo_test")
-    robot.add_link(Link(name="l1"))
+    from linkforge_core.models.link import LinkPhysics
+
+    # Link-level properties (Physics go to Link, material goes to GazeboElement)
+    robot.add_link(Link(name="l1", physics=LinkPhysics(mu=0.5, mu2=0.5, kp=1000, kd=10)))
 
     # Robot-level plugin
     robot.add_gazebo_element(
         GazeboElement(plugins=[GazeboPlugin(name="p1", filename="f1.so", parameters={"k1": "v1"})])
     )
 
-    # Link-level properties
-    robot.add_gazebo_element(
-        GazeboElement(reference="l1", mu1=0.5, mu2=0.5, kp=1000, kd=10, material="Gazebo/Red")
-    )
+    # Link-level Gazebo extensions
+    robot.add_gazebo_element(GazeboElement(reference="l1", material="Gazebo/Red"))
 
     robot2 = perform_urdf_roundtrip(robot, use_ros2_control=False)
     assert_robots_equal(robot, robot2)

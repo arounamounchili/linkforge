@@ -81,3 +81,16 @@ def is_valid_name(name: str, allow_hyphen: bool = True) -> bool:
     # All characters must be alphanumeric or allowed special chars
     allowed_special = ("_", "-") if allow_hyphen else ("_",)
     return all(c.isalnum() or c in allowed_special for c in name)
+
+
+def format_scientific(value: float) -> str:
+    """Format a float to scientific notation for UI display."""
+    return f"{value:.2e}"
+
+
+def parse_scientific(value: str, fallback: float) -> float:
+    """Parse a scientific notation string back to float."""
+    try:
+        return float(value)
+    except ValueError:
+        return fallback
