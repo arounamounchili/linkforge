@@ -1136,8 +1136,8 @@ def test_blender_ros2_control_defaults(clean_scene, scene, blender_context) -> N
 
     assert control is not None
     # Command should default to position because it was empty but state was not
-    assert control.joints[0].command_interfaces == ["position"]
-    assert control.joints[0].state_interfaces == ["position"]
+    assert control.joints[0].command_interfaces == ("position",)
+    assert control.joints[0].state_interfaces == ("position",)
 
 
 def test_blender_ros2_control_joint_obj_name_sync(clean_scene, scene, blender_context) -> None:
@@ -1288,7 +1288,7 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
     assert core_simple.name == "TransSimple"
     assert len(core_simple.joints) > 0 and core_simple.joints[0].name == "Joint1"
     assert core_simple.joints[0].mechanical_reduction == 50.0
-    assert core_simple.joints[0].hardware_interfaces == ["velocity"]
+    assert core_simple.joints[0].hardware_interfaces == ("velocity",)
     assert len(core_simple.actuators) > 0 and core_simple.actuators[0].name == "Joint1_motor"
 
     # Differential Transmission
