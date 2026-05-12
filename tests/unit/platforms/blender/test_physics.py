@@ -80,5 +80,42 @@ class TestInertialOrigin:
         assert pytest.approx(link.inertial.origin.rpy.z) == 0.3
 
 
+class TestSimulationProperties:
+    """Tests for advanced simulation physics properties."""
+
+    def test_scientific_proxies(self) -> None:
+        """Test scientific notation conversion logic."""
+
+        # Create a mock instance (dataclass-like behavior for testing logic)
+        class MockProps:
+            def __init__(self):
+                self.kp = 0.0
+                self.kd = 0.0
+
+        mock = MockProps()
+        from linkforge.blender.properties.link_props import (
+            get_kd_scientific,
+            get_kp_scientific,
+            set_kd_scientific,
+            set_kp_scientific,
+        )
+
+        # Test KP (Large value)
+        mock.kp = 1.0e12
+        assert get_kp_scientific(mock) == "1.00e+12"
+
+        set_kp_scientific(mock, "5.5e+09")
+        assert mock.kp == 5.5e9
+        assert get_kp_scientific(mock) == "5.50e+09"
+
+        # Test KD (Small value)
+        mock.kd = 0.01
+        assert get_kd_scientific(mock) == "1.00e-02"
+
+        set_kd_scientific(mock, "1.0")
+        assert mock.kd == 1.0
+        assert get_kd_scientific(mock) == "1.00e+00"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

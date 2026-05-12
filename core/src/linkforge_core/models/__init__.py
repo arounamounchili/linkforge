@@ -27,7 +27,7 @@ from .joint import (
     JointSafetyController,
     JointType,
 )
-from .link import Collision, Inertial, InertiaTensor, Link, Visual
+from .link import Collision, Inertial, InertiaTensor, Link, LinkPhysics, Visual
 from .material import Color, Material
 from .robot import Robot
 from .ros2_control import Ros2Control, Ros2ControlJoint
@@ -82,6 +82,7 @@ __all__ = [
     "Visual",
     "Collision",
     "Link",
+    "LinkPhysics",
     # Joint
     "JointType",
     "JointLimits",

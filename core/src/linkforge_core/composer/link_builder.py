@@ -18,7 +18,7 @@ from ..models.joint import (
     JointSafetyController,
     JointType,
 )
-from ..models.link import Collision, Inertial, InertiaTensor, Link, Visual
+from ..models.link import Collision, Inertial, InertiaTensor, Link, LinkPhysics, Visual
 from ..models.material import Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2ControlJoint
@@ -57,6 +57,7 @@ class _LinkState:
     visuals: list[Visual] = field(default_factory=list)
     collisions: list[Collision] = field(default_factory=list)
     sensors: list[Sensor] = field(default_factory=list)
+    physics: LinkPhysics = field(default_factory=LinkPhysics)
     gazebo_params: dict[str, Any] = field(default_factory=dict)
 
 
@@ -475,12 +476,13 @@ class LinkBuilder:
         return self
 
     def simulation(self, **kwargs: Any) -> LinkBuilder:
-        """Set Gazebo-specific simulation properties for this link.
+        """Set simulation properties for this link.
+
+        Supports both typed LinkPhysics fields and raw gazebo_params.
 
         Common arguments:
             self_collide (bool): Enable self-collision.
             gravity (bool): Enable gravity.
-            static (bool): Mark link as static.
             mu1, mu2 (float): Friction coefficients.
             kp, kd (float): Contact stiffness and damping.
 
@@ -488,7 +490,17 @@ class LinkBuilder:
             The LinkBuilder instance.
         """
         self._check_not_committed()
+
+        # Update both typed model and raw gazebo_params for backward compatibility
+        phys_fields = {f.name for f in LinkPhysics.__dataclass_fields__.values()}
+        phys_updates = {k: v for k, v in kwargs.items() if k in phys_fields}
+
+        if phys_updates:
+            self._link.physics = replace(self._link.physics, **phys_updates)
+
+        # Always update gazebo_params so generators/tests relying on it continue to work
         self._link.gazebo_params.update(kwargs)
+
         return self
 
     def _configure_joint(
@@ -883,6 +895,7 @@ class LinkBuilder:
             initial_visuals=l_state.visuals,
             initial_collisions=l_state.collisions,
             inertial=inertial,
+            physics=l_state.physics,
         )
         self._builder.robot.add_link(link)
 

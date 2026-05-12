@@ -17,6 +17,14 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
+from linkforge_core.constants import (
+    DEFAULT_CONTACT_KD,
+    DEFAULT_CONTACT_KP,
+    DEFAULT_FRICTION_MU1,
+    DEFAULT_FRICTION_MU2,
+    DEFAULT_GRAVITY,
+    DEFAULT_SELF_COLLIDE,
+)
 from linkforge_core.utils.string_utils import (
     format_scientific,
     parse_scientific,
@@ -315,33 +323,33 @@ class LinkPropertyGroup(PropertyGroup):
     self_collide: BoolProperty(  # type: ignore
         name="Self Collide",
         description="Whether this link can collide with other links in the same robot",
-        default=False,
+        default=DEFAULT_SELF_COLLIDE,
     )
 
     gravity: BoolProperty(  # type: ignore
         name="Gravity",
         description="Whether this link is affected by gravity",
-        default=True,
+        default=DEFAULT_GRAVITY,
     )
 
     mu1: FloatProperty(  # type: ignore
         name="Friction mu1",
         description="Static friction coefficient (Coulomb)",
-        default=1.0,
+        default=DEFAULT_FRICTION_MU1,
         min=0.0,
     )
 
     mu2: FloatProperty(  # type: ignore
         name="Friction mu2",
         description="Dynamic friction coefficient",
-        default=1.0,
+        default=DEFAULT_FRICTION_MU2,
         min=0.0,
     )
 
     kp: FloatProperty(  # type: ignore
         name="Stiffness kp",
         description="Contact stiffness (N/m)",
-        default=1e12,
+        default=DEFAULT_CONTACT_KP,
         min=0.0,
     )
 
@@ -355,7 +363,7 @@ class LinkPropertyGroup(PropertyGroup):
     kd: FloatProperty(  # type: ignore
         name="Damping kd",
         description="Contact damping (N s/m)",
-        default=1.0,
+        default=DEFAULT_CONTACT_KD,
         min=0.0,
     )
 

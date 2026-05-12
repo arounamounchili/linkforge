@@ -6,7 +6,7 @@ __all__ = ["RobotXMLParser"]
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from ..base import IResourceResolver, RobotParser
 from ..exceptions import (
@@ -34,9 +34,6 @@ from ..utils.xml_utils import (
     parse_vector3,
 )
 from ..validation import validate_mesh_path, validate_package_uri
-
-if TYPE_CHECKING:
-    pass
 
 logger = get_logger(__name__)
 

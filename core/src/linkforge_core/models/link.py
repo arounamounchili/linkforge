@@ -5,6 +5,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import InitVar, dataclass, field, replace
 
+from ..constants import (
+    DEFAULT_CONTACT_KD,
+    DEFAULT_CONTACT_KP,
+    DEFAULT_FRICTION_MU1,
+    DEFAULT_FRICTION_MU2,
+    DEFAULT_GRAVITY,
+    DEFAULT_SELF_COLLIDE,
+)
 from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
 from .geometry import Geometry, Transform
@@ -90,6 +98,18 @@ class Inertial:
 
 
 @dataclass(frozen=True)
+class LinkPhysics:
+    """Advanced physics settings for simulation engines (Gazebo/GZ)."""
+
+    self_collide: bool = DEFAULT_SELF_COLLIDE
+    gravity: bool = DEFAULT_GRAVITY
+    mu1: float = DEFAULT_FRICTION_MU1
+    mu2: float = DEFAULT_FRICTION_MU2
+    kp: float = DEFAULT_CONTACT_KP
+    kd: float = DEFAULT_CONTACT_KD
+
+
+@dataclass(frozen=True)
 class Visual:
     """Visual representation of a link."""
 
@@ -133,6 +153,7 @@ class Link:
     initial_visuals: InitVar[Sequence[Visual] | None] = None
     initial_collisions: InitVar[Sequence[Collision] | None] = None
     inertial: Inertial | None = None
+    physics: LinkPhysics = field(default_factory=LinkPhysics)
 
     _visuals: list[Visual] = field(default_factory=list, init=False)
     _collisions: list[Collision] = field(default_factory=list, init=False)
