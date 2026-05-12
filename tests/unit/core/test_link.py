@@ -239,7 +239,7 @@ class TestLinkPhysics:
 
         assert physics.self_collide == DEFAULT_SELF_COLLIDE
         assert physics.gravity == DEFAULT_GRAVITY
-        assert physics.mu1 == DEFAULT_FRICTION_MU1
+        assert physics.mu == DEFAULT_FRICTION_MU1
         assert physics.kp == DEFAULT_CONTACT_KP
         assert physics.kd == DEFAULT_CONTACT_KD
 
@@ -248,13 +248,13 @@ class TestLinkPhysics:
         physics = LinkPhysics(
             self_collide=True,
             gravity=False,
-            mu1=0.5,
+            mu=0.5,
             kp=1e6,
             kd=10.0,
         )
         assert physics.self_collide is True
         assert physics.gravity is False
-        assert physics.mu1 == 0.5
+        assert physics.mu == 0.5
         assert physics.kp == 1e6
         assert physics.kd == 10.0
 

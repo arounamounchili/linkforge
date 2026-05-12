@@ -103,7 +103,7 @@ class LinkPhysics:
 
     self_collide: bool = DEFAULT_SELF_COLLIDE
     gravity: bool = DEFAULT_GRAVITY
-    mu1: float = DEFAULT_FRICTION_MU1
+    mu: float = DEFAULT_FRICTION_MU1
     mu2: float = DEFAULT_FRICTION_MU2
     kp: float = DEFAULT_CONTACT_KP
     kd: float = DEFAULT_CONTACT_KD

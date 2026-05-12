@@ -581,7 +581,17 @@ def create_link_object(
             props.inertia_origin_xyz = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
             props.inertia_origin_rpy = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
-    elif hasattr(link_obj, "linkforge"):
+    # Set physics properties on link object (friction, stiffness, damping)
+    if link.physics and hasattr(link_obj, "linkforge"):
+        props = link_obj.linkforge
+        props.mu1 = link.physics.mu
+        props.kp = link.physics.kp
+        props.kd = link.physics.kd
+        # Ensure simulation properties are enabled in the UI
+        props.use_simulation_props = True
+
+    # Final check for massless links if no inertial data was provided
+    if not link.inertial and hasattr(link_obj, "linkforge"):
         # If link has no inertial data (e.g. a dummy root link), set mass to 0
         # and disable auto-inertia to avoid falling back to the default 1.0 kg.
         props = link_obj.linkforge

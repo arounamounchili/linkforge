@@ -92,7 +92,9 @@ class TestSimulationProperties:
                 self.kp = 0.0
                 self.kd = 0.0
 
-        mock = MockProps()
+        from typing import Any
+
+        mock: Any = MockProps()
         from linkforge.blender.properties.link_props import (
             get_kd_scientific,
             get_kp_scientific,

@@ -174,7 +174,7 @@ class LinkTranslator(ITranslator):
 
         # 4. Translate Gazebo Physics
         if props.use_simulation_props:
-            active_lb.simulation(
+            active_lb.physics(
                 self_collide=props.self_collide,
                 gravity=props.gravity,
                 mu1=props.mu1,

@@ -246,6 +246,29 @@ def test_blender_link_to_core_inertia(scene, blender_context) -> None:
     assert link.inertial.inertia.ixx == 1.0
 
 
+def test_blender_link_to_core_physics(scene, blender_context) -> None:
+    """Verify that physics properties (friction, stiffness, damping) are exported to LinkPhysics."""
+    obj = create_test_object("physics_link", None, scene)
+    props = safe_get_linkforge(obj)
+    props.is_robot_link = True
+
+    # Set simulation physics values
+    props.use_simulation_props = True
+    props.mu1 = 0.8
+    props.kp = 1.0e9
+    props.kd = 50.0
+
+    # Convert to Core Link
+    link = blender_link_to_core_with_origin(obj)
+
+    # Verify
+    assert link is not None
+    assert link.physics is not None
+    assert pytest.approx(link.physics.mu) == 0.8
+    assert pytest.approx(link.physics.kp) == 1.0e9
+    assert pytest.approx(link.physics.kd) == 50.0
+
+
 def test_categorize_scene_objects_logic(scene, blender_context) -> None:
     """Verify that scene objects are correctly categorized as links, joints, or sensors."""
     # Setup Scene

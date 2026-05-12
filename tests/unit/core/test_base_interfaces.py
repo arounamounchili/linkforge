@@ -120,6 +120,9 @@ def test_parser_detects_xacro_in_urdf() -> None:
 
 
 def test_xacro_parser_basic(tmp_path) -> None:
+    from typing import cast
+
+    from linkforge_core.models.robot import Robot
     from linkforge_core.parsers.urdf_parser import URDFParser
 
     xacro_path = tmp_path / "robot.xacro"
@@ -128,7 +131,7 @@ def test_xacro_parser_basic(tmp_path) -> None:
     )
 
     parser = URDFParser()
-    robot = parser.parse_xacro(xacro_path)
+    robot = cast(Robot, parser.parse_xacro(xacro_path))
 
     assert robot.name == "xacro_bot"
     assert any(link.name == "base_link" for link in robot.links)

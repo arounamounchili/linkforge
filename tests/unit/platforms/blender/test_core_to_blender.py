@@ -31,6 +31,7 @@ from linkforge_core.models import (
     JointType,
     LidarInfo,
     Link,
+    LinkPhysics,
     Mesh,
     Robot,
     Ros2Control,
@@ -91,6 +92,22 @@ def test_create_link_object_zero_mass(scene, blender_context) -> None:
 
     assert safe_get_linkforge(obj).mass == 0.0
     assert safe_get_linkforge(obj).use_auto_inertia is False
+
+
+def test_create_link_object_physics(scene, blender_context) -> None:
+    """Verify that importing a Link with LinkPhysics correctly sets Blender properties."""
+    physics = LinkPhysics(mu=0.7, kp=2.0e10, kd=100.0)
+    link = Link(name="physics_link_import", physics=physics)
+    robot = Robot(name="test")
+
+    obj = create_link_object(blender_context, link, robot, Path("/tmp"))
+    assert obj is not None
+
+    # Verify Blender properties
+    props = safe_get_linkforge(obj)
+    assert pytest.approx(props.mu1) == 0.7
+    assert pytest.approx(props.kp) == 2.0e10
+    assert pytest.approx(props.kd) == 100.0
 
 
 def test_create_link_object_primitives(scene, blender_context) -> None:

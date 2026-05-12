@@ -475,8 +475,8 @@ class LinkBuilder:
         self._joint.calibration = JointCalibration(rising=rising, falling=falling)
         return self
 
-    def simulation(self, **kwargs: Any) -> LinkBuilder:
-        """Set simulation properties for this link.
+    def physics(self, **kwargs: Any) -> LinkBuilder:
+        """Set simulation and contact physics properties for this link.
 
         Supports both typed LinkPhysics fields and raw gazebo_params.
 
@@ -493,7 +493,13 @@ class LinkBuilder:
 
         # Update both typed model and raw gazebo_params for backward compatibility
         phys_fields = {f.name for f in LinkPhysics.__dataclass_fields__.values()}
-        phys_updates = {k: v for k, v in kwargs.items() if k in phys_fields}
+
+        # Mapping for Blender/ODE specific names to Core Physics fields
+        mapped_kwargs = kwargs.copy()
+        if "mu1" in kwargs and "mu" not in kwargs:
+            mapped_kwargs["mu"] = kwargs["mu1"]
+
+        phys_updates = {k: v for k, v in mapped_kwargs.items() if k in phys_fields}
 
         if phys_updates:
             self._link.physics = replace(self._link.physics, **phys_updates)
@@ -502,6 +508,10 @@ class LinkBuilder:
         self._link.gazebo_params.update(kwargs)
 
         return self
+
+    def simulation(self, **kwargs: Any) -> LinkBuilder:
+        """Deprecated: Use physics() instead."""
+        return self.physics(**kwargs)
 
     def _configure_joint(
         self,
