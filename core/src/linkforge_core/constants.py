@@ -25,6 +25,20 @@ DEFAULT_GRAVITY = True
 DEFAULT_SELF_COLLIDE = False
 
 
+# XML and XACRO Namespaces
+# ----------------------------
+
+# Official XACRO namespace URIs
+XACRO_URIS = {
+    "http://www.ros.org/wiki/xacro",
+    "http://wiki.ros.org/xacro",
+    "http://ros.org/xacro",
+}
+
+# Standard prefix for internal structural processing
+XACRO_PREFIX = "xacro:"
+
+
 # Validation Limits (Sanity Checks)
 # ----------------------------
 

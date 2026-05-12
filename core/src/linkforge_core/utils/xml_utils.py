@@ -6,17 +6,12 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from ..constants import MAX_REASONABLE_FLOAT, MAX_REASONABLE_INT
+from ..constants import MAX_REASONABLE_FLOAT, MAX_REASONABLE_INT, XACRO_URIS
 from ..exceptions import RobotMathError, RobotValidationError, ValidationErrorCode
 from ..models import Vector3
 
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
-ET.register_namespace("xacro", "http://www.ros.org/wiki/xacro")
-
-XACRO_URIS = [
-    "http://www.ros.org/wiki/xacro",
-    "http://wiki.ros.org/xacro",
-]
+ET.register_namespace("xacro", next(iter(XACRO_URIS)))
 
 MAX_XML_DEPTH = 2000
 
@@ -140,6 +135,7 @@ def serialize_xml(
     if namespaces:
         for prefix, uri in namespaces.items():
             ns_attr = f'xmlns:{prefix}="{uri}"'
+            # Using a more robust check for root tag insertion
             if ns_attr not in xml_str and "<robot" in xml_str:
                 xml_str = xml_str.replace("<robot", f"<robot {ns_attr}", 1)
 

@@ -370,7 +370,7 @@ class TestRobot:
         # Test invalid state summary
         # Add a cycle to make it invalid
         j2 = Joint(name="j2", parent="l2", child="base", type=JointType.FIXED)
-        robot.joints = robot.joints + (j2,)  # Bypass adder validation for testing
+        robot.joints = (*robot.joints, j2)  # Bypass adder validation for testing
         robot._reindex()
 
         invalid_summary = robot.summary()
@@ -454,8 +454,8 @@ class TestRobot:
         # we need to bypass add_link/add_joint checks which prevent duplicates.
         robot = Robot(name="test")
         l1 = Link(name="l1")
-        robot.links = robot.links + (l1,)
-        robot.links = robot.links + (l1,)  # Duplicate!
+        robot.links = (*robot.links, l1)
+        robot.links = (*robot.links, l1)  # Duplicate!
 
         result = RobotValidator().validate(robot)
         assert any("Duplicate link name" in e.title for e in result.errors)
@@ -467,8 +467,8 @@ class TestRobot:
         robot.add_link(l2)
 
         j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
-        robot.joints = robot.joints + (j1,)
-        robot.joints = robot.joints + (j1,)  # Duplicate!
+        robot.joints = (*robot.joints, j1)
+        robot.joints = (*robot.joints, j1)  # Duplicate!
 
         result = RobotValidator().validate(robot)
         assert any("Duplicate joint name" in e.title for e in result.errors)
@@ -480,7 +480,7 @@ class TestRobot:
         robot.add_link(l1)
 
         j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="missing")
-        robot.joints = robot.joints + (j1,)
+        robot.joints = (*robot.joints, j1)
 
         result = RobotValidator().validate(robot)
         assert any("Missing child link" in e.title for e in result.errors)
@@ -680,7 +680,7 @@ class TestRobot:
             name="s1", link_name="base", type=SensorType.CAMERA, camera_info=CameraInfo()
         )
         # Bypass add_sensor and verify reindex picks it up
-        robot.sensors = robot.sensors + (sensor,)
+        robot.sensors = (*robot.sensors, sensor)
         assert not robot.has_sensor("s1")
         robot._reindex()
         assert robot.has_sensor("s1")
