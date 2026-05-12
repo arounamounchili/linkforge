@@ -17,11 +17,37 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
-from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
+from linkforge_core.utils.string_utils import (
+    format_scientific,
+    parse_scientific,
+)
+from linkforge_core.utils.string_utils import (
+    sanitize_name as sanitize_robot_name,
+)
 
 from ..utils.link_utils import should_rename_child
 from ..utils.scene_utils import clear_stats_cache
 from ..visualization.inertia_gizmos import tag_redraw
+
+
+def get_kp_scientific(self: LinkPropertyGroup) -> str:
+    """Getter for kp in scientific notation."""
+    return format_scientific(self.kp)
+
+
+def set_kp_scientific(self: LinkPropertyGroup, value: str) -> None:
+    """Setter for kp in scientific notation."""
+    self.kp = parse_scientific(value, self.kp)
+
+
+def get_kd_scientific(self: LinkPropertyGroup) -> str:
+    """Getter for kd in scientific notation."""
+    return format_scientific(self.kd)
+
+
+def set_kd_scientific(self: LinkPropertyGroup, value: str) -> None:
+    """Setter for kd in scientific notation."""
+    self.kd = parse_scientific(value, self.kd)
 
 
 def get_link_name(self: LinkPropertyGroup) -> str:
@@ -282,7 +308,7 @@ class LinkPropertyGroup(PropertyGroup):
     # Gazebo / Simulation Properties
     use_simulation_props: BoolProperty(  # type: ignore
         name="Advanced Simulation",
-        description="Enable advanced physics settings (Gazebo/GZ)",
+        description="Include advanced physics settings (Gazebo/GZ) in the exported model",
         default=False,
     )
 
@@ -314,16 +340,30 @@ class LinkPropertyGroup(PropertyGroup):
 
     kp: FloatProperty(  # type: ignore
         name="Stiffness kp",
-        description="Contact stiffness",
+        description="Contact stiffness (N/m)",
         default=1e12,
         min=0.0,
     )
 
+    kp_ui: StringProperty(  # type: ignore
+        name="Stiffness kp",
+        description="Contact stiffness (e.g. 1.0e+12)",
+        get=get_kp_scientific,
+        set=set_kp_scientific,
+    )
+
     kd: FloatProperty(  # type: ignore
         name="Damping kd",
-        description="Contact damping",
+        description="Contact damping (N s/m)",
         default=1.0,
         min=0.0,
+    )
+
+    kd_ui: StringProperty(  # type: ignore
+        name="Damping kd",
+        description="Contact damping (e.g. 1.0e+00)",
+        get=get_kd_scientific,
+        set=set_kd_scientific,
     )
 
     collision_type: EnumProperty(  # type: ignore

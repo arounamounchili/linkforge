@@ -174,8 +174,6 @@ class LINKFORGE_PT_links(Panel):
             collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
             if collision_obj:
                 is_hidden = collision_obj.hide_viewport
-            if collision_obj:
-                is_hidden = collision_obj.hide_viewport
                 icon_name = "HIDE_OFF" if is_hidden else "HIDE_ON"
                 text = "Show Collision" if is_hidden else "Hide Collision"
                 col.operator(
@@ -277,14 +275,9 @@ class LINKFORGE_PT_links(Panel):
 
         # Simulation Properties (Advanced)
         box.separator()
+        box.label(text="Simulation", icon="WORLD")
         row = box.row()
-        row.prop(
-            props,
-            "use_simulation_props",
-            icon="TRIA_DOWN" if props.use_simulation_props else "TRIA_RIGHT",
-            emboss=False,
-        )
-        row.label(text="Advanced Simulation", icon="WORLD")
+        row.prop(props, "use_simulation_props", text="Advanced Simulation")
 
         if props.use_simulation_props:
             sim_box = box.box()
@@ -298,8 +291,8 @@ class LINKFORGE_PT_links(Panel):
 
             col = sim_box.column(align=True)
             col.label(text="Contact:")
-            col.prop(props, "kp", text="kp (Stiffness)")
-            col.prop(props, "kd", text="kd (Damping)")
+            col.prop(props, "kp_ui", text="kp (Stiffness)")
+            col.prop(props, "kd_ui", text="kd (Damping)")
 
         # Remove Link button (Danger Zone)
         box.separator()
