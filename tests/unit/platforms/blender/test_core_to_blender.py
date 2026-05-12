@@ -110,6 +110,30 @@ def test_create_link_object_physics(scene, blender_context) -> None:
     assert pytest.approx(props.kd) == 100.0
 
 
+def test_create_link_object_physics_toggle(scene, blender_context) -> None:
+    """Verify that use_simulation_props is only True if physics are non-default."""
+    robot = Robot(name="test")
+
+    # 1. Default Physics -> Toggle should be FALSE
+    link_default = Link(name="default_link", physics=LinkPhysics())
+    obj_def = create_link_object(blender_context, link_default, robot, Path("/tmp"))
+    assert safe_get_linkforge(obj_def).use_simulation_props is False
+
+    # 2. Modified Physics -> Toggle should be TRUE
+    phys_mod = LinkPhysics(mu=0.5)  # Modified mu
+    link_mod = Link(name="mod_link", physics=phys_mod)
+    obj_mod = create_link_object(blender_context, link_mod, robot, Path("/tmp"))
+    assert safe_get_linkforge(obj_mod).use_simulation_props is True
+    assert pytest.approx(safe_get_linkforge(obj_mod).mu) == 0.5
+
+    # 3. Explicit Gazebo Element -> Toggle should be TRUE even if physics are default
+    link_gz = Link(name="gz_link", physics=LinkPhysics())
+    gz_elem = GazeboElement(reference="gz_link", static=True)  # Has static property
+    robot_gz = Robot(name="test_gz", links=[link_gz], gazebo_elements=[gz_elem])
+    obj_gz = create_link_object(blender_context, link_gz, robot_gz, Path("/tmp"))
+    assert safe_get_linkforge(obj_gz).use_simulation_props is True
+
+
 def test_create_link_object_primitives(scene, blender_context) -> None:
     """Test creating a Link object with multiple primitive visuals and collisions."""
     # Setup Core Link

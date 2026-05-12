@@ -834,7 +834,7 @@ class SceneToRobotTranslator:
         # Add controllers YAML if ros2_control is active
         if getattr(self.robot_props, "use_ros2_control", False):
             # Special case for standard gz_ros2_control: only add if we actually have joints to control
-            if is_standard_control and not self.builder.robot.ros2_control:
+            if is_standard_control and not self.builder.robot.ros2_controls:
                 return
 
             yaml_path = getattr(self.robot_props, "controllers_yaml_path", "")

@@ -142,7 +142,7 @@ class LinkTranslator(ITranslator):
                     link_name,
                     "collision",
                     meshes_dir,
-                    mesh_format,
+                    "STL",  # Collisions always use STL for maximum physics compatibility
                     simplify=(quality < 1.0) and not is_imported,
                     decimation_ratio=quality,
                     dry_run=dry_run,
