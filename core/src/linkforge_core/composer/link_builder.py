@@ -971,11 +971,16 @@ class LinkBuilder:
         else:
             target_system = self._builder.robot.ros2_controls[0]
 
-        target_system.joints.append(
-            Ros2ControlJoint(
-                name=joint.name,
-                command_interfaces=self._control_interfaces[0],
-                state_interfaces=self._control_interfaces[1],
-                parameters=self._control_interfaces[2],
-            )
+        new_system = replace(
+            target_system,
+            joints=(
+                *target_system.joints,
+                Ros2ControlJoint(
+                    name=joint.name,
+                    command_interfaces=self._control_interfaces[0],
+                    state_interfaces=self._control_interfaces[1],
+                    parameters=self._control_interfaces[2],
+                ),
+            ),
         )
+        self._builder.robot.update_ros2_control(new_system)

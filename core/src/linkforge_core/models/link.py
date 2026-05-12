@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 from ..constants import (
@@ -157,8 +158,8 @@ class Link:
     name: str
     inertial: Inertial | None = None
     physics: LinkPhysics = field(default_factory=LinkPhysics)
-    visuals: list[Visual] = field(default_factory=list)
-    collisions: list[Collision] = field(default_factory=list)
+    visuals: Sequence[Visual] = field(default_factory=tuple)
+    collisions: Sequence[Collision] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         """Validate link."""
@@ -176,19 +177,17 @@ class Link:
                 value=self.name,
             )
 
-        # Ensure visuals and collisions are lists (in case they were passed as other sequences)
-        if not isinstance(self.visuals, list):
-            self.visuals = list(self.visuals)
-        if not isinstance(self.collisions, list):
-            self.collisions = list(self.collisions)
+        # Enforce immutable collections
+        self.visuals = tuple(self.visuals)
+        self.collisions = tuple(self.collisions)
 
     def add_visual(self, visual: Visual) -> None:
         """Add a visual representation."""
-        self.visuals.append(visual)
+        self.visuals = (*self.visuals, visual)
 
     def add_collision(self, collision: Collision) -> None:
         """Add a collision representation."""
-        self.collisions.append(collision)
+        self.collisions = (*self.collisions, collision)
 
     @property
     def mass(self) -> float:
@@ -209,7 +208,7 @@ class Link:
         """Create a new link with a prefixed name and sub-elements."""
         return Link(
             name=f"{prefix}{self.name}",
-            visuals=[v.with_prefix(prefix) for v in self.visuals],
-            collisions=[c.with_prefix(prefix) for c in self.collisions],
+            visuals=tuple(v.with_prefix(prefix) for v in self.visuals),
+            collisions=tuple(c.with_prefix(prefix) for c in self.collisions),
             physics=self.physics,
         )

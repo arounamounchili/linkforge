@@ -310,7 +310,7 @@ class TestURDFParser:
         assert trans.type == "transmission_interface/SimpleTransmission"
         assert len(trans.joints) == 1
         assert trans.joints[0].name == "joint1"
-        assert trans.joints[0].hardware_interfaces == ["position"]  # Normalized
+        assert trans.joints[0].hardware_interfaces == ("position",)  # Normalized
         assert len(trans.actuators) == 1
         assert trans.actuators[0].mechanical_reduction == 50.0
 
@@ -1197,7 +1197,7 @@ class TestURDFParser:
         </robot>"""
         parser = URDFParser()
         robot = parser.parse_string(xml)
-        assert robot.ros2_controls[0].joints == []
+        assert robot.ros2_controls[0].joints == ()
 
     def test_imu_sensor_with_angular_velocity_x_noise(self) -> None:
         """IMU angular_velocity with an <x> noise element parses the noise correctly."""

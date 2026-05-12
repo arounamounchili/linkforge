@@ -16,6 +16,7 @@ from __future__ import annotations
 import copy
 import itertools
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -78,12 +79,12 @@ class Robot:
     resource_resolver: IResourceResolver = field(default_factory=FileSystemResolver, compare=False)
 
     # Core collections
-    links: tuple[Link, ...] = field(default_factory=tuple)
-    joints: tuple[Joint, ...] = field(default_factory=tuple)
-    sensors: tuple[Sensor, ...] = field(default_factory=tuple)
-    transmissions: tuple[Transmission, ...] = field(default_factory=tuple)
-    ros2_controls: tuple[Ros2Control, ...] = field(default_factory=tuple)
-    gazebo_elements: tuple[GazeboElement, ...] = field(default_factory=tuple)
+    links: Sequence[Link] = field(default_factory=tuple)
+    joints: Sequence[Joint] = field(default_factory=tuple)
+    sensors: Sequence[Sensor] = field(default_factory=tuple)
+    transmissions: Sequence[Transmission] = field(default_factory=tuple)
+    ros2_controls: Sequence[Ros2Control] = field(default_factory=tuple)
+    gazebo_elements: Sequence[GazeboElement] = field(default_factory=tuple)
     semantic: SemanticRobotDescription = field(default_factory=SemanticRobotDescription)
 
     # Fast lookup indices (name -> object)
@@ -246,12 +247,12 @@ class Robot:
         root_link = sub_robot.get_root_link()
 
         # Migrate Physical & Functional Collections
-        self.links = self.links + sub_robot.links
-        self.joints = self.joints + sub_robot.joints
-        self.sensors = self.sensors + sub_robot.sensors
-        self.transmissions = self.transmissions + sub_robot.transmissions
-        self.ros2_controls = self.ros2_controls + sub_robot.ros2_controls
-        self.gazebo_elements = self.gazebo_elements + sub_robot.gazebo_elements
+        self.links = (*self.links, *sub_robot.links)
+        self.joints = (*self.joints, *sub_robot.joints)
+        self.sensors = (*self.sensors, *sub_robot.sensors)
+        self.transmissions = (*self.transmissions, *sub_robot.transmissions)
+        self.ros2_controls = (*self.ros2_controls, *sub_robot.ros2_controls)
+        self.gazebo_elements = (*self.gazebo_elements, *sub_robot.gazebo_elements)
 
         # Re-index to include merged elements
         self._reindex()
@@ -299,15 +300,9 @@ class Robot:
             )
 
         if overwrite and link.name in self._link_index:
-            # Find and replace in list
-            temp_links = list(self.links)
-            for i, existing in enumerate(temp_links):
-                if existing.name == link.name:
-                    temp_links[i] = link
-                    break
-            self.links = tuple(temp_links)
+            self.links = tuple(link if lnk.name == link.name else lnk for lnk in self.links)
         else:
-            self.links = self.links + (link,)
+            self.links = (*self.links, link)
 
         self._link_index[link.name] = link
         self._graph_cache = None
@@ -346,7 +341,7 @@ class Robot:
                 value=joint.child,
             )
 
-        self.joints = self.joints + (joint,)
+        self.joints = (*self.joints, joint)
         self._joint_index[joint.name] = joint
         self._link_as_parent_index[joint.parent].append(joint)
         self._link_as_child_index[joint.child].append(joint)
@@ -566,7 +561,7 @@ class Robot:
                 value=sensor.link_name,
             )
 
-        self.sensors = self.sensors + (sensor,)
+        self.sensors = (*self.sensors, sensor)
         self._sensor_index[sensor.name] = sensor
 
     def get_sensor(self, name: str) -> Sensor | None:
@@ -641,7 +636,7 @@ class Robot:
                     value=trans_joint.name,
                 )
 
-        self.transmissions = self.transmissions + (transmission,)
+        self.transmissions = (*self.transmissions, transmission)
         self._transmission_index[transmission.name] = transmission
 
     def get_transmission(self, name: str) -> Transmission | None:
@@ -716,7 +711,22 @@ class Robot:
                     value=ctrl_joint.name,
                 )
 
-        self.ros2_controls = self.ros2_controls + (ros2_control,)
+        self.ros2_controls = (*self.ros2_controls, ros2_control)
+        self._ros2_control_index[ros2_control.name] = ros2_control
+
+    def update_ros2_control(self, ros2_control: Ros2Control) -> None:
+        """Update an existing ros2_control configuration.
+
+        Args:
+            ros2_control: The updated Ros2Control configuration.
+        """
+        if ros2_control.name not in self._ros2_control_index:
+            self.add_ros2_control(ros2_control)
+            return
+
+        self.ros2_controls = tuple(
+            ros2_control if ctrl.name == ros2_control.name else ctrl for ctrl in self.ros2_controls
+        )
         self._ros2_control_index[ros2_control.name] = ros2_control
 
     def get_ros2_control(self, name: str) -> Ros2Control | None:
@@ -785,7 +795,7 @@ class Robot:
                 value=element.reference,
             )
 
-        self.gazebo_elements = self.gazebo_elements + (element,)
+        self.gazebo_elements = (*self.gazebo_elements, element)
 
     def get_gazebo_elements(self, reference: str | None = None) -> list[GazeboElement]:
         """Get Gazebo elements, optionally filtered by reference.

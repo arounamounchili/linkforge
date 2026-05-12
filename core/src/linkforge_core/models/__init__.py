@@ -56,7 +56,6 @@ from .srdf import (
     VirtualJoint,
 )
 from .transmission import (
-    HardwareInterface,
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
@@ -108,7 +107,6 @@ __all__ = [
     "Sensor",
     # Transmission
     "TransmissionType",
-    "HardwareInterface",
     "TransmissionJoint",
     "TransmissionActuator",
     "Transmission",

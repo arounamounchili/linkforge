@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
-@dataclass
+@dataclass(frozen=True)
 class Ros2ControlJoint:
     """Joint configuration in ros2_control block.
 
@@ -15,8 +16,8 @@ class Ros2ControlJoint:
     """
 
     name: str
-    command_interfaces: list[str] = field(default_factory=list)
-    state_interfaces: list[str] = field(default_factory=list)
+    command_interfaces: Sequence[str] = field(default_factory=tuple)
+    state_interfaces: Sequence[str] = field(default_factory=tuple)
     parameters: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -37,21 +38,23 @@ class Ros2ControlJoint:
                 target="Ros2ControlInterfaces",
                 value=self.name,
             )
+        object.__setattr__(self, "command_interfaces", tuple(self.command_interfaces))
+        object.__setattr__(self, "state_interfaces", tuple(self.state_interfaces))
 
     def with_prefix(self, prefix: str) -> Ros2ControlJoint:
         """Create a new control joint with a prefixed name."""
         return replace(self, name=f"{prefix}{self.name}")
 
     def normalized(self) -> Ros2ControlJoint:
-        """Return a new joint with sorted interfaces for comparison."""
+        """Return a new control joint with sorted interfaces."""
         return replace(
             self,
-            command_interfaces=sorted(self.command_interfaces),
-            state_interfaces=sorted(self.state_interfaces),
+            command_interfaces=tuple(sorted(self.command_interfaces)),
+            state_interfaces=tuple(sorted(self.state_interfaces)),
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class Ros2Control:
     """ros2_control configuration block.
 
@@ -62,7 +65,7 @@ class Ros2Control:
     name: str
     type: str = "system"  # "system", "actuator", or "sensor"
     hardware_plugin: str = ""
-    joints: list[Ros2ControlJoint] = field(default_factory=list)
+    joints: Sequence[Ros2ControlJoint] = field(default_factory=tuple)
     parameters: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -117,18 +120,19 @@ class Ros2Control:
                 target="Ros2ControlJoints",
                 value=len(self.joints),
             )
+        object.__setattr__(self, "joints", tuple(self.joints))
 
     def with_prefix(self, prefix: str) -> Ros2Control:
         """Create a new control block with prefixed name and joints."""
         return replace(
             self,
             name=f"{prefix}{self.name}",
-            joints=[j.with_prefix(prefix) for j in self.joints],
+            joints=tuple(j.with_prefix(prefix) for j in self.joints),
         )
 
     def normalized(self) -> Ros2Control:
         """Return a new control block with sorted joints for comparison."""
         return replace(
             self,
-            joints=sorted([j.normalized() for j in self.joints], key=lambda x: x.name),
+            joints=tuple(sorted([j.normalized() for j in self.joints], key=lambda x: x.name)),
         )
