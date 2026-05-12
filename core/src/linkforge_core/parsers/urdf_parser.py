@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..base import IResourceResolver
+from ..constants import XACRO_URIS
 from ..exceptions import (
     RobotModelError,
     RobotParserIOError,
@@ -69,7 +70,6 @@ from ..models import (
 from ..utils.math_utils import normalize_vector
 from ..utils.xml_utils import (
     MAX_XML_DEPTH,
-    XACRO_URIS,
     get_xml_namespace,
     parse_float,
     parse_int,
