@@ -232,14 +232,14 @@ class TestLinkPhysics:
         from linkforge_core.constants import (
             DEFAULT_CONTACT_KD,
             DEFAULT_CONTACT_KP,
-            DEFAULT_FRICTION_MU1,
+            DEFAULT_FRICTION_MU,
             DEFAULT_GRAVITY,
             DEFAULT_SELF_COLLIDE,
         )
 
         assert physics.self_collide == DEFAULT_SELF_COLLIDE
         assert physics.gravity == DEFAULT_GRAVITY
-        assert physics.mu == DEFAULT_FRICTION_MU1
+        assert physics.mu == DEFAULT_FRICTION_MU
         assert physics.kp == DEFAULT_CONTACT_KP
         assert physics.kd == DEFAULT_CONTACT_KD
 
@@ -295,14 +295,14 @@ class TestLink:
         """Test link with visual element."""
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
         visual = Visual(geometry=geom)
-        link = Link(name="link1", initial_visuals=[visual])
+        link = Link(name="link1", visuals=[visual])
         assert link.visuals[0] == visual
 
     def test_link_with_collision(self) -> None:
         """Test link with collision element."""
         geom = Box(size=Vector3(1.0, 1.0, 1.0))
         collision = Collision(geometry=geom)
-        link = Link(name="link1", initial_collisions=[collision])
+        link = Link(name="link1", collisions=[collision])
         assert link.collisions[0] == collision
 
     def test_link_with_inertial(self) -> None:
@@ -335,8 +335,8 @@ class TestLink:
 
         link = Link(
             name="complete_link",
-            initial_visuals=[visual],
-            initial_collisions=[collision],
+            visuals=[visual],
+            collisions=[collision],
             inertial=inertial,
         )
 

@@ -19,23 +19,15 @@ class GazeboElement:
     properties: dict[str, str] = field(default_factory=dict)
     plugins: list[GazeboPlugin] = field(default_factory=list)
 
-    # Common properties for links
+    # Common properties for links (platform-specific)
     material: str | None = None  # Gazebo material (e.g., "Gazebo/Red")
-    self_collide: bool | None = None
     static: bool | None = None
-    gravity: bool | None = None
 
-    # Common properties for joints
+    # Common properties for joints (platform-specific)
     stop_cfm: float | None = None  # Constraint force mixing for joint stops
     stop_erp: float | None = None  # Error reduction parameter for joint stops
     provide_feedback: bool | None = None  # Enable force-torque feedback
     implicit_spring_damper: bool | None = None
-
-    # Friction parameters
-    mu1: float | None = None  # Friction coefficient in first friction direction
-    mu2: float | None = None  # Friction coefficient in second friction direction
-    kp: float | None = None  # Contact stiffness
-    kd: float | None = None  # Contact damping
 
     def __post_init__(self) -> None:
         """Validate Gazebo element."""

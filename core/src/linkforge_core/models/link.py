@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import InitVar, dataclass, field, replace
+from dataclasses import dataclass, field, replace
 
 from ..constants import (
     DEFAULT_CONTACT_KD,
     DEFAULT_CONTACT_KP,
-    DEFAULT_FRICTION_MU1,
+    DEFAULT_FRICTION_MU,
     DEFAULT_FRICTION_MU2,
     DEFAULT_GRAVITY,
     DEFAULT_SELF_COLLIDE,
@@ -99,11 +98,17 @@ class Inertial:
 
 @dataclass(frozen=True)
 class LinkPhysics:
-    """Advanced physics settings for simulation engines (Gazebo/GZ)."""
+    """Surface and contact physics properties for a link.
+
+    These parameters govern how the link interacts with other objects in a
+    physics simulator (e.g., Gazebo, MuJoCo, PyBullet). While naming follows
+    common conventions, generators are responsible for mapping these to
+    engine-specific equivalents.
+    """
 
     self_collide: bool = DEFAULT_SELF_COLLIDE
     gravity: bool = DEFAULT_GRAVITY
-    mu: float = DEFAULT_FRICTION_MU1
+    mu: float = DEFAULT_FRICTION_MU
     mu2: float = DEFAULT_FRICTION_MU2
     kp: float = DEFAULT_CONTACT_KP
     kd: float = DEFAULT_CONTACT_KD
@@ -150,19 +155,12 @@ class Link:
     """
 
     name: str
-    initial_visuals: InitVar[Sequence[Visual] | None] = None
-    initial_collisions: InitVar[Sequence[Collision] | None] = None
     inertial: Inertial | None = None
     physics: LinkPhysics = field(default_factory=LinkPhysics)
+    visuals: list[Visual] = field(default_factory=list)
+    collisions: list[Collision] = field(default_factory=list)
 
-    _visuals: list[Visual] = field(default_factory=list, init=False)
-    _collisions: list[Collision] = field(default_factory=list, init=False)
-
-    def __post_init__(
-        self,
-        initial_visuals: Sequence[Visual] | None = None,
-        initial_collisions: Sequence[Collision] | None = None,
-    ) -> None:
+    def __post_init__(self) -> None:
         """Validate link."""
         if not self.name:
             raise RobotValidationError(
@@ -178,28 +176,19 @@ class Link:
                 value=self.name,
             )
 
-        if initial_visuals:
-            self._visuals.extend(initial_visuals)
-        if initial_collisions:
-            self._collisions.extend(initial_collisions)
-
-    @property
-    def visuals(self) -> list[Visual]:
-        """Get visual representations."""
-        return list(self._visuals)
-
-    @property
-    def collisions(self) -> list[Collision]:
-        """Get collision representations."""
-        return list(self._collisions)
+        # Ensure visuals and collisions are lists (in case they were passed as other sequences)
+        if not isinstance(self.visuals, list):
+            self.visuals = list(self.visuals)
+        if not isinstance(self.collisions, list):
+            self.collisions = list(self.collisions)
 
     def add_visual(self, visual: Visual) -> None:
         """Add a visual representation."""
-        self._visuals.append(visual)
+        self.visuals.append(visual)
 
     def add_collision(self, collision: Collision) -> None:
         """Add a collision representation."""
-        self._collisions.append(collision)
+        self.collisions.append(collision)
 
     @property
     def mass(self) -> float:
@@ -220,7 +209,7 @@ class Link:
         """Create a new link with a prefixed name and sub-elements."""
         return Link(
             name=f"{prefix}{self.name}",
-            initial_visuals=[v.with_prefix(prefix) for v in self._visuals],
-            initial_collisions=[c.with_prefix(prefix) for c in self._collisions],
-            inertial=self.inertial,
+            visuals=[v.with_prefix(prefix) for v in self.visuals],
+            collisions=[c.with_prefix(prefix) for c in self.collisions],
+            physics=self.physics,
         )

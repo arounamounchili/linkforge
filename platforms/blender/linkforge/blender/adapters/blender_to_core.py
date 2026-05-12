@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from linkforge_core.composer import RobotBuilder
-    from linkforge_core.models import Joint, Link, Robot
+    from linkforge_core.models import Robot
     from linkforge_core.validation.result import ValidationResult
 
 try:
@@ -28,33 +28,15 @@ from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (
     Box,
-    CameraInfo,
     Color,
-    ContactInfo,
     Cylinder,
-    ForceTorqueInfo,
-    GazeboPlugin,
     Geometry,
-    GPSInfo,
-    IMUInfo,
-    LidarInfo,
     Material,
     Mesh,
     Robot,
-    Ros2Control,
-    Ros2ControlJoint,
-    Sensor,
-    SensorNoise,
-    SensorType,
     Sphere,
     Transform,
     Vector3,
-)
-from linkforge_core.models.transmission import (
-    Transmission,
-    TransmissionActuator,
-    TransmissionJoint,
-    TransmissionType,
 )
 from linkforge_core.utils.math_utils import clean_float
 from linkforge_core.utils.string_utils import sanitize_name
@@ -62,7 +44,11 @@ from linkforge_core.validation.result import ValidationResult
 from mathutils import Matrix
 
 from .context import IBlenderContext
-from .translator import SensorTranslator
+from .translator import (
+    Ros2ControlTranslator,
+    SensorTranslator,
+    TransmissionTranslator,
+)
 
 # Constants
 logger = get_logger(__name__)
@@ -483,110 +469,6 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
     return Material(name=mat_name, color=color)
 
 
-def blender_transmission_to_core(obj: Any) -> Transmission | None:
-    """Convert Blender Empty with TransmissionPropertyGroup to Core Transmission.
-
-    Args:
-        obj: Blender Empty object with linkforge_transmission property group
-
-    Returns:
-        Core Transmission model or None
-
-    """
-    if obj is None:
-        return None
-
-    props = getattr(obj, "linkforge_transmission", None)
-    if not props or not getattr(props, "is_robot_transmission", False):
-        return None
-
-    trans_name = props.transmission_name if props.transmission_name else obj.name
-
-    # Transmission type mapping
-    trans_type_map = {
-        "SIMPLE": TransmissionType.SIMPLE.value,
-        "DIFFERENTIAL": TransmissionType.DIFFERENTIAL.value,
-        "FOUR_BAR_LINKAGE": TransmissionType.FOUR_BAR_LINKAGE.value,
-        "CUSTOM": props.custom_type if props.custom_type else TransmissionType.CUSTOM.value,
-    }
-    trans_type = trans_type_map.get(props.transmission_type, TransmissionType.SIMPLE.value)
-
-    # Hardware interface mapping
-    hw_if_map = {
-        "POSITION": "position",
-        "VELOCITY": "velocity",
-        "EFFORT": "effort",
-    }
-    hw_if = hw_if_map.get(props.hardware_interface, "position")
-
-    joints = []
-    actuators = []
-
-    if props.transmission_type in ("SIMPLE", "CUSTOM", "FOUR_BAR_LINKAGE"):
-        joint_obj = props.joint_name
-        if joint_obj:
-            joint_props = getattr(joint_obj, "linkforge_joint", None)
-            joint_name = (
-                joint_props.joint_name
-                if joint_props and getattr(joint_props, "joint_name", "")
-                else ""
-            ) or joint_obj.name
-
-            joints.append(
-                TransmissionJoint(
-                    name=joint_name,
-                    hardware_interfaces=[hw_if],
-                    mechanical_reduction=props.mechanical_reduction,
-                    offset=props.offset,
-                )
-            )
-
-            act_name = (
-                props.actuator_name
-                if props.use_custom_actuator_name and props.actuator_name
-                else f"{joint_name}_motor"
-            )
-            actuators.append(TransmissionActuator(name=act_name, hardware_interfaces=[hw_if]))
-    elif props.transmission_type == "DIFFERENTIAL":
-        j1_obj = props.joint1_name
-        j2_obj = props.joint2_name
-        if j1_obj and j2_obj:
-            j1_props = getattr(j1_obj, "linkforge_joint", None)
-            j1_name = (
-                j1_props.joint_name if j1_props and getattr(j1_props, "joint_name", "") else ""
-            ) or j1_obj.name
-            j2_props = getattr(j2_obj, "linkforge_joint", None)
-            j2_name = (
-                j2_props.joint_name if j2_props and getattr(j2_props, "joint_name", "") else ""
-            ) or j2_obj.name
-
-            joints.append(
-                TransmissionJoint(
-                    name=j1_name,
-                    hardware_interfaces=[hw_if],
-                    mechanical_reduction=props.mechanical_reduction,
-                )
-            )
-            joints.append(
-                TransmissionJoint(
-                    name=j2_name,
-                    hardware_interfaces=[hw_if],
-                    mechanical_reduction=props.mechanical_reduction,
-                )
-            )
-
-            a1_name = props.actuator1_name if props.actuator1_name else f"{j1_name}_motor"
-            a2_name = props.actuator2_name if props.actuator2_name else f"{j2_name}_motor"
-
-            actuators.append(TransmissionActuator(name=a1_name, hardware_interfaces=[hw_if]))
-            actuators.append(TransmissionActuator(name=a2_name, hardware_interfaces=[hw_if]))
-
-    if not joints:
-        return None
-
-    return Transmission(name=trans_name, type=trans_type, joints=joints, actuators=actuators)
-
-
 def _categorize_scene_objects(
     scene: Any,
 ) -> tuple[
@@ -912,31 +794,27 @@ class SceneToRobotTranslator:
             )
 
     def _translate_transmissions(self, transmission_objects: list[Any]) -> None:
+        """Translate transmissions using specialized TransmissionTranslator."""
+
+        transmission_translator = TransmissionTranslator()
         for obj in transmission_objects:
-            try:
-                transmission = blender_transmission_to_core(obj)
-                if transmission:
-                    self.builder.robot.add_transmission(transmission)
-            except Exception as e:
-                self.validation_result.add_error(
-                    title=f"Transmission translation failed: {obj.name}",
-                    message=str(e),
-                    code=ValidationErrorCode.INVALID_VALUE,
-                    affected_objects=[obj.name],
-                )
+            transmission_translator.translate(
+                obj=obj,
+                builder=self.builder,
+                context=self.context,
+                validation_result=self.validation_result,
+            )
 
     def _translate_ros2_control(self) -> None:
+        """Translate ROS2 Control settings from robot properties."""
         if self.robot_props and getattr(self.robot_props, "use_ros2_control", False):
-            try:
-                ros2_control = blender_ros2_control_to_core(self.robot_props)
-                if ros2_control:
-                    self.builder.robot.add_ros2_control(ros2_control)
-            except Exception as e:
-                self.validation_result.add_error(
-                    title="ROS2 Control translation failed",
-                    message=str(e),
-                    code=ValidationErrorCode.INVALID_VALUE,
-                )
+            translator = Ros2ControlTranslator()
+            translator.translate(
+                obj=self.robot_props,
+                builder=self.builder,
+                context=self.context,
+                validation_result=self.validation_result,
+            )
 
     def _translate_scene_gazebo_plugins(self) -> None:
         """Translate scene-level Gazebo plugins (e.g. ros2_control or custom)."""
@@ -972,17 +850,6 @@ class SceneToRobotTranslator:
 
         self.builder.robot.add_gazebo_element(GazeboElement(plugins=[gazebo_plugin]))
 
-    def _get_geom_suffix(self, child: Any, parent_obj: Any, type_tag: str) -> str:
-        visual_count = sum(1 for c in parent_obj.children if type_tag in c.name)
-        source_name = child.get("source_name", None)
-        if source_name:
-            return f"_{sanitize_name(source_name)}"
-        elif visual_count > 1:
-            # Find index
-            idx = [c for c in parent_obj.children if type_tag in c.name].index(child)
-            return f"_{idx}"
-        return ""
-
 
 def scene_to_robot(
     context: IBlenderContext | bpy.types.Context,
@@ -1000,303 +867,3 @@ def scene_to_robot(
 
     translator = SceneToRobotTranslator(context, meshes_dir, dry_run)
     return translator.translate()
-
-
-def blender_sensor_to_core(obj: Any) -> Sensor | None:
-    """Convert a Blender sensor Empty and its properties to a Core Sensor model.
-
-    This function extracts sensor-specific configuration (Lidar, Camera, IMU)
-    from Blender custom properties and maps them to the structured LinkForge
-    core models for export.
-
-    Args:
-        obj: The Blender Empty object representing the sensor.
-
-    Returns:
-        A Core Sensor model if successful, or None if the object is invalid.
-
-    """
-    if obj is None:
-        return None
-    props = getattr(obj, "linkforge_sensor", None)
-    if not props or not props.is_robot_sensor:
-        return None
-
-    sensor_name = props.sensor_name if props.sensor_name else obj.name
-    sensor_type = SensorType(props.sensor_type.lower())
-    link_obj = props.attached_link
-    link_props = getattr(link_obj, "linkforge", None)
-    link_name = (
-        (link_props.link_name if link_props and link_props.link_name else link_obj.name)
-        if link_obj
-        else ""
-    )
-
-    if not link_name:
-        raise RobotValidationError(
-            ValidationErrorCode.NOT_FOUND,
-            "Sensor is not attached to any link. Please select a parent link.",
-            target="SensorAttachment",
-            value=sensor_name,
-        )
-
-    # Build sensor origin from object transform
-    origin = matrix_to_transform(obj.matrix_world)
-
-    # Type-specific info
-    camera_info = None
-    lidar_info = None
-    imu_info = None
-    gps_info = None
-    contact_info = None
-    force_torque_info = None
-
-    # Noise model
-    noise = None
-    if props.use_noise:
-        noise = SensorNoise(
-            type=props.noise_type,
-            mean=props.noise_mean,
-            stddev=props.noise_stddev,
-        )
-
-    # Camera info
-    if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA):
-        camera_info = CameraInfo(
-            horizontal_fov=props.camera_horizontal_fov,
-            width=props.camera_width,
-            height=props.camera_height,
-            format=props.camera_format,
-            near_clip=props.camera_near_clip,
-            far_clip=props.camera_far_clip,
-            noise=noise,
-        )
-
-    # LIDAR info
-    elif sensor_type == SensorType.LIDAR:
-        lidar_info = LidarInfo(
-            horizontal_samples=props.lidar_horizontal_samples,
-            horizontal_min_angle=props.lidar_horizontal_min_angle,
-            horizontal_max_angle=props.lidar_horizontal_max_angle,
-            vertical_samples=props.lidar_vertical_samples,
-            range_min=props.lidar_range_min,
-            range_max=props.lidar_range_max,
-            noise=noise,
-        )
-
-    # IMU info
-    elif sensor_type == SensorType.IMU:
-        imu_info = IMUInfo(
-            angular_velocity_noise=noise,
-            linear_acceleration_noise=noise,
-        )
-
-    # GPS info
-    elif sensor_type == SensorType.GPS:
-        gps_info = GPSInfo(
-            position_sensing_horizontal_noise=noise,
-            velocity_sensing_horizontal_noise=noise,
-        )
-
-    # Contact info
-    elif sensor_type == SensorType.CONTACT:
-        collision_name = props.contact_collision
-        if not collision_name:
-            # Fallback: try to guess standard name
-            collision_name = f"{link_name}_collision"
-        contact_info = ContactInfo(collision=collision_name, noise=noise)
-
-    # Force/Torque info
-    elif sensor_type == SensorType.FORCE_TORQUE:
-        force_torque_info = ForceTorqueInfo(noise=noise)
-
-    # Gazebo plugin
-    plugin = None
-    if props.use_gazebo_plugin and props.plugin_filename:
-        plugin = GazeboPlugin(
-            name=f"{sensor_name}_plugin",
-            filename=props.plugin_filename,
-        )
-
-    # Topic name
-    topic = props.topic_name if props.topic_name else None
-
-    return Sensor(
-        name=sensor_name,
-        type=sensor_type,
-        link_name=link_name,
-        origin=origin,
-        update_rate=props.update_rate,
-        always_on=props.always_on,
-        visualize=props.visualize,
-        camera_info=camera_info,
-        lidar_info=lidar_info,
-        imu_info=imu_info,
-        gps_info=gps_info,
-        contact_info=contact_info,
-        force_torque_info=force_torque_info,
-        plugin=plugin,
-        topic=topic,
-    )
-
-
-def blender_ros2_control_to_core(props: Any) -> Ros2Control | None:
-    """Convert centralized Blender ros2_control properties to Core model.
-
-    Args:
-        props: RobotPropertyGroup containing ros2_control settings
-
-    Returns:
-        Core Ros2Control model or None
-    """
-    if not props or not props.ros2_control_name:
-        return None
-
-    joints: list[Ros2ControlJoint] = []
-    for item in props.ros2_control_joints:
-        cmd_ifs = []
-        if item.cmd_position:
-            cmd_ifs.append("position")
-        if item.cmd_velocity:
-            cmd_ifs.append("velocity")
-        if item.cmd_effort:
-            cmd_ifs.append("effort")
-
-        state_ifs = []
-        if item.state_position:
-            state_ifs.append("position")
-        if item.state_velocity:
-            state_ifs.append("velocity")
-        if item.state_effort:
-            state_ifs.append("effort")
-
-        # Intelligent defaults: if one side is empty but the other isn't,
-        # apply 'position' as a sensible default to ensure validity.
-        # NOTE: sensor hardware types cannot have command interfaces.
-        if props.ros2_control_type == "sensor":
-            if cmd_ifs:
-                logger.warning(
-                    f"ROS2 Control: Hardware type 'sensor' cannot have command interfaces. "
-                    f"Stripping {cmd_ifs} from joint '{item.name}'."
-                )
-                cmd_ifs = []
-            if not state_ifs:
-                state_ifs.append("position")
-        else:
-            if state_ifs and not cmd_ifs:
-                cmd_ifs.append("position")
-            elif cmd_ifs and not state_ifs:
-                state_ifs.append("position")
-
-        # Extract joint-level parameters
-        parameters = {p.name: p.value for p in item.parameters if p.name}
-
-        # Determine the correct joint name
-        joint_obj = getattr(item, "joint_obj", None)
-        joint_props = getattr(joint_obj, "linkforge_joint", None)
-        joint_name = joint_props.joint_name if joint_props else item.name
-
-        if cmd_ifs or state_ifs:
-            joints.append(
-                Ros2ControlJoint(
-                    name=joint_name,
-                    command_interfaces=cmd_ifs,
-                    state_interfaces=state_ifs,
-                    parameters=parameters,
-                )
-            )
-
-    # ROS 2 Specification: 'actuator' types must have exactly one joint.
-    # Handle gracefully by taking only the first if multiple are configured.
-    if props.ros2_control_type == "actuator" and len(joints) > 1:
-        logger.warning(
-            f"ROS2 Control: Hardware type 'actuator' is limited to exactly one joint by ROS 2 "
-            f"specification. Truncating {len(joints)} joints to only include '{joints[0].name}'."
-        )
-        joints = joints[:1]
-
-    if not joints:
-        return None
-
-    return Ros2Control(
-        name=props.ros2_control_name,
-        type=props.ros2_control_type,
-        hardware_plugin=props.hardware_plugin,
-        joints=joints,
-        parameters={p.name: p.value for p in props.ros2_control_parameters if p.name},
-    )
-
-
-# --- Legacy Wrappers for Test Compatibility ---
-# TODO: Refactor tests to use Translator architecture and remove these.
-
-
-def blender_link_to_core_with_origin(obj: Any, **kwargs: Any) -> Link | None:
-    """Legacy wrapper for Link conversion. Use LinkTranslator instead."""
-    import bpy
-    from linkforge_core.composer import RobotBuilder
-
-    from .context import BlenderContext
-    from .translator import LinkTranslator
-
-    if obj is None:
-        return None
-    context = kwargs.get("context") or BlenderContext(bpy)
-    builder = RobotBuilder("temp")
-    lb = LinkTranslator().translate(obj, builder, context, **kwargs)
-    if lb:
-        lb.commit()
-    props = getattr(obj, "linkforge", None)
-    link_name = props.link_name if props and props.link_name else obj.name
-    return builder.robot.get_link(link_name)
-
-
-def blender_joint_to_core(obj: Any) -> Joint | None:
-    """Legacy wrapper for Joint conversion. Use JointTranslator instead."""
-    import bpy
-    from linkforge_core.composer import RobotBuilder
-
-    from .context import BlenderContext
-    from .translator import JointTranslator
-
-    context = BlenderContext(bpy)
-    builder = RobotBuilder("temp")
-
-    if obj is None:
-        return None
-    props = getattr(obj, "linkforge_joint", None)
-    if not props or not getattr(props, "is_robot_joint", False):
-        return None
-    if not props.child_link:
-        raise RobotValidationError(
-            ValidationErrorCode.NOT_FOUND,
-            "Joint has no child link. Please select a child link in the Joint properties.",
-            target="JointBuilder",
-        )
-
-    # We need the child link to be in the builder to create the joint
-    child_obj = props.child_link
-    child_props = getattr(child_obj, "linkforge", None)
-    child_name = child_props.link_name if child_props and child_props.link_name else child_obj.name
-
-    # Also need the parent link
-    parent_obj = props.parent_link
-    if not parent_obj:
-        raise RobotValidationError(
-            ValidationErrorCode.NOT_FOUND,
-            "Joint has no parent link. Please select a parent link in the Joint properties.",
-            target="JointBuilder",
-        )
-
-    parent_props = getattr(parent_obj, "linkforge", None)
-    parent_name = (
-        parent_props.link_name if parent_props and parent_props.link_name else parent_obj.name
-    )
-    builder.link(parent_name).root()  # Add as root for now
-
-    lb = builder.link(child_name, parent=parent_name)
-    JointTranslator().translate(obj, builder, context, lb=lb)
-    lb.commit()
-
-    joint_name = props.joint_name if props and props.joint_name else obj.name
-    return builder.robot.get_joint(joint_name)

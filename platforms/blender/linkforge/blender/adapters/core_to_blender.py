@@ -584,7 +584,7 @@ def create_link_object(
     # Set physics properties on link object (friction, stiffness, damping)
     if link.physics and hasattr(link_obj, "linkforge"):
         props = link_obj.linkforge
-        props.mu1 = link.physics.mu
+        props.mu = link.physics.mu
         props.kp = link.physics.kp
         props.kd = link.physics.kd
         # Ensure simulation properties are enabled in the UI

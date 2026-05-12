@@ -476,14 +476,14 @@ class LinkBuilder:
         return self
 
     def physics(self, **kwargs: Any) -> LinkBuilder:
-        """Set simulation and contact physics properties for this link.
+        """Set surface and contact physics properties for this link.
 
-        Supports both typed LinkPhysics fields and raw gazebo_params.
+        Supports both typed LinkPhysics fields and raw engine-specific parameters.
 
         Common arguments:
             self_collide (bool): Enable self-collision.
             gravity (bool): Enable gravity.
-            mu1, mu2 (float): Friction coefficients.
+            mu, mu2 (float): Friction coefficients.
             kp, kd (float): Contact stiffness and damping.
 
         Returns:
@@ -491,27 +491,18 @@ class LinkBuilder:
         """
         self._check_not_committed()
 
-        # Update both typed model and raw gazebo_params for backward compatibility
         phys_fields = {f.name for f in LinkPhysics.__dataclass_fields__.values()}
-
-        # Mapping for Blender/ODE specific names to Core Physics fields
-        mapped_kwargs = kwargs.copy()
-        if "mu1" in kwargs and "mu" not in kwargs:
-            mapped_kwargs["mu"] = kwargs["mu1"]
-
-        phys_updates = {k: v for k, v in mapped_kwargs.items() if k in phys_fields}
+        phys_updates = {k: v for k, v in kwargs.items() if k in phys_fields}
 
         if phys_updates:
             self._link.physics = replace(self._link.physics, **phys_updates)
 
-        # Always update gazebo_params so generators/tests relying on it continue to work
-        self._link.gazebo_params.update(kwargs)
+        # Store non-physics fields in gazebo_params
+        remaining_kwargs = {k: v for k, v in kwargs.items() if k not in phys_fields}
+        if remaining_kwargs:
+            self._link.gazebo_params.update(remaining_kwargs)
 
         return self
-
-    def simulation(self, **kwargs: Any) -> LinkBuilder:
-        """Deprecated: Use physics() instead."""
-        return self.physics(**kwargs)
 
     def _configure_joint(
         self,
@@ -902,8 +893,8 @@ class LinkBuilder:
         l_state = self._link
         link = Link(
             name=self._link_name,
-            initial_visuals=l_state.visuals,
-            initial_collisions=l_state.collisions,
+            visuals=l_state.visuals,
+            collisions=l_state.collisions,
             inertial=inertial,
             physics=l_state.physics,
         )

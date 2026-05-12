@@ -20,7 +20,7 @@ from bpy.types import Context, PropertyGroup
 from linkforge_core.constants import (
     DEFAULT_CONTACT_KD,
     DEFAULT_CONTACT_KP,
-    DEFAULT_FRICTION_MU1,
+    DEFAULT_FRICTION_MU,
     DEFAULT_FRICTION_MU2,
     DEFAULT_GRAVITY,
     DEFAULT_SELF_COLLIDE,
@@ -332,10 +332,10 @@ class LinkPropertyGroup(PropertyGroup):
         default=DEFAULT_GRAVITY,
     )
 
-    mu1: FloatProperty(  # type: ignore
-        name="Friction mu1",
+    mu: FloatProperty(  # type: ignore
+        name="Friction mu",
         description="Static friction coefficient (Coulomb)",
-        default=DEFAULT_FRICTION_MU1,
+        default=DEFAULT_FRICTION_MU,
         min=0.0,
     )
 

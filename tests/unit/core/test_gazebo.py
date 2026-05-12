@@ -69,19 +69,9 @@ class TestGazeboElement:
         element = GazeboElement(
             reference="base_link",
             material="Gazebo/Red",
-            self_collide=True,
-            mu1=0.8,
-            mu2=0.8,
-            kp=1000.0,
-            kd=100.0,
         )
         assert element.reference == "base_link"
         assert element.material == "Gazebo/Red"
-        assert element.self_collide is True
-        assert element.mu1 == pytest.approx(0.8)
-        assert element.mu2 == pytest.approx(0.8)
-        assert element.kp == pytest.approx(1000.0)
-        assert element.kd == pytest.approx(100.0)
 
     def test_joint_element(self) -> None:
         """Test creating a joint-level Gazebo element."""

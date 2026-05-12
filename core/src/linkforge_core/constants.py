@@ -6,7 +6,7 @@ from __future__ import annotations
 # ----------------------------
 
 # Default static friction coefficient (Coulomb)
-DEFAULT_FRICTION_MU1 = 1.0
+DEFAULT_FRICTION_MU = 1.0
 
 # Default dynamic friction coefficient (Coulomb)
 DEFAULT_FRICTION_MU2 = 1.0

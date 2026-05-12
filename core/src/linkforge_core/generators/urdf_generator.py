@@ -13,6 +13,7 @@ __all__ = [
 ]
 
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +23,7 @@ from ..logging_config import get_logger
 from ..models.gazebo import GazeboElement, GazeboPlugin
 from ..models.geometry import Transform
 from ..models.joint import Joint, JointType
-from ..models.link import Collision, Link, Visual
+from ..models.link import Collision, Link, LinkPhysics, Visual
 from ..models.material import Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2Control
@@ -773,19 +774,13 @@ class URDFGenerator(RobotXMLGenerator):
             xml_add_text(gz_elem, "material", gazebo_elem.material)
 
         # Add boolean properties
-        self._add_optional_bool_element(gz_elem, "selfCollide", gazebo_elem.self_collide)
         self._add_optional_bool_element(gz_elem, "static", gazebo_elem.static)
-        self._add_optional_bool_element(gz_elem, "gravity", gazebo_elem.gravity)
         self._add_optional_bool_element(gz_elem, "provideFeedback", gazebo_elem.provide_feedback)
         self._add_optional_bool_element(
             gz_elem, "implicitSpringDamper", gazebo_elem.implicit_spring_damper
         )
 
         # Add numeric properties
-        self._add_optional_numeric_element(gz_elem, "mu1", gazebo_elem.mu1)
-        self._add_optional_numeric_element(gz_elem, "mu2", gazebo_elem.mu2)
-        self._add_optional_numeric_element(gz_elem, "kp", gazebo_elem.kp)
-        self._add_optional_numeric_element(gz_elem, "kd", gazebo_elem.kd)
         self._add_optional_numeric_element(gz_elem, "stopCfm", gazebo_elem.stop_cfm)
         self._add_optional_numeric_element(gz_elem, "stopErp", gazebo_elem.stop_erp)
 
@@ -885,12 +880,75 @@ class URDFGenerator(RobotXMLGenerator):
             parent: Parent XML element (robot)
             robot: Robot model
         """
-        if robot.gazebo_elements:
+        if robot.links or robot.gazebo_elements:
             parent.append(ET.Comment(" Gazebo "))
-        # Sort gazebo elements by reference for deterministic output
-        # Empty reference (global) comes first
-        for gazebo_elem in sorted(robot.gazebo_elements, key=lambda g: g.reference or ""):
-            self._add_gazebo_element(parent, gazebo_elem)
+
+        grouped_elements: dict[str | None, list[GazeboElement]] = defaultdict(list)
+        for gz in robot.gazebo_elements:
+            grouped_elements[gz.reference].append(gz)
+
+        # 1. Handle Link-level Gazebo tags (Physics + Extensions)
+        for link in sorted(robot.links, key=lambda lnk: lnk.name):
+            # Create a single tag for this link
+            gz_tag = ET.SubElement(parent, "gazebo", reference=link.name)
+
+            # Add Physics (Universal Truth)
+            self._fill_link_physics(gz_tag, link.physics)
+
+            # Add any explicit Gazebo elements for this link
+            if link.name in grouped_elements:
+                for elem in grouped_elements[link.name]:
+                    self._fill_gazebo_element(gz_tag, elem)
+                # Mark as handled
+                del grouped_elements[link.name]
+
+        # 2. Handle Robot-level (reference=None) and other Gazebo tags
+        # Sort by reference for deterministic output
+        for ref in sorted(grouped_elements.keys(), key=lambda r: r or ""):
+            attrib = {"reference": ref} if ref else {}
+            gz_tag = ET.SubElement(parent, "gazebo", attrib)
+            for elem in grouped_elements[ref]:
+                self._fill_gazebo_element(gz_tag, elem)
+
+    def _fill_link_physics(self, gz_elem: ET.Element, phys: LinkPhysics) -> None:
+        """Fill an existing gazebo element with physics properties."""
+        # Boolean properties
+        ET.SubElement(gz_elem, "selfCollide").text = "true" if phys.self_collide else "false"
+        ET.SubElement(gz_elem, "gravity").text = "true" if phys.gravity else "false"
+
+        # Friction parameters
+        ET.SubElement(gz_elem, "mu1").text = format_float(phys.mu)
+        ET.SubElement(gz_elem, "mu2").text = format_float(phys.mu2)
+
+        # Contact parameters
+        ET.SubElement(gz_elem, "kp").text = format_float(phys.kp)
+        ET.SubElement(gz_elem, "kd").text = format_float(phys.kd)
+
+    def _fill_gazebo_element(self, gz_elem: ET.Element, gazebo_elem: GazeboElement) -> None:
+        """Fill an existing gazebo element with properties from a GazeboElement model."""
+        # Add material if specified
+        if gazebo_elem.material is not None:
+            xml_add_text(gz_elem, "material", gazebo_elem.material)
+
+        # Add boolean properties
+        self._add_optional_bool_element(gz_elem, "static", gazebo_elem.static)
+        self._add_optional_bool_element(gz_elem, "provideFeedback", gazebo_elem.provide_feedback)
+        self._add_optional_bool_element(
+            gz_elem, "implicitSpringDamper", gazebo_elem.implicit_spring_damper
+        )
+
+        # Add numeric properties
+        self._add_optional_numeric_element(gz_elem, "stopCfm", gazebo_elem.stop_cfm)
+        self._add_optional_numeric_element(gz_elem, "stopErp", gazebo_elem.stop_erp)
+
+        # Add custom properties (sort by key for deterministic output)
+        for key in sorted(gazebo_elem.properties.keys()):
+            prop_elem = ET.SubElement(gz_elem, key)
+            prop_elem.text = gazebo_elem.properties[key]
+
+        # Add plugins (sort by name for deterministic output)
+        for plugin in sorted(gazebo_elem.plugins, key=lambda p: p.name):
+            self._add_gazebo_plugin_element(gz_elem, plugin)
 
     def add_sensors(self, parent: ET.Element, robot: Robot) -> None:
         """Add Sensors section to parent element.

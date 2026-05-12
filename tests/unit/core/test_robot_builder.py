@@ -450,7 +450,7 @@ class TestRobotBuilder:
             .dynamics(damping=0.5, friction=0.1)
             .safety(soft_lower=-0.9, k_velocity=10.0)
             .calibration(rising=0.1)
-            .simulation(self_collide=True)
+            .physics(self_collide=True)
             .commit()
         )
 
@@ -464,10 +464,9 @@ class TestRobotBuilder:
         assert j.calibration is not None
         assert j.calibration.rising == 0.1
 
-        assert any(
-            ge.reference == "l1_aj" and ge.self_collide is True
-            for ge in builder.robot.gazebo_elements
-        )
+        link = builder.robot.link("l1_aj")
+        assert link.physics.self_collide is True
+        assert link.physics.gravity is True  # Default
 
     def test_export_validation(self) -> None:
         """Test validation during export to ensures integrity of generated URDF/SRDF."""

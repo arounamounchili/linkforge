@@ -286,7 +286,7 @@ class LINKFORGE_PT_links(Panel):
 
             col = sim_box.column(align=True)
             col.label(text="Friction:")
-            col.prop(props, "mu1", text="mu1 (Static)")
+            col.prop(props, "mu", text="mu (Static)")
             col.prop(props, "mu2", text="mu2 (Dynamic)")
 
             col = sim_box.column(align=True)

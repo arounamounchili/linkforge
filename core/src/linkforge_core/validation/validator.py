@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..exceptions import RobotValidationError
 from .checks import (
     DuplicateNameCheck,
     GeometryCheck,
@@ -82,10 +83,27 @@ class RobotValidator:
         Returns:
             ValidationResult containing all errors and warnings.
         """
-        # Ensure internal indices are fresh before validation
-        robot._reindex()
-
         result = ValidationResult(robot_name=robot.name)
+
+        # Ensure internal indices are fresh before validation
+        try:
+            robot._reindex()
+        except RobotValidationError as e:
+            # Report indexing errors (like duplicates) as validation errors
+            result.add_error(
+                title=str(e),
+                message=str(e),
+                code=e.code,
+                affected_objects=[str(e.value)] if e.value is not None else [],
+            )
+
         for check in self._checks:
-            check.run(robot, result)
+            try:
+                check.run(robot, result)
+            except Exception as e:
+                result.add_error(
+                    title="Check failure",
+                    message=f"Validation check {check.__class__.__name__} failed: {str(e)}",
+                )
+
         return result

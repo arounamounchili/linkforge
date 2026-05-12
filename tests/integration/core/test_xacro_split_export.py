@@ -22,9 +22,7 @@ def test_split_files_and_reimport_simulated() -> None:
         joints = []
         for i in range(2):
             name = f"wheel_{i}"
-            link = Link(
-                name=name, initial_visuals=[Visual(geometry=wheel_geom, material=wheel_mat)]
-            )
+            link = Link(name=name, visuals=[Visual(geometry=wheel_geom, material=wheel_mat)])
             links.append(link)
             joint = Joint(
                 name=f"{name}_joint",
@@ -36,7 +34,7 @@ def test_split_files_and_reimport_simulated() -> None:
             )
             joints.append(joint)
 
-        robot = Robot(name="test_bot", initial_links=links, initial_joints=joints)
+        robot = Robot(name="test_bot", links=links, joints=joints)
 
         # Export with ALL features enabled
         gen = XACROGenerator(
