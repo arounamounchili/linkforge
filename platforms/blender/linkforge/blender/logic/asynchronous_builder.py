@@ -54,6 +54,7 @@ class AsynchronousRobotBuilder:
 
         self.is_finished = False
         self.error: str | None = None
+        self.active_scene: bpy.types.Scene | None = None
 
     def _prepare_tasks(self) -> None:
         """Build the list of tasks to be performed."""
@@ -91,12 +92,12 @@ class AsynchronousRobotBuilder:
         """Register the timer and start processing."""
         logger.info(f"Starting asynchronous import of '{self.robot.name}'...")
 
-        # Setup background state
-        scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
-        if scene and hasattr(scene, "linkforge"):
-            scene.linkforge.is_importing = True
-            scene.linkforge.abort_import = False
-            scene.linkforge.import_status = "Starting..."
+        # Setup background state (store scene locally to avoid context sensitivity)
+        self.active_scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
+        if self.active_scene and hasattr(self.active_scene, "linkforge"):
+            self.active_scene.linkforge.is_importing = True
+            self.active_scene.linkforge.abort_import = False
+            self.active_scene.linkforge.import_status = "Starting..."
 
         # Setup progress bar
         if self.context.window_manager:
@@ -107,8 +108,14 @@ class AsynchronousRobotBuilder:
 
     def process_next_chunk(self) -> float | None:
         """Process a chunk of tasks. Return interval or None to stop."""
-        scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
-        # Check for cancellation
+        # Use stored active_scene if start() was called, otherwise fallback to context (for unit tests)
+        scene = (
+            self.active_scene
+            or self.context.scene
+            or (bpy.data.scenes[0] if bpy.data.scenes else None)
+        )
+
+        # Use the stored scene to check for cancellation, immune to context changes
         if scene and hasattr(scene, "linkforge") and scene.linkforge.abort_import:
             logger.warning("Import aborted by user.")
             self.error = "Import cancelled by user."
