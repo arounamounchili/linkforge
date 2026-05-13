@@ -33,9 +33,11 @@ The platform-independent heart of the project. **Strictly Zero-Dependency.**
 graph TB
     subgraph "Core Layer"
         Models[Data Models<br/>Robot/Link/Joint]
+        Composer[Composer API<br/>RobotBuilder/Assembly]
         Physics[Physics Engine<br/>Inertia/Validation]
         IO[Parsers & Generators<br/>URDF/XACRO/SRDF]
     end
+    Composer --> Models
     IO --> Models
     Physics --> Models
 ```
@@ -83,5 +85,5 @@ sequenceDiagram
 
 ---
 
-**Last Updated:** 2026-04-15
-**Version:** 1.3.0
+**Last Updated:** 2026-05-13
+**Version:** 1.4.0

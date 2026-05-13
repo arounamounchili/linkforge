@@ -14,7 +14,8 @@ from __future__ import annotations
 
 __version__ = "1.3.0"  # x-release-please-version
 
-from . import generators, models, parsers, physics
+from . import composer, generators, models, parsers, physics, validation
+from .composer import RobotBuilder
 from .exceptions import (
     LinkForgeError,
     RobotGeneratorError,
@@ -24,11 +25,16 @@ from .exceptions import (
 )
 from .generators import URDFGenerator, XACROGenerator
 from .utils.math_utils import format_float, format_vector
+from .validation import RobotValidator
 
 __all__ = [
     "models",
     "physics",
     "parsers",
+    "composer",
+    "validation",
+    "RobotBuilder",
+    "RobotValidator",
     "URDFGenerator",
     "XACROGenerator",
     "format_float",

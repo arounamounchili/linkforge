@@ -118,7 +118,6 @@ If you want to contribute to LinkForge or use the latest source code:
 
 Complete examples in `examples/` directory:
 
-- `roundtrip_test_robot.urdf`: A comprehensive robot containing ALL 6 URDF joint types (fixed, revolute, continuous, prismatic, planar, floating), plus sensors. Perfect for testing full roundtrip capabilities.
 - `mobile_robot.urdf`: A simple mobile robot base.
 - `diff_drive_robot.urdf`: A differential drive robot with wheels.
 - `quadruped_robot.urdf`: A 4-legged robot demonstrating complex kinematic chains and multi-link assemblies.
@@ -136,7 +135,6 @@ Complete examples in `examples/` directory:
 ### Setup
 ```bash
 # 1. Install 'just' command runner (see Contributing Guide for OS-specific instructions)
-# 1. Install 'just' command runner
 # 2. Clone repository
 git clone https://github.com/arounamounchili/linkforge.git
 cd linkforge
@@ -157,7 +155,6 @@ For complete instructions on testing, linting, and building, see our [Contributi
 
 ## 🗺️ Roadmap
 
-
 ### Phase 0: The Foundation (Completed)
 - [x] **v1.0.0**: Core URDF/XACRO Export, Sensors, & `ros2_control` basics.
 - [x] **v1.1.0**: Enhanced Documentation, Workflow Polish, & Bug Fixes.
@@ -165,7 +162,7 @@ For complete instructions on testing, linting, and building, see our [Contributi
 
 ### Phase 1: The Professional Bridge (Current)
 - [x] **v1.3.0**: Performance & Control (NumPy Acceleration, Depsgraph, & ROS2 Control).
-- [/] **v1.4.0**: Modular Synthesis (Composer API, Namespaced Merging, & SRDF Generation).
+- [x] **v1.4.0**: Modular Synthesis (Composer API, Namespaced Merging, & SRDF Generation).
 - [ ] **v1.5.0**: Visual SRDF Editor in Blender & Semantic Assistant.
 - [ ] **v1.6.0**: LinkForge CLI & GitHub Actions for automated validation.
 

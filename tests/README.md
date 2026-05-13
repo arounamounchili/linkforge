@@ -8,26 +8,31 @@ The test suite separates pure logic from platform-specific behavior:
 
 ### 1. `unit/`
 Isolated tests for individual components avoiding external dependencies.
-- **`unit/core/`**: Tests for robot models, parsers, and physics utilities. Runs in standard Python.
-- **`unit/platforms/blender/`**: Tests for Blender utilities (scene helpers, visualization, operators). Requires a Blender runtime.
+- **`unit/core/`**: Tests for robot models, parsers, and physics utilities.
+- **`unit/platforms/blender/`**: Tests for Blender utilities (scene helpers, visualization).
 
 ### 2. `integration/`
 End-to-end tests verifying the interaction between multiple components.
-- **`integration/core/`**: Verifies complex URDF parsing, Xacro expansion scenarios, and validation features like Inertia calculations.
-- **`integration/platforms/blender/`**: Verifies the complete roundtrip process (Import → Scene Setup → Export).
+- **`integration/core/`**: Verifies complex URDF/SRDF parsing and validation.
+- **`integration/platforms/blender/`**: Verifies the complete roundtrip process.
+
+### 3. Infrastructure
+- `blender_launcher.py` (Root): CLI tool to run tests inside a Blender environment.
+- `mock_bpy_env.py`: Comprehensive mock of the Blender API for fast logic testing.
+- `conftest.py`, `core_test_utils.py`, `blender_test_utils.py`: Shared fixtures and assertions.
 
 ## How to Run Tests
 
 ### Standard Python Tests
 To run core unit tests and core integration tests:
 ```bash
-pytest tests/unit/core tests/integration/core
+just test-core
 ```
 
 ### Blender-Dependent Tests
 To run tests that require the Blender Python API (`bpy`), use the launcher from the project root:
 ```bash
-python blender_launcher.py
+just test-blender
 ```
 *Note: Ensure your `BLENDER_PATH` environment variable is set or Blender is installed at its default location.*
 

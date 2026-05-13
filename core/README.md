@@ -15,7 +15,7 @@ It provides robust, dependency-minimized parsing and generation of robot descrip
   - `physics/`: Math and kinematics utilities for inertia and joint dynamics.
   - `validation/`: Robust schema validation for robot data.
   - `utils/`: Common helpers and mathematical operations.
-  - `base.py`, `exceptions.py`, `logging_config.py`: Core interfaces, error handling, and logging.
+  - `base.py`, `constants.py`, `exceptions.py`, `logging_config.py`: Core interfaces, shared constants, error handling, and logging.
 
 ## Development
 
@@ -23,8 +23,8 @@ The core library is built and managed using [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
 # Install dependencies
-uv sync
+just install
 
 # Run core tests (execute from the project root directory)
-uv run pytest tests/unit/core
+just test-core
 ```
