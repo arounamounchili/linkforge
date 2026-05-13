@@ -30,11 +30,26 @@ just test-core
 ```
 
 ### Blender-Dependent Tests
-To run tests that require the Blender Python API (`bpy`), use the launcher from the project root:
+#### A. Fast Logic Testing (No Blender Required)
+Tests the Blender integration logic using a comprehensive mock environment. This is very fast and runs in standard Python.
+```bash
+just test-blender-logic
+```
+
+#### B. Full Integration Testing (Requires Real Blender)
+Runs tests inside a real Blender instance to verify UI, visualization, and roundtrip fidelity.
 ```bash
 just test-blender
 ```
 *Note: Ensure your `BLENDER_PATH` environment variable is set or Blender is installed at its default location.*
+
+## 📊 Test Coverage
+
+To run the entire suite and generate a combined coverage report (HTML):
+```bash
+just coverage
+```
+The report will be available at `htmlcov/index.html`.
 
 ## Best Practices for Contributors
 
