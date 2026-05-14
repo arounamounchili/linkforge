@@ -15,7 +15,7 @@ from linkforge.blender.adapters.blender_to_core import (
     matrix_to_transform,
 )
 
-from tests.mock_bpy_env import MockMatrix, MockMesh, MockObject, MockVector
+from tests.mock_bpy_env import MockEuler, MockMatrix, MockMesh, MockObject, MockVector
 
 
 def test_matrix_to_transform_mocked() -> None:
@@ -28,7 +28,7 @@ def test_matrix_to_transform_mocked() -> None:
     mock_matrix.data[0][3] = 1.0
     mock_matrix.data[1][3] = 2.0
     mock_matrix.data[2][3] = 3.0
-    mock_matrix._euler_hint = MockVector(0.1, 0.2, 0.3)
+    mock_matrix._euler_hint = MockEuler(0.1, 0.2, 0.3)
 
     # Call adapter
     import mathutils
@@ -55,13 +55,13 @@ def test_detect_primitive_type_box_mocked() -> None:
     # Mock mesh data using high-fidelity MockMesh to satisfy isinstance checks
     mock_mesh = MockMesh(name="BoxMesh")
     mock_mesh.vertices.clear()
-    mock_mesh.vertices.extend([MagicMock()] * 8)
+    mock_mesh.vertices.extend([MagicMock() for _ in range(8)])
 
     # 6 faces, each with 4 vertices (quads)
-    mock_poly = MagicMock()
-    mock_poly.vertices = [0, 1, 2, 3]
-    mock_mesh.polygons.clear()
-    mock_mesh.polygons.extend([mock_poly] * 6)
+    for _ in range(6):
+        mock_poly = MagicMock()
+        mock_poly.vertices = [0, 1, 2, 3]
+        mock_mesh.polygons.append(mock_poly)
 
     mock_obj.data = mock_mesh
 
@@ -86,9 +86,9 @@ def test_detect_primitive_type_sphere_mocked() -> None:
     # UV Sphere default subdivision (e.g. 482 verts)
     mock_mesh = MockMesh(name="SphereMesh")
     mock_mesh.vertices.clear()
-    mock_mesh.vertices.extend([MagicMock()] * 482)
+    mock_mesh.vertices.extend([MagicMock() for _ in range(482)])
     mock_mesh.polygons.clear()
-    mock_mesh.polygons.extend([MagicMock()] * 480)
+    mock_mesh.polygons.extend([MagicMock() for _ in range(480)])
     mock_obj.data = mock_mesh
 
     # Call logic

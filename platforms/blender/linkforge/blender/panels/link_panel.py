@@ -8,6 +8,7 @@ import typing
 import bpy
 from bpy.types import Context, Panel
 
+from ..utils.property_helpers import get_link_props
 from ..utils.scene_utils import get_robot_statistics
 
 
@@ -45,28 +46,25 @@ class LINKFORGE_PT_links(Panel):
             )
             return
 
-        props = getattr(obj, "linkforge")
+        props = get_link_props(obj)
 
         # Check if selected object is a visual/collision child of a link
         # If so, show parent link properties instead
         if (
             obj
             and obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and getattr(obj.parent, "linkforge").is_robot_link
+            and (lp_p := get_link_props(obj.parent))
+            and lp_p.is_robot_link
             and props
             and not props.is_robot_link
             and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
         ):
             # Switch to parent for property display (visual/collision elements only)
             obj = obj.parent
-            props = getattr(obj, "linkforge")
-
-        # Check if selected object is already a link (edit mode vs create mode)
-        is_link = props.is_robot_link if props else False
+            props = get_link_props(obj)
 
         # Only show Create button when NOT editing a link
-        if not is_link:
+        if not props or not props.is_robot_link:
             box = layout.box()
             box.label(text="Link Creation", icon="PLUS")
             col = box.column(align=True)
@@ -76,7 +74,7 @@ class LINKFORGE_PT_links(Panel):
             col.operator("linkforge.add_empty_link", icon="EMPTY_DATA", text="Add Empty Link Frame")
 
         # Show link properties only if a link is selected (edit mode)
-        if not is_link:
+        if not props or not props.is_robot_link:
             return
 
         # IS A LINK - Show link properties

@@ -11,6 +11,8 @@ import bpy
 from bpy.props import BoolProperty, FloatProperty, StringProperty
 from bpy.types import AddonPreferences, Context
 
+from .utils.property_helpers import get_joint_props, get_link_props, get_sensor_props
+
 
 def update_joint_axes_visibility(_self: LinkForgePreferences, _context: Context) -> None:
     """Callback when show_joint_axes changes - manage draw handler and force viewport redraw."""
@@ -30,11 +32,7 @@ def update_joint_empty_size(self: LinkForgePreferences, context: Context) -> Non
     # Update all existing joint empties in the scene
     if context.scene:
         for obj in context.scene.objects:
-            if (
-                obj.type == "EMPTY"
-                and hasattr(obj, "linkforge_joint")
-                and obj.linkforge_joint.is_robot_joint
-            ):
+            if obj.type == "EMPTY" and (props := get_joint_props(obj)) and props.is_robot_joint:
                 obj.empty_display_size = self.joint_empty_size
 
     # Force viewport redraw
@@ -54,11 +52,7 @@ def update_sensor_empty_size(self: LinkForgePreferences, context: Context) -> No
     # Update all existing sensor empties in the scene
     if context.scene:
         for obj in context.scene.objects:
-            if (
-                obj.type == "EMPTY"
-                and hasattr(obj, "linkforge_sensor")
-                and obj.linkforge_sensor.is_robot_sensor
-            ):
+            if obj.type == "EMPTY" and (props := get_sensor_props(obj)) and props.is_robot_sensor:
                 obj.empty_display_size = new_size
 
     # Force viewport redraw
@@ -78,7 +72,7 @@ def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None
     # Update all existing link empties in the scene
     if context.scene:
         for obj in context.scene.objects:
-            if obj.type == "EMPTY" and hasattr(obj, "linkforge") and obj.linkforge.is_robot_link:
+            if obj.type == "EMPTY" and (props := get_link_props(obj)) and props.is_robot_link:
                 obj.empty_display_size = new_size
 
     # Force viewport redraw

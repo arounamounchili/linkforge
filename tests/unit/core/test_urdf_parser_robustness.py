@@ -327,7 +327,7 @@ def test_urdf_parser_gazebo_non_sensor_robustness() -> None:
     assert gz.plugins[0].name == "test_plugin"
     assert gz.plugins[0].filename == "libtest.so"
 
-    link = robot.get_link("link_a")
+    link = robot.link("link_a")
     assert link.physics.mu == 0.2
     assert link.physics.mu2 == 0.2
     assert link.physics.kp == 1000.0

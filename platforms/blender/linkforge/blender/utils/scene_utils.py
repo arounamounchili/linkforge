@@ -11,9 +11,15 @@ from typing import Any
 import bpy
 
 from ..adapters.blender_to_core import detect_primitive_type
+from ..utils.property_helpers import (
+    get_joint_props,
+    get_link_props,
+    get_sensor_props,
+    get_transmission_props,
+)
 
 if typing.TYPE_CHECKING:
-    from ..properties.joint_props import JointPropertyGroup
+    pass
 
 
 def is_robot_link(obj: Any) -> bool:
@@ -25,7 +31,8 @@ def is_robot_link(obj: Any) -> bool:
     Returns:
         True if object has linkforge properties and is marked as robot_link
     """
-    return hasattr(obj, "linkforge") and obj.linkforge.is_robot_link
+    props = get_link_props(obj)
+    return bool(props and props.is_robot_link)
 
 
 def is_robot_joint(obj: Any) -> bool:
@@ -39,8 +46,8 @@ def is_robot_joint(obj: Any) -> bool:
     """
     return (
         getattr(obj, "type", None) == "EMPTY"
-        and hasattr(obj, "linkforge_joint")
-        and obj.linkforge_joint.is_robot_joint
+        and (props := get_joint_props(obj)) is not None
+        and props.is_robot_joint
     )
 
 
@@ -55,8 +62,8 @@ def is_robot_sensor(obj: Any) -> bool:
     """
     return (
         getattr(obj, "type", None) == "EMPTY"
-        and hasattr(obj, "linkforge_sensor")
-        and obj.linkforge_sensor.is_robot_sensor
+        and (props := get_sensor_props(obj)) is not None
+        and props.is_robot_sensor
     )
 
 
@@ -71,8 +78,8 @@ def is_robot_transmission(obj: Any) -> bool:
     """
     return (
         getattr(obj, "type", None) == "EMPTY"
-        and hasattr(obj, "linkforge_transmission")
-        and obj.linkforge_transmission.is_robot_transmission
+        and (props := get_transmission_props(obj)) is not None
+        and props.is_robot_transmission
     )
 
 
@@ -212,16 +219,16 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
         )
 
     for obj in scene.objects:
-        if is_robot_link(obj):
-            link_name = obj.linkforge.link_name if obj.linkforge.link_name else obj.name
+        if (lp := get_link_props(obj)) and lp.is_robot_link:
+            link_name = lp.link_name if lp.link_name else obj.name
             link_objects[link_name] = obj
 
             # NOTE: invalid mass values (<= 0) are ignored
-            if obj.linkforge.mass > 0:
-                total_mass += obj.linkforge.mass
+            if lp.mass > 0:
+                total_mass += lp.mass
 
             # Track manual inertia gizmos
-            if not obj.linkforge.use_auto_inertia:
+            if not lp.use_auto_inertia:
                 manual_inertia_objects.append(obj)
 
             # Heuristic Geometry Detection (moved from link_panel.py)
@@ -259,22 +266,23 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
         if is_robot_joint(obj):
             joint_objects.append(obj)
 
-            joint_type = obj.linkforge_joint.joint_type
-            total_dof += JOINT_DOF_MAP.get(joint_type, 0)
+            if jp := get_joint_props(obj):
+                joint_type = jp.joint_type
+                total_dof += JOINT_DOF_MAP.get(joint_type, 0)
 
-            child = obj.linkforge_joint.child_link
-            parent = obj.linkforge_joint.parent_link
+                child = jp.child_link
+                parent = jp.parent_link
 
-            if child and hasattr(child, "linkforge"):
-                child_name = child.linkforge.link_name if child.linkforge.link_name else child.name
-                parent_name = ""
-                if parent and hasattr(parent, "linkforge"):
-                    parent_name = (
-                        parent.linkforge.link_name if parent.linkforge.link_name else parent.name
-                    )
+                if child and (props_child := get_link_props(child)):
+                    child_name = props_child.link_name if props_child.link_name else child.name
+                    parent_name = ""
+                    if parent and (props_parent := get_link_props(parent)):
+                        parent_name = (
+                            props_parent.link_name if props_parent.link_name else parent.name
+                        )
 
-                if child_name and parent_name:
-                    joints_map[child_name] = (parent_name, obj)
+                    if child_name and parent_name:
+                        joints_map[child_name] = (parent_name, obj)
 
         if is_robot_sensor(obj):
             sensor_objects.append(obj)
@@ -331,9 +339,9 @@ def build_tree_from_stats(
     for child_name, (parent_name, joint_obj) in joints_map.items():
         if parent_name in tree:
             try:
-                props = typing.cast("JointPropertyGroup", joint_obj.linkforge_joint)
-                tree[parent_name].append((child_name, props.joint_name, props.joint_type))
-                joints[(parent_name, child_name)] = joint_obj
+                if props := get_joint_props(joint_obj):
+                    tree[parent_name].append((child_name, props.joint_name, props.joint_type))
+                    joints[(parent_name, child_name)] = joint_obj
             except (ReferenceError, AttributeError):
                 continue
 

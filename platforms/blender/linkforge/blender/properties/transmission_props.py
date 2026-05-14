@@ -11,7 +11,7 @@ from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty
 from bpy.types import Context, PropertyGroup
 from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 
-from ..utils.property_helpers import find_property_owner
+from ..utils.property_helpers import find_property_owner, get_joint_props
 from ..utils.scene_utils import clear_stats_cache
 
 
@@ -106,7 +106,7 @@ def poll_robot_joint(_self: TransmissionPropertyGroup, obj: bpy.types.Object) ->
     Returns:
         True if the object is a valid robot joint.
     """
-    return bool(obj and hasattr(obj, "linkforge_joint") and obj.linkforge_joint.is_robot_joint)
+    return bool(obj and (props := get_joint_props(obj)) and props.is_robot_joint)
 
 
 class TransmissionPropertyGroup(PropertyGroup):

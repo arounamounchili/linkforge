@@ -267,7 +267,7 @@ def _create_primitive_collision(
 
     # Create primitive at world origin initially
     # We create them at unit size for predictable scaling via dimensions
-    ops = getattr(context, "ops", bpy.ops)
+    ops = getattr(context, "ops", None) or bpy.ops
     if prim_type == "BOX":
         # Create cube (1x1x1)
         ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
@@ -355,7 +355,7 @@ def _merge_visual_meshes(
         dup.matrix_world = link_obj.matrix_world.inverted() @ visual_obj.matrix_world
 
         # Select and make active for transform application
-        ops = getattr(context, "ops", bpy.ops)
+        ops = getattr(context, "ops", None) or bpy.ops
         ops.object.select_all(action="DESELECT")
         dup.select_set(True)
         vl = getattr(context, "view_layer", bpy.context.view_layer)
@@ -375,7 +375,7 @@ def _merge_visual_meshes(
         return duplicates[0]
 
     # Multiple visuals - join them into single mesh
-    ops = getattr(context, "ops", bpy.ops)
+    ops = getattr(context, "ops", None) or bpy.ops
     ops.object.select_all(action="DESELECT")
     for dup in duplicates:
         dup.select_set(True)
@@ -653,7 +653,7 @@ class LINKFORGE_OT_add_empty_link(Operator):
             empty_size = getattr(addon_prefs, "link_empty_size", empty_size)
 
         # Create Empty object as link frame
-        data = getattr(context, "data", bpy.data)
+        data = getattr(context, "data", None) or bpy.data
         empty = data.objects.new(link_name, None)
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = empty_size
@@ -676,7 +676,7 @@ class LINKFORGE_OT_add_empty_link(Operator):
         logger.debug(f"add_empty_link set {empty.name}.is_robot_link to {lf.is_robot_link}")
 
         # Select the new link
-        ops = getattr(context, "ops", bpy.ops)
+        ops = getattr(context, "ops", None) or bpy.ops
         ops.object.select_all(action="DESELECT")
         empty.select_set(True)
         vl = getattr(context, "view_layer", bpy.context.view_layer)
@@ -729,13 +729,11 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             return False
 
         # Don't allow if already a visual/collision child of a link
-        return bool(
-            not (
-                obj.parent
-                and hasattr(obj.parent, "linkforge")
-                and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-                and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
-            )
+        return not (
+            obj.parent
+            and hasattr(obj.parent, "linkforge")
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
         )
 
     @safe_execute
@@ -767,7 +765,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         mesh_obj.name = f"{link_name}_visual"
 
         # Create Empty object as link frame
-        data = getattr(context, "data", bpy.data)
+        data = getattr(context, "data", None) or bpy.data
         empty = data.objects.new(link_name, None)
         empty.empty_display_type = "PLAIN_AXES"
         empty.empty_display_size = empty_size
@@ -817,7 +815,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             link_props.use_auto_inertia = True
 
             # Select the new link Empty
-            ops = getattr(context, "ops", bpy.ops)
+            ops = getattr(context, "ops", None) or bpy.ops
             ops.object.select_all(action="DESELECT")
             empty.select_set(True)
             if context.view_layer is not None:
@@ -1407,7 +1405,7 @@ def update_collision_quality_realtime(
         # FALLBACK IMPROVEMENT: If modifier is missing but object exists, try adding it first
         # This is much faster than full _regenerate_ and avoids one potential "jump".
         decimate_mod = typing.cast(
-            bpy.types.DecimateModifier,
+            typing.Any,
             collision_obj.modifiers.new(name="Decimate", type="DECIMATE"),
         )
         decimate_mod.ratio = quality_ratio

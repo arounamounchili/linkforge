@@ -68,8 +68,8 @@ def clean_scene(blender_context):
 
     # Clear scene-level LinkForge property collections (persisted on bpy.data.scenes)
     scene = bpy.context.scene
-    if hasattr(scene, "linkforge"):
-        lf = scene.linkforge
+    lf = getattr(scene, "linkforge", None)
+    if lf:
         if hasattr(lf, "ros2_control_joints"):
             lf.ros2_control_joints.clear()
         if hasattr(lf, "ros2_control_parameters"):

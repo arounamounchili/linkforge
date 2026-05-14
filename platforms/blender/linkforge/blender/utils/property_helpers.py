@@ -5,7 +5,7 @@ This module provides optimized helper functions for property update callbacks.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import bpy
 from bpy.types import Context
@@ -16,9 +16,10 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
 
     This is an optimized helper for property update callbacks that need to find
     their owning object. It tries multiple strategies from fastest to slowest:
-    1. Check context.object (active object) first
-    2. Check context.selected_objects
-    3. Fall back to full scene search as last resort
+    1. Check id_data (most reliable and fastest)
+    2. Check context.object (active object) first
+    3. Check context.selected_objects
+    4. Fall back to full scene search as last resort
 
     Args:
         context: Blender context
@@ -27,12 +28,6 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
 
     Returns:
         The object that owns this property group, or None if not found
-
-    Example:
-        >>> def update_sensor_name(self, context):
-        >>>     obj = find_property_owner(context, self, "linkforge_sensor")
-        >>>     if obj:
-        >>>         obj.name = self.sensor_name
     """
     # Strategy 1: Check id_data (most reliable and fastest)
     if (
@@ -53,16 +48,66 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
     ):
         return context.object
 
-    # Strategy 2: Check selected objects (faster than full scene search)
+    # Strategy 3: Check selected objects (faster than full scene search)
     if hasattr(context, "selected_objects"):
         for obj in context.selected_objects:
             if hasattr(obj, property_attr) and getattr(obj, property_attr) == property_group:
                 return obj
 
-    # Strategy 3: Fall back to full scene search (slowest)
+    # Strategy 4: Fall back to full scene search (slowest)
     if hasattr(context, "scene") and context.scene:
         for obj in context.scene.objects:
             if hasattr(obj, property_attr) and getattr(obj, property_attr) == property_group:
                 return obj
 
     return None
+
+
+if TYPE_CHECKING:
+    from linkforge.blender.properties.joint_props import JointPropertyGroup
+    from linkforge.blender.properties.link_props import LinkPropertyGroup
+    from linkforge.blender.properties.robot_props import RobotPropertyGroup
+    from linkforge.blender.properties.sensor_props import SensorPropertyGroup
+    from linkforge.blender.properties.transmission_props import (
+        TransmissionPropertyGroup,
+    )
+
+
+def get_link_props(obj: bpy.types.Object | None) -> LinkPropertyGroup | None:
+    """Type-safe access to LinkForge link properties on a Blender object."""
+    if obj is None:
+        return None
+    return cast("LinkPropertyGroup | None", getattr(obj, "linkforge", None))
+
+
+def get_joint_props(obj: bpy.types.Object | None) -> JointPropertyGroup | None:
+    """Type-safe access to LinkForge joint properties on a Blender object."""
+    if obj is None:
+        return None
+    return cast("JointPropertyGroup | None", getattr(obj, "linkforge_joint", None))
+
+
+def get_sensor_props(obj: bpy.types.Object | None) -> SensorPropertyGroup | None:
+    """Type-safe access to LinkForge sensor properties on a Blender object."""
+    if obj is None:
+        return None
+    return cast("SensorPropertyGroup | None", getattr(obj, "linkforge_sensor", None))
+
+
+def get_transmission_props(
+    obj: bpy.types.Object | None,
+) -> TransmissionPropertyGroup | None:
+    """Type-safe access to LinkForge transmission properties on a Blender object."""
+    if obj is None:
+        return None
+    return cast(
+        "TransmissionPropertyGroup | None",
+        getattr(obj, "linkforge_transmission", None),
+    )
+
+
+def get_robot_props(scene: bpy.types.Scene | None) -> RobotPropertyGroup | None:
+    """Type-safe access to LinkForge robot properties on a Blender scene."""
+    if scene is None:
+        return None
+    return cast("RobotPropertyGroup | None", getattr(scene, "linkforge", None))

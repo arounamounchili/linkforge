@@ -8,6 +8,8 @@ import typing
 import bpy
 from bpy.types import Context, Panel, UILayout
 
+from ..utils.property_helpers import get_link_props, get_sensor_props
+
 
 class LINKFORGE_PT_perceive(Panel):
     """Panel for adding sensors to perceive the environment."""
@@ -33,26 +35,22 @@ class LINKFORGE_PT_perceive(Panel):
         obj = context.active_object
 
         # Check if selected object is a sensor (edit mode vs create mode)
-        is_sensor = (
+        is_sensor = bool(
             obj
             and obj.select_get()
             and obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_sensor")
-            and getattr(obj, "linkforge_sensor").is_robot_sensor
+            and (sp := get_sensor_props(obj))
+            and sp.is_robot_sensor
         )
 
         # Only show Create button when NOT editing a sensor
-        if not is_sensor:
+        if not is_sensor or not (props := get_sensor_props(obj)):
             # Detect target link (either selected link or parent of selected visual)
             target_link = None
             if obj and obj.select_get():
-                if hasattr(obj, "linkforge") and getattr(obj, "linkforge").is_robot_link:
+                if (lp := get_link_props(obj)) and lp.is_robot_link:
                     target_link = obj
-                elif (
-                    obj.parent
-                    and hasattr(obj.parent, "linkforge")
-                    and getattr(obj.parent, "linkforge").is_robot_link
-                ):
+                elif obj.parent and (lp_p := get_link_props(obj.parent)) and lp_p.is_robot_link:
                     # Selected object is a visual/collision child of a link
                     target_link = obj.parent
 
@@ -65,10 +63,8 @@ class LINKFORGE_PT_perceive(Panel):
                     row.operator("linkforge.create_sensor", icon="ADD", text="Create Sensor")
 
         # Show sensor properties only if a sensor is selected (edit mode)
-        if not is_sensor or not obj:
+        if not is_sensor or not obj or not (props := get_sensor_props(obj)):
             return
-
-        props = getattr(obj, "linkforge_sensor")
 
         # === SENSOR IDENTIFICATION ===
         box = layout.box()

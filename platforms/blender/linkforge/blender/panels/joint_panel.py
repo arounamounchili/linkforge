@@ -7,6 +7,8 @@ import contextlib
 import bpy
 from bpy.types import Context, Panel
 
+from ..utils.property_helpers import get_joint_props, get_link_props
+
 
 class LINKFORGE_PT_joints(Panel):
     """Panel for robot joint properties in 3D Viewport sidebar."""
@@ -28,12 +30,12 @@ class LINKFORGE_PT_joints(Panel):
         obj = context.active_object
 
         # Check if selected object is a joint (edit mode vs create mode)
-        is_joint = (
+        is_joint = bool(
             obj
             and obj.select_get()
             and obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and getattr(obj, "linkforge_joint").is_robot_joint
+            and (jp := get_joint_props(obj))
+            and jp.is_robot_joint
         )
 
         # Only show Create button when NOT editing a joint
@@ -41,13 +43,9 @@ class LINKFORGE_PT_joints(Panel):
             # Detect target link (either selected link or parent of selected visual)
             target_link = None
             if obj and obj.select_get():
-                if hasattr(obj, "linkforge") and getattr(obj, "linkforge").is_robot_link:
+                if (lp := get_link_props(obj)) and lp.is_robot_link:
                     target_link = obj
-                elif (
-                    obj.parent
-                    and hasattr(obj.parent, "linkforge")
-                    and getattr(obj.parent, "linkforge").is_robot_link
-                ):
+                elif obj.parent and (lp_p := get_link_props(obj.parent)) and lp_p.is_robot_link:
                     # Selected object is a visual/collision child of a link
                     target_link = obj.parent
 
@@ -58,10 +56,8 @@ class LINKFORGE_PT_joints(Panel):
             row.operator("linkforge.create_joint", icon="ADD", text="Create Joint")
 
         # Show joint properties only if a joint is selected (edit mode)
-        if not is_joint or not obj:
+        if not is_joint or not obj or not (props := get_joint_props(obj)):
             return
-
-        props = getattr(obj, "linkforge_joint")
 
         # Joint properties
         box = layout.box()

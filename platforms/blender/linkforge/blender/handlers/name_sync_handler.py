@@ -12,6 +12,13 @@ if typing.TYPE_CHECKING:
     import bpy
 from linkforge_core.utils.string_utils import sanitize_name
 
+from ..utils.property_helpers import (
+    get_joint_props,
+    get_link_props,
+    get_sensor_props,
+    get_transmission_props,
+)
+
 try:
     from bpy.app.handlers import persistent
 except (ImportError, AttributeError):
@@ -57,37 +64,28 @@ def on_depsgraph_update_post(_scene: typing.Any, _depsgraph: typing.Any) -> None
         obj = update.id
 
         # 1. Sync Link identities
-        if hasattr(obj, "linkforge"):
-            lf = obj.linkforge
-            # Use getattr to safely check for robot link status, avoiding crashes on Scene properties
-            if getattr(lf, "is_robot_link", False):
-                sanitized = sanitize_name(obj.name)
-                if sanitized != lf.link_name or obj.name != sanitized:
-                    lf.link_name = sanitized
+        if (lf := get_link_props(obj)) and lf.is_robot_link:
+            sanitized = sanitize_name(obj.name)
+            if sanitized != lf.link_name or obj.name != sanitized:
+                lf.link_name = sanitized
 
         # 2. Sync Joint identities
-        if hasattr(obj, "linkforge_joint"):
-            jf = obj.linkforge_joint
-            if getattr(jf, "is_robot_joint", False):
-                sanitized = sanitize_name(obj.name)
-                if sanitized != jf.joint_name or obj.name != sanitized:
-                    jf.joint_name = sanitized
+        if (jf := get_joint_props(obj)) and jf.is_robot_joint:
+            sanitized = sanitize_name(obj.name)
+            if sanitized != jf.joint_name or obj.name != sanitized:
+                jf.joint_name = sanitized
 
         # 3. Sync Sensor identities
-        if hasattr(obj, "linkforge_sensor"):
-            sf = obj.linkforge_sensor
-            if sf.is_robot_sensor:
-                sanitized = sanitize_name(obj.name)
-                if sanitized != sf.sensor_name:
-                    sf.sensor_name = sanitized
+        if (sf := get_sensor_props(obj)) and sf.is_robot_sensor:
+            sanitized = sanitize_name(obj.name)
+            if sanitized != sf.sensor_name:
+                sf.sensor_name = sanitized
 
         # 4. Sync Transmission identities
-        if hasattr(obj, "linkforge_transmission"):
-            tf = obj.linkforge_transmission
-            if tf.is_robot_transmission:
-                sanitized = sanitize_name(obj.name)
-                if sanitized != tf.transmission_name:
-                    tf.transmission_name = sanitized
+        if (tf := get_transmission_props(obj)) and tf.is_robot_transmission:
+            sanitized = sanitize_name(obj.name)
+            if sanitized != tf.transmission_name:
+                tf.transmission_name = sanitized
 
 
 def register() -> None:

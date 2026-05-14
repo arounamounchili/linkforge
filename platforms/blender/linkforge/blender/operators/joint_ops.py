@@ -10,13 +10,12 @@ import bpy
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.property_helpers import get_joint_props, get_link_props, get_robot_props
 from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
     from bpy.types import Context, Operator
 
-    from ..properties.joint_props import JointPropertyGroup
-    from ..properties.link_props import LinkPropertyGroup
 else:
     # Runtime fallback for mock environments where bpy.types might be partially loaded.
     Context = typing.Any
@@ -49,13 +48,9 @@ class LINKFORGE_OT_create_joint(Operator):
 
         # Allow if object is a link or a child of a link (visual mesh)
         return bool(
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
-            or (
-                obj.parent
-                and hasattr(obj.parent, "linkforge")
-                and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-            )
+            (lp := get_link_props(obj))
+            and lp.is_robot_link
+            or (obj.parent and (lp_p := get_link_props(obj.parent)) and lp_p.is_robot_link)
         )
 
     @safe_execute
@@ -66,15 +61,14 @@ class LINKFORGE_OT_create_joint(Operator):
         # Get the link object (either selected directly or parent of selected visual)
         link_obj = None
         if obj:
-            if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
+            if (lp := get_link_props(obj)) and lp.is_robot_link:
                 link_obj = obj
-            elif obj.parent:
+            elif obj.parent and (lp_p := get_link_props(obj.parent)) and lp_p.is_robot_link:
                 link_obj = obj.parent
-        if not link_obj or not hasattr(link_obj, "linkforge"):
+
+        if not link_obj or not (link_props := get_link_props(link_obj)):
             self.report({"ERROR"}, "No valid robot link found")
             return {"CANCELLED"}
-
-        link_props = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
 
         # Get preferred empty size from addon preferences
         from ..preferences import get_addon_prefs
@@ -98,7 +92,7 @@ class LINKFORGE_OT_create_joint(Operator):
             joint_empty = getattr(context, "active_object", bpy.context.active_object)
             if not joint_empty:
                 return {"CANCELLED"}
-            joint_empty.name = f"{typing.cast('LinkPropertyGroup', getattr(link_obj, 'linkforge')).link_name}_joint"
+            joint_empty.name = f"{link_props.link_name}_joint"
             joint_empty.rotation_mode = "XYZ"
             joint_empty.rotation_euler = rotation
 
@@ -115,27 +109,19 @@ class LINKFORGE_OT_create_joint(Operator):
         joint_empty.empty_display_size = empty_size
 
         # Enable joint properties
-        typing.cast(typing.Any, joint_empty).linkforge_joint.is_robot_joint = True
-        typing.cast(typing.Any, joint_empty).linkforge_joint.joint_name = sanitize_robot_name(
-            joint_empty.name
-        )
+        if joint_props := get_joint_props(joint_empty):
+            joint_props.is_robot_joint = True
+            joint_props.joint_name = sanitize_robot_name(joint_empty.name)
 
-        # Set default joint joint_type
-        joint_props = typing.cast("JointPropertyGroup", getattr(joint_empty, "linkforge_joint"))
-        joint_props.joint_type = "REVOLUTE"
+            # Set default joint joint_type
+            joint_props.joint_type = "REVOLUTE"
 
-        # Enable limits by default for REVOLUTE joints (they typically need them)
-        # User can disable if not needed
-        joint_props.use_limits = True
+            # Enable limits by default for REVOLUTE joints (they typically need them)
+            # User can disable if not needed
+            joint_props.use_limits = True
 
-        # Ensure matrices are up to date before triggering property callbacks
-        # This prevents transform jumps when setting child_link (which sets parent)
-        view_layer = context.view_layer
-        if view_layer is not None:
-            view_layer.update()
-
-        # Auto-set child link to the selected link (parent must be set manually)
-        joint_props.child_link = link_obj
+            # Auto-set child link to the selected link (parent must be set manually)
+            joint_props.child_link = link_obj
 
         self.report(
             {"INFO"},
@@ -163,10 +149,7 @@ class LINKFORGE_OT_delete_joint(Operator):
         """Check if operator can run."""
         obj = context.active_object
         return bool(
-            obj
-            and obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and typing.cast("JointPropertyGroup", getattr(obj, "linkforge_joint")).is_robot_joint
+            obj and obj.type == "EMPTY" and (jp := get_joint_props(obj)) and jp.is_robot_joint
         )
 
     @safe_execute
@@ -180,12 +163,8 @@ class LINKFORGE_OT_delete_joint(Operator):
 
         # Remove from ROS2 Control list if present (Maintain Consistency)
         scene = context.scene
-        if (
-            scene
-            and hasattr(scene, "linkforge")
-            and hasattr(scene.linkforge, "ros2_control_joints")
-        ):
-            rc_joints = typing.cast(typing.Any, scene).linkforge.ros2_control_joints
+        if scene and (rp := get_robot_props(scene)):
+            rc_joints = rp.ros2_control_joints
             # Find index by name
             idx_to_remove = -1
             for i, item in enumerate(rc_joints):
@@ -228,19 +207,14 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
             return False
         if not obj.select_get():
             return False
-        return bool(
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and typing.cast("JointPropertyGroup", getattr(obj, "linkforge_joint")).is_robot_joint
-        )
+        return bool(obj.type == "EMPTY" and (jp := get_joint_props(obj)) and jp.is_robot_joint)
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator."""
         joint_empty = context.active_object
-        if not joint_empty:
+        if not joint_empty or not (props := get_joint_props(joint_empty)):
             return {"CANCELLED"}
-        props = typing.cast("JointPropertyGroup", getattr(joint_empty, "linkforge_joint"))
 
         # Find nearest links based on distance
         scene = context.scene
@@ -250,7 +224,7 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
         joint_loc = joint_empty.location
         links = []
         for obj in scene.objects:
-            if hasattr(obj, "linkforge") and typing.cast(typing.Any, obj).linkforge.is_robot_link:
+            if (lp := get_link_props(obj)) and lp.is_robot_link:
                 links.append((obj, (obj.location - joint_loc).length))
 
         if not links:

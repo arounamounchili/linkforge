@@ -67,6 +67,7 @@ class TestCollisionScaling:
         safe_get_linkforge(link_obj).is_robot_link = True
 
         collision_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
+        assert collision_obj is not None
         # Dimensions should be 4x3x1
         assert abs(collision_obj.dimensions.x - 4.0) < 1e-5
         assert abs(collision_obj.dimensions.y - 3.0) < 1e-5

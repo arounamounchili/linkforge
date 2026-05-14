@@ -330,11 +330,12 @@ class TestXacroInfrastructure:
         robot_file.write_text(
             '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="t"><link name="$(arg myarg)"/></robot>'
         )
-
         parser = XACROParser()
         xml = parser.resolve(robot_file, myarg="passed_val")
         root = ET.fromstring(xml)
-        assert root.find("link").get("name") == "passed_val"
+        link = root.find("link")
+        assert link is not None
+        assert link.get("name") == "passed_val"
 
     def test_xacro_arg_default_and_include_missing(self, resolver) -> None:
         """Test xacro:arg default values and include missing files."""

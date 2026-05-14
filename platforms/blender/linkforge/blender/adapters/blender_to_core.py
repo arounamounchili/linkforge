@@ -43,6 +43,13 @@ from linkforge_core.utils.string_utils import sanitize_name
 from linkforge_core.validation.result import ValidationResult
 from mathutils import Matrix
 
+from ..utils.property_helpers import (
+    get_joint_props,
+    get_link_props,
+    get_robot_props,
+    get_sensor_props,
+    get_transmission_props,
+)
 from .context import IBlenderContext
 from .translator import (
     Ros2ControlTranslator,
@@ -503,29 +510,29 @@ def _categorize_scene_objects(
     )
     for obj in scene.objects:
         # Check for Link
-        lf = getattr(obj, "linkforge", None)
+        lf = get_link_props(obj)
         if lf and getattr(lf, "is_robot_link", False):
             link_name = lf.link_name if lf.link_name else obj.name
             link_objects[link_name] = obj
 
         # Check for Joint
-        j_lf = getattr(obj, "linkforge_joint", None)
+        j_lf = get_joint_props(obj)
         if j_lf and getattr(j_lf, "is_robot_joint", False):
             joint_objects.append(obj)
             props = j_lf
             parent_obj = props.parent_link
             child_obj = props.child_link
 
-            parent_props = getattr(parent_obj, "linkforge", None)
+            parent_props = get_link_props(parent_obj)
             parent_name = (
                 parent_props.link_name
-                if parent_props and getattr(parent_props, "link_name", "")
+                if parent_props and parent_props.link_name
                 else (parent_obj.name if parent_obj else "")
             )
-            child_props = getattr(child_obj, "linkforge", None)
+            child_props = get_link_props(child_obj)
             child_name = (
                 child_props.link_name
-                if child_props and getattr(child_props, "link_name", "")
+                if child_props and child_props.link_name
                 else (child_obj.name if child_obj else "")
             )
 
@@ -533,12 +540,12 @@ def _categorize_scene_objects(
                 joints_map[child_name] = (parent_name, obj)
 
         # Check for Sensor
-        s_lf = getattr(obj, "linkforge_sensor", None)
+        s_lf = get_sensor_props(obj)
         if s_lf and getattr(s_lf, "is_robot_sensor", False):
             sensor_objects.append(obj)
 
         # Check for Transmission
-        t_lf = getattr(obj, "linkforge_transmission", None)
+        t_lf = get_transmission_props(obj)
         if t_lf and getattr(t_lf, "is_robot_transmission", False):
             transmission_objects.append(obj)
 
@@ -626,7 +633,7 @@ class SceneToRobotTranslator:
         self.depsgraph = depsgraph
 
         # Get robot properties from scene
-        self.robot_props = getattr(context.scene, "linkforge", None)
+        self.robot_props = get_robot_props(context.scene)
         if not self.robot_props:
             raise RobotValidationError(
                 ValidationErrorCode.NOT_FOUND, "Scene has no LinkForge properties"
@@ -688,7 +695,7 @@ class SceneToRobotTranslator:
         """Collect and register all unique materials used in the robot."""
         processed_mats = set()
         for link_obj in link_objects.values():
-            props = getattr(link_obj, "linkforge", None)
+            props = get_link_props(link_obj)
             if props and props.use_material:
                 for child in link_obj.children:
                     if "_visual" in child.name and child.type == "MESH":
@@ -731,7 +738,7 @@ class SceneToRobotTranslator:
                 if not joint_info:
                     return
                 _parent_name, joint_obj = joint_info
-                joint_props = getattr(joint_obj, "linkforge_joint", None)
+                joint_props = get_joint_props(joint_obj)
                 joint_name = joint_props.joint_name if joint_props else joint_obj.name
                 lb = parent_lb.child(link_name, joint_name=joint_name)
 

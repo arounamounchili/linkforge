@@ -9,6 +9,7 @@ from bpy.props import StringProperty
 from bpy.types import Context, Operator
 
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.property_helpers import get_robot_props
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
@@ -121,10 +122,8 @@ class LINKFORGE_OT_clear_component_search(Operator):
         Returns:
             True if the operator can be executed, False otherwise.
         """
-        if not hasattr(context.scene, "linkforge"):
-            return False
-        props = getattr(context.scene, "linkforge")
-        return bool(props.component_browser_search)
+        props = get_robot_props(context.scene)
+        return bool(props and props.component_browser_search)
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -137,9 +136,8 @@ class LINKFORGE_OT_clear_component_search(Operator):
             Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
         """
         scene = context.scene
-        if not scene:
+        if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
-        props = getattr(scene, "linkforge")
         props.component_browser_search = ""
         return {"FINISHED"}
 

@@ -21,6 +21,14 @@ if TYPE_CHECKING:
     from .context import IBlenderContext
 
 
+from ..utils.property_helpers import (
+    get_joint_props,
+    get_link_props,
+    get_robot_props,
+    get_sensor_props,
+    get_transmission_props,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -82,12 +90,12 @@ class LinkTranslator(ITranslator):
             matrix_to_transform,
         )
 
-        props = getattr(obj, "linkforge", None)
+        props = get_link_props(obj)
         if not props:
             return None
 
         link_name = props.link_name if props.link_name else obj.name
-        robot_props = getattr(context.scene, "linkforge", None)
+        robot_props = get_robot_props(context.scene)
         mesh_format = robot_props.mesh_format if robot_props else "STL"
 
         # Use provided LinkBuilder or create a new one
@@ -164,8 +172,8 @@ class LinkTranslator(ITranslator):
                     )
 
         # 3. Translate Physics (Inertia & Mass)
-        if props.use_auto_inertia:
-            active_lb.mass(props.mass)
+        if (lp := get_link_props(obj)) and lp.use_auto_inertia:
+            active_lb.mass(lp.mass)
         else:
             inertia = InertiaTensor(
                 ixx=props.inertia_ixx,
@@ -271,8 +279,8 @@ class JointTranslator(ITranslator):
 
         from .blender_to_core import matrix_to_transform
 
-        props = getattr(obj, "linkforge_joint", None)
-        if not props or not getattr(props, "is_robot_joint", False):
+        props = get_joint_props(obj)
+        if not props or not props.is_robot_joint:
             return
 
         if not props.parent_link:
@@ -285,8 +293,10 @@ class JointTranslator(ITranslator):
 
         # Calculate joint origin
         if link_frames:
-            parent_name = props.parent_link.linkforge.link_name if props.parent_link else ""
-            child_name = props.child_link.linkforge.link_name if props.child_link else ""
+            parent_props = get_link_props(props.parent_link)
+            parent_name = parent_props.link_name if parent_props else ""
+            child_props = get_link_props(props.child_link)
+            child_name = child_props.link_name if child_props else ""
 
             if parent_name in link_frames and child_name in link_frames:
                 parent_frame = link_frames[parent_name]
@@ -364,7 +374,7 @@ class JointTranslator(ITranslator):
 
         # Mimic
         if props.use_mimic and props.mimic_joint:
-            mimic_props = getattr(props.mimic_joint, "linkforge_joint", None)
+            mimic_props = get_joint_props(props.mimic_joint)
             mimic_name = mimic_props.joint_name if mimic_props else props.mimic_joint.name
             lb.mimic(mimic_name, multiplier=props.mimic_multiplier, offset=props.mimic_offset)
 
@@ -448,7 +458,7 @@ class SensorTranslator(ITranslator):
 
         if obj is None:
             return None
-        props = getattr(obj, "linkforge_sensor", None)
+        props = get_sensor_props(obj)
         if not props or not props.is_robot_sensor:
             return None
 
@@ -460,7 +470,7 @@ class SensorTranslator(ITranslator):
         )
         sensor_type = SensorType(props.sensor_type.lower())
         link_obj = props.attached_link
-        link_props = getattr(link_obj, "linkforge", None)
+        link_props = get_link_props(link_obj)
         link_name = (
             (link_props.link_name if link_props and link_props.link_name else link_obj.name)
             if link_obj
@@ -654,10 +664,10 @@ class Ros2ControlTranslator(ITranslator):
 
             # Determine the correct joint name
             joint_obj = getattr(item, "joint_obj", None)
-            joint_props = getattr(joint_obj, "linkforge_joint", None)
+            joint_props = get_joint_props(joint_obj)
             joint_name = ""
             if joint_props:
-                potential_name = getattr(joint_props, "joint_name", "")
+                potential_name = joint_props.joint_name
                 if isinstance(potential_name, str):
                     joint_name = potential_name
 
@@ -735,8 +745,8 @@ class TransmissionTranslator(ITranslator):
         if obj is None:
             return None
 
-        props = getattr(obj, "linkforge_transmission", None)
-        if not props or not getattr(props, "is_robot_transmission", False):
+        props = get_transmission_props(obj)
+        if not props or not props.is_robot_transmission:
             return None
 
         trans_name = props.transmission_name if props.transmission_name else obj.name
@@ -764,10 +774,10 @@ class TransmissionTranslator(ITranslator):
         if props.transmission_type in ("SIMPLE", "CUSTOM", "FOUR_BAR_LINKAGE"):
             joint_obj = props.joint_name
             if joint_obj:
-                joint_props = getattr(joint_obj, "linkforge_joint", None)
+                joint_props = get_joint_props(joint_obj)
                 joint_name = ""
                 if joint_props:
-                    potential_name = getattr(joint_props, "joint_name", "")
+                    potential_name = joint_props.joint_name
                     if isinstance(potential_name, str):
                         joint_name = potential_name
 
@@ -793,13 +803,13 @@ class TransmissionTranslator(ITranslator):
             j1_obj = props.joint1_name
             j2_obj = props.joint2_name
             if j1_obj and j2_obj:
-                j1_props = getattr(j1_obj, "linkforge_joint", None)
+                j1_props = get_joint_props(j1_obj)
                 j1_name = (
-                    j1_props.joint_name if j1_props and getattr(j1_props, "joint_name", "") else ""
+                    j1_props.joint_name if j1_props and j1_props.joint_name else ""
                 ) or j1_obj.name
-                j2_props = getattr(j2_obj, "linkforge_joint", None)
+                j2_props = get_joint_props(j2_obj)
                 j2_name = (
-                    j2_props.joint_name if j2_props and getattr(j2_props, "joint_name", "") else ""
+                    j2_props.joint_name if j2_props and j2_props.joint_name else ""
                 ) or j2_obj.name
 
                 joints.append(

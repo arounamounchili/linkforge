@@ -95,9 +95,10 @@ class AsynchronousRobotBuilder:
         # Setup background state (store scene locally to avoid context sensitivity)
         self.active_scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
         if self.active_scene and hasattr(self.active_scene, "linkforge"):
-            self.active_scene.linkforge.is_importing = True
-            self.active_scene.linkforge.abort_import = False
-            self.active_scene.linkforge.import_status = "Starting..."
+            lp = self.active_scene.linkforge  # pyright: ignore[reportAttributeAccessIssue]
+            lp.is_importing = True
+            lp.abort_import = False
+            lp.import_status = "Starting..."
 
         # Setup progress bar
         if self.context.window_manager:
@@ -116,7 +117,7 @@ class AsynchronousRobotBuilder:
         )
 
         # Use the stored scene to check for cancellation, immune to context changes
-        if scene and hasattr(scene, "linkforge") and scene.linkforge.abort_import:
+        if scene and hasattr(scene, "linkforge") and scene.linkforge.abort_import:  # pyright: ignore[reportAttributeAccessIssue]
             logger.warning("Import aborted by user.")
             self.error = "Import cancelled by user."
             self.finish()
@@ -145,7 +146,7 @@ class AsynchronousRobotBuilder:
 
             # Update UI
             if current_status and scene and hasattr(scene, "linkforge"):
-                scene.linkforge.import_status = current_status
+                scene.linkforge.import_status = current_status  # pyright: ignore[reportAttributeAccessIssue]
 
             if self.context.window_manager:
                 self.context.window_manager.progress_update(self.completed_tasks)
@@ -202,7 +203,7 @@ class AsynchronousRobotBuilder:
                 scene = self.context.scene
                 if scene and hasattr(scene, "linkforge"):
                     # Force update collision visibility toggle
-                    scene.linkforge.show_collisions = scene.linkforge.show_collisions
+                    scene.linkforge.show_collisions = scene.linkforge.show_collisions  # pyright: ignore[reportAttributeAccessIssue]
 
                     # Auto-link ROS 2 Control joint pointers to newly created objects
                     # Match by persistent robot model identity (source_name_stored)
@@ -229,9 +230,10 @@ class AsynchronousRobotBuilder:
         # Clear background state
         scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
         if scene and hasattr(scene, "linkforge"):
-            scene.linkforge.is_importing = False
-            scene.linkforge.import_status = ""
-            scene.linkforge.abort_import = False
+            lp = scene.linkforge  # pyright: ignore[reportAttributeAccessIssue]
+            lp.is_importing = False
+            lp.import_status = ""
+            lp.abort_import = False
 
         if self.error:
             # Report error if cancelled or failed

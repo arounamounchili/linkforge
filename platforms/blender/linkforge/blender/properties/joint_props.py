@@ -18,11 +18,11 @@ from bpy.props import (
 from bpy.types import Context, PropertyGroup
 
 if typing.TYPE_CHECKING:
-    from .link_props import LinkPropertyGroup
+    pass
 
 from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 
-from ..utils.property_helpers import find_property_owner
+from ..utils.property_helpers import find_property_owner, get_link_props
 from ..utils.scene_utils import clear_stats_cache
 
 
@@ -138,8 +138,8 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
             for obj in scene.objects:
                 if (
                     obj.parent == joint_obj
-                    and hasattr(obj, "linkforge")
-                    and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
+                    and (props := get_link_props(obj))
+                    and props.is_robot_link
                 ):
                     # Clear parent while preserving world position
                     clear_parent_keep_transform(obj)
@@ -151,7 +151,7 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
 
 def poll_robot_link(_self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
-    return bool(hasattr(obj, "linkforge") and obj.linkforge.is_robot_link)
+    return bool((props := get_link_props(obj)) and props.is_robot_link)
 
 
 def poll_robot_joint(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:

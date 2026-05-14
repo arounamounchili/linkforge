@@ -348,7 +348,7 @@ def test_get_object_material_logic(scene, blender_context) -> None:
     if socket and hasattr(socket, "default_value"):
         setattr(socket, "default_value", (0.1, 0.2, 0.3, 1.0))  # noqa: B010
     assert obj.data is not None and hasattr(obj.data, "materials")
-    obj.data.materials.append(mat)
+    getattr(obj.data, "materials").append(mat)
 
     link_props = safe_get_linkforge(obj)
     link_props.use_material = True
@@ -444,8 +444,8 @@ def test_get_object_material_logic_nodes(scene, blender_context) -> None:
 
     # Clear and assign explicitly
     if obj.data and hasattr(obj.data, "materials"):
-        obj.data.materials.clear()
-        obj.data.materials.append(mat)
+        getattr(obj.data, "materials").clear()
+        getattr(obj.data, "materials").append(mat)
     if bpy.context.view_layer:
         bpy.context.view_layer.update()
 
@@ -876,7 +876,7 @@ def test_blender_link_to_core_geometry_and_material(scene, blender_context) -> N
         if socket and hasattr(socket, "default_value"):
             setattr(socket, "default_value", (1, 0, 0, 1))  # Red  # noqa: B010
     if vis_obj.data and hasattr(vis_obj.data, "materials"):
-        vis_obj.data.materials.append(mat)
+        getattr(vis_obj.data, "materials").append(mat)
 
     # Collision with Cylinder
     bpy.ops.mesh.primitive_cylinder_add()

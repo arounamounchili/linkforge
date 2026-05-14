@@ -32,6 +32,7 @@ from linkforge_core.models import (
 
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
+from ..utils.property_helpers import get_joint_props, get_link_props
 from ..utils.scene_utils import move_to_collection, sync_object_collections
 
 logger = get_logger(__name__)
@@ -400,8 +401,7 @@ def create_link_object(
         move_to_collection(link_obj, collection)
 
     # Set link properties on the main link object
-    if hasattr(link_obj, "linkforge"):
-        props = link_obj.linkforge
+    if props := get_link_props(link_obj):
         props.is_robot_link = True
         props.source_name_stored = link.name
         props.link_name = link.name
@@ -562,8 +562,7 @@ def create_link_object(
                 collision_obj["collision_geometry_type"] = "SPHERE"
 
     # Set mass and inertia properties on link object
-    if link.inertial and hasattr(link_obj, "linkforge"):
-        props = link_obj.linkforge
+    if link.inertial and (props := get_link_props(link_obj)):
         props.mass = link.inertial.mass
 
         if link.inertial.inertia:
@@ -583,8 +582,7 @@ def create_link_object(
             props.inertia_origin_rpy = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
     # Set physics properties on link object (friction, stiffness, damping)
-    if hasattr(link_obj, "linkforge"):
-        props = link_obj.linkforge
+    if props := get_link_props(link_obj):
         phys = link.physics
 
         # Map all physics values (so they are ready if user enables the toggle later)
@@ -603,17 +601,14 @@ def create_link_object(
         props.use_simulation_props = is_physics_modified or has_gazebo_element
 
     # Final check for massless links if no inertial data was provided
-    if not link.inertial and hasattr(link_obj, "linkforge"):
+    if not link.inertial and (props := get_link_props(link_obj)):
         # If link has no inertial data (e.g. a dummy root link), set mass to 0
         # and disable auto-inertia to avoid falling back to the default 1.0 kg.
-        props = link_obj.linkforge
         props.mass = 0.0
         props.use_auto_inertia = False
 
     # Set geometry types on link properties (use first element if multiple)
-    if hasattr(link_obj, "linkforge"):
-        props = link_obj.linkforge
-
+    if props := get_link_props(link_obj):
         if link.collisions:
             # Set collision quality to 100% for imported meshes (preserve original detail)
             # This prevents degradation on re-export and gives user full control
@@ -678,8 +673,7 @@ def create_joint_object(
         context.scene.collection.objects.link(empty)
 
     # Set joint properties
-    if hasattr(empty, "linkforge_joint"):
-        props = empty.linkforge_joint
+    if props := get_joint_props(empty):
         props.is_robot_joint = True
         props.source_name_stored = joint.name
         props.joint_name = joint.name

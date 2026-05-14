@@ -340,6 +340,10 @@ def test_import_robot_complex_tree(scene, blender_context) -> None:
     branch2_obj = bpy.data.objects.get("branch2")
     leaf_obj = bpy.data.objects.get("leaf")
 
+    assert branch1_obj is not None
+    assert branch2_obj is not None
+    assert leaf_obj is not None
+
     assert branch1_obj.parent is not None
     assert branch1_obj.parent.parent == root_obj  # Link -> Joint -> Parent Link
     assert branch2_obj.parent is not None

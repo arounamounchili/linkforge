@@ -21,11 +21,11 @@ from bpy.types import Context, PropertyGroup
 from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
-    from .link_props import LinkPropertyGroup
+    pass
 
 from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 
-from ..utils.property_helpers import find_property_owner
+from ..utils.property_helpers import find_property_owner, get_link_props
 
 
 def get_sensor_name(self: SensorPropertyGroup) -> str:
@@ -103,11 +103,7 @@ def update_sensor_hierarchy(self: SensorPropertyGroup, context: Context) -> None
 
 def poll_robot_link(_self: SensorPropertyGroup, obj: bpy.types.Object) -> bool:
     """Filter to only allow robot link objects in pointer selection."""
-    return bool(
-        obj
-        and hasattr(obj, "linkforge")
-        and typing.cast("LinkPropertyGroup", obj.linkforge).is_robot_link
-    )
+    return bool(obj and (props := get_link_props(obj)) and props.is_robot_link)
 
 
 class SensorPropertyGroup(PropertyGroup):

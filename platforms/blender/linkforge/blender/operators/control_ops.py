@@ -6,11 +6,11 @@ import bpy
 from bpy.props import IntProperty, StringProperty
 
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.property_helpers import get_joint_props, get_robot_props
 
 if typing.TYPE_CHECKING:
     from bpy.types import Context, Operator
 
-    from ..properties.robot_props import RobotPropertyGroup
 else:
     # Runtime fallback for mock environments where bpy.types might be partially loaded.
     Context = typing.Any
@@ -42,7 +42,7 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
         Returns:
             True if the scene has LinkForge properties initialized.
         """
-        return hasattr(context.scene, "linkforge")
+        return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -55,9 +55,8 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
             Set containing the execution state (e.g., {'FINISHED'}).
         """
         scene = context.scene
-        if not scene:
+        if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
-        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
 
         # Find the target joint object we intend to add
         target_joint_obj = next(
@@ -65,9 +64,9 @@ class LINKFORGE_OT_add_ros2_control_joint(Operator):
                 obj
                 for obj in scene.objects
                 if obj.type == "EMPTY"
-                and hasattr(obj, "linkforge_joint")
-                and obj.linkforge_joint.is_robot_joint
-                and obj.linkforge_joint.joint_name == self.joint_name
+                and (jp := get_joint_props(obj))
+                and jp.is_robot_joint
+                and jp.joint_name == self.joint_name
             ),
             None,
         )
@@ -127,7 +126,7 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
         """
         if not context.scene:
             return False
-        props = getattr(context.scene, "linkforge", None)
+        props = get_robot_props(context.scene)
         return bool(props and len(props.ros2_control_joints) > 0)
 
     @safe_execute
@@ -140,9 +139,8 @@ class LINKFORGE_OT_remove_ros2_control_joint(Operator):
         Returns:
             Set containing the execution state.
         """
-        if not context.scene:
+        if not context.scene or not (props := get_robot_props(context.scene)):
             return {"CANCELLED"}
-        props = typing.cast("RobotPropertyGroup", getattr(context.scene, "linkforge"))
         index = props.ros2_control_active_joint_index
 
         if 0 <= index < len(props.ros2_control_joints):
@@ -184,7 +182,7 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         """
         if not context.scene:
             return False
-        props = getattr(context.scene, "linkforge", None)
+        props = get_robot_props(context.scene)
         return bool(props and len(props.ros2_control_joints) > 1)
 
     @safe_execute
@@ -197,9 +195,8 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         Returns:
             Set containing the execution state.
         """
-        if not context.scene:
+        if not context.scene or not (props := get_robot_props(context.scene)):
             return {"CANCELLED"}
-        props = typing.cast("RobotPropertyGroup", getattr(context.scene, "linkforge"))
         index = props.ros2_control_active_joint_index
         new_index = index
 
@@ -239,7 +236,7 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
         Returns:
             True if LinkForge properties are initialized in the scene.
         """
-        return hasattr(context.scene, "linkforge")
+        return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -252,7 +249,8 @@ class LINKFORGE_OT_add_ros2_control_parameter(Operator):
             Set containing the execution state.
         """
         scene = context.scene
-        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
 
         if self.target == "GLOBAL":
             param = props.ros2_control_parameters.add()
@@ -295,7 +293,7 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
         Returns:
             True if LinkForge properties are initialized.
         """
-        return hasattr(context.scene, "linkforge")
+        return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -308,7 +306,8 @@ class LINKFORGE_OT_remove_ros2_control_parameter(Operator):
             Set containing the execution state.
         """
         scene = context.scene
-        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
 
         if self.target == "GLOBAL":
             items = props.ros2_control_parameters
@@ -339,13 +338,14 @@ class LINKFORGE_OT_purge_ros2_control_data(Operator):
     @classmethod
     def poll(cls, context: Context) -> bool:
         """Check if operators can run."""
-        return hasattr(context.scene, "linkforge")
+        return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the purge."""
         scene = context.scene
-        props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
 
         props.ros2_control_joints.clear()
         props.ros2_control_parameters.clear()

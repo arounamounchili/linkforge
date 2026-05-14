@@ -352,8 +352,8 @@ def cleanup_blender_scene(scene: typing.Any | None = None) -> None:
 
     # Reset Scene properties
     target_scene = scene or bpy.context.scene
-    if target_scene and hasattr(target_scene, "linkforge"):
-        props = target_scene.linkforge
+    props = getattr(target_scene, "linkforge", None)
+    if props:
         props.robot_name = "robot"
         props.strict_mode = False
         props.use_ros2_control = False

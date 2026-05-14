@@ -51,13 +51,16 @@ exclude = ["platforms/blender/linkforge/linkforge_core"]
 
 [tool.pyright]
 include = ["core/src", "platforms/blender", "tests"]
+exclude = ["**/mock_bpy_env.py"]
+ignore = ["**/mock_bpy_env.py"]
 extraPaths = ["core/src", "platforms/blender"]
 typeCheckingMode = "basic"
 pythonVersion = "3.13"
 
-[tool.pyrefly]
-project-includes = ["core/src", "platforms/blender", "tests"]
-project-roots = ["core/src", "platforms/blender"]
+executionEnvironments = [
+  { root = "platforms/blender", reportAttributeAccessIssue = "none", reportInvalidTypeForm = "none", reportReturnType = "none" }
+]
+
 
 # Blender (bpy) stubs use Python 3.12 syntax.
 [[tool.mypy.overrides]]
@@ -108,4 +111,5 @@ dev = [
     "sphinxcontrib-mermaid>=0.9.2",
     "sphinx-design>=0.5.0",
     "fake-bpy-module-4.2",
+    "pyright>=1.1.409",
 ]

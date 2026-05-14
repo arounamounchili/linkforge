@@ -10,13 +10,12 @@ import bpy
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.property_helpers import get_link_props, get_sensor_props
 from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
     from bpy.types import Context, Operator
 
-    from ..properties.link_props import LinkPropertyGroup
-    from ..properties.sensor_props import SensorPropertyGroup
 else:
     # Runtime fallback for mock environments where bpy.types might be partially loaded.
     Context = typing.Any
@@ -48,18 +47,11 @@ class LINKFORGE_OT_create_sensor(Operator):
             return False
 
         # Allow if object is a link (not a joint!)
-        if (
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
-        ):
+        if (lp := get_link_props(obj)) and lp.is_robot_link:
             return True
 
         # Allow if selection is a child of a link (visual/collision)
-        return bool(
-            obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-        )
+        return bool(obj.parent and (lp_p := get_link_props(obj.parent)) and lp_p.is_robot_link)
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -72,14 +64,14 @@ class LINKFORGE_OT_create_sensor(Operator):
             return {"CANCELLED"}
 
         # Get the link object (either selected directly or parent of selected visual)
-        link_obj = (
-            obj
-            if obj
-            and hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
-            else (obj.parent if obj else None)
-        )
-        if not link_obj:
+        link_obj = None
+        if obj:
+            if (lp := get_link_props(obj)) and lp.is_robot_link:
+                link_obj = obj
+            elif obj.parent and (lp_p := get_link_props(obj.parent)) and lp_p.is_robot_link:
+                link_obj = obj.parent
+
+        if not link_obj or not (link_props := get_link_props(link_obj)):
             return {"CANCELLED"}
 
         # Get preferred empty size from addon preferences
@@ -97,11 +89,7 @@ class LINKFORGE_OT_create_sensor(Operator):
             sensor_empty = getattr(context, "active_object", bpy.context.active_object)
 
         # Ensure unique name
-        link_name = (
-            typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge")).link_name
-            if link_obj
-            else "unknown"
-        )
+        link_name = link_props.link_name if link_props else "unknown"
         if sensor_empty:
             sensor_empty.name = f"{link_name}_sensor"
 
@@ -126,10 +114,7 @@ class LINKFORGE_OT_create_sensor(Operator):
             sensor_empty.empty_display_size = empty_size
 
         # Enable sensor properties
-        if sensor_empty:
-            sensor_props = typing.cast(
-                "SensorPropertyGroup", getattr(sensor_empty, "linkforge_sensor")
-            )
+        if sensor_empty and (sensor_props := get_sensor_props(sensor_empty)):
             sensor_props.is_robot_sensor = True
             sensor_props.sensor_name = sanitize_robot_name(sensor_empty.name)
 
@@ -166,11 +151,7 @@ class LINKFORGE_OT_delete_sensor(Operator):
             return False
         if not obj.select_get():
             return False
-        return bool(
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_sensor")
-            and typing.cast("SensorPropertyGroup", getattr(obj, "linkforge_sensor")).is_robot_sensor
-        )
+        return bool(obj.type == "EMPTY" and (sp := get_sensor_props(obj)) and sp.is_robot_sensor)
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -179,9 +160,9 @@ class LINKFORGE_OT_delete_sensor(Operator):
         if not obj:
             return {"CANCELLED"}
 
+        sensor_props = get_sensor_props(obj)
         sensor_name = (
-            typing.cast("SensorPropertyGroup", getattr(obj, "linkforge_sensor")).sensor_name
-            or obj.name
+            sensor_props.sensor_name if sensor_props and sensor_props.sensor_name else obj.name
         )
 
         # Delete the object

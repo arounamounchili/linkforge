@@ -141,14 +141,19 @@ class TestJointVisualization:
         mock_remove = mocker.patch("bpy.types.SpaceView3D.draw_handler_remove")
         mock_prefs = mocker.patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs")
 
+        class MockPrefs:
+            show_joint_axes: bool = False
+
+        prefs = MockPrefs()
         # Test ENABLE
-        mock_prefs.return_value = type("Prefs", (), {"show_joint_axes": True})()
+        prefs.show_joint_axes = True
+        mock_prefs.return_value = prefs
         update_viz_handle(bpy.context)
         mock_add.assert_called_once()
         assert bpy.app.driver_namespace["linkforge_joint_gizmo_handler"] == "handle_123"
 
         # Test DISABLE
-        mock_prefs.return_value.show_joint_axes = False
+        prefs.show_joint_axes = False
         update_viz_handle(bpy.context)
         mock_remove.assert_called()
         assert "linkforge_joint_gizmo_handler" not in bpy.app.driver_namespace

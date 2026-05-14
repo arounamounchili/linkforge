@@ -7,6 +7,7 @@ import typing
 
 import bpy
 
+from ..utils.property_helpers import get_joint_props, get_robot_props
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
@@ -48,11 +49,9 @@ class LINKFORGE_UL_ros2_control_joints(bpy.types.UIList):
             row = layout.row(align=True)
 
             # Use the joint's custom name if it exists, otherwise fall back to the object name
-            display_name = (
-                getattr(item.joint_obj, "linkforge_joint").joint_name
-                if item.joint_obj
-                else item.name
-            )
+            display_name = item.name
+            if item.joint_obj and (jp := get_joint_props(item.joint_obj)):
+                display_name = jp.joint_name
 
             row.label(text=display_name, icon="EMPTY_AXIS")
 
@@ -101,11 +100,9 @@ class LINKFORGE_PT_control(bpy.types.Panel):
         inner = layout.box()
 
         # Use the joint's custom name if it exists, otherwise fall back to the object name
-        display_name = (
-            getattr(joint_item.joint_obj, "linkforge_joint").joint_name
-            if joint_item.joint_obj
-            else joint_item.name
-        )
+        display_name = joint_item.name
+        if joint_item.joint_obj and (jp := get_joint_props(joint_item.joint_obj)):
+            display_name = jp.joint_name
 
         inner.label(text=f"Config: {display_name}", icon="SETTINGS")
 
@@ -166,7 +163,8 @@ class LINKFORGE_PT_control(bpy.types.Panel):
         if not (layout and scene):
             return
 
-        props = getattr(scene, "linkforge")
+        if not (props := get_robot_props(scene)):
+            return
 
         # Master Toggle
         layout.prop(props, "use_ros2_control", text="Use ROS2 Control", icon="CHECKMARK")
@@ -272,7 +270,8 @@ class LINKFORGE_MT_add_control_joint(bpy.types.Menu):
         if not (layout and scene):
             return
 
-        props = getattr(scene, "linkforge")
+        if not (props := get_robot_props(scene)):
+            return
 
         # Get all joints from tree using centralized statistics
         stats = get_robot_statistics(scene)
@@ -284,12 +283,8 @@ class LINKFORGE_MT_add_control_joint(bpy.types.Menu):
 
         joint_objs = []
         for obj in scene.objects:
-            if (
-                obj.type == "EMPTY"
-                and hasattr(obj, "linkforge_joint")
-                and getattr(obj, "linkforge_joint").is_robot_joint
-            ):
-                name = getattr(obj, "linkforge_joint").joint_name
+            if (jp := get_joint_props(obj)) and jp.is_robot_joint:
+                name = jp.joint_name
                 # Check if the exact object or the exact name was already added
                 if obj not in added_objs and name not in added_names:
                     joint_objs.append((name, obj))

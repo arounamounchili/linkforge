@@ -9,13 +9,12 @@ import bpy
 
 from ..properties.link_props import sanitize_robot_name
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.property_helpers import get_joint_props, get_transmission_props
 from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
     from bpy.types import Context, Operator
 
-    from ..properties.joint_props import JointPropertyGroup
-    from ..properties.transmission_props import TransmissionPropertyGroup
 else:
     # Runtime fallback for mock environments where bpy.types might be partially loaded.
     Context = typing.Any
@@ -52,11 +51,7 @@ class LINKFORGE_OT_create_transmission(Operator):
         if not obj.select_get():
             return False
         # Require a joint to be selected
-        return bool(
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and typing.cast("JointPropertyGroup", getattr(obj, "linkforge_joint")).is_robot_joint
-        )
+        return bool(obj.type == "EMPTY" and (jp := get_joint_props(obj)) and jp.is_robot_joint)
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -96,7 +91,8 @@ def create_transmission_for_joint(joint_obj: typing.Any, context: Context) -> bo
         empty_size = getattr(addon_prefs, "transmission_empty_size", empty_size)
 
     # Get selected joint
-    joint_props = typing.cast("JointPropertyGroup", getattr(joint_obj, "linkforge_joint"))
+    if not (joint_props := get_joint_props(joint_obj)):
+        return False
     joint_name = joint_props.joint_name
     location = joint_obj.matrix_world.translation.copy()
 
@@ -123,8 +119,7 @@ def create_transmission_for_joint(joint_obj: typing.Any, context: Context) -> bo
         view_layer.update()
 
     # ALIGNMENT: Point arrow along Joint Axis
-    if hasattr(joint_obj, "linkforge_joint"):
-        jp = typing.cast("JointPropertyGroup", getattr(joint_obj, "linkforge_joint"))
+    if jp := get_joint_props(joint_obj):
         axis_vec = None
         if jp.axis == "X":
             axis_vec = (1, 0, 0)
@@ -156,14 +151,12 @@ def create_transmission_for_joint(joint_obj: typing.Any, context: Context) -> bo
 
     # Set display size and properties
     transmission_empty.empty_display_size = empty_size
-    trans_props = typing.cast(
-        "TransmissionPropertyGroup", getattr(transmission_empty, "linkforge_transmission")
-    )
-    trans_props.is_robot_transmission = True
+    if trans_props := get_transmission_props(transmission_empty):
+        trans_props.is_robot_transmission = True
 
-    trans_props.transmission_name = sanitize_robot_name(transmission_empty.name)
-    trans_props.transmission_type = "SIMPLE"
-    trans_props.joint_name = joint_obj
+        trans_props.transmission_name = sanitize_robot_name(transmission_empty.name)
+        trans_props.transmission_type = "SIMPLE"
+        trans_props.joint_name = joint_obj
 
     clear_stats_cache()
     return True
@@ -197,11 +190,7 @@ class LINKFORGE_OT_delete_transmission(Operator):
         if not obj.select_get():
             return False
         return bool(
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_transmission")
-            and typing.cast(
-                "TransmissionPropertyGroup", getattr(obj, "linkforge_transmission")
-            ).is_robot_transmission
+            obj.type == "EMPTY" and (tp := get_transmission_props(obj)) and tp.is_robot_transmission
         )
 
     @safe_execute

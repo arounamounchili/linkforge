@@ -292,11 +292,8 @@ def fix_existing_joints(_dummy: typing.Any = None) -> None:
         return
 
     for obj in scene.objects:
-        if (
-            obj.type == "EMPTY"
-            and hasattr(obj, "linkforge_joint")
-            and obj.linkforge_joint.is_robot_joint
-        ):
+        joint_props = getattr(obj, "linkforge_joint", None)
+        if obj.type == "EMPTY" and joint_props and getattr(joint_props, "is_robot_joint", False):
             # Ensure PLAIN_AXES type (simple crosshair)
             # We draw our own custom RViz-style arrows on top of this
             if obj.empty_display_type != "PLAIN_AXES":

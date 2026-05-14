@@ -28,7 +28,10 @@ class TestLinkOperators:
     def test_add_empty_link_operator(self, scene, blender_context) -> None:
         """Verify that the add_empty_link operator creates a valid link frame."""
         # Run operator
-        bpy.ops.linkforge.add_empty_link()
+        import typing
+
+        ops: typing.Any = bpy.ops
+        ops.linkforge.add_empty_link()
 
         # Verify object creation
         assert "base_link" in bpy.data.objects
@@ -48,11 +51,16 @@ class TestLinkOperators:
         safe_update(scene)
 
         # Select it (operator uses active_object)
-        bpy.context.view_layer.objects.active = mesh_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = mesh_obj
         mesh_obj.select_set(True)
 
         # Run operator
-        bpy.ops.linkforge.create_link_from_mesh()
+        import typing
+
+        ops: typing.Any = bpy.ops
+        ops.linkforge.create_link_from_mesh()
 
         # Verify restructuring
         # The Empty should now have the original name "arm_segment"
