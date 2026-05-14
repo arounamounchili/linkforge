@@ -1,4 +1,13 @@
-"""Transmission models for ros2_control integration."""
+"""Transmission models for ros2_control integration.
+
+This module defines the mechanical coupling between actuators and joints,
+handling gear ratios, offsets, and hardware interface mappings.
+
+Transmission Types:
+- **Simple**: 1-to-1 mapping between an actuator and a joint.
+- **Differential**: 2-to-2 mapping (e.g., wrist or differential drive).
+- **Linkage**: Complex mappings like four-bar linkages.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +16,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from enum import Enum
 
+from ..constants import EPSILON
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
 
@@ -22,10 +32,7 @@ class TransmissionType(str, Enum):
 
 @dataclass(frozen=True)
 class TransmissionJoint:
-    """Joint specification in a transmission.
-
-    Defines how a joint is connected in the transmission with its hardware interface.
-    """
+    """Joint specification in a transmission."""
 
     name: str
     hardware_interfaces: Sequence[str] = field(default_factory=lambda: ("position",))
@@ -48,12 +55,12 @@ class TransmissionJoint:
                 target="HardwareInterfaces",
                 value=self.name,
             )
-        if self.mechanical_reduction is not None and self.mechanical_reduction == 0:
+        if self.mechanical_reduction is not None and abs(self.mechanical_reduction) < EPSILON:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Mechanical reduction for transmission joint '{self.name}' cannot be zero",
                 target="MechanicalReduction",
-                value=self.name,
+                value=self.mechanical_reduction,
             )
         object.__setattr__(self, "hardware_interfaces", tuple(self.hardware_interfaces))
 
@@ -68,10 +75,7 @@ class TransmissionJoint:
 
 @dataclass(frozen=True)
 class TransmissionActuator:
-    """Actuator specification in a transmission.
-
-    Defines the actuator properties and its connection to the transmission.
-    """
+    """Actuator specification in a transmission."""
 
     name: str
     hardware_interfaces: Sequence[str] = field(default_factory=lambda: ("position",))
@@ -94,12 +98,12 @@ class TransmissionActuator:
                 target="HardwareInterfaces",
                 value=self.name,
             )
-        if self.mechanical_reduction is not None and self.mechanical_reduction == 0:
+        if self.mechanical_reduction is not None and abs(self.mechanical_reduction) < EPSILON:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Mechanical reduction for transmission actuator '{self.name}' cannot be zero",
                 target="MechanicalReduction",
-                value=self.name,
+                value=self.mechanical_reduction,
             )
         object.__setattr__(self, "hardware_interfaces", tuple(self.hardware_interfaces))
 
@@ -114,11 +118,7 @@ class TransmissionActuator:
 
 @dataclass(frozen=True)
 class Transmission:
-    """Transmission definition for mapping between joints and actuators.
-
-    Transmissions define the relationship between joints and actuators, handling
-    mechanical reduction and other transformations. Used by ros_control/ros2_control.
-    """
+    """Transmission definition mapping between joints and actuators."""
 
     name: str
     type: str  # Plugin name (e.g., TransmissionType enum or custom)
