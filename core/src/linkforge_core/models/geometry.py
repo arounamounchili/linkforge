@@ -1,8 +1,13 @@
 """Geometry primitives and spatial transformations for robot models.
 
-This module provides the structural building blocks for robot links,
-including primitive shapes (Box, Cylinder, Sphere) and external Mesh
-references, along with spatial Transform utilities.
+Defines the structural building blocks for robot links and spatial pose
+utilities.
+
+Core Components:
+    - Box, Cylinder, Sphere: Analytic primitive geometries.
+    - Mesh: External geometry reference with scaling support.
+    - Transform: 6-DOF spatial pose (XYZ + RPY).
+    - Vector3: 3D spatial coordinate container.
 """
 
 from __future__ import annotations

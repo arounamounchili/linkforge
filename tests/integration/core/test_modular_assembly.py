@@ -17,13 +17,16 @@ def create_arm_component() -> RobotBuilder:
     builder = RobotBuilder("arm")
     (
         builder.link("arm_base")
+        .mass(1.0)
         .visual(Box(size=Vector3(0.1, 0.1, 0.1)))
         .commit()
         .link("link_1", parent="arm_base")
+        .mass(1.0)
         .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57), xyz=(0, 0, 0.1))
         .visual(Box(size=Vector3(0.05, 0.05, 0.2)))
         .commit()
         .link("wrist", parent="link_1")
+        .mass(1.0)
         .revolute(axis=(0, 1, 0), limits=(-1.57, 1.57), xyz=(0, 0, 0.2))
         .visual(Box(size=Vector3(0.05, 0.05, 0.05)))
         .commit()
@@ -35,7 +38,7 @@ def test_modular_assembly_with_prefixes() -> None:
     """Verify merging two identical arms with unique prefixes."""
     # 1. Create the main robot (base)
     main = RobotBuilder("modular_robot")
-    main.link("chassis").visual(Box(size=Vector3(0.5, 0.5, 0.2))).commit()
+    main.link("chassis").mass(1.0).visual(Box(size=Vector3(0.5, 0.5, 0.2))).commit()
 
     # 2. Create the arm component
     arm_comp = create_arm_component()

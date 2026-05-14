@@ -289,31 +289,32 @@ logger.error(f"Debug: {variable}")
 
 ### Python Style Guide
 
-We follow **PEP 8** with some modifications. Always use **type hints** and **Google-style docstrings** (required for ReadTheDocs API docs):
+### Documentation Standards (Lean Google Style)
+
+We follow a **Lean Google Style** for documentation. Every module and class must be documented to provide high-level context and component breakdowns:
+
+1.  **Module Headers**: Summarize the purpose and categorize key components (Models, Validators, Utilities).
+2.  **Concise Summaries**: Focus on *intent* and *physical implications* rather than just restating the signature.
+3.  **Core Components**: Use a structured list in module docstrings to identify the main actors.
 
 ```python
-# Good: Clear, typed, documented
-def calculate_inertia(geometry: Box, mass: float) -> InertiaTensor:
-    """Calculate inertia tensor for a box.
+"""Module title.
 
-    Args:
-        geometry: Box geometry with dimensions
-        mass: Total mass in kg
+Brief high-level summary of role in the IR.
 
-    Returns:
-        Inertia tensor for the box
-
-    Raises:
-        RobotModelError: If mass is non-positive
-    """
-    if mass <= 0:
-        raise RobotModelError("Mass must be positive")
-
-    # Calculate moments of inertia
-    ixx = (mass / 12.0) * (geometry.size.y**2 + geometry.size.z**2)
-    # ...
-    return InertiaTensor(ixx=ixx, ...)
+Core Components:
+    - ComponentA: Brief role description.
+    - ComponentB: Brief role description.
+"""
 ```
+
+### "Physics as Truth" Design Principle
+
+LinkForge follows a strict **Physics as Truth** philosophy. The Intermediate Representation (IR) is not just a data structure; it is a physical model that must remain stable and plausible at all times.
+
+- **Strict Validation**: All models (Link, Joint, Sensor) must implement `__post_init__` guardrails for physical properties (e.g., non-negative mass, normalized axes, valid LIDAR ranges).
+- **Orchestrated Checks**: Global consistency (cycles, connectivity, ros2_control limits) is enforced by the `RobotValidator`.
+- **Fail Fast**: We prefer a `RobotValidationError` at construction time over a physics engine crash at runtime.
 
 ```python
 # Good ✅

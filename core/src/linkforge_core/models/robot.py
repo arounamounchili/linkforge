@@ -3,6 +3,12 @@
 The Robot class serves as the central container for a robot's kinematic,
 physical, and sensor data. It acts as a unified data structure that
 bridges high-fidelity design tools with robotics description formats.
+
+Core Responsibilities:
+- **Assembly**: Merging sub-robots and managing component namespaces.
+- **Topology**: Maintaining O(1) indices for links, joints, and sensors.
+- **Validation**: Enforcing structural integrity and kinematic tree rules.
+- **Export**: Orchestrating URDF and SRDF generation.
 """
 
 from __future__ import annotations
@@ -42,12 +48,10 @@ from .transmission import Transmission
 class Robot:
     """Complete robot description containing links, joints, and metadata.
 
-    Acts as the central hub of the IR, maintaining rigid bodies (Links)
-    connected by kinematic constraints (Joints), along with sensors,
-    transmissions, and simulation-specific metadata.
-
-    Note:
-        - Uses O(1) hash map lookups for links and joints via internal indices.
+    Acts as the central hub of the LinkForge IR, maintaining rigid bodies
+    (Links) connected by kinematic constraints (Joints), along with sensors,
+    transmissions, and simulation-specific metadata. It provides high-level
+    assembly and traversal APIs.
     """
 
     name: str

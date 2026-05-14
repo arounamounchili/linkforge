@@ -1,13 +1,11 @@
 """Mesh topology and numerical validation utilities.
 
 Provides checks for the 'Top Six Pathologies' of triangle meshes to ensure
-physical accuracy and simulation stability. A valid mesh must be:
-  - Closed (watertight): no boundary edges
-  - Manifold: no shared edges by >2 triangles
-  - Consistently oriented: uniform winding (outward normals)
-  - Welded: no unwelded/proximal vertices
-  - Efficient: no duplicate or degenerate triangles
-  - Numerically stable: no extreme aspect ratio 'sliver' triangles
+physical accuracy and simulation stability.
+
+Core Components:
+    - validate_mesh_topology: Comprehensive check for manifoldness, winding, and slivers.
+    - Severity: Enum for differentiating advisory warnings from fatal errors.
 """
 
 from __future__ import annotations

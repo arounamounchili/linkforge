@@ -1,12 +1,14 @@
 """Semantic robot description models (SRDF).
 
-This module provides data structures to represent MoveIt-style semantic information,
-bridging the gap between raw kinematic structure and high-level motion planning.
+This module provides data structures to represent MoveIt-standard semantic
+information, bridging the gap between raw kinematic structure and high-level
+motion planning.
 
-Key Components:
+Core Components:
 - **Planning**: Groups of links/joints and kinematic chains.
 - **Poses**: Named joint configurations (group states).
 - **Collisions**: Fine-grained collision filtering and geometric approximations.
+- **Interfaces**: Virtual joints and end-effector definitions.
 """
 
 from __future__ import annotations
@@ -353,8 +355,9 @@ class JointProperty:
 class SemanticRobotDescription:
     """Container for all semantic information (SRDF).
 
-    This class serves as the central point for MoveIt-compatible metadata
-    that exists alongside the kinematic URDF description.
+    This class serves as the central repository for MoveIt-compatible metadata,
+    including planning groups, collision filters, and named poses, that
+    complement the kinematic robot model.
     """
 
     robot_name: str = ""

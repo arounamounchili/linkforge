@@ -1204,7 +1204,11 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     safe_get_sensor(lidar_obj).sensor_type = "LIDAR"
     safe_get_sensor(lidar_obj).attached_link = link
     safe_get_sensor(lidar_obj).lidar_horizontal_samples = 720
+    safe_get_sensor(lidar_obj).lidar_horizontal_min_angle = -3.14159
+    safe_get_sensor(lidar_obj).lidar_horizontal_max_angle = 3.14159
     safe_get_sensor(lidar_obj).lidar_vertical_samples = 16
+    safe_get_sensor(lidar_obj).lidar_vertical_min_angle = -0.1
+    safe_get_sensor(lidar_obj).lidar_vertical_max_angle = 0.1
 
     builder = RobotBuilder("Robot")
     from linkforge_core.models.link import Link

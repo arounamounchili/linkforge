@@ -1,8 +1,13 @@
 """Joint model representing kinematic connections between robot links.
 
 This module defines the relationships between parent and child links,
-including motion types (Revolute, Prismatic, etc.), limits, dynamics,
-and safety controller configurations.
+including motion types, limits, dynamics, and safety configurations.
+
+Core Components:
+- **Topology**: Parent-child relationship and naming.
+- **Motion**: Joint types (Revolute, Prismatic, etc.) and axis definition.
+- **Constraints**: Limits, dynamics (friction/damping), and safety controllers.
+- **Specialized**: Mimic joints and calibration metadata.
 """
 
 from __future__ import annotations
@@ -140,7 +145,12 @@ class JointCalibration:
 
 @dataclass(frozen=True)
 class Joint:
-    """Robot joint defining the kinematic connection between two links."""
+    """Robot joint defining the kinematic connection between two links.
+
+    A joint couples a parent link to a child link with a specific degree
+    of freedom (DOF) and mechanical limits. It defines the coordinate
+    transformation from parent to child.
+    """
 
     name: str
     type: JointType

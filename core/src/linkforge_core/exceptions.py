@@ -1,7 +1,14 @@
 """Custom exceptions for the LinkForge ecosystem.
 
-This module defines the exception hierarchy used across models, parsers,
-and generators to provide granular error handling.
+Defines the exception hierarchy used across models, parsers, and generators
+to provide granular error handling and categorized validation failures.
+
+Core Components:
+    - ValidationErrorCode: Enum of standardized error categories.
+    - LinkForgeError: Base exception for the entire ecosystem.
+    - RobotModelError: Failures related to the IR and physical consistency.
+    - RobotParserError: Failures during format import and resolution.
+    - RobotGeneratorError: Failures during format export.
 """
 
 from enum import Enum

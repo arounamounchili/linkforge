@@ -549,9 +549,9 @@ class TestRobot:
         # Test a mimic chain that ends properly (hitting break)
 
         robot = Robot(name="test")
-        l1 = Link(name="l1")
-        l2 = Link(name="l2")
-        l3 = Link(name="l3")
+        l1 = Link(name="l1", inertial=Inertial(mass=1.0))
+        l2 = Link(name="l2", inertial=Inertial(mass=1.0))
+        l3 = Link(name="l3", inertial=Inertial(mass=1.0))
         robot.add_link(l1)
         robot.add_link(l2)
         robot.add_link(l3)

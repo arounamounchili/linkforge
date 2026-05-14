@@ -1,9 +1,14 @@
 """Modular validation checks for robot models.
 
-Each class implements a single, focused validation rule following the
-Single Responsibility Principle. Checks are designed to be composable:
-they write errors and warnings directly into a shared ``ValidationResult``,
-allowing the caller to run any subset of checks independently.
+This module provides focused validation rules following the Single
+Responsibility Principle. Each check is independent and contributes to
+a shared :class:`~linkforge_core.validation.result.ValidationResult`.
+
+Check Categories:
+- **Topology**: Links, joints, and kinematic tree integrity.
+- **Physics**: Mass, inertia, and numerical stability.
+- **Interfaces**: ros2_control and mimic joint chains.
+- **Semantic**: SRDF planning groups and collision filters.
 """
 
 from __future__ import annotations

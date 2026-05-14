@@ -3,10 +3,11 @@
 This module defines the mechanical coupling between actuators and joints,
 handling gear ratios, offsets, and hardware interface mappings.
 
-Transmission Types:
+Transmission Categories:
 - **Simple**: 1-to-1 mapping between an actuator and a joint.
 - **Differential**: 2-to-2 mapping (e.g., wrist or differential drive).
 - **Linkage**: Complex mappings like four-bar linkages.
+- **Custom**: Extensible plugin-based transmissions.
 """
 
 from __future__ import annotations
@@ -118,7 +119,12 @@ class TransmissionActuator:
 
 @dataclass(frozen=True)
 class Transmission:
-    """Transmission definition mapping between joints and actuators."""
+    """Mechanical transmission mapping between joints and actuators.
+
+    Transmissions describe how mathematical joint states relate to physical
+    actuator commands, including hardware interface specifications for
+    ros2_control.
+    """
 
     name: str
     type: str  # Plugin name (e.g., TransmissionType enum or custom)

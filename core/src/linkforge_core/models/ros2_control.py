@@ -1,9 +1,10 @@
 """ros2_control data models for hardware interface configuration.
 
 This module provides data structures to define how robot joints and sensors
-interface with the ROS 2 Control framework.
+interface with the ROS 2 Control framework. It manages the metadata required
+to generate <ros2_control> blocks in URDF.
 
-Control Block Types:
+Control Block Categories:
 - **System**: Multi-joint hardware (e.g., a complete robotic arm).
 - **Actuator**: Simple single-joint hardware (e.g., a standalone motor).
 - **Sensor**: Read-only hardware (e.g., an external encoder).
@@ -93,7 +94,12 @@ class Ros2ControlSensor:
 
 @dataclass(frozen=True)
 class Ros2Control:
-    """Complete ros2_control system configuration."""
+    """Hardware interface abstraction for ROS 2 Control.
+
+    This model describes a hardware system (system, actuator, or sensor),
+    its associated joints/sensors, and the hardware plugin used to
+    communicate with the physical or simulated hardware.
+    """
 
     name: str
     type: str = "system"  # "system", "actuator", or "sensor"

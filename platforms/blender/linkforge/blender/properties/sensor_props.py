@@ -283,6 +283,26 @@ class SensorPropertyGroup(PropertyGroup):
         soft_max=128,
     )
 
+    lidar_vertical_min_angle: FloatProperty(  # type: ignore[valid-type]
+        name="Vertical Min Angle",
+        description="Minimum vertical scan angle (displayed in degrees, stored as radians)",
+        default=-0.261799,  # -15 degrees
+        min=-3.14159265359,
+        max=3.14159265359,
+        precision=3,
+        subtype="ANGLE",
+    )
+
+    lidar_vertical_max_angle: FloatProperty(  # type: ignore[valid-type]
+        name="Vertical Max Angle",
+        description="Maximum vertical scan angle (displayed in degrees, stored as radians)",
+        default=0.261799,  # 15 degrees
+        min=-3.14159265359,
+        max=3.14159265359,
+        precision=3,
+        subtype="ANGLE",
+    )
+
     lidar_range_min: FloatProperty(  # type: ignore[valid-type]
         name="Range Min",
         description="Minimum detection range in meters",
@@ -299,6 +319,15 @@ class SensorPropertyGroup(PropertyGroup):
         min=0.1,
         soft_max=100.0,
         precision=1,
+    )
+
+    lidar_range_resolution: FloatProperty(  # type: ignore[valid-type]
+        name="Range Resolution",
+        description="Resolution of the range sensor in meters",
+        default=0.01,
+        min=0.001,
+        soft_max=0.1,
+        precision=3,
     )
 
     # Contact-specific properties

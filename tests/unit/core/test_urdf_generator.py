@@ -53,7 +53,7 @@ class TestURDFGenerator:
         robot.add_joint(Joint(name="j1", parent="base_link", child="child", type=JointType.FIXED))
 
         generator = URDFGenerator(pretty_print=False)
-        xml_str = generator.generate(robot)
+        xml_str = generator.generate(robot, validate=False)
 
         root = ET.fromstring(xml_str)
         assert root.tag == "robot"
@@ -85,7 +85,7 @@ class TestURDFGenerator:
         robot.add_joint(Joint(name="j1", parent="base_link", child="child", type=JointType.FIXED))
 
         generator = URDFGenerator(pretty_print=False)
-        xml_str = generator.generate(robot)
+        xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
         link_elem = root.find("link")
@@ -287,7 +287,7 @@ class TestURDFGenerator:
         robot.add_joint(joint)
 
         generator = URDFGenerator()
-        xml_str = generator.generate(robot)
+        xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
         joint_elem = root.find(".//joint[@name='j1']")
@@ -319,7 +319,7 @@ class TestURDFGenerator:
         robot.add_joint(Joint(name="j1", parent="body", child="child", type=JointType.FIXED))
 
         generator = URDFGenerator(pretty_print=False)
-        xml_str = generator.generate(robot)
+        xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
         inertial_elem = root.find("link/inertial")
@@ -371,7 +371,7 @@ class TestURDFGenerator:
         output_path = tmp_path / "robot.urdf"
         generator = URDFGenerator(output_path=output_path)
 
-        xml_str = generator.generate(robot)
+        xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
         mesh_elem = root.find("link/visual/geometry/mesh")
@@ -410,7 +410,7 @@ class TestURDFGenerator:
         robot.add_transmission(trans)
 
         generator = URDFGenerator(pretty_print=False)
-        xml_str = generator.generate(robot)
+        xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
         trans_elem = root.find("transmission")
@@ -539,7 +539,7 @@ class TestURDFGenerator:
         robot.add_gazebo_element(gz)
 
         generator = URDFGenerator(pretty_print=False)
-        xml_str = generator.generate(robot)
+        xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
         gz_elem = root.find("gazebo[@reference='base']")
@@ -945,7 +945,7 @@ class TestURDFGenerator:
             transmissions=[trans],
         )
         gen = URDFGenerator(use_ros2_control=True)
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
 
         assert "<offset>0.5</offset>" in xml
         assert "<offset>0.1</offset>" in xml
@@ -1056,7 +1056,7 @@ class TestURDFGenerator:
         gz = GazeboElement(reference="base", properties={"dampingFactor": "0.1"})
         robot = Robot(name="r", links=[Link(name="base")], gazebo_elements=[gz])
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
 
         assert "<dampingFactor>0.1</dampingFactor>" in xml
 
@@ -1112,7 +1112,7 @@ class TestURDFGenerator:
         )
 
         gen = URDFGenerator(use_ros2_control=True)
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
 
         assert xml.count("libgz_ros2_control-system.so") == 0
         assert "my_ros2_control" in xml
@@ -1132,7 +1132,7 @@ class TestURDFGenerator:
         )
         robot = Robot(name="r", links=[Link(name="base", physics=phys)])
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
 
         assert '<gazebo reference="base">' in xml
         assert "<mu1>0.8</mu1>" in xml
@@ -1232,7 +1232,7 @@ class TestURDFGenerator:
             ros2_controls=[rc],
         )
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
 
         assert "<plugin>plugin/name</plugin>" in xml
         assert '<param name="param1">val1</param>' in xml
@@ -1268,7 +1268,7 @@ class TestURDFGenerator:
             joints=[Joint(name="j1", parent="b", child="c", type=JointType.FIXED)],
         )
         gen = URDFGenerator(use_ros2_control=False)
-        result = gen.generate(robot)
+        result = gen.generate(robot, validate=False)
         assert "ros2_control" not in result
 
     def test_mimic_joint_with_default_multiplier_and_offset(self) -> None:
@@ -1299,7 +1299,7 @@ class TestURDFGenerator:
         robot.add_joint(j_main)
         robot.add_joint(j_mimic)
         gen = URDFGenerator()
-        result = gen.generate(robot)
+        result = gen.generate(robot, validate=False)
         root = ET.fromstring(result)
         mimic = root.find(".//mimic")
         assert mimic is not None
@@ -1319,7 +1319,7 @@ class TestURDFGenerator:
         )
         robot.add_sensor(sensor)
         gen = URDFGenerator()
-        result = gen.generate(robot)
+        result = gen.generate(robot, validate=False)
         assert "position_sensing" in result
         assert "vertical" in result
 
@@ -1336,7 +1336,7 @@ class TestURDFGenerator:
         )
         robot.add_sensor(sensor)
         gen = URDFGenerator()
-        result = gen.generate(robot)
+        result = gen.generate(robot, validate=False)
         assert "ct" in result
 
     def test_force_torque_sensor_generates_output(self) -> None:
@@ -1352,7 +1352,7 @@ class TestURDFGenerator:
         )
         robot.add_sensor(sensor)
         gen = URDFGenerator()
-        result = gen.generate(robot)
+        result = gen.generate(robot, validate=False)
         assert "ft" in result
 
     def test_generate_robot_with_empty_sections(self) -> None:
@@ -1369,7 +1369,7 @@ class TestURDFGenerator:
         link = Link(name="l", collisions=[Collision(geometry=Box(Vector3(1, 1, 1)))])
         robot = Robot(name="r", links=[link])
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
         assert "<collision>" in xml
         assert 'name="' not in xml.split("<collision>")[1].split(">")[0]
 
@@ -1385,7 +1385,7 @@ class TestURDFGenerator:
         )
         robot.add_joint(j1)
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
         assert 'falling="0.5"' in xml
         assert "rising" not in xml
 
@@ -1412,7 +1412,7 @@ class TestURDFGenerator:
             transmissions=[trans],
         )
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
         assert "<mechanicalReduction>" not in xml
         assert "<offset>" not in xml
 
@@ -1533,7 +1533,7 @@ class TestURDFGenerator:
         )
         robot = Robot(name="r", links=[Link(name="a"), Link(name="b")], joints=[j])
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
         assert "<calibration" not in xml
 
     def test_generate_imu_sensor_with_linear_acceleration_noise_only(self) -> None:
@@ -1605,7 +1605,7 @@ class TestURDFGenerator:
         link = Link(name="l", visuals=[Visual(geometry=UnknownGeometry())])  # type: ignore
         robot = Robot(name="r", links=[link])
         gen = URDFGenerator()
-        xml = gen.generate(robot)
+        xml = gen.generate(robot, validate=False)
         # Should create <geometry> but no child element
         # Using a more flexible check for the tag presence
         assert "<geometry" in xml

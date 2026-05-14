@@ -1,13 +1,14 @@
 """Sensor models for robotic simulation (Gazebo, SDF, URDF).
 
-This module defines the virtual instruments attached to robot links,
-enabling feedback for perception, navigation, and control in simulation.
+This module defines virtual instruments attached to robot links, enabling
+feedback for perception, navigation, and control. It serves as a bridge
+between physical robot hardware and simulation-specific sensor descriptions.
 
 Sensor Categories:
-- **Visual**: Camera and Depth Camera.
-- **Ranging**: LIDAR (Laser Scanners).
-- **Kinematic**: IMU and GPS.
-- **Physical**: Force/Torque and Contact sensors.
+- **Visual**: Camera and depth camera models.
+- **Ranging**: LIDAR (Laser Scanners) with 2D/3D support.
+- **Kinematic**: IMU (Inertial Measurement Unit) and GPS (NavSat).
+- **Physical**: Force/Torque and contact/collision sensors.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from .geometry import Transform
 
 
 class SensorType(str, Enum):
-    """Supported sensor types in Gazebo/SDF."""
+    """Enumeration of supported sensor types in the LinkForge IR."""
 
     CAMERA = "camera"
     DEPTH_CAMERA = "depth_camera"
@@ -139,12 +140,26 @@ class LidarInfo:
                 target="LidarRangeMax",
                 value=self.range_max,
             )
+        if self.range_resolution <= 0:
+            raise RobotValidationError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Lidar range_resolution must be positive",
+                target="LidarRangeResolution",
+                value=self.range_resolution,
+            )
         if self.horizontal_min_angle >= self.horizontal_max_angle:
             raise RobotValidationError(
                 ValidationErrorCode.OUT_OF_RANGE,
                 "Lidar horizontal min_angle must be less than max_angle",
                 target="LidarAngleRange",
                 value=(self.horizontal_min_angle, self.horizontal_max_angle),
+            )
+        if self.vertical_samples > 1 and self.vertical_min_angle >= self.vertical_max_angle:
+            raise RobotValidationError(
+                ValidationErrorCode.OUT_OF_RANGE,
+                "Lidar vertical min_angle must be less than max_angle for 3D scans",
+                target="LidarVerticalAngleRange",
+                value=(self.vertical_min_angle, self.vertical_max_angle),
             )
 
 
@@ -225,10 +240,11 @@ class ForceTorqueInfo:
 
 @dataclass(frozen=True)
 class Sensor:
-    """Generic sensor definition for simulation.
+    """Unified sensor model for simulation and hardware abstraction.
 
-    Sensors are attached to links and provide measurements in simulation
-    environments like Gazebo or Ignition.
+    Sensors are logical entities attached to robot links. They define
+    data acquisition parameters (update rate, FOV, range) and are
+    exported to simulation-specific formats (e.g., Gazebo <sensor> tags).
     """
 
     name: str

@@ -1,7 +1,11 @@
 """Material and color definitions for visual robot components.
 
-This module provides the data structures for defining the appearance
-of robot links, including RGBA colors and texture references.
+Defines the appearance of robot links, including RGBA colors and
+texture references.
+
+Core Components:
+    - Material: Container for color and texture associations.
+    - Color: RGBA spatial color representation [0, 1].
 """
 
 from __future__ import annotations

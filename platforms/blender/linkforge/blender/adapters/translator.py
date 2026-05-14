@@ -433,6 +433,10 @@ class SensorTranslator(ITranslator):
                     code=ValidationErrorCode.INVALID_VALUE,
                     affected_objects=[obj.name],
                 )
+            else:
+                # If no validation result is provided, let the exception bubble up
+                # to avoid silent failures in tests or scripts.
+                raise
 
     def _matrix_to_transform(self, matrix: Any) -> Any:
         """Helper to convert matrix to transform without circular import."""
@@ -520,12 +524,15 @@ class SensorTranslator(ITranslator):
         # LIDAR info
         elif sensor_type == SensorType.LIDAR:
             lidar_info = LidarInfo(
-                horizontal_samples=props.lidar_horizontal_samples,
-                horizontal_min_angle=props.lidar_horizontal_min_angle,
-                horizontal_max_angle=props.lidar_horizontal_max_angle,
-                vertical_samples=props.lidar_vertical_samples,
-                range_min=props.lidar_range_min,
-                range_max=props.lidar_range_max,
+                horizontal_samples=int(props.lidar_horizontal_samples),
+                horizontal_min_angle=float(props.lidar_horizontal_min_angle),
+                horizontal_max_angle=float(props.lidar_horizontal_max_angle),
+                vertical_samples=int(props.lidar_vertical_samples),
+                vertical_min_angle=float(props.lidar_vertical_min_angle),
+                vertical_max_angle=float(props.lidar_vertical_max_angle),
+                range_min=float(props.lidar_range_min),
+                range_max=float(props.lidar_range_max),
+                range_resolution=float(props.lidar_range_resolution),
                 noise=noise,
             )
 

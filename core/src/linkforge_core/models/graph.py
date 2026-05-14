@@ -1,9 +1,13 @@
 """Kinematic graph management for robot structures.
 
-This module provides formal graph theory logic for validating and
-traversing the link-joint structure of a robot. It is responsible for
-ensuring the model forms a valid tree or forest (collection of trees)
-suitable for simulation and control.
+This module provides formal graph theory logic for validating and traversing
+the link-joint structure of a robot. It ensures the model forms a valid tree
+or forest (collection of trees) suitable for simulation and control.
+
+Core Functionality:
+- **Topology**: Detects cycles and identifies root links.
+- **Traversal**: Provides topological sorting for links and joints.
+- **Isolation**: Detects disconnected kinematic islands.
 """
 
 from __future__ import annotations
@@ -23,7 +27,7 @@ class KinematicGraph:
     """Robot connectivity model for cycle detection and topological sorting.
 
     This class decouples the graph-theoretical concerns (islands, cycles, roots)
-    from the main Robot data model.
+    from the main Robot data model, enabling efficient structural validation.
     """
 
     def __init__(self, links: Iterable[Link], joints: Iterable[Joint]) -> None:

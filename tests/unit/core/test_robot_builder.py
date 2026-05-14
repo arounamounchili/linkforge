@@ -202,7 +202,7 @@ class TestRobotBuilder:
         # No geometry fallback
         b2 = RobotBuilder("no_fallback_f")
         b2.link("l_nf_f").mass(1.0).root()
-        assert b2.robot.link("l_nf_f").inertia.ixx == 1e-6
+        assert b2.robot.link("l_nf_f").inertia.ixx == 1e-09
 
     def test_attach_merge(self) -> None:
         """Test attaching another builder/robot."""
@@ -263,10 +263,10 @@ class TestRobotBuilder:
         builder = RobotBuilder("export_robot")
         builder.link("base_exp").root()
 
-        urdf = builder.export_urdf()
+        urdf = builder.export_urdf(validate=False)
         assert '<robot name="export_robot"' in urdf
 
-        srdf = builder.export_srdf()
+        srdf = builder.export_srdf(validate=False)
         assert '<robot name="export_robot"' in srdf
 
     def test_explicit_transforms_and_origins(self) -> None:
@@ -471,14 +471,14 @@ class TestRobotBuilder:
     def test_export_validation(self) -> None:
         """Test validation during export to ensures integrity of generated URDF/SRDF."""
         builder = RobotBuilder("export_val")
-        builder.link("base_ev").root()
+        builder.link("base_ev").mass(1.0).root()
 
         # Should pass
         builder.export_urdf(validate=True)
         builder.export_srdf(validate=True)
 
         # Should fail with cycle (base -> l1 -> base)
-        builder.link("l1_ev", parent="base_ev").fixed().commit()
+        builder.link("l1_ev", parent="base_ev").mass(1.0).fixed().commit()
         builder.robot.add_joint(Joint("cycle_ev", JointType.FIXED, "l1_ev", "base_ev"))
         with pytest.raises(RobotValidationError):
             builder.export_urdf(validate=True)

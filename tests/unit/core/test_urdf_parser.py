@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from linkforge_core.base import RobotParserError, XacroDetectedError
+from linkforge_core.constants import MIN_REASONABLE_INERTIA
 from linkforge_core.exceptions import (
     RobotModelError,
     RobotParserIOError,
@@ -715,8 +716,8 @@ class TestURDFParser:
         robot = parser.parse_string(xml)
         assert robot.links[0].inertial is not None
         inertia = robot.links[0].inertial.inertia
-        assert inertia.ixx == 1e-6
-        assert inertia.izz == 1e-6
+        assert inertia.ixx == MIN_REASONABLE_INERTIA
+        assert inertia.izz == MIN_REASONABLE_INERTIA
 
     def test_sensor_defaults(self) -> None:
         """Test default info creation for sensors missing specific tags."""
@@ -1073,7 +1074,7 @@ class TestURDFParser:
         # We now create a valid Inertial with zero() tensor instead of None
         assert robot.links[0].inertial is not None
         assert robot.links[0].inertial.mass == 2.0
-        assert robot.links[0].inertial.inertia.ixx == 1e-6
+        assert robot.links[0].inertial.inertia.ixx == MIN_REASONABLE_INERTIA
 
     def test_link_with_negative_inertia_is_sanitized(self) -> None:
         """Link inertia with negative diagonal values are sanitized to 1e-6."""
@@ -1087,9 +1088,9 @@ class TestURDFParser:
         robot = parser.parse_string(xml)
         assert robot.links[0].inertial is not None
         t = robot.links[0].inertial.inertia
-        assert t.ixx == pytest.approx(1e-6)
-        assert t.iyy == pytest.approx(1e-6)
-        assert t.izz == pytest.approx(1e-6)
+        assert t.ixx == pytest.approx(MIN_REASONABLE_INERTIA)
+        assert t.iyy == pytest.approx(MIN_REASONABLE_INERTIA)
+        assert t.izz == pytest.approx(MIN_REASONABLE_INERTIA)
 
     def test_collision_with_no_geometry_is_skipped(self) -> None:
         """Collision element without any geometry child is silently not added."""

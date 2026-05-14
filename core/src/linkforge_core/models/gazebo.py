@@ -2,7 +2,11 @@
 
 This module provides data structures to represent Gazebo-specific properties,
 bridging the gap between standard kinematic URDF and high-fidelity physics
-simulation parameters (CFM, ERP, materials, etc.).
+simulation parameters.
+
+Core Components:
+- **Elements**: Container for link/joint specific physics (CFM, ERP, materials).
+- **Plugins**: Functional extensions for sensors, controllers, and physics.
 """
 
 from __future__ import annotations
@@ -15,7 +19,12 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 
 @dataclass(frozen=True)
 class GazeboElement:
-    """Generic Gazebo element applied to robot, link, or joint."""
+    """Simulation-specific metadata container for Gazebo.
+
+    Encapsulates parameters that are not part of the standard URDF spec but
+    are required for high-fidelity physics (e.g., DART/ODE parameters) or
+    visual appearance in Gazebo.
+    """
 
     reference: str | None = None  # Link or joint name (None for robot-level)
     properties: dict[str, str] = field(default_factory=dict)

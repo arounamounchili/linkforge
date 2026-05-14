@@ -1,9 +1,13 @@
-"""Robot validator — thin orchestrator over modular validation checks.
+"""Robot validation orchestrator.
 
-This module provides :class:`RobotValidator`, which runs a configurable
-registry of :class:`~linkforge_core.validation.checks.ValidationCheck`
-instances against a robot model and returns a unified
-:class:`~linkforge_core.validation.result.ValidationResult`.
+This module provides the :class:`RobotValidator`, which coordinates a suite
+of modular :class:`ValidationCheck` instances to verify the structural,
+kinematic, and physical integrity of a robot model.
+
+Core Responsibilities:
+- **Orchestration**: Running multiple checks in a specific order.
+- **Reporting**: Aggregating issues into a unified :class:`ValidationResult`.
+- **Consistency**: Ensuring internal model indices are fresh before validation.
 """
 
 from __future__ import annotations

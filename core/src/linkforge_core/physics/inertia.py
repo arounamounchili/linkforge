@@ -1,7 +1,12 @@
 """Inertia tensor calculation for primitive geometries.
 
-Based on standard formulas for common shapes:
-https://en.wikipedia.org/wiki/List_of_moments_of_inertia
+Provides standard formulas and advanced numerical integration (Mirtich algorithm)
+for computing physically accurate mass properties of robot links.
+
+Core Components:
+    - calculate_inertia: Unified wrapper for all geometry types.
+    - calculate_mesh_inertia_from_triangles: High-fidelity Mirtich integration.
+    - _calculate_box/cylinder/sphere_inertia: Primitive analytic formulas.
 """
 
 from __future__ import annotations

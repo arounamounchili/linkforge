@@ -1,28 +1,12 @@
 """RobotBuilder API for LinkForge.
 
-The 'Composer' layer provides a **Fluent Builder Pattern** for intuitive,
-hierarchical construction of robot kinematic trees (links and joints).
+Provides a **Fluent Builder Pattern** for intuitive, hierarchical construction
+of robot kinematic trees (links and joints).
 
-Key Features:
-- **Fluent API**: Chain methods to define visuals, collisions, and dynamics.
-- **Safety**: Automatically commits dangling builders and prevents post-commit mutations.
-- **Validation**: Enforces structural integrity and material registration at build time.
-
-Example:
-    >>> from linkforge_core.composer import RobotBuilder
-    >>> from linkforge_core.composer.helpers import box
-    >>> builder = RobotBuilder("my_robot")
-    >>> builder.material("blue", color=(0, 0, 1, 1))
-    >>> (
-    ...     builder.link("base_link")
-    ...         .visual(box(0.5, 0.5, 0.2), material="blue")
-    ...         .collision()  # Auto-clones visual geometry
-    ...         .mass(10.0)   # Auto-calculates inertia
-    ...     .child("arm_link")
-    ...         .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57), xyz=(0, 0, 0.1))
-    ...         .commit()
-    ... )
-    >>> robot = builder.build()
+Core Components:
+    - RobotBuilder: Entry point for assembly and global material/control config.
+    - LinkBuilder: Fluent API for defining link visuals, collisions, and mass.
+    - SemanticBuilder: Interface for SRDF/MoveIt semantic groups.
 """
 
 from __future__ import annotations

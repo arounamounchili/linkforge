@@ -1,4 +1,13 @@
-"""Link physics and kinematics builder for LinkForge Composer."""
+"""Link physics and kinematics builder for LinkForge Composer.
+
+Provides a staged fluent interface for constructing robot links, including
+visuals, collisions, mass properties, and their parent joint connections.
+
+Core Components:
+    - LinkBuilder: Staged builder for programmatic link/joint construction.
+    - _JointState: Internal container for staged joint properties.
+    - _LinkState: Internal container for staged link properties.
+"""
 
 from __future__ import annotations
 

@@ -1,9 +1,13 @@
 """Base classes for Robot Generators and Parsers.
 
-This module defines the abstract base classes that all format-specific generators
-(URDF, SRDF, etc.) and parsers should inherit from. These classes facilitate
-translation between the LinkForge Intermediate Representation (IR) and various
-external robot description formats. Support for MJCF and SDF is planned.
+This module defines the abstract base classes that facilitate translation
+between the LinkForge Intermediate Representation (IR) and various external
+robot description formats.
+
+Core Components:
+    - RobotGenerator: Abstract base for format-specific exporters (URDF, SRDF).
+    - RobotParser: Abstract base for format-specific importers.
+    - IResourceResolver: Protocol for resolving package:// and file:// URIs.
 """
 
 from __future__ import annotations

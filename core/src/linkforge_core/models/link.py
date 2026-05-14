@@ -3,6 +3,11 @@
 This module provides the core data structures for robot links, including
 inertial properties, collision geometry, visual appearance, and surface
 physics parameters.
+
+Core Components:
+- **Physics**: Inertia tensors, mass, and surface properties (friction).
+- **Geometry**: Visual and collision representations.
+- **Traversal**: Support for namespacing and deep-copy transformations.
 """
 
 from __future__ import annotations
@@ -49,15 +54,11 @@ class InertiaTensor:
 
     def __post_init__(self) -> None:
         """Validate inertia tensor values."""
-        # All diagonal elements must meet minimal stability thresholds
-        if (
-            self.ixx < MIN_REASONABLE_INERTIA
-            or self.iyy < MIN_REASONABLE_INERTIA
-            or self.izz < MIN_REASONABLE_INERTIA
-        ):
+        # All diagonal elements must be positive
+        if self.ixx <= 0 or self.iyy <= 0 or self.izz <= 0:
             raise RobotPhysicsError(
                 ValidationErrorCode.OUT_OF_RANGE,
-                f"Diagonal inertia components must be at least {MIN_REASONABLE_INERTIA}",
+                "Diagonal inertia components must be positive",
                 target="DiagonalInertia",
                 value=(self.ixx, self.iyy, self.izz),
             )
@@ -163,8 +164,9 @@ class Collision:
 class Link:
     """Robot link representing a rigid body in a kinematic chain.
 
-    A link is a rigid body with visual, collision, and inertial properties.
-    The model supports multiple visual and collision elements per link.
+    A link is a rigid body defined by its name, physical properties (inertial),
+    and geometric representations (visual/collision). It serves as a node
+    in the kinematic graph.
     """
 
     name: str
@@ -218,9 +220,9 @@ class Link:
 
     def with_prefix(self, prefix: str) -> Link:
         """Create a new link with a prefixed name and sub-elements."""
-        return Link(
+        return replace(
+            self,
             name=f"{prefix}{self.name}",
             visuals=tuple(v.with_prefix(prefix) for v in self.visuals),
             collisions=tuple(c.with_prefix(prefix) for c in self.collisions),
-            physics=self.physics,
         )

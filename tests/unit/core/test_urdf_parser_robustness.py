@@ -4,6 +4,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from linkforge_core.constants import MIN_REASONABLE_INERTIA
 from linkforge_core.exceptions import RobotModelError, RobotParserError, XacroDetectedError
 from linkforge_core.models.geometry import Box
 from linkforge_core.parsers.urdf_parser import URDFParser
@@ -50,8 +51,8 @@ def test_xml_base_inertia_sanitization() -> None:
     )
     inertial = parser._parse_inertial_element(elem)
     assert inertial is not None
-    # Minimal stable diagonal is 1e-6
-    assert inertial.inertia.ixx == 1e-6
+    # Minimal stable diagonal is MIN_REASONABLE_INERTIA
+    assert inertial.inertia.ixx == MIN_REASONABLE_INERTIA
 
 
 def test_xml_base_geometry_error_handling() -> None:
