@@ -1,4 +1,14 @@
-"""Sensor models for robotic simulation (Gazebo, SDF, URDF)."""
+"""Sensor models for robotic simulation (Gazebo, SDF, URDF).
+
+This module defines the virtual instruments attached to robot links,
+enabling feedback for perception, navigation, and control in simulation.
+
+Sensor Categories:
+- **Visual**: Camera and Depth Camera.
+- **Ranging**: LIDAR (Laser Scanners).
+- **Kinematic**: IMU and GPS.
+- **Physical**: Force/Torque and Contact sensors.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +16,7 @@ import math
 from dataclasses import dataclass, field, replace
 from enum import Enum
 
+from ..constants import EPSILON
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from .gazebo import GazeboPlugin
 from .geometry import Transform
@@ -51,8 +62,7 @@ class CameraInfo:
 
         # Standard pinhole cameras support FOV up to 180° (π radians)
         # For FOV > 180°, use wideanglecamera sensor type instead
-        # Use small tolerance (1e-6) to handle floating-point precision from UI conversions
-        if self.horizontal_fov <= 0 or self.horizontal_fov > (math.pi + 1e-6):
+        if self.horizontal_fov <= 0 or self.horizontal_fov > (math.pi + EPSILON):
             raise RobotValidationError(
                 ValidationErrorCode.OUT_OF_RANGE,
                 "Camera FOV must be between 0 and 180 degrees (π radians)",
@@ -216,9 +226,10 @@ class ForceTorqueInfo:
 
 @dataclass(frozen=True)
 class Sensor:
-    """Generic sensor definition for Gazebo simulation.
+    """Generic sensor definition for simulation.
 
-    Sensors are attached to links and provide measurements in simulation.
+    Sensors are attached to links and provide measurements in simulation
+    environments like Gazebo or Ignition.
     """
 
     name: str
