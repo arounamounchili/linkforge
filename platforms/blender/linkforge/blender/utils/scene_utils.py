@@ -11,6 +11,11 @@ from typing import Any
 import bpy
 
 from ..adapters.blender_to_core import detect_primitive_type
+from ..constants import (
+    SUFFIX_COLLISION,
+    TAG_COLLISION_GEOM,
+    TAG_SOURCE_GEOM,
+)
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -232,20 +237,20 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
                 manual_inertia_objects.append(obj)
 
             # Heuristic Geometry Detection (moved from link_panel.py)
-            collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
+            collision_obj = next(
+                (c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None
+            )
             if collision_obj:
                 detected_type = "MESH"
                 is_primitive = False
 
                 # 1. Check explicit URDF tag
-                if collision_obj.get("source_geometry_type"):
-                    detected_type = typing.cast(str, collision_obj["source_geometry_type"])
+                if collision_obj.get(TAG_SOURCE_GEOM):
+                    detected_type = typing.cast(str, collision_obj[TAG_SOURCE_GEOM])
                     is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
                 # 2. Check generator tag
                 else:
-                    stored_type = typing.cast(
-                        str, collision_obj.get("collision_geometry_type", "AUTO")
-                    )
+                    stored_type = typing.cast(str, collision_obj.get(TAG_COLLISION_GEOM, "AUTO"))
                     if stored_type and stored_type in ("BOX", "CYLINDER", "SPHERE"):
                         detected_type = stored_type
                         is_primitive = True

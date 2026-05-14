@@ -6,6 +6,7 @@ definition and validation. Constants are categorized into:
 - **Physics Defaults**: Standard friction, stiffness, and damping coefficients.
 - **Namespaces**: Official URIs and prefixes for XML/XACRO processing.
 - **Numerical Stability**: Guardrails (mass, inertia, epsilon) for simulation.
+- **Validation**: Thresholds for mesh topology and file size.
 """
 
 from __future__ import annotations
@@ -32,6 +33,10 @@ DEFAULT_GRAVITY = True
 # Default self-collision inclusion
 DEFAULT_SELF_COLLIDE = False
 
+# Default Joint Axis (Z-axis is standard for many robotics defaults)
+DEFAULT_AXIS_XYZ = (0.0, 0.0, 1.0)
+DEFAULT_AXIS_XYZ_STR = "0 0 1"
+
 
 # XML and XACRO Namespaces
 # ----------------------------
@@ -57,6 +62,13 @@ MAX_REASONABLE_FLOAT = 1e18
 # Maximum absolute value allowed for integers (IDs, sample counts, etc.)
 MAX_REASONABLE_INT = 1000000
 
+# Maximum file size for parsers (100 MB)
+MAX_FILE_SIZE = 100 * 1024 * 1024
+
+# Maximum depth for XML tree parsing to prevent Billion Laughs / recursion issues
+MAX_XML_DEPTH = 2000
+
+
 # Numerical Stability (Guardrails)
 # ----------------------------
 
@@ -78,6 +90,11 @@ DEGENERATE_VOL_THRESHOLD = 1e-12  # m³
 NEGATIVE_INERTIA_THRESHOLD = -1e-06
 SYLVESTER_TOLERANCE_EPSILON = 1e-9
 
+# Mesh Validation Thresholds
+MESH_PROXIMITY_THRESHOLD = 6
+MESH_SLIVER_THRESHOLD = 1000.0
+MIN_MESH_AREA = 1e-15
+
 
 # Joint Dynamics Defaults
 # ----------------------------
@@ -87,3 +104,10 @@ DEFAULT_JOINT_DAMPING = 0.0
 
 # Default joint friction (N or N m)
 DEFAULT_JOINT_FRICTION = 0.0
+
+# Visualization Defaults (Core)
+# ----------------------------
+DEFAULT_COLOR_RGBA_STR = "0.7 0.7 0.7 1.0"
+DEFAULT_MESH_SCALE_STR = "1 1 1"
+DEFAULT_GEOMETRY_RADIUS = 0.1
+DEFAULT_GEOMETRY_LENGTH = 0.5

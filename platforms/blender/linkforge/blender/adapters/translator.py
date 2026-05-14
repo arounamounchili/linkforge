@@ -21,6 +21,12 @@ if TYPE_CHECKING:
     from .context import IBlenderContext
 
 
+from ..constants import (
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
+    TAG_SOURCE_NAME,
+)
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -103,9 +109,9 @@ class LinkTranslator(ITranslator):
 
         # 1. Translate visuals
         for child in obj.children:
-            if "_visual" in child.name:
+            if SUFFIX_VISUAL in child.name:
                 mat = get_object_material(child, props)
-                suffix = self._get_geom_suffix(child, obj, "_visual", sanitize_name)
+                suffix = self._get_geom_suffix(child, obj, SUFFIX_VISUAL, sanitize_name)
 
                 geom, world_mat = get_object_geometry(
                     child,
@@ -130,7 +136,7 @@ class LinkTranslator(ITranslator):
                         xyz=origin.xyz.to_tuple(),
                         rpy=origin.rpy.to_tuple(),
                         material=mat.name if mat else None,
-                        name=child.get("source_name"),
+                        name=child.get(TAG_SOURCE_NAME),
                     )
                     # Mesh Topology Validation
                     self._validate_mesh(
@@ -139,10 +145,10 @@ class LinkTranslator(ITranslator):
 
         # 2. Translate collisions
         for child in obj.children:
-            if "_collision" in child.name:
-                suffix = self._get_geom_suffix(child, obj, "_collision", sanitize_name)
+            if SUFFIX_COLLISION in child.name:
+                suffix = self._get_geom_suffix(child, obj, SUFFIX_COLLISION, sanitize_name)
                 quality = props.collision_quality / 100.0
-                is_imported = child.get("imported_from_source", False)
+                is_imported = child.get(TAG_IMPORTED_SOURCE, False)
 
                 geom, world_mat = get_object_geometry(
                     child,
@@ -164,7 +170,7 @@ class LinkTranslator(ITranslator):
                         geom,
                         xyz=origin.xyz.to_tuple(),
                         rpy=origin.rpy.to_tuple(),
-                        name=child.get("source_name"),
+                        name=child.get(TAG_SOURCE_NAME),
                     )
                     # Mesh Topology Validation
                     self._validate_mesh(
@@ -207,7 +213,7 @@ class LinkTranslator(ITranslator):
         self, child: Any, parent_obj: Any, type_tag: str, sanitize_func: Any
     ) -> str:
         visual_count = sum(1 for c in parent_obj.children if type_tag in c.name)
-        source_name = child.get("source_name", None)
+        source_name = child.get(TAG_SOURCE_NAME, None)
         if source_name:
             return f"_{sanitize_func(source_name)}"
         elif visual_count > 1:
@@ -274,6 +280,7 @@ class JointTranslator(ITranslator):
         **_kwargs: Any,
     ) -> None:
         """Translate a Blender joint to a Core Joint using the LinkBuilder."""
+        from linkforge_core.constants import DEFAULT_AXIS_XYZ, SYLVESTER_TOLERANCE_EPSILON
         from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
         from linkforge_core.models.joint import JointType
 
@@ -323,10 +330,10 @@ class JointTranslator(ITranslator):
                 float(props.custom_axis_z),
             )
             # Fallback for zero axis
-            if all(abs(v) < 1e-6 for v in axis):
-                axis = (0.0, 0.0, 1.0)
+            if all(abs(v) < SYLVESTER_TOLERANCE_EPSILON for v in axis):
+                axis = DEFAULT_AXIS_XYZ
         else:
-            axis = (0.0, 0.0, 1.0)
+            axis = DEFAULT_AXIS_XYZ
 
         # Select joint type and configure
         joint_type = JointType(props.joint_type.lower())
@@ -555,7 +562,7 @@ class SensorTranslator(ITranslator):
             collision_name = props.contact_collision
             if not collision_name:
                 # Fallback: try to guess standard name
-                collision_name = f"{link_name}_collision"
+                collision_name = f"{link_name}{SUFFIX_COLLISION}"
             contact_info = ContactInfo(collision=collision_name, noise=noise)
 
         # Force/Torque info

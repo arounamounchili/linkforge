@@ -30,6 +30,14 @@ from linkforge_core.models import (
     Sphere,
 )
 
+from ..constants import (
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_COLLISION_GEOM,
+    TAG_IMPORTED_SOURCE,
+    TAG_SOURCE_GEOM,
+    TAG_SOURCE_NAME,
+)
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.property_helpers import get_joint_props, get_link_props
@@ -114,7 +122,7 @@ def create_primitive_mesh(
                 # Force update to ensure dimensions are applied correctly before return
                 if context.view_layer is not None:
                     context.view_layer.update()
-                obj["source_geometry_type"] = "BOX"
+                obj[TAG_SOURCE_GEOM] = "BOX"
 
         elif isinstance(geometry, Cylinder):
             context.ops.mesh.primitive_cylinder_add(location=(0, 0, 0))
@@ -125,7 +133,7 @@ def create_primitive_mesh(
                 # Force update to ensure dimensions are applied correctly
                 if hasattr(context.scene, "update"):
                     context.scene.update()
-                obj["source_geometry_type"] = "CYLINDER"
+                obj[TAG_SOURCE_GEOM] = "CYLINDER"
 
         elif isinstance(geometry, Sphere):
             context.ops.mesh.primitive_uv_sphere_add(location=(0, 0, 0))
@@ -135,7 +143,7 @@ def create_primitive_mesh(
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
                 if hasattr(context.scene, "update"):
                     context.scene.update()
-                obj["source_geometry_type"] = "SPHERE"
+                obj[TAG_SOURCE_GEOM] = "SPHERE"
 
         else:
             return None
@@ -412,11 +420,11 @@ def create_link_object(
 
         # Determine visual object name (single vs multiple)
         if len(link.visuals) == 1:
-            visual_name = f"{link.name}_visual"
+            visual_name = f"{link.name}{SUFFIX_VISUAL}"
         else:
             # Use robot model name attribute if available, otherwise use index
             suffix = visual.name if visual.name else str(idx)
-            visual_name = f"{link.name}_visual_{suffix}"
+            visual_name = f"{link.name}{SUFFIX_VISUAL}_{suffix}"
 
         # Create geometry
         if isinstance(visual.geometry, Mesh):
@@ -459,7 +467,7 @@ def create_link_object(
 
             # Store robot model name attribute for round-trip
             if visual.name:
-                visual_obj["source_name"] = visual.name
+                visual_obj[TAG_SOURCE_NAME] = visual.name
 
             # Add visual mesh to collection
             if collection:
@@ -482,11 +490,11 @@ def create_link_object(
 
         # Determine collision object name (single vs multiple)
         if len(link.collisions) == 1:
-            collision_name = f"{link.name}_collision"
+            collision_name = f"{link.name}{SUFFIX_COLLISION}"
         else:
             # Use robot model name attribute if available, otherwise use index
             suffix = collision.name if collision.name else str(idx)
-            collision_name = f"{link.name}_collision_{suffix}"
+            collision_name = f"{link.name}{SUFFIX_COLLISION}_{suffix}"
 
         # Create geometry
         if isinstance(collision.geometry, Mesh):
@@ -529,11 +537,11 @@ def create_link_object(
 
             # Store robot model name attribute for round-trip
             if collision.name:
-                collision_obj["source_name"] = collision.name
+                collision_obj[TAG_SOURCE_NAME] = collision.name
 
             # Mark as imported to prevent re-simplification on export.
             # Without this, collision meshes degrade with each import-export cycle.
-            collision_obj["imported_from_source"] = True
+            collision_obj[TAG_IMPORTED_SOURCE] = True
 
             # Add collision mesh to link's collections
             sync_object_collections(collision_obj, link_obj)
@@ -553,13 +561,13 @@ def create_link_object(
 
             # Set collision geometry type for UI consistency
             if isinstance(collision.geometry, Mesh):
-                collision_obj["collision_geometry_type"] = "MESH"
+                collision_obj[TAG_COLLISION_GEOM] = "MESH"
             elif isinstance(collision.geometry, Box):
-                collision_obj["collision_geometry_type"] = "BOX"
+                collision_obj[TAG_COLLISION_GEOM] = "BOX"
             elif isinstance(collision.geometry, Cylinder):
-                collision_obj["collision_geometry_type"] = "CYLINDER"
+                collision_obj[TAG_COLLISION_GEOM] = "CYLINDER"
             elif isinstance(collision.geometry, Sphere):
-                collision_obj["collision_geometry_type"] = "SPHERE"
+                collision_obj[TAG_COLLISION_GEOM] = "SPHERE"
 
     # Set mass and inertia properties on link object
     if link.inertial and (props := get_link_props(link_obj)):

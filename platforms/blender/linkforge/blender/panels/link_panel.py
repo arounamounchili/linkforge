@@ -8,6 +8,7 @@ import typing
 import bpy
 from bpy.types import Context, Panel
 
+from ..constants import SUFFIX_COLLISION, SUFFIX_VISUAL, TAG_IMPORTED_SOURCE
 from ..utils.property_helpers import get_link_props
 from ..utils.scene_utils import get_robot_statistics
 
@@ -57,7 +58,7 @@ class LINKFORGE_PT_links(Panel):
             and lp_p.is_robot_link
             and props
             and not props.is_robot_link
-            and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
+            and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         ):
             # Switch to parent for property display (visual/collision elements only)
             obj = obj.parent
@@ -79,8 +80,8 @@ class LINKFORGE_PT_links(Panel):
 
         # IS A LINK - Show link properties
         box = layout.box()
-        visual_count = sum(1 for child in obj.children if "_visual" in child.name.lower())
-        collision_count = sum(1 for child in obj.children if "_collision" in child.name.lower())
+        visual_count = sum(1 for child in obj.children if SUFFIX_VISUAL in child.name.lower())
+        collision_count = sum(1 for child in obj.children if SUFFIX_COLLISION in child.name.lower())
         is_virtual = visual_count == 0 and collision_count == 0
 
         title = f"Link: {props.link_name}"
@@ -133,7 +134,7 @@ class LINKFORGE_PT_links(Panel):
                 text=f"Detected Collision: {detected_type}", icon=typing.cast(typing.Any, icon_name)
             )
 
-            is_imported = typing.cast(bool, collision_obj.get("imported_from_source"))
+            is_imported = typing.cast(bool, collision_obj.get(TAG_IMPORTED_SOURCE))
 
             # Show quality slider for mesh-based collisions.
             # If the user explicitly selects MESH mode, we show the slider even if
@@ -169,7 +170,9 @@ class LINKFORGE_PT_links(Panel):
             )
 
             # Visibility toggle
-            collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
+            collision_obj = next(
+                (c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None
+            )
             if collision_obj:
                 is_hidden = collision_obj.hide_viewport
                 icon_name = "HIDE_OFF" if is_hidden else "HIDE_ON"
@@ -239,7 +242,7 @@ class LINKFORGE_PT_links(Panel):
             visual_children = [
                 child
                 for child in obj.children
-                if "_visual" in child.name.lower() and child.type == "MESH"
+                if SUFFIX_VISUAL in child.name.lower() and child.type == "MESH"
             ]
 
             if visual_children:

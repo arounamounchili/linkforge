@@ -6,6 +6,8 @@ their naming conventions, and hierarchy.
 
 from __future__ import annotations
 
+from ..constants import SUFFIX_COLLISION, SUFFIX_VISUAL
+
 
 def should_rename_child(child_name: str, parent_old_name: str) -> bool:
     """Check if a child object was auto-named by LinkForge and should be synced.
@@ -20,8 +22,8 @@ def should_rename_child(child_name: str, parent_old_name: str) -> bool:
     Returns:
         True if the child is a standard LinkForge visual/collision object that should be renamed.
     """
-    prefix_v = f"{parent_old_name}_visual"
-    prefix_c = f"{parent_old_name}_collision"
+    prefix_v = f"{parent_old_name}{SUFFIX_VISUAL}"
+    prefix_c = f"{parent_old_name}{SUFFIX_COLLISION}"
 
     # Case 1: Perfect match (e.g., "base_link_visual")
     # Case 2: Suffix match (e.g., "base_link_visual.001" or "base_link_visual_mesh")

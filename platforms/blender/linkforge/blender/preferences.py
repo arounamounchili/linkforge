@@ -11,6 +11,12 @@ import bpy
 from bpy.props import BoolProperty, FloatProperty, StringProperty
 from bpy.types import AddonPreferences, Context
 
+from .constants import (
+    DEFAULT_INERTIA_GIZMO_SIZE,
+    DEFAULT_JOINT_GIZMO_SIZE,
+    DEFAULT_LINK_GIZMO_SIZE,
+    DEFAULT_SENSOR_GIZMO_SIZE,
+)
 from .utils.property_helpers import get_joint_props, get_link_props, get_sensor_props
 
 
@@ -143,7 +149,7 @@ class LinkForgePreferences(AddonPreferences):
     joint_empty_size: FloatProperty(  # type: ignore
         name="Joint Display Size",
         description="Size of the joint markers and GPU axes in viewport",
-        default=0.2,
+        default=DEFAULT_JOINT_GIZMO_SIZE,
         min=0.01,
         max=100.0,
         soft_min=0.05,
@@ -157,7 +163,7 @@ class LinkForgePreferences(AddonPreferences):
     sensor_empty_size: FloatProperty(  # type: ignore
         name="Sensor Empty Size",
         description="Size of the sensor markers in viewport (bigger = easier to select, smaller = cleaner view)",
-        default=0.1,
+        default=DEFAULT_SENSOR_GIZMO_SIZE,
         min=0.01,
         max=100.0,
         soft_min=0.05,
@@ -171,7 +177,7 @@ class LinkForgePreferences(AddonPreferences):
     link_empty_size: FloatProperty(  # type: ignore
         name="Link Empty Size",
         description="Size of the link markers in viewport (bigger = easier to select, smaller = cleaner view)",
-        default=0.1,
+        default=DEFAULT_LINK_GIZMO_SIZE,
         min=0.01,
         max=100.0,
         soft_min=0.05,
@@ -193,7 +199,7 @@ class LinkForgePreferences(AddonPreferences):
     inertia_gizmo_size: FloatProperty(  # type: ignore
         name="Inertia Frame Size",
         description="Standard display size for CoM spheres and principal axes",
-        default=0.1,
+        default=DEFAULT_INERTIA_GIZMO_SIZE,
         min=0.01,
         max=100.0,
         soft_min=0.05,

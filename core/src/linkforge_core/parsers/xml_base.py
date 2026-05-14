@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 from ..base import IResourceResolver, RobotParser
+from ..constants import MAX_FILE_SIZE
 from ..exceptions import (
     RobotModelError,
     RobotParserError,
@@ -37,7 +38,6 @@ from ..validation import validate_mesh_path, validate_package_uri
 
 logger = get_logger(__name__)
 
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 
 T = TypeVar("T")
 

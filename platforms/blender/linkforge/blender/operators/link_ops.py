@@ -9,6 +9,12 @@ import typing
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models.link import InertiaTensor
 
+from ..constants import (
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_COLLISION_GEOM,
+    TAG_IMPORTED_SOURCE,
+)
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
@@ -82,7 +88,7 @@ def execute_collision_preview_update() -> None | float:
         return None
 
     # Find collision object
-    collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
+    collision_obj = next((c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None)
     if collision_obj is None:
         return None
 
@@ -99,12 +105,12 @@ def execute_collision_preview_update() -> None | float:
         return None
 
     # Check if it's imported from URDF (don't regenerate imported collisions)
-    if collision_obj.get("imported_from_source", False):
+    if collision_obj.get(TAG_IMPORTED_SOURCE, False):
         return None
 
     # Regenerate collision mesh with new quality
     # The collision_type is stored on the collision_obj itself
-    collision_type = collision_obj.get("collision_geometry_type", "MESH")
+    collision_type = collision_obj.get(TAG_COLLISION_GEOM, "MESH")
     regenerate_collision_mesh(obj, str(collision_type), bpy.context)
 
     return None  # All caught up
@@ -129,13 +135,13 @@ def regenerate_collision_mesh(
 
     # Filter out non-mesh visual children (e.g. empties)
     visual_children = [
-        c for c in link_obj.children if "_visual" in c.name.lower() and c.type == "MESH"
+        c for c in link_obj.children if SUFFIX_VISUAL in c.name.lower() and c.type == "MESH"
     ]
     if not visual_children:
         return
 
     # Delete existing collision meshes for this link
-    existing_collisions = [c for c in link_obj.children if "_collision" in c.name.lower()]
+    existing_collisions = [c for c in link_obj.children if SUFFIX_COLLISION in c.name.lower()]
     hide_viewport = True
     if existing_collisions:
         # Preserve visibility of the first existing collision
@@ -166,7 +172,7 @@ def create_collision_for_link(
         The created collision object, or None if failed
     """
     visual_children = [
-        c for c in link_obj.children if "_visual" in c.name.lower() and c.type == "MESH"
+        c for c in link_obj.children if SUFFIX_VISUAL in c.name.lower() and c.type == "MESH"
     ]
 
     # If no explicit visual children, check if the link object itself is a mesh
@@ -182,7 +188,7 @@ def create_collision_for_link(
     # Production-grade fix: Wrap all collision operators in a context and mode guard
     with context_and_mode_guard(context):
         # Remove existing collision objects to prevent duplicates
-        existing_collisions = [c for c in link_obj.children if "_collision" in c.name.lower()]
+        existing_collisions = [c for c in link_obj.children if SUFFIX_COLLISION in c.name.lower()]
         for col in existing_collisions:
             bpy.data.objects.remove(col, do_unlink=True)
 
@@ -245,7 +251,7 @@ def create_collision_for_link(
         collision_obj.display_type = "WIRE"
         collision_obj.show_in_front = True
         collision_obj.rotation_mode = "XYZ"
-        collision_obj["collision_geometry_type"] = collision_type
+        collision_obj[TAG_COLLISION_GEOM] = collision_type
         collision_obj.hide_viewport = True
         collision_obj.hide_render = True
 
@@ -483,7 +489,7 @@ def _create_mesh_collision_compound(
         merged_obj.hide_render = old_hide_render
 
         # Persist collision type for UI consistency
-        merged_obj["collision_geometry_type"] = "MESH"
+        merged_obj[TAG_COLLISION_GEOM] = "MESH"
 
         # Ensure it's in the same collection
         for collection in merged_obj.users_collection:
@@ -535,7 +541,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
         collision_children = [
             child
             for child in link_obj.children
-            if child.type == "MESH" and "_collision" in child.name.lower()
+            if child.type == "MESH" and SUFFIX_COLLISION in child.name.lower()
         ]
 
         # If no collision, use visual meshes
@@ -543,7 +549,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             target_children = [
                 child
                 for child in link_obj.children
-                if child.type == "MESH" and "_visual" in child.name.lower()
+                if child.type == "MESH" and SUFFIX_VISUAL in child.name.lower()
             ]
         else:
             target_children = collision_children
@@ -733,7 +739,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             obj.parent
             and hasattr(obj.parent, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-            and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
+            and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         )
 
     @safe_execute
@@ -762,7 +768,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
 
         # Rename mesh FIRST to free up the name for the Empty
         # This prevents Blender from auto-renaming the Empty to "name.001"
-        mesh_obj.name = f"{link_name}_visual"
+        mesh_obj.name = f"{link_name}{SUFFIX_VISUAL}"
 
         # Create Empty object as link frame
         data = getattr(context, "data", None) or bpy.data
@@ -842,7 +848,7 @@ class LINKFORGE_OT_generate_collision(Operator):
     bl_label = "Generate Collision"
     bl_description = (
         "Auto-generate collision geometry from visual mesh. "
-        "Requires at least one child mesh with '_visual' suffix."
+        "Requires at least one child mesh with " + SUFFIX_VISUAL + " suffix."
     )
     bl_options = {"REGISTER", "UNDO"}
 
@@ -888,7 +894,7 @@ class LINKFORGE_OT_generate_collision(Operator):
             obj.parent
             and hasattr(obj.parent, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-            and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
+            and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         )
 
     @safe_execute
@@ -916,7 +922,7 @@ class LINKFORGE_OT_generate_collision(Operator):
             obj.parent
             and hasattr(obj.parent, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-            and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
+            and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         ):
             link_obj = obj.parent
 
@@ -939,7 +945,7 @@ class LINKFORGE_OT_generate_collision(Operator):
         if collision_obj is None:
             # Check if it failed because of missing visuals
             visual_children = [
-                c for c in link_obj.children if "_visual" in c.name.lower() and c.type == "MESH"
+                c for c in link_obj.children if SUFFIX_VISUAL in c.name.lower() and c.type == "MESH"
             ]
             if not visual_children:
                 self.report({"ERROR"}, "No visual meshes found. Cannot generate collision.")
@@ -996,7 +1002,7 @@ class LINKFORGE_OT_generate_collision_all(Operator):
                 and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
             ):
                 # Resolve primary mesh to use for detection
-                visual_children = [c for c in obj.children if "_visual" in c.name.lower()]
+                visual_children = [c for c in obj.children if SUFFIX_VISUAL in c.name.lower()]
                 if visual_children:
                     collision_type = typing.cast(
                         "LinkPropertyGroup", getattr(obj, "linkforge")
@@ -1039,7 +1045,7 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
             hasattr(obj, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
         ):
-            collision_children = [c for c in obj.children if "_collision" in c.name.lower()]
+            collision_children = [c for c in obj.children if SUFFIX_COLLISION in c.name.lower()]
             return len(collision_children) > 0
 
         # Allow if object is visual/collision child
@@ -1048,7 +1054,9 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
             and hasattr(obj.parent, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
         ):
-            collision_children = [c for c in obj.parent.children if "_collision" in c.name.lower()]
+            collision_children = [
+                c for c in obj.parent.children if SUFFIX_COLLISION in c.name.lower()
+            ]
             return len(collision_children) > 0
 
         return False
@@ -1067,14 +1075,14 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
         ):
             # It's a link - toggle all its collision children
             for child in obj.children:
-                if "_collision" in child.name.lower():
+                if SUFFIX_COLLISION in child.name.lower():
                     child.hide_viewport = not child.hide_viewport
                     child.hide_render = child.hide_viewport  # Keep render state consistent
         else:
             # It's a visual/collision child - toggle its parent's collisions
             if obj.parent and hasattr(obj.parent, "linkforge"):
                 for child in obj.parent.children:
-                    if "_collision" in child.name.lower():
+                    if SUFFIX_COLLISION in child.name.lower():
                         child.hide_viewport = not child.hide_viewport
                         child.hide_render = child.hide_viewport  # Keep render state consistent
 
@@ -1182,7 +1190,7 @@ class LINKFORGE_OT_calculate_inertia_all(Operator):
                     # Only count as failed if it had visual/collision mesh but failed
                     has_mesh = any(
                         c.type == "MESH"
-                        and ("_visual" in c.name.lower() or "_collision" in c.name.lower())
+                        and (SUFFIX_VISUAL in c.name.lower() or SUFFIX_COLLISION in c.name.lower())
                         for c in obj.children
                     )
                     if has_mesh:
@@ -1227,7 +1235,7 @@ class LINKFORGE_OT_remove_link(Operator):
             obj.parent
             and hasattr(obj.parent, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-            and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
+            and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         )
 
     @safe_execute
@@ -1243,7 +1251,7 @@ class LINKFORGE_OT_remove_link(Operator):
             obj.parent
             and hasattr(obj.parent, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-            and ("_visual" in obj.name.lower() or "_collision" in obj.name.lower())
+            and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         ):
             link_obj = obj.parent
 
@@ -1255,13 +1263,15 @@ class LINKFORGE_OT_remove_link(Operator):
 
         # Find visual child
         visual_children = [
-            c for c in link_obj.children if "_visual" in c.name.lower() and c.type == "MESH"
+            c for c in link_obj.children if SUFFIX_VISUAL in c.name.lower() and c.type == "MESH"
         ]
 
         if not visual_children:
             # VIRTUAL LINK / EMPTY FRAME - Robust handling
             # If no visual mesh, we simply delete the collision children and the frame itself
-            collision_children = [c for c in link_obj.children if "_collision" in c.name.lower()]
+            collision_children = [
+                c for c in link_obj.children if SUFFIX_COLLISION in c.name.lower()
+            ]
             for col in collision_children:
                 bpy.data.objects.remove(col, do_unlink=True)
 
@@ -1279,13 +1289,15 @@ class LINKFORGE_OT_remove_link(Operator):
                 visual_obj.matrix_world = original_world_matrix
 
                 # Restore name (remove _visual suffix / link prefix)
-                if visual_obj.name.endswith("_visual"):
+                if visual_obj.name.endswith(SUFFIX_VISUAL):
                     visual_obj.name = visual_obj.name[:-7]
                 elif visual_obj.name.startswith(f"{link_name}_visual"):
                     visual_obj.name = link_name
 
             # Delete collision objects
-            collision_children = [c for c in link_obj.children if "_collision" in c.name.lower()]
+            collision_children = [
+                c for c in link_obj.children if SUFFIX_COLLISION in c.name.lower()
+            ]
             for col in collision_children:
                 bpy.data.objects.remove(col, do_unlink=True)
 
@@ -1335,7 +1347,7 @@ class LINKFORGE_OT_add_material_slot(Operator):
             obj.parent
             and hasattr(obj.parent, "linkforge")
             and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
-            and "_visual" in obj.name.lower()
+            and SUFFIX_VISUAL in obj.name.lower()
         )
 
     @safe_execute
@@ -1350,7 +1362,7 @@ class LINKFORGE_OT_add_material_slot(Operator):
             and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
         ):
             visual_children = [
-                c for c in obj.children if "_visual" in c.name.lower() and c.type == "MESH"
+                c for c in obj.children if SUFFIX_VISUAL in c.name.lower() and c.type == "MESH"
             ]
             if not visual_children:
                 self.report({"ERROR"}, "No visual mesh found for this link")

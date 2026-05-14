@@ -43,6 +43,12 @@ from linkforge_core.utils.string_utils import sanitize_name
 from linkforge_core.validation.result import ValidationResult
 from mathutils import Matrix
 
+from ..constants import (
+    PRIMITIVE_MAX_FACES,
+    SUFFIX_VISUAL,
+    TAG_COLLISION_GEOM,
+    TAG_SOURCE_GEOM,
+)
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -165,7 +171,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
 
     mesh_obj = cast(bpy.types.Mesh, mesh)
 
-    tags = ["source_geometry_type", "collision_geometry_type"]
+    tags = [TAG_SOURCE_GEOM, TAG_COLLISION_GEOM]
     for tag in tags:
         tag_val = obj.get(tag)  # type: ignore[func-returns-value]
         if isinstance(tag_val, str):
@@ -177,6 +183,9 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     # Count vertices and faces
     vert_count = len(mesh_obj.vertices)
     face_count = len(mesh_obj.polygons)
+
+    if face_count > PRIMITIVE_MAX_FACES:
+        return None
 
     # Get config for primitive detection thresholds
     config = DEFAULT_PRIMITIVE_CONFIG
@@ -698,7 +707,7 @@ class SceneToRobotTranslator:
             props = get_link_props(link_obj)
             if props and props.use_material:
                 for child in link_obj.children:
-                    if "_visual" in child.name and child.type == "MESH":
+                    if SUFFIX_VISUAL in child.name and child.type == "MESH":
                         mat = get_object_material(child, props)
                         if mat and mat.name not in processed_mats:
                             # Register material in the robot model to satisfy LinkBuilder validation

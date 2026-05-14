@@ -33,6 +33,11 @@ from linkforge_core.utils.string_utils import (
     sanitize_name as sanitize_robot_name,
 )
 
+from ..constants import (
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
+)
 from ..utils.link_utils import should_rename_child
 from ..utils.scene_utils import clear_stats_cache
 from ..visualization.inertia_gizmos import tag_redraw
@@ -127,12 +132,12 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     for child in self.id_data.children:
         if should_rename_child(child.name, old_source_name):
             # Surgical replacement
-            if "_visual" in child.name:
-                suffix = child.name[len(old_source_name) + len("_visual") :]
-                new_name = f"{sanitized_name}_visual{suffix}"
+            if SUFFIX_VISUAL in child.name:
+                suffix = child.name[len(old_source_name) + len(SUFFIX_VISUAL) :]
+                new_name = f"{sanitized_name}{SUFFIX_VISUAL}{suffix}"
             else:  # _collision
-                suffix = child.name[len(old_source_name) + len("_collision") :]
-                new_name = f"{sanitized_name}_collision{suffix}"
+                suffix = child.name[len(old_source_name) + len(SUFFIX_COLLISION) :]
+                new_name = f"{sanitized_name}{SUFFIX_COLLISION}{suffix}"
 
             if child.name != new_name:
                 child.name = new_name
@@ -160,14 +165,14 @@ def on_collision_quality_update(self: PropertyGroup, _context: Context) -> None:
         return
 
     # Find collision object
-    collision_obj = next((c for c in obj.children if "_collision" in c.name.lower()), None)
+    collision_obj = next((c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None)
     if collision_obj is None:
         return
 
     # Skip regeneration for imported URDF models to preserve external data
     try:
         # Use dictionary access for Blender ID properties
-        if collision_obj["imported_from_source"]:
+        if collision_obj[TAG_IMPORTED_SOURCE]:
             return
     except (KeyError, TypeError):
         # Property doesn't exist, proceed with regeneration

@@ -6,14 +6,12 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from ..constants import MAX_REASONABLE_FLOAT, MAX_REASONABLE_INT, XACRO_URIS
+from ..constants import MAX_REASONABLE_FLOAT, MAX_REASONABLE_INT, MAX_XML_DEPTH, XACRO_URIS
 from ..exceptions import RobotMathError, RobotValidationError, ValidationErrorCode
 from ..models import Vector3
 
 # Register XACRO namespace to ensure standard 'xacro:' prefix in exports
 ET.register_namespace("xacro", next(iter(XACRO_URIS)))
-
-MAX_XML_DEPTH = 2000
 
 
 def strip_xml_namespace(tag: str) -> str:

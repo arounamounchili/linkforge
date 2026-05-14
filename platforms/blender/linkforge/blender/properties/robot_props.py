@@ -19,6 +19,7 @@ import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
+from ..constants import SUFFIX_COLLISION
 from ..utils.property_helpers import get_link_props
 from .control_props import Ros2ControlJointProperty, Ros2ControlParameterProperty
 
@@ -38,7 +39,7 @@ def update_collision_visibility(self: RobotPropertyGroup, context: bpy.types.Con
             obj.parent
             and (props := get_link_props(obj.parent))
             and props.is_robot_link
-            and "_collision" in obj.name.lower()
+            and SUFFIX_COLLISION in obj.name.lower()
         ):
             obj.hide_viewport = not show
 
