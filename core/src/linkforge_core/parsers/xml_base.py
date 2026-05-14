@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 from ..base import IResourceResolver, RobotParser
-from ..constants import MAX_FILE_SIZE
+from ..constants import (
+    DEFAULT_GEOMETRY_LENGTH,
+    DEFAULT_GEOMETRY_RADIUS,
+    DEFAULT_MATERIAL_RGBA_STR,
+    MAX_FILE_SIZE,
+)
 from ..exceptions import (
     RobotModelError,
     RobotParserError,
@@ -175,15 +180,19 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         """Parse cylinder geometry."""
         if cylinder is None:
             return None
-        radius = parse_float(cylinder.get("radius"), "cylinder radius", default=0.5)
-        length = parse_float(cylinder.get("length"), "cylinder length", default=1.0)
+        radius = parse_float(
+            cylinder.get("radius"), "cylinder radius", default=DEFAULT_GEOMETRY_RADIUS
+        )
+        length = parse_float(
+            cylinder.get("length"), "cylinder length", default=DEFAULT_GEOMETRY_LENGTH
+        )
         return Cylinder(radius=radius, length=length)
 
     def _parse_sphere(self, sphere: ET.Element | None) -> Sphere | None:
         """Parse sphere geometry."""
         if sphere is None:
             return None
-        radius = parse_float(sphere.get("radius"), "sphere radius", default=0.5)
+        radius = parse_float(sphere.get("radius"), "sphere radius", default=DEFAULT_GEOMETRY_RADIUS)
         return Sphere(radius=radius)
 
     def _parse_mesh(self, mesh: ET.Element | None, base_dir: Path | None) -> Mesh | None:
@@ -245,7 +254,7 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
         num_rgb = 3
         num_rgba = 4
         if color_elem is not None:
-            rgba_text = color_elem.get("rgba", "0.8 0.8 0.8 1.0")
+            rgba_text = color_elem.get("rgba", DEFAULT_MATERIAL_RGBA_STR)
             parts = rgba_text.strip().split()
             try:
                 num_parts = len(parts)

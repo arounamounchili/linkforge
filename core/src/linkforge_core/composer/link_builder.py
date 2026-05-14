@@ -15,6 +15,14 @@ import logging
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
+from ..constants import (
+    DEFAULT_CAMERA_FOV,
+    DEFAULT_CAMERA_HEIGHT,
+    DEFAULT_CAMERA_WIDTH,
+    DEFAULT_LIDAR_RANGE_MAX,
+    DEFAULT_LIDAR_RANGE_MIN,
+    DEFAULT_LIDAR_SAMPLES,
+)
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..models.gazebo import GazeboElement
 from ..models.geometry import Geometry, Transform, Vector3
@@ -604,9 +612,9 @@ class LinkBuilder:
     def camera(
         self,
         name: str,
-        fov: float = 1.047,
-        width: int = 640,
-        height: int = 480,
+        fov: float = DEFAULT_CAMERA_FOV,
+        width: int = DEFAULT_CAMERA_WIDTH,
+        height: int = DEFAULT_CAMERA_HEIGHT,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
@@ -636,9 +644,9 @@ class LinkBuilder:
     def lidar(
         self,
         name: str,
-        range_min: float = 0.1,
-        range_max: float = 10.0,
-        samples: int = 640,
+        range_min: float = DEFAULT_LIDAR_RANGE_MIN,
+        range_max: float = DEFAULT_LIDAR_RANGE_MAX,
+        samples: int = DEFAULT_LIDAR_SAMPLES,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:

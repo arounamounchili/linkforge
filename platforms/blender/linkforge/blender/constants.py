@@ -6,12 +6,14 @@ specific to the Blender adapter.
 
 # Object Suffixes for Robot Components
 # ----------------------------
+# Used for naming child objects representing visual and collision geometry
 SUFFIX_VISUAL = "_visual"
 SUFFIX_COLLISION = "_collision"
 SUFFIX_SENSOR = "_sensor"
 
 # Metadata Tags (Blender ID Properties)
 # ----------------------------
+# These keys are used in object['key'] storage for persistence
 TAG_SOURCE_NAME = "source_name"
 TAG_SOURCE_GEOM = "source_geometry_type"
 TAG_IMPORTED_SOURCE = "imported_from_source"
@@ -20,10 +22,14 @@ TAG_SENSOR_TYPE = "sensor_type"
 
 # UI and Visualization Defaults
 # ----------------------------
-DEFAULT_LINK_GIZMO_SIZE = 0.2
-DEFAULT_JOINT_GIZMO_SIZE = 0.2
+# Gizmo sizes for viewport display
+DEFAULT_LINK_GIZMO_SIZE = 0.1
+DEFAULT_JOINT_GIZMO_SIZE = 0.1
 DEFAULT_SENSOR_GIZMO_SIZE = 0.1
 DEFAULT_INERTIA_GIZMO_SIZE = 0.1
+
+# Default simplification ratio for generated collision meshes
+DEFAULT_COLLISION_QUALITY = 50.0
 
 # Heuristic Thresholds (Primitive Detection)
 # ----------------------------
@@ -32,7 +38,3 @@ PRIMITIVE_MAX_FACES = 1000
 
 # Tolerance for geometric comparisons (e.g. vertex alignment)
 GEOM_TOLERANCE = 1e-4
-
-# LIDAR visualization defaults
-DEFAULT_LIDAR_SCAN_COUNT = 640
-DEFAULT_LIDAR_HORIZONTAL_FOV = 6.283185  # 2 * PI

@@ -17,7 +17,21 @@ import math
 from dataclasses import dataclass, field, replace
 from enum import Enum
 
-from ..constants import EPSILON
+from ..constants import (
+    DEFAULT_CAMERA_FAR,
+    DEFAULT_CAMERA_FORMAT,
+    DEFAULT_CAMERA_FOV,
+    DEFAULT_CAMERA_HEIGHT,
+    DEFAULT_CAMERA_NEAR,
+    DEFAULT_CAMERA_WIDTH,
+    DEFAULT_LIDAR_MAX_ANGLE,
+    DEFAULT_LIDAR_MIN_ANGLE,
+    DEFAULT_LIDAR_RANGE_MAX,
+    DEFAULT_LIDAR_RANGE_MIN,
+    DEFAULT_LIDAR_SAMPLES,
+    DEFAULT_UPDATE_RATE,
+    EPSILON,
+)
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from .gazebo import GazeboPlugin
 from .geometry import Transform
@@ -50,12 +64,12 @@ class SensorNoise:
 class CameraInfo:
     """Camera-specific sensor information."""
 
-    horizontal_fov: float = 1.047  # Radians (~60°)
-    width: int = 640
-    height: int = 480
-    format: str = "R8G8B8"  # Pixel format
-    near_clip: float = 0.1
-    far_clip: float = 100.0
+    horizontal_fov: float = DEFAULT_CAMERA_FOV
+    width: int = DEFAULT_CAMERA_WIDTH
+    height: int = DEFAULT_CAMERA_HEIGHT
+    format: str = DEFAULT_CAMERA_FORMAT
+    near_clip: float = DEFAULT_CAMERA_NEAR
+    far_clip: float = DEFAULT_CAMERA_FAR
     noise: SensorNoise | None = None
 
     def __post_init__(self) -> None:
@@ -98,10 +112,10 @@ class LidarInfo:
     """LIDAR/laser scanner sensor information."""
 
     # Horizontal scan parameters
-    horizontal_samples: int = 640
+    horizontal_samples: int = DEFAULT_LIDAR_SAMPLES
     horizontal_resolution: float = 1.0
-    horizontal_min_angle: float = -1.570796  # -π/2 radians (-90°)
-    horizontal_max_angle: float = 1.570796  # π/2 radians (90°)
+    horizontal_min_angle: float = DEFAULT_LIDAR_MIN_ANGLE
+    horizontal_max_angle: float = DEFAULT_LIDAR_MAX_ANGLE
 
     # Vertical scan parameters (for 3D LIDAR)
     vertical_samples: int = 1
@@ -110,8 +124,8 @@ class LidarInfo:
     vertical_max_angle: float = 0.0
 
     # Range parameters
-    range_min: float = 0.1  # m
-    range_max: float = 10.0  # m
+    range_min: float = DEFAULT_LIDAR_RANGE_MIN
+    range_max: float = DEFAULT_LIDAR_RANGE_MAX
     range_resolution: float = 0.01  # m
 
     # Noise
@@ -250,7 +264,7 @@ class Sensor:
     name: str
     type: SensorType
     link_name: str  # Link this sensor is attached to
-    update_rate: float = 30.0  # Hz
+    update_rate: float = DEFAULT_UPDATE_RATE  # Hz
     always_on: bool = True
     visualize: bool = False
 

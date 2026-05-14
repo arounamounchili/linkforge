@@ -521,12 +521,13 @@ def test_create_joint_object_prismatic(scene, blender_context) -> None:
 
     link_objects = {"p": p_obj, "c": c_obj}
 
+    # Use highly precise normalization to satisfy SYLVESTER_TOLERANCE_EPSILON (1e-9)
     joint = Joint(
         name="prism_j",
         type=JointType.PRISMATIC,
         parent="p",
         child="c",
-        axis=Vector3(0.70710678, 0.70710678, 0.0),  # Correct unit vector
+        axis=Vector3(0.70710678118, 0.70710678118, 0.0),
         limits=JointLimits(lower=0, upper=1.0, effort=10, velocity=1),
     )
 
@@ -536,8 +537,8 @@ def test_create_joint_object_prismatic(scene, blender_context) -> None:
     assert props.joint_type == "PRISMATIC"
     assert props.axis == "CUSTOM"
     # Expect normalized 1/sqrt(2) approx 0.707
-    assert pytest.approx(props.custom_axis_x) == 0.7071067
-    assert pytest.approx(props.custom_axis_y) == 0.7071067
+    assert pytest.approx(props.custom_axis_x) == 0.70710678
+    assert pytest.approx(props.custom_axis_y) == 0.70710678
 
 
 def test_create_joint_object_continuous_floating(scene, blender_context) -> None:

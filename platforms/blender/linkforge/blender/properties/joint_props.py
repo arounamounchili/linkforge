@@ -16,6 +16,12 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
+from linkforge_core.constants import (
+    DEFAULT_JOINT_DAMPING,
+    DEFAULT_JOINT_EFFORT,
+    DEFAULT_JOINT_FRICTION,
+    DEFAULT_JOINT_VELOCITY,
+)
 
 if typing.TYPE_CHECKING:
     pass
@@ -279,23 +285,23 @@ class JointPropertyGroup(PropertyGroup):
     limit_lower: FloatProperty(  # type: ignore
         name="Lower Limit",
         description="Minimum position (radians for revolute/continuous joints, meters for prismatic joints)",
-        default=-3.14159265359,  # -π
-        soft_min=-6.28318530718,  # -2π
-        soft_max=6.28318530718,  # 2π
+        default=-3.14159265359,
+        soft_min=-6.28318530718,
+        soft_max=6.28318530718,
     )
 
     limit_upper: FloatProperty(  # type: ignore
         name="Upper Limit",
         description="Maximum position (radians for revolute/continuous joints, meters for prismatic joints)",
-        default=3.14159265359,  # π
-        soft_min=-6.28318530718,  # -2π
-        soft_max=6.28318530718,  # 2π
+        default=3.14159265359,
+        soft_min=-6.28318530718,
+        soft_max=6.28318530718,
     )
 
     limit_effort: FloatProperty(  # type: ignore
         name="Max Effort",
         description="Maximum force/torque the joint motor can apply",
-        default=10.0,
+        default=DEFAULT_JOINT_EFFORT,
         min=0.0,
         soft_max=100.0,
     )
@@ -303,7 +309,7 @@ class JointPropertyGroup(PropertyGroup):
     limit_velocity: FloatProperty(  # type: ignore
         name="Max Velocity",
         description="Maximum speed the joint can move",
-        default=1.0,
+        default=DEFAULT_JOINT_VELOCITY,
         min=0.0,
         soft_max=10.0,
     )
@@ -318,7 +324,7 @@ class JointPropertyGroup(PropertyGroup):
     dynamics_damping: FloatProperty(  # type: ignore
         name="Damping",
         description="Resistance to motion (slows down movement)",
-        default=0.0,
+        default=DEFAULT_JOINT_DAMPING,
         min=0.0,
         soft_max=10.0,
     )
@@ -326,7 +332,7 @@ class JointPropertyGroup(PropertyGroup):
     dynamics_friction: FloatProperty(  # type: ignore
         name="Friction",
         description="Static friction (resistance to starting motion)",
-        default=0.0,
+        default=DEFAULT_JOINT_FRICTION,
         min=0.0,
         soft_max=10.0,
     )

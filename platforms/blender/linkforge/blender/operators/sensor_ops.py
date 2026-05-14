@@ -6,7 +6,9 @@ import contextlib
 import typing
 
 import bpy
+from linkforge_core.constants import DEFAULT_SENSOR_TYPE
 
+from ..constants import DEFAULT_SENSOR_GIZMO_SIZE, SUFFIX_SENSOR
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
@@ -75,7 +77,7 @@ class LINKFORGE_OT_create_sensor(Operator):
             return {"CANCELLED"}
 
         # Get preferred empty size from addon preferences
-        empty_size = 0.1  # Default fallback
+        empty_size = DEFAULT_SENSOR_GIZMO_SIZE  # Default fallback
         from ..preferences import get_addon_prefs
 
         addon_prefs = get_addon_prefs(context)
@@ -91,7 +93,7 @@ class LINKFORGE_OT_create_sensor(Operator):
         # Ensure unique name
         link_name = link_props.link_name if link_props else "unknown"
         if sensor_empty:
-            sensor_empty.name = f"{link_name}_sensor"
+            sensor_empty.name = f"{link_name}{SUFFIX_SENSOR}"
 
         if sensor_empty:
             # STRICT ALIGNMENT PARENTING
@@ -119,7 +121,7 @@ class LINKFORGE_OT_create_sensor(Operator):
             sensor_props.sensor_name = sanitize_robot_name(sensor_empty.name)
 
             # Set default sensor type
-            sensor_props.sensor_type = "CAMERA"
+            sensor_props.sensor_type = DEFAULT_SENSOR_TYPE
 
             # Auto-set attached link to the link object
             sensor_props.attached_link = link_obj

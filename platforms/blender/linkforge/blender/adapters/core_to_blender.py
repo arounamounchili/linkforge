@@ -196,7 +196,8 @@ def import_mesh_file(
         ".dae": ["wm.collada_import"],
     }
 
-    # Bug #3: Conditional DAE support for Blender < 5.0.0
+    # Compatibility Notice: Blender 5.0.0+ removes native Collada (.dae) support.
+    # We enforce this check early to guide users toward modern formats (GLB/OBJ).
     if ext == ".dae":
         if bpy.app.version >= (5, 0, 0):
             logger.error(

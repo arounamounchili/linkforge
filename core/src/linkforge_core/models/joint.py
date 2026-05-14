@@ -20,6 +20,7 @@ from ..constants import (
     DEFAULT_JOINT_DAMPING,
     DEFAULT_JOINT_FRICTION,
     EPSILON,
+    SYLVESTER_TOLERANCE_EPSILON,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
@@ -259,7 +260,7 @@ class Joint:
                 )
 
             # Enforce normalized axis in model
-            if abs(axis_magnitude - 1.0) > 1e-6:
+            if abs(axis_magnitude - 1.0) > SYLVESTER_TOLERANCE_EPSILON:
                 raise RobotValidationError(
                     ValidationErrorCode.INVALID_VALUE,
                     "Joint axis must be a unit vector",

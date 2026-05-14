@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from ..constants import DEFAULT_MATERIAL_RGBA
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
@@ -47,8 +48,8 @@ class Color:
 
     @classmethod
     def grey(cls) -> Color:
-        """Standard grey color (0.5, 0.5, 0.5, 1.0)."""
-        return cls(0.5, 0.5, 0.5, 1.0)
+        """Standard grey color from constants."""
+        return cls(*DEFAULT_MATERIAL_RGBA)
 
     def to_tuple(self) -> tuple[float, float, float, float]:
         """Convert to RGBA tuple."""

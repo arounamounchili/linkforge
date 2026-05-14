@@ -23,6 +23,7 @@ from linkforge_core.constants import (
     DEFAULT_FRICTION_MU,
     DEFAULT_FRICTION_MU2,
     DEFAULT_GRAVITY,
+    DEFAULT_LINK_MASS,
     DEFAULT_SELF_COLLIDE,
 )
 from linkforge_core.utils.string_utils import (
@@ -34,6 +35,7 @@ from linkforge_core.utils.string_utils import (
 )
 
 from ..constants import (
+    DEFAULT_COLLISION_QUALITY,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_IMPORTED_SOURCE,
@@ -243,7 +245,7 @@ class LinkPropertyGroup(PropertyGroup):
     mass: FloatProperty(  # type: ignore
         name="Mass",
         description="Weight of this link in kilograms (for physics simulation)",
-        default=1.0,
+        default=DEFAULT_LINK_MASS,
         min=0.0,
         soft_max=1000.0,
         max=1000000.0,
@@ -398,7 +400,7 @@ class LinkPropertyGroup(PropertyGroup):
             "Mesh detail preserved in collision geometry (100% = full detail, 50% = half the faces). "
             "Lower values = faster physics simulation. Imported collision defaults to 100%"
         ),
-        default=50.0,  # 50% for user-created collision (good balance)
+        default=DEFAULT_COLLISION_QUALITY,
         min=1.0,  # At least 1% to avoid empty meshes
         max=100.0,  # 100% = no simplification
         precision=0,  # Show as integer (no decimals)

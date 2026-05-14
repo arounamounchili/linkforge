@@ -24,6 +24,9 @@ from dataclasses import dataclass
 
 import bpy
 from linkforge_core.composer import RobotBuilder
+from linkforge_core.constants import (
+    DEFAULT_MATERIAL_RGBA,
+)
 from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (
@@ -480,7 +483,7 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
 
     # If no Blender material assigned, use default gray
     if color is None:
-        color = Color(0.8, 0.8, 0.8, 1.0)
+        color = Color(*DEFAULT_MATERIAL_RGBA)
 
     return Material(name=mat_name, color=color)
 
@@ -717,7 +720,7 @@ class SceneToRobotTranslator:
                             color_tuple = (
                                 (mat.color.r, mat.color.g, mat.color.b, mat.color.a)
                                 if mat.color
-                                else (0.8, 0.8, 0.8, 1.0)
+                                else DEFAULT_MATERIAL_RGBA
                             )
                             self.builder.material(mat.name, color=color_tuple)
                             processed_mats.add(mat.name)

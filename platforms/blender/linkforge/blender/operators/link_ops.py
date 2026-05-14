@@ -10,6 +10,7 @@ from linkforge_core.logging_config import get_logger
 from linkforge_core.models.link import InertiaTensor
 
 from ..constants import (
+    DEFAULT_LINK_GIZMO_SIZE,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_COLLISION_GEOM,
@@ -651,7 +652,7 @@ class LINKFORGE_OT_add_empty_link(Operator):
             return {"CANCELLED"}
 
         # Initialize default size and prefix
-        empty_size = 0.1
+        empty_size = DEFAULT_LINK_GIZMO_SIZE
         link_name = "base_link"
 
         addon_prefs = get_addon_prefs(context)
@@ -760,7 +761,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         from ..preferences import get_addon_prefs
 
         # Initialize default size
-        empty_size = 0.1
+        empty_size = DEFAULT_LINK_GIZMO_SIZE
 
         addon_prefs = get_addon_prefs(context)
         if addon_prefs:

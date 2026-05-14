@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from ..base import IResourceResolver
-from ..constants import XACRO_URIS
+from ..constants import MAX_FILE_SIZE, MAX_XML_DEPTH, XACRO_URIS
 from ..exceptions import (
     RobotParserError,
     RobotParserIOError,
@@ -34,12 +34,11 @@ from ..models.srdf import (
     VirtualJoint,
 )
 from ..utils.xml_utils import (
-    MAX_XML_DEPTH,
     get_xml_namespace,
     parse_float,
     strip_xml_namespace,
 )
-from .xml_base import MAX_FILE_SIZE, RobotXMLParser
+from .xml_base import RobotXMLParser
 
 # Define a TypeVar for generic collection parsing
 T = TypeVar("T")

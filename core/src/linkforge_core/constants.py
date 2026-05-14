@@ -3,42 +3,16 @@
 This module provides industry-standard baselines used during robot model
 definition and validation. Constants are categorized into:
 
-- **Physics Defaults**: Standard friction, stiffness, and damping coefficients.
-- **Namespaces**: Official URIs and prefixes for XML/XACRO processing.
-- **Numerical Stability**: Guardrails (mass, inertia, epsilon) for simulation.
-- **Validation**: Thresholds for mesh topology and file size.
+1.  **Infrastructure**: XML/XACRO namespaces and structural prefixes.
+2.  **Numerical Stability**: Fundamental precision and solver guardrails.
+3.  **Validation**: Physical and geometric sanity thresholds.
+4.  **Physics & Dynamics**: Global simulation and component behaviors.
+5.  **Component Defaults**: Standard baselines for Links, Joints, and Sensors.
 """
 
 from __future__ import annotations
 
-# Physics Defaults (Simulation)
-# ----------------------------
-
-# Default static friction coefficient (Coulomb)
-DEFAULT_FRICTION_MU = 1.0
-
-# Default dynamic friction coefficient (Coulomb)
-DEFAULT_FRICTION_MU2 = 1.0
-
-# Default contact stiffness (N/m)
-# 1e12 is the industry standard for 'hard' contact in Gazebo/GZ
-DEFAULT_CONTACT_KP = 1e12
-
-# Default contact damping (N s/m)
-DEFAULT_CONTACT_KD = 1.0
-
-# Default gravity inclusion
-DEFAULT_GRAVITY = True
-
-# Default self-collision inclusion
-DEFAULT_SELF_COLLIDE = False
-
-# Default Joint Axis (Z-axis is standard for many robotics defaults)
-DEFAULT_AXIS_XYZ = (0.0, 0.0, 1.0)
-DEFAULT_AXIS_XYZ_STR = "0 0 1"
-
-
-# XML and XACRO Namespaces
+# 1. XML and XACRO Infrastructure
 # ----------------------------
 
 # Official XACRO namespace URIs
@@ -52,7 +26,27 @@ XACRO_URIS = {
 XACRO_PREFIX = "xacro:"
 
 
-# Validation Limits (Sanity Checks)
+# 2. Numerical Stability (Foundation)
+# ----------------------------
+
+# General small value for floating point comparisons
+EPSILON = 1e-9
+
+# Stability epsilon for Sylvester's criterion and inertia checks
+SYLVESTER_TOLERANCE_EPSILON = 1e-9
+
+# Minimum mass in kg to prevent singular matrices in dynamics solvers
+MIN_REASONABLE_MASS = 1e-6
+
+# Minimum inertia diagonal value to prevent zero-inertia crashes
+MIN_REASONABLE_INERTIA = 1e-9
+
+# Thresholds for inertia calculation fallback and stability
+MIN_MASS_STABILITY_THRESHOLD = 0.01  # kg
+MIN_INERTIA_STABILITY_VALUE = 1e-6  # kg·m²
+
+
+# 3. Validation Limits (Guardrails)
 # ----------------------------
 
 # Maximum absolute value allowed for floats in robot models
@@ -68,46 +62,77 @@ MAX_FILE_SIZE = 100 * 1024 * 1024
 # Maximum depth for XML tree parsing to prevent Billion Laughs / recursion issues
 MAX_XML_DEPTH = 2000
 
-
-# Numerical Stability (Guardrails)
-# ----------------------------
-
-# Small value for floating point comparisons
-EPSILON = 1e-9
-
-# Minimum mass in kg to prevent singular matrices in dynamics solvers
-MIN_REASONABLE_MASS = 1e-6
-
-# Minimum inertia diagonal value to prevent zero-inertia crashes
-MIN_REASONABLE_INERTIA = 1e-9
-
-# Thresholds for inertia calculation fallback and stability
-MIN_MASS_STABILITY_THRESHOLD = 0.01  # kg
-MIN_INERTIA_STABILITY_VALUE = 1e-6  # kg·m²
-
-# Geometric thresholds
+# Geometric and Mesh thresholds
 DEGENERATE_VOL_THRESHOLD = 1e-12  # m³
 NEGATIVE_INERTIA_THRESHOLD = -1e-06
-SYLVESTER_TOLERANCE_EPSILON = 1e-9
-
-# Mesh Validation Thresholds
 MESH_PROXIMITY_THRESHOLD = 6
 MESH_SLIVER_THRESHOLD = 1000.0
 MIN_MESH_AREA = 1e-15
 
 
-# Joint Dynamics Defaults
+# 4. Global Physics Defaults
 # ----------------------------
 
-# Default joint damping (N s / m or N m s / rad)
-DEFAULT_JOINT_DAMPING = 0.0
+# Default static/dynamic friction coefficient (Coulomb)
+DEFAULT_FRICTION_MU = 1.0
+DEFAULT_FRICTION_MU2 = 1.0
 
-# Default joint friction (N or N m)
-DEFAULT_JOINT_FRICTION = 0.0
+# Default contact stiffness (N/m) and damping (N s/m)
+# 1e12 is the industry standard for 'hard' contact in Gazebo/GZ
+DEFAULT_CONTACT_KP = 1e12
+DEFAULT_CONTACT_KD = 1.0
 
-# Visualization Defaults (Core)
+# Simulation toggles
+DEFAULT_GRAVITY = True
+DEFAULT_SELF_COLLIDE = False
+
+
+# 5. Component Defaults
 # ----------------------------
-DEFAULT_COLOR_RGBA_STR = "0.7 0.7 0.7 1.0"
+
+# --- Link Defaults ---
+DEFAULT_LINK_MASS = 1.0
+DEFAULT_MATERIAL_RGBA = (0.7, 0.7, 0.7, 1.0)
+DEFAULT_MATERIAL_RGBA_STR = "0.7 0.7 0.7 1.0"
 DEFAULT_MESH_SCALE_STR = "1 1 1"
 DEFAULT_GEOMETRY_RADIUS = 0.1
 DEFAULT_GEOMETRY_LENGTH = 0.5
+
+# --- Joint Defaults ---
+# Default axis (Z-axis is standard for many robotics defaults)
+DEFAULT_AXIS_XYZ = (0.0, 0.0, 1.0)
+DEFAULT_AXIS_XYZ_STR = "0 0 1"
+
+# Joint Dynamics
+DEFAULT_JOINT_DAMPING = 0.0
+DEFAULT_JOINT_FRICTION = 0.0
+DEFAULT_JOINT_EFFORT = 10.0
+DEFAULT_JOINT_VELOCITY = 1.0
+
+# --- Sensor Defaults ---
+# Common
+DEFAULT_UPDATE_RATE = 30.0
+DEFAULT_SENSOR_TYPE = "CAMERA"
+DEFAULT_SENSOR_ALWAYS_ON = True
+DEFAULT_SENSOR_VISUALIZE = False
+
+# Camera
+DEFAULT_CAMERA_FOV = 1.047  # Radians (~60 degrees)
+DEFAULT_CAMERA_WIDTH = 640
+DEFAULT_CAMERA_HEIGHT = 480
+DEFAULT_CAMERA_FORMAT = "R8G8B8"
+DEFAULT_CAMERA_NEAR = 0.1
+DEFAULT_CAMERA_FAR = 100.0
+
+# LIDAR Horizontal Parameters
+DEFAULT_LIDAR_SAMPLES = 640
+DEFAULT_LIDAR_RANGE_MIN = 0.1
+DEFAULT_LIDAR_RANGE_MAX = 10.0
+DEFAULT_LIDAR_RANGE_RESOLUTION = 0.01
+DEFAULT_LIDAR_MIN_ANGLE = -1.570796  # -90 degrees
+DEFAULT_LIDAR_MAX_ANGLE = 1.570796  # +90 degrees
+
+# LIDAR Vertical Parameters
+DEFAULT_LIDAR_VERTICAL_SAMPLES = 1
+DEFAULT_LIDAR_VERTICAL_MIN_ANGLE = 0.0
+DEFAULT_LIDAR_VERTICAL_MAX_ANGLE = 0.0

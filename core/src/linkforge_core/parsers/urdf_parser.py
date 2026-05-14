@@ -24,7 +24,23 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..base import IResourceResolver
-from ..constants import XACRO_URIS
+from ..constants import (
+    DEFAULT_CAMERA_FAR,
+    DEFAULT_CAMERA_FORMAT,
+    DEFAULT_CAMERA_FOV,
+    DEFAULT_CAMERA_HEIGHT,
+    DEFAULT_CAMERA_NEAR,
+    DEFAULT_CAMERA_WIDTH,
+    DEFAULT_LIDAR_MAX_ANGLE,
+    DEFAULT_LIDAR_MIN_ANGLE,
+    DEFAULT_LIDAR_RANGE_MAX,
+    DEFAULT_LIDAR_RANGE_MIN,
+    DEFAULT_LIDAR_SAMPLES,
+    DEFAULT_UPDATE_RATE,
+    MAX_FILE_SIZE,
+    MAX_XML_DEPTH,
+    XACRO_URIS,
+)
 from ..exceptions import (
     RobotModelError,
     RobotParserIOError,
@@ -70,7 +86,6 @@ from ..models import (
 )
 from ..utils.math_utils import normalize_vector
 from ..utils.xml_utils import (
-    MAX_XML_DEPTH,
     get_xml_namespace,
     parse_float,
     parse_int,
@@ -79,7 +94,7 @@ from ..utils.xml_utils import (
     parse_vector3,
     strip_xml_namespace,
 )
-from .xml_base import MAX_FILE_SIZE, RobotXMLParser
+from .xml_base import RobotXMLParser
 
 logger = get_logger(__name__)
 
@@ -663,7 +678,9 @@ class URDFParser(RobotXMLParser[Robot]):
         }
         sensor_type = type_map.get(sensor_type_str.lower(), SensorType.CAMERA)
         update_rate = parse_float(
-            sensor_elem.findtext("{*}update_rate", "30.0"), check_name="updateRate", default=30.0
+            sensor_elem.findtext("{*}update_rate", str(DEFAULT_UPDATE_RATE)),
+            check_name="updateRate",
+            default=DEFAULT_UPDATE_RATE,
         )
 
         origin = Transform.identity()
@@ -693,16 +710,24 @@ class URDFParser(RobotXMLParser[Robot]):
                     horizontal_fov=parse_float(
                         camera_elem.findtext("{*}horizontal_fov"),
                         check_name="horizontal_fov",
-                        default=1.047,
+                        default=DEFAULT_CAMERA_FOV,
                     ),
-                    width=parse_int(camera_elem.findtext("{*}image/{*}width"), default=640),
-                    height=parse_int(camera_elem.findtext("{*}image/{*}height"), default=480),
-                    format=camera_elem.findtext("{*}image/{*}format", "R8G8B8"),
+                    width=parse_int(
+                        camera_elem.findtext("{*}image/{*}width"), default=DEFAULT_CAMERA_WIDTH
+                    ),
+                    height=parse_int(
+                        camera_elem.findtext("{*}image/{*}height"), default=DEFAULT_CAMERA_HEIGHT
+                    ),
+                    format=camera_elem.findtext("{*}image/{*}format", DEFAULT_CAMERA_FORMAT),
                     near_clip=parse_float(
-                        camera_elem.findtext("{*}clip/{*}near"), check_name="near", default=0.1
+                        camera_elem.findtext("{*}clip/{*}near"),
+                        check_name="near",
+                        default=DEFAULT_CAMERA_NEAR,
                     ),
                     far_clip=parse_float(
-                        camera_elem.findtext("{*}clip/{*}far"), check_name="far", default=100.0
+                        camera_elem.findtext("{*}clip/{*}far"),
+                        check_name="far",
+                        default=DEFAULT_CAMERA_FAR,
                     ),
                     noise=self._parse_sensor_noise(camera_elem),
                 )
@@ -714,23 +739,28 @@ class URDFParser(RobotXMLParser[Robot]):
             if ray_elem is not None:
                 lidar_info = LidarInfo(
                     horizontal_samples=parse_int(
-                        ray_elem.findtext("{*}scan/{*}horizontal/{*}samples"), default=640
+                        ray_elem.findtext("{*}scan/{*}horizontal/{*}samples"),
+                        default=DEFAULT_LIDAR_SAMPLES,
                     ),
                     horizontal_min_angle=parse_float(
                         ray_elem.findtext("{*}scan/{*}horizontal/{*}min_angle"),
                         check_name="min_angle",
-                        default=-1.570796,
+                        default=DEFAULT_LIDAR_MIN_ANGLE,
                     ),
                     horizontal_max_angle=parse_float(
                         ray_elem.findtext("{*}scan/{*}horizontal/{*}max_angle"),
                         check_name="max_angle",
-                        default=1.570796,
+                        default=DEFAULT_LIDAR_MAX_ANGLE,
                     ),
                     range_min=parse_float(
-                        ray_elem.findtext("{*}range/{*}min"), check_name="range_min", default=0.1
+                        ray_elem.findtext("{*}range/{*}min"),
+                        check_name="range_min",
+                        default=DEFAULT_LIDAR_RANGE_MIN,
                     ),
                     range_max=parse_float(
-                        ray_elem.findtext("{*}range/{*}max"), check_name="range_max", default=10.0
+                        ray_elem.findtext("{*}range/{*}max"),
+                        check_name="range_max",
+                        default=DEFAULT_LIDAR_RANGE_MAX,
                     ),
                     noise=self._parse_sensor_noise(ray_elem),
                 )

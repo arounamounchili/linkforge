@@ -17,6 +17,27 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
+from linkforge_core.constants import (
+    DEFAULT_CAMERA_FAR,
+    DEFAULT_CAMERA_FORMAT,
+    DEFAULT_CAMERA_FOV,
+    DEFAULT_CAMERA_HEIGHT,
+    DEFAULT_CAMERA_NEAR,
+    DEFAULT_CAMERA_WIDTH,
+    DEFAULT_LIDAR_MAX_ANGLE,
+    DEFAULT_LIDAR_MIN_ANGLE,
+    DEFAULT_LIDAR_RANGE_MAX,
+    DEFAULT_LIDAR_RANGE_MIN,
+    DEFAULT_LIDAR_RANGE_RESOLUTION,
+    DEFAULT_LIDAR_SAMPLES,
+    DEFAULT_LIDAR_VERTICAL_MAX_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_MIN_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_SAMPLES,
+    DEFAULT_SENSOR_ALWAYS_ON,
+    DEFAULT_SENSOR_TYPE,
+    DEFAULT_SENSOR_VISUALIZE,
+    DEFAULT_UPDATE_RATE,
+)
 
 from ..utils.scene_utils import clear_stats_cache
 
@@ -146,7 +167,7 @@ class SensorPropertyGroup(PropertyGroup):
             ("CONTACT", "Contact", "Contact sensor"),
             ("FORCE_TORQUE", "Force/Torque", "Force-torque sensor"),
         ],
-        default="CAMERA",
+        default=DEFAULT_SENSOR_TYPE,
     )
 
     # Attached link
@@ -162,7 +183,7 @@ class SensorPropertyGroup(PropertyGroup):
     update_rate: FloatProperty(  # type: ignore[valid-type]
         name="Update Rate",
         description="Sensor update rate in Hz",
-        default=30.0,
+        default=DEFAULT_UPDATE_RATE,
         min=0.1,
         soft_max=100.0,
         precision=1,
@@ -171,13 +192,13 @@ class SensorPropertyGroup(PropertyGroup):
     always_on: BoolProperty(  # type: ignore[valid-type]
         name="Always On",
         description="Whether the sensor is always active",
-        default=False,
+        default=DEFAULT_SENSOR_ALWAYS_ON,
     )
 
     visualize: BoolProperty(  # type: ignore[valid-type]
         name="Visualize",
         description="Enable visualization in the simulator",
-        default=False,
+        default=DEFAULT_SENSOR_VISUALIZE,
     )
 
     topic_name: StringProperty(  # type: ignore[valid-type]
@@ -191,7 +212,7 @@ class SensorPropertyGroup(PropertyGroup):
     camera_horizontal_fov: FloatProperty(  # type: ignore[valid-type]
         name="Horizontal FOV",
         description="Camera horizontal field of view (displayed in degrees, stored as radians). Standard cameras support up to 180°",
-        default=1.047,  # ~60 degrees in radians
+        default=DEFAULT_CAMERA_FOV,
         min=0.1,
         max=3.14159265359,  # π radians = 180° (maximum for pinhole camera model)
         precision=3,
@@ -201,7 +222,7 @@ class SensorPropertyGroup(PropertyGroup):
     camera_width: IntProperty(  # type: ignore[valid-type]
         name="Image Width",
         description="Camera image width in pixels",
-        default=640,
+        default=DEFAULT_CAMERA_WIDTH,
         min=1,
         soft_max=1920,
     )
@@ -209,7 +230,7 @@ class SensorPropertyGroup(PropertyGroup):
     camera_height: IntProperty(  # type: ignore[valid-type]
         name="Image Height",
         description="Camera image height in pixels",
-        default=480,
+        default=DEFAULT_CAMERA_HEIGHT,
         min=1,
         soft_max=1080,
     )
@@ -217,7 +238,7 @@ class SensorPropertyGroup(PropertyGroup):
     camera_near_clip: FloatProperty(  # type: ignore[valid-type]
         name="Near Clip",
         description="Camera near clipping plane distance (meters)",
-        default=0.1,
+        default=DEFAULT_CAMERA_NEAR,
         min=0.001,
         soft_max=10.0,
         precision=3,
@@ -226,7 +247,7 @@ class SensorPropertyGroup(PropertyGroup):
     camera_far_clip: FloatProperty(  # type: ignore[valid-type]
         name="Far Clip",
         description="Camera far clipping plane distance (meters)",
-        default=100.0,
+        default=DEFAULT_CAMERA_FAR,
         min=0.1,
         soft_max=1000.0,
         precision=1,
@@ -243,14 +264,14 @@ class SensorPropertyGroup(PropertyGroup):
             ("BAYER_RGGB8", "Bayer RGGB8", "8-bit Bayer pattern"),
             ("BAYER_BGGR8", "Bayer BGGR8", "8-bit Bayer pattern"),
         ],
-        default="R8G8B8",
+        default=DEFAULT_CAMERA_FORMAT,
     )
 
     # LIDAR-specific properties
     lidar_horizontal_samples: IntProperty(  # type: ignore[valid-type]
         name="Horizontal Samples",
         description="Number of horizontal scan samples",
-        default=640,
+        default=DEFAULT_LIDAR_SAMPLES,
         min=1,
         soft_max=2048,
     )
@@ -258,7 +279,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_horizontal_min_angle: FloatProperty(  # type: ignore[valid-type]
         name="Horizontal Min Angle",
         description="Minimum horizontal scan angle (displayed in degrees, stored as radians)",
-        default=-1.5707963267948966,  # -90 degrees
+        default=DEFAULT_LIDAR_MIN_ANGLE,
         min=-3.14159265359,  # -180°
         max=3.14159265359,  # 180°
         precision=3,
@@ -268,7 +289,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_horizontal_max_angle: FloatProperty(  # type: ignore[valid-type]
         name="Horizontal Max Angle",
         description="Maximum horizontal scan angle (displayed in degrees, stored as radians)",
-        default=1.5707963267948966,  # 90 degrees
+        default=DEFAULT_LIDAR_MAX_ANGLE,
         min=-3.14159265359,  # -180°
         max=3.14159265359,  # 180°
         precision=3,
@@ -278,7 +299,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_vertical_samples: IntProperty(  # type: ignore[valid-type]
         name="Vertical Samples",
         description="Number of vertical scan samples (1 for 2D LIDAR)",
-        default=1,
+        default=DEFAULT_LIDAR_VERTICAL_SAMPLES,
         min=1,
         soft_max=128,
     )
@@ -286,7 +307,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_vertical_min_angle: FloatProperty(  # type: ignore[valid-type]
         name="Vertical Min Angle",
         description="Minimum vertical scan angle (displayed in degrees, stored as radians)",
-        default=-0.261799,  # -15 degrees
+        default=DEFAULT_LIDAR_VERTICAL_MIN_ANGLE,
         min=-3.14159265359,
         max=3.14159265359,
         precision=3,
@@ -296,7 +317,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_vertical_max_angle: FloatProperty(  # type: ignore[valid-type]
         name="Vertical Max Angle",
         description="Maximum vertical scan angle (displayed in degrees, stored as radians)",
-        default=0.261799,  # 15 degrees
+        default=DEFAULT_LIDAR_VERTICAL_MAX_ANGLE,
         min=-3.14159265359,
         max=3.14159265359,
         precision=3,
@@ -306,7 +327,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_range_min: FloatProperty(  # type: ignore[valid-type]
         name="Range Min",
         description="Minimum detection range in meters",
-        default=0.1,
+        default=DEFAULT_LIDAR_RANGE_MIN,
         min=0.001,
         soft_max=10.0,
         precision=3,
@@ -315,7 +336,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_range_max: FloatProperty(  # type: ignore[valid-type]
         name="Range Max",
         description="Maximum detection range in meters",
-        default=10.0,
+        default=DEFAULT_LIDAR_RANGE_MAX,
         min=0.1,
         soft_max=100.0,
         precision=1,
@@ -324,7 +345,7 @@ class SensorPropertyGroup(PropertyGroup):
     lidar_range_resolution: FloatProperty(  # type: ignore[valid-type]
         name="Range Resolution",
         description="Resolution of the range sensor in meters",
-        default=0.01,
+        default=DEFAULT_LIDAR_RANGE_RESOLUTION,
         min=0.001,
         soft_max=0.1,
         precision=3,
