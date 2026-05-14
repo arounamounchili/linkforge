@@ -1,4 +1,9 @@
-"""Joint model representing kinematic connections within the LinkForge Intermediate Representation (IR)."""
+"""Joint model representing kinematic connections between robot links.
+
+This module defines the relationships between parent and child links,
+including motion types (Revolute, Prismatic, etc.), limits, dynamics,
+and safety controller configurations.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +11,11 @@ import math
 from dataclasses import dataclass, replace
 from enum import Enum
 
+from ..constants import (
+    DEFAULT_JOINT_DAMPING,
+    DEFAULT_JOINT_FRICTION,
+    EPSILON,
+)
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
 from .geometry import Transform, Vector3
@@ -62,10 +72,10 @@ class JointLimits:
 
 @dataclass(frozen=True)
 class JointDynamics:
-    """Joint dynamics properties."""
+    """Joint dynamics properties defining physical behavior."""
 
-    damping: float = 0.0  # Damping coefficient
-    friction: float = 0.0  # Friction coefficient
+    damping: float = DEFAULT_JOINT_DAMPING
+    friction: float = DEFAULT_JOINT_FRICTION
 
     def __post_init__(self) -> None:
         """Validate dynamics."""
@@ -130,18 +140,7 @@ class JointCalibration:
 
 @dataclass(frozen=True)
 class Joint:
-    """Robot joint (connection between two links).
-
-    Defines the kinematic relationship between parent and child links.
-    The joint type determines whether an axis and limits are required or
-    allowed.
-
-    Note:
-        - Revolute/Prismatic: Requires both `axis` and `limits`.
-        - Continuous: Requires `axis`, limits are optional (no range).
-        - Fixed: No axis or limits allowed.
-        - Planar: Requires `axis`.
-    """
+    """Robot joint defining the kinematic connection between two links."""
 
     name: str
     type: JointType
@@ -241,7 +240,7 @@ class Joint:
         # Validate and normalize axis if present
         if self.axis is not None:
             axis_magnitude = math.sqrt(self.axis.x**2 + self.axis.y**2 + self.axis.z**2)
-            if axis_magnitude < 1e-10:
+            if axis_magnitude < EPSILON:
                 raise RobotValidationError(
                     ValidationErrorCode.OUT_OF_RANGE,
                     "Joint axis magnitude is too small",
