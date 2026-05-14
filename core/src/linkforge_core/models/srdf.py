@@ -1,7 +1,12 @@
 """Semantic robot description models (SRDF).
 
 This module provides data structures to represent MoveIt-style semantic information,
-such as planning groups, poses, and collision filters.
+bridging the gap between raw kinematic structure and high-level motion planning.
+
+Key Components:
+- **Planning**: Groups of links/joints and kinematic chains.
+- **Poses**: Named joint configurations (group states).
+- **Collisions**: Fine-grained collision filtering and geometric approximations.
 """
 
 from __future__ import annotations
@@ -15,14 +20,7 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 
 @dataclass(frozen=True)
 class VirtualJoint:
-    """Connects the robot to a fixed frame in the world.
-
-    Attributes:
-        name: Unique name for the virtual joint.
-        type: Type of joint (e.g., 'fixed', 'planar', 'floating').
-        parent_frame: Name of the parent coordinate frame (e.g., 'world').
-        child_link: Name of the robot link attached to this joint.
-    """
+    """Connects the robot to a fixed frame in the world."""
 
     name: str
     type: str
@@ -61,14 +59,7 @@ class VirtualJoint:
 
 @dataclass(frozen=True)
 class GroupState:
-    """A named set of joint values for a planning group (a pose).
-
-    Attributes:
-        name: Unique name for this pose (e.g., 'home', 'folded').
-        group: Name of the planning group this state applies to.
-        joint_values: Dictionary mapping joint names to their target values.
-            A joint can have multiple values (e.g., planar or floating joints).
-    """
+    """A named set of joint values for a planning group (a pose)."""
 
     name: str
     group: str
@@ -113,14 +104,7 @@ class GroupState:
 
 @dataclass(frozen=True)
 class EndEffector:
-    """Defines a planning group as an end effector.
-
-    Attributes:
-        name: Unique name for the end effector.
-        group: The planning group that forms the end effector (e.g., 'hand').
-        parent_link: The robot link the end effector is attached to.
-        parent_group: Optional name of the group this end-effector belongs to.
-    """
+    """Defines a planning group as an end effector."""
 
     name: str
     group: str
@@ -156,11 +140,7 @@ class EndEffector:
 
 @dataclass(frozen=True)
 class PassiveJoint:
-    """A joint that is not actuated but exists in the kinematic chain.
-
-    Attributes:
-        name: Name of the passive joint.
-    """
+    """A joint that is not actuated but exists in the kinematic chain."""
 
     name: str
 
@@ -185,15 +165,7 @@ class PassiveJoint:
 
 @dataclass(frozen=True)
 class CollisionPair:
-    """Represents a collision rule between two specific links.
-
-    Can be used for both disabled and enabled collisions.
-
-    Attributes:
-        link1: Name of the first link.
-        link2: Name of the second link.
-        reason: Optional human-readable reason (e.g., 'Adjacent', 'Never').
-    """
+    """Represents a collision rule between two specific links."""
 
     link1: str
     link2: str
@@ -230,12 +202,7 @@ class CollisionPair:
 
 @dataclass(frozen=True)
 class Chain:
-    """A kinematic chain defined by a base link and a tip link.
-
-    Attributes:
-        base_link: Name of the base link.
-        tip_link: Name of the tip link.
-    """
+    """A kinematic chain defined by a base link and a tip link."""
 
     base_link: str
     tip_link: str
@@ -265,15 +232,7 @@ class Chain:
 
 @dataclass(frozen=True)
 class PlanningGroup:
-    """A named collection of links, joints, or chains used for motion planning.
-
-    Attributes:
-        name: Unique name for the planning group (e.g., 'arm', 'gripper').
-        links: List of link names included in the group.
-        joints: List of joint names included in the group.
-        chains: List of chains defining kinematic structure.
-        subgroups: List of other planning group names to include.
-    """
+    """A named collection of links, joints, or chains used for motion planning."""
 
     name: str
     links: Sequence[str] = field(default_factory=tuple)
@@ -321,14 +280,7 @@ class PlanningGroup:
 
 @dataclass(frozen=True)
 class SrdfSphere:
-    """A collision sphere approximation.
-
-    Attributes:
-        center_x: Center X coordinate.
-        center_y: Center Y coordinate.
-        center_z: Center Z coordinate.
-        radius: Radius of the sphere.
-    """
+    """A collision sphere approximation."""
 
     center_x: float
     center_y: float
@@ -346,12 +298,7 @@ class SrdfSphere:
 
 @dataclass(frozen=True)
 class LinkSphereApproximation:
-    """Sphere-based collision geometry for a link.
-
-    Attributes:
-        link: Name of the link.
-        spheres: List of spheres approximating the link's collision geometry.
-    """
+    """Sphere-based collision geometry for a link."""
 
     link: str
     spheres: Sequence[SrdfSphere] = field(default_factory=tuple)
@@ -377,13 +324,7 @@ class LinkSphereApproximation:
 
 @dataclass(frozen=True)
 class JointProperty:
-    """Key-value metadata for a joint.
-
-    Attributes:
-        joint_name: Name of the joint.
-        property_name: Name of the property.
-        value: Value of the property.
-    """
+    """Key-value metadata for a joint."""
 
     joint_name: str
     property_name: str
@@ -414,19 +355,6 @@ class SemanticRobotDescription:
 
     This class serves as the central point for MoveIt-compatible metadata
     that exists alongside the kinematic URDF description.
-
-    Attributes:
-        robot_name: Name of the robot.
-        virtual_joints: Virtual joints connecting the robot to the world.
-        groups: Planning groups.
-        group_states: Named joint configurations for groups.
-        end_effectors: End effector definitions.
-        passive_joints: Joints ignored by planning.
-        disabled_collisions: Collision pairs to disable.
-        enabled_collisions: Collision pairs to explicitly enable.
-        no_default_collision_links: Links to disable all default collisions for.
-        link_sphere_approximations: Sphere approximations for collision checking.
-        joint_properties: Metadata properties for joints.
     """
 
     robot_name: str = ""
