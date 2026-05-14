@@ -1,4 +1,8 @@
-"""Material and color definitions for robot visuals."""
+"""Material and color definitions for visual robot components.
+
+This module provides the data structures for defining the appearance
+of robot links, including RGBA colors and texture references.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,7 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 
 @dataclass(frozen=True)
 class Color:
-    """RGBA color representation."""
+    """RGBA color representation with components in range [0.0, 1.0]."""
 
     r: float  # Red (0.0 - 1.0)
     g: float  # Green (0.0 - 1.0)
@@ -27,18 +31,33 @@ class Color:
                     value=component,
                 )
 
+    @classmethod
+    def white(cls) -> Color:
+        """Standard white color (1.0, 1.0, 1.0, 1.0)."""
+        return cls(1.0, 1.0, 1.0, 1.0)
+
+    @classmethod
+    def black(cls) -> Color:
+        """Standard black color (0.0, 0.0, 0.0, 1.0)."""
+        return cls(0.0, 0.0, 0.0, 1.0)
+
+    @classmethod
+    def grey(cls) -> Color:
+        """Standard grey color (0.5, 0.5, 0.5, 1.0)."""
+        return cls(0.5, 0.5, 0.5, 1.0)
+
     def to_tuple(self) -> tuple[float, float, float, float]:
         """Convert to RGBA tuple."""
         return (self.r, self.g, self.b, self.a)
 
     def __str__(self) -> str:
-        """String representation."""
+        """String representation formatted as 'R G B A'."""
         return f"{self.r} {self.g} {self.b} {self.a}"
 
 
 @dataclass(frozen=True)
 class Material:
-    """Material properties for visual elements."""
+    """Material properties defining the visual surface of a robot link."""
 
     name: str
     color: Color | None = None
