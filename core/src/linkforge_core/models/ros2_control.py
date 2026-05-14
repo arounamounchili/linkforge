@@ -1,4 +1,13 @@
-"""ros2_control data models for ROS 2 control configuration."""
+"""ros2_control data models for hardware interface configuration.
+
+This module provides data structures to define how robot joints and sensors
+interface with the ROS 2 Control framework.
+
+Control Block Types:
+- **System**: Multi-joint hardware (e.g., a complete robotic arm).
+- **Actuator**: Simple single-joint hardware (e.g., a standalone motor).
+- **Sensor**: Read-only hardware (e.g., an external encoder).
+"""
 
 from __future__ import annotations
 
@@ -10,10 +19,7 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 
 @dataclass(frozen=True)
 class Ros2ControlJoint:
-    """Joint configuration in ros2_control block.
-
-    Represents a joint's control interfaces in a ros2_control system.
-    """
+    """Joint configuration in a ros2_control block."""
 
     name: str
     command_interfaces: Sequence[str] = field(default_factory=tuple)
@@ -56,10 +62,7 @@ class Ros2ControlJoint:
 
 @dataclass(frozen=True)
 class Ros2ControlSensor:
-    """Sensor configuration in ros2_control block.
-
-    Represents a sensor's state interfaces and parameters.
-    """
+    """Sensor configuration in a ros2_control block."""
 
     name: str
     state_interfaces: Sequence[str] = field(default_factory=tuple)
@@ -90,11 +93,7 @@ class Ros2ControlSensor:
 
 @dataclass(frozen=True)
 class Ros2Control:
-    """ros2_control configuration block.
-
-    Represents a complete ros2_control system configuration including
-    hardware plugin and joint interfaces.
-    """
+    """Complete ros2_control system configuration."""
 
     name: str
     type: str = "system"  # "system", "actuator", or "sensor"

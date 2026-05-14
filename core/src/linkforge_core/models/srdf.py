@@ -23,8 +23,8 @@ class VirtualJoint:
     """Connects the robot to a fixed frame in the world."""
 
     name: str
-    type: str
-    parent_frame: str
+    type: str  # e.g., 'fixed', 'planar', 'floating'
+    parent_frame: str  # e.g., 'world'
     child_link: str
 
     def __post_init__(self) -> None:
@@ -61,7 +61,7 @@ class VirtualJoint:
 class GroupState:
     """A named set of joint values for a planning group (a pose)."""
 
-    name: str
+    name: str  # e.g., 'home', 'folded'
     group: str
     joint_values: dict[str, Any] = field(default_factory=dict)
 
@@ -107,7 +107,7 @@ class EndEffector:
     """Defines a planning group as an end effector."""
 
     name: str
-    group: str
+    group: str  # The group that forms the end effector (e.g., 'hand')
     parent_link: str
     parent_group: str | None = None
 
@@ -169,7 +169,7 @@ class CollisionPair:
 
     link1: str
     link2: str
-    reason: str | None = None
+    reason: str | None = None  # e.g., 'Adjacent', 'Never'
 
     def __post_init__(self) -> None:
         """Validate collision pair."""

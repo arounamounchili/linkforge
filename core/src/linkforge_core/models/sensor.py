@@ -49,7 +49,7 @@ class SensorNoise:
 class CameraInfo:
     """Camera-specific sensor information."""
 
-    horizontal_fov: float = 1.047  # ~60 degrees in radians
+    horizontal_fov: float = 1.047  # Radians (~60°)
     width: int = 640
     height: int = 480
     format: str = "R8G8B8"  # Pixel format
@@ -109,9 +109,9 @@ class LidarInfo:
     vertical_max_angle: float = 0.0
 
     # Range parameters
-    range_min: float = 0.1
-    range_max: float = 10.0
-    range_resolution: float = 0.01
+    range_min: float = 0.1  # m
+    range_max: float = 10.0  # m
+    range_resolution: float = 0.01  # m
 
     # Noise
     noise: SensorNoise | None = None
@@ -194,10 +194,9 @@ class ForceTorqueInfo:
     F/T sensors measure forces and torques applied to joints or links.
     """
 
-    # Measurement frame (child or parent or sensor)
+    # Measurement frame (child, parent, or sensor)
     frame: str = "child"
-
-    # Direction of measurement (parent_to_child or child_to_parent)
+    # Defines the direction (parent_to_child or child_to_parent)
     measure_direction: str = "child_to_parent"
 
     # Noise model for force/torque measurements
