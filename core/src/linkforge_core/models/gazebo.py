@@ -1,3 +1,10 @@
+"""Gazebo simulation models and plugins.
+
+This module provides data structures to represent Gazebo-specific properties,
+bridging the gap between standard kinematic URDF and high-fidelity physics
+simulation parameters (CFM, ERP, materials, etc.).
+"""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -8,11 +15,7 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 
 @dataclass(frozen=True)
 class GazeboElement:
-    """Generic Gazebo element that can be applied to robot, link, or joint.
-
-    Simulation elements allow specification of Gazebo-specific properties
-    that are not part of the standard kinematic tree.
-    """
+    """Generic Gazebo element applied to robot, link, or joint."""
 
     reference: str | None = None  # Link or joint name (None for robot-level)
     properties: dict[str, str] = field(default_factory=dict)
@@ -50,10 +53,7 @@ class GazeboElement:
 
 @dataclass(frozen=True)
 class GazeboPlugin:
-    """Gazebo plugin specification.
-
-    Plugins can be applied at robot, link, or joint level to extend Gazebo functionality.
-    """
+    """Gazebo plugin specification for functional extensions."""
 
     name: str
     filename: str
