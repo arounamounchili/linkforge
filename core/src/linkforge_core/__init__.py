@@ -1,13 +1,16 @@
 """LinkForge Core Library.
 
-This is a multi-platform core library for robot URDF/XACRO generation.
-It can be used standalone or integrated into various platforms (Blender, Unity, Web, etc.).
+The platform-independent heart of the LinkForge project, providing a
+unified Intermediate Representation (IR) for robotics. This core library
+handles the "Robotics Intelligence" isolated from design tools.
 
 Modules:
-    models: Data structures for robots, links, joints, geometry, and SRDF
-    physics: Inertia and mass calculations
-    parsers: URDF, XACRO, and SRDF file parsing
-    generators: URDF, XACRO, and SRDF file generation
+    composer: High-level API for assembling robots via RobotBuilder.
+    generators: URDF, XACRO, and SRDF file generation.
+    models: Core data structures for robots, links, joints, and geometry.
+    parsers: Lossless URDF, XACRO, and SRDF file parsing.
+    physics: Scientifically grounded inertia and mass calculations.
+    validation: Multi-phase hardened validation of robot descriptions.
 """
 
 from __future__ import annotations
