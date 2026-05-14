@@ -1,4 +1,9 @@
-"""Geometry primitives for robot links."""
+"""Geometry primitives and spatial transformations for robot models.
+
+This module provides the structural building blocks for robot links,
+including primitive shapes (Box, Cylinder, Sphere) and external Mesh
+references, along with spatial Transform utilities.
+"""
 
 from __future__ import annotations
 
@@ -21,7 +26,7 @@ class GeometryType(Enum):
 
 @dataclass(frozen=True)
 class Vector3:
-    """3D vector representation."""
+    """3D vector representation for spatial coordinates, axes, and scaling."""
 
     x: float
     y: float
@@ -42,9 +47,10 @@ class Vector3:
 
 @dataclass(frozen=True)
 class Transform:
-    """Spatial transformation (position + orientation).
+    """Spatial transformation representing a 6-DOF pose.
 
-    Uses XYZ position and RPY (Roll-Pitch-Yaw) orientation in radians.
+    Combines XYZ position (Vector3) and RPY (Roll-Pitch-Yaw) orientation
+    in radians, following the standard robotics convention.
     """
 
     xyz: Vector3 = Vector3(0.0, 0.0, 0.0)
@@ -65,7 +71,7 @@ class Transform:
 
 @dataclass(frozen=True)
 class Box:
-    """Box geometry (rectangular cuboid)."""
+    """Box geometry representing a rectangular cuboid."""
 
     size: Vector3  # width (x), depth (y), height (z)
 
@@ -90,7 +96,7 @@ class Box:
 
 @dataclass(frozen=True)
 class Cylinder:
-    """Cylinder geometry (axis along Z)."""
+    """Cylinder geometry aligned along the local Z-axis."""
 
     radius: float
     length: float  # height along Z axis
