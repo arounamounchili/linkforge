@@ -57,6 +57,7 @@ from ..models import (
     Robot,
     Ros2Control,
     Ros2ControlJoint,
+    Ros2ControlSensor,
     Sensor,
     SensorNoise,
     SensorType,
@@ -482,10 +483,32 @@ class URDFParser(RobotXMLParser[Robot]):
                     )
                 )
 
+        sensors: list[Ros2ControlSensor] = []
+        for sensor_elem in rc_elem.findall("{*}sensor"):
+            sensor_name = sensor_elem.get("name", "")
+            state_interfaces = [
+                self._normalize_hardware_interface(state.get("name", "position"))
+                for state in sensor_elem.findall("{*}state_interface")
+            ]
+            sensor_params: dict[str, str] = {
+                str(param.get("name")): param.text.strip()
+                for param in sensor_elem.findall("{*}param")
+                if param.get("name") and param.text
+            }
+
+            if state_interfaces or sensor_params:
+                sensors.append(
+                    Ros2ControlSensor(
+                        name=sensor_name,
+                        state_interfaces=state_interfaces,
+                        parameters=sensor_params,
+                    )
+                )
+
         # Catch-all for top-level parameters not inside <hardware>
         for child in rc_elem:
-            if child.tag not in ("hardware", "joint") and child.text:
-                parameters[child.tag] = child.text.strip()
+            if strip_xml_namespace(child.tag) not in ("hardware", "joint", "sensor") and child.text:
+                parameters[strip_xml_namespace(child.tag)] = child.text.strip()
 
         try:
             return Ros2Control(
@@ -493,6 +516,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 type=rc_type,
                 hardware_plugin=hardware_plugin,
                 joints=joints,
+                sensors=sensors,
                 parameters=parameters,
             )
         except RobotModelError as e:

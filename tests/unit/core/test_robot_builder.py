@@ -487,12 +487,12 @@ class TestRobotBuilder:
 
     def test_builder_edge_cases(self) -> None:
         """Verify remaining builder edge cases and branching logic."""
-        # LinkBuilder.build() (line 1037-1038)
+        # LinkBuilder.build()
         b1 = RobotBuilder("b1")
         robot = b1.link("base_b1").build()
         assert robot.name == "b1"
 
-        # LinkBuilder.sensor() (line 989-990)
+        # LinkBuilder.sensor()
         b2 = RobotBuilder("b2")
         from linkforge_core.models.sensor import IMUInfo, Sensor
 
@@ -500,13 +500,13 @@ class TestRobotBuilder:
         b2.link("l_raw").sensor(s).root()
         assert len(b2.robot.sensors) == 1
 
-        # Double commit (line 1043)
+        # Double commit
         b3 = RobotBuilder("b3")
         l3 = b3.link("l_dc")
         l3.root()
         l3._commit()  # Should return immediately due to _committed flag
 
-        # Inertial origin not overwritten (line 1064 jump)
+        # Inertial origin not overwritten
         b4 = RobotBuilder("b4")
         b4.link("l_origin").collision(box(1, 1, 1)).mass(1.0, origin_xyz=(0, 0, 1)).root()
         assert b4.robot.link("l_origin").inertial_origin.xyz.z == 1.0

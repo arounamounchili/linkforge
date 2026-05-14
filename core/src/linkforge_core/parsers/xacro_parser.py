@@ -611,8 +611,12 @@ class XacroResolver:
             RobotParserError: If parent scope inheritance fails.
         """
         macro_name = tag[len(_PREFIX_XACRO) :]
-        if macro_name in self.macros:
-            params, macro_elem = self.macros[macro_name]
+        lookup_name = macro_name
+        if self._ns_stack and lookup_name not in self.macros:
+            lookup_name = f"{'.'.join(self._ns_stack)}.{macro_name}"
+
+        if lookup_name in self.macros:
+            params, macro_elem = self.macros[lookup_name]
             local_props: dict[str, Any] = {}
 
             # Parse parameters
@@ -663,10 +667,20 @@ class XacroResolver:
             parent_props = copy.deepcopy(self.properties)
             self.properties.update(local_props)
 
-            container = ET.Element(_TAG_CONTAINER)
-            self._resolve_children(container, macro_elem)
+            # Push namespace from macro name to support local property resolution
+            ns_parts = macro_name.split(".")
+            ns_to_push = ns_parts[:-1]
+            self._ns_stack.extend(ns_to_push)
 
-            self.properties = parent_props
+            try:
+                container = ET.Element(_TAG_CONTAINER)
+                self._resolve_children(container, macro_elem)
+            finally:
+                # Pop pushed namespace parts
+                for _ in ns_to_push:
+                    self._ns_stack.pop()
+                self.properties = parent_props
+
             return container
 
         # Unknown xacro tag - report warning and skip it
@@ -895,6 +909,17 @@ class XacroResolver:
                 else:
                     ctx[name] = val
 
+            # Support local lookups if inside a namespace
+            if self._ns_stack:
+                current_ns = ".".join(self._ns_stack)
+                prefix = f"{current_ns}."
+                for name, val in self.properties.items():
+                    if name.startswith(prefix):
+                        short_name = name[len(prefix) :]
+                        # Inject if it's a direct child of the current namespace
+                        if "." not in short_name:
+                            ctx[short_name] = val
+
             return eval(expr, ctx, {})
         except Exception as e:
             # CRITICAL: Do not silent-fail! If math fails (e.g. missing variable),
@@ -922,20 +947,17 @@ class XacroResolver:
             The parsed YAML data (dict or list).
         """
         if yaml is None:
-            logger.error("XACRO: PyYAML is not installed. load_yaml() failed.")
-            return {}
+            raise RobotXacroError("XACRO: PyYAML is not installed. load_yaml() failed.")  # noqa: TRY003
 
         path = self._find_file(filename)
         if not path:
-            logger.error(f"XACRO: Could not find YAML file {filename}")
-            return {}
+            raise RobotXacroError(f"XACRO: Could not find YAML file {filename}")  # noqa: TRY003
         try:
             with open(path) as f:
                 data = yaml.safe_load(f)
                 return AttrDict._wrap(data)
-        except Exception as e:  # pragma: no cover
-            logger.error(f"XACRO: Failed to load YAML {filename}: {e}")
-            return AttrDict()
+        except Exception as e:
+            raise RobotXacroError(f"Failed to load YAML {filename}: {e}") from e  # noqa: TRY003
 
     def _handle_load_json(self, filename: str) -> Any:
         """Helper to load JSON file in XACRO context.
@@ -948,15 +970,13 @@ class XacroResolver:
         """
         path = self._find_file(filename)
         if not path:
-            logger.error(f"XACRO: Could not find JSON file {filename}")
-            return {}
+            raise RobotXacroError(f"XACRO: Could not find JSON file {filename}")  # noqa: TRY003
         try:
             with open(path) as f:
                 data = json.load(f)
                 return AttrDict._wrap(data)
-        except Exception as e:  # pragma: no cover
-            logger.error(f"XACRO: Failed to load JSON {filename}: {e}")
-            return AttrDict()
+        except Exception as e:
+            raise RobotXacroError(f"Failed to load JSON {filename}: {e}") from e  # noqa: TRY003
 
     def _finalize_xml(self, root: ET.Element) -> str:
         """Strip XACRO artifacts and serialize to XML string.

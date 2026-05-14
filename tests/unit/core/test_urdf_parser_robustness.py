@@ -296,3 +296,142 @@ def test_urdf_parser_namespaced_parsing() -> None:
     assert test_joint is not None
     assert test_joint.parent == "base_link"
     assert test_joint.child == "child_link"
+
+
+def test_urdf_parser_gazebo_non_sensor_robustness() -> None:
+    """Verify parsing of non-sensor gazebo elements like plugins and materials."""
+    parser = URDFParser()
+    xml = """
+    <robot name="gazebo_test">
+        <link name="link_a"/>
+        <gazebo reference="link_a">
+            <material>Gazebo/Red</material>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+            <kp>1000.0</kp>
+            <kd>1.0</kd>
+            <minDepth>0.001</minDepth>
+            <maxVel>0.01</maxVel>
+            <plugin name="test_plugin" filename="libtest.so">
+                <param>1</param>
+            </plugin>
+        </gazebo>
+    </robot>
+    """
+    robot = parser.parse_string(xml)
+    assert len(robot.gazebo_elements) == 1
+    gz = robot.gazebo_elements[0]
+    assert gz.reference == "link_a"
+    assert gz.material == "Gazebo/Red"
+    assert len(gz.plugins) == 1
+    assert gz.plugins[0].name == "test_plugin"
+    assert gz.plugins[0].filename == "libtest.so"
+
+    link = robot.get_link("link_a")
+    assert link.physics.mu == 0.2
+    assert link.physics.mu2 == 0.2
+    assert link.physics.kp == 1000.0
+    assert link.physics.kd == 1.0
+
+
+def test_urdf_parser_ros2_control_params() -> None:
+    """Verify parsing of params in ros2_control hardware plugin."""
+    parser = URDFParser()
+    xml = """
+    <robot name="ros2_control_test">
+        <link name="base"/>
+        <link name="l1"/>
+        <joint name="j1" type="revolute">
+            <parent link="base"/>
+            <child link="l1"/>
+        </joint>
+        <ros2_control name="ctrl" type="system">
+            <hardware>
+                <plugin>mock_hardware</plugin>
+                <param name="port">/dev/ttyUSB0</param>
+            </hardware>
+            <joint name="j1">
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+                <param name="min">-1</param>
+            </joint>
+            <sensor name="s1">
+                <state_interface name="velocity"/>
+                <param name="hz">100</param>
+            </sensor>
+        </ros2_control>
+    </robot>
+    """
+    robot = parser.parse_string(xml)
+    assert len(robot.ros2_controls) == 1
+    ctrl = robot.ros2_controls[0]
+    assert ctrl.hardware_plugin == "mock_hardware"
+    assert ctrl.parameters.get("port") == "/dev/ttyUSB0"
+
+    assert len(ctrl.joints) == 1
+    assert ctrl.joints[0].parameters.get("min") == "-1"
+    assert any(s.name == "s1" and s.parameters.get("hz") == "100" for s in ctrl.sensors)
+
+
+def test_urdf_parser_transmission_multiple_actuators() -> None:
+    """Verify parsing of transmissions with multiple actuators or joints."""
+    parser = URDFParser()
+    xml = """
+    <robot name="trans_test">
+        <link name="base"/>
+        <link name="l1"/>
+        <joint name="j1" type="revolute">
+            <parent link="base"/>
+            <child link="l1"/>
+        </joint>
+        <transmission name="trans1">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="j1">
+                <hardwareInterface>PositionJointInterface</hardwareInterface>
+            </joint>
+            <actuator name="motor1">
+                <mechanicalReduction>50</mechanicalReduction>
+            </actuator>
+        </transmission>
+    </robot>
+    """
+    robot = parser.parse_string(xml)
+    assert len(robot.transmissions) == 1
+    trans = robot.transmissions[0]
+    assert len(trans.joints) == 1
+    assert trans.joints[0].hardware_interfaces[0] == "position"
+    assert len(trans.actuators) == 1
+    assert trans.actuators[0].mechanical_reduction == 50.0
+
+
+def test_urdf_parser_joint_missing_limit_values() -> None:
+    """Verify parsing of joint limits with missing attributes."""
+    parser = URDFParser()
+    xml = """
+    <robot name="joint_test">
+        <link name="base"/><link name="l1"/><link name="l2"/>
+        <joint name="j1" type="revolute">
+            <parent link="base"/><child link="l1"/>
+            <limit/> <!-- Missing effort and velocity -->
+        </joint>
+        <joint name="j2" type="revolute">
+            <parent link="l1"/><child link="l2"/>
+            <dynamics/> <!-- Empty dynamics -->
+            <calibration/> <!-- Empty calibration -->
+            <safety_controller soft_lower_limit="-1" soft_upper_limit="1" k_position="1"/> <!-- Missing k_velocity -->
+            <limit effort="1" velocity="1"/>
+        </joint>
+    </robot>
+    """
+    robot = parser.parse_string(xml)
+
+    j1 = robot.get_joint("j1")
+    assert j1 is not None
+    assert j1.limits is not None
+    assert j1.limits.effort == 0.0
+
+    j2 = robot.get_joint("j2")
+    assert j2 is not None
+    assert j2.dynamics is not None
+    assert j2.calibration is not None
+    assert j2.safety_controller is not None

@@ -55,6 +55,40 @@ class Ros2ControlJoint:
 
 
 @dataclass(frozen=True)
+class Ros2ControlSensor:
+    """Sensor configuration in ros2_control block.
+
+    Represents a sensor's state interfaces and parameters.
+    """
+
+    name: str
+    state_interfaces: Sequence[str] = field(default_factory=tuple)
+    parameters: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Validate sensor configuration."""
+        if not self.name:
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY,
+                "ROS2 control sensor name cannot be empty",
+                target="SensorName",
+                value=self.name,
+            )
+        object.__setattr__(self, "state_interfaces", tuple(self.state_interfaces))
+
+    def with_prefix(self, prefix: str) -> Ros2ControlSensor:
+        """Create a new control sensor with a prefixed name."""
+        return replace(self, name=f"{prefix}{self.name}")
+
+    def normalized(self) -> Ros2ControlSensor:
+        """Return a new control sensor with sorted interfaces."""
+        return replace(
+            self,
+            state_interfaces=tuple(sorted(self.state_interfaces)),
+        )
+
+
+@dataclass(frozen=True)
 class Ros2Control:
     """ros2_control configuration block.
 
@@ -66,6 +100,7 @@ class Ros2Control:
     type: str = "system"  # "system", "actuator", or "sensor"
     hardware_plugin: str = ""
     joints: Sequence[Ros2ControlJoint] = field(default_factory=tuple)
+    sensors: Sequence[Ros2ControlSensor] = field(default_factory=tuple)
     parameters: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -101,6 +136,15 @@ class Ros2Control:
                 target="Ros2ControlJoints",
             )
 
+        # Ensure all sensors have unique names
+        sensor_names = [s.name for s in self.sensors]
+        if len(sensor_names) != len(set(sensor_names)):
+            raise RobotValidationError(
+                ValidationErrorCode.DUPLICATE_NAME,
+                f"Duplicate sensor names found in ROS2 control system '{self.name}'",
+                target="Ros2ControlSensors",
+            )
+
         # Hardware sensors are read-only and do not accept command interfaces
         if self.type == "sensor":
             for joint in self.joints:
@@ -121,6 +165,7 @@ class Ros2Control:
                 value=len(self.joints),
             )
         object.__setattr__(self, "joints", tuple(self.joints))
+        object.__setattr__(self, "sensors", tuple(self.sensors))
 
     def with_prefix(self, prefix: str) -> Ros2Control:
         """Create a new control block with prefixed name and joints."""
@@ -128,11 +173,13 @@ class Ros2Control:
             self,
             name=f"{prefix}{self.name}",
             joints=tuple(j.with_prefix(prefix) for j in self.joints),
+            sensors=tuple(s.with_prefix(prefix) for s in self.sensors),
         )
 
     def normalized(self) -> Ros2Control:
-        """Return a new control block with sorted joints for comparison."""
+        """Return a new control block with sorted joints and sensors for comparison."""
         return replace(
             self,
             joints=tuple(sorted([j.normalized() for j in self.joints], key=lambda x: x.name)),
+            sensors=tuple(sorted([s.normalized() for s in self.sensors], key=lambda x: x.name)),
         )

@@ -230,10 +230,12 @@ def create_robot_link(
     scene: typing.Any,
     parent: typing.Any | None = None,
     with_visual: bool = True,
+    with_collision: bool = True,
+    with_cube: bool = True,
 ) -> typing.Any:
     """High-level factory to create a LinkForge robot link.
 
-    Creates an Empty object as the link frame and optionally a child visual mesh.
+    Creates an Empty object as the link frame and optionally child meshes.
     """
     link_obj = create_test_object(name, None, scene=scene)
 
@@ -243,8 +245,14 @@ def create_robot_link(
         link_obj.parent = parent
 
     if with_visual:
-        mesh_obj = create_mesh_object(f"{name}_visual", scene=scene)
+        mesh_obj = create_mesh_object(f"{name}_visual", scene=scene, with_cube=with_cube)
         mesh_obj.parent = link_obj
+        safe_get_linkforge(mesh_obj, scene).is_robot_visual = True
+
+    if with_collision:
+        mesh_obj = create_mesh_object(f"{name}_collision", scene=scene, with_cube=with_cube)
+        mesh_obj.parent = link_obj
+        safe_get_linkforge(mesh_obj, scene).is_robot_collision = True
 
     if scene.view_layers:
         scene.view_layers[0].update()

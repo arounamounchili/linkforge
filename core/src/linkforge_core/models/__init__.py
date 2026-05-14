@@ -30,7 +30,7 @@ from .joint import (
 from .link import Collision, Inertial, InertiaTensor, Link, LinkPhysics, Visual
 from .material import Color, Material
 from .robot import Robot
-from .ros2_control import Ros2Control, Ros2ControlJoint
+from .ros2_control import Ros2Control, Ros2ControlJoint, Ros2ControlSensor
 from .sensor import (
     CameraInfo,
     ContactInfo,
@@ -95,6 +95,7 @@ __all__ = [
     # ros2_control
     "Ros2Control",
     "Ros2ControlJoint",
+    "Ros2ControlSensor",
     # Sensor
     "SensorType",
     "SensorNoise",
