@@ -12,6 +12,8 @@ from ..constants import (
     DEFAULT_FRICTION_MU2,
     DEFAULT_GRAVITY,
     DEFAULT_SELF_COLLIDE,
+    EPSILON,
+    MIN_REASONABLE_INERTIA,
 )
 from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
@@ -51,14 +53,12 @@ class InertiaTensor:
                 value=(self.ixx, self.iyy, self.izz),
             )
 
-        # Triangle inequality for principal moments
+        # Principal moments triangle inequality
         # https://en.wikipedia.org/wiki/Moment_of_inertia#Principal_axes
-        # Add a small epsilon tolerance for float precision issues (e.g. from CAD or Blender)
-        epsilon = 1e-9
         if not (
-            self.ixx + self.iyy >= self.izz - epsilon
-            and self.iyy + self.izz >= self.ixx - epsilon
-            and self.izz + self.ixx >= self.iyy - epsilon
+            self.ixx + self.iyy >= self.izz - EPSILON
+            and self.iyy + self.izz >= self.ixx - EPSILON
+            and self.izz + self.ixx >= self.iyy - EPSILON
         ):
             raise RobotPhysicsError(
                 ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
@@ -70,8 +70,14 @@ class InertiaTensor:
     @classmethod
     def zero(cls) -> InertiaTensor:
         """Create a minimal valid inertia tensor (for massless links)."""
-        epsilon = 1e-6
-        return cls(epsilon, 0.0, 0.0, epsilon, 0.0, epsilon)
+        return cls(
+            MIN_REASONABLE_INERTIA,
+            0.0,
+            0.0,
+            MIN_REASONABLE_INERTIA,
+            0.0,
+            MIN_REASONABLE_INERTIA,
+        )
 
 
 @dataclass(frozen=True)

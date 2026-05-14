@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from ..constants import MIN_REASONABLE_INERTIA, MIN_REASONABLE_MASS
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
 from .result import ValidationResult
 
@@ -227,17 +228,30 @@ class MassPropertiesCheck(ValidationCheck):
     """Check for mass and inertia issues (warnings)."""
 
     def run(self, robot: Robot, result: ValidationResult) -> None:
-        """Check for mass property warnings."""
+        """Check for mass property health."""
         for link in robot.links:
-            if link.mass < 0.01:
+            # 1. Mass Checks
+            if link.mass < MIN_REASONABLE_MASS:
+                result.add_error(
+                    title="Critical low mass",
+                    message=(
+                        f"Link '{link.name}' has near-zero mass ({link.mass:.9f} kg). "
+                        "This will crash most physics solvers."
+                    ),
+                    affected_objects=[link.name],
+                    code=ValidationErrorCode.PHYSICS_VIOLATION,
+                    suggestion=f"Increase mass to at least {MIN_REASONABLE_MASS} kg",
+                )
+            elif link.mass < 0.01:
                 result.add_warning(
                     title="Very low mass",
-                    message=f"Link '{link.name}' has very low mass ({link.mass:.6f} kg).",
+                    message=f"Link '{link.name}' has low mass ({link.mass:.6f} kg).",
                     affected_objects=[link.name],
                     code=ValidationErrorCode.INVALID_VALUE,
-                    suggestion="Consider providing a more realistic mass to avoid simulation instability",
+                    suggestion="Consider providing a more realistic mass for better simulation stability",
                 )
 
+            # 2. Inertia Checks
             if link.inertial is None:
                 result.add_warning(
                     title="Missing inertia",
@@ -246,6 +260,19 @@ class MassPropertiesCheck(ValidationCheck):
                     code=ValidationErrorCode.NOT_FOUND,
                     suggestion="Add an inertial element or use automatic inertia calculation",
                 )
+            else:
+                tensor = link.inertial.inertia
+                if any(v < MIN_REASONABLE_INERTIA for v in [tensor.ixx, tensor.iyy, tensor.izz]):
+                    result.add_error(
+                        title="Critical low inertia",
+                        message=(
+                            f"Link '{link.name}' has near-zero inertia diagonals. "
+                            "This will lead to numerical instability."
+                        ),
+                        affected_objects=[link.name],
+                        code=ValidationErrorCode.PHYSICS_VIOLATION,
+                        suggestion=f"Increase inertia diagonals to at least {MIN_REASONABLE_INERTIA}",
+                    )
 
 
 class GeometryCheck(ValidationCheck):
