@@ -10,6 +10,12 @@ import os
 from functools import lru_cache
 from math import isfinite
 
+from ..constants import (
+    DEGENERATE_VOL_THRESHOLD,
+    MIN_INERTIA_STABILITY_VALUE,
+    MIN_MASS_STABILITY_THRESHOLD,
+    SYLVESTER_TOLERANCE_EPSILON,
+)
 from ..exceptions import RobotMathError, RobotPhysicsError, ValidationErrorCode
 from ..logging_config import get_logger
 from ..models.geometry import Box, Cylinder, Geometry, Mesh, Sphere
@@ -17,13 +23,6 @@ from ..models.link import InertiaTensor
 from .mesh_validation import validate_mesh_topology
 
 logger = get_logger(__name__)
-
-# Numerical thresholds for physical stability and mesh integrity
-NEGATIVE_INERTIA_THRESHOLD = -1e-06
-MIN_MASS_STABILITY_THRESHOLD = 0.01  # kg
-DEGENERATE_VOL_THRESHOLD = 1e-12  # m³
-MIN_INERTIA_STABILITY_VALUE = 1e-06  # kg·m²
-SYLVESTER_TOLERANCE_EPSILON = 1e-9
 
 # Configurable cache size for inertia calculations
 DEFAULT_INERTIA_CACHE_SIZE = int(os.environ.get("LINKFORGE_INERTIA_CACHE_SIZE", "512"))

@@ -69,6 +69,15 @@ MIN_REASONABLE_MASS = 1e-6
 # Minimum inertia diagonal value to prevent zero-inertia crashes
 MIN_REASONABLE_INERTIA = 1e-9
 
+# Thresholds for inertia calculation fallback and stability
+MIN_MASS_STABILITY_THRESHOLD = 0.01  # kg
+MIN_INERTIA_STABILITY_VALUE = 1e-6  # kg·m²
+
+# Geometric thresholds
+DEGENERATE_VOL_THRESHOLD = 1e-12  # m³
+NEGATIVE_INERTIA_THRESHOLD = -1e-06
+SYLVESTER_TOLERANCE_EPSILON = 1e-9
+
 
 # Joint Dynamics Defaults
 # ----------------------------

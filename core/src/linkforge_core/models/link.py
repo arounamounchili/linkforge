@@ -49,11 +49,15 @@ class InertiaTensor:
 
     def __post_init__(self) -> None:
         """Validate inertia tensor values."""
-        # All diagonal elements must be positive
-        if self.ixx <= 0 or self.iyy <= 0 or self.izz <= 0:
+        # All diagonal elements must meet minimal stability thresholds
+        if (
+            self.ixx < MIN_REASONABLE_INERTIA
+            or self.iyy < MIN_REASONABLE_INERTIA
+            or self.izz < MIN_REASONABLE_INERTIA
+        ):
             raise RobotPhysicsError(
                 ValidationErrorCode.OUT_OF_RANGE,
-                "Diagonal inertia components must be positive",
+                f"Diagonal inertia components must be at least {MIN_REASONABLE_INERTIA}",
                 target="DiagonalInertia",
                 value=(self.ixx, self.iyy, self.izz),
             )

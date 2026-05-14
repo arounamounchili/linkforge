@@ -12,7 +12,11 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from ..constants import MIN_REASONABLE_INERTIA, MIN_REASONABLE_MASS
+from ..constants import (
+    MIN_MASS_STABILITY_THRESHOLD,
+    MIN_REASONABLE_INERTIA,
+    MIN_REASONABLE_MASS,
+)
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
 from .result import ValidationResult
 
@@ -242,7 +246,7 @@ class MassPropertiesCheck(ValidationCheck):
                     code=ValidationErrorCode.PHYSICS_VIOLATION,
                     suggestion=f"Increase mass to at least {MIN_REASONABLE_MASS} kg",
                 )
-            elif link.mass < 0.01:
+            elif link.mass < MIN_MASS_STABILITY_THRESHOLD:
                 result.add_warning(
                     title="Very low mass",
                     message=f"Link '{link.name}' has low mass ({link.mass:.6f} kg).",
