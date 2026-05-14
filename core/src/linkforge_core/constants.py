@@ -9,6 +9,10 @@ Attributes:
     DEFAULT_CONTACT_KP: High-fidelity contact stiffness for hard surfaces.
     XACRO_URIS: Set of supported XACRO namespace identifiers.
     MAX_REASONABLE_FLOAT: Guardrail to prevent simulation-breaking overflows.
+    EPSILON: Small value for floating point comparisons.
+    MIN_REASONABLE_MASS: Minimum mass to prevent singular matrices.
+    MIN_REASONABLE_INERTIA: Minimum inertia to prevent solver crashes.
+    DEFAULT_JOINT_DAMPING: Default damping for kinematic joints.
 """
 
 from __future__ import annotations
@@ -59,3 +63,25 @@ MAX_REASONABLE_FLOAT = 1e18
 
 # Maximum absolute value allowed for integers (IDs, sample counts, etc.)
 MAX_REASONABLE_INT = 1000000
+
+# Numerical Stability (Guardrails)
+# ----------------------------
+
+# Small value for floating point comparisons
+EPSILON = 1e-9
+
+# Minimum mass in kg to prevent singular matrices in dynamics solvers
+MIN_REASONABLE_MASS = 1e-6
+
+# Minimum inertia diagonal value to prevent zero-inertia crashes
+MIN_REASONABLE_INERTIA = 1e-9
+
+
+# Joint Dynamics Defaults
+# ----------------------------
+
+# Default joint damping (N s / m or N m s / rad)
+DEFAULT_JOINT_DAMPING = 0.0
+
+# Default joint friction (N or N m)
+DEFAULT_JOINT_FRICTION = 0.0
