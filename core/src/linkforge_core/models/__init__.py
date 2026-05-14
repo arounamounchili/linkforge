@@ -1,9 +1,14 @@
 """Core data models for robot descriptions.
 
-This sub-package defines the foundational data structures that represent
-a robot's physical, kinematic, sensor, and semantic (SRDF) properties.
-These models are designed to be simulator-agnostic and form the central API
-for all LinkForge operations.
+This sub-package defines the foundational data structures representing
+a robot's physical, kinematic, sensor, and semantic properties.
+Models are categorized into:
+
+- **Kinematics**: Central Robot model, Links, and Joints.
+- **Physics**: Inertia tensors, Materials, and Surface properties.
+- **Geometry**: Primitive shapes (Box, Cylinder, Sphere) and Meshes.
+- **Semantic**: SRDF (MoveIt) planning groups and configuration states.
+- **Functional**: Sensors, Transmissions, and Hardware Interfaces (ros2_control).
 """
 
 from .gazebo import GazeboElement, GazeboPlugin
