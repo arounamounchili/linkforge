@@ -1,14 +1,8 @@
 """Central Robot model representing the LinkForge Intermediate Representation (IR).
 
-This module provides the core `Robot` class, which serves as the central
-hub for all kinematic, physical, and sensor data within the LinkForge ecosystem.
-It acts as a unified data structure that bridges high-fidelity design tools
-(like Blender or FreeCAD) with robotics description formats (URDF, XACRO, SRDF).
-
-The LinkForge IR is designed for:
-1.  **Format Agnosticism**: Supporting lossless translation between different description formats.
-2.  **Physical Integrity**: Ensuring all mass properties and kinematic constraints are validated.
-3.  **Extensibility**: Allowing format-specific metadata to be preserved via internal dictionaries.
+The Robot class serves as the central container for a robot's kinematic,
+physical, and sensor data. It acts as a unified data structure that
+bridges high-fidelity design tools with robotics description formats.
 """
 
 from __future__ import annotations
@@ -48,25 +42,9 @@ from .transmission import Transmission
 class Robot:
     """Complete robot description containing links, joints, and metadata.
 
-    The Robot class acts as the central hub of the LinkForge Intermediate
-    Representation (IR). It maintains a collection of rigid bodies (Links)
+    Acts as the central hub of the IR, maintaining rigid bodies (Links)
     connected by kinematic constraints (Joints), along with sensors,
-    transmissions, and format-specific metadata.
-
-    Attributes:
-        name: Unique identifier for the robot.
-        version: LinkForge IR schema version (e.g., '1.1').
-        materials: Global material library shared across links.
-        metadata: Arbitrary dictionary for format-specific extensions.
-        resource_resolver: Strategy for locating meshes and external files.
-        links: Read-only access to the collection of rigid bodies.
-        joints: Read-only access to kinematic constraints connecting links.
-        sensors: Read-only access to attached sensors.
-        transmissions: Read-only access to mechanical transmissions.
-        ros2_controls: Read-only access to hardware interface configurations.
-        gazebo_elements: Read-only access to simulation-specific metadata.
-        semantic: MoveIt/SRDF semantic description of the robot.
-        graph: Formally verified kinematic structure (rebuilt on demand).
+    transmissions, and simulation-specific metadata.
 
     Note:
         - Uses O(1) hash map lookups for links and joints via internal indices.
