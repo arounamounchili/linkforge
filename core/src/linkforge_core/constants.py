@@ -1,18 +1,11 @@
 """Central constants and configuration defaults for the LinkForge ecosystem.
 
-This module provides industry-standard physical constants, XML/XACRO
-namespace registries, and sanity limits used during robot validation
-to ensure simulation stability.
+This module provides industry-standard baselines used during robot model
+definition and validation. Constants are categorized into:
 
-Attributes:
-    DEFAULT_FRICTION_MU: Standard static friction coefficient.
-    DEFAULT_CONTACT_KP: High-fidelity contact stiffness for hard surfaces.
-    XACRO_URIS: Set of supported XACRO namespace identifiers.
-    MAX_REASONABLE_FLOAT: Guardrail to prevent simulation-breaking overflows.
-    EPSILON: Small value for floating point comparisons.
-    MIN_REASONABLE_MASS: Minimum mass to prevent singular matrices.
-    MIN_REASONABLE_INERTIA: Minimum inertia to prevent solver crashes.
-    DEFAULT_JOINT_DAMPING: Default damping for kinematic joints.
+- **Physics Defaults**: Standard friction, stiffness, and damping coefficients.
+- **Namespaces**: Official URIs and prefixes for XML/XACRO processing.
+- **Numerical Stability**: Guardrails (mass, inertia, epsilon) for simulation.
 """
 
 from __future__ import annotations
