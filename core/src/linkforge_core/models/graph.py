@@ -1,7 +1,9 @@
 """Kinematic graph management for robot structures.
 
 This module provides formal graph theory logic for validating and
-traversing the link-joint structure of a robot.
+traversing the link-joint structure of a robot. It is responsible for
+ensuring the model forms a valid tree or forest (collection of trees)
+suitable for simulation and control.
 """
 
 from __future__ import annotations
@@ -20,7 +22,8 @@ if TYPE_CHECKING:
 class KinematicGraph:
     """Robot connectivity model for cycle detection and topological sorting.
 
-    Decouples graph logic from the main Robot model.
+    This class decouples the graph-theoretical concerns (islands, cycles, roots)
+    from the main Robot data model.
     """
 
     def __init__(self, links: Iterable[Link], joints: Iterable[Joint]) -> None:
@@ -61,7 +64,11 @@ class KinematicGraph:
             self.inv_adj[joint.child].append((joint.parent, joint.name))
 
     def has_cycle(self) -> bool:
-        """Detect kinematic loops using iterative DFS stability."""
+        """Detect kinematic loops using iterative DFS.
+
+        Kinematic cycles are generally illegal in URDF and many physics solvers
+        unless explicitly handled by parallel linkage plugins.
+        """
         if not self.joints:
             return False
 
