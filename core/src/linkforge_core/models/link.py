@@ -1,4 +1,9 @@
-"""Link model representing a rigid body within the LinkForge Intermediate Representation (IR)."""
+"""Link model representing rigid bodies and their physical properties.
+
+This module provides the core data structures for robot links, including
+inertial properties, collision geometry, visual appearance, and surface
+physics parameters.
+"""
 
 from __future__ import annotations
 
@@ -30,9 +35,9 @@ class InertiaTensor:
     [ ixy  iyy  iyz ]
     [ ixz  iyz  izz ]
 
-    The tensor must be physically plausible. Diagonals must be non-zero
-    positive values, and the principal moments must satisfy the triangle
-    inequality.
+    The tensor must be physically plausible. Diagonals must be positive
+    values, and the principal moments must satisfy the triangle
+    inequality for rigid body mass distribution.
     """
 
     ixx: float
@@ -107,10 +112,8 @@ class Inertial:
 class LinkPhysics:
     """Surface and contact physics properties for a link.
 
-    These parameters govern how the link interacts with other objects in a
-    physics simulator (e.g., Gazebo, MuJoCo, PyBullet). While naming follows
-    common conventions, generators are responsible for mapping these to
-    engine-specific equivalents.
+    Defines how the link interacts with other objects in a physics simulator
+    (e.g., friction, stiffness, damping).
     """
 
     self_collide: bool = DEFAULT_SELF_COLLIDE
@@ -154,11 +157,10 @@ class Collision:
 
 @dataclass
 class Link:
-    """Robot link (rigid body in the kinematic chain).
+    """Robot link representing a rigid body in a kinematic chain.
 
     A link is a rigid body with visual, collision, and inertial properties.
-    The LinkForge model allows multiple visual and collision elements per link,
-    supporting high-fidelity formats like URDF and SDF.
+    The model supports multiple visual and collision elements per link.
     """
 
     name: str
