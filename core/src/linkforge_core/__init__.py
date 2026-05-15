@@ -18,7 +18,12 @@ from __future__ import annotations
 __version__ = "1.3.0"  # x-release-please-version
 
 from . import composer, generators, models, parsers, physics, validation
-from .base import FileSystemResolver, RobotGenerator, RobotParser
+from .base import (
+    FileSystemResolver,
+    IResourceResolver,
+    RobotGenerator,
+    RobotParser,
+)
 from .composer import LinkBuilder, RobotBuilder
 from .exceptions import (
     LinkForgeError,
@@ -27,7 +32,11 @@ from .exceptions import (
     RobotModelError,
     RobotParserError,
     RobotPhysicsError,
+    RobotSecurityError,
     RobotValidationError,
+    RobotXacroError,
+    RobotXacroExpressionError,
+    RobotXacroRecursionError,
     ValidationErrorCode,
     XacroDetectedError,
 )
@@ -36,37 +45,49 @@ from .logging_config import get_logger
 from .models import (
     Box,
     CameraInfo,
+    Chain,
+    CollisionPair,
     Color,
     ContactInfo,
     Cylinder,
+    EndEffector,
     ForceTorqueInfo,
     GazeboElement,
     GazeboPlugin,
     Geometry,
     GPSInfo,
+    GroupState,
     IMUInfo,
     Inertial,
     InertiaTensor,
     Joint,
+    JointProperty,
     JointType,
+    KinematicGraph,
     LidarInfo,
     Link,
     LinkPhysics,
+    LinkSphereApproximation,
     Material,
     Mesh,
+    PassiveJoint,
+    PlanningGroup,
     Robot,
     Ros2Control,
     Ros2ControlJoint,
+    SemanticRobotDescription,
     Sensor,
     SensorNoise,
     SensorType,
     Sphere,
+    SrdfSphere,
     Transform,
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
     TransmissionType,
     Vector3,
+    VirtualJoint,
 )
 from .parsers import (
     SRDFParser,
@@ -86,10 +107,21 @@ from .physics import (
 )
 from .utils.dict_utils import filter_items_by_name
 from .utils.math_utils import clean_float, format_float, format_vector
+from .utils.path_utils import (
+    get_export_path,
+    normalize_uri_to_path,
+    resolve_package_path,
+)
 from .utils.string_utils import (
     format_scientific,
     parse_scientific,
     sanitize_name,
+)
+from .utils.xml_utils import (
+    parse_float,
+    parse_int,
+    parse_vector3,
+    serialize_xml,
 )
 from .validation import RobotValidator, Severity, ValidationResult, find_sandbox_root
 
@@ -105,10 +137,12 @@ __all__ = [
     "Transform",
     "InertiaTensor",
     "Inertial",
+    "KinematicGraph",
     "RobotValidator",
     "RobotGenerator",
     "RobotParser",
     "FileSystemResolver",
+    "IResourceResolver",
     "XacroResolver",
     "clear_xacro_cache",
     "find_sandbox_root",
@@ -168,9 +202,31 @@ __all__ = [
     "RobotPhysicsError",
     "RobotValidationError",
     "RobotMathError",
+    "RobotSecurityError",
+    "RobotXacroError",
+    "RobotXacroRecursionError",
+    "RobotXacroExpressionError",
     "ValidationErrorCode",
     "ValidationResult",
     "Severity",
     "XacroDetectedError",
     "LinkPhysics",
+    "SemanticRobotDescription",
+    "PlanningGroup",
+    "Chain",
+    "GroupState",
+    "EndEffector",
+    "PassiveJoint",
+    "VirtualJoint",
+    "CollisionPair",
+    "LinkSphereApproximation",
+    "SrdfSphere",
+    "JointProperty",
+    "resolve_package_path",
+    "normalize_uri_to_path",
+    "get_export_path",
+    "serialize_xml",
+    "parse_float",
+    "parse_int",
+    "parse_vector3",
 ]
