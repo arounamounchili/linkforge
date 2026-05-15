@@ -6,14 +6,13 @@ import contextlib
 import time
 import typing
 
-from linkforge_core import InertiaTensor
+from linkforge_core import InertiaTensor, get_logger
 from linkforge_core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,
     GEOM_SPHERE,
 )
-from linkforge_core.logging_config import get_logger
 
 from ..constants import (
     DEFAULT_LINK_GIZMO_SIZE,
@@ -535,8 +534,10 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
 
     # Import here to avoid circular dependency
-    from linkforge_core.models.geometry import Box, Cylinder, Sphere
-    from linkforge_core.physics import (
+    from linkforge_core import (
+        Box,
+        Cylinder,
+        Sphere,
         calculate_inertia,
         calculate_mesh_inertia_from_triangles,
         validate_mesh_topology,
@@ -589,7 +590,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             # Primitive calculation expects dimensions
             if prim_type == GEOM_BOX:
                 # Convert mathutils.Vector to core Vector3
-                from linkforge_core.models.geometry import Vector3
+                from linkforge_core import Vector3
 
                 size = Vector3(dims.x, dims.y, dims.z)
                 tensor = calculate_inertia(Box(size=size), mass)

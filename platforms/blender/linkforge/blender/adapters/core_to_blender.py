@@ -17,7 +17,19 @@ if not typing.TYPE_CHECKING:
     from mathutils import Matrix
 
 
-from linkforge_core import Joint, Link, Robot
+from linkforge_core import (
+    Box,
+    Color,
+    Cylinder,
+    Geometry,
+    Joint,
+    Link,
+    LinkPhysics,
+    Mesh,
+    Robot,
+    Sphere,
+    get_logger,
+)
 from linkforge_core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
@@ -40,16 +52,6 @@ from linkforge_core.constants import (
     SENSOR_GPU_LIDAR,
     SENSOR_IMU,
     SENSOR_LIDAR,
-)
-from linkforge_core.logging_config import get_logger
-from linkforge_core.models import (
-    Box,
-    Color,
-    Cylinder,
-    Geometry,
-    LinkPhysics,
-    Mesh,
-    Sphere,
 )
 
 from ..constants import (

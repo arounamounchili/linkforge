@@ -11,10 +11,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from linkforge_core import LinkBuilder, RobotBuilder, ValidationResult
-    from linkforge_core.models.ros2_control import Ros2Control
-    from linkforge_core.models.sensor import Sensor
-    from linkforge_core.models.transmission import Transmission
+    from linkforge_core import (
+        LinkBuilder,
+        RobotBuilder,
+        Ros2Control,
+        Sensor,
+        Transmission,
+        ValidationResult,
+    )
 
     from .context import IBlenderContext
 
@@ -23,9 +27,11 @@ from linkforge_core.constants import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
     CONTROL_TYPE_SYSTEM,
+    DEFAULT_AXIS_XYZ,
     HW_IF_EFFORT,
     HW_IF_POSITION,
     HW_IF_VELOCITY,
+    SYLVESTER_TOLERANCE_EPSILON,
     TRANS_CUSTOM,
     TRANS_DIFFERENTIAL,
     TRANS_FOUR_BAR,
@@ -100,8 +106,7 @@ class LinkTranslator(ITranslator):
         **_kwargs: Any,
     ) -> LinkBuilder | None:
         """Translate a Blender link to a Core Link using RobotBuilder."""
-        from linkforge_core import InertiaTensor
-        from linkforge_core.utils.string_utils import sanitize_name
+        from linkforge_core import InertiaTensor, sanitize_name
 
         from .blender_to_core import (
             get_object_geometry,
@@ -245,7 +250,7 @@ class LinkTranslator(ITranslator):
         if not result or obj.type != "MESH":
             return
 
-        from linkforge_core.physics.mesh_validation import validate_mesh_topology
+        from linkforge_core import validate_mesh_topology
 
         from .blender_to_core import extract_mesh_triangles
 
@@ -293,9 +298,7 @@ class JointTranslator(ITranslator):
         **_kwargs: Any,
     ) -> None:
         """Translate a Blender joint to a Core Joint using the LinkBuilder."""
-        from linkforge_core import RobotValidationError, ValidationErrorCode
-        from linkforge_core.constants import DEFAULT_AXIS_XYZ, SYLVESTER_TOLERANCE_EPSILON
-        from linkforge_core.models.joint import JointType
+        from linkforge_core import JointType, RobotValidationError, ValidationErrorCode
 
         from .blender_to_core import matrix_to_transform
 
@@ -466,18 +469,19 @@ class SensorTranslator(ITranslator):
 
     def _blender_sensor_to_core(self, obj: Any) -> Sensor | None:
         """Convert a Blender sensor Empty and its properties to a Core Sensor model."""
-        from linkforge_core import RobotValidationError, ValidationErrorCode
-        from linkforge_core.models.gazebo import GazeboPlugin
-        from linkforge_core.models.sensor import (
+        from linkforge_core import (
             CameraInfo,
             ContactInfo,
             ForceTorqueInfo,
+            GazeboPlugin,
             GPSInfo,
             IMUInfo,
             LidarInfo,
+            RobotValidationError,
             Sensor,
             SensorNoise,
             SensorType,
+            ValidationErrorCode,
         )
 
         if obj is None:
@@ -643,8 +647,11 @@ class Ros2ControlTranslator(ITranslator):
 
     def _blender_ros2_control_to_core(self, props: Any) -> Ros2Control | None:
         """Convert centralized Blender ros2_control properties to Core model."""
-        from linkforge_core.logging_config import get_logger
-        from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
+        from linkforge_core import (
+            Ros2Control,
+            Ros2ControlJoint,
+            get_logger,
+        )
 
         logger = get_logger(__name__)
 
@@ -764,7 +771,7 @@ class TransmissionTranslator(ITranslator):
 
     def _blender_transmission_to_core(self, obj: Any) -> Transmission | None:
         """Convert Blender Empty with TransmissionPropertyGroup to Core Transmission."""
-        from linkforge_core.models.transmission import (
+        from linkforge_core import (
             Transmission,
             TransmissionActuator,
             TransmissionJoint,

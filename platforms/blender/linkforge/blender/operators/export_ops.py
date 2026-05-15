@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 import bpy
 from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
-from linkforge_core.logging_config import get_logger
+from linkforge_core import get_logger
 
 from ..constants import PROP_ROBOT, PROP_VALIDATION
 from ..utils.decorators import OperatorReturn, safe_execute

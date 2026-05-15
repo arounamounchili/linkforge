@@ -21,12 +21,23 @@ except ImportError:
 
 import bpy
 from linkforge_core import (
+    Box,
+    Color,
+    Cylinder,
+    Geometry,
+    Material,
+    Mesh,
     Robot,
     RobotBuilder,
     RobotValidationError,
+    Sphere,
     Transform,
     ValidationErrorCode,
     ValidationResult,
+    Vector3,
+    clean_float,
+    get_logger,
+    sanitize_name,
 )
 from linkforge_core.constants import (
     DEFAULT_MATERIAL_RGBA,
@@ -36,19 +47,6 @@ from linkforge_core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
-from linkforge_core.logging_config import get_logger
-from linkforge_core.models import (
-    Box,
-    Color,
-    Cylinder,
-    Geometry,
-    Material,
-    Mesh,
-    Sphere,
-    Vector3,
-)
-from linkforge_core.utils.math_utils import clean_float
-from linkforge_core.utils.string_utils import sanitize_name
 from mathutils import Matrix
 
 from ..constants import (
@@ -840,7 +838,7 @@ class SceneToRobotTranslator:
             # Custom plugin: use filename as name (matches test expectation)
             name = plugin_filename
 
-        from linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
+        from linkforge_core import GazeboElement, GazeboPlugin
 
         gazebo_plugin = GazeboPlugin(
             name=name,

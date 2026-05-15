@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import bpy
-from linkforge_core.models import Joint
+from linkforge_core import Joint
 
 from .property_helpers import get_joint_props
 

@@ -34,7 +34,7 @@ from linkforge_core.constants import (
 if typing.TYPE_CHECKING:
     pass
 
-from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
+from linkforge_core import sanitize_name as sanitize_robot_name
 
 from ..constants import PROP_JOINT
 from ..utils.property_helpers import find_property_owner, get_link_props
