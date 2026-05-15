@@ -57,7 +57,3 @@ class TestRotationNormalization:
         obj = create_robot_link("test_rotation_link", scene)
         assert obj is not None
         assert obj.rotation_mode == "XYZ"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

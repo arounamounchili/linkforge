@@ -9,6 +9,8 @@ import site
 import subprocess
 import sys
 
+import pytest
+
 
 def setup_environment():
     """Setup paths and dependencies for the test run."""
@@ -78,8 +80,6 @@ def run_tests():
 
     if not has_target:
         args.extend(test_dirs)
-
-    import pytest
 
     exit_code = pytest.main(args)
 

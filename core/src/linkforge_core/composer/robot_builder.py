@@ -13,6 +13,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..constants import (
+    CONTROL_TYPE_SYSTEM,
+    SRDF_REASON_ADJACENT,
+)
 from ..exceptions import RobotModelError, RobotValidationError, ValidationErrorCode
 from ..models.geometry import Transform, Vector3
 from ..models.joint import JointLimits, JointType
@@ -80,7 +84,7 @@ class RobotBuilder:
         axis: tuple[float, float, float] | None = None,
         limits: tuple[float, float] | None = None,
         disable_collision: bool = False,
-        reason: str = "Adjacent",
+        reason: str = SRDF_REASON_ADJACENT,
     ) -> RobotBuilder:
         """Merge another robot or assembly into the current one.
 
@@ -157,7 +161,7 @@ class RobotBuilder:
         self,
         name: str,
         hardware_plugin: str,
-        control_type: str = "system",
+        control_type: str = CONTROL_TYPE_SYSTEM,
         parameters: dict[str, Any] | None = None,
     ) -> RobotBuilder:
         """Add a global ros2_control system configuration.

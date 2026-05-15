@@ -7,8 +7,9 @@ import typing
 
 import bpy
 from bpy.types import Context, Panel
+from linkforge_core.constants import GEOM_MESH
 
-from ..constants import SUFFIX_COLLISION, SUFFIX_VISUAL, TAG_IMPORTED_SOURCE
+from ..constants import GEOM_AUTO, SUFFIX_COLLISION, SUFFIX_VISUAL, TAG_IMPORTED_SOURCE
 from ..utils.property_helpers import get_link_props
 from ..utils.scene_utils import get_robot_statistics
 
@@ -120,7 +121,7 @@ class LINKFORGE_PT_links(Panel):
         geo_info = stats.geometry_stats.get(props.link_name)
 
         collision_obj = None
-        detected_type = "MESH"
+        detected_type = GEOM_MESH
         is_primitive = False
 
         if geo_info:
@@ -139,8 +140,8 @@ class LINKFORGE_PT_links(Panel):
             # Show quality slider for mesh-based collisions.
             # If the user explicitly selects MESH mode, we show the slider even if
             # the current detection is a primitive to allow for mode switching.
-            if props.collision_type == "MESH" or (
-                props.collision_type == "AUTO" and detected_type == "MESH"
+            if props.collision_type == GEOM_MESH or (
+                props.collision_type == GEOM_AUTO and detected_type == GEOM_MESH
             ):
                 box.separator()
                 row = box.row()

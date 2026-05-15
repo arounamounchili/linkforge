@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import bpy
-import pytest
 
 from tests.blender_test_utils import (
     safe_get_linkforge_scene,
@@ -27,7 +26,3 @@ class TestROS2ControlIntegration:
         assert len(lf_scene.ros2_control_joints) == 1
         assert lf_scene.ros2_control_joints[0].name == "joint1"
         assert lf_scene.ros2_control_joints[0].cmd_position is True
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

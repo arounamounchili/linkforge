@@ -18,9 +18,16 @@ from enum import Enum
 
 from ..constants import (
     DEFAULT_JOINT_DAMPING,
+    DEFAULT_JOINT_EFFORT,
     DEFAULT_JOINT_FRICTION,
+    DEFAULT_JOINT_VELOCITY,
     EPSILON,
-    SYLVESTER_TOLERANCE_EPSILON,
+    JOINT_CONTINUOUS,
+    JOINT_FIXED,
+    JOINT_FLOATING,
+    JOINT_PLANAR,
+    JOINT_PRISMATIC,
+    JOINT_REVOLUTE,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
@@ -30,12 +37,12 @@ from .geometry import Transform, Vector3
 class JointType(Enum):
     """Standard robot joint types."""
 
-    REVOLUTE = "revolute"  # Rotates around axis with limits
-    CONTINUOUS = "continuous"  # Rotates around axis without limits
-    PRISMATIC = "prismatic"  # Slides along axis with limits
-    FIXED = "fixed"  # No motion
-    FLOATING = "floating"  # 6 DOF (free in space)
-    PLANAR = "planar"  # 2D motion in a plane
+    REVOLUTE = JOINT_REVOLUTE  # Rotates around axis with limits
+    CONTINUOUS = JOINT_CONTINUOUS  # Rotates around axis without limits
+    PRISMATIC = JOINT_PRISMATIC  # Slides along axis with limits
+    FIXED = JOINT_FIXED  # No motion
+    FLOATING = JOINT_FLOATING  # 6 DOF (free in space)
+    PLANAR = JOINT_PLANAR  # 2D motion in a plane
 
 
 @dataclass(frozen=True)
@@ -47,8 +54,8 @@ class JointLimits:
 
     lower: float | None = None  # Lower limit (radians for revolute, meters for prismatic)
     upper: float | None = None  # Upper limit
-    effort: float = 0.0  # Maximum effort (N or Nm)
-    velocity: float = 0.0  # Maximum velocity (rad/s or m/s)
+    effort: float = DEFAULT_JOINT_EFFORT  # Maximum effort (N or Nm)
+    velocity: float = DEFAULT_JOINT_VELOCITY  # Maximum velocity (rad/s or m/s)
 
     def __post_init__(self) -> None:
         """Validate limits."""
@@ -166,18 +173,15 @@ class Joint:
     calibration: JointCalibration | None = None
 
     def __post_init__(self) -> None:
-        """Validate joint configuration and kinematic constraints.
-
-        Raises:
-            RobotValidationError: If naming conventions, topology (parent==child),
-                axis, or limit requirements for the joint type are violated.
-        """
+        """Validate and normalize joint properties."""
+        # Validate name
         if not self.name:
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Joint name cannot be empty", target="JointName"
+                ValidationErrorCode.NAME_EMPTY,
+                "Joint name cannot be empty",
+                target="JointName",
+                value=self.name,
             )
-
-        # Validate naming convention
         if not is_valid_name(self.name):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_NAME,
@@ -192,14 +196,12 @@ class Joint:
                 "Parent link name cannot be empty",
                 target="ParentLink",
             )
-
         if not self.child:
             raise RobotValidationError(
                 ValidationErrorCode.NAME_EMPTY,
                 "Child link name cannot be empty",
                 target="ChildLink",
             )
-
         if self.parent == self.child:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
@@ -208,12 +210,11 @@ class Joint:
                 value=self.parent,
             )
 
-        # Validate Axis requirements
-        # Type-specific validation
+        # Validate Axis Requirements
         if self.type in (
             JointType.REVOLUTE,
-            JointType.PRISMATIC,
             JointType.CONTINUOUS,
+            JointType.PRISMATIC,
             JointType.PLANAR,
         ):
             if self.axis is None:
@@ -250,17 +251,18 @@ class Joint:
 
         # Validate and normalize axis if present
         if self.axis is not None:
-            axis_magnitude = math.sqrt(self.axis.x**2 + self.axis.y**2 + self.axis.z**2)
+            axis_sq_mag = self.axis.x**2 + self.axis.y**2 + self.axis.z**2
+            axis_magnitude = math.sqrt(axis_sq_mag)
             if axis_magnitude < EPSILON:
                 raise RobotValidationError(
-                    ValidationErrorCode.OUT_OF_RANGE,
-                    "Joint axis magnitude is too small",
-                    target="JointAxisMagnitude",
-                    value=axis_magnitude,
+                    ValidationErrorCode.INVALID_VALUE,
+                    "Joint axis cannot be a zero vector",
+                    target="JointAxis",
+                    value=self.axis,
                 )
 
-            # Enforce normalized axis in model
-            if abs(axis_magnitude - 1.0) > SYLVESTER_TOLERANCE_EPSILON:
+            # Non-unit axis vectors are not allowed in the constructor for strict IR
+            if abs(axis_magnitude - 1.0) > EPSILON:
                 raise RobotValidationError(
                     ValidationErrorCode.INVALID_VALUE,
                     "Joint axis must be a unit vector",

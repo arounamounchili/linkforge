@@ -693,7 +693,3 @@ class TestXacroInfrastructure:
         """
         resolved = resolver.resolve_string(xml)
         assert "val1_val2" in resolved
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

@@ -88,7 +88,3 @@ class TestMeshRobustness:
             mock_wm.stl_export.side_effect = TypeError("Unexpected")
             with pytest.raises(TypeError):
                 export_mesh_stl(obj, filepath)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

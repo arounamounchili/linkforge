@@ -99,7 +99,3 @@ class TestSRDFGenerator:
         assert dc.get("link1") == "l1"
         assert dc.get("link2") == "l2"
         assert dc.get("reason") == "adjacent"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

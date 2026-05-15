@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-import pytest
 from linkforge_core.generators.urdf_generator import URDFGenerator
 from linkforge_core.parsers.urdf_parser import URDFParser
 from linkforge_core.validation import RobotValidator
@@ -205,7 +204,3 @@ def test_urdf_string_equivalence() -> None:
     assert root_rt.get("name") == root_orig.get("name")
     assert len(list(root_rt.findall("link"))) == len(list(root_orig.findall("link")))
     assert len(list(root_rt.findall("joint"))) == len(list(root_orig.findall("joint")))
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

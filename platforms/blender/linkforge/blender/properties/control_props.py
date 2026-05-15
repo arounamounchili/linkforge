@@ -14,6 +14,11 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import PropertyGroup
+from linkforge_core.constants import (
+    HW_IF_EFFORT,
+    HW_IF_POSITION,
+    HW_IF_VELOCITY,
+)
 
 
 class Ros2ControlParameterProperty(PropertyGroup):
@@ -38,11 +43,11 @@ class Ros2ControlInterfaceProperty(PropertyGroup):
         name="Interface",
         description="Interface type",
         items=[
-            ("position", "Position", "Position interface"),
-            ("velocity", "Velocity", "Velocity interface"),
-            ("effort", "Effort", "Effort/Torque interface"),
+            (HW_IF_POSITION, "Position", "Position interface"),
+            (HW_IF_VELOCITY, "Velocity", "Velocity interface"),
+            (HW_IF_EFFORT, "Effort", "Effort/Torque interface"),
         ],
-        default="position",
+        default=HW_IF_POSITION,
     )
 
     # Parameters for this specific interface (e.g., min/max for command interfaces)

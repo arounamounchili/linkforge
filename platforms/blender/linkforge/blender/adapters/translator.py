@@ -21,7 +21,22 @@ if TYPE_CHECKING:
     from .context import IBlenderContext
 
 
+from linkforge_core.constants import (
+    CONTROL_TYPE_ACTUATOR,
+    CONTROL_TYPE_SENSOR,
+    CONTROL_TYPE_SYSTEM,
+    HW_IF_EFFORT,
+    HW_IF_POSITION,
+    HW_IF_VELOCITY,
+    TRANS_CUSTOM,
+    TRANS_DIFFERENTIAL,
+    TRANS_FOUR_BAR,
+    TRANS_SIMPLE,
+)
+
 from ..constants import (
+    FORMAT_STL,
+    GEOM_AUTO,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_IMPORTED_SOURCE,
@@ -102,7 +117,7 @@ class LinkTranslator(ITranslator):
 
         link_name = props.link_name if props.link_name else obj.name
         robot_props = get_robot_props(context.scene)
-        mesh_format = robot_props.mesh_format if robot_props else "STL"
+        mesh_format = robot_props.mesh_format if robot_props else FORMAT_STL
 
         # Use provided LinkBuilder or create a new one
         active_lb = lb if lb else builder.link(link_name)
@@ -115,7 +130,7 @@ class LinkTranslator(ITranslator):
 
                 geom, world_mat = get_object_geometry(
                     child,
-                    "AUTO",
+                    GEOM_AUTO,
                     link_name,
                     "visual",
                     meshes_dir,
@@ -152,11 +167,11 @@ class LinkTranslator(ITranslator):
 
                 geom, world_mat = get_object_geometry(
                     child,
-                    "AUTO",
+                    GEOM_AUTO,
                     link_name,
                     "collision",
                     meshes_dir,
-                    "STL",  # Collisions always use STL for maximum physics compatibility
+                    FORMAT_STL,  # Collisions always use STL for maximum physics compatibility
                     simplify=(quality < 1.0) and not is_imported,
                     decimation_ratio=quality,
                     dry_run=dry_run,
@@ -529,7 +544,7 @@ class SensorTranslator(ITranslator):
             )
 
         # LIDAR info
-        elif sensor_type == SensorType.LIDAR:
+        elif sensor_type in (SensorType.LIDAR, SensorType.GPU_LIDAR):
             lidar_info = LidarInfo(
                 horizontal_samples=int(props.lidar_horizontal_samples),
                 horizontal_min_angle=float(props.lidar_horizontal_min_angle),
@@ -638,27 +653,27 @@ class Ros2ControlTranslator(ITranslator):
         if props is None or not getattr(props, "use_ros2_control", False):
             return None
 
-        ros2_control_type = getattr(props, "ros2_control_type", "system")
+        ros2_control_type = getattr(props, "ros2_control_type", CONTROL_TYPE_SYSTEM)
         joints: list[Ros2ControlJoint] = []
         for item in getattr(props, "ros2_control_joints", []):
             cmd_ifs = []
             if getattr(item, "cmd_position", False):
-                cmd_ifs.append("position")
+                cmd_ifs.append(HW_IF_POSITION)
             if getattr(item, "cmd_velocity", False):
-                cmd_ifs.append("velocity")
+                cmd_ifs.append(HW_IF_VELOCITY)
             if getattr(item, "cmd_effort", False):
-                cmd_ifs.append("effort")
+                cmd_ifs.append(HW_IF_EFFORT)
 
             state_ifs = []
             if getattr(item, "state_position", False):
-                state_ifs.append("position")
+                state_ifs.append(HW_IF_POSITION)
             if getattr(item, "state_velocity", False):
-                state_ifs.append("velocity")
+                state_ifs.append(HW_IF_VELOCITY)
             if getattr(item, "state_effort", False):
-                state_ifs.append("effort")
+                state_ifs.append(HW_IF_EFFORT)
 
             # Intelligent defaults
-            if ros2_control_type == "sensor":
+            if ros2_control_type == CONTROL_TYPE_SENSOR:
                 if cmd_ifs:
                     logger.warning(
                         f"ROS2 Control: Hardware type 'sensor' cannot have command interfaces. "
@@ -666,12 +681,12 @@ class Ros2ControlTranslator(ITranslator):
                     )
                     cmd_ifs = []
                 if not state_ifs:
-                    state_ifs.append("position")
+                    state_ifs.append(HW_IF_POSITION)
             else:
                 if state_ifs and not cmd_ifs:
-                    cmd_ifs.append("position")
+                    cmd_ifs.append(HW_IF_POSITION)
                 elif cmd_ifs and not state_ifs:
-                    state_ifs.append("position")
+                    state_ifs.append(HW_IF_POSITION)
 
             # Extract joint-level parameters
             parameters = {p.name: p.value for p in getattr(item, "parameters", []) if p.name}
@@ -700,7 +715,7 @@ class Ros2ControlTranslator(ITranslator):
                 )
 
         # ROS 2 Specification: 'actuator' types must have exactly one joint.
-        if ros2_control_type == "actuator" and len(joints) > 1:
+        if ros2_control_type == CONTROL_TYPE_ACTUATOR and len(joints) > 1:
             logger.warning(
                 f"ROS2 Control: Hardware type 'actuator' is limited to exactly one joint by ROS 2 "
                 f"specification. Truncating {len(joints)} joints to only include '{joints[0].name}'."
@@ -710,9 +725,11 @@ class Ros2ControlTranslator(ITranslator):
         if not joints:
             return None
 
+        core_type = ros2_control_type
+
         return Ros2Control(
             name=props.ros2_control_name if props.ros2_control_name else "RobotControl",
-            type=ros2_control_type,
+            type=core_type,
             hardware_plugin=props.hardware_plugin,
             joints=joints,
         )
@@ -767,25 +784,20 @@ class TransmissionTranslator(ITranslator):
 
         # Transmission type mapping
         trans_type_map = {
-            "SIMPLE": TransmissionType.SIMPLE.value,
-            "DIFFERENTIAL": TransmissionType.DIFFERENTIAL.value,
-            "FOUR_BAR_LINKAGE": TransmissionType.FOUR_BAR_LINKAGE.value,
-            "CUSTOM": props.custom_type if props.custom_type else TransmissionType.CUSTOM.value,
+            TRANS_SIMPLE: TransmissionType.SIMPLE.value,
+            TRANS_DIFFERENTIAL: TransmissionType.DIFFERENTIAL.value,
+            TRANS_FOUR_BAR: TransmissionType.FOUR_BAR_LINKAGE.value,
+            TRANS_CUSTOM: props.custom_type if props.custom_type else TransmissionType.CUSTOM.value,
         }
         trans_type = trans_type_map.get(props.transmission_type, TransmissionType.SIMPLE.value)
 
         # Hardware interface mapping
-        hw_if_map = {
-            "POSITION": "position",
-            "VELOCITY": "velocity",
-            "EFFORT": "effort",
-        }
-        hw_if = hw_if_map.get(props.hardware_interface, "position")
+        hw_if = props.hardware_interface
 
         joints = []
         actuators = []
 
-        if props.transmission_type in ("SIMPLE", "CUSTOM", "FOUR_BAR_LINKAGE"):
+        if props.transmission_type in (TRANS_SIMPLE, TRANS_CUSTOM, TRANS_FOUR_BAR):
             joint_obj = props.joint_name
             if joint_obj:
                 joint_props = get_joint_props(joint_obj)
@@ -813,7 +825,7 @@ class TransmissionTranslator(ITranslator):
                     else f"{joint_name}_motor"
                 )
                 actuators.append(TransmissionActuator(name=act_name, hardware_interfaces=[hw_if]))
-        elif props.transmission_type == "DIFFERENTIAL":
+        elif props.transmission_type == TRANS_DIFFERENTIAL:
             j1_obj = props.joint1_name
             j2_obj = props.joint2_name
             if j1_obj and j2_obj:

@@ -20,7 +20,15 @@ from linkforge_core.constants import (
     DEFAULT_JOINT_DAMPING,
     DEFAULT_JOINT_EFFORT,
     DEFAULT_JOINT_FRICTION,
+    DEFAULT_JOINT_TYPE,
     DEFAULT_JOINT_VELOCITY,
+    JOINT_CONTINUOUS,
+    JOINT_FIXED,
+    JOINT_FLOATING,
+    JOINT_PLANAR,
+    JOINT_PRISMATIC,
+    JOINT_REVOLUTE,
+    PI,
 )
 
 if typing.TYPE_CHECKING:
@@ -28,6 +36,7 @@ if typing.TYPE_CHECKING:
 
 from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 
+from ..constants import PROP_JOINT
 from ..utils.property_helpers import find_property_owner, get_link_props
 from ..utils.scene_utils import clear_stats_cache
 
@@ -107,7 +116,7 @@ def update_joint_hierarchy(self: JointPropertyGroup, context: Context) -> None:
         return
 
     # Find the joint object that owns this property
-    joint_obj = find_property_owner(context, self, "linkforge_joint")
+    joint_obj = find_property_owner(context, self, PROP_JOINT)
     if joint_obj is None or not self.is_robot_joint:
         return
 
@@ -165,14 +174,14 @@ def poll_robot_joint(self: JointPropertyGroup, obj: bpy.types.Object) -> bool:
     if not obj or obj.type != "EMPTY":
         return False
 
-    joint_props = getattr(obj, "linkforge_joint", None)
+    joint_props = getattr(obj, PROP_JOINT, None)
     if not joint_props or not joint_props.is_robot_joint:
         return False
 
     # Prevent self-mimicry
     # We compare the objects that own the properties
     # find_property_owner is imported at the top
-    current_obj = find_property_owner(bpy.context, self, "linkforge_joint")
+    current_obj = find_property_owner(bpy.context, self, PROP_JOINT)
     return bool(obj != current_obj)
 
 
@@ -208,14 +217,14 @@ class JointPropertyGroup(PropertyGroup):
         name="Joint Type",
         description="Type of joint connection",
         items=[
-            ("REVOLUTE", "Revolute", "Rotates around axis with limits"),
-            ("CONTINUOUS", "Continuous", "Rotates around axis without limits"),
-            ("PRISMATIC", "Prismatic", "Slides along axis with limits"),
-            ("FIXED", "Fixed", "No motion allowed"),
-            ("FLOATING", "Floating", "6 DOF free in space"),
-            ("PLANAR", "Planar", "2D motion in a plane"),
+            (JOINT_REVOLUTE, "Revolute", "Rotates around axis with limits"),
+            (JOINT_CONTINUOUS, "Continuous", "Rotates around axis without limits"),
+            (JOINT_PRISMATIC, "Prismatic", "Slides along axis with limits"),
+            (JOINT_FIXED, "Fixed", "No motion allowed"),
+            (JOINT_FLOATING, "Floating", "6 DOF free in space"),
+            (JOINT_PLANAR, "Planar", "2D motion in a plane"),
         ],
-        default="REVOLUTE",
+        default=DEFAULT_JOINT_TYPE,
         update=clear_stats_cache,
     )
 
@@ -285,17 +294,17 @@ class JointPropertyGroup(PropertyGroup):
     limit_lower: FloatProperty(  # type: ignore
         name="Lower Limit",
         description="Minimum position (radians for revolute/continuous joints, meters for prismatic joints)",
-        default=-3.14159265359,
-        soft_min=-6.28318530718,
-        soft_max=6.28318530718,
+        default=-PI,
+        soft_min=-2 * PI,
+        soft_max=2 * PI,
     )
 
     limit_upper: FloatProperty(  # type: ignore
         name="Upper Limit",
         description="Maximum position (radians for revolute/continuous joints, meters for prismatic joints)",
-        default=3.14159265359,
-        soft_min=-6.28318530718,
-        soft_max=6.28318530718,
+        default=PI,
+        soft_min=-2 * PI,
+        soft_max=2 * PI,
     )
 
     limit_effort: FloatProperty(  # type: ignore
@@ -436,7 +445,7 @@ def register() -> None:
         bpy.utils.unregister_class(JointPropertyGroup)
         bpy.utils.register_class(JointPropertyGroup)
 
-    prop_name = "linkforge_joint"
+    prop_name = PROP_JOINT
     setattr(
         bpy.types.Object,
         prop_name,
@@ -449,7 +458,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        delattr(bpy.types.Object, "linkforge_joint")
+        delattr(bpy.types.Object, PROP_JOINT)
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(JointPropertyGroup)

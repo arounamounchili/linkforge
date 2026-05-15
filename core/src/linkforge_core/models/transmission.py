@@ -17,7 +17,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from enum import Enum
 
-from ..constants import EPSILON
+from ..constants import EPSILON, HW_IF_POSITION
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..utils.string_utils import is_valid_name
 
@@ -36,7 +36,7 @@ class TransmissionJoint:
     """Joint specification in a transmission."""
 
     name: str
-    hardware_interfaces: Sequence[str] = field(default_factory=lambda: ("position",))
+    hardware_interfaces: Sequence[str] = field(default_factory=lambda: (HW_IF_POSITION,))
     mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
@@ -79,7 +79,7 @@ class TransmissionActuator:
     """Actuator specification in a transmission."""
 
     name: str
-    hardware_interfaces: Sequence[str] = field(default_factory=lambda: ("position",))
+    hardware_interfaces: Sequence[str] = field(default_factory=lambda: (HW_IF_POSITION,))
     mechanical_reduction: float | None = 1.0
     offset: float = 0.0
 
@@ -242,7 +242,8 @@ class Transmission:
         joint_name: str,
         actuator_name: str | None = None,
         mechanical_reduction: float = 1.0,
-        hardware_interface: str = "position",
+        hardware_interface: str | None = None,
+        hardware_interfaces: list[str] | None = None,
     ) -> Transmission:
         """Create a simple 1-to-1 transmission.
 
@@ -251,7 +252,8 @@ class Transmission:
             joint_name: Name of the joint
             actuator_name: Name of the actuator (defaults to joint_name + "_motor")
             mechanical_reduction: Gear ratio (default 1.0)
-            hardware_interface: Interface type (default "position")
+            hardware_interface: Single interface type (deprecated alias)
+            hardware_interfaces: Interface types (default [HW_IF_POSITION])
 
         Returns:
             Configured simple transmission
@@ -260,20 +262,27 @@ class Transmission:
         if actuator_name is None:
             actuator_name = f"{joint_name}_motor"
 
+        # Handle plural/singular interfaces
+        actual_interfaces = hardware_interfaces or []
+        if hardware_interface:
+            actual_interfaces.append(hardware_interface)
+        if not actual_interfaces:
+            actual_interfaces = [HW_IF_POSITION]
+
         return cls(
             name=name,
             type=TransmissionType.SIMPLE.value,
             joints=(
                 TransmissionJoint(
                     name=joint_name,
-                    hardware_interfaces=(hardware_interface,),
+                    hardware_interfaces=actual_interfaces,
                     mechanical_reduction=mechanical_reduction,
                 ),
             ),
             actuators=(
                 TransmissionActuator(
                     name=actuator_name,
-                    hardware_interfaces=(hardware_interface,),
+                    hardware_interfaces=actual_interfaces,
                     mechanical_reduction=1.0,
                 ),
             ),
@@ -288,7 +297,8 @@ class Transmission:
         actuator1_name: str | None = None,
         actuator2_name: str | None = None,
         mechanical_reduction: float = 1.0,
-        hardware_interface: str = "position",
+        hardware_interface: str | None = None,
+        hardware_interfaces: list[str] | None = None,
     ) -> Transmission:
         """Create a differential transmission (2 actuators, 2 joints).
 
@@ -299,7 +309,8 @@ class Transmission:
             actuator1_name: First actuator name (defaults to joint1_name + "_motor")
             actuator2_name: Second actuator name (defaults to joint2_name + "_motor")
             mechanical_reduction: Gear ratio (default 1.0)
-            hardware_interface: Interface type (default "position")
+            hardware_interface: Single interface type (deprecated alias)
+            hardware_interfaces: Interface types (default [HW_IF_POSITION])
 
         Returns:
             Configured differential transmission
@@ -310,30 +321,37 @@ class Transmission:
         if actuator2_name is None:
             actuator2_name = f"{joint2_name}_motor"
 
+        # Handle plural/singular interfaces
+        actual_interfaces = hardware_interfaces or []
+        if hardware_interface:
+            actual_interfaces.append(hardware_interface)
+        if not actual_interfaces:
+            actual_interfaces = [HW_IF_POSITION]
+
         return cls(
             name=name,
             type=TransmissionType.DIFFERENTIAL.value,
             joints=(
                 TransmissionJoint(
                     name=joint1_name,
-                    hardware_interfaces=(hardware_interface,),
+                    hardware_interfaces=actual_interfaces,
                     mechanical_reduction=mechanical_reduction,
                 ),
                 TransmissionJoint(
                     name=joint2_name,
-                    hardware_interfaces=(hardware_interface,),
+                    hardware_interfaces=actual_interfaces,
                     mechanical_reduction=mechanical_reduction,
                 ),
             ),
             actuators=(
                 TransmissionActuator(
                     name=actuator1_name,
-                    hardware_interfaces=(hardware_interface,),
+                    hardware_interfaces=actual_interfaces,
                     mechanical_reduction=1.0,
                 ),
                 TransmissionActuator(
                     name=actuator2_name,
-                    hardware_interfaces=(hardware_interface,),
+                    hardware_interfaces=actual_interfaces,
                     mechanical_reduction=1.0,
                 ),
             ),

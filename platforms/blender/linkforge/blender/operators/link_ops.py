@@ -6,11 +6,19 @@ import contextlib
 import time
 import typing
 
+from linkforge_core.constants import (
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
+)
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models.link import InertiaTensor
 
 from ..constants import (
     DEFAULT_LINK_GIZMO_SIZE,
+    GEOM_AUTO,
+    PROP_LINK,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_COLLISION_GEOM,
@@ -111,7 +119,7 @@ def execute_collision_preview_update() -> None | float:
 
     # Regenerate collision mesh with new quality
     # The collision_type is stored on the collision_obj itself
-    collision_type = collision_obj.get(TAG_COLLISION_GEOM, "MESH")
+    collision_type = collision_obj.get(TAG_COLLISION_GEOM, GEOM_MESH)
     regenerate_collision_mesh(obj, str(collision_type), bpy.context)
 
     return None  # All caught up
@@ -124,13 +132,13 @@ def regenerate_collision_mesh(
 
     Args:
         link_obj: The link object (Empty)
-        collision_type: Type of collision ("AUTO", "BOX", "SPHERE", "CYLINDER", "MESH")
+        collision_type: Type of collision ("auto", "box", "sphere", "cylinder", "mesh")
         context: Blender context
     """
     if (
         not link_obj
-        or not hasattr(link_obj, "linkforge")
-        or not typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge")).is_robot_link
+        or not hasattr(link_obj, PROP_LINK)
+        or not typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK)).is_robot_link
     ):
         return
 
@@ -166,7 +174,7 @@ def create_collision_for_link(
 
     Args:
         link_obj: The link object (Empty)
-        collision_type: Type of collision ("AUTO", "BOX", "SPHERE", "CYLINDER", "MESH")
+        collision_type: Type of collision ("auto", "box", "sphere", "cylinder", "mesh")
         context: Blender context
 
     Returns:
@@ -183,7 +191,7 @@ def create_collision_for_link(
     if not visual_children:
         return None
 
-    lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
+    lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
     link_name = lf.link_name or link_obj.name
 
     # Production-grade fix: Wrap all collision operators in a context and mode guard
@@ -197,18 +205,18 @@ def create_collision_for_link(
         from ..adapters.blender_to_core import detect_primitive_type
 
         # Determine collision type
-        if collision_type == "AUTO":
+        if collision_type == GEOM_AUTO:
             # For multiple visuals, always use mesh simplification (compound collision)
             if len(visual_children) > 1:
-                collision_type = "MESH"
+                collision_type = GEOM_MESH
             else:
                 # Single visual - try to detect primitive
                 detected = detect_primitive_type(visual_children[0])
-                collision_type = detected if detected else "MESH"
+                collision_type = detected if detected else GEOM_MESH
 
         # Determine collision type and generate geometry
         local_offset = mathutils.Vector((0, 0, 0))
-        if collision_type in ("BOX", "SPHERE", "CYLINDER"):
+        if collision_type in (GEOM_BOX, GEOM_SPHERE, GEOM_CYLINDER):
             # Primitives only make sense for single visuals
             collision_obj, local_offset = _create_primitive_collision(
                 visual_children[0], collision_type, link_name, context
@@ -275,13 +283,13 @@ def _create_primitive_collision(
     # Create primitive at world origin initially
     # We create them at unit size for predictable scaling via dimensions
     ops = getattr(context, "ops", None) or bpy.ops
-    if prim_type == "BOX":
+    if prim_type == GEOM_BOX:
         # Create cube (1x1x1)
         ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 0))
-    elif prim_type == "SPHERE":
+    elif prim_type == GEOM_SPHERE:
         # Create sphere (radius 0.5 = 1m diameter)
         ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(0, 0, 0))
-    elif prim_type == "CYLINDER":
+    elif prim_type == GEOM_CYLINDER:
         # Create cylinder (radius 0.5, depth 1.0 = 1x1x1 volume)
         ops.mesh.primitive_cylinder_add(radius=0.5, depth=1.0, location=(0, 0, 0))
     else:
@@ -455,7 +463,7 @@ def _create_mesh_collision_compound(
     merged_obj.data.update()
 
     # Add decimation modifier for live quality adjustment
-    lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
+    lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
     quality_ratio = lf.collision_quality / 100.0
 
     decimate_mod = typing.cast(
@@ -490,7 +498,7 @@ def _create_mesh_collision_compound(
         merged_obj.hide_render = old_hide_render
 
         # Persist collision type for UI consistency
-        merged_obj[TAG_COLLISION_GEOM] = "MESH"
+        merged_obj[TAG_COLLISION_GEOM] = GEOM_MESH
 
         # Ensure it's in the same collection
         for collection in merged_obj.users_collection:
@@ -519,12 +527,12 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     """
     if (
         not link_obj
-        or not hasattr(link_obj, "linkforge")
-        or not typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge")).is_robot_link
+        or not hasattr(link_obj, PROP_LINK)
+        or not typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK)).is_robot_link
     ):
         return False
 
-    lf = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
+    lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
 
     # Import here to avoid circular dependency
     from linkforge_core.models.geometry import Box, Cylinder, Sphere
@@ -579,16 +587,16 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             dims = target_obj.dimensions
 
             # Primitive calculation expects dimensions
-            if prim_type == "BOX":
+            if prim_type == GEOM_BOX:
                 # Convert mathutils.Vector to core Vector3
                 from linkforge_core.models.geometry import Vector3
 
                 size = Vector3(dims.x, dims.y, dims.z)
                 tensor = calculate_inertia(Box(size=size), mass)
-            elif prim_type == "SPHERE":
+            elif prim_type == GEOM_SPHERE:
                 radius = max(dims[0], dims[1], dims[2]) / 2.0
                 tensor = calculate_inertia(Sphere(radius=radius), mass)
-            elif prim_type == "CYLINDER":
+            elif prim_type == GEOM_CYLINDER:
                 radius = max(dims[0], dims[1]) / 2.0
                 length = dims[2]
                 tensor = calculate_inertia(Cylinder(radius=radius, length=length), mass)
@@ -678,7 +686,7 @@ class LINKFORGE_OT_add_empty_link(Operator):
         empty.rotation_euler = scene.cursor.rotation_euler.copy()
 
         # Mark as robot link
-        lf = typing.cast("LinkPropertyGroup", getattr(empty, "linkforge"))
+        lf = typing.cast("LinkPropertyGroup", getattr(empty, PROP_LINK))
         lf.is_robot_link = True
         logger.debug(f"add_empty_link set {empty.name}.is_robot_link to {lf.is_robot_link}")
 
@@ -691,7 +699,7 @@ class LINKFORGE_OT_add_empty_link(Operator):
             vl.objects.active = empty
 
         # Ensure name is sanitized
-        typing.cast("LinkPropertyGroup", getattr(empty, "linkforge")).link_name = empty.name
+        typing.cast("LinkPropertyGroup", getattr(empty, PROP_LINK)).link_name = empty.name
 
         clear_stats_cache()
         self.report({"INFO"}, f"Added virtual link frame '{empty.name}' at cursor.")
@@ -730,16 +738,16 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
 
         # Don't allow if already a link
         if (
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         ):
             return False
 
         # Don't allow if already a visual/collision child of a link
         return not (
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
             and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         )
 
@@ -811,7 +819,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             # mesh_obj.scale is already correct (it was S, parent is 1, so S stays S)
 
             # Mark Empty as robot link
-            link_props = typing.cast("LinkPropertyGroup", getattr(empty, "linkforge"))
+            link_props = typing.cast("LinkPropertyGroup", getattr(empty, PROP_LINK))
             link_props.is_robot_link = True
             link_props.link_name = link_name
 
@@ -858,20 +866,20 @@ class LINKFORGE_OT_generate_collision(Operator):
         description="Type of collision geometry to generate",
         items=[
             (
-                "AUTO",
+                GEOM_AUTO,
                 "Auto-Detect",
                 "Automatically detect primitive shape or use mesh simplification",
             ),
-            ("BOX", "Bounding Box", "Use axis-aligned bounding box"),
-            ("SPHERE", "Bounding Sphere", "Use bounding sphere"),
-            ("CYLINDER", "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
+            (GEOM_BOX, "Bounding Box", "Use axis-aligned bounding box"),
+            (GEOM_SPHERE, "Bounding Sphere", "Use bounding sphere"),
+            (GEOM_CYLINDER, "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
             (
-                "MESH",
+                GEOM_MESH,
                 "Mesh (Simplified)",
                 "Generate simplified mesh from visual geometry",
             ),
         ],
-        default="AUTO",
+        default=GEOM_AUTO,
     )
 
     @classmethod
@@ -885,16 +893,16 @@ class LINKFORGE_OT_generate_collision(Operator):
 
         # Allow if object is a link
         if (
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         ):
             return True
 
         # Allow if object is visual/collision child
         return bool(
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
             and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         )
 
@@ -905,8 +913,8 @@ class LINKFORGE_OT_generate_collision(Operator):
         links = [
             o
             for o in bpy.data.objects
-            if hasattr(o, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(o, "linkforge")).is_robot_link
+            if hasattr(o, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(o, PROP_LINK)).is_robot_link
         ]
 
         if not links:
@@ -921,8 +929,8 @@ class LINKFORGE_OT_generate_collision(Operator):
         link_obj = obj
         if (
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
             and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         ):
             link_obj = obj.parent
@@ -933,11 +941,11 @@ class LINKFORGE_OT_generate_collision(Operator):
         # Determine collision type
         # Priority: Operator property (if changed in redo) > Link property > Default "AUTO"
         collision_type = self.collision_type
-        if collision_type == "AUTO" and hasattr(link_obj, "linkforge"):
+        if collision_type == "AUTO" and hasattr(link_obj, PROP_LINK):
             # If operator is AUTO (default), check if link has specific setting
             # Note: Link property also defaults to AUTO, so this works out
             collision_type = typing.cast(
-                "LinkPropertyGroup", getattr(link_obj, "linkforge")
+                "LinkPropertyGroup", getattr(link_obj, PROP_LINK)
             ).collision_type
 
         # Create collision
@@ -966,7 +974,7 @@ class LINKFORGE_OT_generate_collision(Operator):
                 if vl:
                     vl.objects.active = link_obj
 
-        lp = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
+        lp = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
         self.report({"INFO"}, f"Generated '{collision_type}' collision for '{lp.link_name}'")
         clear_stats_cache()
         return {"FINISHED"}
@@ -999,14 +1007,14 @@ class LINKFORGE_OT_generate_collision_all(Operator):
         for obj in scene.objects:
             # Check if it's a robot link
             if (
-                hasattr(obj, "linkforge")
-                and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+                hasattr(obj, PROP_LINK)
+                and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
             ):
                 # Resolve primary mesh to use for detection
                 visual_children = [c for c in obj.children if SUFFIX_VISUAL in c.name.lower()]
                 if visual_children:
                     collision_type = typing.cast(
-                        "LinkPropertyGroup", getattr(obj, "linkforge")
+                        "LinkPropertyGroup", getattr(obj, PROP_LINK)
                     ).collision_type
                     if create_collision_for_link(obj, collision_type, context):
                         count += 1
@@ -1043,8 +1051,8 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
 
         # Allow if object is a link with collision children
         if (
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         ):
             collision_children = [c for c in obj.children if SUFFIX_COLLISION in c.name.lower()]
             return len(collision_children) > 0
@@ -1052,8 +1060,8 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
         # Allow if object is visual/collision child
         if (
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
         ):
             collision_children = [
                 c for c in obj.parent.children if SUFFIX_COLLISION in c.name.lower()
@@ -1071,8 +1079,8 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
 
         # Toggle visibility
         if (
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         ):
             # It's a link - toggle all its collision children
             for child in obj.children:
@@ -1081,7 +1089,7 @@ class LINKFORGE_OT_toggle_collision_visibility(Operator):
                     child.hide_render = child.hide_viewport  # Keep render state consistent
         else:
             # It's a visual/collision child - toggle its parent's collisions
-            if obj.parent and hasattr(obj.parent, "linkforge"):
+            if obj.parent and hasattr(obj.parent, PROP_LINK):
                 for child in obj.parent.children:
                     if SUFFIX_COLLISION in child.name.lower():
                         child.hide_viewport = not child.hide_viewport
@@ -1115,14 +1123,14 @@ class LINKFORGE_OT_calculate_inertia(Operator):
         # If selected object is a visual/collision child, check parent
         if (
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
         ):
             return True
 
         return bool(
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         )
 
     @safe_execute
@@ -1136,8 +1144,8 @@ class LINKFORGE_OT_calculate_inertia(Operator):
         link_obj = obj
         if (
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
         ):
             link_obj = obj.parent
 
@@ -1147,7 +1155,7 @@ class LINKFORGE_OT_calculate_inertia(Operator):
         success = calculate_inertia_for_link(link_obj)
 
         if success:
-            link_name = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge")).link_name
+            link_name = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK)).link_name
             self.report({"INFO"}, f"Calculated inertia for '{link_name}'")
             return {"FINISHED"}
         else:
@@ -1182,8 +1190,8 @@ class LINKFORGE_OT_calculate_inertia_all(Operator):
         for obj in scene.objects:
             # Check if it's a robot link
             if (
-                hasattr(obj, "linkforge")
-                and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+                hasattr(obj, PROP_LINK)
+                and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
             ):
                 if calculate_inertia_for_link(obj):
                     count += 1
@@ -1226,16 +1234,16 @@ class LINKFORGE_OT_remove_link(Operator):
 
         # Allow if object is a robot link
         if (
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         ):
             return True
 
         # Allow if object is a visual/collision child of a link
         return bool(
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
             and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         )
 
@@ -1250,8 +1258,8 @@ class LINKFORGE_OT_remove_link(Operator):
         link_obj = obj
         if (
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
             and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
         ):
             link_obj = obj.parent
@@ -1259,7 +1267,7 @@ class LINKFORGE_OT_remove_link(Operator):
         if not link_obj:
             return {"CANCELLED"}
 
-        lp = typing.cast("LinkPropertyGroup", getattr(link_obj, "linkforge"))
+        lp = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
         link_name = lp.link_name or link_obj.name
 
         # Find visual child
@@ -1338,16 +1346,16 @@ class LINKFORGE_OT_add_material_slot(Operator):
 
         # Allow if object is a link
         if (
-            hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         ):
             return True
 
         # Allow if object is a visual child
         return bool(
             obj.parent
-            and hasattr(obj.parent, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj.parent, "linkforge")).is_robot_link
+            and hasattr(obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
             and SUFFIX_VISUAL in obj.name.lower()
         )
 
@@ -1359,8 +1367,8 @@ class LINKFORGE_OT_add_material_slot(Operator):
         # If selected object is link, find visual child
         if (
             obj
-            and hasattr(obj, "linkforge")
-            and typing.cast("LinkPropertyGroup", getattr(obj, "linkforge")).is_robot_link
+            and hasattr(obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
         ):
             visual_children = [
                 c for c in obj.children if SUFFIX_VISUAL in c.name.lower() and c.type == "MESH"
@@ -1408,7 +1416,7 @@ def update_collision_quality_realtime(
 
     # FAST PATH: If we have a Decimate modifier, just update the ratio
     # This provides instant feedback without expensive mesh regeneration
-    lf = typing.cast("LinkPropertyGroup", getattr(obj, "linkforge"))
+    lf = typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK))
     quality_ratio = lf.collision_quality / 100.0
 
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)

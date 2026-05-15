@@ -28,9 +28,28 @@ from ..constants import (
     DEFAULT_LIDAR_MIN_ANGLE,
     DEFAULT_LIDAR_RANGE_MAX,
     DEFAULT_LIDAR_RANGE_MIN,
+    DEFAULT_LIDAR_RANGE_RESOLUTION,
     DEFAULT_LIDAR_SAMPLES,
+    DEFAULT_LIDAR_VERTICAL_MAX_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_MIN_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_RESOLUTION,
+    DEFAULT_LIDAR_VERTICAL_SAMPLES,
     DEFAULT_UPDATE_RATE,
     EPSILON,
+    FT_DIR_CHILD_TO_PARENT,
+    FT_DIR_PARENT_TO_CHILD,
+    FT_FRAME_CHILD,
+    FT_FRAME_PARENT,
+    FT_FRAME_SENSOR,
+    NOISE_GAUSSIAN,
+    SENSOR_CAMERA,
+    SENSOR_CONTACT,
+    SENSOR_DEPTH_CAMERA,
+    SENSOR_FORCE_TORQUE,
+    SENSOR_GPS,
+    SENSOR_GPU_LIDAR,
+    SENSOR_IMU,
+    SENSOR_LIDAR,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from .gazebo import GazeboPlugin
@@ -40,20 +59,21 @@ from .geometry import Transform
 class SensorType(str, Enum):
     """Enumeration of supported sensor types in the LinkForge IR."""
 
-    CAMERA = "camera"
-    DEPTH_CAMERA = "depth_camera"
-    LIDAR = "lidar"
-    IMU = "imu"
-    GPS = "gps"
-    FORCE_TORQUE = "force_torque"
-    CONTACT = "contact"
+    CAMERA = SENSOR_CAMERA
+    DEPTH_CAMERA = SENSOR_DEPTH_CAMERA
+    LIDAR = SENSOR_LIDAR
+    GPU_LIDAR = SENSOR_GPU_LIDAR
+    IMU = SENSOR_IMU
+    GPS = SENSOR_GPS
+    FORCE_TORQUE = SENSOR_FORCE_TORQUE
+    CONTACT = SENSOR_CONTACT
 
 
 @dataclass(frozen=True)
 class SensorNoise:
     """Noise model for sensor measurements."""
 
-    type: str = "gaussian"  # gaussian, gaussian_quantized
+    type: str = NOISE_GAUSSIAN  # gaussian, gaussian_quantized
     mean: float = 0.0
     stddev: float = 0.0
     bias_mean: float = 0.0
@@ -118,15 +138,15 @@ class LidarInfo:
     horizontal_max_angle: float = DEFAULT_LIDAR_MAX_ANGLE
 
     # Vertical scan parameters (for 3D LIDAR)
-    vertical_samples: int = 1
-    vertical_resolution: float = 1.0
-    vertical_min_angle: float = 0.0
-    vertical_max_angle: float = 0.0
+    vertical_samples: int = DEFAULT_LIDAR_VERTICAL_SAMPLES
+    vertical_resolution: float = DEFAULT_LIDAR_VERTICAL_RESOLUTION
+    vertical_min_angle: float = DEFAULT_LIDAR_VERTICAL_MIN_ANGLE
+    vertical_max_angle: float = DEFAULT_LIDAR_VERTICAL_MAX_ANGLE
 
     # Range parameters
     range_min: float = DEFAULT_LIDAR_RANGE_MIN
     range_max: float = DEFAULT_LIDAR_RANGE_MAX
-    range_resolution: float = 0.01  # m
+    range_resolution: float = DEFAULT_LIDAR_RANGE_RESOLUTION  # m
 
     # Noise
     noise: SensorNoise | None = None
@@ -224,23 +244,23 @@ class ForceTorqueInfo:
     """
 
     # Measurement frame (child, parent, or sensor)
-    frame: str = "child"
+    frame: str = FT_FRAME_CHILD
     # Defines the direction (parent_to_child or child_to_parent)
-    measure_direction: str = "child_to_parent"
+    measure_direction: str = FT_DIR_CHILD_TO_PARENT
 
     # Noise model for force/torque measurements
     noise: SensorNoise | None = None
 
     def __post_init__(self) -> None:
         """Validate F/T sensor parameters."""
-        if self.frame not in ("child", "parent", "sensor"):
+        if self.frame not in (FT_FRAME_CHILD, FT_FRAME_PARENT, FT_FRAME_SENSOR):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Invalid F/T frame '{self.frame}' (must be child, parent, or sensor)",
                 target="ForceTorqueFrame",
                 value=self.frame,
             )
-        if self.measure_direction not in ("child_to_parent", "parent_to_child"):
+        if self.measure_direction not in (FT_DIR_CHILD_TO_PARENT, FT_DIR_PARENT_TO_CHILD):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Invalid F/T direction '{self.measure_direction}'",

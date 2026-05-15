@@ -5,7 +5,6 @@ from __future__ import annotations
 import typing
 from unittest.mock import MagicMock
 
-import pytest
 from linkforge.blender.adapters.mesh_io import export_link_mesh
 from linkforge.blender.utils.decorators import OperatorReturn, safe_execute
 from linkforge_core.exceptions import RobotModelError
@@ -115,7 +114,3 @@ class TestDecorators:
 
         assert failing_op(mock_self, None) == {"CANCELLED"}
         assert "Fail" in mock_self.reports[0][1]
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import cast
 
 import bpy
-import pytest
 from bpy.types import DecimateModifier
 from linkforge.blender.operators.link_ops import (
     create_collision_for_link,
@@ -32,7 +31,7 @@ class TestCollisionAlignment:
         visual_obj.matrix_parent_inverse.identity()
 
         # Generate Collision
-        collision_obj = create_collision_for_link(link_obj, "MESH", bpy.context)
+        collision_obj = create_collision_for_link(link_obj, "mesh", bpy.context)
 
         assert collision_obj is not None
         assert collision_obj.parent == link_obj
@@ -48,7 +47,7 @@ class TestCollisionQuality:
         safe_get_linkforge(link_obj).is_robot_link = True
 
         safe_get_linkforge(link_obj).collision_quality = 50.0
-        create_collision_for_link(link_obj, "MESH", bpy.context)
+        create_collision_for_link(link_obj, "mesh", bpy.context)
 
         collision_obj = next(c for c in link_obj.children if "_collision" in c.name)
         decimate_mod = cast(
@@ -66,13 +65,9 @@ class TestCollisionScaling:
 
         safe_get_linkforge(link_obj).is_robot_link = True
 
-        collision_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
+        collision_obj = create_collision_for_link(link_obj, "box", bpy.context)
         assert collision_obj is not None
         # Dimensions should be 4x3x1
         assert abs(collision_obj.dimensions.x - 4.0) < 1e-5
         assert abs(collision_obj.dimensions.y - 3.0) < 1e-5
         assert abs(collision_obj.dimensions.z - 1.0) < 1e-5
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

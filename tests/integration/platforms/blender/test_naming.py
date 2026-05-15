@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import time
 
-import pytest
-
 from tests.blender_test_utils import (
     create_test_object,
     safe_get_linkforge,
@@ -68,7 +66,3 @@ class TestNaming:
         # Try setting empty
         obj_lf.sensor_name = ""
         assert obj_lf.sensor_name == "my_sensor"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

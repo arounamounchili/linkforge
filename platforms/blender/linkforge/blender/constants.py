@@ -1,8 +1,19 @@
-"""Platform-specific constants for LinkForge in Blender.
+"""Platform-specific constants and naming conventions for the LinkForge Blender adapter.
 
-This module contains UI defaults, naming conventions, and heuristics
-specific to the Blender adapter.
+This module defines the structural glue between Blender's internal data
+structures and the LinkForge IR, including UI defaults, object suffixes,
+and property registration keys.
+
+Core Components:
+    - Naming Conventions: Standardized suffixes for visual, collision, and sensor objects.
+    - Property Keys: Registration identifiers for custom Blender property groups.
+    - UI Defaults:    for viewport display and asynchronous builder tasks.
 """
+
+from dataclasses import dataclass
+
+# Addon metadata
+ADDON_ID_DEFAULT = "linkforge"
 
 # Object Suffixes for Robot Components
 # ----------------------------
@@ -10,6 +21,10 @@ specific to the Blender adapter.
 SUFFIX_VISUAL = "_visual"
 SUFFIX_COLLISION = "_collision"
 SUFFIX_SENSOR = "_sensor"
+
+# Geometry Purposes
+PURPOSE_VISUAL = "visual"
+PURPOSE_COLLISION = "collision"
 
 # Metadata Tags (Blender ID Properties)
 # ----------------------------
@@ -19,6 +34,30 @@ TAG_SOURCE_GEOM = "source_geometry_type"
 TAG_IMPORTED_SOURCE = "imported_from_source"
 TAG_COLLISION_GEOM = "collision_geometry_type"
 TAG_SENSOR_TYPE = "sensor_type"
+
+# Blender Property Group Identifiers
+# ----------------------------
+# Used for registration and access via bpy.types.Object.linkforge_...
+PROP_LINK = "linkforge"
+PROP_JOINT = "linkforge_joint"
+PROP_SENSOR = "linkforge_sensor"
+PROP_TRANSMISSION = "linkforge_transmission"
+PROP_CONTROL = "linkforge_control"
+PROP_ROBOT = "linkforge_robot"
+PROP_VALIDATION = "linkforge_validation"
+
+# File Formats and Extensions
+# ----------------------------
+FORMAT_STL = "STL"
+FORMAT_OBJ = "OBJ"
+FORMAT_GLB = "GLB"
+
+# Default Names
+# ----------------------------
+DEFAULT_LINK_NAME = "base_link"
+DEFAULT_JOINT_NAME = "joint"
+DEFAULT_SENSOR_NAME = "sensor"
+DEFAULT_ROBOT_NAME = "robot"
 
 # UI and Visualization Defaults
 # ----------------------------
@@ -38,3 +77,43 @@ PRIMITIVE_MAX_FACES = 1000
 
 # Tolerance for geometric comparisons (e.g. vertex alignment)
 GEOM_TOLERANCE = 1e-4
+
+# Automation and Logic Defaults
+# ----------------------------
+GEOM_AUTO = "auto"
+
+
+@dataclass(frozen=True)
+class PrimitiveDetectionConfig:
+    """Configuration for primitive shape detection from Blender meshes.
+
+    Start with specific vertex counts and use bounding box ratios to
+    fuzzy match geometry.
+    """
+
+    # Cube detection - exact match required
+    cube_vert_count: int = 8  # Cubes always have 8 vertices
+    cube_face_count: int = 6  # Cubes always have 6 faces
+    cube_verts_per_face: int = 4  # Each face has 4 vertices
+
+    # Sphere detection (UV Sphere with various subdivision levels)
+    # Based on Blender UV Sphere: 16 segments × 8 rings = 240 verts (minimum acceptable)
+    sphere_min_verts: int = 240  # Minimum for low-poly spheres
+    sphere_max_verts: int = 1000  # Maximum for high-poly spheres
+    sphere_min_faces: int = 240  # Minimum face count
+    sphere_max_faces: int = 1000  # Maximum face count
+    # Empirically determined: 0.9 allows for minor mesh imperfections
+    sphere_uniformity_tolerance: float = 0.9
+
+    # Cylinder detection (default 32 vertices, supports 16-64 range)
+    cylinder_min_verts: int = 32  # Minimum vertices (16-sided cylinder minimum)
+    cylinder_max_verts: int = 128  # Maximum vertices (64-sided cylinder maximum)
+    cylinder_min_faces: int = 18  # 16 vertices = 16 side faces + 2 caps
+    cylinder_max_faces: int = 66  # 64 vertices = 64 side faces + 2 caps
+    cylinder_base_tolerance: float = 0.9  # XY ratio must be > 0.9 for circular base
+    cylinder_height_min_ratio: float = 0.9  # Z/XY ratio boundaries
+    cylinder_height_max_ratio: float = 1.1
+
+
+# Default primitive detection configuration
+DEFAULT_PRIMITIVE_CONFIG = PrimitiveDetectionConfig()

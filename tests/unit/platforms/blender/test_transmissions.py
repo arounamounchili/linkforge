@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from tests.blender_test_utils import (
     create_test_object,
     safe_get_joint,
@@ -100,7 +98,3 @@ class TestTransmissionLogic:
 
         assert poll_robot_joint(props, j_obj) is True
         assert poll_robot_joint(props, n_obj) is False
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

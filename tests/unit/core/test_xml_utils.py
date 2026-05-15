@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
 from linkforge_core.exceptions import (
     RobotMathError,
     RobotModelError,
@@ -81,7 +82,6 @@ def test_serialize_xml_with_namespaces() -> None:
 
 def test_parsing_fallbacks() -> None:
     """Test fallbacks for invalid numeric and boolean parsing."""
-    import pytest
 
     # Invalid floats
     with pytest.raises(RobotModelError, match="Non-finite float value"):
@@ -108,7 +108,6 @@ def test_parsing_fallbacks() -> None:
 
 def test_parse_vector3_errors() -> None:
     """Test parse_vector3 with various errors."""
-    import pytest
 
     with pytest.raises(RobotModelError, match="Expected 3 values"):
         parse_vector3("1 2")
@@ -121,8 +120,6 @@ def test_parse_vector3_errors() -> None:
 def test_validate_xml_depth_exceeded() -> None:
     """Test XML depth validation with exceeding depth."""
     import sys
-
-    import pytest
 
     old_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(max(old_limit, MAX_XML_DEPTH + 100))
@@ -141,7 +138,6 @@ def test_validate_xml_depth_exceeded() -> None:
 
 def test_parsing_missing_attribute() -> None:
     """Test RobotModelError when attribute is missing and no default is provided."""
-    import pytest
 
     with pytest.raises(RobotModelError, match="Missing required attribute"):
         parse_float(None, attribute_name="test_float")
@@ -227,7 +223,6 @@ def test_create_xml_element_no_formatter() -> None:
 
 def test_parse_vector3_exception_fallback() -> None:
     """Test Vector3 parsing fallback and error handling."""
-    import pytest
     from linkforge_core.utils.xml_utils import parse_vector3
 
     # Hit RobotMathError (re-raised)

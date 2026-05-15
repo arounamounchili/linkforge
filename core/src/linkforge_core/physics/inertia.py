@@ -14,8 +14,10 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from math import isfinite
+from typing import Final
 
 from ..constants import (
+    DEFAULT_INERTIA_CACHE_SIZE,
     DEGENERATE_VOL_THRESHOLD,
     MIN_INERTIA_STABILITY_VALUE,
     MIN_MASS_STABILITY_THRESHOLD,
@@ -30,7 +32,9 @@ from .mesh_validation import validate_mesh_topology
 logger = get_logger(__name__)
 
 # Configurable cache size for inertia calculations
-DEFAULT_INERTIA_CACHE_SIZE = int(os.environ.get("LINKFORGE_INERTIA_CACHE_SIZE", "512"))
+DEFAULT_INERTIA_CACHE_SIZE_ENV: Final[int] = int(
+    os.environ.get("LINKFORGE_INERTIA_CACHE_SIZE", str(DEFAULT_INERTIA_CACHE_SIZE))
+)
 
 
 def _get_stability_fallback() -> InertiaTensor:
@@ -39,7 +43,7 @@ def _get_stability_fallback() -> InertiaTensor:
     return InertiaTensor(ixx=val, ixy=0.0, ixz=0.0, iyy=val, iyz=0.0, izz=val)
 
 
-@lru_cache(maxsize=DEFAULT_INERTIA_CACHE_SIZE)
+@lru_cache(maxsize=DEFAULT_INERTIA_CACHE_SIZE_ENV)
 def _calculate_box_inertia_cached(x: float, y: float, z: float, mass: float) -> InertiaTensor:
     """Cached calculation of box inertia tensor."""
     ixx = (1.0 / 12.0) * mass * (y * y + z * z)
@@ -64,7 +68,7 @@ def calculate_box_inertia(box: Box, mass: float) -> InertiaTensor:
     return _calculate_box_inertia_cached(box.size.x, box.size.y, box.size.z, mass)
 
 
-@lru_cache(maxsize=DEFAULT_INERTIA_CACHE_SIZE)
+@lru_cache(maxsize=DEFAULT_INERTIA_CACHE_SIZE_ENV)
 def _calculate_cylinder_inertia_cached(radius: float, length: float, mass: float) -> InertiaTensor:
     """Cached calculation of cylinder inertia tensor."""
     ixx = iyy = (1.0 / 12.0) * mass * (3 * radius * radius + length * length)
@@ -88,7 +92,7 @@ def calculate_cylinder_inertia(cylinder: Cylinder, mass: float) -> InertiaTensor
     return _calculate_cylinder_inertia_cached(cylinder.radius, cylinder.length, mass)
 
 
-@lru_cache(maxsize=DEFAULT_INERTIA_CACHE_SIZE)
+@lru_cache(maxsize=DEFAULT_INERTIA_CACHE_SIZE_ENV)
 def _calculate_sphere_inertia_cached(radius: float, mass: float) -> InertiaTensor:
     """Cached calculation of sphere inertia tensor."""
     i = (2.0 / 5.0) * mass * radius * radius

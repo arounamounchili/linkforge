@@ -36,6 +36,12 @@ from linkforge.blender.adapters.translator import (
     TransmissionTranslator,
 )
 from linkforge_core.composer import RobotBuilder
+from linkforge_core.constants import (
+    HW_IF_VELOCITY,
+    TRANS_CUSTOM,
+    TRANS_DIFFERENTIAL,
+    TRANS_SIMPLE,
+)
 from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.models import (
     Box,
@@ -112,7 +118,7 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.5)
     s_obj = bpy.context.active_object
     assert s_obj is not None
-    geom_s, world_matrix = get_object_geometry(s_obj, geometry_type="AUTO")
+    geom_s, world_matrix = get_object_geometry(s_obj, geometry_type="auto")
     assert isinstance(geom_s, Sphere)
     assert geom_s.radius > 0.0
     assert world_matrix == s_obj.matrix_world
@@ -121,7 +127,7 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.3, depth=1.0)
     c_obj = bpy.context.active_object
     assert c_obj is not None
-    geom_c, world_matrix = get_object_geometry(c_obj, geometry_type="AUTO")
+    geom_c, world_matrix = get_object_geometry(c_obj, geometry_type="auto")
     assert isinstance(geom_c, Cylinder)
     assert geom_c.radius > 0.0
     assert geom_c.length > 0.0
@@ -136,7 +142,7 @@ def test_detect_primitive_type_box(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
     assert obj is not None
-    assert detect_primitive_type(obj) == "BOX"
+    assert detect_primitive_type(obj) == "box"
 
 
 def test_detect_primitive_type_sphere(scene, blender_context) -> None:
@@ -147,7 +153,7 @@ def test_detect_primitive_type_sphere(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0)
     obj = bpy.context.active_object
     assert obj is not None
-    assert detect_primitive_type(obj) == "SPHERE"
+    assert detect_primitive_type(obj) == "sphere"
 
 
 def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
@@ -158,7 +164,7 @@ def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.0, depth=3.0)
     obj = bpy.context.active_object
     assert obj is not None
-    assert detect_primitive_type(obj) == "CYLINDER"
+    assert detect_primitive_type(obj) == "cylinder"
 
 
 def test_detect_primitive_type_none_case(scene, blender_context) -> None:
@@ -186,7 +192,7 @@ def test_blender_joint_to_core_conversion(scene, blender_context) -> None:
     props = safe_get_joint(joint_obj)
     props.is_robot_joint = True
     props.joint_name = "blender_j"
-    props.joint_type = "REVOLUTE"
+    props.joint_type = "revolute"
     props.axis = "Y"
     props.parent_link = p_obj
     props.child_link = c_obj
@@ -219,7 +225,7 @@ def test_blender_sensor_to_core_lidar(scene, blender_context) -> None:
     props = safe_get_sensor(sensor_obj)
     props.is_robot_sensor = True
     props.attached_link = parent_obj
-    props.sensor_type = "LIDAR"
+    props.sensor_type = "lidar"
     props.update_rate = 50.0
     props.lidar_range_min = 0.5
     props.lidar_range_max = 50.0
@@ -397,13 +403,13 @@ def test_get_object_geometry_forced_primitives(scene, blender_context) -> None:
     assert obj is not None
 
     # Force Sphere (radius should be max dim / 2 = 1.0)
-    geom_s, wm_s = get_object_geometry(obj, geometry_type="SPHERE")
+    geom_s, wm_s = get_object_geometry(obj, geometry_type="sphere")
     assert isinstance(geom_s, Sphere)
     assert wm_s == obj.matrix_world
     assert pytest.approx(geom_s.radius) == 1.0
 
     # Force Cylinder (z depth is 2.0, max x/y is 2.0 -> radius 1.0)
-    geom_c, wm_c = get_object_geometry(obj, geometry_type="CYLINDER")
+    geom_c, wm_c = get_object_geometry(obj, geometry_type="cylinder")
     assert isinstance(geom_c, Cylinder)
     assert wm_c == obj.matrix_world
     assert pytest.approx(geom_c.radius) == 1.0
@@ -416,7 +422,7 @@ def test_get_object_geometry_mesh_simplified(tmp_path, scene, blender_context) -
     obj = bpy.context.active_object
     assert obj is not None
     # MESH currently falls back to BOX if not implemented with real hull
-    geom, wm = get_object_geometry(obj, geometry_type="MESH", meshes_dir=tmp_path, link_name="hull")
+    geom, wm = get_object_geometry(obj, geometry_type="mesh", meshes_dir=tmp_path, link_name="hull")
     assert isinstance(geom, (Box, Mesh))
 
 
@@ -478,12 +484,12 @@ def test_categorize_scene_objects_complex_hierarchy(scene, blender_context) -> N
     # Joint (Base -> Child)
     joint = create_test_object("base_to_child", None, scene)
     safe_get_joint(joint).is_robot_joint = True
-    safe_get_joint(joint).joint_type = "REVOLUTE"
+    safe_get_joint(joint).joint_type = "revolute"
     safe_get_joint(joint).parent_link = base
     safe_get_joint(joint).child_link = child
 
     # Sensor on Child
-    sensor = create_test_object("camera", None, scene)
+    sensor = create_test_object("CAMERA", None, scene)
     safe_get_sensor(sensor).is_robot_sensor = True
     safe_get_sensor(sensor).sensor_type = "CAMERA"
     safe_get_sensor(sensor).attached_link = child
@@ -496,7 +502,7 @@ def test_categorize_scene_objects_complex_hierarchy(scene, blender_context) -> N
     assert "base_link" in links
     assert "child_link" in links
     assert any(j.name == "base_to_child" for j in joints)
-    assert any(s.name == "camera" for s in sensors)
+    assert any(s.name == "CAMERA" for s in sensors)
     assert len(joints_map) == 1
     assert joints_map["child_link"][0] == "base_link"  # Parent name
     assert root_link is not None
@@ -518,7 +524,7 @@ def test_blender_joint_to_core_types(scene, blender_context) -> None:
     props.is_robot_joint = True
     props.parent_link = parent
     props.child_link = child  # Also usually required or good practice
-    props.joint_type = "PRISMATIC"
+    props.joint_type = "prismatic"
     props.axis = "X"
     props.limit_lower = -1.0
     props.limit_upper = 2.0
@@ -533,7 +539,7 @@ def test_blender_joint_to_core_types(scene, blender_context) -> None:
     assert joint.limits.upper == 2.0
 
     # Continuous
-    safe_get_joint(joint_obj).joint_type = "CONTINUOUS"
+    safe_get_joint(joint_obj).joint_type = "continuous"
     joint = translate_joint_to_model(joint_obj, blender_context, parent, child)
     assert joint is not None
     assert joint.type == JointType.CONTINUOUS
@@ -555,7 +561,7 @@ def test_blender_joint_to_core_advanced_props(scene, blender_context) -> None:
     props.is_robot_joint = True
     props.parent_link = p
     props.child_link = c
-    props.joint_type = "REVOLUTE"
+    props.joint_type = "revolute"
     props.limit_lower = -1.57
     props.limit_upper = 1.57
 
@@ -602,7 +608,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     props = safe_get_sensor(imu_obj)
     props.is_robot_sensor = True
     props.attached_link = parent
-    props.sensor_type = "IMU"
+    props.sensor_type = "imu"
     props.update_rate = 100.0
     props.always_on = True
     props.visualize = True
@@ -642,7 +648,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     props = safe_get_sensor(lidar_obj)
     props.is_robot_sensor = True
     props.attached_link = parent
-    props.sensor_type = "LIDAR"
+    props.sensor_type = "lidar"
     props.lidar_range_max = 50.0
     props.lidar_range_min = 0.5
 
@@ -662,13 +668,13 @@ def test_detect_primitive_type_logic(scene, blender_context) -> None:
     cube = bpy.context.active_object
     assert cube is not None
     assert cube is not None
-    assert detect_primitive_type(cube) == "BOX"
+    assert detect_primitive_type(cube) == "box"
 
     # Sphere (UV Sphere default)
     bpy.ops.mesh.primitive_uv_sphere_add()
     sphere = bpy.context.active_object
     assert sphere is not None
-    assert detect_primitive_type(sphere) == "SPHERE"
+    assert detect_primitive_type(sphere) == "sphere"
 
     # Cylinder
     bpy.ops.mesh.primitive_cylinder_add()
@@ -678,7 +684,7 @@ def test_detect_primitive_type_logic(scene, blender_context) -> None:
     cyl.scale = (1, 1, 2)
     if bpy.context.view_layer:
         bpy.context.view_layer.update()  # Ensure dimensions update
-    assert detect_primitive_type(cyl) == "CYLINDER"
+    assert detect_primitive_type(cyl) == "cylinder"
 
     # Complex Mesh (Monkey/Suzanne)
     bpy.ops.mesh.primitive_monkey_add()
@@ -731,13 +737,13 @@ def test_get_object_geometry_decimation(tmp_path, scene, blender_context) -> Non
 
     # Without simplify
     g1, wm1 = get_object_geometry(
-        obj, geometry_type="MESH", simplify=False, meshes_dir=tmp_path, link_name="l1"
+        obj, geometry_type="mesh", simplify=False, meshes_dir=tmp_path, link_name="l1"
     )
 
     # With simplify (decimate to 10%)
     g2, wm2 = get_object_geometry(
         obj,
-        geometry_type="MESH",
+        geometry_type="mesh",
         simplify=True,
         decimation_ratio=0.1,
         meshes_dir=tmp_path,
@@ -756,7 +762,7 @@ def test_get_object_geometry_dry_run(tmp_path, scene, blender_context) -> None:
 
     # Should not crash and should return geometry even with invalid dir
     geom, wm = get_object_geometry(
-        obj, geometry_type="MESH", dry_run=True, meshes_dir=Path("/invalid/path"), link_name="dry"
+        obj, geometry_type="mesh", dry_run=True, meshes_dir=Path("/invalid/path"), link_name="dry"
     )
     assert isinstance(geom, Mesh)
     assert wm == obj.matrix_world
@@ -799,7 +805,7 @@ def test_get_object_geometry_auto_primitive(scene, blender_context) -> None:
     obj = bpy.context.active_object
     assert obj is not None
 
-    geom, wm = get_object_geometry(obj, geometry_type="AUTO")
+    geom, wm = get_object_geometry(obj, geometry_type="auto")
 
     assert isinstance(geom, Box)
     assert wm == obj.matrix_world
@@ -997,7 +1003,7 @@ def test_blender_sensor_with_noise(scene, blender_context) -> None:
     sensor_obj.parent = link_obj
     safe_get_sensor(sensor_obj).is_robot_sensor = True
     safe_get_sensor(sensor_obj).attached_link = link_obj
-    safe_get_sensor(sensor_obj).sensor_type = "IMU"
+    safe_get_sensor(sensor_obj).sensor_type = "imu"
     safe_get_sensor(sensor_obj).use_noise = True
     safe_get_sensor(sensor_obj).noise_mean = 0.1
     safe_get_sensor(sensor_obj).noise_stddev = 0.05
@@ -1117,7 +1123,7 @@ def test_blender_link_auto_inertia_sphere(scene, blender_context) -> None:
 
 def test_blender_ros2_control_defaults(clean_scene, scene, blender_context) -> None:
     """Verify default ROS2 control interface assignment when one side is selected."""
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_name = "DefaultBot"
     props.use_ros2_control = True
 
@@ -1142,7 +1148,7 @@ def test_blender_ros2_control_defaults(clean_scene, scene, blender_context) -> N
 
 def test_blender_ros2_control_joint_obj_name_sync(clean_scene, scene, blender_context) -> None:
     """Verify that ros2_control generation uses the joint_obj.linkforge_joint.joint_name instead of item.name if present."""
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.ros2_control_name = "SyncedBot"
     props.use_ros2_control = True
 
@@ -1180,9 +1186,9 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     safe_get_linkforge(link).is_robot_link = True
 
     # GPS
-    gps_obj = create_test_object("GPS", None, scene)
+    gps_obj = create_test_object("gps", None, scene)
     safe_get_sensor(gps_obj).is_robot_sensor = True
-    safe_get_sensor(gps_obj).sensor_type = "GPS"
+    safe_get_sensor(gps_obj).sensor_type = "gps"
     safe_get_sensor(gps_obj).attached_link = link
     safe_get_sensor(gps_obj).use_noise = True
 
@@ -1199,9 +1205,9 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     )
 
     # LIDAR with samples
-    lidar_obj = create_test_object("LIDAR", None, scene)
+    lidar_obj = create_test_object("lidar", None, scene)
     safe_get_sensor(lidar_obj).is_robot_sensor = True
-    safe_get_sensor(lidar_obj).sensor_type = "LIDAR"
+    safe_get_sensor(lidar_obj).sensor_type = "lidar"
     safe_get_sensor(lidar_obj).attached_link = link
     safe_get_sensor(lidar_obj).lidar_horizontal_samples = 720
     safe_get_sensor(lidar_obj).lidar_horizontal_min_angle = -3.14159
@@ -1230,7 +1236,7 @@ def test_blender_joint_dynamics(clean_scene, scene, blender_context) -> None:
 
     j = create_test_object("J", None, scene)
     safe_get_joint(j).is_robot_joint = True
-    safe_get_joint(j).joint_type = "REVOLUTE"
+    safe_get_joint(j).joint_type = "revolute"
     safe_get_joint(j).parent_link = p
     safe_get_joint(j).child_link = c
     safe_get_joint(j).use_dynamics = True
@@ -1273,10 +1279,10 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
     # Simple Transmission
     t_simple = create_test_object("TransSimple", None, scene)
     safe_get_transmission(t_simple).is_robot_transmission = True
-    safe_get_transmission(t_simple).transmission_type = "SIMPLE"
+    safe_get_transmission(t_simple).transmission_type = TRANS_SIMPLE
     safe_get_transmission(t_simple).joint_name = j1
     safe_get_transmission(t_simple).mechanical_reduction = 50.0
-    safe_get_transmission(t_simple).hardware_interface = "VELOCITY"
+    safe_get_transmission(t_simple).hardware_interface = HW_IF_VELOCITY
 
     builder = RobotBuilder("Robot")
     from linkforge_core.models.joint import Joint, JointType
@@ -1298,7 +1304,7 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
     # Differential Transmission
     t_diff = create_test_object("TransDiff", None, scene)
     safe_get_transmission(t_diff).is_robot_transmission = True
-    safe_get_transmission(t_diff).transmission_type = "DIFFERENTIAL"
+    safe_get_transmission(t_diff).transmission_type = TRANS_DIFFERENTIAL
     safe_get_transmission(t_diff).joint1_name = j1
     safe_get_transmission(t_diff).joint2_name = j2
     safe_get_transmission(t_diff).actuator1_name = "act1"
@@ -1322,7 +1328,7 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
 
 def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_context) -> None:
     """Test scene_to_robot with Gazebo plugins and error collection."""
-    props = scene.linkforge
+    props = safe_get_linkforge_scene(scene)
     props.use_ros2_control = True
     props.gazebo_plugin_name = "test_plugin"
     props.controllers_yaml_path = "/path/to/yaml"
@@ -1351,7 +1357,8 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_conte
     lf_scene = safe_get_linkforge_scene(scene)
     lf_scene.robot_name = "ExhaustiveRobot"
     lf_scene.use_ros2_control = True
-    scene.linkforge.ros2_control_name = "DefaultBot"
+    scene_props = safe_get_linkforge_scene(scene)
+    scene_props.ros2_control_name = "DefaultBot"
 
     # Create a valid joint for ros2_control validation
     child_obj = create_test_object("C", None, scene)
@@ -1363,11 +1370,11 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_conte
     safe_get_joint(joint_obj).parent_link = link_obj
     safe_get_joint(joint_obj).child_link = child_obj
 
-    item = scene.linkforge.ros2_control_joints.add()
+    item = safe_get_linkforge_scene(scene).ros2_control_joints.add()
     item.name = "Dummy"
     item.cmd_position = True
-    scene.linkforge.gazebo_plugin_name = "gazebo_ros2_control"
-    scene.linkforge.controllers_yaml_path = "/path/to/yaml"
+    safe_get_linkforge_scene(scene).gazebo_plugin_name = "gazebo_ros2_control"
+    safe_get_linkforge_scene(scene).controllers_yaml_path = "/path/to/yaml"
     # Use a lambda to return a Link with the correct name for each call
     with mock.patch(
         "linkforge.blender.adapters.translator.LinkTranslator.translate",
@@ -1405,9 +1412,9 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     )
 
     # GPS with noise
-    gps = create_test_object("GPS", None, scene)
+    gps = create_test_object("gps", None, scene)
     safe_get_sensor(gps).is_robot_sensor = True
-    safe_get_sensor(gps).sensor_type = "GPS"
+    safe_get_sensor(gps).sensor_type = "gps"
     safe_get_sensor(gps).attached_link = link
     safe_get_sensor(gps).use_noise = True
     safe_get_sensor(gps).noise_mean = 0.0
@@ -1463,7 +1470,7 @@ def test_blender_to_core_geometry_edge_cases(clean_scene, scene, blender_context
     # zero-size object
     box = create_test_object("ZeroBox", None, scene)
     box.dimensions = (0, 0, 0)
-    geom, mat = get_object_geometry(box, geometry_type="BOX")
+    geom, mat = get_object_geometry(box, geometry_type="box")
     assert geom is None
 
     # extract_mesh_triangles None
@@ -1483,7 +1490,7 @@ def test_blender_joint_advanced_cases(clean_scene, scene, blender_context) -> No
     safe_get_joint(j).parent_link = p
     safe_get_joint(j).child_link = c
     # Custom axis normalization
-    safe_get_joint(j).joint_type = "REVOLUTE"
+    safe_get_joint(j).joint_type = "revolute"
     safe_get_joint(j).axis = "CUSTOM"
     safe_get_joint(j).custom_axis_x = 2.0
     safe_get_joint(j).custom_axis_y = 0.0
@@ -1520,12 +1527,12 @@ def test_blender_joint_advanced_cases(clean_scene, scene, blender_context) -> No
     assert core.calibration.falling is None
 
     # Fixed joint axis (should be None)
-    safe_get_joint(j).joint_type = "FIXED"
+    safe_get_joint(j).joint_type = "fixed"
     core = translate_joint_to_model(j, blender_context, parent=p, child=c)
     assert core and core.axis is None
 
     # Continuous joint with limits
-    safe_get_joint(j).joint_type = "CONTINUOUS"
+    safe_get_joint(j).joint_type = "continuous"
     safe_get_joint(j).use_limits = True
     safe_get_joint(j).limit_effort = 10.0
     core = translate_joint_to_model(j, blender_context, parent=p, child=c)
@@ -1543,7 +1550,7 @@ def test_blender_transmission_advanced(clean_scene, scene, blender_context) -> N
 
     t = create_test_object("TransCustom", None, scene)
     safe_get_transmission(t).is_robot_transmission = True
-    safe_get_transmission(t).transmission_type = "CUSTOM"
+    safe_get_transmission(t).transmission_type = TRANS_CUSTOM
     safe_get_transmission(t).custom_type = "my_custom_trans"
     safe_get_transmission(t).joint_name = j1
     safe_get_transmission(t).use_custom_actuator_name = True
@@ -1624,7 +1631,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
 
     # Multi-visuals
     create_mesh_obj("root_link_visual_1", root, "CUBE")
-    create_mesh_obj("root_link_visual_2", root, "SPHERE")  # Hits Sphere branch
+    create_mesh_obj("root_link_visual_2", root, "sphere")  # Hits Sphere branch
 
     # Joint (Needed for transmission)
     child = create_test_object("ChildLink", None, scene)
@@ -1644,14 +1651,14 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     # Sensor with Gazebo Plugin (Custom mount - Hits 1071-1075)
     lidar = create_test_object("Lidar", None, scene)
     safe_get_sensor(lidar).is_robot_sensor = True
-    safe_get_sensor(lidar).sensor_type = "LIDAR"
+    safe_get_sensor(lidar).sensor_type = "lidar"
     safe_get_sensor(lidar).attached_link = root
     lidar.parent = None  # Custom mount
     safe_get_sensor(lidar).use_gazebo_plugin = True
     safe_get_sensor(lidar).plugin_filename = "liblidar.so"
 
     # ROS2 Control (Hits 1106-1126)
-    scene_props = safe_get_linkforge(scene)
+    scene_props = safe_get_linkforge_scene(scene)
     scene_props.use_ros2_control = True
     scene_props.ros2_control_name = "TestSystem"
     item = scene_props.ros2_control_joints.add()
@@ -1899,5 +1906,5 @@ def test_detect_primitive_type_tags(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
     assert obj is not None
-    obj["source_geometry_type"] = "SPHERE"
-    assert detect_primitive_type(obj) == "SPHERE"
+    obj["source_geometry_type"] = "sphere"
+    assert detect_primitive_type(obj) == "sphere"

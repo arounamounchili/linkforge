@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import bpy
-import pytest
 from linkforge.blender.operators.export_ops import LINKFORGE_OT_export_robot_model
 from linkforge.blender.operators.transmission_ops import LINKFORGE_OT_create_transmission
 
@@ -113,7 +112,3 @@ class TestControlTransmissionsIntegration:
         assert "<transmission" in urdf_content
         assert '<joint name="j1">' in urdf_content
         assert "<mechanicalReduction>50</mechanicalReduction>" in urdf_content
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

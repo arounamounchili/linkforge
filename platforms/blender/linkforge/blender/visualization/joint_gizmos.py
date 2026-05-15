@@ -18,8 +18,10 @@ import bpy
 import gpu
 from bpy.types import Context
 from gpu_extras.batch import batch_for_shader
+from linkforge_core.constants import PI
 from mathutils import Vector
 
+from ..constants import PROP_JOINT
 from ..preferences import get_addon_prefs
 from ..utils.scene_utils import get_robot_statistics
 
@@ -74,7 +76,7 @@ def generate_arrow_cone_vertices(
     num_segments = 8
     base_vertices = []
     for i in range(num_segments):
-        angle = (2 * math.pi * i) / num_segments
+        angle = (2 * PI * i) / num_segments
         vertex = base_center + (perp1 * math.cos(angle) + perp2 * math.sin(angle)) * cone_radius
         base_vertices.append(vertex[:])
 
@@ -292,7 +294,7 @@ def fix_existing_joints(_dummy: typing.Any = None) -> None:
         return
 
     for obj in scene.objects:
-        joint_props = getattr(obj, "linkforge_joint", None)
+        joint_props = getattr(obj, PROP_JOINT, None)
         if obj.type == "EMPTY" and joint_props and getattr(joint_props, "is_robot_joint", False):
             # Ensure PLAIN_AXES type (simple crosshair)
             # We draw our own custom RViz-style arrows on top of this

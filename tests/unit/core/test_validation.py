@@ -46,7 +46,3 @@ def test_multiple_root_links_validation() -> None:
     with pytest.raises(RobotValidationError) as exc:
         robot.get_root_link()
     assert exc.value.code == ValidationErrorCode.MULTIPLE_ROOTS
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

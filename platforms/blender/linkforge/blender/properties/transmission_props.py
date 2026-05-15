@@ -9,8 +9,20 @@ from __future__ import annotations
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
+from linkforge_core.constants import (
+    HW_IF_EFFORT,
+    HW_IF_POSITION,
+    HW_IF_VELOCITY,
+    TRANS_CUSTOM,
+    TRANS_DIFFERENTIAL,
+    TRANS_FOUR_BAR,
+    TRANS_SIMPLE,
+)
 from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 
+from ..constants import (
+    PROP_TRANSMISSION,
+)
 from ..utils.property_helpers import find_property_owner, get_joint_props
 from ..utils.scene_utils import clear_stats_cache
 
@@ -67,12 +79,14 @@ def update_transmission_hierarchy(self: TransmissionPropertyGroup, context: Cont
         context: The current Blender context.
     """
     # Find the transmission object that owns this property
-    transmission_obj = find_property_owner(context, self, "linkforge_transmission")
+    transmission_obj = find_property_owner(context, self, PROP_TRANSMISSION)
     if transmission_obj is None or not self.is_robot_transmission:
         return
 
     # Determine which joint to use based on transmission type
-    joint_obj = self.joint1_name if self.transmission_type == "DIFFERENTIAL" else self.joint_name
+    joint_obj = (
+        self.joint1_name if self.transmission_type == TRANS_DIFFERENTIAL else self.joint_name
+    )
 
     # Reparent transmission to the joint
     if joint_obj:
@@ -141,12 +155,16 @@ class TransmissionPropertyGroup(PropertyGroup):
         name="Transmission Type",
         description="Type of transmission mechanism",
         items=[
-            ("SIMPLE", "Simple", "1:1 joint to actuator transmission"),
-            ("DIFFERENTIAL", "Differential", "2 joints to 2 actuators (differential drive)"),
-            ("FOUR_BAR_LINKAGE", "Four-Bar Linkage", "Four-bar linkage transmission"),
-            ("CUSTOM", "Custom", "Custom transmission type"),
+            (TRANS_SIMPLE, "Simple", "1:1 joint to actuator transmission"),
+            (
+                TRANS_DIFFERENTIAL,
+                "Differential",
+                "2 joints to 2 actuators (differential drive)",
+            ),
+            (TRANS_FOUR_BAR, "Four-Bar Linkage", "Four-bar linkage transmission"),
+            (TRANS_CUSTOM, "Custom", "Custom transmission type"),
         ],
-        default="SIMPLE",
+        default=TRANS_SIMPLE,
     )
 
     # Custom type (when transmission_type is CUSTOM)
@@ -187,11 +205,11 @@ class TransmissionPropertyGroup(PropertyGroup):
         name="Hardware Interface",
         description="Control interface type for ROS2 Control",
         items=[
-            ("POSITION", "Position", "Position control interface"),
-            ("VELOCITY", "Velocity", "Velocity control interface"),
-            ("EFFORT", "Effort", "Effort/torque control interface"),
+            (HW_IF_POSITION, "Position", "Position control interface"),
+            (HW_IF_VELOCITY, "Velocity", "Velocity interface"),
+            (HW_IF_EFFORT, "Effort", "Effort/torque control interface"),
         ],
-        default="POSITION",
+        default=HW_IF_POSITION,
     )
 
     # Mechanical properties
@@ -251,7 +269,11 @@ def register() -> None:
         bpy.utils.unregister_class(TransmissionPropertyGroup)
         bpy.utils.register_class(TransmissionPropertyGroup)
 
-    bpy.types.Object.linkforge_transmission = PointerProperty(type=TransmissionPropertyGroup)  # type: ignore
+    setattr(
+        bpy.types.Object,
+        PROP_TRANSMISSION,
+        PointerProperty(type=TransmissionPropertyGroup),  # type: ignore[func-returns-value]
+    )
 
 
 def unregister() -> None:
@@ -259,7 +281,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        del bpy.types.Object.linkforge_transmission  # type: ignore
+        delattr(bpy.types.Object, PROP_TRANSMISSION)
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(TransmissionPropertyGroup)

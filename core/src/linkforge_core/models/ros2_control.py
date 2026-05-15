@@ -15,6 +15,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
+from ..constants import (
+    CONTROL_TYPE_ACTUATOR,
+    CONTROL_TYPE_SENSOR,
+    CONTROL_TYPE_SYSTEM,
+)
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
@@ -102,7 +107,7 @@ class Ros2Control:
     """
 
     name: str
-    type: str = "system"  # "system", "actuator", or "sensor"
+    type: str = CONTROL_TYPE_SYSTEM  # "system", "actuator", or "sensor"
     hardware_plugin: str = ""
     joints: Sequence[Ros2ControlJoint] = field(default_factory=tuple)
     sensors: Sequence[Ros2ControlSensor] = field(default_factory=tuple)
@@ -117,7 +122,7 @@ class Ros2Control:
                 target="Ros2ControlName",
                 value=self.name,
             )
-        if self.type not in ("system", "actuator", "sensor"):
+        if self.type not in (CONTROL_TYPE_SYSTEM, CONTROL_TYPE_ACTUATOR, CONTROL_TYPE_SENSOR):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Invalid ROS2 control type '{self.type}' (must be system, actuator, or sensor)",
@@ -151,7 +156,7 @@ class Ros2Control:
             )
 
         # Hardware sensors are read-only and do not accept command interfaces
-        if self.type == "sensor":
+        if self.type == CONTROL_TYPE_SENSOR:
             for joint in self.joints:
                 if joint.command_interfaces:
                     raise RobotValidationError(
@@ -162,7 +167,7 @@ class Ros2Control:
                     )
 
         # Hardware actuators are designed for exactly one joint
-        if self.type == "actuator" and len(self.joints) != 1:
+        if self.type == CONTROL_TYPE_ACTUATOR and len(self.joints) != 1:
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 "Actuator type must have exactly one joint",

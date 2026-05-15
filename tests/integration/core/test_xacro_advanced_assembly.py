@@ -185,7 +185,3 @@ def test_xacro_error_propagation_to_parser(tmp_path: Path) -> None:
     with pytest.raises(RobotXacroError) as excinfo:
         XACROParser().resolve(bad_xacro)
     assert "undefined_var" in str(excinfo.value)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

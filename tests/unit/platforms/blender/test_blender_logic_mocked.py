@@ -9,7 +9,6 @@ import typing
 from unittest.mock import MagicMock
 
 import bpy
-import pytest
 from linkforge.blender.adapters.blender_to_core import (
     detect_primitive_type,
     matrix_to_transform,
@@ -68,7 +67,7 @@ def test_detect_primitive_type_box_mocked() -> None:
     # Call logic
     result = detect_primitive_type(typing.cast(bpy.types.Object, mock_obj))
 
-    assert result == "BOX"
+    assert result == "box"
 
 
 def test_detect_primitive_type_sphere_mocked() -> None:
@@ -94,7 +93,7 @@ def test_detect_primitive_type_sphere_mocked() -> None:
     # Call logic
     result = detect_primitive_type(typing.cast(bpy.types.Object, mock_obj))
 
-    assert result == "SPHERE"
+    assert result == "sphere"
 
 
 def test_detect_primitive_type_none_mocked() -> None:
@@ -103,7 +102,3 @@ def test_detect_primitive_type_none_mocked() -> None:
     mock_obj.type = "EMPTY"
 
     assert detect_primitive_type(typing.cast(bpy.types.Object, mock_obj)) is None
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

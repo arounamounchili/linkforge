@@ -11,6 +11,8 @@ import bpy
 from bpy.props import BoolProperty, CollectionProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
+from ..constants import PROP_VALIDATION
+
 
 class ValidationIssueProperty(PropertyGroup):
     """A single validation issue (error or warning)."""
@@ -226,17 +228,19 @@ def register() -> None:
         bpy.utils.register_class(ValidationResultProperty)
 
     # Register window manager property
-    from typing import Any
 
-    prop: Any = bpy.props.PointerProperty(type=ValidationResultProperty)  # type: ignore[func-returns-value]
-    bpy.types.WindowManager.linkforge_validation = prop  # type: ignore[attr-defined]
+    setattr(
+        bpy.types.WindowManager,
+        PROP_VALIDATION,
+        bpy.props.PointerProperty(type=ValidationResultProperty),  # type: ignore[func-returns-value]
+    )
 
 
 def unregister() -> None:
     """Unregister property groups."""
 
     with contextlib.suppress(AttributeError):
-        delattr(bpy.types.WindowManager, "linkforge_validation")
+        delattr(bpy.types.WindowManager, PROP_VALIDATION)
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(ValidationResultProperty)

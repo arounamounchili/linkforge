@@ -25,6 +25,7 @@ from typing import Any, cast
 
 from ..base import IResourceResolver
 from ..constants import (
+    CONTROL_TYPE_SYSTEM,
     DEFAULT_CAMERA_FAR,
     DEFAULT_CAMERA_FORMAT,
     DEFAULT_CAMERA_FOV,
@@ -37,8 +38,20 @@ from ..constants import (
     DEFAULT_LIDAR_RANGE_MIN,
     DEFAULT_LIDAR_SAMPLES,
     DEFAULT_UPDATE_RATE,
+    DEFAULT_URDF_AXIS_XYZ,
+    DEFAULT_URDF_AXIS_XYZ_STR,
+    HW_IF_POSITION,
+    JOINT_CONTINUOUS,
+    JOINT_FIXED,
+    JOINT_FLOATING,
+    JOINT_PLANAR,
+    JOINT_PRISMATIC,
+    JOINT_REVOLUTE,
     MAX_FILE_SIZE,
     MAX_XML_DEPTH,
+    NOISE_GAUSSIAN,
+    UNNAMED_JOINT,
+    UNNAMED_LINK,
     XACRO_URIS,
 )
 from ..exceptions import (
@@ -139,7 +152,7 @@ class URDFParser(RobotXMLParser[Robot]):
             A populated Link model.
 
         """
-        name = link_elem.get("name", "unnamed_link")
+        name = link_elem.get("name", UNNAMED_LINK)
 
         # Parse Visuals
         visuals = [
@@ -236,16 +249,16 @@ class URDFParser(RobotXMLParser[Robot]):
             A populated Joint model.
 
         """
-        name = joint_elem.get("name", "unnamed_joint")
-        joint_type_str = joint_elem.get("type", "fixed")
+        name = joint_elem.get("name", UNNAMED_JOINT)
+        joint_type_str = joint_elem.get("type", JOINT_FIXED)
 
         type_map = {
-            "revolute": JointType.REVOLUTE,
-            "continuous": JointType.CONTINUOUS,
-            "prismatic": JointType.PRISMATIC,
-            "fixed": JointType.FIXED,
-            "floating": JointType.FLOATING,
-            "planar": JointType.PLANAR,
+            JOINT_REVOLUTE: JointType.REVOLUTE,
+            JOINT_CONTINUOUS: JointType.CONTINUOUS,
+            JOINT_PRISMATIC: JointType.PRISMATIC,
+            JOINT_FIXED: JointType.FIXED,
+            JOINT_FLOATING: JointType.FLOATING,
+            JOINT_PLANAR: JointType.PLANAR,
         }
         joint_type = type_map.get(joint_type_str.lower(), JointType.FIXED)
 
@@ -281,16 +294,14 @@ class URDFParser(RobotXMLParser[Robot]):
         )
 
     def _parse_joint_axis(self, joint_elem: ET.Element, joint_type: JointType) -> Vector3 | None:
-        """Parse the <axis> element for a joint.
+        """Parse the <axis> element of a joint."""
+        if joint_type in (
+            JointType.FIXED,
+            JointType.FLOATING,
+        ):
+            return None
 
-        Args:
-            joint_elem: The joint XML element.
-            joint_type: The type of the joint.
-
-        Returns:
-            A normalized Vector3 for the axis, or None if not applicable.
-
-        """
+        # Exclude other types that don't traditionally have an axis but aren't fixed
         if joint_type not in (
             JointType.REVOLUTE,
             JointType.CONTINUOUS,
@@ -301,13 +312,13 @@ class URDFParser(RobotXMLParser[Robot]):
 
         axis_elem = joint_elem.find("{*}axis")
         if axis_elem is not None:
-            axis = parse_vector3(axis_elem.get("xyz", "1 0 0"))
+            axis = parse_vector3(axis_elem.get("xyz", DEFAULT_URDF_AXIS_XYZ_STR))
             nx, ny, nz = normalize_vector(axis.x, axis.y, axis.z)
             if nx == 0.0 and ny == 0.0 and nz == 0.0:
-                return Vector3(1.0, 0.0, 0.0)
+                return Vector3(*DEFAULT_URDF_AXIS_XYZ)
             return Vector3(nx, ny, nz)
 
-        return Vector3(1.0, 0.0, 0.0)
+        return Vector3(*DEFAULT_URDF_AXIS_XYZ)
 
     def _parse_joint_limits(
         self, joint_elem: ET.Element, joint_type: JointType, joint_name: str
@@ -456,7 +467,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         """
         name = rc_elem.get("name", "")
-        rc_type = rc_elem.get("type", "system")
+        rc_type = rc_elem.get("type", CONTROL_TYPE_SYSTEM)
 
         hw_elem = rc_elem.find("{*}hardware")
         plugin_elem = hw_elem.find("{*}plugin") if hw_elem is not None else None
@@ -475,11 +486,11 @@ class URDFParser(RobotXMLParser[Robot]):
         for joint_elem in rc_elem.findall("{*}joint"):
             joint_name = joint_elem.get("name", "")
             command_interfaces = [
-                self._normalize_hardware_interface(cmd.get("name", "position"))
+                self._normalize_hardware_interface(cmd.get("name", HW_IF_POSITION))
                 for cmd in joint_elem.findall("{*}command_interface")
             ]
             state_interfaces = [
-                self._normalize_hardware_interface(state.get("name", "position"))
+                self._normalize_hardware_interface(state.get("name", HW_IF_POSITION))
                 for state in joint_elem.findall("{*}state_interface")
             ]
             joint_params: dict[str, str] = {
@@ -502,7 +513,7 @@ class URDFParser(RobotXMLParser[Robot]):
         for sensor_elem in rc_elem.findall("{*}sensor"):
             sensor_name = sensor_elem.get("name", "")
             state_interfaces = [
-                self._normalize_hardware_interface(state.get("name", "position"))
+                self._normalize_hardware_interface(state.get("name", HW_IF_POSITION))
                 for state in sensor_elem.findall("{*}state_interface")
             ]
             sensor_params: dict[str, str] = {
@@ -576,13 +587,13 @@ class URDFParser(RobotXMLParser[Robot]):
         if tag == "joint":
             return TransmissionJoint(
                 name=name,
-                hardware_interfaces=hw_interfaces or ["position"],
+                hardware_interfaces=hw_interfaces or [HW_IF_POSITION],
                 mechanical_reduction=reduction,
                 offset=offset,
             )
         return TransmissionActuator(
             name=name,
-            hardware_interfaces=hw_interfaces or ["position"],
+            hardware_interfaces=hw_interfaces or [HW_IF_POSITION],
             mechanical_reduction=reduction,
             offset=offset,
         )
@@ -634,7 +645,7 @@ class URDFParser(RobotXMLParser[Robot]):
         if actual_noise_elem is None:
             return None
         return SensorNoise(
-            type=actual_noise_elem.findtext("{*}type", "gaussian"),
+            type=actual_noise_elem.findtext("{*}type", NOISE_GAUSSIAN),
             mean=parse_float(
                 actual_noise_elem.findtext("{*}mean", "0.0"), check_name="mean", default=0.0
             ),
@@ -668,8 +679,8 @@ class URDFParser(RobotXMLParser[Robot]):
             "multicamera": SensorType.CAMERA,
             "ray": SensorType.LIDAR,
             "lidar": SensorType.LIDAR,
-            "gpu_ray": SensorType.LIDAR,
-            "gpu_lidar": SensorType.LIDAR,
+            "gpu_ray": SensorType.GPU_LIDAR,
+            "gpu_lidar": SensorType.GPU_LIDAR,
             "imu": SensorType.IMU,
             "gps": SensorType.GPS,
             "navsat": SensorType.GPS,

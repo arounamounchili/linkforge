@@ -9,9 +9,17 @@ from pathlib import Path
 from typing import Any
 
 import bpy
+from linkforge_core.constants import EPSILON
 from linkforge_core.logging_config import get_logger
 from linkforge_core.utils.string_utils import sanitize_name
 from mathutils import Matrix, Vector
+
+from ..constants import (
+    FORMAT_GLB,
+    FORMAT_OBJ,
+    FORMAT_STL,
+    PURPOSE_COLLISION,
+)
 
 logger = get_logger(__name__)
 
@@ -182,8 +190,8 @@ def get_mesh_filename(
 
     Args:
         link_name: Name of the robot link
-        geometry_type: "visual" or "collision"
-        mesh_format: "STL", "OBJ", or "GLB"
+        geometry_type: "visual" or "collision" (use PURPOSE_VISUAL, PURPOSE_COLLISION)
+        mesh_format: "STL", "OBJ", or "GLB" (use FORMAT_STL, etc.)
         suffix: Optional unique suffix (e.g., index or name)
 
     Returns:
@@ -274,8 +282,8 @@ def export_link_mesh(
     Args:
         obj: Blender Object to export
         link_name: Name of the robot link
-        geometry_type: "visual" or "collision"
-        mesh_format: "STL", "OBJ", or "GLB"
+        geometry_type: "visual" or "collision" (PURPOSE_VISUAL, PURPOSE_COLLISION)
+        mesh_format: "STL", "OBJ", or "GLB" (FORMAT_STL, etc.)
         meshes_dir: Directory where mesh files should be saved
         simplify: Whether to simplify mesh (for collision)
         decimation_ratio: Simplification ratio if simplify=True
@@ -337,7 +345,7 @@ def export_link_mesh(
         final_mesh_data.transform(scale_matrix)
 
         # Local Centering: Shift vertices to origin
-        if local_center.length > 1e-6:
+        if local_center.length > EPSILON:
             logger.info(f"Localizing mesh data for '{obj.name}' (center: {local_center})")
             final_mesh_data.transform(Matrix.Translation(-local_center))
 
@@ -357,7 +365,7 @@ def export_link_mesh(
         # Simplify if requested for collision
         export_obj = temp_export_obj
 
-        if simplify and geometry_type == "collision":
+        if simplify and geometry_type == PURPOSE_COLLISION:
             # Simplified object will inherit centered data
             simplified_obj = create_simplified_mesh(temp_export_obj, decimation_ratio)
             if simplified_obj:
@@ -365,11 +373,11 @@ def export_link_mesh(
 
         # Export based on format
         success = False
-        if mesh_format.upper() == "STL":
+        if mesh_format.upper() == FORMAT_STL:
             success = export_mesh_stl(export_obj, filepath)
-        elif mesh_format.upper() == "OBJ":
+        elif mesh_format.upper() == FORMAT_OBJ:
             success = export_mesh_obj(export_obj, filepath)
-        elif mesh_format.upper() == "GLB":
+        elif mesh_format.upper() == FORMAT_GLB:
             success = export_mesh_glb(export_obj, filepath)
         else:
             # Unknown format, default to OBJ

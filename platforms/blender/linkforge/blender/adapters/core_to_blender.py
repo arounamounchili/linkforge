@@ -17,11 +17,35 @@ if not typing.TYPE_CHECKING:
     from mathutils import Matrix
 
 
+from linkforge_core.constants import (
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
+    HW_IF_EFFORT,
+    HW_IF_POSITION,
+    HW_IF_VELOCITY,
+    JOINT_CONTINUOUS,
+    JOINT_FIXED,
+    JOINT_FLOATING,
+    JOINT_PLANAR,
+    JOINT_PRISMATIC,
+    JOINT_REVOLUTE,
+    SENSOR_CAMERA,
+    SENSOR_CONTACT,
+    SENSOR_DEPTH_CAMERA,
+    SENSOR_FORCE_TORQUE,
+    SENSOR_GPS,
+    SENSOR_GPU_LIDAR,
+    SENSOR_IMU,
+    SENSOR_LIDAR,
+)
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (
     Box,
     Color,
     Cylinder,
+    Geometry,
     Joint,
     Link,
     LinkPhysics,
@@ -31,6 +55,11 @@ from linkforge_core.models import (
 )
 
 from ..constants import (
+    DEFAULT_JOINT_GIZMO_SIZE,
+    DEFAULT_LINK_GIZMO_SIZE,
+    PROP_LINK,
+    PROP_ROBOT,
+    PROP_SENSOR,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_COLLISION_GEOM,
@@ -122,7 +151,7 @@ def create_primitive_mesh(
                 # Force update to ensure dimensions are applied correctly before return
                 if context.view_layer is not None:
                     context.view_layer.update()
-                obj[TAG_SOURCE_GEOM] = "BOX"
+                obj[TAG_SOURCE_GEOM] = GEOM_BOX
 
         elif isinstance(geometry, Cylinder):
             context.ops.mesh.primitive_cylinder_add(location=(0, 0, 0))
@@ -133,7 +162,7 @@ def create_primitive_mesh(
                 # Force update to ensure dimensions are applied correctly
                 if hasattr(context.scene, "update"):
                     context.scene.update()
-                obj[TAG_SOURCE_GEOM] = "CYLINDER"
+                obj[TAG_SOURCE_GEOM] = GEOM_CYLINDER
 
         elif isinstance(geometry, Sphere):
             context.ops.mesh.primitive_uv_sphere_add(location=(0, 0, 0))
@@ -143,7 +172,7 @@ def create_primitive_mesh(
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
                 if hasattr(context.scene, "update"):
                     context.scene.update()
-                obj[TAG_SOURCE_GEOM] = "SPHERE"
+                obj[TAG_SOURCE_GEOM] = GEOM_SPHERE
 
         else:
             return None
@@ -361,18 +390,17 @@ def normalize_and_consolidate_imported_objects(
     return final_obj
 
 
-def _get_geometry_type_str(geometry: Box | Cylinder | Sphere | Mesh) -> str:
-    """Get geometry type string from geometry instance."""
-    geometry_type_map = {
-        Box: "BOX",
-        Cylinder: "CYLINDER",
-        Sphere: "SPHERE",
-        Mesh: "MESH",
-    }
-    for geom_class, type_str in geometry_type_map.items():
-        if isinstance(geometry, geom_class):
-            return type_str
-    return "MESH"  # Default fallback
+def _get_geometry_type_str(geometry: Geometry | None) -> str:
+    """Map core Geometry model to Blender geometry type string."""
+    if isinstance(geometry, Box):
+        return GEOM_BOX
+    if isinstance(geometry, Sphere):
+        return GEOM_SPHERE
+    if isinstance(geometry, Cylinder):
+        return GEOM_CYLINDER
+    if isinstance(geometry, Mesh):
+        return GEOM_MESH
+    return GEOM_MESH
 
 
 def create_link_object(
@@ -403,7 +431,7 @@ def create_link_object(
 
     # Set display size from preferences
     prefs = get_addon_prefs()
-    link_obj.empty_display_size = prefs.link_empty_size if prefs else 0.1
+    link_obj.empty_display_size = prefs.link_empty_size if prefs else DEFAULT_LINK_GIZMO_SIZE
 
     # Add to collection
     if collection:
@@ -561,14 +589,14 @@ def create_link_object(
             collision_obj.hide_render = True
 
             # Set collision geometry type for UI consistency
-            if isinstance(collision.geometry, Mesh):
-                collision_obj[TAG_COLLISION_GEOM] = "MESH"
-            elif isinstance(collision.geometry, Box):
-                collision_obj[TAG_COLLISION_GEOM] = "BOX"
+            if isinstance(collision.geometry, Box):
+                collision_obj[TAG_COLLISION_GEOM] = GEOM_BOX
             elif isinstance(collision.geometry, Cylinder):
-                collision_obj[TAG_COLLISION_GEOM] = "CYLINDER"
+                collision_obj[TAG_COLLISION_GEOM] = GEOM_CYLINDER
             elif isinstance(collision.geometry, Sphere):
-                collision_obj[TAG_COLLISION_GEOM] = "SPHERE"
+                collision_obj[TAG_COLLISION_GEOM] = GEOM_SPHERE
+            elif isinstance(collision.geometry, Mesh):
+                collision_obj[TAG_COLLISION_GEOM] = GEOM_MESH
 
     # Set mass and inertia properties on link object
     if link.inertial and (props := get_link_props(link_obj)):
@@ -628,10 +656,10 @@ def create_link_object(
             collision_geom_type = _get_geometry_type_str(link.collisions[0].geometry)
             if collision_geom_type in ("BOX", "CYLINDER", "SPHERE"):
                 props.collision_type = collision_geom_type
-            elif collision_geom_type == "MESH":
+            elif collision_geom_type == GEOM_MESH:
                 # For mesh collisions, default to MESH (Simplified)
                 # (most imported mesh collisions are simplified meshes)
-                props.collision_type = "MESH"
+                props.collision_type = GEOM_MESH
 
         # Enable material export if imported URDF has material
         if link.visuals and link.visuals[0].material:
@@ -659,10 +687,12 @@ def create_joint_object(
         Blender Empty object or None
 
     """
-    empty_size = 0.2  # Default fallback
     prefs = get_addon_prefs()
-    if prefs:
-        empty_size = getattr(prefs, "joint_empty_size", empty_size)
+    empty_size = (
+        getattr(prefs, "joint_empty_size", DEFAULT_JOINT_GIZMO_SIZE)
+        if prefs
+        else DEFAULT_JOINT_GIZMO_SIZE
+    )
 
     # Create Empty object (ARROWS shows RGB colored axes)
     empty = context.data.objects.new(joint.name, None)
@@ -689,14 +719,14 @@ def create_joint_object(
 
         # Set joint type
         type_map = {
-            "REVOLUTE": "REVOLUTE",
-            "CONTINUOUS": "CONTINUOUS",
-            "PRISMATIC": "PRISMATIC",
-            "FIXED": "FIXED",
-            "FLOATING": "FLOATING",
-            "PLANAR": "PLANAR",
+            JOINT_REVOLUTE: JOINT_REVOLUTE,
+            JOINT_CONTINUOUS: JOINT_CONTINUOUS,
+            JOINT_PRISMATIC: JOINT_PRISMATIC,
+            JOINT_FIXED: JOINT_FIXED,
+            JOINT_FLOATING: JOINT_FLOATING,
+            JOINT_PLANAR: JOINT_PLANAR,
         }
-        props.joint_type = type_map.get(joint.type.name, "FIXED")
+        props.joint_type = type_map.get(joint.type.value, JOINT_FIXED)
 
         # Set parent and child links (PointerProperty expects Blender objects)
         props.parent_link = link_objects.get(joint.parent)
@@ -839,23 +869,23 @@ def create_sensor_object(
     empty.empty_display_size = prefs.sensor_empty_size if prefs else 0.1
 
     # Set sensor properties
-    if hasattr(empty, "linkforge_sensor"):
-        props = empty.linkforge_sensor
+    if hasattr(empty, PROP_SENSOR):
+        props = getattr(empty, PROP_SENSOR)
         props.is_robot_sensor = True
         props.sensor_name = sensor.name
 
         # Map sensor type
         type_map = {
-            "camera": "CAMERA",
-            "depth_camera": "DEPTH_CAMERA",
-            "lidar": "LIDAR",
-            "gpu_lidar": "LIDAR",
-            "imu": "IMU",
-            "gps": "GPS",
-            "contact": "CONTACT",
-            "force_torque": "FORCE_TORQUE",
+            SENSOR_CAMERA: SENSOR_CAMERA,
+            SENSOR_DEPTH_CAMERA: SENSOR_DEPTH_CAMERA,
+            SENSOR_LIDAR: SENSOR_LIDAR,
+            SENSOR_GPU_LIDAR: SENSOR_GPU_LIDAR,
+            SENSOR_IMU: SENSOR_IMU,
+            SENSOR_GPS: SENSOR_GPS,
+            SENSOR_CONTACT: SENSOR_CONTACT,
+            SENSOR_FORCE_TORQUE: SENSOR_FORCE_TORQUE,
         }
-        props.sensor_type = type_map.get(sensor.type.value, "CAMERA")
+        props.sensor_type = type_map.get(sensor.type.value, SENSOR_CAMERA)
 
         # Set attached link (PointerProperty expects Blender object)
         props.attached_link = link_objects.get(sensor.link_name)
@@ -962,14 +992,14 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
     """
     scene = context.scene
     # Set robot name in scene properties
-    if hasattr(scene, "linkforge"):
-        scene.linkforge.robot_name = robot.name
+    if hasattr(scene, PROP_ROBOT):
+        getattr(scene, PROP_ROBOT).robot_name = robot.name
 
     # Reset Global LinkForge State
     # Since LinkForge manages a single centralized configuration per scene,
     # Populate centralized ROS2 Control
     if robot.ros2_controls:
-        lp = getattr(scene, "linkforge")
+        lp = getattr(scene, PROP_ROBOT)
         lp.use_ros2_control = True
         control = robot.ros2_controls[0]
         lp.ros2_control_name = control.name
@@ -988,12 +1018,12 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
         for rc_joint in control.joints:
             item = lp.ros2_control_joints.add()
             item.name = rc_joint.name
-            item.cmd_position = "position" in rc_joint.command_interfaces
-            item.cmd_velocity = "velocity" in rc_joint.command_interfaces
-            item.cmd_effort = "effort" in rc_joint.command_interfaces
-            item.state_position = "position" in rc_joint.state_interfaces
-            item.state_velocity = "velocity" in rc_joint.state_interfaces
-            item.state_effort = "effort" in rc_joint.state_interfaces
+            item.cmd_position = HW_IF_POSITION in rc_joint.command_interfaces
+            item.cmd_velocity = HW_IF_VELOCITY in rc_joint.command_interfaces
+            item.cmd_effort = HW_IF_EFFORT in rc_joint.command_interfaces
+            item.state_position = HW_IF_POSITION in rc_joint.state_interfaces
+            item.state_velocity = HW_IF_VELOCITY in rc_joint.state_interfaces
+            item.state_effort = HW_IF_EFFORT in rc_joint.state_interfaces
 
             # Map joint-level parameters
             item.parameters.clear()
@@ -1002,8 +1032,8 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
                 param_item.name = key
                 param_item.value = value
     # Master reset of ROS2 Control / Gazebo state if not present in robot
-    if not robot.ros2_controls and hasattr(scene, "linkforge"):
-        lp = scene.linkforge
+    if not robot.ros2_controls and hasattr(scene, PROP_ROBOT):
+        lp = getattr(scene, PROP_ROBOT)
         lp.use_ros2_control = False
         lp.ros2_control_joints.clear()
         lp.ros2_control_parameters.clear()
@@ -1011,14 +1041,15 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
         lp.controllers_yaml_path = ""
 
     # Map Gazebo simulation settings if present
-    if robot.gazebo_elements and hasattr(scene, "linkforge"):
+    if robot.gazebo_elements and hasattr(scene, PROP_ROBOT):
         plugin_found = False
         for elem in robot.gazebo_elements:
             for plugin in elem.plugins:
                 if "ros2_control" in plugin.name.lower():
-                    scene.linkforge.gazebo_plugin_name = plugin.name
+                    lp_tmp = getattr(scene, PROP_ROBOT)
+                    lp_tmp.gazebo_plugin_name = plugin.name
                     if "parameters" in plugin.parameters:
-                        scene.linkforge.controllers_yaml_path = plugin.parameters["parameters"]
+                        lp_tmp.controllers_yaml_path = plugin.parameters["parameters"]
                     plugin_found = True
                     break
             if plugin_found:
@@ -1108,12 +1139,12 @@ def import_robot_to_scene(
     # This ensures that if 'Show Collisions' is off (default), the newly imported collision meshes are hidden
     if (
         context.scene
-        and hasattr(context.scene, "linkforge")
-        and hasattr(context.scene.linkforge, "update_collision_visibility")
+        and hasattr(context.scene, PROP_LINK)
+        and hasattr(getattr(context.scene, PROP_LINK), "update_collision_visibility")
     ):
         # We need to pass the context or property group self. Since update method expects self,
         # we can call the function directly or trigger property update.
         # Calling the update function bound to the property group instance is safest.
-        context.scene.linkforge.update_collision_visibility(context)
+        getattr(context.scene, PROP_LINK).update_collision_visibility(context)
 
     return True

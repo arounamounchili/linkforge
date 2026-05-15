@@ -16,6 +16,17 @@ from typing import Any, cast
 
 from .. import __version__
 from ..base import RobotGeneratorError
+from ..constants import (
+    COMMENT_MACROS,
+    COMMENT_MATERIALS,
+    COMMENT_PROPERTIES,
+    XACRO_DEFAULT_PARAMS,
+    XACRO_PARAM_NAME,
+    XACRO_PARAM_PARENT,
+    XACRO_PARAM_RPY,
+    XACRO_PARAM_XYZ,
+    XACRO_URIS,
+)
 from ..models.geometry import Box, Cylinder, Mesh, Sphere
 from ..models.joint import Joint
 from ..models.link import Link, Visual
@@ -29,7 +40,7 @@ from ..validation import RobotValidator
 from .urdf_generator import URDFGenerator
 
 # XACRO Namespace URI
-XACRO_URI = "http://www.ros.org/wiki/xacro"
+XACRO_URI = sorted(XACRO_URIS)[0]  # Primary URI
 XACRO_NS = f"{{{XACRO_URI}}}"
 
 
@@ -144,7 +155,7 @@ class XACROGenerator(URDFGenerator):
 
         # Add Properties to Root
         if properties:
-            root.append(ET.Comment(" Properties "))
+            root.append(ET.Comment(COMMENT_PROPERTIES))
         for prop_name, prop_value in properties:
             ET.SubElement(root, f"{XACRO_NS}property", name=prop_name, value=str(prop_value))
 
@@ -154,7 +165,7 @@ class XACROGenerator(URDFGenerator):
         # Add global material definitions (after properties, before macros)
         # This follows standard URDF/XACRO practice: define materials once, reference by name
         if self.global_materials:
-            root.append(ET.Comment(" Materials "))
+            root.append(ET.Comment(COMMENT_MATERIALS))
         if self.extract_materials:
             # Add global material definitions with property references
             for material in self.global_materials.values():
@@ -174,7 +185,7 @@ class XACROGenerator(URDFGenerator):
 
         # Generate Macro Definitions
         if self.generate_macros and self.macro_groups:
-            root.append(ET.Comment(" Macros "))
+            root.append(ET.Comment(COMMENT_MACROS))
         if self.generate_macros:
             for signature, group in self.macro_groups.items():
                 self._generate_macro_definition(root, signature, group)
@@ -562,7 +573,7 @@ class XACROGenerator(URDFGenerator):
 
         macro_elem = ET.SubElement(root, f"{XACRO_NS}macro")
         macro_elem.set("name", macro_name)
-        macro_elem.set("params", "name parent xyz rpy")
+        macro_elem.set("params", XACRO_DEFAULT_PARAMS)
 
         # Add comment
         comment = ET.Comment(f" Macro for {len(group)} similar {macro_name}s ")
@@ -577,9 +588,11 @@ class XACROGenerator(URDFGenerator):
             macro_elem, "joint", name="${name}_joint", type=template_joint.type.value
         )
 
-        ET.SubElement(joint_elem, "parent", link="${parent}")
-        ET.SubElement(joint_elem, "child", link="${name}")
-        ET.SubElement(joint_elem, "origin", xyz="${xyz}", rpy="${rpy}")
+        ET.SubElement(joint_elem, "parent", link=f"${{{XACRO_PARAM_PARENT}}}")
+        ET.SubElement(joint_elem, "child", link=f"${{{XACRO_PARAM_NAME}}}")
+        ET.SubElement(
+            joint_elem, "origin", xyz=f"${{{XACRO_PARAM_XYZ}}}", rpy=f"${{{XACRO_PARAM_RPY}}}"
+        )
 
         # Use shared logic for all functional properties (Axis, Limits, Mimic, Safety Controller, Calibration)
         self._add_joint_properties(joint_elem, template_joint)
@@ -605,10 +618,10 @@ class XACROGenerator(URDFGenerator):
         rpy = format_vector(origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
         call_elem = ET.SubElement(root, f"{XACRO_NS}{macro_name}")
-        call_elem.set("name", link.name)
-        call_elem.set("parent", joint.parent)
-        call_elem.set("xyz", xyz)
-        call_elem.set("rpy", rpy)
+        call_elem.set(XACRO_PARAM_NAME, link.name)
+        call_elem.set(XACRO_PARAM_PARENT, joint.parent)
+        call_elem.set(XACRO_PARAM_XYZ, xyz)
+        call_elem.set(XACRO_PARAM_RPY, rpy)
 
     def _add_visual_element(self, parent: ET.Element, visual: Visual) -> None:
         """Add visual element to parent with XACRO property support.

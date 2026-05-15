@@ -7,7 +7,6 @@ correctly prevents collisions and maintains kinematic integrity.
 
 from __future__ import annotations
 
-import pytest
 from linkforge_core.composer import RobotBuilder
 from linkforge_core.models.geometry import Box, Vector3
 
@@ -124,9 +123,3 @@ def test_modular_assembly_collision_disabling() -> None:
             break
 
     assert found, "Collision pair was not found in SRDF"
-
-
-if __name__ == "__main__":
-    import pytest
-
-    pytest.main([__file__, "-v"])

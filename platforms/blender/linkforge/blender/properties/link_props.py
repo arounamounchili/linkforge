@@ -25,6 +25,10 @@ from linkforge_core.constants import (
     DEFAULT_GRAVITY,
     DEFAULT_LINK_MASS,
     DEFAULT_SELF_COLLIDE,
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
 )
 from linkforge_core.utils.string_utils import (
     format_scientific,
@@ -36,6 +40,8 @@ from linkforge_core.utils.string_utils import (
 
 from ..constants import (
     DEFAULT_COLLISION_QUALITY,
+    GEOM_AUTO,
+    PROP_LINK,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_IMPORTED_SOURCE,
@@ -162,7 +168,7 @@ def on_collision_quality_update(self: PropertyGroup, _context: Context) -> None:
     obj = getattr(self, "id_data", None)
     if not obj:
         return
-    lf = getattr(obj, "linkforge", None)
+    lf = getattr(obj, PROP_LINK, None)
     if not lf or not lf.is_robot_link:
         return
 
@@ -385,13 +391,13 @@ class LinkPropertyGroup(PropertyGroup):
         name="Collision Type",
         description="Type of collision geometry to generate",
         items=[
-            ("AUTO", "Auto", "Automatically detect primitive shape or export as mesh"),
-            ("BOX", "Bounding Box", "Axis-aligned bounding box around the mesh"),
-            ("SPHERE", "Bounding Sphere", "Spherical bounding volume around the mesh"),
-            ("CYLINDER", "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
-            ("MESH", "Mesh (Simplified)", "Generate simplified mesh from visual geometry"),
+            (GEOM_AUTO, "Auto", "Automatically detect primitive shape or export as mesh"),
+            (GEOM_BOX, "Bounding Box", "Axis-aligned bounding box around the mesh"),
+            (GEOM_SPHERE, "Bounding Sphere", "Spherical bounding volume around the mesh"),
+            (GEOM_CYLINDER, "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
+            (GEOM_MESH, "Mesh (Simplified)", "Generate simplified mesh from visual geometry"),
         ],
-        default="AUTO",
+        default=GEOM_AUTO,
     )
 
     collision_quality: FloatProperty(  # type: ignore
@@ -434,10 +440,9 @@ def register() -> None:
         bpy.utils.unregister_class(LinkPropertyGroup)
         bpy.utils.register_class(LinkPropertyGroup)
 
-    prop_name = "linkforge"
     setattr(
         bpy.types.Object,
-        prop_name,
+        PROP_LINK,
         typing.cast(typing.Any, PointerProperty(type=LinkPropertyGroup)),
     )
 
@@ -447,7 +452,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        delattr(bpy.types.Object, "linkforge")
+        delattr(bpy.types.Object, PROP_LINK)
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(LinkPropertyGroup)

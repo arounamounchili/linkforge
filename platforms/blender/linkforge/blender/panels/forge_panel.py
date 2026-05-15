@@ -11,6 +11,8 @@ import contextlib
 import bpy
 from bpy.types import Context, Panel
 
+from ..constants import PROP_LINK
+
 
 class LINKFORGE_PT_forge(Panel):
     """Parent panel for building robot structure."""
@@ -35,7 +37,7 @@ class LINKFORGE_PT_forge(Panel):
 
         if not context.scene:
             return
-        scene_props = getattr(context.scene, "linkforge")
+        scene_props = getattr(context.scene, PROP_LINK)
 
         if scene_props.is_importing:
             # Active Import Status

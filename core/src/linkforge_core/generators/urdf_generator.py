@@ -19,6 +19,35 @@ from typing import Any
 
 from .. import __version__
 from ..base import RobotGeneratorError
+from ..constants import (
+    COMMENT_GAZEBO,
+    COMMENT_JOINTS,
+    COMMENT_LINKS,
+    COMMENT_MATERIALS,
+    COMMENT_ROS2_CONTROL,
+    COMMENT_SENSORS,
+    COMMENT_TRANSMISSIONS,
+    CONTROL_TYPE_SYSTEM,
+    GZ_SENSOR_CAMERA,
+    GZ_SENSOR_CONTACT,
+    GZ_SENSOR_DEPTH_CAMERA,
+    GZ_SENSOR_FORCE_TORQUE,
+    GZ_SENSOR_GPU_LIDAR,
+    GZ_SENSOR_IMU,
+    GZ_SENSOR_LIDAR,
+    GZ_SENSOR_NAVSAT,
+    HW_IF_EFFORT,
+    HW_IF_POSITION,
+    HW_IF_VELOCITY,
+    SENSOR_CAMERA,
+    SENSOR_CONTACT,
+    SENSOR_DEPTH_CAMERA,
+    SENSOR_FORCE_TORQUE,
+    SENSOR_GPS,
+    SENSOR_GPU_LIDAR,
+    SENSOR_IMU,
+    SENSOR_LIDAR,
+)
 from ..logging_config import get_logger
 from ..models.gazebo import GazeboElement, GazeboPlugin
 from ..models.geometry import Transform
@@ -36,7 +65,6 @@ from ..models.sensor import (
     LidarInfo,
     Sensor,
     SensorNoise,
-    SensorType,
 )
 from ..models.transmission import Transmission
 from ..utils.math_utils import format_float, format_vector
@@ -122,7 +150,7 @@ class URDFGenerator(RobotXMLGenerator):
         # Add materials (collect unique materials first)
         self.global_materials = self._collect_materials(robot)
         if self.global_materials:
-            root.append(ET.Comment(" Materials "))
+            root.append(ET.Comment(COMMENT_MATERIALS))
         # Sort materials by name for deterministic output
         for mat_name in sorted(self.global_materials.keys()):
             self._add_material_element(root, self.global_materials[mat_name])
@@ -157,7 +185,7 @@ class URDFGenerator(RobotXMLGenerator):
         and iteration, delegating the specific element creation to _add_link_to_xml.
         """
         if robot.links:
-            parent.append(ET.Comment(" Links "))
+            parent.append(ET.Comment(COMMENT_LINKS))
         # Sort links by name for deterministic output
         for link in sorted(robot.links, key=lambda link_item: link_item.name):
             self._add_link_to_xml(parent, link)
@@ -165,7 +193,7 @@ class URDFGenerator(RobotXMLGenerator):
     def add_joints_section(self, parent: ET.Element, robot: Robot) -> None:
         """Add Joints section to parent element."""
         if robot.joints:
-            parent.append(ET.Comment(" Joints "))
+            parent.append(ET.Comment(COMMENT_JOINTS))
         # Sort joints by name for deterministic output
         for joint in sorted(robot.joints, key=lambda joint_item: joint_item.name):
             self._add_joint_to_xml(parent, joint)
@@ -509,16 +537,15 @@ class URDFGenerator(RobotXMLGenerator):
         gazebo_elem = ET.SubElement(parent, "gazebo", reference=sensor.link_name)
 
         # Map internal types to Gazebo Sim modern types
-        # "lidar" -> "gpu_lidar" for performance
-        # "gps" -> "navsat"
         type_mapping = {
-            SensorType.LIDAR.value: "gpu_lidar",
-            SensorType.GPS.value: "navsat",
-            SensorType.CAMERA.value: "camera",
-            SensorType.DEPTH_CAMERA.value: "depth_camera",
-            SensorType.IMU.value: "imu",
-            SensorType.CONTACT.value: "contact",
-            SensorType.FORCE_TORQUE.value: "force_torque",
+            SENSOR_LIDAR: GZ_SENSOR_LIDAR,
+            SENSOR_GPU_LIDAR: GZ_SENSOR_GPU_LIDAR,
+            SENSOR_GPS: GZ_SENSOR_NAVSAT,
+            SENSOR_CAMERA: GZ_SENSOR_CAMERA,
+            SENSOR_DEPTH_CAMERA: GZ_SENSOR_DEPTH_CAMERA,
+            SENSOR_IMU: GZ_SENSOR_IMU,
+            SENSOR_CONTACT: GZ_SENSOR_CONTACT,
+            SENSOR_FORCE_TORQUE: GZ_SENSOR_FORCE_TORQUE,
         }
 
         sim_type = type_mapping.get(sensor.type.value, sensor.type.value)
@@ -857,7 +884,7 @@ class URDFGenerator(RobotXMLGenerator):
                 self._add_parsed_ros2_control_element(parent, rc)
         elif robot.transmissions:
             # Generate ros2_control from transmissions if enabled
-            parent.append(ET.Comment(" ROS2 Control "))
+            parent.append(ET.Comment(COMMENT_ROS2_CONTROL))
             self._add_ros2_control_element(parent, robot)
 
     def add_transmissions(self, parent: ET.Element, robot: Robot) -> None:
@@ -868,7 +895,7 @@ class URDFGenerator(RobotXMLGenerator):
             robot: Robot model
         """
         if robot.transmissions:
-            parent.append(ET.Comment(" Transmissions "))
+            parent.append(ET.Comment(COMMENT_TRANSMISSIONS))
         # Sort transmissions by name for deterministic output
         for transmission in sorted(robot.transmissions, key=lambda t: t.name):
             self._add_transmission_element(parent, transmission)
@@ -890,7 +917,7 @@ class URDFGenerator(RobotXMLGenerator):
         if not robot.gazebo_elements and not has_modified_physics:
             return
 
-        parent.append(ET.Comment(" Gazebo "))
+        parent.append(ET.Comment(COMMENT_GAZEBO))
 
         # 1. Handle Link-level Gazebo tags (Physics + Extensions)
         # We only generate these if physics are non-default or if there are explicit elements
@@ -972,7 +999,7 @@ class URDFGenerator(RobotXMLGenerator):
             robot: Robot model
         """
         if robot.sensors:
-            parent.append(ET.Comment(" Sensors "))
+            parent.append(ET.Comment(COMMENT_SENSORS))
         # Sort sensors by name for deterministic output
         for sensor in sorted(robot.sensors, key=lambda s: s.name):
             self._add_sensor_element(parent, sensor)
@@ -987,7 +1014,9 @@ class URDFGenerator(RobotXMLGenerator):
         """
         # Create ros2_control element with Gazebo Sim system
         # Using "gz_ros2_control/GazeboSimSystem" which is the modern standard
-        rc_elem = ET.SubElement(parent, "ros2_control", name="GazeboSimSystem", type="system")
+        rc_elem = ET.SubElement(
+            parent, "ros2_control", name="GazeboSimSystem", type=CONTROL_TYPE_SYSTEM
+        )
 
         # Hardware plugin for Gazebo Sim
         hw_elem = ET.SubElement(rc_elem, "hardware")
@@ -1008,12 +1037,12 @@ class URDFGenerator(RobotXMLGenerator):
                     ET.SubElement(joint_elem, "command_interface", name=interface_name)
 
                 # Always add standard state interfaces
-                ET.SubElement(joint_elem, "state_interface", name="position")
-                ET.SubElement(joint_elem, "state_interface", name="velocity")
+                ET.SubElement(joint_elem, "state_interface", name=HW_IF_POSITION)
+                ET.SubElement(joint_elem, "state_interface", name=HW_IF_VELOCITY)
 
                 # Add effort state interface if using effort control
-                if "effort" in command_interfaces:
-                    ET.SubElement(joint_elem, "state_interface", name="effort")
+                if HW_IF_EFFORT in command_interfaces:
+                    ET.SubElement(joint_elem, "state_interface", name=HW_IF_EFFORT)
 
         # Add Gazebo Sim ros2_control plugin (gz_ros2_control)
         # Check if plugin already exists in robot model
@@ -1090,9 +1119,9 @@ class URDFGenerator(RobotXMLGenerator):
         """
         hw_lower = hw_interface.lower()
         if "position" in hw_lower:
-            return "position"
+            return HW_IF_POSITION
         if "velocity" in hw_lower:
-            return "velocity"
+            return HW_IF_VELOCITY
         if "effort" in hw_lower:
-            return "effort"
-        return "position"  # Default fallback
+            return HW_IF_EFFORT
+        return HW_IF_POSITION  # Default fallback

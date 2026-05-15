@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import bpy
-import pytest
 
 from tests.blender_test_utils import (
     create_robot_link,
@@ -49,7 +48,7 @@ class TestSensorsPluginsIntegration:
         assert sensor_obj is not None
 
         s_props = safe_get_sensor(sensor_obj)
-        s_props.sensor_type = "LIDAR"
+        s_props.sensor_type = "gpu_lidar"
         s_props.update_rate = 30.0
         s_props.lidar_horizontal_samples = 640
 
@@ -88,7 +87,3 @@ class TestSensorsPluginsIntegration:
         urdf_content = export_path.read_text()
         assert "<gazebo>" in urdf_content
         assert '<plugin name="libmy_plugin.so" filename="libmy_plugin.so"' in urdf_content
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

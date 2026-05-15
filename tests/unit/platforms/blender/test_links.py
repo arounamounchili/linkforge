@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import bpy
-import pytest
 from linkforge.blender.operators.link_ops import (
     create_collision_for_link,
     execute_collision_preview_update,
@@ -30,7 +29,7 @@ class TestLinkOperations:
         link_obj = create_robot_link("empty_link", scene)
 
         # No children, no geometry
-        col_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
+        col_obj = create_collision_for_link(link_obj, "box", bpy.context)
         assert link_obj.type == "EMPTY"
         assert safe_get_linkforge(link_obj).is_robot_link
 
@@ -45,7 +44,7 @@ class TestLinkOperations:
         vis = create_mesh_object("link_visual", scene)
         vis.parent = link_obj
 
-        col_obj = create_collision_for_link(link_obj, "BOX", bpy.context)
+        col_obj = create_collision_for_link(link_obj, "box", bpy.context)
 
         assert col_obj is not None
         assert col_obj.parent == link_obj
@@ -115,8 +114,4 @@ class TestLinkRobustness:
         from tests.blender_test_utils import create_test_object
 
         obj = create_test_object("NotALink", None, scene)
-        regenerate_collision_mesh(obj, "AUTO", bpy.context)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        regenerate_collision_mesh(obj, "auto", bpy.context)

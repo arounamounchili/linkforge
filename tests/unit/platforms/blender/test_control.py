@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import bpy
-import pytest
 from linkforge.blender.operators.control_ops import (
     LINKFORGE_OT_add_ros2_control_joint,
     LINKFORGE_OT_remove_ros2_control_joint,
@@ -60,7 +59,3 @@ class TestSensorOperations:
         assert "_sensor" in sensor_obj.name
         assert safe_get_sensor(sensor_obj).is_robot_sensor
         assert sensor_obj.parent == link_obj
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

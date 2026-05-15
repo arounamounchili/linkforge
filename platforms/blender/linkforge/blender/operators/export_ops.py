@@ -17,6 +17,7 @@ from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
 from linkforge_core.logging_config import get_logger
 
+from ..constants import PROP_ROBOT, PROP_VALIDATION
 from ..utils.decorators import OperatorReturn, safe_execute
 
 if TYPE_CHECKING:
@@ -56,15 +57,15 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     # Type ignore to resolve 'misc' definition collision with Operator.check
     def check(self, context: Context) -> Any:
         """Verify if export can proceed based on current scene state."""
-        return bool(context.scene and hasattr(context.scene, "linkforge"))
+        return bool(context.scene and hasattr(context.scene, PROP_ROBOT))
 
     def invoke(self, context: Context, event: Event) -> Any:
         """Invoked before the file browser opens."""
         # Update file extension based on export format
-        if not context.scene or not hasattr(context.scene, "linkforge"):
+        if not context.scene or not hasattr(context.scene, PROP_ROBOT):
             return {"CANCELLED"}
 
-        robot_props = typing.cast(Any, context.scene).linkforge
+        robot_props = getattr(context.scene, PROP_ROBOT)
         if robot_props.export_format == "XACRO":
             self.filename_ext = ".xacro"
         else:
@@ -83,13 +84,13 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         from ..adapters.blender_to_core import scene_to_robot
         from ..adapters.context import BlenderContext
 
-        if not context.scene or not hasattr(context.scene, "linkforge"):
+        if not context.scene or not hasattr(context.scene, PROP_ROBOT):
             return {"CANCELLED"}
 
         # Wrap the raw Blender context in our adapter
         lf_context = BlenderContext(bpy_instance=bpy)
         scene = context.scene
-        robot_props = typing.cast("RobotPropertyGroup", getattr(scene, "linkforge"))
+        robot_props = typing.cast("RobotPropertyGroup", getattr(scene, PROP_ROBOT))
 
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)
@@ -203,14 +204,12 @@ class LINKFORGE_OT_validate_robot(Operator):
         from linkforge_core.validation import RobotValidator
 
         # Clear previous results
-        if not context.window_manager or not hasattr(
-            context.window_manager, "linkforge_validation"
-        ):
+        if not context.window_manager or not hasattr(context.window_manager, PROP_VALIDATION):
             self.report({"ERROR"}, "Validation system not initialized")
             return {"CANCELLED"}
 
         validation_props = typing.cast(
-            "ValidationResultProperty", getattr(context.window_manager, "linkforge_validation")
+            "ValidationResultProperty", getattr(context.window_manager, PROP_VALIDATION)
         )
         validation_props.clear()
 

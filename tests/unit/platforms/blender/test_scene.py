@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from linkforge.blender.utils.scene_utils import (
     build_tree_from_stats,
     get_robot_statistics,
@@ -71,7 +70,3 @@ class TestTreeBuilding:
         assert root_link == "parent"
         assert any(c[0] == "child" for c in tree["parent"])
         assert ("parent", "child") in joints_dict
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

@@ -66,7 +66,3 @@ def test_split_files_and_reimport_simulated() -> None:
         assert '<xacro:macro name="cylinder_' in macro_content
 
     pass
-
-
-if __name__ == "__main__":
-    test_split_files_and_reimport_simulated()

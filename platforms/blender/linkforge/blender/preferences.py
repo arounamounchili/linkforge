@@ -12,6 +12,7 @@ from bpy.props import BoolProperty, FloatProperty, StringProperty
 from bpy.types import AddonPreferences, Context
 
 from .constants import (
+    ADDON_ID_DEFAULT,
     DEFAULT_INERTIA_GIZMO_SIZE,
     DEFAULT_JOINT_GIZMO_SIZE,
     DEFAULT_LINK_GIZMO_SIZE,
@@ -116,7 +117,7 @@ def get_addon_id() -> str:
     if pkg and pkg.startswith("bl_ext."):
         # Extension path: bl_ext.<repo>.<id>
         return ".".join(pkg.split(".")[:3])
-    return pkg.split(".")[0] if pkg else "linkforge"
+    return pkg.split(".")[0] if pkg else ADDON_ID_DEFAULT
 
 
 def get_addon_prefs(context: Context | None = None) -> LinkForgePreferences | None:

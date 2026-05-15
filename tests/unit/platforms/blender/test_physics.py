@@ -117,7 +117,3 @@ class TestSimulationProperties:
         set_kd_scientific(mock, "1.0")
         assert mock.kd == 1.0
         assert get_kd_scientific(mock) == "1.00e+00"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

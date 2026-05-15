@@ -78,7 +78,3 @@ class TestPreferences:
             update_joint_empty_size(mock_prefs, bpy.context)
 
         assert obj.empty_display_size == pytest.approx(0.5)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

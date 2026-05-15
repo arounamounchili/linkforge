@@ -478,6 +478,13 @@ class TestURDFGenerator:
             ),
         )
         robot.add_sensor(camera)
+        gpu_lidar = Sensor(
+            name="gpu_lidar_sensor",
+            type=SensorType.GPU_LIDAR,
+            link_name="base",
+            lidar_info=LidarInfo(horizontal_samples=128),
+        )
+        robot.add_sensor(gpu_lidar)
 
         generator = URDFGenerator(pretty_print=False)
         xml_str = generator.generate(
@@ -492,7 +499,7 @@ class TestURDFGenerator:
         assert lidar_gazebo.get("reference") == "base"
         sensor_elem = lidar_gazebo.find("sensor")
         assert sensor_elem is not None
-        assert sensor_elem.get("type") == "gpu_lidar"  # mapped type
+        assert sensor_elem.get("type") == "lidar"  # mapped type
         update_rate = sensor_elem.find("update_rate")
         assert update_rate is not None
         assert update_rate.text == "10"
@@ -510,6 +517,13 @@ class TestURDFGenerator:
         cam_sensor = cam_gazebo.find("sensor")
         assert cam_sensor is not None
         assert cam_sensor.get("type") == "camera"
+
+        gpu_gazebo = next(
+            g for g in gazebos if g.find("sensor[@name='gpu_lidar_sensor']") is not None
+        )
+        gpu_sensor = gpu_gazebo.find("sensor")
+        assert gpu_sensor is not None
+        assert gpu_sensor.get("type") == "gpu_lidar"
 
         cam_elem = cam_sensor.find("camera")
         assert cam_elem is not None

@@ -10,6 +10,14 @@ from typing import TYPE_CHECKING, Any, cast
 import bpy
 from bpy.types import Context
 
+from ..constants import (
+    PROP_JOINT,
+    PROP_LINK,
+    PROP_ROBOT,
+    PROP_SENSOR,
+    PROP_TRANSMISSION,
+)
+
 
 def find_property_owner(context: Context, property_group: Any, property_attr: str) -> Any | None:
     """Find the Blender object that owns a given property group instance.
@@ -77,21 +85,21 @@ def get_link_props(obj: bpy.types.Object | None) -> LinkPropertyGroup | None:
     """Type-safe access to LinkForge link properties on a Blender object."""
     if obj is None:
         return None
-    return cast("LinkPropertyGroup | None", getattr(obj, "linkforge", None))
+    return cast("LinkPropertyGroup | None", getattr(obj, PROP_LINK, None))
 
 
 def get_joint_props(obj: bpy.types.Object | None) -> JointPropertyGroup | None:
     """Type-safe access to LinkForge joint properties on a Blender object."""
     if obj is None:
         return None
-    return cast("JointPropertyGroup | None", getattr(obj, "linkforge_joint", None))
+    return cast("JointPropertyGroup | None", getattr(obj, PROP_JOINT, None))
 
 
 def get_sensor_props(obj: bpy.types.Object | None) -> SensorPropertyGroup | None:
     """Type-safe access to LinkForge sensor properties on a Blender object."""
     if obj is None:
         return None
-    return cast("SensorPropertyGroup | None", getattr(obj, "linkforge_sensor", None))
+    return cast("SensorPropertyGroup | None", getattr(obj, PROP_SENSOR, None))
 
 
 def get_transmission_props(
@@ -102,7 +110,7 @@ def get_transmission_props(
         return None
     return cast(
         "TransmissionPropertyGroup | None",
-        getattr(obj, "linkforge_transmission", None),
+        getattr(obj, PROP_TRANSMISSION, None),
     )
 
 
@@ -110,4 +118,4 @@ def get_robot_props(scene: bpy.types.Scene | None) -> RobotPropertyGroup | None:
     """Type-safe access to LinkForge robot properties on a Blender scene."""
     if scene is None:
         return None
-    return cast("RobotPropertyGroup | None", getattr(scene, "linkforge", None))
+    return cast("RobotPropertyGroup | None", getattr(scene, PROP_ROBOT, None))

@@ -20,12 +20,16 @@ try:
 except ImportError:
     np = None
 
-from dataclasses import dataclass
 
 import bpy
 from linkforge_core.composer import RobotBuilder
 from linkforge_core.constants import (
     DEFAULT_MATERIAL_RGBA,
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_EPSILON,
+    GEOM_MESH,
+    GEOM_SPHERE,
 )
 from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.logging_config import get_logger
@@ -47,7 +51,11 @@ from linkforge_core.validation.result import ValidationResult
 from mathutils import Matrix
 
 from ..constants import (
+    DEFAULT_PRIMITIVE_CONFIG,
+    FORMAT_STL,
+    GEOM_AUTO,
     PRIMITIVE_MAX_FACES,
+    PURPOSE_VISUAL,
     SUFFIX_VISUAL,
     TAG_COLLISION_GEOM,
     TAG_SOURCE_GEOM,
@@ -101,47 +109,6 @@ def matrix_to_transform(matrix: Any) -> Transform:
     return Transform(xyz=xyz, rpy=rpy)
 
 
-@dataclass(frozen=True)
-class PrimitiveDetectionConfig:
-    """Configuration for primitive shape detection from Blender meshes.
-
-    Start with specific vertex counts and use bounding box ratios to
-    fuzzy match geometry.
-    """
-
-    # Cube detection - exact match required
-    cube_vert_count: int = 8  # Cubes always have 8 vertices
-    cube_face_count: int = 6  # Cubes always have 6 faces
-    cube_verts_per_face: int = 4  # Each face has 4 vertices
-
-    # Sphere detection (UV Sphere with various subdivision levels)
-    # Based on Blender UV Sphere: 16 segments × 8 rings = 240 verts (minimum acceptable)
-    sphere_min_verts: int = 240  # Minimum for low-poly spheres (less may be too coarse)
-    sphere_max_verts: int = (
-        1000  # Maximum for high-poly spheres (prevents complex mesh false positives)
-    )
-    sphere_min_faces: int = 240  # Minimum face count
-    sphere_max_faces: int = 1000  # Maximum face count
-    # Empirically determined: 0.9 allows for minor mesh imperfections while rejecting non-spherical shapes
-    sphere_uniformity_tolerance: float = (
-        0.9  # Dimensions within 10% to be spherical (1.0 = perfect sphere)
-    )
-
-    # Cylinder detection (default 32 vertices, supports 16-64 range)
-    cylinder_min_verts: int = 32  # Minimum vertices (16-sided cylinder minimum)
-    cylinder_max_verts: int = 128  # Maximum vertices (64-sided cylinder maximum)
-    cylinder_min_faces: int = 18  # 16 vertices = 16 side faces + 2 caps
-    cylinder_max_faces: int = 66  # 64 vertices = 64 side faces + 2 caps
-    cylinder_base_tolerance: float = 0.9  # XY ratio must be > 0.9 for circular base
-    cylinder_height_min_ratio: float = 0.9  # Z/XY ratio boundaries to distinguish from sphere
-    cylinder_height_max_ratio: float = 1.1  # If height/radius ratio is 0.9-1.1, might be sphere
-
-
-# Default primitive detection configuration
-# Users can override by creating a custom config and passing it to detection functions
-DEFAULT_PRIMITIVE_CONFIG = PrimitiveDetectionConfig()
-
-
 def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     """Detect if a Blender mesh object matches a standard primitive shape.
 
@@ -154,7 +121,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
         obj: The Blender mesh object to analyze.
 
     Returns:
-        "BOX", "CYLINDER", or "SPHERE" if a match is detected, else None.
+        "box", "cylinder", or "sphere" if a match is detected, else None.
     """
     if obj is None or obj.type != "MESH":
         return None
@@ -178,9 +145,10 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     for tag in tags:
         tag_val = obj.get(tag)  # type: ignore[func-returns-value]
         if isinstance(tag_val, str):
-            if tag_val in ("BOX", "CYLINDER", "SPHERE"):
-                return tag_val
-            if tag_val == "MESH":
+            tag_val_lower = tag_val.lower()
+            if tag_val_lower in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
+                return tag_val_lower
+            if tag_val_lower == GEOM_MESH:
                 return None
 
     # Count vertices and faces
@@ -200,7 +168,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
             len(poly.vertices) == config.cube_verts_per_face for poly in mesh_obj.polygons
         )
         if all_quads:
-            return "BOX"
+            return GEOM_BOX
 
     # UV Sphere: Variable subdivision levels
     # Default (32 segs, 16 rings) = 482 verts, 480 faces
@@ -215,7 +183,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
             min_dim = min(dims.x, dims.y, dims.z)
             # Within tolerance (sphere should be uniform)
             if min_dim / max_dim > config.sphere_uniformity_tolerance:
-                return "SPHERE"
+                return GEOM_SPHERE
 
     # Cylinder: Variable vertex counts (16, 32, 64 typical)
     # Formula: verts = segments * 2, faces = segments + 2 (caps)
@@ -236,7 +204,7 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
                     z_vs_xy < config.cylinder_height_min_ratio
                     or z_vs_xy > config.cylinder_height_max_ratio
                 ):
-                    return "CYLINDER"
+                    return GEOM_CYLINDER
 
     # If none match, it's a complex mesh
     return None
@@ -244,11 +212,11 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
 
 def get_object_geometry(
     obj: bpy.types.Object | None,
-    geometry_type: str = "AUTO",
+    geometry_type: str = GEOM_AUTO,
     link_name: str | None = None,
-    geom_purpose: str = "visual",
+    geom_purpose: str = PURPOSE_VISUAL,
     meshes_dir: Path | None = None,
-    mesh_format: str = "STL",
+    mesh_format: str = FORMAT_STL,
     simplify: bool = False,
     decimation_ratio: float = 0.5,
     dry_run: bool = False,
@@ -260,13 +228,13 @@ def get_object_geometry(
     Args:
         obj: Blender Object
         geometry_type: Type of geometry to extract
-            - "AUTO": Auto-detect (primitives for simple shapes, mesh for complex)
-            - "MESH": Force mesh export
-            - "BOX", "CYLINDER", "SPHERE": Force specific primitive
+            - "auto": Auto-detect (primitives for simple shapes, mesh for complex)
+            - "mesh": Force mesh export
+            - "box", "cylinder", "sphere": Force specific primitive
         link_name: Name of the link (for mesh filename)
-        geom_purpose: "visual" or "collision" (for mesh filename)
+        geom_purpose: "visual" or "collision" (use PURPOSE_VISUAL, PURPOSE_COLLISION)
         meshes_dir: Directory to export mesh files to
-        mesh_format: "STL", "OBJ", or "GLB"
+        mesh_format: "STL", "OBJ", or "GLB" (use FORMAT_STL, etc.)
         simplify: Whether to simplify mesh (for collision)
         decimation_ratio: Simplification ratio if simplify=True
         dry_run: If True, generate mesh paths but don't write files
@@ -281,12 +249,12 @@ def get_object_geometry(
 
     # Determine actual geometry type to use (AUTO requires detection)
     actual_geometry_type = geometry_type
-    if actual_geometry_type == "AUTO":
+    if actual_geometry_type == GEOM_AUTO:
         detected_type = detect_primitive_type(obj)
         # Use detected primitive (cleaner URDF) or fallback to mesh for complex shapes
-        actual_geometry_type = detected_type or "MESH"
+        actual_geometry_type = detected_type or GEOM_MESH
 
-    if actual_geometry_type == "MESH":
+    if actual_geometry_type == GEOM_MESH:
         # Export actual mesh file if meshes_dir is provided
         if meshes_dir and link_name and obj.type == "MESH":
             from .mesh_io import export_link_mesh
@@ -311,25 +279,25 @@ def get_object_geometry(
                 ), geom_world_matrix
 
         # Fallback: approximate with bounding box if export failed or not requested
-        actual_geometry_type = "BOX"
+        actual_geometry_type = GEOM_BOX
 
     # For primitives, the pose is just the current object matrix
     geom_world_matrix = obj.matrix_world
 
-    if actual_geometry_type == "BOX":
+    if actual_geometry_type == GEOM_BOX:
         # Use bounding box dimensions
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:
             return None, Matrix.Identity(4)
 
         # Robustness Check: Skip zero-size objects (e.g. empties from failed imports)
-        if dimensions.length < 1e-6:
+        if dimensions.length < GEOM_EPSILON:
             logger.warning(f"Skipping geometry for '{obj.name}': Dimensions are zero.")
             return None, Matrix.Identity(4)
 
         return Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z)), geom_world_matrix
 
-    elif actual_geometry_type == "CYLINDER":
+    elif actual_geometry_type == GEOM_CYLINDER:
         # Approximate with bounding cylinder
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:
@@ -339,7 +307,7 @@ def get_object_geometry(
         length = dimensions.z
         return Cylinder(radius=radius, length=length), geom_world_matrix
 
-    elif actual_geometry_type == "SPHERE":
+    elif actual_geometry_type == GEOM_SPHERE:
         # Approximate with bounding sphere
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:

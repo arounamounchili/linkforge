@@ -173,7 +173,7 @@ class TestCompoundOperations:
         safe_update(scene)
 
         # Run regeneration
-        regenerate_collision_mesh(link_obj, "MESH", bpy.context)
+        regenerate_collision_mesh(link_obj, "mesh", bpy.context)
 
         # Verify collision object
         collision_objs = [c for c in link_obj.children if "_collision" in c.name]

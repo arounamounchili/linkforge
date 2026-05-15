@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 
 import bpy
-import pytest
 from linkforge.blender.operators.export_ops import LINKFORGE_OT_export_robot_model
 from linkforge.blender.operators.import_ops import LINKFORGE_OT_import_robot_model
 
@@ -36,7 +35,7 @@ class TestExportImportRoundtrip:
         child.location = (0, 0, 1.0)
 
         # Connect with a revolute joint
-        joint = create_robot_joint("joint1", base, child, scene, joint_type="REVOLUTE")
+        joint = create_robot_joint("joint1", base, child, scene, joint_type="revolute")
         j_props = safe_get_joint(joint)
         j_props.limit_lower = -1.57
         j_props.limit_upper = 1.57
@@ -105,7 +104,7 @@ class TestExportImportRoundtrip:
         assert nj_props.is_robot_joint is True
         assert nj_props.parent_link == new_base
         assert nj_props.child_link == new_child
-        assert nj_props.joint_type == "REVOLUTE"
+        assert nj_props.joint_type == "revolute"
         assert abs(nj_props.limit_lower + 1.57) < 1e-5
         assert abs(nj_props.limit_upper - 1.57) < 1e-5
 
@@ -149,7 +148,3 @@ class TestExportImportRoundtrip:
         # The link should still exist as an Empty even if mesh failed
         assert "base_link" in bpy.data.objects
         assert bpy.data.objects["base_link"].type == "EMPTY"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

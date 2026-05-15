@@ -17,6 +17,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from ..constants import (
+    SRDF_VJOIN_FIXED,
+    SRDF_VJOIN_FLOATING,
+    SRDF_VJOIN_PLANAR,
+)
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
@@ -35,7 +40,7 @@ class VirtualJoint:
             raise RobotValidationError(
                 ValidationErrorCode.NAME_EMPTY, "Virtual joint name cannot be empty"
             )
-        if self.type not in ("fixed", "planar", "floating"):
+        if self.type not in (SRDF_VJOIN_FIXED, SRDF_VJOIN_PLANAR, SRDF_VJOIN_FLOATING):
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
                 f"Invalid virtual joint type '{self.type}' (must be fixed, planar, or floating)",

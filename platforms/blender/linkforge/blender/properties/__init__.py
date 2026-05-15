@@ -42,9 +42,16 @@ def unregister() -> None:
 
     import bpy
 
+    from ..constants import (
+        PROP_JOINT,
+        PROP_LINK,
+        PROP_SENSOR,
+        PROP_TRANSMISSION,
+    )
+
     # 1. Unpatch global types first to break references
-    obj_props = ["linkforge", "linkforge_joint", "linkforge_sensor", "linkforge_transmission"]
-    scene_props = ["linkforge"]
+    obj_props = [PROP_LINK, PROP_JOINT, PROP_SENSOR, PROP_TRANSMISSION]
+    scene_props = [PROP_LINK]
 
     for p in obj_props:
         with contextlib.suppress(AttributeError):

@@ -19,9 +19,18 @@ from ..constants import (
     DEFAULT_CAMERA_FOV,
     DEFAULT_CAMERA_HEIGHT,
     DEFAULT_CAMERA_WIDTH,
+    DEFAULT_JOINT_DAMPING,
+    DEFAULT_JOINT_EFFORT,
+    DEFAULT_JOINT_FRICTION,
+    DEFAULT_JOINT_VELOCITY,
     DEFAULT_LIDAR_RANGE_MAX,
     DEFAULT_LIDAR_RANGE_MIN,
     DEFAULT_LIDAR_SAMPLES,
+    DEFAULT_UPDATE_RATE_CONTACT,
+    DEFAULT_UPDATE_RATE_FORCE_TORQUE,
+    DEFAULT_UPDATE_RATE_GPS,
+    DEFAULT_UPDATE_RATE_IMU,
+    HW_IF_EFFORT,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from ..models.gazebo import GazeboElement
@@ -293,8 +302,8 @@ class LinkBuilder:
         name: str | None = None,
         xyz: tuple[float, float, float] | None = None,
         rpy: tuple[float, float, float] | None = None,
-        effort: float = 0.0,
-        velocity: float = 0.0,
+        effort: float = DEFAULT_JOINT_EFFORT,
+        velocity: float = DEFAULT_JOINT_VELOCITY,
     ) -> LinkBuilder:
         """Configure the connection as a REVOLUTE (limited rotation) joint.
 
@@ -324,8 +333,8 @@ class LinkBuilder:
         name: str | None = None,
         xyz: tuple[float, float, float] | None = None,
         rpy: tuple[float, float, float] | None = None,
-        effort: float | None = None,
-        velocity: float | None = None,
+        effort: float = DEFAULT_JOINT_EFFORT,
+        velocity: float = DEFAULT_JOINT_VELOCITY,
     ) -> LinkBuilder:
         """Configure the connection as a CONTINUOUS (unlimited rotation) joint.
 
@@ -356,8 +365,8 @@ class LinkBuilder:
         name: str | None = None,
         xyz: tuple[float, float, float] | None = None,
         rpy: tuple[float, float, float] | None = None,
-        effort: float = 0.0,
-        velocity: float = 0.0,
+        effort: float = DEFAULT_JOINT_EFFORT,
+        velocity: float = DEFAULT_JOINT_VELOCITY,
     ) -> LinkBuilder:
         """Configure the connection as a PRISMATIC (linear sliding) joint.
 
@@ -424,7 +433,9 @@ class LinkBuilder:
         self._joint.axis = self._normalize_axis(axis)
         return self._configure_joint(name, xyz, rpy)
 
-    def dynamics(self, damping: float = 0.0, friction: float = 0.0) -> LinkBuilder:
+    def dynamics(
+        self, damping: float = DEFAULT_JOINT_DAMPING, friction: float = DEFAULT_JOINT_FRICTION
+    ) -> LinkBuilder:
         """Set the physical dynamics for the joint.
 
         Args:
@@ -561,7 +572,7 @@ class LinkBuilder:
     def transmission(
         self,
         reduction: float = 1.0,
-        interface: str = "effort",
+        interface: str = HW_IF_EFFORT,
         actuator: str | None = None,
         name: str | None = None,
     ) -> LinkBuilder:
@@ -673,10 +684,42 @@ class LinkBuilder:
         self._link.sensors.append(sensor)
         return self
 
+    def gpu_lidar(
+        self,
+        name: str,
+        range_min: float = DEFAULT_LIDAR_RANGE_MIN,
+        range_max: float = DEFAULT_LIDAR_RANGE_MAX,
+        samples: int = DEFAULT_LIDAR_SAMPLES,
+        xyz: tuple[float, float, float] = (0, 0, 0),
+        rpy: tuple[float, float, float] = (0, 0, 0),
+    ) -> LinkBuilder:
+        """Attach a high-performance GPU-accelerated lidar sensor to this link.
+
+        Args:
+            name: Unique sensor name.
+            range_min, range_max: Distance limits in meters.
+            samples: Number of rays per scan.
+            xyz, rpy: Position/Orientation relative to link frame.
+
+        Returns:
+            The LinkBuilder instance.
+        """
+        self._check_not_committed()
+        info = LidarInfo(range_min=range_min, range_max=range_max, horizontal_samples=samples)
+        sensor = Sensor(
+            name=name,
+            type=SensorType.GPU_LIDAR,
+            link_name=self._link_name,
+            lidar_info=info,
+            origin=Transform(xyz=Vector3(*xyz), rpy=Vector3(*rpy)),
+        )
+        self._link.sensors.append(sensor)
+        return self
+
     def imu(
         self,
         name: str,
-        update_rate: float = 100.0,
+        update_rate: float = DEFAULT_UPDATE_RATE_IMU,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
@@ -705,7 +748,7 @@ class LinkBuilder:
     def gps(
         self,
         name: str,
-        update_rate: float = 5.0,
+        update_rate: float = DEFAULT_UPDATE_RATE_GPS,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
@@ -734,7 +777,7 @@ class LinkBuilder:
     def force_torque(
         self,
         name: str,
-        update_rate: float = 100.0,
+        update_rate: float = DEFAULT_UPDATE_RATE_FORCE_TORQUE,
         xyz: tuple[float, float, float] = (0, 0, 0),
         rpy: tuple[float, float, float] = (0, 0, 0),
     ) -> LinkBuilder:
@@ -766,7 +809,7 @@ class LinkBuilder:
         self,
         name: str,
         collision: str,
-        update_rate: float = 50.0,
+        update_rate: float = DEFAULT_UPDATE_RATE_CONTACT,
     ) -> LinkBuilder:
         """Attach a contact sensor to this link.
 

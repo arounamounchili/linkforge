@@ -9,6 +9,7 @@ import bpy
 from bpy.types import Context, Panel, Scene, UILayout
 from linkforge_core.utils.dict_utils import filter_items_by_name
 
+from ..constants import PROP_LINK, PROP_VALIDATION
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
@@ -32,7 +33,7 @@ class LINKFORGE_PT_export_panel(Panel):
         layout = self.layout
         if not layout:
             return
-        props = getattr(scene, "linkforge")
+        props = getattr(scene, PROP_LINK)
 
         # Count components
         stats = get_robot_statistics(scene)
@@ -90,8 +91,8 @@ class LINKFORGE_PT_export_panel(Panel):
 
             wm = context.window_manager
             validation = None
-            if wm and hasattr(wm, "linkforge_validation"):
-                validation = getattr(wm, "linkforge_validation")
+            if wm and hasattr(wm, PROP_VALIDATION):
+                validation = getattr(wm, PROP_VALIDATION)
 
             if not validation or not validation.has_results:
                 box.label(text="Not run yet", icon="INFO")
@@ -252,7 +253,7 @@ class LINKFORGE_PT_export_panel(Panel):
         if not select_box:
             return
 
-        props = getattr(scene, "linkforge")
+        props = getattr(scene, PROP_LINK)
 
         # UI
         search_row = select_box.row(align=True)

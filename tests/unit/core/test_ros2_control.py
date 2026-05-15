@@ -66,7 +66,3 @@ class TestRos2ControlParsing:
         assert len(rc.joints) == 1
         assert rc.joints[0].name == "joint1"
         assert "position" in rc.joints[0].command_interfaces
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

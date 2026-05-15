@@ -51,7 +51,7 @@ class TestJointProperties:
         props = safe_get_joint(obj)
 
         assert not props.is_robot_joint
-        assert props.joint_type == "REVOLUTE"
+        assert props.joint_type == "revolute"
         assert props.axis == "Z"
         assert props.custom_axis_x == 0.0
         assert props.limit_lower == pytest.approx(-3.14159, abs=1e-3)
@@ -157,7 +157,3 @@ class TestJointVisualization:
         update_viz_handle(bpy.context)
         mock_remove.assert_called()
         assert "linkforge_joint_gizmo_handler" not in bpy.app.driver_namespace
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

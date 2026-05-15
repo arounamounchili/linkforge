@@ -71,18 +71,18 @@ def safe_get_joint(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
 
 
 def safe_get_linkforge_scene(scene: typing.Any) -> typing.Any:
-    """Safe accessor for the 'linkforge' property group on a Blender scene."""
-    prop = getattr(scene, "linkforge", None)
+    """Safe accessor for the 'linkforge_robot' property group on a Blender scene."""
+    prop = getattr(scene, "linkforge_robot", None)
     if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
     # If missing, try a quick refresh
     _refresh_blender_environment(scene)
-    prop = getattr(scene, "linkforge", None)
+    prop = getattr(scene, "linkforge_robot", None)
     if prop is not None and hasattr(prop, "bl_rna"):
         return prop
 
-    raise AttributeError(f"Scene '{scene.name}' missing 'linkforge' property group.")
+    raise AttributeError(f"Scene '{scene.name}' missing 'linkforge_robot' property group.")
 
 
 def safe_get_transmission(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
@@ -265,7 +265,7 @@ def create_robot_joint(
     parent_link: typing.Any,
     child_link: typing.Any,
     scene: typing.Any,
-    joint_type: str = "REVOLUTE",
+    joint_type: str = "revolute",
 ) -> typing.Any:
     """High-level factory to create a LinkForge robot joint.
 

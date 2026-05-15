@@ -20,8 +20,10 @@ from typing import Any
 import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
+from linkforge_core.constants import PI
 from mathutils import Matrix, Vector
 
+from ..constants import PROP_LINK
 from ..preferences import get_addon_prefs
 from ..utils.scene_utils import get_robot_statistics
 
@@ -59,7 +61,7 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
     if not obj:
         return {"lines": [], "line_colors": []}
 
-    props = obj.linkforge
+    props = getattr(obj, PROP_LINK)
 
     # Get manual inertia origin relative to link
     # The property inertia_origin_xyz is in LINK LOCAL space
@@ -131,7 +133,7 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
     # Local circle points
     circle_points = []
     for i in range(segments + 1):
-        angle = 2 * math.pi * i / segments
+        angle = 2 * PI * i / segments
         circle_points.append((math.cos(angle) * sphere_radius, math.sin(angle) * sphere_radius))
 
     # Rings in local inertia frame

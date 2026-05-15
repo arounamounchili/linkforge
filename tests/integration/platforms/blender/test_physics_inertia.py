@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import bpy
-import pytest
 
 from tests.blender_test_utils import (
     create_mesh_object,
@@ -83,7 +82,3 @@ class TestPhysicsInertiaIntegration:
         # Note: I need to check if LINKFORGE_OT_calculate_mass_from_volume exists
         # Let's assume it does based on link_ops.py analysis
         pass
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

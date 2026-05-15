@@ -18,8 +18,21 @@ import contextlib
 import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
+from linkforge_core.constants import (
+    CONTROL_TYPE_ACTUATOR,
+    CONTROL_TYPE_SENSOR,
+    CONTROL_TYPE_SYSTEM,
+    ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
+    ROS2_CONTROL_DEFAULT_PLUGIN,
+)
 
-from ..constants import SUFFIX_COLLISION
+from ..constants import (
+    FORMAT_GLB,
+    FORMAT_OBJ,
+    FORMAT_STL,
+    PROP_ROBOT,
+    SUFFIX_COLLISION,
+)
 from ..utils.property_helpers import get_link_props
 from .control_props import Ros2ControlJointProperty, Ros2ControlParameterProperty
 
@@ -82,23 +95,23 @@ class RobotPropertyGroup(PropertyGroup):
         name="System Type",
         description="Type of the hardware system",
         items=[
-            ("system", "System", "Full robot system with multiple joints"),
-            ("actuator", "Actuator", "Single actuator system"),
-            ("sensor", "Sensor", "Sensor-only system"),
+            (CONTROL_TYPE_SYSTEM, "System", "Full robot system with multiple joints"),
+            (CONTROL_TYPE_ACTUATOR, "Actuator", "Single actuator system"),
+            (CONTROL_TYPE_SENSOR, "Sensor", "Sensor-only system"),
         ],
-        default="system",
+        default=CONTROL_TYPE_SYSTEM,
     )
 
     hardware_plugin: StringProperty(  # type: ignore
         name="Hardware Plugin",
         description="ROS 2 Hardware Interface plugin name",
-        default="gz_ros2_control/GazeboSimSystem",
+        default=ROS2_CONTROL_DEFAULT_PLUGIN,
     )
 
     gazebo_plugin_name: StringProperty(  # type: ignore
         name="Gazebo Plugin",
         description="Gazebo ros2_control plugin name",
-        default="gz_ros2_control::GazeboSimROS2ControlPlugin",
+        default=ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
     )
 
     controllers_yaml_path: StringProperty(  # type: ignore
@@ -127,22 +140,22 @@ class RobotPropertyGroup(PropertyGroup):
         description="3D file format for visual meshes (collision meshes always use STL)",
         items=[
             (
-                "OBJ",
+                FORMAT_OBJ,
                 "OBJ",
                 "Wavefront OBJ with materials - recommended for Gazebo/RViz visualization",
             ),
             (
-                "STL",
+                FORMAT_STL,
                 "STL",
                 "STereoLithography without materials - for simple geometry or 3D printing",
             ),
             (
-                "GLB",
+                FORMAT_GLB,
                 "glTF Binary (.glb)",
                 "Modern, efficient standard - best for web/Foxglove/Isaac Sim",
             ),
         ],
-        default="OBJ",
+        default=FORMAT_OBJ,
     )
 
     mesh_directory_name: StringProperty(  # type: ignore
@@ -250,15 +263,18 @@ def register() -> None:
         bpy.utils.register_class(RobotPropertyGroup)
 
     # Register scene property
-    prop = bpy.props.PointerProperty(type=RobotPropertyGroup)  # type: ignore[func-returns-value]
-    bpy.types.Scene.linkforge = prop  # type: ignore[attr-defined]
+    setattr(
+        bpy.types.Scene,
+        PROP_ROBOT,
+        bpy.props.PointerProperty(type=RobotPropertyGroup),  # type: ignore[func-returns-value]
+    )
 
 
 def unregister() -> None:
     """Unregister property group."""
 
     with contextlib.suppress(AttributeError):
-        delattr(bpy.types.Scene, "linkforge")
+        delattr(bpy.types.Scene, PROP_ROBOT)
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(RobotPropertyGroup)

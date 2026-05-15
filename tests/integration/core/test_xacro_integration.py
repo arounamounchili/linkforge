@@ -99,7 +99,3 @@ def test_empty_xacro_handling(tmp_path: Path, xacro_to_robot) -> None:
     robot = xacro_to_robot(xacro_file)
     assert robot.name == "empty"
     assert len(robot.links) == 0
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

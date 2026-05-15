@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import bpy
-import pytest
 from linkforge.blender.operators.export_ops import (
     LINKFORGE_OT_export_robot_model,
     LINKFORGE_OT_validate_robot,
@@ -98,7 +97,3 @@ class TestRobotExport:
         with patch("bpy_extras.io_utils.ExportHelper.invoke", return_value={"FINISHED"}):
             LINKFORGE_OT_export_robot_model.invoke(mock_op, bpy.context, MagicMock())
             assert mock_op.filename_ext == ".xacro"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

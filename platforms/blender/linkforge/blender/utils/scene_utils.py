@@ -9,9 +9,22 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import bpy
+from linkforge_core.constants import (
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
+    JOINT_CONTINUOUS,
+    JOINT_FIXED,
+    JOINT_FLOATING,
+    JOINT_PLANAR,
+    JOINT_PRISMATIC,
+    JOINT_REVOLUTE,
+)
 
 from ..adapters.blender_to_core import detect_primitive_type
 from ..constants import (
+    GEOM_AUTO,
     SUFFIX_COLLISION,
     TAG_COLLISION_GEOM,
     TAG_SOURCE_GEOM,
@@ -130,12 +143,12 @@ def clear_stats_cache(_self: Any = None, _context: Any = None) -> None:
 
 # Map joint types to DOF contribution
 JOINT_DOF_MAP = {
-    "FIXED": 0,
-    "REVOLUTE": 1,
-    "CONTINUOUS": 1,
-    "PRISMATIC": 1,
-    "PLANAR": 2,
-    "FLOATING": 6,
+    JOINT_FIXED: 0,
+    JOINT_REVOLUTE: 1,
+    JOINT_CONTINUOUS: 1,
+    JOINT_PRISMATIC: 1,
+    JOINT_PLANAR: 2,
+    JOINT_FLOATING: 6,
 }
 
 
@@ -241,21 +254,25 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
                 (c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None
             )
             if collision_obj:
-                detected_type = "MESH"
+                detected_type = GEOM_MESH
                 is_primitive = False
 
                 # 1. Check explicit URDF tag
                 if collision_obj.get(TAG_SOURCE_GEOM):
-                    detected_type = typing.cast(str, collision_obj[TAG_SOURCE_GEOM])
-                    is_primitive = detected_type in ("BOX", "CYLINDER", "SPHERE")
+                    tag_val = str(collision_obj[TAG_SOURCE_GEOM]).lower()
+                    detected_type = tag_val
+                    is_primitive = tag_val in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE)
                 # 2. Check generator tag
                 else:
-                    stored_type = typing.cast(str, collision_obj.get(TAG_COLLISION_GEOM, "AUTO"))
-                    if stored_type and stored_type in ("BOX", "CYLINDER", "SPHERE"):
+                    stored_type = collision_obj.get(TAG_COLLISION_GEOM, GEOM_AUTO)
+                    if isinstance(stored_type, str):
+                        stored_type = stored_type.lower()
+
+                    if stored_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
                         detected_type = stored_type
                         is_primitive = True
-                    elif stored_type == "MESH":
-                        detected_type = "MESH"
+                    elif stored_type == GEOM_MESH:
+                        detected_type = GEOM_MESH
                     # 3. Fallback to heuristic
                     else:
                         try:

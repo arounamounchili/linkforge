@@ -56,7 +56,3 @@ class TestInertiaFormulas:
         assert inertia.ixx == pytest.approx(2.0)
         assert inertia.iyy == pytest.approx(2.0)
         assert inertia.izz == pytest.approx(2.0)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

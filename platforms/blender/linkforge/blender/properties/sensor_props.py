@@ -18,6 +18,12 @@ from bpy.props import (
 )
 from bpy.types import Context, PropertyGroup
 from linkforge_core.constants import (
+    CAM_FORMAT_BAYER_BGGR8,
+    CAM_FORMAT_BAYER_RGGB8,
+    CAM_FORMAT_GRAY8,
+    CAM_FORMAT_GRAY16,
+    CAM_FORMAT_RGB8,
+    CAM_FORMAT_RGB16,
     DEFAULT_CAMERA_FAR,
     DEFAULT_CAMERA_FORMAT,
     DEFAULT_CAMERA_FOV,
@@ -37,6 +43,17 @@ from linkforge_core.constants import (
     DEFAULT_SENSOR_TYPE,
     DEFAULT_SENSOR_VISUALIZE,
     DEFAULT_UPDATE_RATE,
+    NOISE_GAUSSIAN,
+    NOISE_GAUSSIAN_QUANTIZED,
+    PI,
+    SENSOR_CAMERA,
+    SENSOR_CONTACT,
+    SENSOR_DEPTH_CAMERA,
+    SENSOR_FORCE_TORQUE,
+    SENSOR_GPS,
+    SENSOR_GPU_LIDAR,
+    SENSOR_IMU,
+    SENSOR_LIDAR,
 )
 
 from ..utils.scene_utils import clear_stats_cache
@@ -46,6 +63,7 @@ if typing.TYPE_CHECKING:
 
 from linkforge_core.utils.string_utils import sanitize_name as sanitize_robot_name
 
+from ..constants import PROP_SENSOR
 from ..utils.property_helpers import find_property_owner, get_link_props
 
 
@@ -98,7 +116,7 @@ def update_sensor_hierarchy(self: SensorPropertyGroup, context: Context) -> None
     """
 
     # Find the sensor object that owns this property
-    sensor_obj = find_property_owner(context, self, "linkforge_sensor")
+    sensor_obj = find_property_owner(context, self, PROP_SENSOR)
     if sensor_obj is None or not self.is_robot_sensor:
         return
 
@@ -159,13 +177,14 @@ class SensorPropertyGroup(PropertyGroup):
         name="Sensor Type",
         description="Type of sensor",
         items=[
-            ("CAMERA", "Camera", "RGB camera sensor"),
-            ("DEPTH_CAMERA", "Depth Camera", "Depth/RGBD camera sensor"),
-            ("LIDAR", "LIDAR", "2D/3D laser scanner"),
-            ("IMU", "IMU", "Inertial measurement unit"),
-            ("GPS", "GPS", "Global positioning system"),
-            ("CONTACT", "Contact", "Contact sensor"),
-            ("FORCE_TORQUE", "Force/Torque", "Force-torque sensor"),
+            (SENSOR_CAMERA, "Camera", "RGB camera sensor"),
+            (SENSOR_DEPTH_CAMERA, "Depth Camera", "Depth/RGBD camera sensor"),
+            (SENSOR_LIDAR, "LIDAR", "2D/3D laser scanner"),
+            (SENSOR_GPU_LIDAR, "GPU LIDAR", "GPU-accelerated laser scanner"),
+            (SENSOR_IMU, "IMU", "Inertial measurement unit"),
+            (SENSOR_GPS, "GPS", "Global positioning system"),
+            (SENSOR_CONTACT, "Contact", "Contact sensor"),
+            (SENSOR_FORCE_TORQUE, "Force/Torque", "Force-torque sensor"),
         ],
         default=DEFAULT_SENSOR_TYPE,
     )
@@ -214,7 +233,7 @@ class SensorPropertyGroup(PropertyGroup):
         description="Camera horizontal field of view (displayed in degrees, stored as radians). Standard cameras support up to 180°",
         default=DEFAULT_CAMERA_FOV,
         min=0.1,
-        max=3.14159265359,  # π radians = 180° (maximum for pinhole camera model)
+        max=PI,  # π radians = 180° (maximum for pinhole camera model)
         precision=3,
         subtype="ANGLE",  # Blender displays this in degrees
     )
@@ -257,12 +276,12 @@ class SensorPropertyGroup(PropertyGroup):
         name="Image Format",
         description="Camera image pixel format",
         items=[
-            ("R8G8B8", "RGB8", "8-bit RGB color"),
-            ("R16G16B16", "RGB16", "16-bit RGB color"),
-            ("L8", "L8 (Grayscale)", "8-bit grayscale"),
-            ("L16", "L16 (Grayscale)", "16-bit grayscale"),
-            ("BAYER_RGGB8", "Bayer RGGB8", "8-bit Bayer pattern"),
-            ("BAYER_BGGR8", "Bayer BGGR8", "8-bit Bayer pattern"),
+            (CAM_FORMAT_RGB8, "RGB8", "8-bit RGB color"),
+            (CAM_FORMAT_RGB16, "RGB16", "16-bit RGB color"),
+            (CAM_FORMAT_GRAY8, "L8 (Grayscale)", "8-bit grayscale"),
+            (CAM_FORMAT_GRAY16, "L16 (Grayscale)", "16-bit grayscale"),
+            (CAM_FORMAT_BAYER_RGGB8, "Bayer RGGB8", "8-bit Bayer pattern"),
+            (CAM_FORMAT_BAYER_BGGR8, "Bayer BGGR8", "8-bit Bayer pattern"),
         ],
         default=DEFAULT_CAMERA_FORMAT,
     )
@@ -280,8 +299,8 @@ class SensorPropertyGroup(PropertyGroup):
         name="Horizontal Min Angle",
         description="Minimum horizontal scan angle (displayed in degrees, stored as radians)",
         default=DEFAULT_LIDAR_MIN_ANGLE,
-        min=-3.14159265359,  # -180°
-        max=3.14159265359,  # 180°
+        min=-PI,  # -180°
+        max=PI,  # 180°
         precision=3,
         subtype="ANGLE",  # Blender displays this in degrees
     )
@@ -290,8 +309,8 @@ class SensorPropertyGroup(PropertyGroup):
         name="Horizontal Max Angle",
         description="Maximum horizontal scan angle (displayed in degrees, stored as radians)",
         default=DEFAULT_LIDAR_MAX_ANGLE,
-        min=-3.14159265359,  # -180°
-        max=3.14159265359,  # 180°
+        min=-PI,  # -180°
+        max=PI,  # 180°
         precision=3,
         subtype="ANGLE",  # Blender displays this in degrees
     )
@@ -308,8 +327,8 @@ class SensorPropertyGroup(PropertyGroup):
         name="Vertical Min Angle",
         description="Minimum vertical scan angle (displayed in degrees, stored as radians)",
         default=DEFAULT_LIDAR_VERTICAL_MIN_ANGLE,
-        min=-3.14159265359,
-        max=3.14159265359,
+        min=-PI,
+        max=PI,
         precision=3,
         subtype="ANGLE",
     )
@@ -318,8 +337,8 @@ class SensorPropertyGroup(PropertyGroup):
         name="Vertical Max Angle",
         description="Maximum vertical scan angle (displayed in degrees, stored as radians)",
         default=DEFAULT_LIDAR_VERTICAL_MAX_ANGLE,
-        min=-3.14159265359,
-        max=3.14159265359,
+        min=-PI,
+        max=PI,
         precision=3,
         subtype="ANGLE",
     )
@@ -373,10 +392,10 @@ class SensorPropertyGroup(PropertyGroup):
         name="Noise Type",
         description="Type of noise model",
         items=[
-            ("gaussian", "Gaussian", "Gaussian noise"),
-            ("gaussian_quantized", "Gaussian Quantized", "Quantized Gaussian noise"),
+            (NOISE_GAUSSIAN, "Gaussian", "Gaussian noise"),
+            (NOISE_GAUSSIAN_QUANTIZED, "Gaussian Quantized", "Quantized Gaussian noise"),
         ],
-        default="gaussian",
+        default=NOISE_GAUSSIAN,
     )
 
     noise_mean: FloatProperty(  # type: ignore[valid-type]
@@ -425,7 +444,7 @@ def register() -> None:
         bpy.utils.unregister_class(SensorPropertyGroup)
         bpy.utils.register_class(SensorPropertyGroup)
 
-    prop_name = "linkforge_sensor"
+    prop_name = PROP_SENSOR
     setattr(
         bpy.types.Object,
         prop_name,
@@ -438,7 +457,7 @@ def unregister() -> None:
     import contextlib
 
     with contextlib.suppress(AttributeError):
-        delattr(bpy.types.Object, "linkforge_sensor")
+        delattr(bpy.types.Object, PROP_SENSOR)
 
     with contextlib.suppress(RuntimeError):
         bpy.utils.unregister_class(SensorPropertyGroup)

@@ -164,7 +164,3 @@ class TestURDFRobustness:
         """
         robot = parser.parse_string(xml)
         assert len(robot.links) == 1
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

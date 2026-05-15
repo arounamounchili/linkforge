@@ -12,21 +12,21 @@ Core Components:
 
 from __future__ import annotations
 
-import math
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 
+from ..constants import GEOM_BOX, GEOM_CYLINDER, GEOM_MESH, GEOM_SPHERE, PI
 from ..exceptions import RobotPhysicsError, ValidationErrorCode
 
 
 class GeometryType(Enum):
     """Standard geometry primitives."""
 
-    BOX = "box"
-    CYLINDER = "cylinder"
-    SPHERE = "sphere"
-    MESH = "mesh"
+    BOX = GEOM_BOX
+    CYLINDER = GEOM_CYLINDER
+    SPHERE = GEOM_SPHERE
+    MESH = GEOM_MESH
 
 
 @dataclass(frozen=True)
@@ -128,8 +128,8 @@ class Cylinder:
         return GeometryType.CYLINDER
 
     def volume(self) -> float:
-        """Calculate volume."""
-        return math.pi * self.radius**2 * self.length
+        """Calculate volume of the cylinder."""
+        return PI * (self.radius**2) * self.length
 
 
 @dataclass(frozen=True)
@@ -153,8 +153,8 @@ class Sphere:
         return GeometryType.SPHERE
 
     def volume(self) -> float:
-        """Calculate volume."""
-        return (4.0 / 3.0) * math.pi * self.radius**3
+        """Calculate volume of the sphere."""
+        return (4.0 / 3.0) * PI * (self.radius**3)
 
 
 @dataclass(frozen=True)

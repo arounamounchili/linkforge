@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import math
 
+from ..constants import EPSILON
 
-def clean_float(value: float, epsilon: float = 1e-10) -> float:
+
+def clean_float(value: float, epsilon: float = EPSILON) -> float:
     """Clean up floating point values to avoid -0.0 and very small numbers.
 
     Args:
@@ -50,7 +52,7 @@ def normalize_vector(x: float, y: float, z: float) -> tuple[float, float, float]
         Normalized components (x, y, z)
     """
     magnitude = math.sqrt(x**2 + y**2 + z**2)
-    if magnitude < 1e-10:
+    if magnitude < EPSILON:
         return (0.0, 0.0, 0.0)
     return (x / magnitude, y / magnitude, z / magnitude)
 

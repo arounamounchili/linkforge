@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from linkforge_core.models import (
     Box,
     Cylinder,
@@ -248,7 +247,3 @@ def test_ros2_control_roundtrip() -> None:
     robot1 = URDFParser().parse_string(urdf)
     robot2 = perform_urdf_roundtrip(robot1)
     assert_robots_equal(robot1, robot2)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

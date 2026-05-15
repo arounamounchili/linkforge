@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from ..constants import SRDF_REASON_ADJACENT, SRDF_VJOIN_FIXED
 from ..models.srdf import (
     Chain,
     CollisionPair,
@@ -134,7 +135,11 @@ class SemanticBuilder:
         return self._builder
 
     def virtual_joint(
-        self, name: str, child_link: str, parent_frame: str = "world", joint_type: str = "fixed"
+        self,
+        name: str,
+        child_link: str,
+        parent_frame: str = "world",
+        joint_type: str = SRDF_VJOIN_FIXED,
     ) -> IComposer:
         """Define a virtual joint connecting the robot to the world frame.
 
@@ -156,7 +161,9 @@ class SemanticBuilder:
         )
         return self._builder
 
-    def disable_collisions(self, link1: str, link2: str, reason: str = "Adjacent") -> IComposer:
+    def disable_collisions(
+        self, link1: str, link2: str, reason: str = SRDF_REASON_ADJACENT
+    ) -> IComposer:
         """Instruct MoveIt to ignore collisions between two specific links.
 
         Args:

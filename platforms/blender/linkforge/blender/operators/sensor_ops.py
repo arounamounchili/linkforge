@@ -8,7 +8,7 @@ import typing
 import bpy
 from linkforge_core.constants import DEFAULT_SENSOR_TYPE
 
-from ..constants import DEFAULT_SENSOR_GIZMO_SIZE, SUFFIX_SENSOR
+from ..constants import DEFAULT_SENSOR_GIZMO_SIZE, PROP_LINK, SUFFIX_SENSOR
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
@@ -61,7 +61,7 @@ class LINKFORGE_OT_create_sensor(Operator):
         obj = context.active_object
 
         if not obj or not (
-            hasattr(obj, "linkforge") or (obj.parent and hasattr(obj.parent, "linkforge"))
+            hasattr(obj, PROP_LINK) or (obj.parent and hasattr(obj.parent, PROP_LINK))
         ):
             return {"CANCELLED"}
 

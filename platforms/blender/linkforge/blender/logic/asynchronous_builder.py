@@ -21,6 +21,7 @@ from ..adapters.core_to_blender import (
     create_sensor_object,
     setup_scene_for_robot,
 )
+from ..constants import PROP_ROBOT
 from ..utils.joint_utils import resolve_mimic_joints
 
 logger = get_logger(__name__)
@@ -94,8 +95,8 @@ class AsynchronousRobotBuilder:
 
         # Setup background state (store scene locally to avoid context sensitivity)
         self.active_scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
-        if self.active_scene and hasattr(self.active_scene, "linkforge"):
-            lp = self.active_scene.linkforge  # pyright: ignore[reportAttributeAccessIssue]
+        if self.active_scene and hasattr(self.active_scene, PROP_ROBOT):
+            lp = getattr(self.active_scene, PROP_ROBOT)  # pyright: ignore[reportAttributeAccessIssue]
             lp.is_importing = True
             lp.abort_import = False
             lp.import_status = "Starting..."
@@ -117,7 +118,7 @@ class AsynchronousRobotBuilder:
         )
 
         # Use the stored scene to check for cancellation, immune to context changes
-        if scene and hasattr(scene, "linkforge") and scene.linkforge.abort_import:  # pyright: ignore[reportAttributeAccessIssue]
+        if scene and hasattr(scene, PROP_ROBOT) and getattr(scene, PROP_ROBOT).abort_import:  # pyright: ignore[reportAttributeAccessIssue]
             logger.warning("Import aborted by user.")
             self.error = "Import cancelled by user."
             self.finish()
@@ -145,8 +146,8 @@ class AsynchronousRobotBuilder:
                 self.completed_tasks += 1
 
             # Update UI
-            if current_status and scene and hasattr(scene, "linkforge"):
-                scene.linkforge.import_status = current_status  # pyright: ignore[reportAttributeAccessIssue]
+            if current_status and scene and hasattr(scene, PROP_ROBOT):
+                getattr(scene, PROP_ROBOT).import_status = current_status  # pyright: ignore[reportAttributeAccessIssue]
 
             if self.context.window_manager:
                 self.context.window_manager.progress_update(self.completed_tasks)
@@ -201,13 +202,14 @@ class AsynchronousRobotBuilder:
 
                 # Sync collision visibility
                 scene = self.context.scene
-                if scene and hasattr(scene, "linkforge"):
+                if scene and hasattr(scene, PROP_ROBOT):
                     # Force update collision visibility toggle
-                    scene.linkforge.show_collisions = scene.linkforge.show_collisions  # pyright: ignore[reportAttributeAccessIssue]
+                    lp_tmp = getattr(scene, PROP_ROBOT)
+                    lp_tmp.show_collisions = lp_tmp.show_collisions  # pyright: ignore[reportAttributeAccessIssue]
 
                     # Auto-link ROS 2 Control joint pointers to newly created objects
                     # Match by persistent robot model identity (source_name_stored)
-                    lp = scene.linkforge
+                    lp = getattr(scene, PROP_ROBOT)
                     if lp.use_ros2_control:
                         for rc_joint in lp.ros2_control_joints:
                             # Find the joint object in the current import set
@@ -229,8 +231,8 @@ class AsynchronousRobotBuilder:
 
         # Clear background state
         scene = self.context.scene or (bpy.data.scenes[0] if bpy.data.scenes else None)
-        if scene and hasattr(scene, "linkforge"):
-            lp = scene.linkforge  # pyright: ignore[reportAttributeAccessIssue]
+        if scene and hasattr(scene, PROP_ROBOT):
+            lp = getattr(scene, PROP_ROBOT)  # pyright: ignore[reportAttributeAccessIssue]
             lp.is_importing = False
             lp.import_status = ""
             lp.abort_import = False

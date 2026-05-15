@@ -6,6 +6,7 @@ import contextlib
 import typing
 
 import bpy
+from linkforge_core.constants import JOINT_REVOLUTE
 
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard
@@ -114,7 +115,7 @@ class LINKFORGE_OT_create_joint(Operator):
             joint_props.joint_name = sanitize_robot_name(joint_empty.name)
 
             # Set default joint joint_type
-            joint_props.joint_type = "REVOLUTE"
+            joint_props.joint_type = JOINT_REVOLUTE
 
             # Enable limits by default for REVOLUTE joints (they typically need them)
             # User can disable if not needed

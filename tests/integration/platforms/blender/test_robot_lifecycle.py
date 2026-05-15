@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import bpy
-import pytest
 from linkforge.blender.operators.link_ops import calculate_inertia_for_link
 
 from tests.blender_test_utils import (
@@ -81,7 +80,3 @@ class TestJointIntegration:
 
         assert j_props.parent_link == p
         assert j_props.child_link == c
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

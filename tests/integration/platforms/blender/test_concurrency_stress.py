@@ -10,7 +10,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import bpy
-import pytest
 from linkforge.blender.adapters.context import BlenderContext
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
 from linkforge_core.composer import RobotBuilder
@@ -48,7 +47,3 @@ def test_rapid_collection_cleanup_stress():
             bpy.context.view_layer.update()
 
     # No crash is a pass
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

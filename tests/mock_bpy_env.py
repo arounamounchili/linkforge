@@ -1071,7 +1071,7 @@ class MockObject(MockPropertyGroup):
     linkforge_sensor: MockPropertyGroup
     linkforge_transmission: MockPropertyGroup
     linkforge_validation: MockPropertyGroup
-    linkforge_scene: MockPropertyGroup
+    linkforge_robot: MockPropertyGroup
 
     def __init__(self, name="Object", data=None, **kwargs):
         super().__init__(**kwargs)
@@ -1113,9 +1113,9 @@ class MockObject(MockPropertyGroup):
             self.linkforge.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
             self.linkforge.ros2_control_parameters = MockCollection(prop_type=MockPropertyGroup)
 
-        if not any("linkforge_scene" in c.__dict__ for c in type(self).__mro__):
-            self.linkforge_scene = MockPropertyGroup(name="linkforge_scene")
-            self.linkforge_scene.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
+        if not any("linkforge_robot" in c.__dict__ for c in type(self).__mro__):
+            self.linkforge_robot = MockPropertyGroup(name="linkforge_robot")
+            self.linkforge_robot.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
 
         if not any("linkforge_joint" in c.__dict__ for c in type(self).__mro__):
             self.linkforge_joint = MockPropertyGroup(name="linkforge_joint")
@@ -1366,7 +1366,7 @@ class MockScene(MockPropertyGroup):
     """Mock for bpy.types.Scene."""
 
     linkforge: MockPropertyGroup
-    linkforge_scene: MockPropertyGroup
+    linkforge_robot: MockPropertyGroup
     linkforge_validation: MockPropertyGroup
 
     def __init__(self, name="Scene", **kwargs):
@@ -1393,7 +1393,7 @@ class MockScene(MockPropertyGroup):
         self.linkforge.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
         self.linkforge.ros2_control_parameters = MockCollection(prop_type=MockPropertyGroup)
 
-        self.linkforge_scene = self.linkforge
+        self.linkforge_robot = self.linkforge
         self.linkforge_validation = MockPropertyGroup(name="linkforge_validation")
 
 
