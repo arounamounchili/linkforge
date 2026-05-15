@@ -17,6 +17,7 @@ if not typing.TYPE_CHECKING:
     from mathutils import Matrix
 
 
+from linkforge_core import Joint, Link, Robot
 from linkforge_core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
@@ -46,11 +47,8 @@ from linkforge_core.models import (
     Color,
     Cylinder,
     Geometry,
-    Joint,
-    Link,
     LinkPhysics,
     Mesh,
-    Robot,
     Sphere,
 )
 

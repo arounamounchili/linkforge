@@ -11,9 +11,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from linkforge_core.composer import RobotBuilder
-    from linkforge_core.models import Robot
-    from linkforge_core.validation.result import ValidationResult
+    from linkforge_core import Robot, RobotBuilder, ValidationResult
 
 try:
     import numpy as np  # type: ignore[import-not-found]
@@ -22,7 +20,14 @@ except ImportError:
 
 
 import bpy
-from linkforge_core.composer import RobotBuilder
+from linkforge_core import (
+    Robot,
+    RobotBuilder,
+    RobotValidationError,
+    Transform,
+    ValidationErrorCode,
+    ValidationResult,
+)
 from linkforge_core.constants import (
     DEFAULT_MATERIAL_RGBA,
     GEOM_BOX,
@@ -31,7 +36,6 @@ from linkforge_core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
-from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 from linkforge_core.logging_config import get_logger
 from linkforge_core.models import (
     Box,
@@ -40,14 +44,11 @@ from linkforge_core.models import (
     Geometry,
     Material,
     Mesh,
-    Robot,
     Sphere,
-    Transform,
     Vector3,
 )
 from linkforge_core.utils.math_utils import clean_float
 from linkforge_core.utils.string_utils import sanitize_name
-from linkforge_core.validation.result import ValidationResult
 from mathutils import Matrix
 
 from ..constants import (

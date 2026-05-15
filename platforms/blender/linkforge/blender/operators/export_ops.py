@@ -79,7 +79,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the export."""
         # Import here to avoid circular dependencies
-        from linkforge_core.generators import URDFGenerator, XACROGenerator
+        from linkforge_core import URDFGenerator, XACROGenerator
 
         from ..adapters.blender_to_core import scene_to_robot
         from ..adapters.context import BlenderContext
@@ -110,7 +110,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         logger.info(f"Exporting robot to: {output_path}")
         logger.debug(f"Mesh directory: {meshes_dir}")
 
-        from linkforge_core import LinkForgeError, RobotGeneratorError
+        from linkforge_core import LinkForgeError, RobotGeneratorError, RobotValidator
 
         # Validate if requested
         if robot_props.validate_before_export:
@@ -121,8 +121,6 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
             except Exception as e:
                 self.report({"ERROR"}, f"Failed to build robot model: {e}")
                 return {"CANCELLED"}
-
-            from linkforge_core.validation import RobotValidator
 
             validator = RobotValidator()
             result = validator.validate(robot_dry_run)
@@ -201,7 +199,7 @@ class LINKFORGE_OT_validate_robot(Operator):
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute validation."""
-        from linkforge_core.validation import RobotValidator
+        from linkforge_core import RobotValidator
 
         # Clear previous results
         if not context.window_manager or not hasattr(context.window_manager, PROP_VALIDATION):

@@ -11,8 +11,8 @@ import typing
 from pathlib import Path
 
 import bpy
+from linkforge_core import Robot
 from linkforge_core.logging_config import get_logger
-from linkforge_core.models import Robot
 
 from ..adapters.context import IBlenderContext
 from ..adapters.core_to_blender import (

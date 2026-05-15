@@ -31,10 +31,10 @@ from .exceptions import (
     XacroDetectedError,
 )
 from .generators import SRDFGenerator, URDFGenerator, XACROGenerator
-from .models import Joint, Link, Robot, Transform
+from .models import Inertial, InertiaTensor, Joint, Link, Robot, Transform
 from .parsers import SRDFParser, URDFParser, XACROParser
 from .utils.math_utils import format_float, format_vector
-from .validation import RobotValidator
+from .validation import RobotValidator, Severity, ValidationResult
 
 __all__ = [
     "models",
@@ -46,6 +46,8 @@ __all__ = [
     "Link",
     "Joint",
     "Transform",
+    "InertiaTensor",
+    "Inertial",
     "RobotBuilder",
     "RobotValidator",
     "URDFParser",
@@ -64,5 +66,7 @@ __all__ = [
     "RobotValidationError",
     "RobotMathError",
     "ValidationErrorCode",
+    "ValidationResult",
+    "Severity",
     "XacroDetectedError",
 ]

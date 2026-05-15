@@ -6,6 +6,7 @@ import contextlib
 import time
 import typing
 
+from linkforge_core import InertiaTensor
 from linkforge_core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
@@ -13,7 +14,6 @@ from linkforge_core.constants import (
     GEOM_SPHERE,
 )
 from linkforge_core.logging_config import get_logger
-from linkforge_core.models.link import InertiaTensor
 
 from ..constants import (
     DEFAULT_LINK_GIZMO_SIZE,

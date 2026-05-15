@@ -11,12 +11,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from linkforge_core.composer.link_builder import LinkBuilder
-    from linkforge_core.composer.robot_builder import RobotBuilder
+    from linkforge_core import LinkBuilder, RobotBuilder, ValidationResult
     from linkforge_core.models.ros2_control import Ros2Control
     from linkforge_core.models.sensor import Sensor
     from linkforge_core.models.transmission import Transmission
-    from linkforge_core.validation.result import ValidationResult
 
     from .context import IBlenderContext
 
@@ -102,7 +100,7 @@ class LinkTranslator(ITranslator):
         **_kwargs: Any,
     ) -> LinkBuilder | None:
         """Translate a Blender link to a Core Link using RobotBuilder."""
-        from linkforge_core.models.link import InertiaTensor
+        from linkforge_core import InertiaTensor
         from linkforge_core.utils.string_utils import sanitize_name
 
         from .blender_to_core import (
@@ -295,8 +293,8 @@ class JointTranslator(ITranslator):
         **_kwargs: Any,
     ) -> None:
         """Translate a Blender joint to a Core Joint using the LinkBuilder."""
+        from linkforge_core import RobotValidationError, ValidationErrorCode
         from linkforge_core.constants import DEFAULT_AXIS_XYZ, SYLVESTER_TOLERANCE_EPSILON
-        from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
         from linkforge_core.models.joint import JointType
 
         from .blender_to_core import matrix_to_transform
@@ -447,7 +445,7 @@ class SensorTranslator(ITranslator):
                 builder.robot.add_sensor(sensor)
         except Exception as e:
             if validation_result:
-                from linkforge_core.exceptions import ValidationErrorCode
+                from linkforge_core import ValidationErrorCode
 
                 validation_result.add_error(
                     title=f"Sensor translation failed: {obj.name}",
@@ -468,7 +466,7 @@ class SensorTranslator(ITranslator):
 
     def _blender_sensor_to_core(self, obj: Any) -> Sensor | None:
         """Convert a Blender sensor Empty and its properties to a Core Sensor model."""
-        from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
+        from linkforge_core import RobotValidationError, ValidationErrorCode
         from linkforge_core.models.gazebo import GazeboPlugin
         from linkforge_core.models.sensor import (
             CameraInfo,
@@ -635,7 +633,7 @@ class Ros2ControlTranslator(ITranslator):
                 builder.robot.add_ros2_control(control)
         except Exception as e:
             if validation_result:
-                from linkforge_core.exceptions import ValidationErrorCode
+                from linkforge_core import ValidationErrorCode
 
                 validation_result.add_error(
                     title="ROS2 Control translation failed",
@@ -755,7 +753,7 @@ class TransmissionTranslator(ITranslator):
                 builder.robot.add_transmission(transmission)
         except Exception as e:
             if validation_result:
-                from linkforge_core.exceptions import ValidationErrorCode
+                from linkforge_core import ValidationErrorCode
 
                 validation_result.add_error(
                     title=f"Transmission translation failed: {obj.name}",
