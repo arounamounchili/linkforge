@@ -1,8 +1,7 @@
 from unittest.mock import PropertyMock, patch
 
 import pytest
-from linkforge_core.exceptions import RobotModelError, RobotValidationError
-from linkforge_core.models import (
+from linkforge_core import (
     CameraInfo,
     GazeboElement,
     Inertial,
@@ -13,18 +12,20 @@ from linkforge_core.models import (
     JointType,
     Link,
     Robot,
+    RobotModelError,
+    RobotValidationError,
+    RobotValidator,
     Ros2Control,
+    Ros2ControlJoint,
+    Sensor,
     SensorType,
-    Vector3,
-)
-from linkforge_core.models.sensor import Sensor
-from linkforge_core.models.transmission import (
     Transmission,
     TransmissionActuator,
     TransmissionJoint,
     TransmissionType,
+    ValidationErrorCode,
+    Vector3,
 )
-from linkforge_core.validation import RobotValidator
 
 
 class TestRobot:
@@ -269,8 +270,6 @@ class TestRobot:
         )
         child = Link(name="child", inertial=inertial)
 
-        from linkforge_core.models import JointLimits
-
         # Revolute joint (1 DOF)
         j1 = Joint(
             name="j1",
@@ -443,7 +442,6 @@ class TestRobot:
 
     def test_root_link_empty(self) -> None:
         robot = Robot(name="test")
-        from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 
         with pytest.raises(RobotValidationError) as exc:
             _ = robot.root_link
@@ -490,8 +488,6 @@ class TestRobot:
         robot = Robot(name="test")
         l1 = Link(name="l1")
         robot.add_link(l1)
-
-        from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
 
         error = RobotValidationError(ValidationErrorCode.NO_ROOT, "No root link found")
         with patch.object(Robot, "root_link", new_callable=PropertyMock, side_effect=error):
@@ -738,8 +734,6 @@ class TestRobot:
         robot.add_joint(Joint(name="joint2", parent="link2", child="link1", type=JointType.FIXED))
 
         # Setup Transmission and Ros2Control
-        from linkforge_core.models.ros2_control import Ros2Control
-        from linkforge_core.models.transmission import Transmission
 
         # Use valid simple transmission
         trans = Transmission.create_simple(
@@ -775,7 +769,6 @@ class TestRobot:
             robot.add_ros2_control(rc)
 
         # Test Joint Existence Validation in ROS2 control
-        from linkforge_core.models.ros2_control import Ros2ControlJoint
 
         rc_invalid = Ros2Control(
             name="invalid_ctrl",

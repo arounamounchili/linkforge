@@ -9,10 +9,9 @@ from linkforge.blender.operators.export_ops import (
     LINKFORGE_OT_export_robot_model,
     LINKFORGE_OT_validate_robot,
 )
+from linkforge_core import ValidationResult
 
-from tests.blender_test_utils import (
-    safe_get_linkforge_scene,
-)
+from tests.blender_test_utils import safe_get_linkforge_scene
 
 # Robot Validation Operator
 
@@ -27,7 +26,6 @@ class TestRobotValidation:
         val_res.is_valid = True
         val_res.has_warnings = False
         mocker.patch("linkforge_core.validation.RobotValidator.validate", return_value=val_res)
-        from linkforge_core.validation import ValidationResult
 
         val_res_obj = ValidationResult()
 
@@ -49,7 +47,6 @@ class TestRobotValidation:
         val_res.error_count = 1
         val_res.errors = [MagicMock(message="Test Error")]
         mocker.patch("linkforge_core.validation.RobotValidator.validate", return_value=val_res)
-        from linkforge_core.validation import ValidationResult
 
         mocker.patch(
             "linkforge.blender.adapters.blender_to_core.scene_to_robot",
@@ -74,8 +71,6 @@ class TestRobotExport:
         mock_self = MagicMock()
         mock_self.filepath = "/tmp/robot.xacro"  # Wrong extension
         mock_self.report = MagicMock()
-
-        from linkforge_core.validation import ValidationResult
 
         mocker.patch(
             "linkforge.blender.adapters.blender_to_core.scene_to_robot",

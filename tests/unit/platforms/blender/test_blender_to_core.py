@@ -35,22 +35,23 @@ from linkforge.blender.adapters.translator import (
     SensorTranslator,
     TransmissionTranslator,
 )
-from linkforge_core.composer import RobotBuilder
-from linkforge_core.constants import (
+from linkforge_core import (
     HW_IF_VELOCITY,
     TRANS_CUSTOM,
     TRANS_DIFFERENTIAL,
     TRANS_SIMPLE,
-)
-from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
-from linkforge_core.models import (
     Box,
     Cylinder,
+    GeometryType,
+    Joint,
     JointType,
     Link,
     Mesh,
+    RobotBuilder,
+    RobotValidationError,
     SensorType,
     Sphere,
+    ValidationErrorCode,
 )
 from mathutils import Euler, Matrix
 
@@ -232,7 +233,6 @@ def test_blender_sensor_to_core_lidar(scene, blender_context) -> None:
 
     # Convert
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("base_link"))  # Register required link
     SensorTranslator().translate(sensor_obj, builder, blender_context)
@@ -614,7 +614,6 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     props.visualize = True
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("sensor_link"))
     SensorTranslator().translate(imu_obj, builder, blender_context)
@@ -856,7 +855,6 @@ def test_blender_link_to_core_complex(scene, blender_context) -> None:
 
 def test_blender_link_to_core_geometry_and_material(scene, blender_context) -> None:
     """Verify detailed geometry and material conversion."""
-    from linkforge_core.models import GeometryType
 
     # Link Setup
     link_obj = create_test_object("material_link", None, scene)
@@ -952,7 +950,6 @@ def test_blender_sensor_contact(scene, blender_context) -> None:
     safe_get_sensor(sensor_obj).contact_collision = "collision_link"
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("base_link"))
     builder.robot.add_link(Link("collision_link"))  # Register required link
@@ -980,7 +977,6 @@ def test_blender_sensor_force_torque(scene, blender_context) -> None:
     safe_get_sensor(sensor_obj).sensor_type = "FORCE_TORQUE"
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("base_link"))  # Register required link
     SensorTranslator().translate(sensor_obj, builder, blender_context)
@@ -1009,7 +1005,6 @@ def test_blender_sensor_with_noise(scene, blender_context) -> None:
     safe_get_sensor(sensor_obj).noise_stddev = 0.05
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("base_link"))  # Register required link
     SensorTranslator().translate(sensor_obj, builder, blender_context)
@@ -1040,7 +1035,6 @@ def test_blender_sensor_with_plugin(scene, blender_context) -> None:
     safe_get_sensor(sensor_obj).plugin_filename = "libmy_camera.so"
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("base_link"))  # Register required link
     SensorTranslator().translate(sensor_obj, builder, blender_context)
@@ -1058,7 +1052,6 @@ def test_blender_sensor_not_robot_sensor(scene, blender_context) -> None:
     safe_get_sensor(sensor_obj).is_robot_sensor = False
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("base_link"))
     SensorTranslator().translate(sensor_obj, builder, blender_context)
@@ -1166,7 +1159,6 @@ def test_blender_ros2_control_joint_obj_name_sync(clean_scene, scene, blender_co
     from linkforge.blender.adapters.translator import Ros2ControlTranslator
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.joint import Joint, JointType
 
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
@@ -1193,7 +1185,6 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     safe_get_sensor(gps_obj).use_noise = True
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("L"))  # Register required link
     SensorTranslator().translate(gps_obj, builder, blender_context)
@@ -1217,7 +1208,6 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     safe_get_sensor(lidar_obj).lidar_vertical_max_angle = 0.1
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("L"))  # Register required link
     SensorTranslator().translate(lidar_obj, builder, blender_context)
@@ -1285,8 +1275,6 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
     safe_get_transmission(t_simple).hardware_interface = HW_IF_VELOCITY
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.joint import Joint, JointType
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
@@ -1311,8 +1299,6 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
     safe_get_transmission(t_diff).actuator2_name = "act2"
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.joint import Joint, JointType
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
@@ -1400,7 +1386,6 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     safe_get_sensor(cam).camera_horizontal_fov = 1.05
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("L"))  # Register required link
     SensorTranslator().translate(cam, builder, blender_context)
@@ -1421,7 +1406,6 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     safe_get_sensor(gps).noise_stddev = 0.01
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("L"))  # Register required link
     SensorTranslator().translate(gps, builder, blender_context)
@@ -1440,7 +1424,6 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     safe_get_sensor(con).contact_collision = "some_link_geom"
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("L"))  # Register required link
     SensorTranslator().translate(con, builder, blender_context)
@@ -1557,8 +1540,6 @@ def test_blender_transmission_advanced(clean_scene, scene, blender_context) -> N
     safe_get_transmission(t).actuator_name = "custom_motor"
 
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.joint import Joint, JointType
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
@@ -1812,7 +1793,6 @@ def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> 
     from linkforge.blender.adapters.blender_to_core import (
         get_object_geometry,
     )
-    from linkforge_core.models.geometry import Box
 
     # blender_link_to_core_with_origin None
     assert translate_link_to_model(None, blender_context) is None
@@ -1881,8 +1861,6 @@ def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> 
     t = create_test_object("T", None, scene)
     safe_get_transmission(t).is_robot_transmission = True
     builder = RobotBuilder("Robot")
-    from linkforge_core.models.joint import Joint, JointType
-    from linkforge_core.models.link import Link
 
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))

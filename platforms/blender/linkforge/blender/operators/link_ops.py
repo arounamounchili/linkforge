@@ -6,12 +6,13 @@ import contextlib
 import time
 import typing
 
-from linkforge_core import InertiaTensor, get_logger
-from linkforge_core.constants import (
+from linkforge_core import (
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,
     GEOM_SPHERE,
+    InertiaTensor,
+    get_logger,
 )
 
 from ..constants import (

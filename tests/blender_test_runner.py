@@ -9,8 +9,6 @@ import site
 import subprocess
 import sys
 
-import pytest
-
 
 def setup_environment():
     """Setup paths and dependencies for the test run."""
@@ -53,6 +51,8 @@ def setup_environment():
 
 def run_tests():
     """Execute pytest within the Blender environment."""
+    import pytest
+
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     test_dirs = [
         os.path.join(project_root, "tests", "integration", "platforms", "blender"),

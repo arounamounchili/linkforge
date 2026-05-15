@@ -18,291 +18,272 @@ from __future__ import annotations
 __version__ = "1.3.0"  # x-release-please-version
 
 from . import composer, generators, models, parsers, physics, validation
+
+# 2. Base Interfaces and Resolvers
 from .base import (
-    FileSystemResolver as FileSystemResolver,
+    FileSystemResolver,
+    IResourceResolver,
+    NetworkResolver,
+    RobotGenerator,
+    RobotParser,
 )
-from .base import (
-    IResourceResolver as IResourceResolver,
+
+# 8. Composer API (Helpers)
+from .composer import (
+    LinkBuilder,
+    RobotBuilder,
+    box,
+    cylinder,
+    mesh,
+    sphere,
 )
-from .base import (
-    RobotGenerator as RobotGenerator,
+
+# 1. Constants and Numerical Infrastructure
+from .constants import (
+    CAM_FORMAT_BAYER_BGGR8,
+    CAM_FORMAT_BAYER_RGGB8,
+    CAM_FORMAT_GRAY8,
+    CAM_FORMAT_GRAY16,
+    CAM_FORMAT_RGB8,
+    CAM_FORMAT_RGB16,
+    CONTROL_TYPE_ACTUATOR,
+    CONTROL_TYPE_SENSOR,
+    CONTROL_TYPE_SYSTEM,
+    DEFAULT_AXIS_XYZ,
+    DEFAULT_AXIS_XYZ_STR,
+    DEFAULT_CAMERA_FAR,
+    DEFAULT_CAMERA_FORMAT,
+    DEFAULT_CAMERA_FOV,
+    DEFAULT_CAMERA_HEIGHT,
+    DEFAULT_CAMERA_NEAR,
+    DEFAULT_CAMERA_WIDTH,
+    DEFAULT_CONTACT_KD,
+    DEFAULT_CONTACT_KP,
+    DEFAULT_FRICTION_MU,
+    DEFAULT_FRICTION_MU2,
+    DEFAULT_GRAVITY,
+    DEFAULT_JOINT_DAMPING,
+    DEFAULT_JOINT_EFFORT,
+    DEFAULT_JOINT_FRICTION,
+    DEFAULT_JOINT_TYPE,
+    DEFAULT_JOINT_VELOCITY,
+    DEFAULT_LIDAR_MAX_ANGLE,
+    DEFAULT_LIDAR_MIN_ANGLE,
+    DEFAULT_LIDAR_RANGE_MAX,
+    DEFAULT_LIDAR_RANGE_MIN,
+    DEFAULT_LIDAR_RANGE_RESOLUTION,
+    DEFAULT_LIDAR_SAMPLES,
+    DEFAULT_LIDAR_VERTICAL_MAX_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_MIN_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_SAMPLES,
+    DEFAULT_LINK_MASS,
+    DEFAULT_MATERIAL_RGBA,
+    DEFAULT_MATERIAL_RGBA_STR,
+    DEFAULT_SELF_COLLIDE,
+    DEFAULT_SENSOR_ALWAYS_ON,
+    DEFAULT_SENSOR_TYPE,
+    DEFAULT_SENSOR_VISUALIZE,
+    DEFAULT_UPDATE_RATE,
+    EPSILON,
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_EPSILON,
+    GEOM_MESH,
+    GEOM_SPHERE,
+    HW_IF_EFFORT,
+    HW_IF_POSITION,
+    HW_IF_VELOCITY,
+    JOINT_CONTINUOUS,
+    JOINT_FIXED,
+    JOINT_FLOATING,
+    JOINT_PLANAR,
+    JOINT_PRISMATIC,
+    JOINT_REVOLUTE,
+    MAX_REASONABLE_FLOAT,
+    MAX_REASONABLE_INT,
+    MAX_XML_DEPTH,
+    MIN_REASONABLE_INERTIA,
+    MIN_REASONABLE_MASS,
+    NOISE_GAUSSIAN,
+    NOISE_GAUSSIAN_QUANTIZED,
+    PI,
+    ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
+    ROS2_CONTROL_DEFAULT_PLUGIN,
+    SENSOR_CAMERA,
+    SENSOR_CONTACT,
+    SENSOR_DEPTH_CAMERA,
+    SENSOR_FORCE_TORQUE,
+    SENSOR_GPS,
+    SENSOR_GPU_LIDAR,
+    SENSOR_IMU,
+    SENSOR_LIDAR,
+    SRDF_VJOIN_FIXED,
+    SRDF_VJOIN_FLOATING,
+    SRDF_VJOIN_PLANAR,
+    SYLVESTER_TOLERANCE_EPSILON,
+    TRANS_CUSTOM,
+    TRANS_DIFFERENTIAL,
+    TRANS_FOUR_BAR,
+    TRANS_SIMPLE,
 )
-from .base import (
-    RobotParser as RobotParser,
-)
-from .composer import LinkBuilder as LinkBuilder
-from .composer import RobotBuilder as RobotBuilder
+
+# 3. Exceptions and Error Codes
 from .exceptions import (
-    LinkForgeError as LinkForgeError,
+    LinkForgeError,
+    RobotGeneratorError,
+    RobotMathError,
+    RobotModelError,
+    RobotParserError,
+    RobotParserIOError,
+    RobotPhysicsError,
+    RobotSecurityError,
+    RobotValidationError,
+    RobotXacroError,
+    RobotXacroExpressionError,
+    RobotXacroRecursionError,
+    ValidationErrorCode,
+    XacroDetectedError,
 )
-from .exceptions import (
-    RobotGeneratorError as RobotGeneratorError,
-)
-from .exceptions import (
-    RobotMathError as RobotMathError,
-)
-from .exceptions import (
-    RobotModelError as RobotModelError,
-)
-from .exceptions import (
-    RobotParserError as RobotParserError,
-)
-from .exceptions import (
-    RobotPhysicsError as RobotPhysicsError,
-)
-from .exceptions import (
-    RobotSecurityError as RobotSecurityError,
-)
-from .exceptions import (
-    RobotValidationError as RobotValidationError,
-)
-from .exceptions import (
-    RobotXacroError as RobotXacroError,
-)
-from .exceptions import (
-    RobotXacroExpressionError as RobotXacroExpressionError,
-)
-from .exceptions import (
-    RobotXacroRecursionError as RobotXacroRecursionError,
-)
-from .exceptions import (
-    ValidationErrorCode as ValidationErrorCode,
-)
-from .exceptions import (
-    XacroDetectedError as XacroDetectedError,
-)
+
+# 5. Parsers and Generators
 from .generators import (
-    SRDFGenerator as SRDFGenerator,
+    RobotXMLGenerator,
+    SRDFGenerator,
+    URDFGenerator,
+    XACROGenerator,
 )
-from .generators import (
-    URDFGenerator as URDFGenerator,
-)
-from .generators import (
-    XACROGenerator as XACROGenerator,
-)
-from .logging_config import get_logger as get_logger
+
+# 9. Logging
+from .logging_config import get_logger, setup_logging
+
+# 4. Models and Data Structures
 from .models import (
-    Box as Box,
-)
-from .models import (
-    CameraInfo as CameraInfo,
-)
-from .models import (
-    Chain as Chain,
-)
-from .models import (
-    CollisionPair as CollisionPair,
-)
-from .models import (
-    Color as Color,
-)
-from .models import (
-    ContactInfo as ContactInfo,
-)
-from .models import (
-    Cylinder as Cylinder,
-)
-from .models import (
-    EndEffector as EndEffector,
-)
-from .models import (
-    ForceTorqueInfo as ForceTorqueInfo,
-)
-from .models import (
-    GazeboElement as GazeboElement,
-)
-from .models import (
-    GazeboPlugin as GazeboPlugin,
-)
-from .models import (
-    Geometry as Geometry,
-)
-from .models import (
-    GPSInfo as GPSInfo,
-)
-from .models import (
-    GroupState as GroupState,
-)
-from .models import (
-    IMUInfo as IMUInfo,
-)
-from .models import (
-    Inertial as Inertial,
-)
-from .models import (
-    InertiaTensor as InertiaTensor,
-)
-from .models import (
-    Joint as Joint,
-)
-from .models import (
-    JointProperty as JointProperty,
-)
-from .models import (
-    JointType as JointType,
-)
-from .models import (
-    KinematicGraph as KinematicGraph,
-)
-from .models import (
-    LidarInfo as LidarInfo,
-)
-from .models import (
-    Link as Link,
-)
-from .models import (
-    LinkPhysics as LinkPhysics,
-)
-from .models import (
-    LinkSphereApproximation as LinkSphereApproximation,
-)
-from .models import (
-    Material as Material,
-)
-from .models import (
-    Mesh as Mesh,
-)
-from .models import (
-    PassiveJoint as PassiveJoint,
-)
-from .models import (
-    PlanningGroup as PlanningGroup,
-)
-from .models import (
-    Robot as Robot,
-)
-from .models import (
-    Ros2Control as Ros2Control,
-)
-from .models import (
-    Ros2ControlJoint as Ros2ControlJoint,
-)
-from .models import (
-    SemanticRobotDescription as SemanticRobotDescription,
-)
-from .models import (
-    Sensor as Sensor,
-)
-from .models import (
-    SensorNoise as SensorNoise,
-)
-from .models import (
-    SensorType as SensorType,
-)
-from .models import (
-    Sphere as Sphere,
-)
-from .models import (
-    SrdfSphere as SrdfSphere,
-)
-from .models import (
-    Transform as Transform,
-)
-from .models import (
-    Transmission as Transmission,
-)
-from .models import (
-    TransmissionActuator as TransmissionActuator,
-)
-from .models import (
-    TransmissionJoint as TransmissionJoint,
-)
-from .models import (
-    TransmissionType as TransmissionType,
-)
-from .models import (
-    Vector3 as Vector3,
-)
-from .models import (
-    VirtualJoint as VirtualJoint,
+    Box,
+    CameraInfo,
+    Chain,
+    Collision,
+    CollisionPair,
+    Color,
+    ContactInfo,
+    Cylinder,
+    EndEffector,
+    ForceTorqueInfo,
+    GazeboElement,
+    GazeboPlugin,
+    Geometry,
+    GeometryType,
+    GPSInfo,
+    GroupState,
+    IMUInfo,
+    Inertial,
+    InertiaTensor,
+    Joint,
+    JointCalibration,
+    JointDynamics,
+    JointLimits,
+    JointMimic,
+    JointProperty,
+    JointSafetyController,
+    JointType,
+    KinematicGraph,
+    LidarInfo,
+    Link,
+    LinkPhysics,
+    LinkSphereApproximation,
+    Material,
+    Mesh,
+    PassiveJoint,
+    PlanningGroup,
+    Robot,
+    Ros2Control,
+    Ros2ControlJoint,
+    Ros2ControlSensor,
+    SemanticRobotDescription,
+    Sensor,
+    SensorNoise,
+    SensorType,
+    Sphere,
+    SrdfSphere,
+    Transform,
+    Transmission,
+    TransmissionActuator,
+    TransmissionJoint,
+    TransmissionType,
+    Vector3,
+    VirtualJoint,
+    Visual,
 )
 from .parsers import (
-    SRDFParser as SRDFParser,
+    RobotXMLParser,
+    SRDFParser,
+    URDFParser,
+    XACROParser,
+    XacroResolver,
+    clear_xacro_cache,
 )
-from .parsers import (
-    URDFParser as URDFParser,
-)
-from .parsers import (
-    XACROParser as XACROParser,
-)
-from .parsers import (
-    XacroResolver as XacroResolver,
-)
-from .parsers import (
-    clear_xacro_cache as clear_xacro_cache,
-)
+
+# 6. Physics and Math Utilities
 from .physics import (
-    calculate_box_inertia as calculate_box_inertia,
+    calculate_box_inertia,
+    calculate_cylinder_inertia,
+    calculate_inertia,
+    calculate_mesh_inertia_approximation,
+    calculate_mesh_inertia_from_triangles,
+    calculate_sphere_inertia,
+    validate_mesh_topology,
 )
-from .physics import (
-    calculate_cylinder_inertia as calculate_cylinder_inertia,
-)
-from .physics import (
-    calculate_inertia as calculate_inertia,
-)
-from .physics import (
-    calculate_mesh_inertia_approximation as calculate_mesh_inertia_approximation,
-)
-from .physics import (
-    calculate_mesh_inertia_from_triangles as calculate_mesh_inertia_from_triangles,
-)
-from .physics import (
-    calculate_sphere_inertia as calculate_sphere_inertia,
-)
-from .physics import (
-    validate_mesh_topology as validate_mesh_topology,
-)
-from .utils.dict_utils import filter_items_by_name as filter_items_by_name
+from .utils.dict_utils import AttrDict, filter_items_by_name
 from .utils.math_utils import (
-    clean_float as clean_float,
-)
-from .utils.math_utils import (
-    format_float as format_float,
-)
-from .utils.math_utils import (
-    format_vector as format_vector,
+    clean_float,
+    format_float,
+    format_vector,
+    normalize_vector,
 )
 from .utils.path_utils import (
-    get_export_path as get_export_path,
-)
-from .utils.path_utils import (
-    normalize_uri_to_path as normalize_uri_to_path,
-)
-from .utils.path_utils import (
-    resolve_package_path as resolve_package_path,
+    _extract_package_name,
+    get_export_path,
+    normalize_uri_to_path,
+    resolve_package_path,
 )
 from .utils.string_utils import (
-    format_scientific as format_scientific,
-)
-from .utils.string_utils import (
-    parse_scientific as parse_scientific,
-)
-from .utils.string_utils import (
-    sanitize_name as sanitize_name,
+    format_scientific,
+    is_valid_name,
+    parse_scientific,
+    sanitize_name,
 )
 from .utils.xml_utils import (
-    parse_float as parse_float,
+    create_xml_element,
+    parse_float,
+    parse_int,
+    parse_optional_bool,
+    parse_optional_float,
+    parse_vector3,
+    serialize_xml,
+    validate_xml_depth,
+    xml_add_text,
+    xml_add_vector,
 )
-from .utils.xml_utils import (
-    parse_int as parse_int,
-)
-from .utils.xml_utils import (
-    parse_vector3 as parse_vector3,
-)
-from .utils.xml_utils import (
-    serialize_xml as serialize_xml,
-)
+
+# 7. Validation and Security
 from .validation import (
-    RobotValidator as RobotValidator,
-)
-from .validation import (
-    Severity as Severity,
-)
-from .validation import (
-    ValidationResult as ValidationResult,
-)
-from .validation import (
-    find_sandbox_root as find_sandbox_root,
+    DuplicateNameCheck,
+    GeometryCheck,
+    HasLinksCheck,
+    JointReferenceCheck,
+    MassPropertiesCheck,
+    MimicChainCheck,
+    RobotValidator,
+    Ros2ControlCheck,
+    SemanticCheck,
+    Severity,
+    TreeStructureCheck,
+    ValidationCheck,
+    ValidationIssue,
+    ValidationResult,
+    find_sandbox_root,
+    is_suspicious_location,
+    validate_mesh_path,
+    validate_package_uri,
 )
 
 __all__ = [
@@ -317,9 +298,17 @@ __all__ = [
     "Robot",
     "Link",
     "Joint",
+    "JointLimits",
+    "JointDynamics",
+    "JointMimic",
+    "JointSafetyController",
+    "JointCalibration",
+    "JointType",
     "Transform",
     "InertiaTensor",
     "Inertial",
+    "Visual",
+    "Collision",
     "KinematicGraph",
     "LinkPhysics",
     # Geometry and Materials
@@ -328,6 +317,7 @@ __all__ = [
     "Sphere",
     "Mesh",
     "Geometry",
+    "GeometryType",
     "Material",
     "Color",
     "Vector3",
@@ -346,8 +336,8 @@ __all__ = [
     "TransmissionType",
     "TransmissionJoint",
     "TransmissionActuator",
-    "Ros2Control",
     "Ros2ControlJoint",
+    "Ros2ControlSensor",
     # Gazebo Integration
     "GazeboPlugin",
     "GazeboElement",
@@ -365,24 +355,49 @@ __all__ = [
     "JointProperty",
     # Robotics Logic (IO & Validation)
     "RobotValidator",
+    "RobotXMLParser",
     "RobotGenerator",
+    "Ros2Control",
     "RobotParser",
     "URDFParser",
     "XACROParser",
     "SRDFParser",
     "URDFGenerator",
+    "RobotXMLGenerator",
     "XACROGenerator",
     "SRDFGenerator",
+    "ValidationCheck",
+    "DuplicateNameCheck",
+    "GeometryCheck",
+    "HasLinksCheck",
+    "JointReferenceCheck",
+    "MassPropertiesCheck",
+    "MimicChainCheck",
+    "Ros2ControlCheck",
+    "TreeStructureCheck",
     "ValidationResult",
+    "ValidationIssue",
     "Severity",
     "XacroResolver",
     "clear_xacro_cache",
+    "SemanticCheck",
     "find_sandbox_root",
+    "is_suspicious_location",
+    "validate_mesh_path",
+    "validate_package_uri",
+    "NetworkResolver",
     "FileSystemResolver",
     "IResourceResolver",
+    "MAX_XML_DEPTH",
+    "MAX_REASONABLE_FLOAT",
+    "MAX_REASONABLE_INT",
     # Composer API
     "RobotBuilder",
     "LinkBuilder",
+    "box",
+    "cylinder",
+    "sphere",
+    "mesh",
     # Physics and Math
     "calculate_inertia",
     "calculate_box_inertia",
@@ -393,25 +408,120 @@ __all__ = [
     "validate_mesh_topology",
     "clean_float",
     "format_float",
+    "normalize_vector",
     "format_vector",
     "format_scientific",
     "parse_scientific",
     # Utilities
     "get_logger",
+    "setup_logging",
     "sanitize_name",
+    "is_valid_name",
     "filter_items_by_name",
+    "AttrDict",
     "resolve_package_path",
     "normalize_uri_to_path",
     "get_export_path",
+    "_extract_package_name",
     "serialize_xml",
+    "validate_xml_depth",
+    "parse_optional_bool",
+    "parse_optional_float",
+    "xml_add_text",
+    "xml_add_vector",
+    "create_xml_element",
     "parse_float",
     "parse_int",
     "parse_vector3",
+    # Constants
+    "PI",
+    "EPSILON",
+    "GEOM_EPSILON",
+    "MIN_REASONABLE_MASS",
+    "MIN_REASONABLE_INERTIA",
+    "SYLVESTER_TOLERANCE_EPSILON",
+    "GEOM_BOX",
+    "GEOM_CYLINDER",
+    "GEOM_SPHERE",
+    "GEOM_MESH",
+    "JOINT_REVOLUTE",
+    "JOINT_CONTINUOUS",
+    "JOINT_PRISMATIC",
+    "JOINT_FIXED",
+    "JOINT_FLOATING",
+    "JOINT_PLANAR",
+    "DEFAULT_JOINT_TYPE",
+    "DEFAULT_JOINT_EFFORT",
+    "DEFAULT_JOINT_VELOCITY",
+    "DEFAULT_JOINT_DAMPING",
+    "DEFAULT_JOINT_FRICTION",
+    "DEFAULT_LINK_MASS",
+    "DEFAULT_GRAVITY",
+    "DEFAULT_SELF_COLLIDE",
+    "DEFAULT_FRICTION_MU",
+    "DEFAULT_FRICTION_MU2",
+    "DEFAULT_CONTACT_KP",
+    "DEFAULT_CONTACT_KD",
+    "DEFAULT_AXIS_XYZ",
+    "DEFAULT_AXIS_XYZ_STR",
+    "DEFAULT_UPDATE_RATE",
+    "DEFAULT_SENSOR_ALWAYS_ON",
+    "DEFAULT_SENSOR_VISUALIZE",
+    "DEFAULT_CAMERA_FOV",
+    "DEFAULT_CAMERA_WIDTH",
+    "DEFAULT_CAMERA_HEIGHT",
+    "DEFAULT_CAMERA_NEAR",
+    "DEFAULT_CAMERA_FAR",
+    "DEFAULT_CAMERA_FORMAT",
+    "DEFAULT_LIDAR_SAMPLES",
+    "DEFAULT_LIDAR_MIN_ANGLE",
+    "DEFAULT_LIDAR_MAX_ANGLE",
+    "DEFAULT_LIDAR_RANGE_MIN",
+    "DEFAULT_LIDAR_RANGE_MAX",
+    "DEFAULT_LIDAR_RANGE_RESOLUTION",
+    "DEFAULT_LIDAR_VERTICAL_SAMPLES",
+    "DEFAULT_LIDAR_VERTICAL_MIN_ANGLE",
+    "DEFAULT_LIDAR_VERTICAL_MAX_ANGLE",
+    "CAM_FORMAT_RGB8",
+    "CAM_FORMAT_RGB16",
+    "CAM_FORMAT_GRAY8",
+    "CAM_FORMAT_GRAY16",
+    "CAM_FORMAT_BAYER_RGGB8",
+    "CAM_FORMAT_BAYER_BGGR8",
+    "NOISE_GAUSSIAN",
+    "NOISE_GAUSSIAN_QUANTIZED",
+    "ROS2_CONTROL_DEFAULT_PLUGIN",
+    "ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN",
+    "DEFAULT_MATERIAL_RGBA",
+    "DEFAULT_MATERIAL_RGBA_STR",
+    "DEFAULT_SENSOR_TYPE",
+    "SENSOR_CAMERA",
+    "SENSOR_DEPTH_CAMERA",
+    "SENSOR_LIDAR",
+    "SENSOR_GPU_LIDAR",
+    "SENSOR_IMU",
+    "SENSOR_GPS",
+    "SENSOR_CONTACT",
+    "SENSOR_FORCE_TORQUE",
+    "HW_IF_POSITION",
+    "HW_IF_VELOCITY",
+    "HW_IF_EFFORT",
+    "CONTROL_TYPE_SYSTEM",
+    "CONTROL_TYPE_ACTUATOR",
+    "CONTROL_TYPE_SENSOR",
+    "TRANS_SIMPLE",
+    "TRANS_DIFFERENTIAL",
+    "TRANS_FOUR_BAR",
+    "TRANS_CUSTOM",
+    "SRDF_VJOIN_FIXED",
+    "SRDF_VJOIN_PLANAR",
+    "SRDF_VJOIN_FLOATING",
     # Exceptions
     "LinkForgeError",
     "RobotGeneratorError",
     "RobotModelError",
     "RobotParserError",
+    "RobotParserIOError",
     "RobotPhysicsError",
     "RobotValidationError",
     "RobotMathError",

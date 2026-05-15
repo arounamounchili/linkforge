@@ -5,14 +5,15 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core.generators.srdf_generator import SRDFGenerator
-from linkforge_core.models import Link, Robot
-from linkforge_core.models.srdf import (
+from linkforge_core import (
     CollisionPair,
+    Link,
     PlanningGroup,
+    Robot,
     SemanticRobotDescription,
+    SRDFGenerator,
+    SRDFParser,
 )
-from linkforge_core.parsers.srdf_parser import SRDFParser
 
 
 @pytest.fixture

@@ -13,7 +13,7 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
-from linkforge_core.models import (
+from linkforge_core import (
     Box,
     CameraInfo,
     Collision,
@@ -25,13 +25,16 @@ from linkforge_core.models import (
     IMUInfo,
     Inertial,
     Joint,
+    JointCalibration,
     JointDynamics,
     JointLimits,
     JointMimic,
+    JointSafetyController,
     JointType,
     LidarInfo,
     Link,
     LinkPhysics,
+    Material,
     Mesh,
     Robot,
     Ros2Control,
@@ -41,6 +44,9 @@ from linkforge_core.models import (
     SensorType,
     Sphere,
     Transform,
+    Transmission,
+    TransmissionActuator,
+    TransmissionJoint,
     Vector3,
     Visual,
 )
@@ -230,7 +236,6 @@ def test_create_joint_object_complex(scene, blender_context) -> None:
 
 def test_create_joint_object_advanced_props(scene, blender_context) -> None:
     """Verify that safety controller and calibration are correctly synced to Blender properties."""
-    from linkforge_core.models import JointCalibration, JointSafetyController
 
     # Setup Links
     p_obj = create_test_object("p_link_adv", None, scene)
@@ -666,11 +671,6 @@ def test_create_sensor_with_custom_plugin(scene, blender_context) -> None:
 
 def test_import_robot_with_legacy_transmissions_skipped(scene, blender_context) -> None:
     """Test that legacy transmissions are skipped (no auto-conversion)."""
-    from linkforge_core.models import (
-        Transmission,
-        TransmissionActuator,
-        TransmissionJoint,
-    )
 
     l1 = Link(name="base")
     l2 = Link(name="arm")
@@ -718,7 +718,6 @@ def test_import_robot_with_legacy_transmissions_skipped(scene, blender_context) 
 
 def test_import_robot_skips_transmissions_when_ros2_control_exists(scene, blender_context) -> None:
     """Test that transmissions are skipped when ros2_control is present."""
-    from linkforge_core.models import Transmission, TransmissionJoint
 
     l1 = Link(name="base")
     l2 = Link(name="arm")
@@ -736,8 +735,6 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists(scene, blende
         name="j1", command_interfaces=["position"], state_interfaces=["position"]
     )
     rc = Ros2Control(name="RealRobot", type="system", hardware_plugin="fake_hw", joints=[rc_joint])
-
-    from linkforge_core.models import TransmissionActuator
 
     trans = Transmission(
         name="trans1",
@@ -771,7 +768,6 @@ def test_import_robot_skips_transmissions_when_ros2_control_exists(scene, blende
 
 def test_create_link_with_material(scene, blender_context) -> None:
     """Test link creation with visual material."""
-    from linkforge_core.models import Material
 
     color = Color(r=1.0, g=0.0, b=0.0, a=1.0)
     material = Material(name="RedMat", color=color)
@@ -1006,7 +1002,6 @@ def test_normalize_and_consolidate_imported_objects(scene, blender_context) -> N
 def test_create_joint_object_mimic_logic(scene, blender_context) -> None:
     """Test that mimics are correctly resolved even if created out of order."""
     from linkforge.blender.adapters.core_to_blender import create_joint_object
-    from linkforge_core.models import Joint, JointMimic, JointType
 
     # Parent/Child link shells
     p = create_test_object("p", None, scene)
@@ -1018,8 +1013,6 @@ def test_create_joint_object_mimic_logic(scene, blender_context) -> None:
     link_objects = {"p": p, "c": c}
     # Mocking the discovery of the driver joint in scene
     # The actual implementation looks for objects by name
-
-    from linkforge_core.models import JointLimits
 
     joint = Joint(
         name="follower",

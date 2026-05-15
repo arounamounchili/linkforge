@@ -16,11 +16,17 @@ from .checks import (
     MassPropertiesCheck,
     MimicChainCheck,
     Ros2ControlCheck,
+    SemanticCheck,
     TreeStructureCheck,
     ValidationCheck,
 )
 from .result import Severity, ValidationIssue, ValidationResult
-from .security import find_sandbox_root, validate_mesh_path, validate_package_uri
+from .security import (
+    find_sandbox_root,
+    is_suspicious_location,
+    validate_mesh_path,
+    validate_package_uri,
+)
 from .validator import RobotValidator
 
 __all__ = [
@@ -42,7 +48,9 @@ __all__ = [
     # Orchestrator
     "RobotValidator",
     # Security helpers
+    "is_suspicious_location",
     "validate_mesh_path",
     "validate_package_uri",
     "find_sandbox_root",
+    "SemanticCheck",
 ]

@@ -10,20 +10,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-if TYPE_CHECKING:
-    from linkforge_core import (
-        LinkBuilder,
-        RobotBuilder,
-        Ros2Control,
-        Sensor,
-        Transmission,
-        ValidationResult,
-    )
-
-    from .context import IBlenderContext
-
-
-from linkforge_core.constants import (
+from linkforge_core import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
     CONTROL_TYPE_SYSTEM,
@@ -36,7 +23,37 @@ from linkforge_core.constants import (
     TRANS_DIFFERENTIAL,
     TRANS_FOUR_BAR,
     TRANS_SIMPLE,
+    CameraInfo,
+    ContactInfo,
+    ForceTorqueInfo,
+    GazeboPlugin,
+    GPSInfo,
+    IMUInfo,
+    InertiaTensor,
+    JointType,
+    LidarInfo,
+    LinkBuilder,
+    RobotBuilder,
+    RobotValidationError,
+    Ros2Control,
+    Ros2ControlJoint,
+    Sensor,
+    SensorNoise,
+    SensorType,
+    Transmission,
+    TransmissionActuator,
+    TransmissionJoint,
+    TransmissionType,
+    ValidationErrorCode,
+    ValidationResult,
+    get_logger,
+    sanitize_name,
+    validate_mesh_topology,
 )
+
+if TYPE_CHECKING:
+    from .context import IBlenderContext
+
 
 from ..constants import (
     FORMAT_STL,
@@ -106,8 +123,6 @@ class LinkTranslator(ITranslator):
         **_kwargs: Any,
     ) -> LinkBuilder | None:
         """Translate a Blender link to a Core Link using RobotBuilder."""
-        from linkforge_core import InertiaTensor, sanitize_name
-
         from .blender_to_core import (
             get_object_geometry,
             get_object_material,
@@ -250,8 +265,6 @@ class LinkTranslator(ITranslator):
         if not result or obj.type != "MESH":
             return
 
-        from linkforge_core import validate_mesh_topology
-
         from .blender_to_core import extract_mesh_triangles
 
         try:
@@ -298,8 +311,6 @@ class JointTranslator(ITranslator):
         **_kwargs: Any,
     ) -> None:
         """Translate a Blender joint to a Core Joint using the LinkBuilder."""
-        from linkforge_core import JointType, RobotValidationError, ValidationErrorCode
-
         from .blender_to_core import matrix_to_transform
 
         props = get_joint_props(obj)
@@ -448,8 +459,6 @@ class SensorTranslator(ITranslator):
                 builder.robot.add_sensor(sensor)
         except Exception as e:
             if validation_result:
-                from linkforge_core import ValidationErrorCode
-
                 validation_result.add_error(
                     title=f"Sensor translation failed: {obj.name}",
                     message=str(e),
@@ -469,21 +478,6 @@ class SensorTranslator(ITranslator):
 
     def _blender_sensor_to_core(self, obj: Any) -> Sensor | None:
         """Convert a Blender sensor Empty and its properties to a Core Sensor model."""
-        from linkforge_core import (
-            CameraInfo,
-            ContactInfo,
-            ForceTorqueInfo,
-            GazeboPlugin,
-            GPSInfo,
-            IMUInfo,
-            LidarInfo,
-            RobotValidationError,
-            Sensor,
-            SensorNoise,
-            SensorType,
-            ValidationErrorCode,
-        )
-
         if obj is None:
             return None
         props = get_sensor_props(obj)
@@ -637,8 +631,6 @@ class Ros2ControlTranslator(ITranslator):
                 builder.robot.add_ros2_control(control)
         except Exception as e:
             if validation_result:
-                from linkforge_core import ValidationErrorCode
-
                 validation_result.add_error(
                     title="ROS2 Control translation failed",
                     message=str(e),
@@ -647,12 +639,6 @@ class Ros2ControlTranslator(ITranslator):
 
     def _blender_ros2_control_to_core(self, props: Any) -> Ros2Control | None:
         """Convert centralized Blender ros2_control properties to Core model."""
-        from linkforge_core import (
-            Ros2Control,
-            Ros2ControlJoint,
-            get_logger,
-        )
-
         logger = get_logger(__name__)
 
         if props is None or not getattr(props, "use_ros2_control", False):
@@ -760,8 +746,6 @@ class TransmissionTranslator(ITranslator):
                 builder.robot.add_transmission(transmission)
         except Exception as e:
             if validation_result:
-                from linkforge_core import ValidationErrorCode
-
                 validation_result.add_error(
                     title=f"Transmission translation failed: {obj.name}",
                     message=str(e),
@@ -771,13 +755,6 @@ class TransmissionTranslator(ITranslator):
 
     def _blender_transmission_to_core(self, obj: Any) -> Transmission | None:
         """Convert Blender Empty with TransmissionPropertyGroup to Core Transmission."""
-        from linkforge_core import (
-            Transmission,
-            TransmissionActuator,
-            TransmissionJoint,
-            TransmissionType,
-        )
-
         if obj is None:
             return None
 
@@ -787,14 +764,17 @@ class TransmissionTranslator(ITranslator):
 
         trans_name = props.transmission_name if props.transmission_name else obj.name
 
-        # Transmission type mapping
+        # Transmission type normalization (handle both 'simple' and 'SIMPLE')
+        raw_type = str(props.transmission_type).lower()
+
+        # Transmission type mapping to URDF plugin names
         trans_type_map = {
             TRANS_SIMPLE: TransmissionType.SIMPLE.value,
             TRANS_DIFFERENTIAL: TransmissionType.DIFFERENTIAL.value,
             TRANS_FOUR_BAR: TransmissionType.FOUR_BAR_LINKAGE.value,
             TRANS_CUSTOM: props.custom_type if props.custom_type else TransmissionType.CUSTOM.value,
         }
-        trans_type = trans_type_map.get(props.transmission_type, TransmissionType.SIMPLE.value)
+        trans_type = trans_type_map.get(raw_type, TransmissionType.SIMPLE.value)
 
         # Hardware interface mapping
         hw_if = props.hardware_interface
@@ -802,7 +782,7 @@ class TransmissionTranslator(ITranslator):
         joints = []
         actuators = []
 
-        if props.transmission_type in (TRANS_SIMPLE, TRANS_CUSTOM, TRANS_FOUR_BAR):
+        if raw_type in (TRANS_SIMPLE, TRANS_CUSTOM, TRANS_FOUR_BAR):
             joint_obj = props.joint_name
             if joint_obj:
                 joint_props = get_joint_props(joint_obj)
@@ -830,7 +810,7 @@ class TransmissionTranslator(ITranslator):
                     else f"{joint_name}_motor"
                 )
                 actuators.append(TransmissionActuator(name=act_name, hardware_interfaces=[hw_if]))
-        elif props.transmission_type == TRANS_DIFFERENTIAL:
+        elif raw_type == TRANS_DIFFERENTIAL:
             j1_obj = props.joint1_name
             j2_obj = props.joint2_name
             if j1_obj and j2_obj:

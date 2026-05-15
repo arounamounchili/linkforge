@@ -1,6 +1,6 @@
 """Tests for validation result classes."""
 
-from linkforge_core.validation.result import Severity, ValidationIssue, ValidationResult
+from linkforge_core import Severity, ValidationIssue, ValidationResult
 
 
 class TestValidationIssue:

@@ -7,8 +7,7 @@ correctly prevents collisions and maintains kinematic integrity.
 
 from __future__ import annotations
 
-from linkforge_core.composer import RobotBuilder
-from linkforge_core.models.geometry import Box, Vector3
+from linkforge_core import Box, RobotBuilder, RobotValidator, Vector3
 
 
 def create_arm_component() -> RobotBuilder:
@@ -90,7 +89,6 @@ def test_modular_assembly_with_prefixes() -> None:
     assert left_wrist_joint.child == "left_wrist"
 
     # Verify Robot Structure is Valid (no cycles, single root)
-    from linkforge_core.validation import RobotValidator
 
     result = RobotValidator().validate(robot)
     assert result.is_valid, f"Validation failed: {result.errors}"

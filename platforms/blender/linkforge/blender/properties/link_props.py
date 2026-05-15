@@ -18,13 +18,6 @@ from bpy.props import (
 )
 from bpy.types import Context, PropertyGroup
 from linkforge_core import (
-    format_scientific,
-    parse_scientific,
-)
-from linkforge_core import (
-    sanitize_name as sanitize_robot_name,
-)
-from linkforge_core.constants import (
     DEFAULT_CONTACT_KD,
     DEFAULT_CONTACT_KP,
     DEFAULT_FRICTION_MU,
@@ -36,6 +29,11 @@ from linkforge_core.constants import (
     GEOM_CYLINDER,
     GEOM_MESH,
     GEOM_SPHERE,
+    format_scientific,
+    parse_scientific,
+)
+from linkforge_core import (
+    sanitize_name as sanitize_robot_name,
 )
 
 from ..constants import (

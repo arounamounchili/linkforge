@@ -1,6 +1,6 @@
 import bpy
 from linkforge.blender.adapters.translator import ITranslator, LinkTranslator, TranslationRegistry
-from linkforge_core.validation.result import ValidationResult
+from linkforge_core import ValidationErrorCode, ValidationResult
 
 from tests.blender_test_utils import cleanup_blender_scene, create_mesh_object
 
@@ -78,7 +78,6 @@ def test_validate_mesh_handles_quads_without_warnings(scene, blender_context):
     translator._validate_mesh(obj, "Part", "visual", result)
 
     # 4. Verify no boundary edge warnings (MESH_BOUNDARY_EDGE)
-    from linkforge_core.exceptions import ValidationErrorCode
 
     boundary_warnings = [
         w for w in result.warnings if w.code == ValidationErrorCode.MESH_BOUNDARY_EDGE
@@ -109,7 +108,6 @@ def test_validate_mesh_with_modifiers(scene, blender_context):
     translator._validate_mesh(obj, "Part", "visual", result, depsgraph=depsgraph)
 
     # 5. Should have no boundary warnings
-    from linkforge_core.exceptions import ValidationErrorCode
 
     boundary_warnings = [
         w for w in result.warnings if w.code == ValidationErrorCode.MESH_BOUNDARY_EDGE

@@ -3,10 +3,11 @@
 from pathlib import Path
 
 import pytest
-from linkforge_core.exceptions import RobotModelError, RobotParserIOError
-from linkforge_core.parsers.srdf_parser import SRDFParser
-from linkforge_core.parsers.urdf_parser import URDFParser
-from linkforge_core.validation.security import (
+from linkforge_core import (
+    RobotModelError,
+    RobotParserIOError,
+    SRDFParser,
+    URDFParser,
     find_sandbox_root,
     validate_mesh_path,
     validate_package_uri,
@@ -103,7 +104,6 @@ class TestValidateMeshPath:
 
     def test_url_encoded_path(self, tmp_path) -> None:
         """Test that URL-encoded paths are decoded."""
-        from linkforge_core.validation.security import validate_mesh_path
 
         urdf_dir = tmp_path / "robot"
         urdf_dir.mkdir()

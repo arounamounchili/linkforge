@@ -9,7 +9,7 @@ from linkforge.blender.adapters.mesh_io import (
     export_mesh_obj,
     export_mesh_stl,
 )
-from linkforge_core.utils.path_utils import resolve_package_path
+from linkforge_core import resolve_package_path
 
 from tests.blender_test_utils import create_test_object
 

@@ -4,10 +4,19 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from linkforge_core.generators.xml_base import RobotXMLGenerator
-from linkforge_core.models.geometry import Box, Cylinder, Mesh, Sphere, Transform, Vector3
-from linkforge_core.models.link import Inertial, InertiaTensor
-from linkforge_core.models.robot import Robot
+from linkforge_core import (
+    Box,
+    Cylinder,
+    Inertial,
+    InertiaTensor,
+    Mesh,
+    Robot,
+    RobotXMLGenerator,
+    RobotXMLParser,
+    Sphere,
+    Transform,
+    Vector3,
+)
 
 
 class MockXMLGenerator(RobotXMLGenerator):
@@ -179,8 +188,6 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
     """Verify that malformed mesh geometry triggers a warning during base XML parsing."""
     from unittest.mock import patch
 
-    from linkforge_core.parsers.xml_base import RobotXMLParser
-
     class MockParser(RobotXMLParser[Any]):
         def parse(self, filepath: Path, **kwargs: Any) -> Any:
             return None
@@ -219,7 +226,6 @@ def test_xml_base_format_value_bool() -> None:
 
 def test_xml_base_parser_geometry_nones() -> None:
     """Test geometry parsing fallback when elements are None."""
-    from linkforge_core.parsers.xml_base import RobotXMLParser
 
     class MockParser(RobotXMLParser[Any]):
         def parse(self, filepath: Path, **kwargs: Any) -> Any:

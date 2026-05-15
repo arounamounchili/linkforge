@@ -2,20 +2,24 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from linkforge_core.exceptions import (
+from linkforge_core import (
+    MAX_XML_DEPTH,
     RobotMathError,
     RobotModelError,
     RobotValidationError,
-)
-from linkforge_core.utils.xml_utils import (
-    MAX_XML_DEPTH,
+    Vector3,
+    create_xml_element,
+    is_suspicious_location,
     parse_float,
     parse_int,
     parse_optional_bool,
     parse_optional_float,
     parse_vector3,
     serialize_xml,
+    validate_package_uri,
     validate_xml_depth,
+    xml_add_text,
+    xml_add_vector,
 )
 
 
@@ -66,8 +70,6 @@ def test_validate_xml_depth_ok() -> None:
 def test_serialize_xml_with_namespaces() -> None:
     """Test XML serialization with custom namespaces."""
     import xml.etree.ElementTree as ET
-
-    from linkforge_core.utils.xml_utils import serialize_xml
 
     root = ET.Element("robot")
     child = ET.SubElement(root, "link")
@@ -152,7 +154,6 @@ def test_parsing_missing_attribute() -> None:
 
 def test_validate_package_uri_complex() -> None:
     """Test complex valid package URI."""
-    from linkforge_core.validation.security import validate_package_uri
 
     uri = "package://my_robot/meshes/arm.stl"
     assert validate_package_uri(uri) == uri
@@ -160,7 +161,6 @@ def test_validate_package_uri_complex() -> None:
 
 def test_is_suspicious_location_match() -> None:
     """Test suspicious location detection."""
-    from linkforge_core.validation.security import is_suspicious_location
 
     # On most systems /etc exists and resolves to /private/etc or itself.
     # We use a path that is definitely suspicious.
@@ -169,7 +169,6 @@ def test_is_suspicious_location_match() -> None:
 
 def test_xml_add_text() -> None:
     """Test xml_add_text utility function."""
-    from linkforge_core.utils.xml_utils import xml_add_text
 
     parent = ET.Element("root")
 
@@ -192,8 +191,6 @@ def test_xml_add_text() -> None:
 
 def test_xml_add_vector() -> None:
     """Test xml_add_vector utility function."""
-    from linkforge_core.models import Vector3
-    from linkforge_core.utils.xml_utils import xml_add_vector
 
     parent = ET.Element("root")
     vec = Vector3(1.1234, 2.0, -3.5)
@@ -211,7 +208,6 @@ def test_xml_add_vector() -> None:
 
 def test_create_xml_element_no_formatter() -> None:
     """Test XML element creation when no specific formatter is provided."""
-    from linkforge_core.utils.xml_utils import create_xml_element
 
     parent = ET.Element("p")
     create_xml_element(parent, "child", a=1, b=True)
@@ -223,7 +219,6 @@ def test_create_xml_element_no_formatter() -> None:
 
 def test_parse_vector3_exception_fallback() -> None:
     """Test Vector3 parsing fallback and error handling."""
-    from linkforge_core.utils.xml_utils import parse_vector3
 
     # Hit RobotMathError (re-raised)
     with pytest.raises(RobotMathError):

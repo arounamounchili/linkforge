@@ -5,8 +5,11 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge_core import (
+    Ros2Control,
+    Ros2ControlJoint,
+    URDFParser,
+)
 
 
 @pytest.fixture

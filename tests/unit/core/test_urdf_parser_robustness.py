@@ -4,11 +4,16 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from linkforge_core.constants import MIN_REASONABLE_INERTIA
-from linkforge_core.exceptions import RobotModelError, RobotParserError, XacroDetectedError
-from linkforge_core.models.geometry import Box
-from linkforge_core.parsers.urdf_parser import URDFParser
-from linkforge_core.parsers.xml_base import RobotXMLParser
+from linkforge_core import (
+    MAX_XML_DEPTH,
+    MIN_REASONABLE_INERTIA,
+    Box,
+    RobotModelError,
+    RobotParserError,
+    RobotXMLParser,
+    URDFParser,
+    XacroDetectedError,
+)
 
 
 class MockXMLParser(RobotXMLParser[Any]):
@@ -191,8 +196,6 @@ def test_urdf_parser_iterative_parsing_robustness(tmp_path) -> None:
 
     # XML nesting too deep
     import sys
-
-    from linkforge_core.utils.xml_utils import MAX_XML_DEPTH
 
     old_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(max(old_limit, MAX_XML_DEPTH + 100))

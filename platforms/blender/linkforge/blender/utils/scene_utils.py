@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import bpy
-from linkforge_core.constants import (
+from linkforge_core import (
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,

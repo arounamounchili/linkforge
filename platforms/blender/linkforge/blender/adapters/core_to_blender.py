@@ -16,21 +16,7 @@ if not typing.TYPE_CHECKING:
     import bpy
     from mathutils import Matrix
 
-
 from linkforge_core import (
-    Box,
-    Color,
-    Cylinder,
-    Geometry,
-    Joint,
-    Link,
-    LinkPhysics,
-    Mesh,
-    Robot,
-    Sphere,
-    get_logger,
-)
-from linkforge_core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,
@@ -52,6 +38,17 @@ from linkforge_core.constants import (
     SENSOR_GPU_LIDAR,
     SENSOR_IMU,
     SENSOR_LIDAR,
+    Box,
+    Color,
+    Cylinder,
+    Geometry,
+    Joint,
+    Link,
+    LinkPhysics,
+    Mesh,
+    Robot,
+    Sphere,
+    get_logger,
 )
 
 from ..constants import (

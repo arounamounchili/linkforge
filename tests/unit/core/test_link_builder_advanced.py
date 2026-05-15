@@ -1,6 +1,5 @@
 import pytest
-from linkforge_core.composer import RobotBuilder
-from linkforge_core.exceptions import RobotValidationError
+from linkforge_core import JointType, RobotBuilder, RobotValidationError
 
 
 class TestLinkBuilderAdvanced:
@@ -76,7 +75,6 @@ class TestLinkBuilderAdvanced:
         comp_builder.link("link1").root()
 
         # Attach with revolute joint
-        from linkforge_core.models.joint import JointType
 
         builder.attach(
             comp_builder,

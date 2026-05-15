@@ -6,7 +6,7 @@ import contextlib
 import typing
 
 import bpy
-from linkforge_core.constants import DEFAULT_SENSOR_TYPE
+from linkforge_core import DEFAULT_SENSOR_TYPE
 
 from ..constants import DEFAULT_SENSOR_GIZMO_SIZE, PROP_LINK, SUFFIX_SENSOR
 from ..properties.link_props import sanitize_robot_name

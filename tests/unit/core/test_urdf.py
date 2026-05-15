@@ -5,9 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core.base import XacroDetectedError
-from linkforge_core.generators.urdf_generator import URDFGenerator
-from linkforge_core.models import (
+from linkforge_core import (
     Box,
     Color,
     Cylinder,
@@ -17,10 +15,12 @@ from linkforge_core.models import (
     Material,
     Mesh,
     Robot,
+    URDFGenerator,
+    URDFParser,
     Vector3,
     Visual,
+    XacroDetectedError,
 )
-from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 @pytest.fixture

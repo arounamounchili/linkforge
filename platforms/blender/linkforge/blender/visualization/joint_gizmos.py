@@ -18,7 +18,7 @@ import bpy
 import gpu
 from bpy.types import Context
 from gpu_extras.batch import batch_for_shader
-from linkforge_core.constants import PI
+from linkforge_core import PI
 from mathutils import Vector
 
 from ..constants import PROP_JOINT

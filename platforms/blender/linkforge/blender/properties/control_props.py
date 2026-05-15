@@ -14,7 +14,7 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import PropertyGroup
-from linkforge_core.constants import (
+from linkforge_core import (
     HW_IF_EFFORT,
     HW_IF_POSITION,
     HW_IF_VELOCITY,

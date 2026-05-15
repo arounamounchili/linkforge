@@ -20,7 +20,7 @@ from typing import Any
 import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
-from linkforge_core.constants import PI
+from linkforge_core import PI
 from mathutils import Matrix, Vector
 
 from ..constants import PROP_LINK

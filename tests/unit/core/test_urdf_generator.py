@@ -3,15 +3,16 @@
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core.base import RobotGeneratorError
-from linkforge_core.generators.urdf_generator import URDFGenerator
-from linkforge_core.models import (
+from linkforge_core import (
     Box,
     CameraInfo,
     Collision,
     Color,
+    ContactInfo,
     Cylinder,
+    ForceTorqueInfo,
     GazeboElement,
+    GazeboPlugin,
     GPSInfo,
     IMUInfo,
     Inertial,
@@ -29,16 +30,21 @@ from linkforge_core.models import (
     Material,
     Mesh,
     Robot,
+    RobotGeneratorError,
     Ros2Control,
+    Ros2ControlJoint,
     Sensor,
     SensorNoise,
     SensorType,
     Sphere,
     Transform,
+    Transmission,
+    TransmissionActuator,
+    TransmissionJoint,
+    URDFGenerator,
     Vector3,
     Visual,
 )
-from linkforge_core.models.transmission import Transmission, TransmissionActuator, TransmissionJoint
 
 
 class TestURDFGenerator:
@@ -443,14 +449,6 @@ class TestURDFGenerator:
         robot.add_link(Link(name="child"))
         robot.add_joint(Joint(name="j1", parent="base", child="child", type=JointType.FIXED))
 
-        from linkforge_core.models.sensor import (
-            CameraInfo,
-            LidarInfo,
-            Sensor,
-            SensorNoise,
-            SensorType,
-        )
-
         lidar = Sensor(
             name="lidar",
             type=SensorType.LIDAR,
@@ -591,8 +589,6 @@ class TestURDFGenerator:
             )
         )
 
-        from linkforge_core.models.transmission import Transmission, TransmissionJoint
-
         # Add a transmission
         trans = Transmission(
             name="arm_trans",
@@ -632,8 +628,6 @@ class TestURDFGenerator:
         robot.add_link(link)
         robot.add_link(Link(name="child"))
         robot.add_joint(Joint(name="j1", parent="base", child="child", type=JointType.FIXED))
-
-        from linkforge_core.models.ros2_control import Ros2Control, Ros2ControlJoint
 
         rc = Ros2Control(
             name="MySystem",
@@ -680,8 +674,6 @@ class TestURDFGenerator:
         robot.add_link(Link(name="child"))
         robot.add_joint(Joint(name="j1", parent="base", child="child", type=JointType.FIXED))
 
-        from linkforge_core.models.gazebo import GazeboElement, GazeboPlugin
-
         # Plugin with parameters
         p1 = GazeboPlugin(
             name="param_plugin", filename="libparam.so", parameters={"key": "value", "rate": "100"}
@@ -725,16 +717,6 @@ class TestURDFGenerator:
         robot.add_link(link)
         robot.add_link(Link(name="child"))
         robot.add_joint(Joint(name="j1", parent="base", child="child", type=JointType.FIXED))
-
-        from linkforge_core.models.sensor import (
-            ContactInfo,
-            ForceTorqueInfo,
-            GPSInfo,
-            IMUInfo,
-            Sensor,
-            SensorNoise,
-            SensorType,
-        )
 
         imu = Sensor(
             name="imu",
@@ -1076,7 +1058,6 @@ class TestURDFGenerator:
 
     def test_generate_gazebo_plugin_whitespace_handling(self) -> None:
         """Test Gazebo plugin whitespace stripping and malformed XML fallback."""
-        from linkforge_core.models.gazebo import GazeboPlugin
 
         # Test Case 1: Whitespace stripping
         raw_xml = "<parent>  <child>   </child>  </parent>   "
@@ -1099,7 +1080,6 @@ class TestURDFGenerator:
 
     def test_generate_ros2_control_plugin_detection(self) -> None:
         """Test skipping auto-gz_ros2_control if a plugin already exists."""
-        from linkforge_core.models.gazebo import GazeboPlugin
 
         gz_plugin = GazeboPlugin(name="my_ros2_control", filename="lib.so")
         gz = GazeboElement(plugins=[gz_plugin])
@@ -1134,7 +1114,6 @@ class TestURDFGenerator:
     def test_generate_gazebo_physics_properties(self) -> None:
         """Test generating Gazebo physics properties (kp, kd, friction, etc.)."""
         # Physics are set on the link
-        from linkforge_core.models.link import LinkPhysics
 
         phys = LinkPhysics(
             mu=0.8,
@@ -1216,7 +1195,6 @@ class TestURDFGenerator:
 
     def test_generate_explicit_ros2_control_with_params(self) -> None:
         """Test generating explicit ros2_control with joint interfaces and parameters."""
-        from linkforge_core.models.ros2_control import Ros2ControlJoint
 
         rc = Ros2Control(
             name="ctrl",
@@ -1254,7 +1232,6 @@ class TestURDFGenerator:
 
     def test_generate_sensor_with_plugin(self) -> None:
         """Sensor with plugin."""
-        from linkforge_core.models.gazebo import GazeboPlugin
 
         p = GazeboPlugin(name="p", filename="f.so")
         sensor = Sensor(
@@ -1339,7 +1316,6 @@ class TestURDFGenerator:
 
     def test_contact_sensor_with_empty_collision_skips_collision_element(self) -> None:
         """Contact sensor with empty collision string omits the collision child."""
-        from linkforge_core.models.sensor import ContactInfo
 
         robot = Robot(name="r", links=[Link(name="base")])
         sensor = Sensor(
@@ -1355,7 +1331,6 @@ class TestURDFGenerator:
 
     def test_force_torque_sensor_generates_output(self) -> None:
         """Force/torque sensor branch is exercised and produces XML output."""
-        from linkforge_core.models.sensor import ForceTorqueInfo
 
         robot = Robot(name="r", links=[Link(name="base")])
         sensor = Sensor(
@@ -1461,7 +1436,6 @@ class TestURDFGenerator:
 
     def test_ros2_control_plugin_traversal(self) -> None:
         """Verify ROS2 control plugin detection logic handles multiple gazebo plugins."""
-        from linkforge_core.models.gazebo import GazeboPlugin
 
         p1 = GazeboPlugin(name="other", filename="o.so")
         p2 = GazeboPlugin(name="my_ros2_control", filename="r.so")
@@ -1494,7 +1468,6 @@ class TestURDFGenerator:
 
     def test_generate_ros2_control_joint_parameters(self) -> None:
         """Verify generator handles custom parameters for ROS2 control joints."""
-        from linkforge_core.models.ros2_control import Ros2ControlJoint
 
         # Must have matching joint in robot model for auto-sync logic
         robot = Robot(

@@ -3,9 +3,12 @@
 from pathlib import Path
 
 import pytest
-from linkforge_core.base import FileSystemResolver, NetworkResolver
-from linkforge_core.models.geometry import Mesh
-from linkforge_core.models.robot import Robot
+from linkforge_core import (
+    FileSystemResolver,
+    Mesh,
+    NetworkResolver,
+    Robot,
+)
 
 
 def test_file_system_resolver_absolute_path(tmp_path: Path) -> None:

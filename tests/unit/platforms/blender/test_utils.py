@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 from linkforge.blender.adapters.mesh_io import export_link_mesh
 from linkforge.blender.utils.decorators import OperatorReturn, safe_execute
-from linkforge_core.exceptions import RobotModelError
+from linkforge_core import RobotModelError
 
 from tests.blender_test_utils import (
     create_mesh_object,

@@ -1,13 +1,13 @@
 import pytest
-from linkforge_core.base import (
+from linkforge_core import (
     LinkForgeError,
+    Robot,
     RobotGenerator,
     RobotGeneratorError,
     RobotParser,
+    URDFParser,
     XacroDetectedError,
 )
-from linkforge_core.models.robot import Robot
-from linkforge_core.parsers.urdf_parser import URDFParser
 
 
 class TestStringGenerator(RobotGenerator[str]):
@@ -120,8 +120,6 @@ def test_parser_detects_xacro_in_urdf() -> None:
 
 
 def test_xacro_parser_basic(tmp_path) -> None:
-    from linkforge_core.parsers.urdf_parser import URDFParser
-
     xacro_path = tmp_path / "robot.xacro"
     xacro_path.write_text(
         '<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="xacro_bot"><link name="base_link"/></robot>'

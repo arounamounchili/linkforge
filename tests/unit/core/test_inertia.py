@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core.exceptions import RobotPhysicsError, ValidationErrorCode
-from linkforge_core.models import InertiaTensor
-from linkforge_core.models.geometry import Box, Sphere, Vector3
-from linkforge_core.physics.inertia import calculate_inertia
+from linkforge_core import (
+    Box,
+    InertiaTensor,
+    RobotPhysicsError,
+    Sphere,
+    ValidationErrorCode,
+    Vector3,
+    calculate_inertia,
+)
 
 # Inertia Model Tests
 

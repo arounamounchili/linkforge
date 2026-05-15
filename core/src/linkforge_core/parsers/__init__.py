@@ -6,6 +6,7 @@ from . import srdf_parser, urdf_parser, xacro_parser
 from .srdf_parser import SRDFParser
 from .urdf_parser import URDFParser
 from .xacro_parser import XACROParser, XacroResolver, clear_xacro_cache
+from .xml_base import RobotXMLParser
 
 __all__ = [
     "srdf_parser",
@@ -16,4 +17,5 @@ __all__ = [
     "XACROParser",
     "XacroResolver",
     "clear_xacro_cache",
+    "RobotXMLParser",
 ]

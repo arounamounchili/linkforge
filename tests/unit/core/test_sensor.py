@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core.exceptions import RobotModelError
-from linkforge_core.models import (
+from linkforge_core import (
     CameraInfo,
     ContactInfo,
     ForceTorqueInfo,
@@ -12,10 +11,12 @@ from linkforge_core.models import (
     GPSInfo,
     IMUInfo,
     LidarInfo,
+    RobotModelError,
     Sensor,
     SensorNoise,
     SensorType,
     Transform,
+    URDFParser,
     Vector3,
 )
 
@@ -451,8 +452,6 @@ class TestSensor:
 def test_sensor_parsing_pose_robustness() -> None:
     """Verify that malformed or incomplete sensor pose elements are handled gracefully."""
     import xml.etree.ElementTree as ET
-
-    from linkforge_core.parsers.urdf_parser import URDFParser
 
     parser = URDFParser()
     xml = """

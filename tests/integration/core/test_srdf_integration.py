@@ -1,7 +1,4 @@
-from linkforge_core.generators.srdf_generator import SRDFGenerator
-from linkforge_core.models.robot import Robot
-from linkforge_core.parsers.srdf_parser import SRDFParser
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge_core import Robot, SRDFGenerator, SRDFParser, URDFParser
 
 # Simplified URDF for integration testing
 SAMPLE_URDF = """<?xml version="1.0"?>

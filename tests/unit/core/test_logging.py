@@ -1,7 +1,7 @@
 import logging
 
 import pytest
-from linkforge_core.logging_config import get_logger, setup_logging
+from linkforge_core import get_logger, setup_logging
 
 
 @pytest.fixture(autouse=True)

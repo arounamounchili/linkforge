@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core.exceptions import RobotValidationError, ValidationErrorCode
-from linkforge_core.models import Joint, JointType, Link, Robot
+from linkforge_core import (
+    Joint,
+    JointType,
+    Link,
+    Robot,
+    RobotValidationError,
+    ValidationErrorCode,
+)
 
 
 def test_tree_structure_validation() -> None:

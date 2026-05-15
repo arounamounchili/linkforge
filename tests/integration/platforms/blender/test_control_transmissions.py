@@ -87,7 +87,7 @@ class TestControlTransmissionsIntegration:
         from tests.blender_test_utils import safe_get_transmission
 
         t_props = safe_get_transmission(trans_obj)
-        t_props.transmission_type = "SIMPLE"
+        t_props.transmission_type = "simple"
         t_props.joint_name = j1
         t_props.mechanical_reduction = 50.0
 

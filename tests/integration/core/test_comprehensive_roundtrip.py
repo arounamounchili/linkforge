@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from linkforge_core.models import (
+from linkforge_core import (
     Box,
     Cylinder,
     GazeboElement,
@@ -15,14 +15,15 @@ from linkforge_core.models import (
     JointSafetyController,
     JointType,
     Link,
+    LinkPhysics,
     Robot,
     Sphere,
     Transform,
     Transmission,
+    URDFParser,
     Vector3,
     Visual,
 )
-from linkforge_core.parsers.urdf_parser import URDFParser
 
 from tests.core_test_utils import assert_robots_equal, perform_urdf_roundtrip
 
@@ -209,7 +210,6 @@ def test_transmission_types_roundtrip() -> None:
 def test_gazebo_elements_roundtrip() -> None:
     """Test robot, link, and joint level Gazebo elements."""
     robot = Robot(name="gazebo_test")
-    from linkforge_core.models.link import LinkPhysics
 
     # Link-level properties (Physics go to Link, material goes to GazeboElement)
     robot.add_link(Link(name="l1", physics=LinkPhysics(mu=0.5, mu2=0.5, kp=1000, kd=10)))

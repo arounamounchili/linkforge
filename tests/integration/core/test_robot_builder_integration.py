@@ -6,13 +6,13 @@ non-origin base links, and multi-visual/collision configurations.
 
 from __future__ import annotations
 
-from linkforge_core.composer.robot_builder import RobotBuilder
-from linkforge_core.models import (
+from linkforge_core import (
     Box,
     Collision,
     Joint,
     JointType,
     Link,
+    RobotBuilder,
     Transform,
     Vector3,
     Visual,

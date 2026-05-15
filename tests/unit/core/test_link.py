@@ -3,10 +3,25 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core.exceptions import RobotModelError
-from linkforge_core.models.geometry import Box, Transform, Vector3
-from linkforge_core.models.link import Collision, Inertial, InertiaTensor, Link, LinkPhysics, Visual
-from linkforge_core.models.material import Color, Material
+from linkforge_core import (
+    DEFAULT_CONTACT_KD,
+    DEFAULT_CONTACT_KP,
+    DEFAULT_FRICTION_MU,
+    DEFAULT_GRAVITY,
+    DEFAULT_SELF_COLLIDE,
+    Box,
+    Collision,
+    Color,
+    Inertial,
+    InertiaTensor,
+    Link,
+    LinkPhysics,
+    Material,
+    RobotModelError,
+    Transform,
+    Vector3,
+    Visual,
+)
 
 
 class TestInertiaTensor:
@@ -229,13 +244,6 @@ class TestLinkPhysics:
     def test_default_values(self) -> None:
         """Test that default values are correctly assigned."""
         physics = LinkPhysics()
-        from linkforge_core.constants import (
-            DEFAULT_CONTACT_KD,
-            DEFAULT_CONTACT_KP,
-            DEFAULT_FRICTION_MU,
-            DEFAULT_GRAVITY,
-            DEFAULT_SELF_COLLIDE,
-        )
 
         assert physics.self_collide == DEFAULT_SELF_COLLIDE
         assert physics.gravity == DEFAULT_GRAVITY

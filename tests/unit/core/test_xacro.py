@@ -3,13 +3,15 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core.exceptions import (
+from linkforge_core import (
     RobotXacroError,
     RobotXacroExpressionError,
     RobotXacroRecursionError,
+    XACROGenerator,
+    XACROParser,
+    XacroResolver,
+    clear_xacro_cache,
 )
-from linkforge_core.generators.xacro_generator import XACROGenerator
-from linkforge_core.parsers.xacro_parser import XacroResolver, clear_xacro_cache
 
 
 @pytest.fixture
@@ -129,7 +131,6 @@ class TestXacroResolver:
           <xacro:insert_block name="b"/>
         </robot>
         """
-        from linkforge_core.exceptions import RobotXacroRecursionError
 
         with pytest.raises(RobotXacroRecursionError):
             resolver.resolve_string(xml)
@@ -324,7 +325,6 @@ class TestXacroInfrastructure:
 
     def test_xacro_parser_parse_file_kwargs(self, tmp_path) -> None:
         """Test XACROParser.resolve kwargs."""
-        from linkforge_core.parsers.xacro_parser import XACROParser
 
         robot_file = tmp_path / "robot.xacro"
         robot_file.write_text(
@@ -444,7 +444,6 @@ class TestXacroInfrastructure:
 
     def test_xacro_include_success_no_ns(self, resolver, tmp_path) -> None:
         """Test successful xacro include without a namespace."""
-        from linkforge_core.parsers.xacro_parser import XACROParser
 
         parser = XACROParser()
 
@@ -466,7 +465,6 @@ class TestXacroInfrastructure:
 
     def test_xacro_file_parsing_edge_cases(self, tmp_path) -> None:
         """Test file parsing coverage for missing includes, namespaced includes, and macro parsing in _get_structural_template."""
-        from linkforge_core.parsers.xacro_parser import XACROParser
 
         parser = XACROParser()
 
@@ -495,7 +493,6 @@ class TestXacroInfrastructure:
 
         bad_file = tmp_path / "bad.xacro"
         bad_file.write_text(bad_xml)
-        from linkforge_core.parsers.xacro_parser import XACROParser
 
         parser = XACROParser()
         with pytest.raises(RobotXacroError):
@@ -518,7 +515,6 @@ class TestXacroInfrastructure:
 
     def test_xacro_circular_include_and_cache(self, tmp_path) -> None:
         """Test circular includes to trigger RobotXacroRecursionError, and caching."""
-        from linkforge_core.parsers.xacro_parser import XACROParser
 
         parser = XACROParser()
 
@@ -543,7 +539,6 @@ class TestXacroInfrastructure:
 
     def test_xacro_namespaced_property(self, tmp_path) -> None:
         """Test defining a property inside a namespace."""
-        from linkforge_core.parsers.xacro_parser import XACROParser
 
         parser = XACROParser()
 
@@ -571,8 +566,6 @@ class TestXacroInfrastructure:
         assert "123" in parser.resolve(main_file)
 
     def test_xacro_cache_and_io_error_handling(self, tmp_path) -> None:
-        from linkforge_core.parsers.xacro_parser import XACROParser
-
         clear_xacro_cache()
 
         parser = XACROParser()

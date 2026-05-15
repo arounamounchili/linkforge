@@ -9,8 +9,7 @@ from __future__ import annotations
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
-from linkforge_core import sanitize_name as sanitize_robot_name
-from linkforge_core.constants import (
+from linkforge_core import (
     HW_IF_EFFORT,
     HW_IF_POSITION,
     HW_IF_VELOCITY,
@@ -18,6 +17,9 @@ from linkforge_core.constants import (
     TRANS_DIFFERENTIAL,
     TRANS_FOUR_BAR,
     TRANS_SIMPLE,
+)
+from linkforge_core import (
+    sanitize_name as sanitize_robot_name,
 )
 
 from ..constants import (

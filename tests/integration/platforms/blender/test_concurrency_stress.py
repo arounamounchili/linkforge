@@ -12,8 +12,7 @@ from pathlib import Path
 import bpy
 from linkforge.blender.adapters.context import BlenderContext
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
-from linkforge_core.composer import RobotBuilder
-from linkforge_core.composer.helpers import box
+from linkforge_core import RobotBuilder, box
 
 
 def test_rapid_collection_cleanup_stress():

@@ -5,8 +5,16 @@ from __future__ import annotations
 import math
 
 import pytest
-from linkforge_core.exceptions import RobotModelError
-from linkforge_core.models import Box, Cylinder, Mesh, Sphere, Transform, Vector3
+from linkforge_core import (
+    Box,
+    Cylinder,
+    GeometryType,
+    Mesh,
+    RobotModelError,
+    Sphere,
+    Transform,
+    Vector3,
+)
 
 
 class TestVector3:
@@ -77,7 +85,6 @@ class TestBox:
 
     def test_type(self) -> None:
         """Test geometry type."""
-        from linkforge_core.models import GeometryType
 
         box = Box(size=Vector3(1.0, 1.0, 1.0))
         assert box.type == GeometryType.BOX
@@ -110,7 +117,6 @@ class TestCylinder:
 
     def test_type(self) -> None:
         """Test geometry type."""
-        from linkforge_core.models import GeometryType
 
         cyl = Cylinder(radius=1.0, length=2.0)
         assert cyl.type == GeometryType.CYLINDER
@@ -142,7 +148,6 @@ class TestSphere:
 
     def test_type(self) -> None:
         """Test geometry type."""
-        from linkforge_core.models import GeometryType
 
         sphere = Sphere(radius=1.0)
         assert sphere.type == GeometryType.SPHERE
@@ -174,7 +179,6 @@ class TestMesh:
 
     def test_type(self) -> None:
         """Test geometry type."""
-        from linkforge_core.models import GeometryType
 
         mesh = Mesh(resource="model.stl")
         assert mesh.type == GeometryType.MESH

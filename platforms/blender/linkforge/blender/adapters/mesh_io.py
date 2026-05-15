@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import bpy
-from linkforge_core import get_logger, sanitize_name
-from linkforge_core.constants import EPSILON
+from linkforge_core import EPSILON, get_logger, sanitize_name
 from mathutils import Matrix, Vector
 
 from ..constants import (

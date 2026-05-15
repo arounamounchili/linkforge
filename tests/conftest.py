@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 
 import pytest
-from linkforge_core.models import (
+from linkforge_core import (
     Box,
     Collision,
     Color,

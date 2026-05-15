@@ -6,7 +6,7 @@ import contextlib
 import typing
 
 import bpy
-from linkforge_core.constants import JOINT_REVOLUTE
+from linkforge_core import JOINT_REVOLUTE
 
 from ..properties.link_props import sanitize_robot_name
 from ..utils.context import context_and_mode_guard

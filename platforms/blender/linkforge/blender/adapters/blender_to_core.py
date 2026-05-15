@@ -11,8 +11,6 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from linkforge_core import Robot, RobotBuilder, ValidationResult
-
 try:
     import numpy as np  # type: ignore[import-not-found]
 except ImportError:
@@ -21,9 +19,17 @@ except ImportError:
 
 import bpy
 from linkforge_core import (
+    DEFAULT_MATERIAL_RGBA,
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_EPSILON,
+    GEOM_MESH,
+    GEOM_SPHERE,
     Box,
     Color,
     Cylinder,
+    GazeboElement,
+    GazeboPlugin,
     Geometry,
     Material,
     Mesh,
@@ -38,14 +44,6 @@ from linkforge_core import (
     clean_float,
     get_logger,
     sanitize_name,
-)
-from linkforge_core.constants import (
-    DEFAULT_MATERIAL_RGBA,
-    GEOM_BOX,
-    GEOM_CYLINDER,
-    GEOM_EPSILON,
-    GEOM_MESH,
-    GEOM_SPHERE,
 )
 from mathutils import Matrix
 
@@ -837,8 +835,6 @@ class SceneToRobotTranslator:
         else:
             # Custom plugin: use filename as name (matches test expectation)
             name = plugin_filename
-
-        from linkforge_core import GazeboElement, GazeboPlugin
 
         gazebo_plugin = GazeboPlugin(
             name=name,

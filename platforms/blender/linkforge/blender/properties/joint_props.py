@@ -16,7 +16,7 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
-from linkforge_core.constants import (
+from linkforge_core import (
     DEFAULT_JOINT_DAMPING,
     DEFAULT_JOINT_EFFORT,
     DEFAULT_JOINT_FRICTION,
@@ -30,11 +30,12 @@ from linkforge_core.constants import (
     JOINT_REVOLUTE,
     PI,
 )
+from linkforge_core import (
+    sanitize_name as sanitize_robot_name,
+)
 
 if typing.TYPE_CHECKING:
     pass
-
-from linkforge_core import sanitize_name as sanitize_robot_name
 
 from ..constants import PROP_JOINT
 from ..utils.property_helpers import find_property_owner, get_link_props

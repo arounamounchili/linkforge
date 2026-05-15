@@ -18,7 +18,7 @@ import contextlib
 import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
-from linkforge_core.constants import (
+from linkforge_core import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
     CONTROL_TYPE_SYSTEM,

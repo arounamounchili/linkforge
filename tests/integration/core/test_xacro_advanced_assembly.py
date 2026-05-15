@@ -9,9 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from linkforge_core.models import Box, Robot
-from linkforge_core.parsers.urdf_parser import URDFParser
-from linkforge_core.parsers.xacro_parser import RobotXacroError, XACROParser
+from linkforge_core import Box, Robot, RobotXacroError, URDFParser, XACROParser
 
 
 @pytest.fixture

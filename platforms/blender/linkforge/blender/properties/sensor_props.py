@@ -17,7 +17,7 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
-from linkforge_core.constants import (
+from linkforge_core import (
     CAM_FORMAT_BAYER_BGGR8,
     CAM_FORMAT_BAYER_RGGB8,
     CAM_FORMAT_GRAY8,
@@ -55,13 +55,14 @@ from linkforge_core.constants import (
     SENSOR_IMU,
     SENSOR_LIDAR,
 )
+from linkforge_core import (
+    sanitize_name as sanitize_robot_name,
+)
 
 from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
     pass
-
-from linkforge_core import sanitize_name as sanitize_robot_name
 
 from ..constants import PROP_SENSOR
 from ..utils.property_helpers import find_property_owner, get_link_props

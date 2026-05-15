@@ -3,9 +3,19 @@
 import tempfile
 from pathlib import Path
 
-from linkforge_core import XACROGenerator
-from linkforge_core.models import Color, Joint, JointType, Link, Material, Robot, Visual
-from linkforge_core.models.geometry import Cylinder, Transform, Vector3
+from linkforge_core import (
+    Color,
+    Cylinder,
+    Joint,
+    JointType,
+    Link,
+    Material,
+    Robot,
+    Transform,
+    Vector3,
+    Visual,
+    XACROGenerator,
+)
 
 
 def test_split_files_and_reimport_simulated() -> None:
