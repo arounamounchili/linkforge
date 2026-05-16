@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, replace
-from enum import Enum
+from enum import StrEnum
 
 from ..constants import (
     DEFAULT_CAMERA_FAR,
@@ -56,7 +56,7 @@ from .gazebo import GazeboPlugin
 from .geometry import Transform
 
 
-class SensorType(str, Enum):
+class SensorType(StrEnum):
     """Enumeration of supported sensor types in the LinkForge IR."""
 
     CAMERA = SENSOR_CAMERA

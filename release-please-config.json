@@ -3,10 +3,10 @@
         ".": {
             "release-type": "python",
             "extra-files": [
-                "platforms/blender/blender_manifest.toml",
+                "platforms/blender/src/linkforge/blender/blender_manifest.toml",
                 "CITATION.cff",
                 "core/pyproject.toml",
-                "core/src/linkforge_core/__init__.py",
+                "core/src/linkforge/core/__init__.py",
                 "platforms/blender/pyproject.toml"
             ],
             "changelog-sections": [

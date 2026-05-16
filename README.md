@@ -77,7 +77,7 @@ By treating robot descriptions as **"Source Code"** rather than compiled **"Exec
 
 ### Method 3: Development Mode (For Contributors)
 If you want to contribute to LinkForge or use the latest source code:
-1. Clone the repository and install dependencies (see [Development Setup](#setup)).
+1. Clone the repository and install dependencies (see [Development Setup](CONTRIBUTING.md#development-setup)).
 2. Run **`just develop`**. This will link your workspace directly into Blender.
 3. Restart Blender and enable **LinkForge** in Extensions.
 

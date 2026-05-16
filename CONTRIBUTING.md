@@ -195,7 +195,7 @@ just coverage
 uv run pytest tests/unit/core/test_robot.py
 
 # Run specific Blender integration test file (manual)
-uv run python blender_launcher.py tests/integration/platforms/blender/test_roundtrip.py
+uv run python scripts/blender_launcher.py tests/integration/platforms/blender/test_roundtrip.py
 ```
 
 ### Manual QA (Mandatory)
@@ -247,7 +247,7 @@ def test_sensor_roundtrip():
     urdf = generator.generate(robot)
 
     # Re-import
-    from linkforge.core.parsers import URDFParser
+    from linkforge.core import URDFParser
     robot2 = URDFParser().parse_string(urdf)
 
     # Verify sensor origin preserved
@@ -278,7 +278,7 @@ We follow a **Tiered Mocking Strategy** based on the level of interaction:
 ### Debugging in Blender
 
 ```python
-from linkforge.core.logging_config import get_logger
+from linkforge.core import get_logger
 logger = get_logger(__name__)
 logger.error(f"Debug: {variable}")
 

@@ -22,8 +22,9 @@ from ..utils.property_helpers import (
 try:
     from bpy.app.handlers import persistent
 except (ImportError, AttributeError):
+    F = typing.TypeVar("F", bound=typing.Callable[..., typing.Any])
 
-    def persistent(func: typing.Any) -> typing.Any:
+    def persistent(func: F) -> F:
         """Dummy decorator for environments without real Blender handlers."""
         return func
 
@@ -52,7 +53,7 @@ def flush_deferred_renames() -> None:
     PENDING_RENAMES.extend(remaining)
 
 
-@persistent  # type: ignore[misc]
+@persistent  # type: ignore[untyped-decorator]
 def on_depsgraph_update_post(_scene: typing.Any, _depsgraph: typing.Any) -> None:
     """Synchronize LinkForge identities when objects are renamed in the Outliner.
 

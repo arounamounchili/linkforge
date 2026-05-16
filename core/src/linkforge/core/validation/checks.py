@@ -189,6 +189,7 @@ class TreeStructureCheck(ValidationCheck):
                 result.add_error(
                     title="Multiple root links",
                     message=str(e),
+                    code=ValidationErrorCode.MULTIPLE_ROOTS,
                     suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
                 )
             else:
@@ -202,6 +203,7 @@ class TreeStructureCheck(ValidationCheck):
             result.add_error(
                 title="Kinematic error",
                 message=str(e),
+                code=ValidationErrorCode.INVALID_VALUE,
             )
             return None
 

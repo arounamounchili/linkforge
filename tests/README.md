@@ -17,7 +17,7 @@ End-to-end tests verifying the interaction between multiple components.
 - **`integration/platforms/blender/`**: Verifies the complete roundtrip process.
 
 ### 3. Infrastructure
-- `blender_launcher.py` (Root): CLI tool to run tests inside a Blender environment.
+- `scripts/blender_launcher.py`: CLI tool to run tests inside a Blender environment.
 - `mock_bpy_env.py`: Comprehensive mock of the Blender API for fast logic testing.
 - `conftest.py`, `core_test_utils.py`, `blender_test_utils.py`: Shared fixtures and assertions.
 

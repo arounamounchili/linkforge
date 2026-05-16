@@ -11,12 +11,12 @@ Core Components:
     - RobotGeneratorError: Failures during format export.
 """
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 
-class ValidationErrorCode(Enum):
+class ValidationErrorCode(StrEnum):
     """Categorized error codes for robot validation failures."""
 
     # Naming and Identity

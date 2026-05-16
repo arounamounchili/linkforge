@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
-from enum import Enum
+from enum import StrEnum
 
 from .._utils.string_utils import is_valid_name
 from ..constants import (
@@ -34,7 +34,7 @@ from ..exceptions import RobotValidationError, ValidationErrorCode
 from .geometry import Transform, Vector3
 
 
-class JointType(Enum):
+class JointType(StrEnum):
     """Standard robot joint types."""
 
     REVOLUTE = JOINT_REVOLUTE  # Rotates around axis with limits

@@ -6,9 +6,9 @@ actual test execution to tests/blender_test_runner.py which runs inside
 Blender's embedded Python interpreter.
 
 Usage:
-    python blender_launcher.py
-    python blender_launcher.py -- --cov=linkforge
-    BLENDER_PATH=/custom/blender python blender_launcher.py
+    uv run python scripts/blender_launcher.py
+    uv run python scripts/blender_launcher.py -- --cov-report=term-missing
+    BLENDER_PATH=/custom/blender uv run python scripts/blender_launcher.py
 """
 
 import os
@@ -52,7 +52,7 @@ def main() -> None:
 
     print(f"Using Blender: {blender_path}")
 
-    project_root = os.path.abspath(os.path.dirname(__file__))
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     runner_script = os.path.join(project_root, "tests", "blender_test_runner.py")
 
     if not os.path.exists(runner_script):

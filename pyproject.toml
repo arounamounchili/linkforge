@@ -47,7 +47,6 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 mypy_path = ["core/src", "platforms/blender/src"]
-exclude = ["platforms/blender/src/linkforge/blender/linkforge"]
 
 [tool.pyright]
 include = ["core/src", "platforms/blender/src", "tests"]
@@ -85,14 +84,6 @@ ignore_errors = false
 disallow_subclassing_any = false
 warn_unused_ignores = true
 
-# Tiered Quality Control: Strict enforcement for production core, optimized for developer velocity in test suites.
-[[tool.mypy.overrides]]
-module = "tests.*"
-check_untyped_defs = false
-disallow_untyped_defs = false
-ignore_missing_imports = true
-ignore_errors = true
-
 [dependency-groups]
 dev = [
     "linkforge-core",
@@ -101,9 +92,9 @@ dev = [
     "pytest>=9.0.3",
     "pytest-cov>=5.0.0",
     "pytest-mock>=3.14.0",
-    "ruff>=0.3.0",
-    "mypy>=1.9.0",
-    "pre-commit>=3.6.0",
+    "ruff>=0.15.13",
+    "mypy>=2.1.0",
+    "pre-commit>=4.6.0",
     "myst-parser>=2.0.0",
     "sphinx>=7.2.6",
     "sphinx-autodoc-typehints>=2.0.0",

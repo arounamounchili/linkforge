@@ -1,14 +1,14 @@
 [run]
 source =
-    linkforge_core
-    linkforge
+    linkforge.core
+    linkforge.blender
 branch = True
 parallel = True
 relative_files = True
 
 [paths]
 source =
-    core/src/linkforge_core
-    platforms/blender/linkforge
-    */linkforge_core
-    */linkforge
+    core/src/linkforge/core
+    platforms/blender/src/linkforge/blender
+    */linkforge/core
+    */linkforge/blender

@@ -74,7 +74,8 @@ $RECYCLE.BIN/
 *.blend2
 
 # Build artifacts
-dist/
+dist/*
+!dist/.gitkeep
 *.pyc
 *.pyo
 *.pyd
@@ -92,7 +93,8 @@ temp/
 *.orig
 
 # Documentation builds
-docs/_build/
+docs/build/
+docs/*.log
 docs/.buildinfo
 docs/.doctrees/
 site/
@@ -100,10 +102,6 @@ site/
 # Bundled Dependencies (managed by build script)
 **/wheels/
 *.whl
-
-# Distribution cleanup
-dist/*.zip
-!dist/.gitkeep
 
 # Linting Tools
 actionlint

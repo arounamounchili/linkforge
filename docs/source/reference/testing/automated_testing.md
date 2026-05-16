@@ -42,7 +42,7 @@ We use `just` to run specific tiers of the suite:
 ### Blender Execution Model
 Blender tests use a **two-layer execution model** because Blender ships its own embedded Python interpreter:
 
-1. `blender_launcher.py` (root): Finds Blender and spawns the subprocess.
+1. `scripts/blender_launcher.py`: Finds Blender and spawns the subprocess.
 2. `tests/blender_test_runner.py`: Runs inside Blender, injects paths, and executes `pytest.main()`.
 
 ## Continuous Integration (CI)

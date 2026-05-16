@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 from ..constants import (
     GEOM_BOX,
@@ -26,7 +26,7 @@ from ..constants import (
 from ..exceptions import RobotPhysicsError, ValidationErrorCode
 
 
-class GeometryType(Enum):
+class GeometryType(StrEnum):
     """Standard geometry primitives."""
 
     BOX = GEOM_BOX

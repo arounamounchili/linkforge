@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
-from enum import Enum
+from enum import StrEnum
 
 from .._utils.string_utils import is_valid_name
 from ..constants import (
@@ -25,7 +25,7 @@ from ..constants import (
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
-class TransmissionType(str, Enum):
+class TransmissionType(StrEnum):
     """Standard transmission types in ros2_control."""
 
     SIMPLE = "transmission_interface/SimpleTransmission"

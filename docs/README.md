@@ -70,11 +70,11 @@ Regular markdown content.
 
 ## Code Examples
 
-\`\`\`python
-from linkforge.core.models import Robot
+```python
+from linkforge.core import Robot
 
 robot = Robot(name="my_robot")
-\`\`\`
+```
 
 ## Cross-References
 
@@ -89,7 +89,7 @@ API docs use Sphinx autodoc with reStructuredText:
 # Module Name
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.Robot
+.. autoclass:: linkforge.core.Robot
    :members:
    :undoc-members:
    :show-inheritance:
