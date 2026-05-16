@@ -5,7 +5,7 @@ LinkForge Core is the platform-independent "Robotics Intelligence" engine. It se
 
 ## 🚀 The "Front Door" API
 
-Starting with v1.3.0, LinkForge Core provides a centralized, curated API. You no longer need to navigate deep module paths.
+LinkForge Core provides a centralized, curated API. You no longer need to navigate deep module paths.
 
 ```python
 import linkforge.core as lf

@@ -8,7 +8,7 @@
 
 ## Context
 
-Prior to v1.3.0, the LinkForge codebase used a standard "flat" layout where packages were located in the root of their respective workspace directories (e.g., `core/linkforge/core/`). Additionally, the public API was highly fragmented, requiring users to know deep module paths (e.g., `from linkforge.core.models.robot import Robot`) to use basic library features.
+Prior to v1.4.0, the LinkForge codebase used a standard "flat" layout where packages were located in the root of their respective workspace directories (e.g., `core/linkforge/core/`). Additionally, the public API was highly fragmented, requiring users to know deep module paths (e.g., `from linkforge.core.models.robot import Robot`) to use basic library features.
 
 This led to several architectural problems:
 1.  **Test Shadowing**: In Python, having the source code in the root can cause tests to run against the local source directory instead of the installed package. This hides installation bugs and dependency issues.
