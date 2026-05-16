@@ -7,12 +7,12 @@ import typing
 
 import bpy
 from bpy.types import Context, Panel, Scene, UILayout
+from linkforge.core._utils.dict_utils import filter_items_by_name
 
 from ..constants import (
-    PROP_LINK,
+    PROP_ROBOT,
     PROP_VALIDATION,
 )
-from ..core._utils.dict_utils import filter_items_by_name
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
@@ -36,7 +36,7 @@ class LINKFORGE_PT_export_panel(Panel):
         layout = self.layout
         if not layout:
             return
-        props = getattr(scene, PROP_LINK)
+        props = getattr(scene, PROP_ROBOT)
 
         # Count components
         stats = get_robot_statistics(scene)
@@ -256,7 +256,7 @@ class LINKFORGE_PT_export_panel(Panel):
         if not select_box:
             return
 
-        props = getattr(scene, PROP_LINK)
+        props = getattr(scene, PROP_ROBOT)
 
         # UI
         search_row = select_box.row(align=True)

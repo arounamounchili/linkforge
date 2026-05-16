@@ -16,15 +16,32 @@ from pathlib import Path
 # --- Health Checks & Dev Mode ---
 def _check_health() -> bool:
     """Verify the extension environment and dependencies."""
-    # 1. Standard Production Path
+    # 1. Standard Production Path (Bundled core)
+    # If running as a Blender extension (bl_ext namespace), we map the bundled
+    # core into the global 'linkforge.core' namespace so absolute imports work.
     try:
-        from . import core  # noqa: F401
+        from . import core as bundled_core  # type: ignore[attr-defined]
+
+        # If we are in a namespace (extensions), alias it to the expected package name
+        if __name__.startswith("bl_ext."):
+            sys.modules["linkforge.core"] = bundled_core
+            # Also alias submodules if needed (recursive mapping might be better but this is usually enough)
+            # Actually, Python handles submodules if 'linkforge.core' is set.
 
         return True
     except ImportError:
         pass
 
-    # 2. Development Fallback: Search for core in workspace
+    # 2. Development Fallback: Try to find linkforge.core in the environment
+    # This is critical for running tests and mypy in the source layout
+    try:
+        import linkforge.core  # noqa: F401
+
+        return True
+    except ImportError:
+        pass
+
+    # 3. Deep Search: Search for core in workspace (fallback for complex envs)
     try:
         current = Path(__file__).resolve()
         for _ in range(10):
@@ -35,7 +52,7 @@ def _check_health() -> bool:
                 if str(core_src) not in sys.path:
                     sys.path.insert(0, str(core_src))
                 try:
-                    from . import core  # noqa: F401
+                    import linkforge.core  # noqa: F401
 
                     return True
                 except ImportError:

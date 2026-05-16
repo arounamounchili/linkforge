@@ -17,12 +17,8 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
-
-from ..constants import (
-    PROP_SENSOR,
-)
-from ..core._utils.string_utils import sanitize_name
-from ..core.constants import (
+from linkforge.core._utils.string_utils import sanitize_name
+from linkforge.core.constants import (
     CAM_FORMAT_BAYER_BGGR8,
     CAM_FORMAT_BAYER_RGGB8,
     CAM_FORMAT_GRAY8,
@@ -59,6 +55,10 @@ from ..core.constants import (
     SENSOR_GPU_LIDAR,
     SENSOR_IMU,
     SENSOR_LIDAR,
+)
+
+from ..constants import (
+    PROP_SENSOR,
 )
 from ..utils.scene_utils import clear_stats_cache
 

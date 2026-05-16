@@ -9,6 +9,11 @@ from pathlib import Path
 from typing import Any
 
 import bpy
+from linkforge.core import get_logger
+from linkforge.core._utils.string_utils import sanitize_name
+from linkforge.core.constants import (
+    EPSILON,
+)
 from mathutils import Matrix, Vector
 
 from ..constants import (
@@ -16,11 +21,6 @@ from ..constants import (
     FORMAT_OBJ,
     FORMAT_STL,
     PURPOSE_COLLISION,
-)
-from ..core import get_logger
-from ..core._utils.string_utils import sanitize_name
-from ..core.constants import (
-    EPSILON,
 )
 
 logger = get_logger(__name__)

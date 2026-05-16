@@ -9,15 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import bpy
-
-from ..adapters.blender_to_core import detect_primitive_type
-from ..constants import (
-    GEOM_AUTO,
-    SUFFIX_COLLISION,
-    TAG_COLLISION_GEOM,
-    TAG_SOURCE_GEOM,
-)
-from ..core.constants import (
+from linkforge.core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,
@@ -28,6 +20,14 @@ from ..core.constants import (
     JOINT_PLANAR,
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
+)
+
+from ..adapters.blender_to_core import detect_primitive_type
+from ..constants import (
+    GEOM_AUTO,
+    SUFFIX_COLLISION,
+    TAG_COLLISION_GEOM,
+    TAG_SOURCE_GEOM,
 )
 from ..utils.property_helpers import (
     get_joint_props,

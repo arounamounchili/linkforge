@@ -12,7 +12,7 @@ import bpy
 from bpy.types import Context, Panel
 
 from ..constants import (
-    PROP_LINK,
+    PROP_ROBOT,
 )
 
 
@@ -39,7 +39,7 @@ class LINKFORGE_PT_forge(Panel):
 
         if not context.scene:
             return
-        scene_props = getattr(context.scene, PROP_LINK)
+        scene_props = getattr(context.scene, PROP_ROBOT)
 
         if scene_props.is_importing:
             # Active Import Status
