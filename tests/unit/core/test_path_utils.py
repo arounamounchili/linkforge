@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from linkforge_core import _extract_package_name, resolve_package_path
+from linkforge.core._utils.path_utils import _extract_package_name, resolve_package_path
 
 
 def test_extract_package_name(tmp_path: Path) -> None:

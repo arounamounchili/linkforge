@@ -1,5 +1,5 @@
 import pytest
-from linkforge_core import (
+from linkforge.core import (
     LinkForgeError,
     Robot,
     RobotGenerator,

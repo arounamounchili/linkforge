@@ -7,7 +7,7 @@ independently or composed into a full validation pipeline.
 ## Abstract Base
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.validation.checks.ValidationCheck
+.. autoclass:: linkforge.core.validation.checks.ValidationCheck
    :members:
    :show-inheritance:
 ```
@@ -15,35 +15,35 @@ independently or composed into a full validation pipeline.
 ## Built-in Checks
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.validation.checks.HasLinksCheck
+.. autoclass:: linkforge.core.validation.checks.HasLinksCheck
    :members:
    :show-inheritance:
 
-.. autoclass:: linkforge_core.validation.checks.DuplicateNameCheck
+.. autoclass:: linkforge.core.validation.checks.DuplicateNameCheck
    :members:
    :show-inheritance:
 
-.. autoclass:: linkforge_core.validation.checks.JointReferenceCheck
+.. autoclass:: linkforge.core.validation.checks.JointReferenceCheck
    :members:
    :show-inheritance:
 
-.. autoclass:: linkforge_core.validation.checks.TreeStructureCheck
+.. autoclass:: linkforge.core.validation.checks.TreeStructureCheck
    :members:
    :show-inheritance:
 
-.. autoclass:: linkforge_core.validation.checks.MassPropertiesCheck
+.. autoclass:: linkforge.core.validation.checks.MassPropertiesCheck
    :members:
    :show-inheritance:
 
-.. autoclass:: linkforge_core.validation.checks.GeometryCheck
+.. autoclass:: linkforge.core.validation.checks.GeometryCheck
    :members:
    :show-inheritance:
 
-.. autoclass:: linkforge_core.validation.checks.Ros2ControlCheck
+.. autoclass:: linkforge.core.validation.checks.Ros2ControlCheck
    :members:
    :show-inheritance:
 
-.. autoclass:: linkforge_core.validation.checks.MimicChainCheck
+.. autoclass:: linkforge.core.validation.checks.MimicChainCheck
    :members:
    :show-inheritance:
 ```
@@ -57,7 +57,7 @@ independently or composed into a full validation pipeline.
 The standard workflow — runs all registered checks in order:
 
 ```python
-from linkforge_core.validation.validator import RobotValidator
+from linkforge.core.validation.validator import RobotValidator
 
 validator = RobotValidator()
 result = validator.validate(robot)
@@ -72,8 +72,8 @@ if not result.is_valid:
 Useful for targeted testing or when building a custom validation pipeline:
 
 ```python
-from linkforge_core.validation.checks import TreeStructureCheck
-from linkforge_core.validation.result import ValidationResult
+from linkforge.core.validation.checks import TreeStructureCheck
+from linkforge.core.validation.result import ValidationResult
 
 result = ValidationResult()
 TreeStructureCheck().run(robot, result)
@@ -91,12 +91,12 @@ else:
 Pick and compose only the checks you need:
 
 ```python
-from linkforge_core.validation.checks import (
+from linkforge.core.validation.checks import (
     HasLinksCheck,
     DuplicateNameCheck,
     MassPropertiesCheck,
 )
-from linkforge_core.validation.result import ValidationResult
+from linkforge.core.validation.result import ValidationResult
 
 checks = [HasLinksCheck(), DuplicateNameCheck(), MassPropertiesCheck()]
 result = ValidationResult()

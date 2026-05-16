@@ -28,8 +28,8 @@ except ImportError:
 # --- Configuration ---
 REPO_ROOT = Path(__file__).resolve().parents[3]  # platforms/blender/scripts/build.py -> root
 PLATFORM_DIR = REPO_ROOT / "platforms" / "blender"
-SOURCE_DIR = PLATFORM_DIR / "linkforge"
-CORE_DIR = REPO_ROOT / "core" / "src" / "linkforge_core"
+SOURCE_DIR = PLATFORM_DIR / "src" / "linkforge" / "blender"
+CORE_DIR = REPO_ROOT / "core" / "src" / "linkforge" / "core"
 MANIFEST_PATH = SOURCE_DIR / "blender_manifest.toml"
 WHEELS_DIR = PLATFORM_DIR / "wheels"
 DIST_DIR = REPO_ROOT / "dist"  # Keep dist in root for easy access
@@ -176,7 +176,7 @@ def build_extension() -> Path:
     # 2. Copy source code (Extension)
     # Copy contents of platforms/blender/linkforge/ so __init__.py is at root
     for item in SOURCE_DIR.iterdir():
-        if item.name.startswith((".", "__pycache__")) or item.name == "linkforge_core":
+        if item.name.startswith((".", "__pycache__")) or item.name == "linkforge.core":
             continue
         dest = staging_dir / item.name
         if item.is_dir():
@@ -184,16 +184,18 @@ def build_extension() -> Path:
         else:
             shutil.copy2(item, dest)
 
-    # 3. Copy Core Library (linkforge_core)
+    # 3. Copy Core Library (linkforge.core)
     # Bundle it inside the linkforge package for policy compliance and reliable imports
     if not CORE_DIR.exists():
         print(f"❌ Error: Core directory {CORE_DIR} not found.")
         sys.exit(1)
 
-    shutil.copytree(CORE_DIR, staging_dir / "linkforge_core")
+    # In the zip, we want linkforge/core/ so 'import linkforge.core' works
+    target_core_dir = staging_dir / "linkforge" / "core"
+    shutil.copytree(CORE_DIR, target_core_dir)
     if (REPO_ROOT / "core" / "LICENSE").exists():
-        shutil.copy2(REPO_ROOT / "core" / "LICENSE", staging_dir / "linkforge_core")
-    print(f"  Bundled linkforge_core -> {staging_dir / 'linkforge_core'}")
+        shutil.copy2(REPO_ROOT / "core" / "LICENSE", target_core_dir)
+    print(f"  Bundled linkforge.core -> {target_core_dir}")
 
     # 3. Copy dependencies (if any)
     if WHEELS_DIR.exists() and any(WHEELS_DIR.iterdir()):
@@ -322,16 +324,30 @@ def develop_extension() -> None:
 
     target_dir = ext_base / "user_default" / "linkforge"
 
-    if target_dir.exists():
+    if target_dir.exists() or target_dir.is_symlink():
         if target_dir.is_symlink():
             target_dir.unlink()
         else:
             shutil.rmtree(target_dir)
 
     try:
-        # Link the entire source folder directly
-        # target_is_directory=True is required for Windows support
+        # 1. Link the Blender source folder to Blender's extensions directory
         os.symlink(SOURCE_DIR, target_dir, target_is_directory=True)
+
+        # 2. Link the Core library INTO the source folder so imports work in dev mode
+        # This mirrors the production build structure: linkforge/core/
+        core_parent = SOURCE_DIR / "linkforge"
+        core_parent.mkdir(exist_ok=True)
+        core_link_target = core_parent / "core"
+
+        if core_link_target.exists() or core_link_target.is_symlink():
+            if core_link_target.is_symlink():
+                core_link_target.unlink()
+            else:
+                shutil.rmtree(core_link_target)
+
+        # Point to core/src/linkforge/core
+        os.symlink(CORE_DIR, core_link_target, target_is_directory=True)
 
         # Clear __pycache__ to force re-read
         pycache = target_dir / "__pycache__"
@@ -339,6 +355,7 @@ def develop_extension() -> None:
             shutil.rmtree(pycache)
 
         print(f"\n✅ Created symlink: {target_dir} -> {SOURCE_DIR}")
+        print(f"✅ Linked core library: {core_link_target} -> {CORE_DIR}")
         print("🚀 Extension is now linked for development.")
     except Exception as e:
         print(f"❌ Error creating symlink: {e}")

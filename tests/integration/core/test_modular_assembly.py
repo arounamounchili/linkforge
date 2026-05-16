@@ -7,7 +7,7 @@ correctly prevents collisions and maintains kinematic integrity.
 
 from __future__ import annotations
 
-from linkforge_core import Box, RobotBuilder, RobotValidator, Vector3
+from linkforge.core import Box, RobotBuilder, RobotValidator, Vector3
 
 
 def create_arm_component() -> RobotBuilder:

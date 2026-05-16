@@ -3,11 +3,8 @@
 from pathlib import Path
 
 import pytest
-from linkforge_core import (
-    RobotModelError,
-    RobotParserIOError,
-    SRDFParser,
-    URDFParser,
+from linkforge.core import RobotModelError, RobotParserIOError, SRDFParser, URDFParser
+from linkforge.core.validation import (
     find_sandbox_root,
     validate_mesh_path,
     validate_package_uri,

@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from linkforge_core import (
+from linkforge.core import (
     Box,
     Cylinder,
     Inertial,
@@ -200,7 +200,7 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
     # Add a mesh with invalid scale to trigger the float conversion error
     ET.SubElement(elem, "mesh", filename="model.stl", scale="invalid_scale_string")
 
-    with patch("linkforge_core.parsers.xml_base.logger") as mock_logger:
+    with patch("linkforge.core.parsers.xml_base.logger") as mock_logger:
         res = parser._parse_geometry_element(elem)
         assert res is None
         mock_logger.warning.assert_called()

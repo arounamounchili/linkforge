@@ -1,6 +1,6 @@
 import bpy
 from linkforge.blender.adapters.translator import ITranslator, LinkTranslator, TranslationRegistry
-from linkforge_core import ValidationErrorCode, ValidationResult
+from linkforge.core import ValidationErrorCode, ValidationResult
 
 from tests.blender_test_utils import cleanup_blender_scene, create_mesh_object
 

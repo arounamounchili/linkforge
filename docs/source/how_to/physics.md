@@ -61,9 +61,9 @@ automatically when you call `.with_mass()` on the `LinkBuilder`. This is the
 Python equivalent of enabling **Auto-Calculate Inertia** in Blender.
 
 ```python
-from linkforge_core.composer import RobotBuilder
-from linkforge_core.models import Robot
-from linkforge_core.models.geometry import Box, Vector3
+from linkforge.core.composer import RobotBuilder
+from linkforge.core.models import Robot
+from linkforge.core.models.geometry import Box, Vector3
 
 assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
 

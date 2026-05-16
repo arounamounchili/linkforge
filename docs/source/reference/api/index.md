@@ -21,7 +21,7 @@ blender
 
 LinkForge is organized into two main layers:
 
-### Core Layer (`linkforge_core`)
+### Core Layer (`linkforge.core`)
 
 Platform-independent robot modeling and URDF/XACRO processing.
 
@@ -50,10 +50,10 @@ The `RobotBuilder` Composer is the recommended way to build robots in Python.
 It handles validation, prefixing, and SRDF generation automatically.
 
 ```python
-from linkforge_core import RobotBuilder
-from linkforge_core.models import Robot
-from linkforge_core.models.geometry import Vector3
-from linkforge_core.models.joint import JointLimits
+from linkforge.core import RobotBuilder
+from linkforge.core.models import Robot
+from linkforge.core.models.geometry import Vector3
+from linkforge.core.models.joint import JointLimits
 
 assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
 
@@ -72,7 +72,7 @@ and SRDF export.
 ### Parsing URDF
 
 ```python
-from linkforge_core.parsers import URDFParser
+from linkforge.core.parsers import URDFParser
 from pathlib import Path
 
 # Parse URDF file
@@ -91,8 +91,8 @@ for link in robot.links:
 ### Calculating Inertia
 
 ```python
-from linkforge_core.physics.inertia import calculate_box_inertia, calculate_cylinder_inertia
-from linkforge_core.models.geometry import Box, Cylinder, Vector3
+from linkforge.core.physics.inertia import calculate_box_inertia, calculate_cylinder_inertia
+from linkforge.core.models.geometry import Box, Cylinder, Vector3
 
 # Box inertia
 box = Box(size=Vector3(1.0, 0.5, 0.3))
@@ -106,7 +106,7 @@ inertia = calculate_cylinder_inertia(cylinder, mass=5.0)
 ### Validation
 
 ```python
-from linkforge_core import RobotValidator
+from linkforge.core import RobotValidator
 
 # Validate robot
 validator = RobotValidator()

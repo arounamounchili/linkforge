@@ -3,7 +3,7 @@
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core import (
+from linkforge.core import (
     Box,
     CameraInfo,
     Collision,

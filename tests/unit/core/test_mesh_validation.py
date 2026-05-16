@@ -3,11 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core import (
-    RobotPhysicsError,
-    ValidationErrorCode,
-    validate_mesh_topology,
-)
+from linkforge.core import RobotPhysicsError, ValidationErrorCode, validate_mesh_topology
 
 
 class TestMeshTopologyValidation:

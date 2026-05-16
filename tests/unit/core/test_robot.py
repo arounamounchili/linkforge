@@ -1,7 +1,7 @@
 from unittest.mock import PropertyMock, patch
 
 import pytest
-from linkforge_core import (
+from linkforge.core import (
     CameraInfo,
     GazeboElement,
     Inertial,

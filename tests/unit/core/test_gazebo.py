@@ -3,11 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core import (
-    GazeboElement,
-    GazeboPlugin,
-    RobotModelError,
-)
+from linkforge.core import GazeboElement, GazeboPlugin, RobotModelError
 
 
 class TestGazeboPlugin:

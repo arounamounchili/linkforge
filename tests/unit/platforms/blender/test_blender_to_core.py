@@ -35,11 +35,7 @@ from linkforge.blender.adapters.translator import (
     SensorTranslator,
     TransmissionTranslator,
 )
-from linkforge_core import (
-    HW_IF_VELOCITY,
-    TRANS_CUSTOM,
-    TRANS_DIFFERENTIAL,
-    TRANS_SIMPLE,
+from linkforge.core import (
     Box,
     Cylinder,
     GeometryType,
@@ -52,6 +48,12 @@ from linkforge_core import (
     SensorType,
     Sphere,
     ValidationErrorCode,
+)
+from linkforge.core.constants import (
+    HW_IF_VELOCITY,
+    TRANS_CUSTOM,
+    TRANS_DIFFERENTIAL,
+    TRANS_SIMPLE,
 )
 from mathutils import Euler, Matrix
 

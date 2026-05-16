@@ -6,7 +6,7 @@ non-origin base links, and multi-visual/collision configurations.
 
 from __future__ import annotations
 
-from linkforge_core import (
+from linkforge.core import (
     Box,
     Collision,
     Joint,

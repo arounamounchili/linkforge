@@ -13,7 +13,7 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
-from linkforge_core import (
+from linkforge.core import (
     Box,
     CameraInfo,
     Collision,

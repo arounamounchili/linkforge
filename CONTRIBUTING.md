@@ -72,7 +72,7 @@ just build
 ```
 linkforge/
 ├── core/                  # Core Robotics Logic (pip package)
-│   └── src/linkforge_core/
+│   └── src/linkforge/core/
 ├── platforms/
 │   └── blender/           # Blender Extension (.zip)
 ├── tests/                 # Test Suite (unit + integration)
@@ -247,7 +247,7 @@ def test_sensor_roundtrip():
     urdf = generator.generate(robot)
 
     # Re-import
-    from linkforge_core.parsers import URDFParser
+    from linkforge.core.parsers import URDFParser
     robot2 = URDFParser().parse_string(urdf)
 
     # Verify sensor origin preserved
@@ -278,7 +278,7 @@ We follow a **Tiered Mocking Strategy** based on the level of interaction:
 ### Debugging in Blender
 
 ```python
-from linkforge_core.logging_config import get_logger
+from linkforge.core.logging_config import get_logger
 logger = get_logger(__name__)
 logger.error(f"Debug: {variable}")
 
@@ -425,7 +425,7 @@ While LinkForge supports `ros2_control`, it is designed to be distribution-agnos
 
 ### 4. Validation Extensibility (Quality Control)
 To maintain the highest standards of robot description quality, LinkForge uses a **Modular Validation Registry**.
-- **The Rule**: Every new core model feature must be accompanied by a corresponding `ValidationCheck` in `core/src/linkforge_core/validation/checks.py`.
+- **The Rule**: Every new core model feature must be accompanied by a corresponding `ValidationCheck` in `core/src/linkforge/core/validation/checks.py`.
 - **Implementation**: Inherit from `ValidationCheck`, implement the `run()` method, and append your class to `RobotValidator.DEFAULT_CHECKS`.
 - **Testing**: Add isolated unit tests for your new check in `tests/unit/core/test_validation_checks.py`.
 

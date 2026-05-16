@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
-from linkforge_core import AttrDict, filter_items_by_name
+from linkforge.core._utils.dict_utils import AttrDict, filter_items_by_name
 
 
 class TestAttrDict:

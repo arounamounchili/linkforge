@@ -7,14 +7,15 @@ It provides robust, dependency-minimized parsing and generation of robot descrip
 
 ## Structure
 
-- `src/linkforge_core/`: The main source code.
+- `src/linkforge/core/`: The main source code.
   - `models/`: Data structures representing robots, joints, links, and semantic info (SRDF).
   - `parsers/`: Parsers for URDF, XACRO, and SRDF formats.
   - `generators/`: Exporters back to XML formats (URDF, Xacro, SRDF).
   - `composer/`: Robot assembly logic and factory patterns.
   - `physics/`: Math and kinematics utilities for inertia and joint dynamics.
   - `validation/`: Robust schema validation for robot data.
-  - `utils/`: Common helpers and mathematical operations.
+  - `_utils/`: Internal helpers and mathematical operations.
+  - `io.py`: Functional entry points and shortcuts.
   - `base.py`, `constants.py`, `exceptions.py`, `logging_config.py`: Core interfaces, shared constants, error handling, and logging.
 
 ## Development

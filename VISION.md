@@ -57,7 +57,7 @@ Why LinkForge is the infrastructure for the next generation of robotics:
 ## 🏗️ Technical Strategy: The Hexagonal Core
 
 LinkForge is the **"LLVM for Robotics."** By utilizing a **Hexagonal Architecture**, we remain framework-independent:
-*   **Decoupled Intelligence**: Our "Robotics Brain" (`linkforge_core`) is isolated from specific UI hosts or simulation engines.
+*   **Decoupled Intelligence**: Our "Robotics Brain" (`linkforge.core`) is isolated from specific UI hosts or simulation engines.
 *   **Model Once, Deploy Anywhere**: Write your robot once in `.lf`, and swappable adapters generate the exact MJCF, URDF, or SDF needed for your specific runtime.
 
 ---

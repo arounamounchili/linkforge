@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from linkforge_core import (
+from linkforge.core import (
     Box,
     Cylinder,
     GazeboElement,

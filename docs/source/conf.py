@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="sphinx_au
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-from linkforge_core import __version__  # noqa: E402
+from linkforge.core import __version__  # noqa: E402
 
 project = "LinkForge"
 copyright = "2026, Arouna Patouossa Mounchili"  # noqa: A001

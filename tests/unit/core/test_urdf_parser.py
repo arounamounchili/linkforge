@@ -3,8 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from linkforge_core import (
-    MIN_REASONABLE_INERTIA,
+from linkforge.core import (
     Box,
     CameraInfo,
     Color,
@@ -21,6 +20,7 @@ from linkforge_core import (
     URDFParser,
     XacroDetectedError,
 )
+from linkforge.core.constants import MIN_REASONABLE_INERTIA
 
 
 class TestURDFParser:
@@ -1105,7 +1105,7 @@ class TestURDFParser:
         # Should not raise — just skip the transmission
         robot = parser.parse_string(xml)
         assert isinstance(
-            robot, __import__("linkforge_core.models.robot", fromlist=["Robot"]).Robot
+            robot, __import__("linkforge.core.models.robot", fromlist=["Robot"]).Robot
         )
 
     def test_camera_sensor_without_image_element_uses_defaults(self) -> None:
@@ -1130,7 +1130,7 @@ class TestURDFParser:
             <sensor type="contact" name="ct0"></sensor>
         </gazebo></robot>"""
         parser = URDFParser()
-        with patch("linkforge_core.parsers.urdf_parser.logger") as mock_logger:
+        with patch("linkforge.core.parsers.urdf_parser.logger") as mock_logger:
             robot = parser.parse_string(xml)
             assert len(robot.sensors) == 0
             assert mock_logger.warning.called

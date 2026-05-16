@@ -11,7 +11,7 @@ While URDF describes **what the robot is**, SRDF describes **how to use it**.
 A Planning Group is a collection of links and joints that are planned together (e.g., an "arm" or a "gripper"). In LinkForge, you define these using the ``group()`` method.
 
 ```python
-from linkforge_core.composer import RobotBuilder
+from linkforge.core.composer import RobotBuilder
 
 builder = RobotBuilder("my_robot")
 # ... (build your robot links and joints)

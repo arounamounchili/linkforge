@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core import RobotModelError, is_valid_name, sanitize_name
+from linkforge.core import RobotModelError
+from linkforge.core._utils.string_utils import is_valid_name, sanitize_name
 
 
 def test_sanitize_name_basic() -> None:

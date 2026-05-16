@@ -1,0 +1,458 @@
+"""Blender Property Groups for robot links.
+
+These properties are stored on Blender objects and define link characteristics.
+"""
+
+from __future__ import annotations
+
+import typing
+
+import bpy
+from bpy.props import (
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
+    FloatVectorProperty,
+    PointerProperty,
+    StringProperty,
+)
+from bpy.types import Context, PropertyGroup
+from linkforge.core._utils.string_utils import (
+    format_scientific,
+    parse_scientific,
+    sanitize_name,
+)
+from linkforge.core.constants import (
+    DEFAULT_CONTACT_KD,
+    DEFAULT_CONTACT_KP,
+    DEFAULT_FRICTION_MU,
+    DEFAULT_FRICTION_MU2,
+    DEFAULT_GRAVITY,
+    DEFAULT_LINK_MASS,
+    DEFAULT_SELF_COLLIDE,
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
+)
+
+from ..constants import (
+    DEFAULT_COLLISION_QUALITY,
+    GEOM_AUTO,
+    PROP_LINK,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
+)
+from ..utils.link_utils import should_rename_child
+from ..utils.scene_utils import clear_stats_cache
+from ..visualization.inertia_gizmos import tag_redraw
+
+
+def get_kp_scientific(self: LinkPropertyGroup) -> str:
+    """Getter for kp in scientific notation."""
+    return format_scientific(self.kp)
+
+
+def set_kp_scientific(self: LinkPropertyGroup, value: str) -> None:
+    """Setter for kp in scientific notation."""
+    self.kp = parse_scientific(value, self.kp)
+
+
+def get_kd_scientific(self: LinkPropertyGroup) -> str:
+    """Getter for kd in scientific notation."""
+    return format_scientific(self.kd)
+
+
+def set_kd_scientific(self: LinkPropertyGroup, value: str) -> None:
+    """Setter for kd in scientific notation."""
+    self.kd = parse_scientific(value, self.kd)
+
+
+def get_link_name(self: LinkPropertyGroup) -> str:
+    """Getter for link_name - returns the persistent source identity.
+
+    Args:
+        self: The LinkPropertyGroup instance.
+
+    Returns:
+        The sanitized robot component name.
+    """
+    # Prioritize the stored identity to avoid Blender's .001 suffixing
+    if self.source_name_stored:
+        return str(self.source_name_stored)
+
+    if not self.id_data:
+        return ""
+    return sanitize_name(str(self.id_data.name))
+
+
+def set_link_name(self: LinkPropertyGroup, value: str) -> None:
+    """Setter for link_name - updates persistent identity and object name.
+
+    Args:
+        self: The LinkPropertyGroup instance.
+        value: The new name value to set.
+    """
+    if not value or not self.id_data:
+        return
+
+    # Sanitize link name for robot model (remove invalid characters)
+    sanitized_name = sanitize_name(value)
+
+    # Store the old name before updating for child renaming logic
+    old_source_name = getattr(self, "source_name_stored", "") or sanitize_name(self.id_data.name)
+
+    # Store the persistent identity
+    self.source_name_stored = sanitized_name
+
+    # Update object name to match link name
+    # Blender will handle collisions by appending suffixes, but our stored name persists
+    if self.id_data.name != sanitized_name:
+        try:
+            self.id_data.name = sanitized_name
+        except AttributeError:
+            # We are likely in a depsgraph update where names are read-only.
+            import bpy
+
+            if not bpy.app.background and hasattr(bpy.app, "timers"):
+                # GUI mode: Use a standard timer
+                def deferred_rename() -> None:
+                    import contextlib
+
+                    if self.id_data:
+                        with contextlib.suppress(Exception):
+                            self.id_data.name = sanitized_name
+                    return None
+
+                bpy.app.timers.register(deferred_rename, first_interval=0.01)
+            else:
+                # Background mode: Use our internal queue
+                from ..handlers.name_sync_handler import PENDING_RENAMES
+
+                PENDING_RENAMES.append((self.id_data, sanitized_name))
+
+    # Update visual and collision children names IF they followed the standard naming pattern
+    for child in self.id_data.children:
+        if should_rename_child(child.name, old_source_name):
+            # Surgical replacement
+            if SUFFIX_VISUAL in child.name:
+                suffix = child.name[len(old_source_name) + len(SUFFIX_VISUAL) :]
+                new_name = f"{sanitized_name}{SUFFIX_VISUAL}{suffix}"
+            else:  # _collision
+                suffix = child.name[len(old_source_name) + len(SUFFIX_COLLISION) :]
+                new_name = f"{sanitized_name}{SUFFIX_COLLISION}{suffix}"
+
+            if child.name != new_name:
+                child.name = new_name
+
+    # Clear statistics cache when names/structure changes
+    clear_stats_cache()
+
+
+def on_collision_quality_update(self: PropertyGroup, _context: Context) -> None:
+    """Update collision mesh preview when quality changes.
+
+    This provides live feedback to the user as they adjust the quality slider,
+    showing them exactly how the exported collision mesh will look.
+
+    Args:
+        self: The LinkPropertyGroup instance owning the quality property.
+        _context: The current Blender context.
+    """
+    # Use id_data to access the object this property is attached to
+    obj = getattr(self, "id_data", None)
+    if not obj:
+        return
+    lf = getattr(obj, PROP_LINK, None)
+    if not lf or not lf.is_robot_link:
+        return
+
+    # Find collision object
+    collision_obj = next((c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None)
+    if collision_obj is None:
+        return
+
+    # Skip regeneration for imported URDF models to preserve external data
+    try:
+        # Use dictionary access for Blender ID properties
+        if collision_obj[TAG_IMPORTED_SOURCE]:
+            return
+    except (KeyError, TypeError):
+        # Property doesn't exist, proceed with regeneration
+        pass
+
+    # Update ratio in realtime
+    from ..operators.link_ops import update_collision_quality_realtime
+
+    update_collision_quality_realtime(obj, collision_obj)
+
+
+def update_inertia_viz(_self: PropertyGroup, _context: Context) -> None:
+    """Trigger visual update for inertia gizmos."""
+    clear_stats_cache()
+    tag_redraw()
+
+
+def update_auto_inertia_toggle(self: PropertyGroup, _context: Context) -> None:
+    """Enable visualization when switching to manual inertia."""
+    if not hasattr(self, "use_auto_inertia"):
+        return
+
+    # Always clear cache to ensure the draw handler sees the update immediately
+    clear_stats_cache()
+
+    if not getattr(self, "use_auto_inertia", True):
+        # User switched to Manual Mode -> Ensure handler is running
+        from ..visualization.inertia_gizmos import ensure_inertia_handler
+
+        ensure_inertia_handler()
+
+
+class LinkPropertyGroup(PropertyGroup):
+    """Properties for a robot link stored on a Blender object."""
+
+    # Link identification
+    is_robot_link: BoolProperty(  # type: ignore
+        name="Is Robot Link",
+        description="Mark this object as a robot link",
+        default=False,
+    )
+
+    # Persistent source Identity
+    # Decouples logical robot model naming from physical Blender object names (resilient to .001 suffixes)
+    source_name_stored: StringProperty(  # type: ignore
+        name="Source Name",
+        description="Persistent source name. Prevents mapping breakage if Blender renames the object",
+        default="",
+    )
+
+    link_name: StringProperty(  # type: ignore
+        name="Link Name",
+        description="Name of the link in robot model (must be unique)",
+        maxlen=64,
+        get=get_link_name,
+        set=set_link_name,
+        update=clear_stats_cache,
+    )
+
+    # Inertial properties
+    use_auto_inertia: BoolProperty(  # type: ignore
+        name="Auto-Calculate Inertia",
+        description="Let LinkForge calculate physics properties from the 3D shape (recommended)",
+        default=True,
+        update=update_auto_inertia_toggle,
+    )
+
+    mass: FloatProperty(  # type: ignore
+        name="Mass",
+        description="Weight of this link in kilograms (for physics simulation)",
+        default=DEFAULT_LINK_MASS,
+        min=0.0,
+        soft_max=1000.0,
+        max=1000000.0,
+        unit="MASS",
+        precision=3,
+        update=clear_stats_cache,
+    )
+
+    # Manual inertia tensor (when auto_inertia is disabled)
+    inertia_ixx: FloatProperty(  # type: ignore
+        name="Ixx",
+        description="Moment of inertia around X-axis - resistance to rotation (kg⋅m²)",
+        default=1.0,
+        min=0.0,
+        precision=6,
+    )
+
+    inertia_ixy: FloatProperty(  # type: ignore
+        name="Ixy",
+        description="Product of inertia XY component - coupling between X and Y rotations (kg⋅m²)",
+        default=0.0,
+        precision=6,
+    )
+
+    inertia_ixz: FloatProperty(  # type: ignore
+        name="Ixz",
+        description="Product of inertia XZ component - coupling between X and Z rotations (kg⋅m²)",
+        default=0.0,
+        precision=6,
+    )
+
+    inertia_iyy: FloatProperty(  # type: ignore
+        name="Iyy",
+        description="Moment of inertia around Y-axis - resistance to rotation (kg⋅m²)",
+        default=1.0,
+        min=0.0,
+        precision=6,
+    )
+
+    inertia_iyz: FloatProperty(  # type: ignore
+        name="Iyz",
+        description="Product of inertia YZ component - coupling between Y and Z rotations (kg⋅m²)",
+        default=0.0,
+        precision=6,
+    )
+
+    inertia_izz: FloatProperty(  # type: ignore
+        name="Izz",
+        description="Moment of inertia around Z-axis - resistance to rotation (kg⋅m²)",
+        default=1.0,
+        min=0.0,
+        precision=6,
+    )
+
+    inertia_origin_xyz: FloatVectorProperty(  # type: ignore
+        name="Inertia Position",
+        description="Position of the center of mass relative to the link frame (meters)",
+        default=(0.0, 0.0, 0.0),
+        size=3,
+        precision=3,
+        unit="LENGTH",
+        update=update_inertia_viz,
+    )
+
+    inertia_origin_rpy: FloatVectorProperty(  # type: ignore
+        name="Inertia Rotation",
+        description="Rotation of the principal axes of inertia relative to the link frame (radians, XYZ order)",
+        default=(0.0, 0.0, 0.0),
+        size=3,
+        precision=3,
+        unit="ROTATION",
+        update=update_inertia_viz,
+    )
+
+    # Gazebo / Simulation Properties
+    use_simulation_props: BoolProperty(  # type: ignore
+        name="Advanced Simulation",
+        description="Include advanced physics settings (Gazebo/GZ) in the exported model",
+        default=False,
+    )
+
+    self_collide: BoolProperty(  # type: ignore
+        name="Self Collide",
+        description="Whether this link can collide with other links in the same robot",
+        default=DEFAULT_SELF_COLLIDE,
+    )
+
+    gravity: BoolProperty(  # type: ignore
+        name="Gravity",
+        description="Whether this link is affected by gravity",
+        default=DEFAULT_GRAVITY,
+    )
+
+    mu: FloatProperty(  # type: ignore
+        name="Friction mu",
+        description="Static friction coefficient (Coulomb)",
+        default=DEFAULT_FRICTION_MU,
+        min=0.0,
+    )
+
+    mu2: FloatProperty(  # type: ignore
+        name="Friction mu2",
+        description="Dynamic friction coefficient",
+        default=DEFAULT_FRICTION_MU2,
+        min=0.0,
+    )
+
+    kp: FloatProperty(  # type: ignore
+        name="Stiffness kp",
+        description="Contact stiffness (N/m)",
+        default=DEFAULT_CONTACT_KP,
+        min=0.0,
+    )
+
+    kp_ui: StringProperty(  # type: ignore
+        name="Stiffness kp",
+        description="Contact stiffness (e.g. 1.0e+12)",
+        get=get_kp_scientific,
+        set=set_kp_scientific,
+    )
+
+    kd: FloatProperty(  # type: ignore
+        name="Damping kd",
+        description="Contact damping (N s/m)",
+        default=DEFAULT_CONTACT_KD,
+        min=0.0,
+    )
+
+    kd_ui: StringProperty(  # type: ignore
+        name="Damping kd",
+        description="Contact damping (e.g. 1.0e+00)",
+        get=get_kd_scientific,
+        set=set_kd_scientific,
+    )
+
+    collision_type: EnumProperty(  # type: ignore
+        name="Collision Type",
+        description="Type of collision geometry to generate",
+        items=[
+            (GEOM_AUTO, "Auto", "Automatically detect primitive shape or export as mesh"),
+            (GEOM_BOX, "Bounding Box", "Axis-aligned bounding box around the mesh"),
+            (GEOM_SPHERE, "Bounding Sphere", "Spherical bounding volume around the mesh"),
+            (GEOM_CYLINDER, "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
+            (GEOM_MESH, "Mesh (Simplified)", "Generate simplified mesh from visual geometry"),
+        ],
+        default=GEOM_AUTO,
+    )
+
+    collision_quality: FloatProperty(  # type: ignore
+        name="Collision Quality",
+        description=(
+            "Mesh detail preserved in collision geometry (100% = full detail, 50% = half the faces). "
+            "Lower values = faster physics simulation. Imported collision defaults to 100%"
+        ),
+        default=DEFAULT_COLLISION_QUALITY,
+        min=1.0,  # At least 1% to avoid empty meshes
+        max=100.0,  # 100% = no simplification
+        precision=0,  # Show as integer (no decimals)
+        subtype="PERCENTAGE",  # Display with % symbol
+        update=on_collision_quality_update,  # Live preview callback
+    )
+
+    # Material properties
+    use_material: BoolProperty(  # type: ignore
+        name="Export Material",
+        description="Export color/appearance to robot model (enabled by default for auto-created materials)",
+        default=False,  # Set dynamically by operator based on material creation
+    )
+
+
+# Registration
+__all__ = [
+    "LinkPropertyGroup",
+    "register",
+    "unregister",
+    "sanitize_name",
+]
+
+
+def register() -> None:
+    """Register property group."""
+    try:
+        bpy.utils.register_class(LinkPropertyGroup)
+    except ValueError:
+        # If already registered (e.g. from reload), unregister first to ensure clean state
+        bpy.utils.unregister_class(LinkPropertyGroup)
+        bpy.utils.register_class(LinkPropertyGroup)
+
+    setattr(
+        bpy.types.Object,
+        PROP_LINK,
+        typing.cast(typing.Any, PointerProperty(type=LinkPropertyGroup)),
+    )
+
+
+def unregister() -> None:
+    """Unregister property group."""
+    import contextlib
+
+    with contextlib.suppress(AttributeError):
+        delattr(bpy.types.Object, PROP_LINK)
+
+    with contextlib.suppress(RuntimeError):
+        bpy.utils.unregister_class(LinkPropertyGroup)
+
+
+if __name__ == "__main__":
+    register()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core import Joint, JointType, KinematicGraph, Link, RobotValidationError
+from linkforge.core import Joint, JointType, KinematicGraph, Link, RobotValidationError
 
 
 def test_get_topological_joints() -> None:

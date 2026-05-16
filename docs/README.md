@@ -71,7 +71,7 @@ Regular markdown content.
 ## Code Examples
 
 \`\`\`python
-from linkforge_core.models import Robot
+from linkforge.core.models import Robot
 
 robot = Robot(name="my_robot")
 \`\`\`
@@ -89,7 +89,7 @@ API docs use Sphinx autodoc with reStructuredText:
 # Module Name
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.models.Robot
+.. autoclass:: linkforge.core.models.Robot
    :members:
    :undoc-members:
    :show-inheritance:

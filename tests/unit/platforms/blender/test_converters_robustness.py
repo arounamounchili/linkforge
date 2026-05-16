@@ -10,7 +10,7 @@ from linkforge.blender.adapters.blender_to_core import (
     scene_to_robot,
 )
 from linkforge.blender.adapters.translator import JointTranslator, LinkTranslator
-from linkforge_core import RobotBuilder, RobotValidationError, ValidationErrorCode
+from linkforge.core import RobotBuilder, RobotValidationError, ValidationErrorCode
 
 from tests.blender_test_utils import (
     create_test_object,

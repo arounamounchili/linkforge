@@ -9,11 +9,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-from linkforge_core import (
-    RobotValidator,
-    URDFGenerator,
-    URDFParser,
-)
+from linkforge.core import RobotValidator, URDFGenerator, URDFParser
 
 COMPLEX_URDF = """
 <robot name="fidelity_robot">

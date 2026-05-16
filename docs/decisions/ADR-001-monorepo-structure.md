@@ -16,7 +16,7 @@ This ADR documents the decision made and the reasoning behind it, so that future
 
 ## Decision
 
-**All components of the LinkForge ecosystem — `linkforge_core` and all platform adapters — will be maintained in a single monorepo, with one exception: platform adapters that have a fundamentally separate installer ecosystem may be extracted to a standalone repository.**
+**All components of the LinkForge ecosystem — `linkforge.core` and all platform adapters — will be maintained in a single monorepo, with one exception: platform adapters that have a fundamentally separate installer ecosystem may be extracted to a standalone repository.**
 
 The extraction rule is:
 
@@ -27,7 +27,7 @@ The extraction rule is:
 
 | Package | Installer | Location |
 |---|---|---|
-| `linkforge_core` | `pip` | `core/` — always in this repo |
+| `linkforge.core` | `pip` | `core/` — always in this repo |
 | `linkforge-blender` | Blender Extension Manager | `platforms/blender/` — stays in this repo |
 | `linkforge-ros` | `pip` + `apt` (ROS Index) | `platforms/ros/` — may be extracted after v1.4.0 stabilizes |
 | Future adapters (FreeCAD, Web, etc.) | `pip` | `platforms/<name>/` — stays in this repo |
@@ -40,7 +40,7 @@ The extraction rule is:
 - **Atomic changes**: A core model change is validated against all adapters in one Pull Request. There is no risk of adapters silently going out of sync with the core API.
 - **Single contributor setup**: `git clone` + `uv sync` is sufficient to work on any part of the ecosystem. No cross-repo dependency wiring required.
 - **Unified CI/CD**: One pipeline enforces consistent code quality and test coverage across core and all adapters.
-- **No version matrix hell**: End users cannot install a combination of `linkforge_core` and adapter versions that are incompatible with each other.
+- **No version matrix hell**: End users cannot install a combination of `linkforge.core` and adapter versions that are incompatible with each other.
 
 ### Negative
 - **Repo size**: As the number of adapters grows, the repository will grow. This is mitigated by the `platforms/` directory structure which keeps adapters well-isolated.
@@ -51,10 +51,10 @@ The extraction rule is:
 ## Alternatives Considered
 
 ### Alternative: Full Multi-Repo (One Repo per Package)
-Rejected. The primary reason is **version synchronization complexity**. When `linkforge_core` releases a breaking change, every adapter repo must release a compatible update simultaneously. This is operationally very expensive for a small team and a common cause of open-source project abandonment. The monorepo eliminates this risk entirely.
+Rejected. The primary reason is **version synchronization complexity**. When `linkforge.core` releases a breaking change, every adapter repo must release a compatible update simultaneously. This is operationally very expensive for a small team and a common cause of open-source project abandonment. The monorepo eliminates this risk entirely.
 
 ### Alternative: Separate Core Repo + Platform Monorepo
-Rejected. `linkforge_core` is the dependency anchor for every adapter. Keeping it in a separate repo creates the same version synchronization problem as above. It would require every adapter to pin to a specific core release, making development iteration significantly slower.
+Rejected. `linkforge.core` is the dependency anchor for every adapter. Keeping it in a separate repo creates the same version synchronization problem as above. It would require every adapter to pin to a specific core release, making development iteration significantly slower.
 
 ---
 

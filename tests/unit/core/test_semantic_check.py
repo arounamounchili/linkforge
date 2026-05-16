@@ -1,4 +1,5 @@
-from linkforge_core import RobotBuilder, SemanticCheck, ValidationResult
+from linkforge.core import RobotBuilder, ValidationResult
+from linkforge.core.validation import SemanticCheck
 
 
 def test_semantic_check_group_cycles():

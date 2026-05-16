@@ -7,7 +7,7 @@ URDF, XACRO, and SRDF generators for converting Python objects to files.
 All XML-based generators in LinkForge inherit from a shared base engine that handles common geometry, inertial, and origin logic.
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.generators.xml_base.RobotXMLGenerator
+.. autoclass:: linkforge.core.generators.xml_base.RobotXMLGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -16,7 +16,7 @@ All XML-based generators in LinkForge inherit from a shared base engine that han
 ## URDF Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.generators.urdf_generator.URDFGenerator
+.. autoclass:: linkforge.core.generators.urdf_generator.URDFGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -25,7 +25,7 @@ All XML-based generators in LinkForge inherit from a shared base engine that han
 ## XACRO Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.generators.xacro_generator.XACROGenerator
+.. autoclass:: linkforge.core.generators.xacro_generator.XACROGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -41,8 +41,8 @@ on the dedicated [SRDF reference page](srdf.md).
 ### Generate URDF
 
 ```python
-from linkforge_core.models import Robot, Link, Inertial, InertiaTensor
-from linkforge_core import URDFGenerator
+from linkforge.core.models import Robot, Link, Inertial, InertiaTensor
+from linkforge.core import URDFGenerator
 
 # Create robot
 robot = Robot(
@@ -70,7 +70,7 @@ with open("robot.urdf", "w") as f:
 ### Generate XACRO
 
 ```python
-from linkforge_core import XACROGenerator
+from linkforge.core import XACROGenerator
 from pathlib import Path
 
 # Generate XACRO with split files
@@ -103,7 +103,7 @@ urdf = generator.generate(robot)
 ### Round-Trip Verification
 
 ```python
-from linkforge_core.parsers import URDFParser
+from linkforge.core.parsers import URDFParser
 
 # Original robot
 robot1 = create_robot()

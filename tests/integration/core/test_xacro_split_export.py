@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from linkforge_core import (
+from linkforge.core import (
     Color,
     Cylinder,
     Joint,

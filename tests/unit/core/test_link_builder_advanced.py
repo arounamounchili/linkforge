@@ -1,5 +1,5 @@
 import pytest
-from linkforge_core import JointType, RobotBuilder, RobotValidationError
+from linkforge.core import JointType, RobotBuilder, RobotValidationError
 
 
 class TestLinkBuilderAdvanced:

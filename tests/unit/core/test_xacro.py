@@ -3,7 +3,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core import (
+from linkforge.core import (
     RobotXacroError,
     RobotXacroExpressionError,
     RobotXacroRecursionError,
@@ -577,7 +577,7 @@ class TestXacroInfrastructure:
         import unittest.mock as mock
 
         with mock.patch(
-            "linkforge_core.parsers.xacro_parser.XacroResolver._get_structural_template",
+            "linkforge.core.parsers.xacro_parser.XacroResolver._get_structural_template",
             side_effect=RuntimeError("Unexpected"),
         ):
             with pytest.raises(RobotXacroError) as exc:
@@ -616,7 +616,7 @@ class TestXacroInfrastructure:
         import unittest.mock as mock
 
         with mock.patch(
-            "linkforge_core.parsers.xacro_parser.resolve_package_path",
+            "linkforge.core.parsers.xacro_parser.resolve_package_path",
             return_value=tmp_path / "found.xacro",
         ):
             assert resolver._find_file("package://my_pkg/found.xacro") == tmp_path / "found.xacro"
@@ -627,7 +627,7 @@ class TestXacroInfrastructure:
 
         assert resolver._try_parse_typed_value(":") == ":"
 
-        with mock.patch("linkforge_core.parsers.xacro_parser.yaml", None):
+        with mock.patch("linkforge.core.parsers.xacro_parser.yaml", None):
             assert resolver._try_parse_typed_value("123") == 123
             assert resolver._try_parse_typed_value("True") == "True"  # Fallback only does numbers
 

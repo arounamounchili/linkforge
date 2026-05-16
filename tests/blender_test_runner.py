@@ -15,8 +15,8 @@ def setup_environment():
     # Get the project root directory
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-    # Add platforms/blender and core/src to sys.path
-    blender_path = os.path.join(project_root, "platforms", "blender")
+    # Add platforms/blender/src and core/src to sys.path
+    blender_path = os.path.join(project_root, "platforms", "blender", "src")
     core_path = os.path.join(project_root, "core", "src")
     for p in [project_root, blender_path, core_path]:
         if p not in sys.path:

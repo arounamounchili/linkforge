@@ -2,25 +2,21 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from linkforge_core import (
-    MAX_XML_DEPTH,
-    RobotMathError,
-    RobotModelError,
-    RobotValidationError,
-    Vector3,
+from linkforge.core import RobotMathError, RobotModelError, RobotValidationError, Vector3
+from linkforge.core._utils.xml_utils import (
     create_xml_element,
-    is_suspicious_location,
     parse_float,
     parse_int,
     parse_optional_bool,
     parse_optional_float,
     parse_vector3,
     serialize_xml,
-    validate_package_uri,
     validate_xml_depth,
     xml_add_text,
     xml_add_vector,
 )
+from linkforge.core.constants import MAX_XML_DEPTH
+from linkforge.core.validation import is_suspicious_location, validate_package_uri
 
 
 def test_parse_float_valid() -> None:

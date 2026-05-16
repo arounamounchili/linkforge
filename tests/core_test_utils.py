@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from linkforge_core import Robot, URDFGenerator, URDFParser
+from linkforge.core import Robot, URDFGenerator, URDFParser
 
 
 def perform_urdf_roundtrip(robot: Robot, pretty_print: bool = True, **kwargs: Any) -> Robot:

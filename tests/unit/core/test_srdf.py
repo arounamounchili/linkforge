@@ -5,7 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge_core import (
+from linkforge.core import (
     CollisionPair,
     Link,
     PlanningGroup,

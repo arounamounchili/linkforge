@@ -73,7 +73,7 @@ multiple robot arms sharing a common world frame.
 need precise, programmatic control over every joint parameter.
 
 ```python
-from linkforge_core.composer import RobotBuilder
+from linkforge.core.composer import RobotBuilder
 
 # Both patterns produce the same output: a validated Robot + SRDF ready for
 # export to URDF, SRDF, or any future format (MJCF, SDF).

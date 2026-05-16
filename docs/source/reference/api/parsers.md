@@ -7,7 +7,7 @@ URDF, XACRO, and SRDF parsers for converting files into Python objects.
 ### URDFParser Class
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.parsers.urdf_parser.URDFParser
+.. autoclass:: linkforge.core.parsers.urdf_parser.URDFParser
    :members:
    :undoc-members:
    :show-inheritance:
@@ -21,7 +21,7 @@ URDF, XACRO, and SRDF parsers for converting files into Python objects.
 The `XACROParser` provides native, pure-Python resolution of XACRO files. It handles macros, properties, math expressions, and conditional blocks without external ROS dependencies.
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.parsers.xacro_parser.XACROParser
+.. autoclass:: linkforge.core.parsers.xacro_parser.XACROParser
    :members:
    :undoc-members:
    :show-inheritance:
@@ -32,7 +32,7 @@ The `XACROParser` provides native, pure-Python resolution of XACRO files. It han
 The internal engine used by `XACROParser` for hierarchical property resolution and macro substitution.
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.parsers.xacro_parser.XacroResolver
+.. autoclass:: linkforge.core.parsers.xacro_parser.XacroResolver
    :members:
    :undoc-members:
 ```
@@ -60,7 +60,7 @@ on the dedicated [SRDF reference page](srdf.md).
 To resolve a XACRO file into a plain XML string (format-agnostic):
 
 ```python
-from linkforge_core.parsers import XACROParser
+from linkforge.core.parsers import XACROParser
 from pathlib import Path
 
 # Returns a plain XML string
@@ -70,7 +70,7 @@ xml_string = XACROParser().resolve(Path("robot.urdf.xacro"))
 To parse a XACRO file directly into a Robot model (canonical usage):
 
 ```python
-from linkforge_core.parsers import URDFParser
+from linkforge.core.parsers import URDFParser
 from pathlib import Path
 
 # Natively resolves XACRO then parses URDF
@@ -81,7 +81,7 @@ print(f"Loaded robot: {robot.name}")
 ### Parse URDF File
 
 ```python
-from linkforge_core.parsers import URDFParser
+from linkforge.core.parsers import URDFParser
 from pathlib import Path
 
 robot = URDFParser().parse(Path("my_robot.urdf"))
@@ -91,7 +91,7 @@ print(f"Loaded robot: {robot.name}")
 ### Parse URDF String
 
 ```python
-from linkforge_core.parsers import URDFParser
+from linkforge.core.parsers import URDFParser
 
 urdf_content = """<?xml version="1.0"?>
 <robot name="simple_robot">

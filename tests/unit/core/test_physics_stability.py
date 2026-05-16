@@ -1,16 +1,18 @@
 import pytest
-from linkforge_core import (
-    EPSILON,
-    MIN_REASONABLE_INERTIA,
-    MIN_REASONABLE_MASS,
+from linkforge.core import (
     Inertial,
     InertiaTensor,
     Link,
-    MassPropertiesCheck,
     Robot,
     RobotModelError,
     ValidationResult,
 )
+from linkforge.core.constants import (
+    EPSILON,
+    MIN_REASONABLE_INERTIA,
+    MIN_REASONABLE_MASS,
+)
+from linkforge.core.validation import MassPropertiesCheck
 
 
 def test_inertia_numerical_stability_epsilon() -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core import (
+from linkforge.core import (
     RobotModelError,
     Transmission,
     TransmissionActuator,

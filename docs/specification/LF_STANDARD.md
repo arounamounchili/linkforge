@@ -94,4 +94,4 @@ For high-performance loading in large-scale simulation environments (e.g., thous
 ---
 
 > [!TIP]
-> For implementation details, see the `linkforge_core.models` Python module in the source code.
+> For implementation details, see the `linkforge.core.models` Python module in the source code.

@@ -5,9 +5,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from linkforge_core import (
-    DEFAULT_JOINT_EFFORT,
-    DEFAULT_JOINT_VELOCITY,
+from linkforge.core import (
     Joint,
     JointCalibration,
     JointDynamics,
@@ -18,6 +16,10 @@ from linkforge_core import (
     RobotModelError,
     Transform,
     Vector3,
+)
+from linkforge.core.constants import (
+    DEFAULT_JOINT_EFFORT,
+    DEFAULT_JOINT_VELOCITY,
 )
 
 

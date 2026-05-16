@@ -43,7 +43,7 @@ Just as LLVM has "Optimization Passes," the LinkForge Middle-End performs intell
 ## 4. The Hexagonal Advantage
 
 LinkForge’s **Hexagonal Architecture** mirrors LLVM’s modularity.
-*   **Decoupled Intelligence**: The core logic (`linkforge_core`) is isolated from specific UI hosts or simulation engines.
+*   **Decoupled Intelligence**: The core logic (`linkforge.core`) is isolated from specific UI hosts or simulation engines.
 *   **Swappable Adapters**: To support a new simulator (like a new backend in LLVM), we only need to write a single adapter that translates LinkForge IR to the target format.
 
 ---

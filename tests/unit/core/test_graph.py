@@ -4,7 +4,7 @@ Verifies graph theory logic for robot structure validation and traversal.
 """
 
 import pytest
-from linkforge_core import Joint, JointType, KinematicGraph, Link, RobotModelError
+from linkforge.core import Joint, JointType, KinematicGraph, Link, RobotModelError
 
 
 def test_graph_simple_chain() -> None:

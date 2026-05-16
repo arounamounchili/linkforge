@@ -25,9 +25,9 @@ linkforge-blender = { workspace = true }
 
 # Shared Tool Configs
 [tool.pytest.ini_options]
-testpaths = ["tests/unit/core"]
-pythonpath = ["core/src", "platforms/blender"]
-addopts = ["--verbose", "--cov=linkforge_core", "--cov=platforms/blender/linkforge"]
+testpaths = ["tests/unit/core", "tests/unit/platforms/blender"]
+pythonpath = ["core/src", "platforms/blender/src"]
+addopts = ["--verbose", "--cov=linkforge.core", "--cov=linkforge.blender"]
 
 [tool.ruff]
 line-length = 100
@@ -46,14 +46,14 @@ python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
-mypy_path = ["core/src", "platforms/blender"]
-exclude = ["platforms/blender/linkforge/linkforge_core"]
+mypy_path = ["core/src", "platforms/blender/src"]
+exclude = ["platforms/blender/src/linkforge/blender/linkforge"]
 
 [tool.pyright]
-include = ["core/src", "platforms/blender", "tests"]
-exclude = ["**/mock_bpy_env.py"]
-ignore = ["**/mock_bpy_env.py"]
-extraPaths = ["core/src", "platforms/blender"]
+include = ["core/src", "platforms/blender/src", "tests"]
+exclude = ["**/mock_bpy_env.py", "platforms/blender/src/linkforge/blender/linkforge"]
+ignore = ["**/mock_bpy_env.py", "platforms/blender/src/linkforge/blender/linkforge"]
+extraPaths = ["core/src", "platforms/blender/src"]
 typeCheckingMode = "basic"
 pythonVersion = "3.13"
 

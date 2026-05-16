@@ -1,0 +1,319 @@
+"""Blender Operators for exporting robot models.
+
+This module implements the user-facing operators that handle the export of
+robot models from Blender to supported description formats.
+"""
+
+from __future__ import annotations
+
+import os
+import typing
+from contextlib import contextmanager, suppress
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+import bpy
+from bpy.types import Context, Event, Operator
+from bpy_extras.io_utils import ExportHelper
+from linkforge.core import get_logger
+
+from ..constants import (
+    PROP_ROBOT,
+    PROP_VALIDATION,
+)
+from ..utils.decorators import OperatorReturn, safe_execute
+
+if TYPE_CHECKING:
+    from ..properties.robot_props import RobotPropertyGroup
+    from ..properties.validation_props import ValidationResultProperty
+
+logger = get_logger(__name__)
+
+
+@contextmanager
+def working_directory(path: Path) -> typing.Iterator[Path]:
+    """Context manager for temporarily changing the working directory."""
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        yield path
+    finally:
+        os.chdir(old_cwd)
+
+
+class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
+    """Export robot to robot model file"""
+
+    bl_idname = "linkforge.export_robot_model"
+    bl_label = "Export Robot Model"
+    bl_description = "Export robot to supported description formats"
+
+    # ExportHelper properties
+    # Operator properties for ExportHelper/ImportHelper
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
+    filter_glob: bpy.props.StringProperty(  # type: ignore
+        default="*.urdf;*.xacro;*.xml",
+        options={"HIDDEN"},
+        maxlen=255,
+    )
+
+    # Type ignore to resolve 'misc' definition collision with Operator.check
+    def check(self, context: Context) -> Any:
+        """Verify if export can proceed based on current scene state."""
+        return bool(context.scene and hasattr(context.scene, PROP_ROBOT))
+
+    def invoke(self, context: Context, event: Event) -> Any:
+        """Invoked before the file browser opens."""
+        # Update file extension based on export format
+        if not context.scene or not hasattr(context.scene, PROP_ROBOT):
+            return {"CANCELLED"}
+
+        robot_props = getattr(context.scene, PROP_ROBOT)
+        if robot_props.export_format == "XACRO":
+            self.filename_ext = ".xacro"
+        else:
+            self.filename_ext = ".urdf"
+
+        # Call parent invoke to open file browser
+        # ExportHelper.invoke returns a set of strings
+        return ExportHelper.invoke(self, context, event)
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the export."""
+        # Import here to avoid circular dependencies
+        from linkforge.core import URDFGenerator, XACROGenerator
+
+        from ..adapters.blender_to_core import scene_to_robot
+        from ..adapters.context import BlenderContext
+
+        if not context.scene or not hasattr(context.scene, PROP_ROBOT):
+            return {"CANCELLED"}
+
+        # Wrap the raw Blender context in our adapter
+        lf_context = BlenderContext(bpy_instance=bpy)
+        scene = context.scene
+        robot_props = typing.cast("RobotPropertyGroup", getattr(scene, PROP_ROBOT))
+
+        # Prepare meshes directory if exporting meshes
+        output_path = Path(self.filepath)
+
+        # Ensure correct file extension matches format
+        if robot_props.export_format == "XACRO" and output_path.suffix != ".xacro":
+            output_path = output_path.with_suffix(".xacro")
+        elif robot_props.export_format == "URDF" and output_path.suffix != ".urdf":
+            output_path = output_path.with_suffix(".urdf")
+
+        # Update self.filepath to reflect the corrected path
+        self.filepath = str(output_path)
+
+        # Always define meshes_dir so URDF can reference it
+        meshes_dir = output_path.parent / (robot_props.mesh_directory_name or "meshes")
+
+        logger.info(f"Exporting robot to: {output_path}")
+        logger.debug(f"Mesh directory: {meshes_dir}")
+
+        from linkforge.core import LinkForgeError, RobotGeneratorError, RobotValidator
+
+        # Validate if requested
+        if robot_props.validate_before_export:
+            try:
+                robot_dry_run, conversion_result = scene_to_robot(
+                    lf_context, meshes_dir=meshes_dir, dry_run=True
+                )
+            except Exception as e:
+                self.report({"ERROR"}, f"Failed to build robot model: {e}")
+                return {"CANCELLED"}
+
+            validator = RobotValidator()
+            result = validator.validate(robot_dry_run)
+
+            # Merge conversion issues
+            result.issues.extend(conversion_result.issues)
+
+            if not result.is_valid:
+                self.report(
+                    {"ERROR"},
+                    f"Cannot export: {result.error_count} validation error(s). "
+                    f"Run validation to see details.",
+                )
+                return {"CANCELLED"}
+
+        # Second pass: Actual export
+        # If export_meshes is False, we run in dry_run mode (generate paths but don't write files)
+        should_write_meshes = robot_props.export_meshes
+        try:
+            robot, _ = scene_to_robot(
+                lf_context,
+                meshes_dir=meshes_dir,
+                dry_run=not should_write_meshes,
+            )
+        except (LinkForgeError, RobotGeneratorError) as e:
+            # LinkForge specific errors are already user-friendly
+            self.report({"ERROR"}, f"Build failed: {e}")
+            return {"CANCELLED"}
+        except Exception as e:
+            # Catch unexpected internal crashes
+            self.report({"ERROR"}, f"Unexpected internal error: {e}")
+            logger.exception("Export build crashed")
+            return {"CANCELLED"}
+
+        # Generate URDF/XACRO
+        if robot_props.export_format == "URDF":
+            urdf_generator = URDFGenerator(
+                pretty_print=True,
+                output_path=output_path,
+                use_ros2_control=robot_props.use_ros2_control,
+            )
+            urdf_generator.write(robot, output_path, validate=False)
+            msg = f"Exported URDF to {output_path}"
+            if meshes_dir:
+                msg += f" (meshes in {meshes_dir})"
+            self.report({"INFO"}, msg)
+            logger.info(msg)
+        else:  # XACRO
+            xacro_generator = XACROGenerator(
+                pretty_print=True,
+                advanced_mode=True,
+                extract_materials=robot_props.xacro_extract_materials,
+                extract_dimensions=robot_props.xacro_extract_dimensions,
+                generate_macros=robot_props.xacro_generate_macros,
+                split_files=robot_props.xacro_split_files,
+                output_path=output_path,
+                use_ros2_control=robot_props.use_ros2_control,
+            )
+            xacro_generator.write(robot, output_path, validate=False)
+            msg = f"Exported XACRO to {output_path}"
+            if meshes_dir:
+                msg += f" (meshes in {meshes_dir})"
+            self.report({"INFO"}, msg)
+            logger.info(msg)
+
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_validate_robot(Operator):
+    """Validate robot structure"""
+
+    bl_idname = "linkforge.validate_robot"
+    bl_label = "Validate Robot"
+    bl_description = "Validate the robot structure for errors"
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute validation."""
+        from linkforge.core import RobotValidator
+
+        # Clear previous results
+        if not context.window_manager or not hasattr(context.window_manager, PROP_VALIDATION):
+            self.report({"ERROR"}, "Validation system not initialized")
+            return {"CANCELLED"}
+
+        validation_props = typing.cast(
+            "ValidationResultProperty", getattr(context.window_manager, PROP_VALIDATION)
+        )
+        validation_props.clear()
+
+        # Convert scene to robot
+        from ..adapters.blender_to_core import scene_to_robot
+        from ..adapters.context import BlenderContext
+
+        lf_context = BlenderContext(bpy_instance=bpy)
+        try:
+            robot, conversion_result = scene_to_robot(lf_context)
+        except Exception as e:
+            # Catch unexpected fatal build errors
+            validation_props.has_results = True
+            validation_props.is_valid = False
+            validation_props.error_count = 1
+            error_prop = validation_props.errors.add()
+            error_prop.title = "Build Crash"
+            error_prop.message = str(e)
+            error_prop.error_code = "INTERNAL_ERROR"
+
+            self.report({"ERROR"}, f"Model build crashed: {e}")
+            return {"CANCELLED"}
+
+        # Validate using core validator
+        validator = RobotValidator()
+        result = validator.validate(robot)
+
+        # Merge conversion results (like mesh slivers found during build)
+        result.issues.extend(conversion_result.issues)
+
+        # Store results in window manager
+        validation_props.has_results = True
+        validation_props.is_valid = result.is_valid
+        validation_props.error_count = result.error_count
+        validation_props.warning_count = result.warning_count
+        validation_props.link_count = len(robot.links)
+        validation_props.joint_count = len(robot.joints)
+        validation_props.dof_count = robot.degrees_of_freedom
+
+        # Store errors
+        for error in result.errors:
+            error_prop = validation_props.errors.add()
+            error_prop.title = error.title
+            error_prop.message = error.message
+            error_prop.suggestion = error.suggestion or ""
+            error_prop.affected_objects = ", ".join(error.affected_objects)
+            error_prop.error_code = error.code.name if error.code else ""
+
+        # Store warnings
+        for warning in result.warnings:
+            warning_prop = validation_props.warnings.add()
+            warning_prop.title = warning.title
+            warning_prop.message = warning.message
+            warning_prop.suggestion = warning.suggestion or ""
+            warning_prop.affected_objects = ", ".join(warning.affected_objects)
+            warning_prop.error_code = warning.code.name if warning.code else ""
+
+        # Report result
+        if result.is_valid and not result.has_warnings:
+            self.report(
+                {"INFO"},
+                f"Robot '{robot.name}' is valid! "
+                f"({len(robot.links)} links, {len(robot.joints)} joints, "
+                f"{robot.degrees_of_freedom} DOF)",
+            )
+            return {"FINISHED"}
+        elif result.is_valid:
+            self.report(
+                {"WARNING"},
+                f"Robot valid with {result.warning_count} warning(s). Check Validation panel.",
+            )
+            return {"FINISHED"}
+        else:
+            self.report(
+                {"ERROR"},
+                f"Validation failed. Found {result.error_count} error(s). Please check the Validation Panel.",
+            )
+            return {"CANCELLED"}
+
+
+# Registration
+classes = [
+    LINKFORGE_OT_export_robot_model,
+    LINKFORGE_OT_validate_robot,
+]
+
+
+def register() -> None:
+    """Register operators."""
+    for cls in classes:
+        try:
+            bpy.utils.register_class(cls)
+        except ValueError:
+            bpy.utils.unregister_class(cls)
+            bpy.utils.register_class(cls)
+
+
+def unregister() -> None:
+    """Unregister operators."""
+    for cls in reversed(classes):
+        with suppress(RuntimeError):
+            bpy.utils.unregister_class(cls)
+
+
+if __name__ == "__main__":
+    register()

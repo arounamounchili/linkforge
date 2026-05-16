@@ -1,0 +1,338 @@
+"""UI Panel for managing robot links."""
+
+from __future__ import annotations
+
+import contextlib
+import typing
+
+import bpy
+from bpy.types import Context, Panel
+from linkforge.core.constants import (
+    GEOM_MESH,
+)
+
+from ..constants import (
+    GEOM_AUTO,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
+)
+from ..utils.property_helpers import get_link_props
+from ..utils.scene_utils import get_robot_statistics
+
+
+class LINKFORGE_PT_links(Panel):
+    """Panel for robot link properties in 3D Viewport sidebar."""
+
+    bl_label = "Links"
+    bl_idname = "LINKFORGE_PT_links"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "LinkForge"
+    bl_parent_id = "LINKFORGE_PT_forge"
+    bl_order = 1
+
+    def draw(self, context: Context) -> None:
+        """Draw the panel."""
+        layout = self.layout
+        if not layout:
+            return
+
+        obj = context.active_object
+
+        # Early exit if nothing selected
+        if obj is None or not obj.select_get():
+            # Nothing selected - offer to create an empty link
+            box = layout.box()
+            box.label(text="Link Creation", icon="PLUS")
+            col = box.column(align=True)
+            col.operator("linkforge.add_empty_link", icon="EMPTY_DATA", text="Add Empty Link Frame")
+
+            row = col.row()
+            row.enabled = False
+            row.operator(
+                "linkforge.create_link_from_mesh", icon="ADD", text="Create Link from Mesh"
+            )
+            return
+
+        props = get_link_props(obj)
+
+        # Check if selected object is a visual/collision child of a link
+        # If so, show parent link properties instead
+        if (
+            obj
+            and obj.parent
+            and (lp_p := get_link_props(obj.parent))
+            and lp_p.is_robot_link
+            and props
+            and not props.is_robot_link
+            and (SUFFIX_VISUAL in obj.name.lower() or SUFFIX_COLLISION in obj.name.lower())
+        ):
+            # Switch to parent for property display (visual/collision elements only)
+            obj = obj.parent
+            props = get_link_props(obj)
+
+        # Only show Create button when NOT editing a link
+        if not props or not props.is_robot_link:
+            box = layout.box()
+            box.label(text="Link Creation", icon="PLUS")
+            col = box.column(align=True)
+            col.operator(
+                "linkforge.create_link_from_mesh", icon="ADD", text="Create Link from Mesh"
+            )
+            col.operator("linkforge.add_empty_link", icon="EMPTY_DATA", text="Add Empty Link Frame")
+
+        # Show link properties only if a link is selected (edit mode)
+        if not props or not props.is_robot_link:
+            return
+
+        # IS A LINK - Show link properties
+        box = layout.box()
+        visual_count = sum(1 for child in obj.children if SUFFIX_VISUAL in child.name.lower())
+        collision_count = sum(1 for child in obj.children if SUFFIX_COLLISION in child.name.lower())
+        is_virtual = visual_count == 0 and collision_count == 0
+
+        title = f"Link: {props.link_name}"
+        icon = "EMPTY_DATA" if is_virtual else "LINKED"
+        box.label(text=title, icon=typing.cast(typing.Any, icon))
+
+        # Display Blender object name if it differs from persistent robot model name
+        if obj.name != props.link_name:
+            sub = box.row()
+            sub.active = False  # Make it subtle
+            sub.label(text=f"Blender Obj: {obj.name}", icon="INFO")
+
+        if is_virtual:
+            status_box = box.box()
+            status_box.label(text="Status: Virtual Frame (No Geometry)", icon="INFO")
+
+        # Link name
+        box.prop(props, "link_name")
+
+        # Geometry section
+        box.separator()
+        box.label(text="Geometry", icon="MESH_CUBE")
+
+        # Visual/Collision status row with counts
+        row = box.row(align=True)
+        row.label(text=f"Visual: {visual_count}", icon="SHADING_RENDERED")
+        row.label(text=f"Collision: {collision_count}", icon="MOD_PHYSICS")
+
+        # Collision Configuration
+        row = box.row()
+        row.enabled = not is_virtual
+        row.prop(props, "collision_type", text="Collision Type")
+
+        # Geometry Detection Info (Uses centralized statistics for performance)
+        stats = get_robot_statistics(context.scene)
+        geo_info = stats.geometry_stats.get(props.link_name)
+
+        collision_obj = None
+        detected_type = GEOM_MESH
+        is_primitive = False
+
+        if geo_info:
+            collision_obj, detected_type, is_primitive = geo_info
+
+        # Display detected type - ONLY if collision exists
+        if collision_obj:
+            row = box.row()
+            icon_name = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
+            row.label(
+                text=f"Detected Collision: {detected_type}", icon=typing.cast(typing.Any, icon_name)
+            )
+
+            is_imported = typing.cast(bool, collision_obj.get(TAG_IMPORTED_SOURCE))
+
+            # Show quality slider for mesh-based collisions.
+            # If the user explicitly selects MESH mode, we show the slider even if
+            # the current detection is a primitive to allow for mode switching.
+            if props.collision_type == GEOM_MESH or (
+                props.collision_type == GEOM_AUTO and detected_type == GEOM_MESH
+            ):
+                box.separator()
+                row = box.row()
+                # Disable slider if imported from source (cannot be simplified via slider)
+                row.enabled = not is_imported
+                row.prop(props, "collision_quality", text="Collision Quality", slider=True)
+
+            if is_imported:
+                box.label(text="Imported collision: Geometry preserved", icon="LOCKED")
+
+        # Collision actions (after quality setting for logical workflow)
+        col = box.column(align=True)
+
+        if collision_count == 0:
+            # No collision - offer to generate
+            row = col.row()
+            row.enabled = visual_count > 0
+            row.operator(
+                "linkforge.generate_collision", icon="MOD_PHYSICS", text="Generate Collision"
+            )
+        else:
+            # Has collision - offer regenerate AND visibility toggle
+            row = col.row()
+            row.enabled = visual_count > 0
+            row.operator(
+                "linkforge.generate_collision", icon="FILE_REFRESH", text="Regenerate Collision"
+            )
+
+            # Visibility toggle
+            collision_obj = next(
+                (c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None
+            )
+            if collision_obj:
+                is_hidden = collision_obj.hide_viewport
+                icon_name = "HIDE_OFF" if is_hidden else "HIDE_ON"
+                text = "Show Collision" if is_hidden else "Hide Collision"
+                col.operator(
+                    "linkforge.toggle_collision_visibility",
+                    icon=typing.cast(typing.Any, icon_name),
+                    text=text,
+                )
+
+        # Physics properties
+        box.separator()
+        box.label(text="Physics", icon="PHYSICS")
+        box.prop(props, "mass")
+
+        # Auto-inertia (always on by default, simplified)
+        box.separator()
+        row = box.row()
+        row.enabled = not is_virtual  # Cannot auto-calculate without geometry
+        row.prop(props, "use_auto_inertia", text="Auto-Calculate Inertia")
+
+        if is_virtual:
+            row.label(text=" (N/A for frames)", icon="ERROR")
+        elif props.use_auto_inertia:
+            row.label(text="", icon="CHECKMARK")
+        else:
+            # Manual inertia input - 2x3 compact table layout
+            inertia_box = box.box()
+            inertia_box.label(text="Inertia Tensor (kg⋅m²)")
+
+            # Row 1: Diagonal elements [Ixx  Iyy  Izz]
+            row = inertia_box.row(align=True)
+            row.prop(props, "inertia_ixx", text="Ixx")
+            row.prop(props, "inertia_iyy", text="Iyy")
+            row.prop(props, "inertia_izz", text="Izz")
+
+            # Row 2: Off-diagonal elements [Ixy  Ixz  Iyz]
+            row = inertia_box.row(align=True)
+            row.prop(props, "inertia_ixy", text="Ixy")
+            row.prop(props, "inertia_ixz", text="Ixz")
+            row.prop(props, "inertia_iyz", text="Iyz")
+
+            # Center of Mass (Inertial Origin)
+            inertia_box.separator()
+            inertia_box.label(text="Center of Mass")
+
+            # Position (XYZ)  # noqa: ERA001
+            row = inertia_box.row(align=True)
+            row.label(text="Position:", icon="EMPTY_AXIS")
+            row.prop(props, "inertia_origin_xyz", text="")
+
+            # Rotation (RPY)  # noqa: ERA001
+            row = inertia_box.row(align=True)
+            row.label(text="Rotation:", icon="ORIENTATION_GIMBAL")
+            row.prop(props, "inertia_origin_rpy", text="")
+
+        # Material section
+        box.separator()
+        box.label(text="Material", icon="MATERIAL")
+
+        # Material export checkbox
+        row = box.row()
+        row.prop(props, "use_material", text="Export Material")
+
+        if props.use_material:
+            # Find first visual child
+            visual_children = [
+                child
+                for child in obj.children
+                if SUFFIX_VISUAL in child.name.lower() and child.type == "MESH"
+            ]
+
+            if visual_children:
+                visual_obj = visual_children[0]
+
+                # Material selector
+                if visual_obj.material_slots:
+                    box.template_ID(visual_obj.material_slots[0], "material", new="material.new")
+
+                    # Color preview
+                    if visual_obj.material_slots[0].material:
+                        blender_mat = visual_obj.material_slots[0].material
+                        if blender_mat.use_nodes and blender_mat.node_tree:
+                            for node in blender_mat.node_tree.nodes:
+                                if getattr(node, "type", "") == "BSDF_PRINCIPLED":
+                                    row = box.row()
+                                    row.label(text="Color:")
+                                    row.prop(node.inputs["Base Color"], "default_value", text="")
+                                    break
+                else:
+                    # UX Improvement: Show Add button when no slot exists
+                    # This respects "Separation of Concerns" - separate intent (checkbox) from action (add data)
+                    warn_box = box.box()
+                    warn_box.alert = True
+                    warn_box.label(text="No material slot found", icon="INFO")
+                    warn_box.operator(
+                        "linkforge.add_material_slot", icon="ADD", text="Add Material Slot"
+                    )
+            else:
+                box.label(text="No visual geometry", icon="INFO")
+
+        # Simulation Properties (Advanced)
+        box.separator()
+        box.label(text="Simulation", icon="WORLD")
+        row = box.row()
+        row.prop(props, "use_simulation_props", text="Advanced Simulation")
+
+        if props.use_simulation_props:
+            sim_box = box.box()
+            sim_box.prop(props, "self_collide")
+            sim_box.prop(props, "gravity")
+
+            col = sim_box.column(align=True)
+            col.label(text="Friction:")
+            col.prop(props, "mu", text="mu (Static)")
+            col.prop(props, "mu2", text="mu2 (Dynamic)")
+
+            col = sim_box.column(align=True)
+            col.label(text="Contact:")
+            col.prop(props, "kp_ui", text="kp (Stiffness)")
+            col.prop(props, "kd_ui", text="kd (Damping)")
+
+        # Remove Link button (Danger Zone)
+        box.separator()
+        box.separator()
+        row = box.row()
+        row.scale_y = 1.2  # Make it slightly bigger
+        row.operator("linkforge.remove_link", icon="TRASH", text="Remove Link")
+
+
+# Registration
+classes = [
+    LINKFORGE_PT_links,
+]
+
+
+def register() -> None:
+    """Register panel."""
+    for cls in classes:
+        try:
+            bpy.utils.register_class(cls)
+        except ValueError:
+            bpy.utils.unregister_class(cls)
+            bpy.utils.register_class(cls)
+
+
+def unregister() -> None:
+    """Unregister panel."""
+    for cls in reversed(classes):
+        with contextlib.suppress(RuntimeError):
+            bpy.utils.unregister_class(cls)
+
+
+if __name__ == "__main__":
+    register()

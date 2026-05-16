@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from linkforge.blender.adapters.translator import LinkTranslator
-from linkforge_core import RobotBuilder
+from linkforge.core import RobotBuilder
 
 from tests.blender_test_utils import create_test_object, safe_get_linkforge
 

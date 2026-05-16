@@ -15,7 +15,7 @@ This directory contains example URDF and Xacro files to demonstrate the capabili
 You can import these files directly into Blender using the LinkForge addon, or use them with the LinkForge Python API:
 
 ```python
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge.core.parsers.urdf_parser import URDFParser
 
 parser = URDFParser()
 robot = parser.parse("examples/urdf/diff_drive_robot.urdf")
@@ -28,7 +28,7 @@ LinkForge also supports Xacro files by automatically evaluating macros and prope
 
 ```python
 from pathlib import Path
-from linkforge_core.parsers.urdf_parser import URDFParser
+from linkforge.core.parsers.urdf_parser import URDFParser
 
 parser = URDFParser()
 # Resolve Xacro then parse into a Robot model

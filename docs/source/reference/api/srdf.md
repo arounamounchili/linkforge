@@ -7,7 +7,7 @@ planning groups, named poses, and collision filters.
 ## Data Models
 
 ```{eval-rst}
-.. automodule:: linkforge_core.models.srdf
+.. automodule:: linkforge.core.models.srdf
    :members:
    :undoc-members:
    :show-inheritance:
@@ -18,7 +18,7 @@ planning groups, named poses, and collision filters.
 ## SRDF Parser
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.parsers.srdf_parser.SRDFParser
+.. autoclass:: linkforge.core.parsers.srdf_parser.SRDFParser
    :members:
    :undoc-members:
    :show-inheritance:
@@ -29,7 +29,7 @@ planning groups, named poses, and collision filters.
 ## SRDF Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge_core.generators.srdf_generator.SRDFGenerator
+.. autoclass:: linkforge.core.generators.srdf_generator.SRDFGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -42,7 +42,7 @@ planning groups, named poses, and collision filters.
 ### Parse an existing SRDF file
 
 ```python
-from linkforge_core.parsers.srdf_parser import SRDFParser
+from linkforge.core.parsers.srdf_parser import SRDFParser
 from pathlib import Path
 
 srdf = SRDFParser().parse(Path("my_robot.srdf"))
@@ -55,7 +55,7 @@ for group in srdf.groups:
 ### Build SRDF programmatically
 
 ```python
-from linkforge_core.models.srdf import (
+from linkforge.core.models.srdf import (
     SemanticRobotDescription,
     PlanningGroup,
     GroupState,
@@ -83,7 +83,7 @@ srdf = SemanticRobotDescription(
 ### Generate SRDF XML
 
 ```python
-from linkforge_core.generators.srdf_generator import SRDFGenerator
+from linkforge.core.generators.srdf_generator import SRDFGenerator
 
 generator = SRDFGenerator()
 srdf_string = generator.generate(srdf)
@@ -95,9 +95,9 @@ with open("my_robot.srdf", "w") as f:
 ### Round-trip (parse → modify → re-generate)
 
 ```python
-from linkforge_core.parsers.srdf_parser import SRDFParser
-from linkforge_core.generators.srdf_generator import SRDFGenerator
-from linkforge_core.models.srdf import DisabledCollision
+from linkforge.core.parsers.srdf_parser import SRDFParser
+from linkforge.core.generators.srdf_generator import SRDFGenerator
+from linkforge.core.models.srdf import DisabledCollision
 from pathlib import Path
 import dataclasses
 

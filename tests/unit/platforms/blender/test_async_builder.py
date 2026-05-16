@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
-from linkforge_core import Joint, JointType, Link, Robot, RobotModelError
+from linkforge.core import Joint, JointType, Link, Robot, RobotModelError
 
 
 def test_builder_prepare_tasks(scene, blender_context) -> None:

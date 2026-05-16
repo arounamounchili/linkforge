@@ -3,12 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from linkforge_core import (
-    DEFAULT_CONTACT_KD,
-    DEFAULT_CONTACT_KP,
-    DEFAULT_FRICTION_MU,
-    DEFAULT_GRAVITY,
-    DEFAULT_SELF_COLLIDE,
+from linkforge.core import (
     Box,
     Collision,
     Color,
@@ -21,6 +16,13 @@ from linkforge_core import (
     Transform,
     Vector3,
     Visual,
+)
+from linkforge.core.constants import (
+    DEFAULT_CONTACT_KD,
+    DEFAULT_CONTACT_KP,
+    DEFAULT_FRICTION_MU,
+    DEFAULT_GRAVITY,
+    DEFAULT_SELF_COLLIDE,
 )
 
 

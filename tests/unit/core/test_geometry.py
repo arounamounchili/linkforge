@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from linkforge_core import (
+from linkforge.core import (
     Box,
     Cylinder,
     GeometryType,
