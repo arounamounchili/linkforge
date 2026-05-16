@@ -7,12 +7,12 @@ import typing
 
 import bpy
 from bpy.types import Context, Panel, Scene, UILayout
-from linkforge.core._utils.dict_utils import filter_items_by_name
 
 from ..constants import (
     PROP_LINK,
     PROP_VALIDATION,
 )
+from ..core._utils.dict_utils import filter_items_by_name
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 

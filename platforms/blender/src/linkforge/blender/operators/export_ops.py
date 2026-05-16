@@ -15,12 +15,12 @@ from typing import TYPE_CHECKING, Any
 import bpy
 from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
-from linkforge.core import get_logger
 
 from ..constants import (
     PROP_ROBOT,
     PROP_VALIDATION,
 )
+from ..core import get_logger
 from ..utils.decorators import OperatorReturn, safe_execute
 
 if TYPE_CHECKING:
@@ -82,10 +82,9 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the export."""
         # Import here to avoid circular dependencies
-        from linkforge.core import URDFGenerator, XACROGenerator
-
         from ..adapters.blender_to_core import scene_to_robot
         from ..adapters.context import BlenderContext
+        from ..core import URDFGenerator, XACROGenerator
 
         if not context.scene or not hasattr(context.scene, PROP_ROBOT):
             return {"CANCELLED"}
@@ -113,7 +112,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         logger.info(f"Exporting robot to: {output_path}")
         logger.debug(f"Mesh directory: {meshes_dir}")
 
-        from linkforge.core import LinkForgeError, RobotGeneratorError, RobotValidator
+        from ..core import LinkForgeError, RobotGeneratorError, RobotValidator
 
         # Validate if requested
         if robot_props.validate_before_export:
@@ -202,7 +201,7 @@ class LINKFORGE_OT_validate_robot(Operator):
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute validation."""
-        from linkforge.core import RobotValidator
+        from ..core import RobotValidator
 
         # Clear previous results
         if not context.window_manager or not hasattr(context.window_manager, PROP_VALIDATION):

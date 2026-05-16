@@ -18,7 +18,7 @@ def _check_health() -> bool:
     """Verify the extension environment and dependencies."""
     # 1. Standard Production Path
     try:
-        from linkforge import core  # noqa: F401
+        from . import core  # noqa: F401
 
         return True
     except ImportError:
@@ -35,7 +35,7 @@ def _check_health() -> bool:
                 if str(core_src) not in sys.path:
                     sys.path.insert(0, str(core_src))
                 try:
-                    from linkforge import core  # noqa: F401
+                    from . import core  # noqa: F401
 
                     return True
                 except ImportError:

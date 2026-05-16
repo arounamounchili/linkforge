@@ -11,7 +11,6 @@ import typing
 from pathlib import Path
 
 import bpy
-from linkforge.core import Robot, get_logger
 
 from ..adapters.context import IBlenderContext
 from ..adapters.core_to_blender import (
@@ -23,6 +22,7 @@ from ..adapters.core_to_blender import (
 from ..constants import (
     PROP_ROBOT,
 )
+from ..core import Robot, get_logger
 from ..utils.joint_utils import resolve_mimic_joints
 
 logger = get_logger(__name__)

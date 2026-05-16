@@ -20,13 +20,13 @@ from typing import Any
 import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
-from linkforge.core.constants import (
-    PI,
-)
 from mathutils import Matrix, Vector
 
 from ..constants import (
     PROP_LINK,
+)
+from ..core.constants import (
+    PI,
 )
 from ..preferences import get_addon_prefs
 from ..utils.scene_utils import get_robot_statistics
