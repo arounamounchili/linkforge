@@ -20,13 +20,24 @@ def _check_health() -> bool:
     # If running as a Blender extension (bl_ext namespace), we map the bundled
     # core into the global 'linkforge.core' namespace so absolute imports work.
     try:
-        from . import core as bundled_core  # type: ignore[attr-defined]
+        from . import core  # type: ignore[attr-defined]
 
-        # If we are in a namespace (extensions), alias it to the expected package name
+        # If we are in a namespace (extensions), alias it to the expected package names
+        # so that absolute imports like 'from linkforge.core import ...' work correctly.
         if __name__.startswith("bl_ext."):
-            sys.modules["linkforge.core"] = bundled_core
-            # Also alias submodules if needed (recursive mapping might be better but this is usually enough)
-            # Actually, Python handles submodules if 'linkforge.core' is set.
+            # The current module is the extension root (e.g. bl_ext.user_default.linkforge)
+            ext_root = sys.modules[__name__]
+
+            # 1. Alias 'linkforge' to the extension root
+            sys.modules["linkforge"] = ext_root
+
+            # 2. Alias 'linkforge.core' to the bundled core
+            sys.modules["linkforge.core"] = core
+
+            # 3. Alias 'linkforge.blender' to the extension root
+            # (Note: In the bundled extension, the 'blender' package contents are flattened
+            # to the root, so 'linkforge.blender' effectively IS 'linkforge')
+            sys.modules["linkforge.blender"] = ext_root
 
         return True
     except ImportError:
