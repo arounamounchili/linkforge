@@ -6,10 +6,10 @@ import contextlib
 import typing
 
 import bpy
-from linkforge.core.constants import (
+
+from ..core.constants import (
     JOINT_REVOLUTE,
 )
-
 from ..properties.link_props import sanitize_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute

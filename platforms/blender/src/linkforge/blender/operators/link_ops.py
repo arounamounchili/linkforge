@@ -6,14 +6,6 @@ import contextlib
 import time
 import typing
 
-from linkforge.core import InertiaTensor, get_logger
-from linkforge.core.constants import (
-    GEOM_BOX,
-    GEOM_CYLINDER,
-    GEOM_MESH,
-    GEOM_SPHERE,
-)
-
 from ..constants import (
     DEFAULT_LINK_GIZMO_SIZE,
     GEOM_AUTO,
@@ -22,6 +14,13 @@ from ..constants import (
     SUFFIX_VISUAL,
     TAG_COLLISION_GEOM,
     TAG_IMPORTED_SOURCE,
+)
+from ..core import InertiaTensor, get_logger
+from ..core.constants import (
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
 )
 from ..properties.link_props import sanitize_name
 from ..utils.context import context_and_mode_guard
@@ -534,10 +533,9 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
 
     # Import here to avoid circular dependency
-    from linkforge.core import Box, Cylinder, Sphere, calculate_inertia, validate_mesh_topology
-    from linkforge.core.physics import calculate_mesh_inertia_from_triangles
-
     from ..adapters.blender_to_core import extract_mesh_triangles
+    from ..core import Box, Cylinder, Sphere, calculate_inertia, validate_mesh_topology
+    from ..core.physics import calculate_mesh_inertia_from_triangles
 
     # Calculate inertia from child meshes (new architecture: link Empty + children)
     try:
@@ -584,7 +582,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             # Primitive calculation expects dimensions
             if prim_type == GEOM_BOX:
                 # Convert mathutils.Vector to core Vector3
-                from linkforge.core import Vector3
+                from ..core import Vector3
 
                 size = Vector3(dims.x, dims.y, dims.z)
                 tensor = calculate_inertia(Box(size=size), mass)

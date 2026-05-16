@@ -176,7 +176,7 @@ def build_extension() -> Path:
     # 2. Copy source code (Extension)
     # Copy contents of platforms/blender/linkforge/ so __init__.py is at root
     for item in SOURCE_DIR.iterdir():
-        if item.name.startswith((".", "__pycache__")) or item.name == "linkforge.core":
+        if item.name.startswith((".", "__pycache__")) or item.name in {"linkforge.core", "core"}:
             continue
         dest = staging_dir / item.name
         if item.is_dir():

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import bpy
-from linkforge.core import Joint
 
+from ..core import Joint
 from .property_helpers import get_joint_props
 
 

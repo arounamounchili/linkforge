@@ -12,8 +12,8 @@ from pathlib import Path
 
 import bpy
 from bpy_extras.io_utils import ImportHelper
-from linkforge.core import get_logger
 
+from ..core import get_logger
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
 
@@ -69,7 +69,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         Returns:
             Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
         """
-        from linkforge.core import URDFParser, clear_xacro_cache
+        from ..core import URDFParser, clear_xacro_cache
 
         # Clear XACRO cache to ensure changes on disk are picked up
         clear_xacro_cache()
@@ -115,7 +115,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         is_xacro = source_path.suffix == ".xacro" or source_path.name.endswith(".urdf.xacro")
 
         # Detect Sandbox Root for security (allows sibling folders like meshes/)
-        from linkforge.core.validation import find_sandbox_root
+        from ..core.validation import find_sandbox_root
 
         sandbox_root = find_sandbox_root(source_path)
         logger.info(f"Importing robot from: {source_path}")
@@ -124,7 +124,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         # Smart Import Logic:
         # 1. If it looks like URDF, try parsing as URDF.
         # 2. If parsing fails because of Xacro tags, catch the error and switch to Xacro mode.
-        from linkforge.core import FileSystemResolver, RobotParserError, XacroDetectedError
+        from ..core import FileSystemResolver, RobotParserError, XacroDetectedError
 
         # Read additional package paths from preferences
         from ..preferences import get_addon_prefs
@@ -162,7 +162,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             # XACRO PROCESSING (Triggered by extension OR fallback detection)
             if is_xacro:
                 # Convert XACRO to URDF using native XacroResolver
-                from linkforge.core import XacroResolver
+                from ..core import XacroResolver
 
                 self.report({"INFO"}, f"Processing XACRO file: {source_path.name}")
 
@@ -196,7 +196,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             return {"CANCELLED"}
 
         # Validate robot structure
-        from linkforge.core import RobotValidator
+        from ..core import RobotValidator
 
         validator = RobotValidator()
         result = validator.validate(robot)

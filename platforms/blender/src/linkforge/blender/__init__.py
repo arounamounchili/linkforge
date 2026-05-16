@@ -16,41 +16,13 @@ from pathlib import Path
 # --- Health Checks & Dev Mode ---
 def _check_health() -> bool:
     """Verify the extension environment and dependencies."""
-    # 1. Standard Production Path (Bundled core)
-    # If running as a Blender extension (bl_ext namespace), we map the bundled
-    # core into the global 'linkforge.core' namespace so absolute imports work.
+    # Try to import core to ensure it's available (bundled or symlinked)
     try:
-        from . import core  # type: ignore[attr-defined]
-
-        # If we are in a namespace (extensions), alias it to the expected package names
-        # so that absolute imports like 'from linkforge.core import ...' work correctly.
-        if __name__.startswith("bl_ext."):
-            # The current module is the extension root (e.g. bl_ext.user_default.linkforge)
-            ext_root = sys.modules[__name__]
-
-            # 1. Alias 'linkforge' to the extension root
-            sys.modules["linkforge"] = ext_root
-
-            # 2. Alias 'linkforge.core' to the bundled core
-            sys.modules["linkforge.core"] = core
-
-            # 3. Alias 'linkforge.blender' to the extension root
-            # (Note: In the bundled extension, the 'blender' package contents are flattened
-            # to the root, so 'linkforge.blender' effectively IS 'linkforge')
-            sys.modules["linkforge.blender"] = ext_root
+        from . import core  # noqa: F401
 
         return True
     except ImportError:
-        pass
-
-    # 2. Development Fallback: Try to find linkforge.core in the environment
-    # This is critical for running tests and mypy in the source layout
-    try:
-        import linkforge.core  # noqa: F401
-
-        return True
-    except ImportError:
-        pass
+        return False
 
     # 3. Deep Search: Search for core in workspace (fallback for complex envs)
     try:
@@ -63,7 +35,7 @@ def _check_health() -> bool:
                 if str(core_src) not in sys.path:
                     sys.path.insert(0, str(core_src))
                 try:
-                    import linkforge.core  # noqa: F401
+                    from . import core  # noqa: F401
 
                     return True
                 except ImportError:
