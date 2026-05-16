@@ -16,7 +16,7 @@ This package integrates the LinkForge core logic directly into Blender's UI and 
 - `pyproject.toml`: Local development and workspace configuration.
 
 > [!NOTE]
-> The **LinkForge Core** library is located at the project root (`/core`) and is automatically bundled into this extension during the build process to ensure zero-loss translation.
+> The **LinkForge Core** library is located at the project root (`../../core`) and is automatically bundled into this extension during the build process to ensure zero-loss translation.
 
 ## 🛠️ Development
 

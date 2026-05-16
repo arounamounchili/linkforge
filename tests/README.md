@@ -14,7 +14,7 @@ LinkForge uses a **Tiered Testing Architecture** to ensure that robot models rem
 - **`integration/platforms/blender/`**: Verifies scene manipulation and real Blender export/import cycles.
 
 ### 3. Infrastructure
-- `scripts/blender_launcher.py`: Orchestrates tests inside a real (headless) Blender instance.
+- `../scripts/blender_launcher.py`: Orchestrates tests inside a real (headless) Blender instance.
 - `mock_bpy_env.py`: A high-fidelity mock of the Blender API for sub-second logic testing.
 - `conftest.py`: Shared fixtures (e.g., `robot_factory`, `examples_dir`).
 
