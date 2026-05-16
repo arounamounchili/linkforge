@@ -78,7 +78,7 @@ robot = Robot(name="my_robot")
 
 ## Cross-References
 
-See [Getting Started](getting_started.md) for more info.
+See [Contributing Guide](CONTRIBUTING.md) for more info.
 ```
 
 ### API Documentation
@@ -163,7 +163,7 @@ uv add --dev linkify-it-py
 Use relative paths for local files:
 
 ```markdown
-See [Architecture](ARCHITECTURE.md) for details.
+See [Architecture](../ARCHITECTURE.md) for details.
 ```
 
 ### Build warnings
