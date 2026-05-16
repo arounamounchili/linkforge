@@ -1,59 +1,52 @@
 # LinkForge Test Suite
+**The Safety Net for High-Fidelity Robotics.**
 
-LinkForge uses `pytest` to test both the core physics/kinematics engine and the Blender platform integration.
+LinkForge uses a **Tiered Testing Architecture** to ensure that robot models remain physically stable and structurally sound across all platforms.
 
-## Directory Structure
+## 📂 Directory Structure
 
-The test suite separates pure logic from platform-specific behavior:
+### 1. `unit/`: Component-Level Isolation
+- **`unit/core/`**: Tests for IR models, parsers, and physics guardrails (Zero dependencies).
+- **`unit/platforms/blender/`**: Tests for platform adapters and translation logic (Uses `mock_bpy_env`).
 
-### 1. `unit/`
-Isolated tests for individual components avoiding external dependencies.
-- **`unit/core/`**: Tests for robot models, parsers, and physics utilities.
-- **`unit/platforms/blender/`**: Tests for Blender utilities (scene helpers, visualization).
-
-### 2. `integration/`
-End-to-end tests verifying the interaction between multiple components.
-- **`integration/core/`**: Verifies complex URDF/SRDF parsing and validation.
-- **`integration/platforms/blender/`**: Verifies the complete roundtrip process.
+### 2. `integration/`: End-to-End Fidelity
+- **`integration/core/`**: Verifies complex URDF/SRDF round-trips and multi-file XACRO macros.
+- **`integration/platforms/blender/`**: Verifies scene manipulation and real Blender export/import cycles.
 
 ### 3. Infrastructure
-- `scripts/blender_launcher.py`: CLI tool to run tests inside a Blender environment.
-- `mock_bpy_env.py`: Comprehensive mock of the Blender API for fast logic testing.
-- `conftest.py`, `core_test_utils.py`, `blender_test_utils.py`: Shared fixtures and assertions.
+- `scripts/blender_launcher.py`: Orchestrates tests inside a real (headless) Blender instance.
+- `mock_bpy_env.py`: A high-fidelity mock of the Blender API for sub-second logic testing.
+- `conftest.py`: Shared fixtures (e.g., `robot_factory`, `examples_dir`).
 
-## How to Run Tests
+## 🧪 How to Run Tests
 
-### Standard Python Tests
-To run core unit tests and core integration tests:
+### ⚡ Tier 1: Core Logic
+Fast, zero-dependency tests for the heart of LinkForge.
 ```bash
 just test-core
 ```
 
-### Blender-Dependent Tests
-#### A. Fast Logic Testing (No Blender Required)
-Tests the Blender integration logic using a comprehensive mock environment. This is very fast and runs in standard Python.
+### 🚅 Tier 2: Platform Logic (Mocked)
+Tests the Blender integration logic without needing to boot Blender.
 ```bash
 just test-blender-logic
 ```
 
-#### B. Full Integration Testing (Requires Real Blender)
-Runs tests inside a real Blender instance to verify UI, visualization, and roundtrip fidelity.
+### 🛰️ Tier 3: Full Integration (Real Blender)
+The ultimate fidelity check. Runs tests inside a real Blender environment.
 ```bash
 just test-blender
 ```
-*Note: Ensure your `BLENDER_PATH` environment variable is set or Blender is installed at its default location.*
 
-## 📊 Test Coverage
+## 📊 Coverage & Quality
 
-To run the entire suite and generate a combined coverage report (HTML):
+To run the full suite and generate a combined HTML coverage report:
 ```bash
 just coverage
 ```
-The report will be available at `htmlcov/index.html`.
 
-## Best Practices for Contributors
+## 🏗️ Contributor Standards
 
-1. **Use Fixtures**: Place shared test resources (mock robots, custom builders) in `tests/conftest.py`. Prefer self-contained tests (inline strings or programmatic construction) over external file dependencies.
-2. **Platform Isolation**: If a test doesn't explicitly need a 3D viewport or `bpy` data structures, place it in `core`.
-3. **Roundtrip Integrity**: When adding support for a new URDF tag, always add a corresponding roundtrip test in `integration/platforms/blender/` to ensure export parity.
-4. **Mocking**: Use `unittest.mock` to simulate Blender's asynchronous timers or IO operations where possible.
+1. **Physics as Truth**: When adding a new model property, add a unit test in `unit/core/` verifying its physical guardrails.
+2. **Round-Trip Fidelity**: Every new feature must include an integration test verifying that data survives a full import-export cycle.
+3. **Headless First**: Always try to write a Tier 2 (Mocked) test before resorting to a Tier 3 (Real Blender) test.
