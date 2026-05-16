@@ -92,3 +92,55 @@ class TestRobotExport:
         with patch("bpy_extras.io_utils.ExportHelper.invoke", return_value={"FINISHED"}):
             LINKFORGE_OT_export_robot_model.invoke(mock_op, bpy.context, MagicMock())
             assert mock_op.filename_ext == ".xacro"
+
+    def test_export_robot_no_scene(self, mocker) -> None:
+        """Test export operator when scene is missing properties."""
+        mock_self = MagicMock()
+        mock_context = MagicMock()
+        mock_context.scene = MagicMock(spec=bpy.types.Scene)
+        # Force hasattr(context.scene, PROP_ROBOT) to be False
+        del mock_context.scene.linkforge_robot
+
+        result = LINKFORGE_OT_export_robot_model.execute(mock_self, mock_context)
+        assert result == {"CANCELLED"}
+
+    def test_export_robot_validation_failure(self, mocker, scene, blender_context) -> None:
+        """Test export operator when validation before export fails."""
+        props = safe_get_linkforge_scene(scene)
+        props.validate_before_export = True
+        mock_self = MagicMock()
+        mock_self.filepath = "/tmp/robot.urdf"
+        mock_self.report = MagicMock()
+
+        # Mock conversion result with valid but "failing" robot
+        val_res = MagicMock()
+        val_res.is_valid = False
+        val_res.error_count = 1
+        mocker.patch(
+            "linkforge.blender.adapters.blender_to_core.scene_to_robot",
+            return_value=(MagicMock(), MagicMock()),
+        )
+        mocker.patch("linkforge.core.validation.RobotValidator.validate", return_value=val_res)
+
+        result = LINKFORGE_OT_export_robot_model.execute(mock_self, bpy.context)
+        assert result == {"CANCELLED"}
+        mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)
+
+    def test_export_robot_build_error(self, mocker, scene, blender_context) -> None:
+        """Test export operator when scene_to_robot raises an error."""
+        props = safe_get_linkforge_scene(scene)
+        props.validate_before_export = False
+        mock_self = MagicMock()
+        mock_self.filepath = "/tmp/robot.urdf"
+        mock_self.report = MagicMock()
+
+        from linkforge.core import LinkForgeError
+
+        mocker.patch(
+            "linkforge.blender.adapters.blender_to_core.scene_to_robot",
+            side_effect=LinkForgeError("Test Error"),
+        )
+
+        result = LINKFORGE_OT_export_robot_model.execute(mock_self, bpy.context)
+        assert result == {"CANCELLED"}
+        mock_self.report.assert_called_with({"ERROR"}, mocker.ANY)

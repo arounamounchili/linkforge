@@ -46,7 +46,7 @@ class ValidationCheck(ABC):
             robot: The robot model to validate.
             result: The shared result object to append errors/warnings to.
         """
-        ...  # pragma: no cover
+        ...
 
 
 class HasLinksCheck(ValidationCheck):

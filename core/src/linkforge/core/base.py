@@ -59,7 +59,7 @@ class RobotGenerator(ABC, Generic[T]):
         Returns:
             The generated output (e.g. XML string, JSON dict)
         """
-        pass  # pragma: no cover
+        pass
 
     def write(self, robot: Robot, filepath: Path, **kwargs: Any) -> None:
         """Write the generated output to a file.
@@ -116,7 +116,7 @@ class RobotParser(ABC, Generic[T]):
         Returns:
             The parsed model (e.g. Robot, SemanticRobotDescription)
         """
-        pass  # pragma: no cover
+        pass
 
     @abstractmethod
     def parse_string(self, content: str, **kwargs: Any) -> T:
@@ -129,7 +129,7 @@ class RobotParser(ABC, Generic[T]):
         Returns:
             The parsed model (e.g. Robot, SemanticRobotDescription)
         """
-        pass  # pragma: no cover
+        pass
 
 
 @runtime_checkable

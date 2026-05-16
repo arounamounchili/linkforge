@@ -2,18 +2,31 @@
 
 from __future__ import annotations
 
+import importlib
+from unittest.mock import patch
+
+import linkforge.core.physics.inertia
 import pytest
 from linkforge.core import (
     Box,
+    Cylinder,
     InertiaTensor,
+    Mesh,
+    RobotMathError,
     RobotPhysicsError,
     Sphere,
     ValidationErrorCode,
     Vector3,
 )
+from linkforge.core.constants import MIN_INERTIA_STABILITY_VALUE
 from linkforge.core.physics.inertia import (
+    _get_stability_fallback,
+    calculate_box_inertia,
+    calculate_cylinder_inertia,
     calculate_inertia,
+    calculate_mesh_inertia_approximation,
     calculate_mesh_inertia_from_triangles,
+    calculate_sphere_inertia,
 )
 
 # Inertia Model Tests
@@ -64,6 +77,17 @@ class TestInertiaFormulas:
         assert inertia.ixx == pytest.approx(2.0)
         assert inertia.iyy == pytest.approx(2.0)
         assert inertia.izz == pytest.approx(2.0)
+
+    def test_cylinder_inertia_formula(self) -> None:
+        """Verify analytical inertia for a cylinder."""
+        cylinder = Cylinder(radius=0.5, length=2.0)
+        mass = 12.0
+        # Izz = 0.5 * mass * r^2 = 0.5 * 12 * 0.25 = 1.5
+        # Ixx = Iyy = (1/12) * mass * (3r^2 + h^2) = (1/12) * 12 * (0.75 + 4) = 4.75
+        it = calculate_cylinder_inertia(cylinder, mass)
+        assert it.izz == pytest.approx(1.5)
+        assert it.ixx == pytest.approx(4.75)
+        assert it.iyy == pytest.approx(4.75)
 
 
 class TestInertiaIntegration:
@@ -179,3 +203,137 @@ class TestInertiaIntegration:
         assert i2.ixx == pytest.approx(i1.ixx * 4.0, rel=1e-6)
         assert i2.iyy == pytest.approx(i1.iyy * 4.0, rel=1e-6)
         assert i2.izz == pytest.approx(i1.izz * 4.0, rel=1e-6)
+
+    def test_mirtich_sylvester_failure(self):
+        """Test Sylvester criterion safety guard in mesh integration."""
+
+        v = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]
+        f = [(0, 2, 1), (0, 3, 2), (0, 1, 3), (1, 2, 3)]
+        mass = 1.0
+
+        # We use a huge NEGATIVE tolerance to force the condition delta < -eps
+        with (
+            patch("linkforge.core.physics.inertia.SYLVESTER_TOLERANCE_EPSILON", -1e20),
+            pytest.raises(RobotPhysicsError, match="fails Sylvester criterion"),
+        ):
+            calculate_mesh_inertia_from_triangles(v, f, mass)
+
+    def test_mirtich_validation_edge_cases(self):
+        """Test mesh input validation for empty or corrupted data."""
+        # Empty
+        with pytest.raises(RobotPhysicsError, match="Mesh is empty"):
+            calculate_mesh_inertia_from_triangles([], [], 1.0)
+        # Non-finite vertex
+        with pytest.raises(RobotMathError, match="contains non-finite value"):
+            calculate_mesh_inertia_from_triangles([(float("nan"), 0.0, 0.0)], [(0, 0, 0)], 1.0)
+        # Out of range index
+        with pytest.raises(RobotPhysicsError, match="Invalid triangle at 0"):
+            calculate_mesh_inertia_from_triangles([(0.0, 0.0, 0.0)], [(0, 1, 2)], 1.0)
+
+    def test_mirtich_winding_cancellation(self):
+        """Test detection of severe volume cancellation (mixed winding)."""
+        mass = 1.0
+        v = [
+            (-1.0, -1.0, -1.0),
+            (1.0, -1.0, -1.0),
+            (1.0, 1.0, -1.0),
+            (-1.0, 1.0, -1.0),
+            (-1.0, -1.0, 1.0),
+            (1.0, -1.0, 1.0),
+            (1.0, 1.0, 1.0),
+            (-1.0, 1.0, 1.0),
+        ]
+        # Standard box faces
+        f = [
+            (0, 2, 1),
+            (0, 3, 2),
+            (4, 5, 6),
+            (4, 6, 7),
+            (0, 1, 5),
+            (0, 5, 4),
+            (1, 2, 6),
+            (1, 6, 5),
+            (2, 3, 7),
+            (2, 7, 6),
+            (3, 0, 4),
+            (3, 4, 7),
+        ]
+        # Flip 4 out of 12 triangles to trigger high cancellation (ratio < 0.5)
+        f_bad = []
+        for i, tri in enumerate(f):
+            if i < 4:
+                f_bad.append((tri[0], tri[2], tri[1]))
+            else:
+                f_bad.append(tri)
+        with pytest.raises(RobotPhysicsError, match="inconsistent global winding"):
+            calculate_mesh_inertia_from_triangles(v, f_bad, mass)
+
+    def test_mirtich_non_finite_safety_guards(self, mocker):
+        """Verify safety guards for non-finite results without brittle call counting."""
+        v, f = self.create_box_mesh((1, 1, 1))
+        mass = 1.0
+
+        # Mock input validation to do nothing so we can control isfinite calls
+        mocker.patch("linkforge.core.physics.inertia._validate_mesh_inputs")
+
+        # 1. Trigger weighted_com non-finite check
+        mocker.patch("linkforge.core.physics.inertia.isfinite", return_value=False)
+        with pytest.raises(RobotPhysicsError, match="weighted center of mass is non-finite"):
+            calculate_mesh_inertia_from_triangles(v, f, mass)
+
+        # 2. Trigger final com non-finite check
+        # We need isfinite to be True for weighted_com (3 calls) then False
+        mocker.patch(
+            "linkforge.core.physics.inertia.isfinite", side_effect=[True, True, True, False]
+        )
+        with pytest.raises(RobotPhysicsError, match="Computed center of mass is non-finite"):
+            calculate_mesh_inertia_from_triangles(v, f, mass)
+
+
+class TestInertiaUtils:
+    """Tests for inertia utilities and unified wrapper."""
+
+    def test_stability_fallback_values(self):
+        """Verify the values of the stability fallback tensor."""
+        it = _get_stability_fallback()
+        assert it.ixx == MIN_INERTIA_STABILITY_VALUE
+        assert it.iyy == MIN_INERTIA_STABILITY_VALUE
+        assert it.izz == MIN_INERTIA_STABILITY_VALUE
+
+    def test_inertia_stability_fallbacks(self):
+        """Test that all shapes fallback to stability tensor when mass is near zero."""
+        mass = 1e-12
+
+        fallback = _get_stability_fallback()
+        assert calculate_inertia(Box(size=Vector3(1, 1, 1)), mass) == fallback
+        assert calculate_box_inertia(Box(size=Vector3(1, 1, 1)), mass) == fallback
+        assert calculate_cylinder_inertia(Cylinder(radius=1, length=1), mass) == fallback
+        assert calculate_sphere_inertia(Sphere(radius=1), mass) == fallback
+        assert calculate_mesh_inertia_approximation(Mesh(resource="test.stl"), mass) == fallback
+
+    def test_unified_calculate_inertia_types(self):
+        """Verify the unified wrapper handles all supported and unsupported types."""
+        mass = 1.0
+        assert isinstance(calculate_inertia(Box(size=Vector3(1, 1, 1)), mass), InertiaTensor)
+        assert isinstance(calculate_inertia(Cylinder(radius=1, length=1), mass), InertiaTensor)
+        assert isinstance(calculate_inertia(Sphere(radius=1), mass), InertiaTensor)
+        assert isinstance(calculate_inertia(Mesh(resource="test.stl"), mass), InertiaTensor)
+
+        from linkforge.core.models.geometry import Geometry
+
+        class FakeGeometry(Geometry):  # type: ignore
+            def __init__(self):
+                super().__init__(type="fake")
+
+            def volume(self):
+                return 0.0
+
+        with pytest.raises(RobotPhysicsError, match="Unsupported geometry type"):
+            calculate_inertia(FakeGeometry(), mass)
+
+    def test_cache_size_env_var(self, monkeypatch):
+        """Verify that the cache size environment variable is respected."""
+        monkeypatch.setenv("LINKFORGE_INERTIA_CACHE_SIZE", "128")
+
+        importlib.reload(linkforge.core.physics.inertia)
+        assert linkforge.core.physics.inertia.DEFAULT_INERTIA_CACHE_SIZE_ENV == 128
