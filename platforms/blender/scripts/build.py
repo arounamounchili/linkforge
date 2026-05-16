@@ -214,39 +214,6 @@ def build_extension() -> Path:
 
     print("🚀 Building split-platform packages...")
 
-
-def transform_to_relative_imports(staging_dir: Path) -> None:
-    """Transform absolute imports of linkforge.core to relative imports."""
-    print("✨ Transforming absolute imports to relative for extension compatibility...")
-    for py_file in staging_dir.rglob("*.py"):
-        if py_file.name == "__init__.py" and py_file.parent == staging_dir:
-            # Special case for root __init__.py: linkforge.core -> .core
-            content = py_file.read_text()
-            new_content = re.sub(r"import linkforge\.core", "from . import core", content)
-            new_content = re.sub(r"from linkforge\.core", "from .core", new_content)
-            if content != new_content:
-                py_file.write_text(new_content)
-            continue
-
-        # For all other files, linkforge.core is at the root of the extension
-        # So we use 'from .. import core' or similar based on depth.
-        # depth = 1 means operators/*.py (staging/operators/X.py)
-        # relative path is operators/X.py -> 1 part
-        rel_path = py_file.relative_to(staging_dir)
-        depth = len(rel_path.parts) - 1
-        prefix = "." * (depth + 1)
-
-        content = py_file.read_text()
-        # Transform 'from linkforge.core import X' -> 'from ..core import X'
-        new_content = re.sub(r"from linkforge\.core", f"from {prefix}core", content)
-        # Transform 'import linkforge.core' -> 'from .. import core'
-        new_content = re.sub(r"import linkforge\.core", f"from {prefix} import core", content)
-        # Transform 'from linkforge.blender' (which is now the extension root)
-        new_content = re.sub(r"from linkforge\.blender\.", f"from {prefix}", new_content)
-
-        if content != new_content:
-            py_file.write_text(new_content)
-
     # Find Blender CLI
     import os
 
@@ -296,6 +263,39 @@ def transform_to_relative_imports(staging_dir: Path) -> None:
 
     print(f"\n✅ Created split-platform packages in {DIST_DIR}/")
     return DIST_DIR
+
+
+def transform_to_relative_imports(staging_dir: Path) -> None:
+    """Transform absolute imports of linkforge.core to relative imports."""
+    print("✨ Transforming absolute imports to relative for extension compatibility...")
+    for py_file in staging_dir.rglob("*.py"):
+        if py_file.name == "__init__.py" and py_file.parent == staging_dir:
+            # Special case for root __init__.py: linkforge.core -> .core
+            content = py_file.read_text()
+            new_content = re.sub(r"import linkforge\.core", "from . import core", content)
+            new_content = re.sub(r"from linkforge\.core", "from .core", new_content)
+            if content != new_content:
+                py_file.write_text(new_content)
+            continue
+
+        # For all other files, linkforge.core is at the root of the extension
+        # So we use 'from .. import core' or similar based on depth.
+        # depth = 1 means operators/*.py (staging/operators/X.py)
+        # relative path is operators/X.py -> 1 part
+        rel_path = py_file.relative_to(staging_dir)
+        depth = len(rel_path.parts) - 1
+        prefix = "." * (depth + 1)
+
+        content = py_file.read_text()
+        # Transform 'from linkforge.core import X' -> 'from ..core import X'
+        new_content = re.sub(r"from linkforge\.core", f"from {prefix}core", content)
+        # Transform 'import linkforge.core' -> 'from .. import core'
+        new_content = re.sub(r"import linkforge\.core", f"from {prefix} import core", content)
+        # Transform 'from linkforge.blender' (which is now the extension root)
+        new_content = re.sub(r"from linkforge\.blender\.", f"from {prefix}", new_content)
+
+        if content != new_content:
+            py_file.write_text(new_content)
 
 
 def develop_extension() -> None:
