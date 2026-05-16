@@ -190,8 +190,8 @@ def build_extension() -> Path:
         print(f"❌ Error: Core directory {CORE_DIR} not found.")
         sys.exit(1)
 
-    # In the zip, we want linkforge/core/ so 'import linkforge.core' works
-    target_core_dir = staging_dir / "linkforge" / "core"
+    # In the zip, we want core/ so 'from linkforge import core' works (since linkforge is the extension root)
+    target_core_dir = staging_dir / "core"
     shutil.copytree(CORE_DIR, target_core_dir)
     if (REPO_ROOT / "core" / "LICENSE").exists():
         shutil.copy2(REPO_ROOT / "core" / "LICENSE", target_core_dir)
@@ -335,10 +335,8 @@ def develop_extension() -> None:
         os.symlink(SOURCE_DIR, target_dir, target_is_directory=True)
 
         # 2. Link the Core library INTO the source folder so imports work in dev mode
-        # This mirrors the production build structure: linkforge/core/
-        core_parent = SOURCE_DIR / "linkforge"
-        core_parent.mkdir(exist_ok=True)
-        core_link_target = core_parent / "core"
+        # This mirrors the production build structure: core/
+        core_link_target = SOURCE_DIR / "core"
 
         if core_link_target.exists() or core_link_target.is_symlink():
             if core_link_target.is_symlink():
