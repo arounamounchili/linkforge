@@ -16,34 +16,19 @@ from pathlib import Path
 # --- Health Checks & Dev Mode ---
 def _check_health() -> bool:
     """Verify the extension environment and dependencies."""
-    # Try to import core to ensure it's available (bundled or symlinked)
+    # In production, core is bundled. In dev, we use mypy/PYTHONPATH.
     try:
-        from . import core  # noqa: F401
+        from . import core  # type: ignore[attr-defined] # noqa: F401
 
         return True
     except ImportError:
-        return False
+        # Fallback for dev mode
+        try:
+            import linkforge.core  # noqa: F401
 
-    # 3. Deep Search: Search for core in workspace (fallback for complex envs)
-    try:
-        current = Path(__file__).resolve()
-        for _ in range(10):
-            if current.parent == current:
-                break
-            core_src = current / "core" / "src"
-            if (core_src / "linkforge" / "core").is_dir():
-                if str(core_src) not in sys.path:
-                    sys.path.insert(0, str(core_src))
-                try:
-                    from . import core  # noqa: F401
-
-                    return True
-                except ImportError:
-                    break
-            current = current.parent
-    except Exception:
-        pass
-    return False
+            return True
+        except ImportError:
+            return False
 
 
 _HEALTHY = _check_health()

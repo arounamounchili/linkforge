@@ -10,7 +10,8 @@ import typing
 
 if typing.TYPE_CHECKING:
     import bpy
-from ..core._utils.string_utils import sanitize_name
+from linkforge.core._utils.string_utils import sanitize_name
+
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,

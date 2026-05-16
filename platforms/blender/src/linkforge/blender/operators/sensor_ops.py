@@ -6,14 +6,14 @@ import contextlib
 import typing
 
 import bpy
+from linkforge.core.constants import (
+    DEFAULT_SENSOR_TYPE,
+)
 
 from ..constants import (
     DEFAULT_SENSOR_GIZMO_SIZE,
     PROP_LINK,
     SUFFIX_SENSOR,
-)
-from ..core.constants import (
-    DEFAULT_SENSOR_TYPE,
 )
 from ..properties.link_props import sanitize_name
 from ..utils.context import context_and_mode_guard

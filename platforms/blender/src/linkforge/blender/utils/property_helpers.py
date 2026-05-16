@@ -72,11 +72,11 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
 
 
 if TYPE_CHECKING:
-    from ..properties.joint_props import JointPropertyGroup
-    from ..properties.link_props import LinkPropertyGroup
-    from ..properties.robot_props import RobotPropertyGroup
-    from ..properties.sensor_props import SensorPropertyGroup
-    from ..properties.transmission_props import (
+    from linkforge.blender.properties.joint_props import JointPropertyGroup
+    from linkforge.blender.properties.link_props import LinkPropertyGroup
+    from linkforge.blender.properties.robot_props import RobotPropertyGroup
+    from linkforge.blender.properties.sensor_props import SensorPropertyGroup
+    from linkforge.blender.properties.transmission_props import (
         TransmissionPropertyGroup,
     )
 

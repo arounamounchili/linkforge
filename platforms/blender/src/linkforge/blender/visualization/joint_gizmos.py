@@ -18,13 +18,13 @@ import bpy
 import gpu
 from bpy.types import Context
 from gpu_extras.batch import batch_for_shader
+from linkforge.core.constants import (
+    PI,
+)
 from mathutils import Vector
 
 from ..constants import (
     PROP_JOINT,
-)
-from ..core.constants import (
-    PI,
 )
 from ..preferences import get_addon_prefs
 from ..utils.scene_utils import get_robot_statistics

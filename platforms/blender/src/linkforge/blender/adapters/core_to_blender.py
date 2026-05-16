@@ -6,20 +6,7 @@ import contextlib
 import typing
 from pathlib import Path
 
-from ..constants import (
-    DEFAULT_JOINT_GIZMO_SIZE,
-    DEFAULT_LINK_GIZMO_SIZE,
-    PROP_LINK,
-    PROP_ROBOT,
-    PROP_SENSOR,
-    SUFFIX_COLLISION,
-    SUFFIX_VISUAL,
-    TAG_COLLISION_GEOM,
-    TAG_IMPORTED_SOURCE,
-    TAG_SOURCE_GEOM,
-    TAG_SOURCE_NAME,
-)
-from ..core.constants import (
+from linkforge.core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,
@@ -43,6 +30,20 @@ from ..core.constants import (
     SENSOR_LIDAR,
 )
 
+from ..constants import (
+    DEFAULT_JOINT_GIZMO_SIZE,
+    DEFAULT_LINK_GIZMO_SIZE,
+    PROP_LINK,
+    PROP_ROBOT,
+    PROP_SENSOR,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_COLLISION_GEOM,
+    TAG_IMPORTED_SOURCE,
+    TAG_SOURCE_GEOM,
+    TAG_SOURCE_NAME,
+)
+
 if typing.TYPE_CHECKING:
     bpy: typing.Any
     Matrix: typing.Any
@@ -53,7 +54,7 @@ if not typing.TYPE_CHECKING:
     import bpy
     from mathutils import Matrix
 
-from ..core import (
+from linkforge.core import (
     Box,
     Color,
     Cylinder,
@@ -66,6 +67,7 @@ from ..core import (
     Sphere,
     get_logger,
 )
+
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.property_helpers import get_joint_props, get_link_props

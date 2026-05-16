@@ -17,21 +17,12 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
-
-from ..constants import (
-    DEFAULT_COLLISION_QUALITY,
-    GEOM_AUTO,
-    PROP_LINK,
-    SUFFIX_COLLISION,
-    SUFFIX_VISUAL,
-    TAG_IMPORTED_SOURCE,
-)
-from ..core._utils.string_utils import (
+from linkforge.core._utils.string_utils import (
     format_scientific,
     parse_scientific,
     sanitize_name,
 )
-from ..core.constants import (
+from linkforge.core.constants import (
     DEFAULT_CONTACT_KD,
     DEFAULT_CONTACT_KP,
     DEFAULT_FRICTION_MU,
@@ -43,6 +34,15 @@ from ..core.constants import (
     GEOM_CYLINDER,
     GEOM_MESH,
     GEOM_SPHERE,
+)
+
+from ..constants import (
+    DEFAULT_COLLISION_QUALITY,
+    GEOM_AUTO,
+    PROP_LINK,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
 )
 from ..utils.link_utils import should_rename_child
 from ..utils.scene_utils import clear_stats_cache

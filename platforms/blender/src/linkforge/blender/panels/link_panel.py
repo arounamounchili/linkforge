@@ -7,15 +7,15 @@ import typing
 
 import bpy
 from bpy.types import Context, Panel
+from linkforge.core.constants import (
+    GEOM_MESH,
+)
 
 from ..constants import (
     GEOM_AUTO,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_IMPORTED_SOURCE,
-)
-from ..core.constants import (
-    GEOM_MESH,
 )
 from ..utils.property_helpers import get_link_props
 from ..utils.scene_utils import get_robot_statistics

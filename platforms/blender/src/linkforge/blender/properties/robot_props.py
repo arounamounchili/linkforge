@@ -18,6 +18,13 @@ import contextlib
 import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
+from linkforge.core.constants import (
+    CONTROL_TYPE_ACTUATOR,
+    CONTROL_TYPE_SENSOR,
+    CONTROL_TYPE_SYSTEM,
+    ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
+    ROS2_CONTROL_DEFAULT_PLUGIN,
+)
 
 from ..constants import (
     FORMAT_GLB,
@@ -25,13 +32,6 @@ from ..constants import (
     FORMAT_STL,
     PROP_ROBOT,
     SUFFIX_COLLISION,
-)
-from ..core.constants import (
-    CONTROL_TYPE_ACTUATOR,
-    CONTROL_TYPE_SENSOR,
-    CONTROL_TYPE_SYSTEM,
-    ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
-    ROS2_CONTROL_DEFAULT_PLUGIN,
 )
 from ..utils.property_helpers import get_link_props
 from .control_props import Ros2ControlJointProperty, Ros2ControlParameterProperty
