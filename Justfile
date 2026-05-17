@@ -5,22 +5,74 @@
 default:
 	@just --list
 
-# --- Build ---
+# --- Setup & Maintenance ---
 
-# Build all extensions (currently Blender only)
-build: build-blender
+# Install/Sync dependencies and install git pre-commit hooks
+install:
+	uv sync --all-extras
+	uv run pre-commit install || true
 
-# Build Blender Extension
-build-blender:
-	uv run python platforms/blender/scripts/build.py
+# Run all pre-commit hooks on all files
+pre-commit:
+	uv run pre-commit run --all-files
+
+# Clean build artifacts, caches, and OS junk
+clean:
+	@rm -rf dist/ build/ *.egg-info
+	@rm -rf .pytest_cache .mypy_cache .ruff_cache .codespell_cache
+	@rm -rf htmlcov .coverage coverage.xml
+	@find . -type d -name "__pycache__" -exec rm -rf {} +
+	@find . -type f -name "*.py[co]" -delete
+	@find . -name ".DS_Store" -delete
+	@echo "✨ Project is clean."
+
+# Deep clean: Includes virtual environment removal
+clean-all: clean
+	@echo "⚠️ Removing virtual environment..."
+	@rm -rf .venv/ venv/
+	@echo "💀 Everything has been removed. Run 'just install' to recover."
+
+
+# --- Development ---
+
+# Link Blender extension for development (Blender 4.2+)
+develop:
+	uv run python platforms/blender/scripts/build.py develop
 
 # Sync Blender dependencies (downloads platform-specific wheels)
 sync:
 	uv run python platforms/blender/scripts/build.py sync
 
-# Link Blender extension for development (Blender 4.2+)
-develop:
-	uv run python platforms/blender/scripts/build.py develop
+
+# --- Quality ---
+
+# Run all quality checks (format, lint, type)
+check: check-format lint type-check
+
+# Check if code is formatted correctly
+check-format:
+	uv run ruff format --check .
+
+# Run linter (Ruff)
+lint:
+	uv run ruff check .
+
+# Fix linting and formatting issues automatically
+fix:
+	uv run ruff check . --fix
+	uv run ruff format .
+
+# Run all type checkers (MyPy + Pyright)
+type-check: type-check-mypy type-check-pyright
+
+# Run MyPy type checker
+type-check-mypy:
+	MYPYPATH=core/src:platforms/blender/src uv run mypy -p linkforge.core -p linkforge.blender
+
+# Run Pyright type checker
+type-check-pyright:
+	uv run pyright
+
 
 # --- Test ---
 
@@ -65,34 +117,16 @@ coverage:
 	uv run coverage html
 	uv run coverage report
 
-# --- Quality ---
 
-# Run all quality checks (format, lint, type)
-check: check-format lint type-check
+# --- Build & Distribution ---
 
-# Check if code is formatted correctly
-check-format:
-	uv run ruff format --check .
+# Build all extensions (currently Blender only)
+build: build-blender
 
-# Run linter (Ruff)
-lint:
-	uv run ruff check .
+# Build Blender Extension
+build-blender:
+	uv run python platforms/blender/scripts/build.py
 
-# Fix linting and formatting issues automatically
-fix:
-	uv run ruff check . --fix
-	uv run ruff format .
-
-# Run all type checkers (MyPy + Pyright)
-type-check: type-check-mypy type-check-pyright
-
-# Run MyPy type checker
-type-check-mypy:
-	MYPYPATH=core/src:platforms/blender/src uv run mypy -p linkforge.core -p linkforge.blender
-
-# Run Pyright type checker
-type-check-pyright:
-	uv run pyright
 
 # --- Documentation ---
 
@@ -100,30 +134,3 @@ type-check-pyright:
 docs:
 	@cd docs && make html
 	@echo "📖 Documentation built at docs/build/html/index.html"
-
-# --- Maintenance ---
-
-# Clean build artifacts, caches, and OS junk
-clean:
-	@rm -rf dist/ build/ *.egg-info
-	@rm -rf .pytest_cache .mypy_cache .ruff_cache .codespell_cache
-	@rm -rf htmlcov .coverage coverage.xml
-	@find . -type d -name "__pycache__" -exec rm -rf {} +
-	@find . -type f -name "*.py[co]" -delete
-	@find . -name ".DS_Store" -delete
-	@echo "✨ Project is clean."
-
-# Deep clean: Includes virtual environment removal
-clean-all: clean
-	@echo "⚠️ Removing virtual environment..."
-	@rm -rf .venv/ venv/
-	@echo "💀 Everything has been removed. Run 'just install' to recover."
-
-# Install/Sync dependencies
-install:
-	uv sync --all-extras
-	uv run pre-commit install || true
-
-# Run all pre-commit hooks on all files
-pre-commit:
-	uv run pre-commit run --all-files
