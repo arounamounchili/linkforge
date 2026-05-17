@@ -198,3 +198,232 @@ class TestMeshRobustness:
             mock_wm.stl_export.side_effect = TypeError("Unexpected")
             with pytest.raises(TypeError):
                 export_mesh_stl(obj, filepath)
+
+
+class TestMeshExhaustiveCoverage:
+    def test_export_mesh_view_layer_none(self, mocker, scene, tmp_path) -> None:
+        """Verify export and simplification functions handle view_layer being None gracefully."""
+        import bpy
+
+        obj = create_mesh_object("test_cube_view_none", scene=scene, with_cube=True)
+        filepath = tmp_path / "test.stl"
+
+        # Patch view_layer to be None in the mesh_io module
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.context.view_layer", None)
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.stl_export")
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.obj_export")
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf")
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply")
+
+        # 1. STL export
+        assert export_mesh_stl(obj, filepath) is True
+        # 2. OBJ export
+        assert export_mesh_obj(obj, filepath.with_suffix(".obj")) is True
+        # 3. GLB export
+        assert export_mesh_glb(obj, filepath.with_suffix(".glb")) is True
+        # 4. Simplification
+        simplified = create_simplified_mesh(obj, 0.5)
+        assert simplified is not None
+        # Clean up the simplified mesh from blender database
+        if simplified:
+            bpy.data.objects.remove(simplified, do_unlink=True)
+
+    def test_export_mesh_glb_error_handling(self, mocker, scene, tmp_path) -> None:
+        """Verify GLB export error handling for RuntimeError/OSError and TypeError."""
+        obj = create_mesh_object("glb_error_mesh", scene=scene, with_cube=True)
+        filepath = tmp_path / "test.glb"
+
+        # Test RuntimeError/OSError fallback
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf",
+            side_effect=RuntimeError("GLB fail"),
+        )
+        assert export_mesh_glb(obj, filepath) is False
+
+        # Test unexpected TypeError/AttributeError
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf",
+            side_effect=TypeError("Unexpected GLB error"),
+        )
+        with pytest.raises(TypeError, match="Unexpected GLB error"):
+            export_mesh_glb(obj, filepath)
+
+    def test_export_mesh_stl_unexpected_critical_exception(self, mocker, scene, tmp_path) -> None:
+        """Verify STL export critical unexpected exceptions are propagated."""
+        obj = create_mesh_object("stl_critical_mesh", scene=scene, with_cube=True)
+        filepath = tmp_path / "test.stl"
+
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.ops.wm.stl_export",
+            side_effect=Exception("Critical error"),
+        )
+        with pytest.raises(Exception, match="Critical error"):
+            export_mesh_stl(obj, filepath)
+
+    def test_export_mesh_obj_unexpected_critical_exception(self, mocker, scene, tmp_path) -> None:
+        """Verify OBJ export critical unexpected exceptions are propagated."""
+        obj = create_mesh_object("obj_critical_mesh", scene=scene, with_cube=True)
+        filepath = tmp_path / "test.obj"
+
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.ops.wm.obj_export",
+            side_effect=Exception("Critical error"),
+        )
+        with pytest.raises(Exception, match="Critical error"):
+            export_mesh_obj(obj, filepath)
+
+    def test_create_simplified_mesh_non_mesh_fails(self, scene) -> None:
+        """Verify create_simplified_mesh returns None for non-MESH objects or None input."""
+        assert create_simplified_mesh(None, 0.5) is None
+        empty_obj = create_test_object("empty_obj", None, scene)
+        assert create_simplified_mesh(empty_obj, 0.5) is None
+
+    def test_export_link_mesh_non_mesh_fails(self, tmp_path) -> None:
+        """Verify export_link_mesh returns None and Identity matrix for non-MESH objects or None input."""
+        path, offset = export_link_mesh(None, "link", "visual", "STL", tmp_path)
+        assert path is None
+        assert offset.is_identity
+
+    def test_export_link_mesh_depsgraph_provided(self, mocker, scene, tmp_path) -> None:
+        """Verify export_link_mesh uses the provided depsgraph if passed."""
+        import bpy
+
+        obj = create_mesh_object("depsgraph_mesh", scene=scene, with_cube=True)
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.stl_export")
+        path, offset = export_link_mesh(
+            obj, "depsgraph_link", "visual", "STL", tmp_path, depsgraph=depsgraph
+        )
+        assert path is not None
+
+    def test_export_link_mesh_no_translation_needed(self, mocker, scene, tmp_path) -> None:
+        """Verify export_link_mesh handles meshes already centered at origin (local_center <= EPSILON)."""
+        obj = create_mesh_object("centered_mesh", scene=scene, with_cube=True)
+        # Center vertices at (0,0,0) so bound_box is perfectly symmetric
+        for vert in obj.data.vertices:
+            vert.co = (0.0, 0.0, 0.0)
+
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.stl_export")
+        path, offset = export_link_mesh(obj, "centered_link", "visual", "STL", tmp_path)
+        assert path is not None
+
+    def test_export_link_mesh_formats_and_fallbacks(self, mocker, scene, tmp_path) -> None:
+        """Verify export_link_mesh handles various formats (OBJ, GLB, and unknown fallbacks)."""
+        obj = create_mesh_object("formats_mesh", scene=scene, with_cube=True)
+
+        mock_obj = mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.obj_export")
+        mock_glb = mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf")
+
+        # Test OBJ format
+        path_obj, _ = export_link_mesh(obj, "link_obj", "visual", "OBJ", tmp_path)
+        assert path_obj is not None
+        assert path_obj.suffix == ".obj"
+        mock_obj.assert_called_once()
+
+        # Test GLB format
+        path_glb, _ = export_link_mesh(obj, "link_glb", "visual", "GLB", tmp_path)
+        assert path_glb is not None
+        assert path_glb.suffix == ".glb"
+        mock_glb.assert_called_once()
+
+        # Test Unknown format fallback
+        path_fallback, _ = export_link_mesh(obj, "link_fallback", "visual", "PLY", tmp_path)
+        assert path_fallback is not None
+        assert path_fallback.suffix == ".obj"
+
+    def test_export_link_mesh_export_failure(self, scene, tmp_path) -> None:
+        """Verify export_link_mesh returns None when the underlying exporter fails."""
+        obj = create_mesh_object("fail_mesh", scene=scene, with_cube=True)
+
+        with patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=False):
+            path, offset = export_link_mesh(obj, "fail_link", "visual", "STL", tmp_path)
+            assert path is None
+            assert offset.is_identity
+
+    def test_export_link_mesh_cleanup_on_exception(self, mocker, scene, tmp_path) -> None:
+        """Verify export_link_mesh cleans up temporary meshes and objects when an exception is raised."""
+        obj = create_mesh_object("cleanup_mesh", scene=scene, with_cube=True)
+
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.data.meshes.new_from_object",
+            side_effect=RuntimeError("Simulated failure"),
+        )
+        path, offset = export_link_mesh(obj, "cleanup_link", "visual", "STL", tmp_path)
+        assert path is None
+        assert offset.is_identity
+
+    def test_export_mesh_obj_type_error_handling(self, mocker, scene, tmp_path) -> None:
+        """Verify OBJ export handles TypeError and raises it."""
+        obj = create_mesh_object("obj_type_error_mesh", scene=scene, with_cube=True)
+        filepath = tmp_path / "test.obj"
+
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.ops.wm.obj_export",
+            side_effect=TypeError("OBJ type error"),
+        )
+        with pytest.raises(TypeError, match="OBJ type error"):
+            export_mesh_obj(obj, filepath)
+
+    def test_export_link_mesh_dry_run(self, scene, tmp_path) -> None:
+        """Verify export_link_mesh returns expected filepath and matrix immediately in dry_run mode."""
+        obj = create_mesh_object("dry_run_mesh", scene=scene, with_cube=True)
+        filepath, matrix = export_link_mesh(
+            obj, "dry_link", "visual", "STL", tmp_path, dry_run=True
+        )
+        assert filepath is not None
+        assert filepath.name == "dry_link_visual.stl"
+        assert matrix == obj.matrix_world
+
+    def test_export_link_mesh_with_simplification_and_centering(
+        self, mocker, scene, tmp_path
+    ) -> None:
+        """Verify export_link_mesh performs centering (local_center > EPSILON) and simplification."""
+        from mathutils import Vector
+
+        obj = create_mesh_object("complex_mesh", scene=scene, with_cube=True)
+        # Shift the bound_box center to (2.0, 2.0, 2.0)
+        obj.bound_box = [Vector((2.0, 2.0, 2.0))] * 8
+
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.stl_export", return_value=True)
+        # Mock modifier apply for simplify
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply",
+            return_value={"FINISHED"},
+        )
+
+        filepath, offset = export_link_mesh(
+            obj, "complex_link", "collision", "STL", tmp_path, simplify=True, decimation_ratio=0.5
+        )
+        assert filepath is not None
+        # Bounding box center should be shifted by 2 on the X axis, so offset should reflect that
+        assert abs(offset.translation.x - 2.0) < 1e-5
+
+    def test_export_link_mesh_finally_cleanup_different_data(self, mocker, scene, tmp_path) -> None:
+        """Verify the finally block clean up path when final_mesh_data is different from temp_export_obj.data."""
+        import bpy
+
+        obj = create_mesh_object("diff_data_mesh", scene=scene, with_cube=True)
+
+        # We want final_mesh_data.transform to throw an exception so that final_mesh_data != temp_export_obj.data
+        # when the finally block is executed.
+        original_new_from_object = bpy.data.meshes.new_from_object
+
+        def mock_new_from_object(*args, **kwargs):
+            mesh_data = original_new_from_object(*args, **kwargs)
+
+            # Inject directly into __dict__ to bypass the MockPropertyGroup attributes intercept
+            def raise_err(*args, **kwargs):
+                raise RuntimeError("Simulated transform error")
+
+            mesh_data.__dict__["transform"] = raise_err
+            return mesh_data
+
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.data.meshes.new_from_object",
+            side_effect=mock_new_from_object,
+        )
+
+        path, offset = export_link_mesh(obj, "diff_data_link", "visual", "STL", tmp_path)
+        assert path is None
+        assert offset.is_identity

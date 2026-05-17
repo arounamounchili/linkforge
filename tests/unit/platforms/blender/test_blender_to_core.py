@@ -2538,3 +2538,86 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     with patch("linkforge.blender.adapters.context.BlenderContext", return_value=blender_context):
         robot, val = scene_to_robot(raw_ctx)
         assert robot is not None
+
+
+def test_get_object_material_node_traversal_continuation(scene) -> None:
+    """Verify that material parsing successfully continues past non-principled nodes to find the BSDF principled node."""
+    from linkforge.blender.adapters.blender_to_core import get_object_material
+
+    mat = bpy.data.materials.new("NonBSDFAndBSDFMat")
+    mat.use_nodes = True
+    mat.node_tree.nodes.clear()  # Clear pre-populated nodes in mock setup
+
+    # First node is not Principled (should be skipped and loop continues)
+    node_out = mat.node_tree.nodes.new("ShaderNodeOutputMaterial")
+    node_out.type = "OUTPUT_MATERIAL"
+    # Second node is Principled BSDF (should be selected)
+    node_bsdf = mat.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+    node_bsdf.type = "BSDF_PRINCIPLED"
+
+    if len(node_bsdf.inputs) > 0:
+        node_bsdf.inputs[0].name = "Base Color"
+        node_bsdf.inputs[0].default_value = (0.5, 0.6, 0.7, 1.0)
+
+    mesh = bpy.data.meshes.new("TestMeshForNodeContinuation")
+    obj = create_test_object("test_obj_for_node_cont", mesh, scene)
+    obj.data.materials.append(mat)
+
+    props = MagicMock(use_material=True)
+    res_mat = get_object_material(obj, props)
+    assert res_mat is not None
+    assert pytest.approx(res_mat.color.r) == 0.5
+
+
+def test_translate_global_materials_duplicate_and_pre_registered(scene, blender_context) -> None:
+    """Verify global material translation correctly handles duplicate child materials and skips pre-registered builder materials."""
+    from linkforge.blender.adapters.blender_to_core import SceneToRobotTranslator
+    from linkforge.core import Color, Material
+
+    root_obj = create_test_object("root_link_obj", None, scene)
+    safe_get_linkforge(root_obj).is_robot_link = True
+    safe_get_linkforge(root_obj).link_name = "root_link"
+    safe_get_linkforge(root_obj).use_material = True
+
+    # Two visual children sharing the same material
+    mesh1 = bpy.data.meshes.new("ChildMesh1")
+    mesh2 = bpy.data.meshes.new("ChildMesh2")
+    child1 = create_test_object("root_link_visual_1", mesh1, scene)
+    child2 = create_test_object("root_link_visual_2", mesh2, scene)
+    child1.parent = root_obj
+    child2.parent = root_obj
+
+    shared_mat = bpy.data.materials.new("SharedMat")
+    shared_mat.use_nodes = True
+    bsdf_node = shared_mat.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+    bsdf_node.type = "BSDF_PRINCIPLED"
+    child1.data.materials.append(shared_mat)
+    child2.data.materials.append(shared_mat)
+
+    translator = SceneToRobotTranslator(blender_context)
+    # Pre-register SharedMat in the robot builder to trigger registered material skip branch
+    pre_registered_mat = Material(name="SharedMat", color=Color(r=0.5, g=0.5, b=0.5, a=1.0))
+    translator.builder.robot.materials["SharedMat"] = pre_registered_mat
+
+    # Run global material translation: first child hits pre-registered branch, second hits duplicate processed branch
+    translator._translate_global_materials({"root_link": root_obj})
+    assert "SharedMat" in translator.builder.robot.materials
+
+    # Clean up children to prevent interference with other tests
+    for c in [child1, child2]:
+        if c in root_obj.children:
+            root_obj.children.remove(c)
+        if c in scene.objects:
+            scene.objects.remove(c)
+
+
+def test_scene_to_robot_active_context_passthrough(scene, blender_context) -> None:
+    """Verify scene_to_robot handles direct IBlenderContext instance inputs without redundant wrapping."""
+    from linkforge.blender.adapters.blender_to_core import scene_to_robot
+
+    root_obj = create_test_object("root_link_obj_pt", None, scene)
+    safe_get_linkforge(root_obj).is_robot_link = True
+    safe_get_linkforge(root_obj).link_name = "root_link"
+
+    robot, errors = scene_to_robot(blender_context)
+    assert robot is not None

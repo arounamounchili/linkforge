@@ -95,6 +95,9 @@ class MockVector:
     def __sub__(self, other):
         return MockVector(self.x - other[0], self.y - other[1], self.z - other[2])
 
+    def __neg__(self):
+        return MockVector(-self.x, -self.y, -self.z)
+
     @property
     def length(self):
         return (self.x**2 + self.y**2 + self.z**2) ** 0.5
