@@ -45,6 +45,14 @@ class TestTransformUtilities:
         assert child_obj.parent is None
         assert child_obj.matrix_world.translation.x == pytest.approx(original_world_loc.x, abs=1e-4)
 
+    def test_set_parent_keep_transform_none_inputs(self) -> None:
+        """Test parenting guard with None inputs."""
+        set_parent_keep_transform(None, None)
+
+    def test_clear_parent_keep_transform_none_input(self) -> None:
+        """Test clearing parent guard with None input."""
+        clear_parent_keep_transform(None)
+
 
 # Rotation Normalization
 

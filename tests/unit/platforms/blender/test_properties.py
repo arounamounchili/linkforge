@@ -280,26 +280,105 @@ class TestGlobalPropertiesAndCallbacks:
         obj1 = create_test_object("test_strat_3", None, scene)
         props = safe_get_linkforge(obj1)
 
-        # Mock Context with selected_objects for Strategy 3
-        mock_ctx = MagicMock()
-        mock_ctx.object = None
-        mock_ctx.selected_objects = [obj1]
+        # Mock Context with selected_objects for Strategy 3 (original test pattern)
+        original_id_data = getattr(props, "id_data", None)
+        try:
+            # Clear id_data to bypass Strategy 1 and test fallbacks
+            props.id_data = None
 
-        owner = find_property_owner(mock_ctx, props, PROP_LINK)
-        assert owner == obj1
+            mock_ctx = MagicMock()
+            mock_ctx.object = None
+            mock_ctx.selected_objects = [obj1]
 
-        # Mock Context with scene for Strategy 4
-        mock_ctx_scene = MagicMock()
-        mock_ctx_scene.object = None
-        mock_ctx_scene.selected_objects = []
-        mock_ctx_scene.scene = scene
+            owner = find_property_owner(mock_ctx, props, PROP_LINK)
+            assert owner == obj1
 
-        owner_scene = find_property_owner(mock_ctx_scene, props, PROP_LINK)
-        assert owner_scene == obj1
+            # Strategy 2: Active Object check
+            mock_ctx_obj = MagicMock()
+            mock_ctx_obj.object = obj1
+            owner_obj = find_property_owner(mock_ctx_obj, props, PROP_LINK)
+            assert owner_obj == obj1
+
+            # Mock Context with scene for Strategy 4
+            mock_ctx_scene = MagicMock()
+            mock_ctx_scene.object = None
+            mock_ctx_scene.selected_objects = []
+            mock_ctx_scene.scene = scene
+
+            owner_scene = find_property_owner(mock_ctx_scene, props, PROP_LINK)
+            assert owner_scene == obj1
+
+            # Strategy 4 Fallback to None
+            mock_ctx_none = MagicMock()
+            mock_ctx_none.object = None
+            mock_ctx_none.selected_objects = []
+            mock_ctx_none.scene = MagicMock()
+            mock_ctx_none.scene.objects = []
+            owner_none = find_property_owner(mock_ctx_none, props, PROP_LINK)
+            assert owner_none is None
+        finally:
+            props.id_data = original_id_data
 
         # Test get_transmission_props helper
         assert get_transmission_props(None) is None
         assert get_transmission_props(obj1) is not None
+
+        # Test get_robot_props helper with a valid scene
+        assert get_robot_props(scene) is not None
+
+        # Clear id_data for fallback testing
+        original_id_data = getattr(props, "id_data", None)
+        try:
+            props.id_data = None
+
+            # Test selected_objects loop fall-through (empty list)
+            mock_ctx_empty_sel = MagicMock()
+            mock_ctx_empty_sel.object = None
+            mock_ctx_empty_sel.selected_objects = []
+            mock_ctx_empty_sel.scene = None
+            assert find_property_owner(mock_ctx_empty_sel, props, PROP_LINK) is None
+
+            # Test selected_objects loop continuation with non-matching object
+            non_matching_obj = create_test_object("non_match", None, scene)
+            mock_ctx_non_match_sel = MagicMock()
+            mock_ctx_non_match_sel.object = None
+            mock_ctx_non_match_sel.selected_objects = [non_matching_obj]
+            mock_ctx_non_match_sel.scene = None
+            assert find_property_owner(mock_ctx_non_match_sel, props, PROP_LINK) is None
+
+            # Test scene.objects loop continuation and fall-through
+            mock_ctx_non_match_scene = MagicMock()
+            mock_ctx_non_match_scene.object = None
+            mock_ctx_non_match_scene.selected_objects = []
+            mock_ctx_non_match_scene.scene = MagicMock()
+            mock_ctx_non_match_scene.scene.objects = [non_matching_obj]
+            assert find_property_owner(mock_ctx_non_match_scene, props, PROP_LINK) is None
+
+            # Test context without selected_objects attribute (covers 60->66 branch)
+            mock_ctx_no_sel = MagicMock()
+            del mock_ctx_no_sel.selected_objects
+            mock_ctx_no_sel.object = None
+            mock_ctx_no_sel.scene = None
+            assert find_property_owner(mock_ctx_no_sel, props, PROP_LINK) is None
+        finally:
+            props.id_data = original_id_data
+
+    def test_duplicate_registrations(self) -> None:
+        """Test duplicate registration handling in property groups."""
+        from linkforge.blender.properties.control_props import register as control_reg
+        from linkforge.blender.properties.control_props import unregister as control_unreg
+        from linkforge.blender.properties.validation_props import register as val_reg
+        from linkforge.blender.properties.validation_props import unregister as val_unreg
+
+        # Duplicate register on control props (raises ValueError internally)
+        control_reg()
+        control_unreg()
+        control_reg()
+
+        # Duplicate register on validation props (raises ValueError internally)
+        val_reg()
+        val_unreg()
+        val_reg()
 
     def test_joint_properties_and_callbacks(self, scene, blender_context) -> None:
         """Test getters, setters, polls and hierarchy updates in JointPropertyGroup."""

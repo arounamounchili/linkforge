@@ -71,3 +71,89 @@ def test_context_and_mode_guard_override_kwargs() -> None:
         assert override["window"] == mock_window
         assert override["area"] == mock_area
         assert override["region"] == mock_region
+
+
+def test_context_and_mode_guard_no_windows() -> None:
+    """Verify context manager when window manager has no windows."""
+    context = MagicMock()
+    context.mode = "OBJECT"
+    context.area = None
+    context.window = None
+
+    with (
+        patch.object(bpy.context, "window_manager") as mock_wm,
+        patch.object(bpy.context, "temp_override") as mock_temp,
+    ):
+        mock_wm.windows = []
+
+        with context_and_mode_guard(context) as override:
+            assert override == {}
+
+        assert not mock_temp.called
+
+
+def test_context_and_mode_guard_no_view_3d_area() -> None:
+    """Verify context manager when there is no VIEW_3D area."""
+    context = MagicMock()
+    context.mode = "OBJECT"
+    context.area = None
+    context.window = None
+
+    mock_window = MagicMock()
+    mock_area = MagicMock()
+    mock_area.type = "PROPERTIES"
+    mock_window.screen.areas = [mock_area]
+
+    with (
+        patch.object(bpy.context, "window_manager") as mock_wm,
+        patch.object(bpy.context, "temp_override") as mock_temp,
+    ):
+        mock_wm.windows = [mock_window]
+
+        with context_and_mode_guard(context) as override:
+            assert override == {}
+
+        assert not mock_temp.called
+
+
+def test_context_and_mode_guard_no_window_region() -> None:
+    """Verify context manager when there is a VIEW_3D but no WINDOW region."""
+    context = MagicMock()
+    context.mode = "OBJECT"
+    context.area = None
+    context.window = None
+
+    mock_window = MagicMock()
+    mock_area = MagicMock()
+    mock_area.type = "VIEW_3D"
+    mock_region = MagicMock()
+    mock_region.type = "HEADER"
+    mock_area.regions = [mock_region]
+    mock_window.screen.areas = [mock_area]
+
+    with (
+        patch.object(bpy.context, "window_manager") as mock_wm,
+        patch.object(bpy.context, "temp_override") as mock_temp,
+    ):
+        mock_wm.windows = [mock_window]
+
+        with context_and_mode_guard(context) as override:
+            assert "region" not in override
+
+        assert mock_temp.called
+
+
+def test_context_and_mode_guard_restore_mode_exception() -> None:
+    """Verify exception in restoring original mode is suppressed."""
+    context = MagicMock()
+    context.mode = "EDIT_MESH"
+    context.area = MagicMock()
+    context.window = MagicMock()
+
+    with patch.object(bpy.ops.object, "mode_set") as mock_mode_set:
+        mock_mode_set.side_effect = [None, RuntimeError("Fail to restore")]
+
+        with context_and_mode_guard(context):
+            pass
+
+        assert mock_mode_set.call_count == 2

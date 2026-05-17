@@ -253,3 +253,97 @@ class TestJointVisualization:
         update_viz_handle(bpy.context)
         mock_remove.assert_called()
         assert "linkforge_joint_gizmo_handler" not in bpy.app.driver_namespace
+
+
+class TestJointUtils:
+    def test_resolve_mimic_joints(self, scene, blender_context) -> None:
+        """Test resolve_mimic_joints logic and branches in joint_utils.py."""
+        from linkforge.blender.utils.joint_utils import resolve_mimic_joints
+        from linkforge.core import Joint, JointMimic, JointType
+
+        joint1_obj = create_robot_joint("joint1", None, None, scene)
+        joint2_obj = create_robot_joint("joint2", None, None, scene)
+
+        joint_objects = {
+            "joint1": joint1_obj,
+            "joint2": joint2_obj,
+        }
+
+        # 1. Normal resolution: joint2 mimics joint1
+        joints = [
+            Joint(
+                name="joint2",
+                type=JointType.FIXED,
+                parent="link1",
+                child="link2",
+                mimic=JointMimic(joint="joint1", multiplier=1.5, offset=0.2),
+            )
+        ]
+
+        resolve_mimic_joints(joints, joint_objects)
+
+        jp2 = safe_get_joint(joint2_obj)
+        assert jp2.use_mimic is True
+        assert jp2.mimic_joint == joint1_obj
+        assert jp2.mimic_multiplier == pytest.approx(1.5)
+        assert jp2.mimic_offset == pytest.approx(0.2)
+
+        # 2. Branch: mimic joint target not in joint_objects
+        joint3_obj = create_robot_joint("joint3", None, None, scene)
+        joint_objects_missing = {
+            "joint3": joint3_obj,
+        }
+        joints_missing = [
+            Joint(
+                name="joint3",
+                type=JointType.FIXED,
+                parent="link1",
+                child="link2",
+                mimic=JointMimic(joint="non_existent_joint", multiplier=2.0, offset=0.5),
+            )
+        ]
+
+        resolve_mimic_joints(joints_missing, joint_objects_missing)
+        jp3 = safe_get_joint(joint3_obj)
+        assert jp3.use_mimic is False
+        assert jp3.mimic_multiplier == pytest.approx(2.0)
+        assert jp3.mimic_offset == pytest.approx(0.5)
+
+        # 3. Branch: get_joint_props returns None
+        class FakeObject:
+            def __init__(self) -> None:
+                self.linkforge_joint = None
+
+        fake_obj = FakeObject()
+        joint_objects_fake = {
+            "joint4": fake_obj,
+        }
+        joints_fake = [
+            Joint(
+                name="joint4",
+                type=JointType.FIXED,
+                parent="link1",
+                child="link2",
+                mimic=JointMimic(joint="joint1"),
+            )
+        ]
+        resolve_mimic_joints(joints_fake, joint_objects_fake)
+
+        # 4. Branch: joint does not mimic or joint name not in joint_objects
+        joints_no_mimic = [
+            Joint(
+                name="joint_no_mimic",
+                type=JointType.FIXED,
+                parent="link1",
+                child="link2",
+                mimic=None,
+            ),
+            Joint(
+                name="joint_not_in_objects",
+                type=JointType.FIXED,
+                parent="link1",
+                child="link2",
+                mimic=JointMimic(joint="joint1"),
+            ),
+        ]
+        resolve_mimic_joints(joints_no_mimic, joint_objects)
