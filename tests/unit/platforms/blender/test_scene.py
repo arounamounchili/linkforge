@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import bpy
 from linkforge.blender.constants import (
@@ -227,6 +227,282 @@ class TestSceneAnalysis:
             assert geo_info[1] == GEOM_MESH  # Fallback to GEOM_MESH
             assert geo_info[2] is False
 
+    def test_get_robot_statistics_cache_validation_errors(self, scene, blender_context) -> None:
+        """Test cache validation for all object types (joints, sensors, etc.)."""
+        from linkforge.blender.utils.scene_utils import RobotSceneStatistics, _stats_cache
+
+        # Populate the cache manually with dummy stats
+        cache_key = (id(scene), getattr(scene, "frame_current", 0), len(scene.objects))
+
+        with patch.dict(os.environ, {"LINKFORGE_DISABLE_CACHE": "0"}):
+            # 1. Test ReferenceError on joint_obj
+            bad_joint = MagicMock()
+            type(bad_joint).name = PropertyMock(side_effect=ReferenceError("deleted"))
+            stats = RobotSceneStatistics(
+                num_links=0,
+                total_mass=0.0,
+                total_dof=0,
+                link_objects={},
+                joint_objects=[bad_joint],
+                sensor_objects=[],
+                transmission_objects=[],
+                root_link=None,
+            )
+            _stats_cache[cache_key] = stats
+            # This lookup should detect ReferenceError, invalidate cache, and re-scan the scene
+            get_robot_statistics(scene)
+            assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
+
+            # 2. Test ReferenceError on sensor_obj
+            bad_sensor = MagicMock()
+            type(bad_sensor).name = PropertyMock(side_effect=ReferenceError("deleted"))
+            stats = RobotSceneStatistics(
+                num_links=0,
+                total_mass=0.0,
+                total_dof=0,
+                link_objects={},
+                joint_objects=[],
+                sensor_objects=[bad_sensor],
+                transmission_objects=[],
+                root_link=None,
+            )
+            _stats_cache[cache_key] = stats
+            get_robot_statistics(scene)
+            assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
+
+            # 3. Test ReferenceError on transmission_obj
+            bad_trans = MagicMock()
+            type(bad_trans).name = PropertyMock(side_effect=ReferenceError("deleted"))
+            stats = RobotSceneStatistics(
+                num_links=0,
+                total_mass=0.0,
+                total_dof=0,
+                link_objects={},
+                joint_objects=[],
+                sensor_objects=[],
+                transmission_objects=[bad_trans],
+                root_link=None,
+            )
+            _stats_cache[cache_key] = stats
+            get_robot_statistics(scene)
+            assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
+
+            # 4. Test ReferenceError on geometry_stats
+            bad_geo = MagicMock()
+            type(bad_geo).name = PropertyMock(side_effect=ReferenceError("deleted"))
+            stats = RobotSceneStatistics(
+                num_links=0,
+                total_mass=0.0,
+                total_dof=0,
+                link_objects={},
+                joint_objects=[],
+                sensor_objects=[],
+                transmission_objects=[],
+                root_link=None,
+                geometry_stats={"some_link": (bad_geo, "box", True)},
+            )
+            _stats_cache[cache_key] = stats
+            get_robot_statistics(scene)
+            assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
+
+            # 5. Test ReferenceError on manual_inertia_objects
+            bad_inertia = MagicMock()
+            type(bad_inertia).name = PropertyMock(side_effect=ReferenceError("deleted"))
+            stats = RobotSceneStatistics(
+                num_links=0,
+                total_mass=0.0,
+                total_dof=0,
+                link_objects={},
+                joint_objects=[],
+                sensor_objects=[],
+                transmission_objects=[],
+                root_link=None,
+                manual_inertia_objects=[bad_inertia],
+            )
+            _stats_cache[cache_key] = stats
+            get_robot_statistics(scene)
+            assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
+
+    def test_scene_utils_edge_cases(self, scene) -> None:
+        """Cover rare branch conditions, Falsy bounds, collection sync and heuristic tags."""
+        from linkforge.blender.utils.scene_utils import (
+            build_tree_from_stats,
+            get_robot_statistics,
+            move_to_collection,
+            sync_object_collections,
+        )
+
+        # Empty scene or missing hasattr(scene, 'objects')
+        assert get_robot_statistics(None).num_links == 0
+        assert get_robot_statistics(MagicMock(spec=[])).num_links == 0
+
+        # BadObjects to trigger length check TypeError/AttributeError
+        class BadObjects:
+            def __len__(self) -> int:
+                raise TypeError("Bad Length")
+
+            def __iter__(self):
+                return iter([])
+
+        bad_scene = MagicMock()
+        bad_scene.objects = BadObjects()
+        get_robot_statistics(bad_scene, force_refresh=True)
+
+        # Heuristic / tags checks
+        link_obj = create_test_object("link_geom_mesh", None, scene)
+        safe_get_linkforge(link_obj).is_robot_link = True
+        safe_get_linkforge(link_obj).use_auto_inertia = False
+        collision_child = create_test_object("link_geom_mesh_collision", None, scene)
+        collision_child.parent = link_obj
+
+        # 1. stored_type == GEOM_MESH
+        collision_child[TAG_COLLISION_GEOM] = GEOM_MESH
+        stats = get_robot_statistics(scene, force_refresh=True)
+        assert stats.geometry_stats["link_geom_mesh"][1] == GEOM_MESH
+        assert link_obj in stats.manual_inertia_objects
+
+        # 2. non-string stored_type
+        collision_child[TAG_COLLISION_GEOM] = 123
+        get_robot_statistics(scene, force_refresh=True)
+
+        # 3. Heuristic primitive detection returning a value
+        collision_child[TAG_COLLISION_GEOM] = "AUTO"
+        with patch(
+            "linkforge.blender.utils.scene_utils.detect_primitive_type", return_value="box"
+        ) as mock_det:
+            stats = get_robot_statistics(scene, force_refresh=True)
+            assert stats.geometry_stats["link_geom_mesh"][1] == "box"
+
+        # Joint props Falsy branches in loop
+        joint_obj = create_test_object("joint_empty", None, scene)
+        joint_obj.type = "EMPTY"
+        safe_get_joint(joint_obj).is_robot_joint = True
+        # jp.child_link is None
+        stats = get_robot_statistics(scene, force_refresh=True)
+        assert stats.total_dof == 1  # Continuous has 1 DOF
+
+        # jp.parent_link has no link props
+        non_link_parent = create_test_object("non_link_parent", None, scene)
+        non_link_parent.linkforge = None
+        child_link = create_test_object("child_link_real", None, scene)
+        safe_get_linkforge(child_link).is_robot_link = True
+        safe_get_linkforge(child_link).link_name = "child_link_real"
+        safe_get_joint(joint_obj).child_link = child_link
+        safe_get_joint(joint_obj).parent_link = non_link_parent
+        stats = get_robot_statistics(scene, force_refresh=True)
+        assert "child_link_real" in stats.link_objects
+
+        # Sensors and Transmissions detection
+        sensor_obj = create_test_object("sensor_test", None, scene)
+        sensor_obj.type = "EMPTY"
+        safe_get_sensor(sensor_obj).is_robot_sensor = True
+        trans_obj = create_test_object("trans_test", None, scene)
+        trans_obj.type = "EMPTY"
+        safe_get_transmission(trans_obj).is_robot_transmission = True
+        stats = get_robot_statistics(scene, force_refresh=True)
+        assert sensor_obj in stats.sensor_objects
+        assert trans_obj in stats.transmission_objects
+
+        # build_tree_from_stats Falsy jp or parent_name not in tree
+        from linkforge.blender.utils.scene_utils import RobotSceneStatistics
+
+        bad_joint_obj = MagicMock()
+        type(bad_joint_obj).name = "bad_joint"
+        # Raise ReferenceError in get_joint_props
+        with patch(
+            "linkforge.blender.utils.scene_utils.get_joint_props",
+            side_effect=ReferenceError("deleted"),
+        ):
+            stats_mock = RobotSceneStatistics(
+                num_links=2,
+                total_mass=1.0,
+                total_dof=1,
+                link_objects={"link_a": None, "link_b": None},
+                joint_objects=[],
+                sensor_objects=[],
+                transmission_objects=[],
+                root_link=None,
+                joints_map={"link_b": ("link_a", bad_joint_obj)},
+            )
+            tree, root, joints, links = build_tree_from_stats(stats_mock)
+            assert tree["link_a"] == []
+
+        # Helper to construct clean mock objects with all flags False by default
+        def create_clean_mock(name: str):
+            obj = MagicMock()
+            obj.name = name
+            obj.linkforge = MagicMock(is_robot_link=False, mass=0.0, use_auto_inertia=True)
+            obj.linkforge_joint = MagicMock(is_robot_joint=False)
+            obj.linkforge_sensor = MagicMock(is_robot_sensor=False)
+            obj.linkforge_transmission = MagicMock(is_robot_transmission=False)
+            return obj
+
+        # Cover jp := get_joint_props(obj) evaluates to False
+        no_jp_scene = MagicMock()
+        no_jp_joint = create_clean_mock("no_jp_joint")
+        no_jp_scene.objects = [no_jp_joint]
+        with (
+            patch("linkforge.blender.utils.scene_utils.is_robot_joint", return_value=True),
+            patch("linkforge.blender.utils.scene_utils.get_joint_props", return_value=None),
+        ):
+            get_robot_statistics(no_jp_scene, force_refresh=True)
+
+        # Cover root link finding loop when there is no root link (every link is in joints_map)
+        no_root_scene = MagicMock()
+
+        no_root_link1 = create_clean_mock("loop_link1")
+        no_root_link1.linkforge.is_robot_link = True
+        no_root_link1.linkforge.mass = 1.0
+        no_root_link1.linkforge.link_name = "loop_link1"
+
+        no_root_link2 = create_clean_mock("loop_link2")
+        no_root_link2.linkforge.is_robot_link = True
+        no_root_link2.linkforge.mass = 1.0
+        no_root_link2.linkforge.link_name = "loop_link2"
+
+        no_root_joint1 = create_clean_mock("loop_joint1")
+        no_root_joint1.type = "EMPTY"
+        no_root_joint1.linkforge_joint.is_robot_joint = True
+        no_root_joint1.linkforge_joint.joint_type = "continuous"
+        no_root_joint1.linkforge_joint.child_link = no_root_link1
+        no_root_joint1.linkforge_joint.parent_link = no_root_link2
+
+        no_root_joint2 = create_clean_mock("loop_joint2")
+        no_root_joint2.type = "EMPTY"
+        no_root_joint2.linkforge_joint.is_robot_joint = True
+        no_root_joint2.linkforge_joint.joint_type = "continuous"
+        no_root_joint2.linkforge_joint.child_link = no_root_link2
+        no_root_joint2.linkforge_joint.parent_link = no_root_link1
+
+        no_root_scene.objects = [no_root_link1, no_root_link2, no_root_joint1, no_root_joint2]
+        stats_no_root = get_robot_statistics(no_root_scene, force_refresh=True)
+        assert stats_no_root.root_link is None
+
+        # move_to_collection target same as current
+        col_same = bpy.data.collections.new("col_same")
+        obj_same = create_test_object("obj_same", None, scene)
+        col_same.objects.link(obj_same)
+        move_to_collection(obj_same, col_same)
+
+        # sync_object_collections early return when empty source_cols
+        obj_source = create_test_object("obj_source", None, scene)
+        obj_target = create_test_object("obj_target", None, scene)
+        # Ensure obj_source has NO collections
+        for col in list(obj_source.users_collection):
+            col.objects.unlink(obj_source)
+        sync_object_collections(obj_target, obj_source)
+
+        # sync_object_collections unlink from collections source is not in
+        col_ref = bpy.data.collections.new("col_ref")
+        col_extra = bpy.data.collections.new("col_extra")
+        col_ref.objects.link(obj_source)
+        col_extra.objects.link(obj_target)
+
+        with patch("tests.mock_bpy_env.MockCollection.unlink") as mock_unlink:
+            sync_object_collections(obj_target, obj_source)
+            mock_unlink.assert_any_call(obj_target)
+            assert col_ref in obj_target.users_collection
+
 
 # Kinematic Tree Building
 
@@ -254,6 +530,64 @@ class TestTreeBuilding:
         assert any(c[0] == "child" for c in tree["parent"])
         assert ("parent", "child") in joints_dict
 
+    def test_build_tree_from_stats_edge_cases(self) -> None:
+        """Test build_tree_from_stats with various uncommon branches (missing parents, missing properties)."""
+        from linkforge.blender.utils.scene_utils import RobotSceneStatistics, build_tree_from_stats
+
+        # 1. parent_name not in tree (parent_name not in links)
+        joint_obj1 = MagicMock()
+        stats = RobotSceneStatistics(
+            num_links=1,
+            total_mass=0.0,
+            total_dof=0,
+            link_objects={"child": MagicMock()},
+            joint_objects=[joint_obj1],
+            sensor_objects=[],
+            transmission_objects=[],
+            root_link=None,
+            joints_map={"child": ("unknown_parent", joint_obj1)},
+        )
+        # Should not raise exception, but skips tree population since parent is not in tree
+        tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
+        assert "unknown_parent" not in tree
+
+        # 2. get_joint_props returns None
+        joint_obj2 = MagicMock()
+        with patch("linkforge.blender.utils.scene_utils.get_joint_props", return_value=None):
+            stats = RobotSceneStatistics(
+                num_links=2,
+                total_mass=0.0,
+                total_dof=0,
+                link_objects={"parent": MagicMock(), "child": MagicMock()},
+                joint_objects=[joint_obj2],
+                sensor_objects=[],
+                transmission_objects=[],
+                root_link=None,
+                joints_map={"child": ("parent", joint_obj2)},
+            )
+            tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
+            assert len(tree["parent"]) == 0
+
+        # 3. ReferenceError raised when accessing joint properties
+        joint_obj3 = MagicMock()
+        with patch(
+            "linkforge.blender.utils.scene_utils.get_joint_props",
+            side_effect=ReferenceError("deleted"),
+        ):
+            stats = RobotSceneStatistics(
+                num_links=2,
+                total_mass=0.0,
+                total_dof=0,
+                link_objects={"parent": MagicMock(), "child": MagicMock()},
+                joint_objects=[joint_obj3],
+                sensor_objects=[],
+                transmission_objects=[],
+                root_link=None,
+                joints_map={"child": ("parent", joint_obj3)},
+            )
+            tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
+            assert len(tree["parent"]) == 0
+
 
 # Collection Management
 
@@ -274,6 +608,9 @@ class TestCollectionManagement:
         move_to_collection(obj, col2)
         assert col2 in obj.users_collection
         assert col1 not in obj.users_collection
+
+        # Call move_to_collection again when already in col2 to cover "already there" branch
+        move_to_collection(obj, col2)
 
         # Null check safety
         move_to_collection(None, col2)  # Should not raise exception

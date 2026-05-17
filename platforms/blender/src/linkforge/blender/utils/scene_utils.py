@@ -170,15 +170,14 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
     joint_objects: list[Any] = []
     sensor_objects: list[Any] = []
     transmission_objects: list[Any] = []
+    obj_count = 0
 
     if scene:
         disable_cache = os.environ.get("LINKFORGE_DISABLE_CACHE", "0") == "1"
 
         objects = getattr(scene, "objects", [])
-        try:
+        with contextlib.suppress(TypeError, AttributeError):
             obj_count = len(objects)
-        except (TypeError, AttributeError):
-            obj_count = 0
 
         cache_key = (
             id(scene),
@@ -333,7 +332,7 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
     )
 
     # Update cache
-    cache_key = (id(scene), getattr(scene, "frame_current", 0), len(getattr(scene, "objects", [])))
+    cache_key = (id(scene), getattr(scene, "frame_current", 0), obj_count)
     _stats_cache[cache_key] = stats
 
     return stats

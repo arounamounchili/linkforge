@@ -1888,3 +1888,653 @@ def test_detect_primitive_type_tags(scene, blender_context) -> None:
     assert obj is not None
     obj["source_geometry_type"] = "sphere"
     assert detect_primitive_type(obj) == "sphere"
+
+
+def test_blender_to_core_matrix_nulls_and_fallbacks() -> None:
+    """Test matrix_to_transform with Matrix or matrix None/missing."""
+    from unittest.mock import patch
+
+    import linkforge.blender.adapters.blender_to_core as b2c
+
+    # matrix is None
+    res = b2c.matrix_to_transform(None)
+    assert res.xyz.x == 0.0
+
+    # Matrix is None (patched)
+    with patch("linkforge.blender.adapters.blender_to_core.Matrix", None):
+        res = b2c.matrix_to_transform(MagicMock())
+        assert res.xyz.x == 0.0
+
+
+def test_extract_mesh_triangles_nulls_and_fallbacks(scene, blender_context) -> None:
+    """Test extract_mesh_triangles failure bounds."""
+    from unittest.mock import patch
+
+    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
+
+    # eval_obj.to_mesh() returns None
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+    assert obj is not None
+
+    mock_eval = MagicMock()
+    mock_eval.to_mesh.return_value = None
+    with patch("tests.mock_bpy_env.MockObject.evaluated_get", return_value=mock_eval):
+        assert extract_mesh_triangles(obj) is None
+
+    # mesh_data.loop_triangles is None
+    mock_eval2 = MagicMock()
+    mock_mesh = MagicMock()
+    mock_mesh.loop_triangles = None
+    mock_eval2.to_mesh.return_value = mock_mesh
+    with patch("tests.mock_bpy_env.MockObject.evaluated_get", return_value=mock_eval2):
+        assert extract_mesh_triangles(obj) is None
+
+
+def test_extract_mesh_triangles_numpy_vs_pure_python(scene, blender_context) -> None:
+    """Test pure python fallback and numpy scaling paths."""
+    from unittest.mock import MagicMock, patch
+
+    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
+
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+    assert obj is not None
+
+    # Mock a numpy-like object
+    class MockArray:
+        def __init__(self, data):
+            self.data = data
+
+        def __getitem__(self, idx):
+            return self
+
+        def __setitem__(self, idx, val):
+            pass
+
+        def __imul__(self, other):
+            return self
+
+        def __mul__(self, other):
+            return self
+
+        def __rmul__(self, other):
+            return self
+
+        def reshape(self, shape):
+            return self
+
+        def tolist(self):
+            return self.data
+
+    mock_np = MagicMock()
+    mock_np.zeros = lambda size, dtype=None: MockArray([1.0] * size)
+
+    with patch("linkforge.blender.adapters.blender_to_core.np", mock_np):
+        res_np = extract_mesh_triangles(obj, as_numpy=True)
+        assert res_np is not None
+        verts, tris = res_np
+        assert hasattr(verts, "tolist")
+        assert hasattr(tris, "tolist")
+
+    # numpy is mocked as None (pure Python fallback)
+    with patch("linkforge.blender.adapters.blender_to_core.np", None):
+        res_py = extract_mesh_triangles(obj)
+        assert res_py is not None
+        verts_py, tris_py = res_py
+        assert len(verts_py) == 8
+        assert len(tris_py) == 12
+
+
+def test_get_object_material_principled_bsdf_failures(scene, blender_context) -> None:
+    """Test material BSDF node misses and diffuse viewport fallbacks."""
+    from linkforge.blender.adapters.blender_to_core import get_object_material
+
+    # Material has node tree but lacks Principled BSDF node
+    mesh1 = bpy.data.meshes.new("MatMesh1")
+    obj = create_test_object("mat_obj", mesh1, scene)
+    mat = bpy.data.materials.new("NoBSDFMat")
+    mat.use_nodes = True
+    # Clear automatically created Principled BSDF
+    if mat.node_tree:
+        mat.node_tree.nodes.clear()
+
+    # We set custom diffuse color
+    mat.diffuse_color = (0.2, 0.4, 0.6, 0.8)
+
+    if obj.data and hasattr(obj.data, "materials"):
+        obj.data.materials.append(mat)
+
+    # Mock LinkPropertyGroup props
+    props = MagicMock()
+    props.use_material = True
+
+    # MaterialSlots are empty/None or present but fallback diffuse
+    res = get_object_material(obj, props)
+    assert res is not None
+    assert res.color.r == 0.2
+    assert res.color.g == 0.4
+    assert res.color.b == 0.6
+    assert res.color.a == 0.8
+
+    # BSDF Principled exists but inputs list has no "Base Color"
+    mat2 = bpy.data.materials.new("BSDFNoBaseColor")
+    mat2.use_nodes = True
+    if mat2.node_tree:
+        mat2.node_tree.nodes.clear()
+        node = mat2.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+        # remove inputs
+        node.inputs.clear()
+
+    mesh2 = bpy.data.meshes.new("MatMesh2")
+    obj2 = create_test_object("mat_obj_bsdf_no_base", mesh2, scene)
+    if obj2.data and hasattr(obj2.data, "materials"):
+        obj2.data.materials.append(mat2)
+    mat2.diffuse_color = (0.5, 0.5, 0.5, 1.0)
+
+    res2 = get_object_material(obj2, props)
+    assert res2 is not None
+    assert res2.color.r == 0.5
+
+
+def test_scene_to_robot_build_exception(scene, blender_context) -> None:
+    """Verify scene_to_robot when builder throws exception during build."""
+    from unittest.mock import patch
+
+    from linkforge.blender.adapters.blender_to_core import scene_to_robot
+
+    root = create_test_object("Root", None, scene)
+    safe_get_linkforge(root).is_robot_link = True
+    safe_get_linkforge(root).link_name = "root"
+
+    with (
+        patch("linkforge.core.RobotBuilder.build", side_effect=ValueError("Boom!")),
+        pytest.raises(RobotValidationError, match="Boom!"),
+    ):
+        scene_to_robot(bpy.context)
+
+
+def test_get_object_geometry_edge_cases(scene, blender_context) -> None:
+    """Verify geometry extraction with dimensions None fallbacks."""
+    from unittest.mock import patch
+
+    from linkforge.blender.adapters.blender_to_core import get_object_geometry
+
+    # Empty geometry object with dimensions = None
+    obj = create_test_object("EmptyObj", None, scene)
+    with patch("tests.mock_bpy_env.MockObject.dimensions", new=None):
+        geom_box, _ = get_object_geometry(obj, geometry_type="box")
+        assert geom_box is None
+
+        geom_cyl, _ = get_object_geometry(obj, geometry_type="cylinder")
+        assert geom_cyl is None
+
+        geom_sph, _ = get_object_geometry(obj, geometry_type="sphere")
+        assert geom_sph is None
+
+
+def test_detect_primitive_type_edge_cases(scene, blender_context) -> None:
+    """Verify is_mesh has attributes fallback and GEOM_MESH tag return None."""
+    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
+
+    # Object is of type MESH but not isinstance(mesh, bpy.types.Mesh)
+    # E.g. mocked mesh with attributes but not the actual bpy type
+    mesh_obj = create_test_object("FakeMesh", None, scene)
+    mesh_obj.type = "MESH"
+
+    class MockedMesh:
+        def __init__(self):
+            self.vertices = []
+            self.polygons = []
+
+    mesh_obj.data = MockedMesh()
+
+    # By default, since lists are empty, vert_count=0, face_count=0, no primitive matches -> returns None
+    assert detect_primitive_type(mesh_obj) is None
+
+    # When TAG_SOURCE_GEOM is set to GEOM_MESH, detect_primitive_type returns None immediately
+    mesh_obj["source_geometry_type"] = "mesh"
+    assert detect_primitive_type(mesh_obj) is None
+
+
+def test_detect_primitive_type_advanced_branches(scene, blender_context) -> None:
+    """Cover remaining detect_primitive_type branches and conditions."""
+    from unittest.mock import patch
+
+    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
+
+    # 1. is_mesh is False (mesh_obj.data = None) -> returns None
+    mesh_obj = create_test_object("FakeMeshNullData", None, scene)
+    mesh_obj.type = "MESH"
+    mesh_obj.data = None
+    assert detect_primitive_type(mesh_obj) is None
+
+    # 2. Tag fallback to check another tag if string is not sphere/mesh (e.g. "box" tag)
+    mesh_obj2 = create_test_object("FakeMeshBoxTag", None, scene)
+    mesh_obj2.type = "MESH"
+
+    class MockedMesh:
+        def __init__(self):
+            self.vertices = []
+            self.polygons = []
+
+    mesh_obj2.data = MockedMesh()
+    mesh_obj2["source_geometry_type"] = "box"
+    assert detect_primitive_type(mesh_obj2) is None
+
+    # 3. Cube match fail on all_quads
+    mesh_obj3 = create_test_object("CubeMatchFail", None, scene)
+    mesh_obj3.type = "MESH"
+
+    class MockedMeshCube:
+        def __init__(self):
+            self.vertices = [0] * 8
+
+            class MockPoly:
+                def __init__(self, count):
+                    self.vertices = [0] * count
+
+            # 6 faces total, but one has 3 vertices (not all quads)
+            self.polygons = [MockPoly(4)] * 5 + [MockPoly(3)]
+
+    mesh_obj3.data = MockedMeshCube()
+    assert detect_primitive_type(mesh_obj3) is None
+
+    # 4. Sphere match fail on zero dimensions or uniformity
+    mesh_obj4 = create_test_object("SphereMatchFail", None, scene)
+    mesh_obj4.type = "MESH"
+
+    class MockedMeshSphere:
+        def __init__(self):
+            self.vertices = [0] * 482
+
+            class MockPoly:
+                def __init__(self):
+                    self.vertices = [0] * 4
+
+            self.polygons = [MockPoly()] * 480
+
+    mesh_obj4.data = MockedMeshSphere()
+
+    # dimensions check: zero dimension
+    with patch("tests.mock_bpy_env.MockObject.dimensions", new=MagicMock(x=0.0, y=1.0, z=1.0)):
+        assert detect_primitive_type(mesh_obj4) is None
+
+    # dimensions check: uniformity tolerance fails
+    with patch("tests.mock_bpy_env.MockObject.dimensions", new=MagicMock(x=1.0, y=1.0, z=10.0)):
+        assert detect_primitive_type(mesh_obj4) is None
+
+    # 5. Cylinder match fail on zero dimensions or xy_ratio or height ratio
+    mesh_obj5 = create_test_object("CylinderMatchFail", None, scene)
+    mesh_obj5.type = "MESH"
+
+    class MockedMeshCylinder:
+        def __init__(self):
+            # typical cylinder verts (64 verts, 34 faces)
+            self.vertices = [0] * 64
+
+            class MockPoly:
+                def __init__(self):
+                    self.vertices = [0] * 4
+
+            self.polygons = [MockPoly()] * 34
+
+    mesh_obj5.data = MockedMeshCylinder()
+
+    # dimensions check: zero dimension
+    with patch("tests.mock_bpy_env.MockObject.dimensions", new=MagicMock(x=0.0, y=1.0, z=1.0)):
+        assert detect_primitive_type(mesh_obj5) is None
+
+    # dimensions check: circular base ratio fails (x vs y)
+    with patch("tests.mock_bpy_env.MockObject.dimensions", new=MagicMock(x=1.0, y=3.0, z=5.0)):
+        assert detect_primitive_type(mesh_obj5) is None
+
+    # dimensions check: height ratio fails
+    with patch("tests.mock_bpy_env.MockObject.dimensions", new=MagicMock(x=1.0, y=1.0, z=1.0)):
+        assert detect_primitive_type(mesh_obj5) is None
+
+
+def test_get_object_geometry_advanced_branches(scene) -> None:
+    """Cover remaining get_object_geometry branches."""
+    from unittest.mock import MagicMock, patch
+
+    obj = create_test_object("GeomObj", None, scene)
+    obj.type = "MESH"
+
+    # 1. actual_geometry_type = GEOM_MESH but meshes_dir = None -> fallback to Box
+    mock_dims = MagicMock(x=1.0, y=1.0, z=1.0)
+    mock_dims.length = 1.73
+    with patch("tests.mock_bpy_env.MockObject.dimensions", new=mock_dims):
+        geom, _ = get_object_geometry(obj, geometry_type="mesh", meshes_dir=None)
+        assert isinstance(geom, Box)
+
+    # 2. invalid actual_geometry_type -> returns None
+    geom2, _ = get_object_geometry(obj, geometry_type="invalid_type")
+    assert geom2 is None
+
+
+def test_extract_mesh_triangles_advanced_branches(scene) -> None:
+    """Cover remaining extract_mesh_triangles branches."""
+    from unittest.mock import MagicMock, patch
+
+    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
+
+    bpy.ops.mesh.primitive_cube_add()
+    obj = bpy.context.active_object
+    assert obj is not None
+
+    # 1. custom depsgraph
+    mock_dg = MagicMock()
+    with patch("tests.mock_bpy_env.MockObject.evaluated_get") as mock_eval:
+        extract_mesh_triangles(obj, depsgraph=mock_dg)
+        mock_eval.assert_called_with(mock_dg)
+
+    # 2. as_numpy = False while np is mocked
+    class MockArray:
+        def __init__(self, data):
+            self.data = data
+
+        def __getitem__(self, idx):
+            return self
+
+        def __setitem__(self, idx, val):
+            pass
+
+        def __imul__(self, other):
+            return self
+
+        def __mul__(self, other):
+            return self
+
+        def __rmul__(self, other):
+            return self
+
+        def reshape(self, shape):
+            return self
+
+        def tolist(self):
+            return [1, 2, 3]
+
+    mock_np = MagicMock()
+    mock_np.zeros = lambda size, dtype=None: MockArray([1.0] * size)
+
+    with patch("linkforge.blender.adapters.blender_to_core.np", mock_np):
+        res = extract_mesh_triangles(obj, as_numpy=False)
+        assert res == ([1, 2, 3], [1, 2, 3])
+
+
+def test_get_object_material_advanced_branches(scene) -> None:
+    """Cover remaining get_object_material branches."""
+    from unittest.mock import MagicMock, patch
+
+    from linkforge.blender.adapters.blender_to_core import get_object_material
+
+    # 1. material_slots exists but slot.material is None -> fallback to default gray
+    mesh = bpy.data.meshes.new("SlotMesh")
+    obj = create_test_object("slot_obj", mesh, scene)
+
+    mock_slot = MagicMock()
+    mock_slot.material = None
+    mock_slots = MagicMock()
+    mock_slots.__bool__.return_value = True
+    mock_slots.__getitem__.return_value = mock_slot
+
+    with patch("tests.mock_bpy_env.MockObject.material_slots", new=mock_slots):
+        props = MagicMock(use_material=True)
+        res = get_object_material(obj, props)
+        assert res is not None
+        assert res.color.r == 0.7  # default gray
+
+    # 2. use_nodes = True but nodes empty -> fallback to diffuse color
+    mat = bpy.data.materials.new("EmptyNodesMat")
+    mat.use_nodes = True
+    if mat.node_tree:
+        mat.node_tree.nodes.clear()
+    mat.diffuse_color = (0.3, 0.4, 0.5, 1.0)
+
+    mesh2 = bpy.data.meshes.new("SlotMesh2")
+    obj2 = create_test_object("slot_obj2", mesh2, scene)
+    obj2.data.materials.append(mat)
+
+    res2 = get_object_material(obj2, props)
+    assert res2 is not None
+    assert res2.color.r == 0.3
+
+
+def test_scene_to_robot_orchestration_advanced(scene, blender_context) -> None:
+    """Cover remaining scene_to_robot orchestration layers."""
+    from unittest.mock import MagicMock, patch
+
+    from linkforge.blender.adapters.blender_to_core import (
+        SceneToRobotTranslator,
+        _calculate_link_frames,
+        _categorize_scene_objects,
+        scene_to_robot,
+    )
+    from linkforge.core import RobotValidationError
+
+    # 1. _categorize_scene_objects empty -> root_link is None
+    empty_scene = MagicMock()
+    empty_scene.objects = []
+    res = _categorize_scene_objects(empty_scene)
+    assert res[-1] is None
+
+    # 2. _calculate_link_frames child_obj not in link_objects
+    j_map = {"child": ("parent", MagicMock())}
+    frames = _calculate_link_frames(
+        link_objects={}, joints_map=j_map, root_link=("parent", MagicMock())
+    )
+    assert "child" not in frames
+
+    # 3. SceneToRobotTranslator strict mode exception re-raise
+    class BadLinkTranslator:
+        def translate(self, *args, **kwargs):
+            raise ValueError("Strict boom!")
+
+    # Set up a root link
+    root = create_test_object("StrictRoot", None, scene)
+    safe_get_linkforge(root).is_robot_link = True
+    safe_get_linkforge(root).link_name = "strict_root"
+
+    # Set robot properties with strict mode
+    robot_props = safe_get_linkforge_scene(scene)
+    robot_props.strict_mode = True
+
+    translator = SceneToRobotTranslator(blender_context)
+    with (
+        patch("linkforge.blender.adapters.translator.LinkTranslator", BadLinkTranslator),
+        pytest.raises(ValueError, match="Strict boom!"),
+    ):
+        translator.translate()
+
+    # 4. _translate_scene_gazebo_plugins empty name / standard control when control disabled
+    robot_props.gazebo_plugin_name = ""
+    translator2 = SceneToRobotTranslator(blender_context)
+    translator2._translate_scene_gazebo_plugins()
+    assert len(translator2.builder.robot.gazebo_elements) == 0
+
+    # standard control when use_ros2_control is False
+    robot_props.gazebo_plugin_name = "gz_ros2_control"
+    robot_props.use_ros2_control = False
+    translator3 = SceneToRobotTranslator(blender_context)
+    translator3._translate_scene_gazebo_plugins()
+    assert len(translator3.builder.robot.gazebo_elements) == 0
+
+    # yaml_path empty
+    robot_props.use_ros2_control = True
+    robot_props.controllers_yaml_path = ""
+    translator4 = SceneToRobotTranslator(blender_context)
+    translator4.builder.robot.ros2_controls = (MagicMock(),)
+    translator4._translate_scene_gazebo_plugins()
+    elem = translator4.builder.robot.gazebo_elements[0]
+    plugin = elem.plugins[0]
+    assert "parameters" not in plugin.parameters
+
+    # 5. scene_to_robot with a raw context (auto-wrap BlenderContext)
+    class NonProtocolContext:
+        pass
+
+    non_proto_ctx = NonProtocolContext()
+
+    with (
+        patch("linkforge.blender.adapters.blender_to_core.get_robot_props", return_value=None),
+        pytest.raises(RobotValidationError),
+    ):
+        scene_to_robot(non_proto_ctx)
+
+
+def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
+    """Cover the final remaining branches in blender_to_core.py."""
+    from unittest.mock import MagicMock, patch
+
+    import bpy
+    from linkforge.blender.adapters.blender_to_core import (
+        SceneToRobotTranslator,
+        _categorize_scene_objects,
+        get_object_geometry,
+        scene_to_robot,
+    )
+    from linkforge.core import RobotValidationError
+
+    # 1. 275->282: meshes_dir is provided, type is MESH, but export_link_mesh returns None
+    obj = create_test_object("MeshObjFallback", None, scene)
+    obj.type = "MESH"
+
+    mock_dims = MagicMock(x=1.0, y=1.0, z=1.0)
+    mock_dims.length = 1.73
+
+    with (
+        patch("tests.mock_bpy_env.MockObject.dimensions", new=mock_dims),
+        patch(
+            "linkforge.blender.adapters.mesh_io.export_link_mesh", return_value=(None, MagicMock())
+        ),
+    ):
+        geom, _ = get_object_geometry(
+            obj,
+            geometry_type="mesh",
+            link_name="test_link",
+            meshes_dir=Path("/tmp"),
+        )
+        # Falls back to Box because export returned None
+        assert isinstance(geom, Box)
+
+    # 2. 434->433: Principled BSDF node loop with a non-Principled node
+    from linkforge.blender.adapters.blender_to_core import get_object_material
+
+    mat = bpy.data.materials.new("NonBSDFMat")
+    mat.use_nodes = True
+    node = mat.node_tree.nodes.new("ShaderNodeOutputMaterial")
+    node.type = "OUTPUT_MATERIAL"  # not BSDF_PRINCIPLED
+
+    mesh = bpy.data.meshes.new("NonBSDFMesh")
+    obj_mat = create_test_object("non_bsdf_obj", mesh, scene)
+    obj_mat.data.materials.append(mat)
+
+    props = MagicMock(use_material=True)
+    res_mat = get_object_material(obj_mat, props)
+    assert res_mat is not None
+
+    # 3. 534->533: Find root link with multiple links, child evaluated first
+    child_obj = create_test_object("child_link_obj", None, scene)
+    safe_get_linkforge(child_obj).is_robot_link = True
+    safe_get_linkforge(child_obj).link_name = "child_link"
+
+    root_obj = create_test_object("root_link_obj", None, scene)
+    safe_get_linkforge(root_obj).is_robot_link = True
+    safe_get_linkforge(root_obj).link_name = "root_link"
+
+    joint_obj = create_test_object("joint_obj", None, scene)
+    j_props = safe_get_joint(joint_obj)
+    j_props.is_robot_joint = True
+    j_props.joint_name = "test_joint"
+    j_props.parent_link = root_obj
+    j_props.child_link = child_obj
+
+    # _categorize_scene_objects will evaluate child_link first because of alphabetical ordering
+    links, joints, _, _, joints_map, root = _categorize_scene_objects(scene)
+    assert root is not None
+    assert root[0] == "root_link"
+
+    # 4. 644: translate() called when root is None -> validation error added
+    # Clear robot links to have no root link
+    safe_get_linkforge(child_obj).is_robot_link = False
+    safe_get_linkforge(root_obj).is_robot_link = False
+
+    translator = SceneToRobotTranslator(blender_context)
+    # Clear link_objects inside the translator to force root = None
+    with (
+        patch(
+            "linkforge.blender.adapters.blender_to_core._categorize_scene_objects",
+            return_value=({}, [], [], [], {}, None),
+        ),
+        pytest.raises(RobotValidationError, match="No root link"),
+    ):
+        translator.translate()
+
+    # Restore root link for remaining tests
+    safe_get_linkforge(root_obj).is_robot_link = True
+
+    # 5. 680-694: children in link_obj that are not MESH or don't have visual suffix
+    safe_get_linkforge(root_obj).use_material = True
+
+    non_mesh_child = create_test_object("visual_child_empty", None, scene)
+    non_mesh_child.name = "root_link_visual_empty"
+    non_mesh_child.type = "EMPTY"
+    non_mesh_child.parent = root_obj
+
+    mesh_child = create_test_object("visual_child_mesh", bpy.data.meshes.new("ChildMesh"), scene)
+    mesh_child.name = "root_link_visual_mesh"
+    mesh_child.type = "MESH"
+    mesh_child.parent = root_obj
+
+    child_mat = bpy.data.materials.new("ChildMat")
+    mesh_child.data.materials.append(child_mat)
+
+    translator2 = SceneToRobotTranslator(blender_context)
+    translator2._translate_global_materials({"root_link": root_obj})
+
+    # Remove children so they don't break later translation tests
+    for child in [non_mesh_child, mesh_child]:
+        if child in root_obj.children:
+            root_obj.children.remove(child)
+        if child in scene.objects:
+            scene.objects.remove(child)
+
+    # 6. 706: _build_link_recursive with unknown link_name
+    translator2._build_link_recursive("unknown_link", None, {}, {}, {})
+
+    # 7. 719: _build_link_recursive with a child that has parent lb but no joint info in joints_map
+    mock_lb = MagicMock()
+    translator2._build_link_recursive("child_link", mock_lb, {"child_link": child_obj}, {}, {})
+
+    # 8. 798->exit: successful translate when use_ros2_control is False
+    robot_props = safe_get_linkforge_scene(scene)
+    robot_props.use_ros2_control = False
+    translator3 = SceneToRobotTranslator(blender_context)
+    translator3.translate()
+
+    # 9. 810: translator.robot_props is None inside _translate_scene_gazebo_plugins
+    translator3.robot_props = None
+    translator3._translate_scene_gazebo_plugins()  # returns immediately without error
+
+    # 10. 830->836: custom gazebo plugin name with use_ros2_control = False
+    robot_props.use_ros2_control = False
+    robot_props.gazebo_plugin_name = "my_custom_plugin"
+    translator4 = SceneToRobotTranslator(blender_context)
+    translator4._translate_scene_gazebo_plugins()
+    assert len(translator4.builder.robot.gazebo_elements) == 1
+    assert translator4.builder.robot.gazebo_elements[0].plugins[0].name == "my_custom_plugin"
+
+    # 11. 860->865: successful scene_to_robot with raw context wrapper
+    class NonProtocolContext:
+        def __init__(self, scene):
+            self.scene = scene
+
+    raw_ctx = NonProtocolContext(scene)
+    # Re-enable root link
+    safe_get_linkforge(root_obj).is_robot_link = True
+
+    # We mock BlenderContext so that BlenderContext(bpy) returns our working blender_context!
+    with patch("linkforge.blender.adapters.context.BlenderContext", return_value=blender_context):
+        robot, val = scene_to_robot(raw_ctx)
+        assert robot is not None
