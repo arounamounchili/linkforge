@@ -30,6 +30,9 @@ test: test-core test-blender-logic test-blender
 # Run all unit tests (platform-independent + mock-blender)
 test-unit: test-unit-core test-blender-logic
 
+# Run all integration tests (Core + Blender)
+test-integration: test-integration-core test-blender
+
 # Run Core tests (unit + integration)
 test-core: test-unit-core test-integration-core
 
@@ -117,3 +120,7 @@ clean-all: clean
 install:
 	uv sync --all-extras
 	uv run pre-commit install || true
+
+# Run all pre-commit hooks on all files
+pre-commit:
+	uv run pre-commit run --all-files
