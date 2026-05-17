@@ -1669,3 +1669,360 @@ class TestCoreToBlenderExhaustiveCoverage:
         from linkforge.blender.adapters.core_to_blender import _get_geometry_type_str
 
         assert _get_geometry_type_str(None) == "mesh"
+
+    def test_create_material_no_default_value(self, scene, blender_context, mocker) -> None:
+        """Verify create_material_from_color when node_principled input has no default_value attribute (covers 114->118 false branch)."""
+        mat = bpy.data.materials.new(name="no_def_val")
+
+        # Mock node_tree.nodes.new to return a mock node whose inputs[0] has no default_value
+        mock_node = mocker.MagicMock()
+        mock_input = mocker.MagicMock(spec=[])
+        mock_node.inputs = [mock_input]
+
+        mocker.patch.object(mat.node_tree.nodes, "new", return_value=mock_node)
+
+        with mocker.patch.object(blender_context.data.materials, "new", return_value=mat):
+            res = create_material_from_color(blender_context, Color(1, 1, 1, 1), "no_def_val_mat")
+            assert res == mat
+
+    def test_setup_scene_for_robot_uncovered_branches(self, scene, blender_context, mocker) -> None:
+        """Verify setup_scene_for_robot covered completely (996->1002 False, 1052->1054 False)."""
+        from linkforge.blender.adapters.core_to_blender import setup_scene_for_robot
+
+        # 1. scene is missing PROP_ROBOT (covers 996->1002 False branch)
+        mock_scene_no_prop = mocker.MagicMock(spec=[])
+        mock_context = mocker.MagicMock()
+        mock_context.scene = mock_scene_no_prop
+
+        robot_empty = Robot(name="empty_bot")
+        setup_scene_for_robot(mock_context, robot_empty)
+
+        # 2. Gazebo element plugin with ros2_control but parameters dict has no "parameters" key (covers 1052->1054 False branch)
+        mock_scene_with_prop = mocker.MagicMock()
+        mock_scene_with_prop.linkforge_robot = mocker.MagicMock()
+        mock_context_with_prop = mocker.MagicMock()
+        mock_context_with_prop.scene = mock_scene_with_prop
+
+        plugin_no_yaml = GazeboPlugin(
+            name="ros2_control_plugin",
+            filename="libros2_control.so",
+            parameters={"kp": "100.0"},
+        )
+        elem = GazeboElement(plugins=[plugin_no_yaml])
+        robot_gz = Robot(name="gz_bot", gazebo_elements=[elem])
+
+        setup_scene_for_robot(mock_context_with_prop, robot_gz)
+        assert mock_scene_with_prop.linkforge_robot.controllers_yaml_path == ""
+
+    def test_core_to_blender_comprehensive_exhaustiveness(
+        self, mocker, scene, blender_context, tmp_path
+    ) -> None:
+        """Verify all remaining uncovered branches in core_to_blender.py to achieve 100% statement and branch coverage."""
+        from linkforge.blender.adapters.core_to_blender import (
+            create_joint_object,
+            create_link_object,
+            create_primitive_mesh,
+            create_sensor_object,
+            import_mesh_file,
+            setup_scene_for_robot,
+        )
+        from linkforge.core.constants import (
+            GEOM_BOX,
+            GEOM_CYLINDER,
+            GEOM_SPHERE,
+        )
+
+        # 1. Sphere scene update missing branch (174->176 False branch)
+        mocker.patch(
+            "linkforge.blender.adapters.context.BlenderContext.scene",
+            new_callable=mocker.PropertyMock,
+            return_value=None,
+        )
+        sph = Sphere(radius=0.5)
+        obj_sph = create_primitive_mesh(blender_context, sph, "test_sph_scene_none")
+        assert obj_sph is not None
+        mocker.stopall()
+
+        # 2. Primitive mesh creation when obj = context.get_active_object() is None (149->188, 160->188, 171->188 False branches)
+        mocker.patch(
+            "linkforge.blender.adapters.context.BlenderContext.get_active_object",
+            return_value=None,
+        )
+        assert create_primitive_mesh(blender_context, Box(size=Vector3(1, 1, 1)), "t_box") is None
+        assert (
+            create_primitive_mesh(blender_context, Cylinder(radius=0.5, length=2.0), "t_cyl")
+            is None
+        )
+        assert create_primitive_mesh(blender_context, Sphere(radius=0.5), "t_sph") is None
+        mocker.stopall()
+
+        # 3. import_mesh_file collections and exception handling (291->False, 297->False, 307, 312-314)
+        stl_path = tmp_path / "test_import.stl"
+        stl_path.touch()
+
+        # 3a. res_obj.name is ALREADY in current_col.objects (covers 291 False branch)
+        # 3b. res_obj.name is NOT in new_col.objects (covers 297 False branch)
+        def mock_stl_import_ok(**kwargs):
+            col = bpy.data.collections.new("New_STL_Collection")
+            bpy.context.scene.collection.children.link(col)
+            mesh_data = bpy.data.meshes.new("stl_mesh")
+            obj = create_test_object("stl_obj_already_linked", mesh_data)
+            bpy.context.scene.collection.objects.link(obj)
+            return {"FINISHED"}
+
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import", mock_stl_import_ok
+        )
+        res = import_mesh_file(blender_context, stl_path, "stl_obj_already_linked")
+        assert res is not None
+        mocker.stopall()
+
+        # 3c. normalize_and_consolidate returns None (covers 307)
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
+            return_value={"FINISHED"},
+        )
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.normalize_and_consolidate_imported_objects",
+            return_value=None,
+        )
+        assert import_mesh_file(blender_context, stl_path, "none_imported") is None
+        mocker.stopall()
+
+        # 3d. normalize_and_consolidate raises generic Exception (covers 312-314)
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
+            return_value={"FINISHED"},
+        )
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.normalize_and_consolidate_imported_objects",
+            side_effect=ValueError("Unexpected processing error"),
+        )
+        with pytest.raises(ValueError, match="Unexpected processing error"):
+            import_mesh_file(blender_context, stl_path, "raises_err")
+        mocker.stopall()
+
+        # 3e. res_obj.name is NOT in current_col.objects (covers 292 statement)
+        def mock_stl_import_not_linked(**kwargs):
+            col = bpy.data.collections.new("New_STL_Collection_Not_Linked")
+            bpy.context.scene.collection.children.link(col)
+            return {"FINISHED"}
+
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
+            mock_stl_import_not_linked,
+        )
+        obj_not_linked = bpy.data.objects.new(
+            "stl_obj_not_linked", bpy.data.meshes.new("stl_mesh_not_linked")
+        )
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.normalize_and_consolidate_imported_objects",
+            return_value=obj_not_linked,
+        )
+
+        mock_scene = mocker.MagicMock()
+        mock_scene.collection = mocker.MagicMock()
+        mock_scene.collection.objects = mocker.MagicMock()
+        mock_scene.collection.objects.__contains__.return_value = False
+
+        mocker.patch(
+            "linkforge.blender.adapters.context.BlenderContext.scene",
+            new_callable=mocker.PropertyMock,
+            return_value=mock_scene,
+        )
+
+        res_not_linked = import_mesh_file(blender_context, stl_path, "stl_obj_not_linked")
+        assert res_not_linked is not None
+        mock_scene.collection.objects.link.assert_called_once_with(obj_not_linked)
+        mocker.stopall()
+
+        # Create unrecognized geometry class
+        class CustomUnrecognizedGeometry:
+            pass
+
+        # Link with:
+        # - Visual whose created object data has no materials (evaluates 511 False -> jumps to 448)
+        # - Collision whose created object data has no materials (evaluates 581 False -> jumps to 586)
+        # - Collision with unrecognized geometry (evaluates 599 False -> loops to 518)
+        # - Inertial without inertia (covers 606 False branch)
+        # - Inertial without origin (covers 617 False branch)
+        vis = Visual(
+            geometry=Box(size=Vector3(1, 1, 1)),
+            material=Material(name="missing_mat", color=Color(1, 1, 1, 1)),
+        )
+        coll_unrecognized = Collision(geometry=CustomUnrecognizedGeometry())
+        coll_box = Collision(geometry=Box(size=Vector3(1, 1, 1)))
+
+        # Mock create_primitive_mesh to return a MagicMock with data = None to trigger visual/collision false branches
+        mock_mesh_obj = mocker.MagicMock()
+        mock_mesh_obj.data = None
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender.create_primitive_mesh",
+            return_value=mock_mesh_obj,
+        )
+
+        inertial = Inertial(mass=2.0)
+        object.__setattr__(inertial, "inertia", None)
+        object.__setattr__(inertial, "origin", None)
+
+        link = Link(
+            name="exhaustive_link",
+            visuals=[vis],
+            collisions=[coll_unrecognized, coll_box],
+            inertial=inertial,
+        )
+        robot = Robot(name="dummy")
+        obj_link = create_link_object(blender_context, link, robot, tmp_path)
+        assert obj_link is not None
+        mocker.stopall()
+
+        # Verify lowercase collision_type is set (covers 659 for BOX, CYLINDER, SPHERE)
+        link_box = Link(
+            name="link_box",
+            collisions=[Collision(geometry=Box(size=Vector3(1, 1, 1)))],
+        )
+        obj_box = create_link_object(blender_context, link_box, robot, tmp_path)
+        assert obj_box is not None
+        props = safe_get_linkforge(obj_box)
+        assert props.collision_type == GEOM_BOX
+
+        link_cyl = Link(
+            name="link_cyl",
+            collisions=[Collision(geometry=Cylinder(radius=0.5, length=2.0))],
+        )
+        obj_cyl = create_link_object(blender_context, link_cyl, robot, tmp_path)
+        assert obj_cyl is not None
+        assert safe_get_linkforge(obj_cyl).collision_type == GEOM_CYLINDER
+
+        link_sph = Link(
+            name="link_sph",
+            collisions=[Collision(geometry=Sphere(radius=0.5))],
+        )
+        obj_sph_l = create_link_object(blender_context, link_sph, robot, tmp_path)
+        assert obj_sph_l is not None
+        assert safe_get_linkforge(obj_sph_l).collision_type == GEOM_SPHERE
+
+        # Collision unrecognized type (covers 660->666 False branch)
+        mocker.patch(
+            "linkforge.blender.adapters.core_to_blender._get_geometry_type_str",
+            return_value="UNKNOWN",
+        )
+        link_unrecognized_type = Link(
+            name="link_unrecognized_type",
+            collisions=[Collision(geometry=Box(size=Vector3(1, 1, 1)))],
+        )
+        obj_unrecognized = create_link_object(
+            blender_context, link_unrecognized_type, robot, tmp_path
+        )
+        assert obj_unrecognized is not None
+        mocker.stopall()
+
+        # 5. create_joint_object without origin (covers 806 False branch)
+        p = create_test_object("parent_l", None, scene)
+        c = create_test_object("child_l", None, scene)
+        link_objects = {"parent_l": p, "child_l": c}
+        joint_no_origin = Joint(
+            name="joint_no_origin",
+            type=JointType.FIXED,
+            parent="parent_l",
+            child="child_l",
+            origin=None,
+        )
+        obj_j = create_joint_object(blender_context, joint_no_origin, link_objects)
+        assert obj_j is not None
+
+        # 6. create_sensor_object and setup_scene_for_robot edge cases (895->897, 906->908, 908->910, 910->914, 919->921, 1013-1015, 1032-1034, 1052->1054)
+        # 6a. Sensor values are None
+        sensor_none = Sensor(
+            name="sensor_none",
+            type=SensorType.CAMERA,
+            link_name="parent_l",
+            update_rate=30.0,
+            topic=None,
+            camera_info=CameraInfo(
+                horizontal_fov=1.0,
+                width=640,
+                height=480,
+                format="R8G8B8",
+                near_clip=0.1,
+                far_clip=100.0,
+            ),
+        )
+        object.__setattr__(sensor_none, "update_rate", None)
+        object.__setattr__(sensor_none.camera_info, "format", None)
+        object.__setattr__(sensor_none.camera_info, "near_clip", None)
+        object.__setattr__(sensor_none.camera_info, "far_clip", None)
+
+        obj_s = create_sensor_object(blender_context, sensor_none, link_objects)
+        assert obj_s is not None
+
+        # 6b. Lidar vertical_samples is None
+        lidar_none = Sensor(
+            name="lidar_none",
+            type=SensorType.LIDAR,
+            link_name="parent_l",
+            lidar_info=LidarInfo(
+                horizontal_samples=360, range_min=0.1, range_max=10.0, vertical_samples=1
+            ),
+        )
+        object.__setattr__(lidar_none.lidar_info, "vertical_samples", None)
+
+        obj_lid = create_sensor_object(blender_context, lidar_none, link_objects)
+        assert obj_lid is not None
+
+        # 6c. Setup scene for robot with ROS2 Control parameters (covers 1013-1015 and 1032-1034)
+        # and Gazebo element with plugin containing "ros2_control" and parameters (covers 1052->1054)
+        rc_joint = Ros2ControlJoint(
+            name="j1",
+            command_interfaces=["position"],
+            state_interfaces=["position"],
+            parameters={"kp": "100.0"},
+        )
+        control = Ros2Control(
+            name="scene_control",
+            type="system",
+            hardware_plugin="mock_hw",
+            parameters={"global_param": "global_val"},
+            joints=[rc_joint],
+        )
+        plugin_gz = GazeboPlugin(
+            name="gz_ros2_control_plugin",
+            filename="libgz_ros2_control.so",
+            parameters={"parameters": "config.yaml"},
+        )
+        plugin_other = GazeboPlugin(
+            name="other_plugin",
+            filename="libother.so",
+        )
+        elem = GazeboElement(plugins=[plugin_other, plugin_gz])
+        robot_scene = Robot(
+            name="scene_bot",
+            ros2_controls=[control],
+            gazebo_elements=[elem],
+        )
+
+        # Configure high-fidelity MagicMock and lambda-based lookup for scene.linkforge_robot
+        lp = mocker.MagicMock()
+
+        mock_param = mocker.MagicMock()
+        mock_param.name = "global_param"
+        lp.ros2_control_parameters.add.return_value = mock_param
+        lp.ros2_control_parameters.__getitem__ = lambda *args, **kwargs: mock_param
+
+        mock_joint_param = mocker.MagicMock()
+        mock_joint_param.name = "kp"
+        mock_joint = mocker.MagicMock()
+        mock_joint.parameters.add.return_value = mock_joint_param
+        mock_joint.parameters.__getitem__ = lambda *args, **kwargs: mock_joint_param
+
+        lp.ros2_control_joints.add.return_value = mock_joint
+        lp.ros2_control_joints.__getitem__ = lambda *args, **kwargs: mock_joint
+
+        scene.linkforge_robot = lp
+
+        setup_scene_for_robot(blender_context, robot_scene)
+
+        assert lp.use_ros2_control is True
+        assert lp.ros2_control_parameters[0].name == "global_param"
+        assert lp.ros2_control_joints[0].parameters[0].name == "kp"
+        assert lp.controllers_yaml_path == "config.yaml"

@@ -68,8 +68,7 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
     except (RuntimeError, OSError) as e:
         logger.warning(f"STL export failed: {e}")
         # Restore visibility if failed
-        if "was_hidden" in locals():
-            obj.hide_viewport = was_hidden
+        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during STL export: {e}", exc_info=True)
@@ -126,8 +125,7 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
         )
     except (RuntimeError, OSError) as e:
         logger.warning(f"OBJ export failed: {e}")
-        if "was_hidden" in locals():
-            obj.hide_viewport = was_hidden
+        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during OBJ export: {e}", exc_info=True)
@@ -247,8 +245,7 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
         )
     except (RuntimeError, OSError) as e:
         logger.warning(f"GLB export failed: {e}")
-        if "was_hidden" in locals():
-            obj.hide_viewport = was_hidden
+        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during GLB export: {e}", exc_info=True)

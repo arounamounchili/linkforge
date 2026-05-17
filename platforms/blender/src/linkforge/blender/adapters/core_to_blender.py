@@ -655,7 +655,7 @@ def create_link_object(
             # Set collision_type based on imported geometry (for UI display)
             # This ensures the UI shows the correct type instead of defaulting to "Auto"
             collision_geom_type = _get_geometry_type_str(link.collisions[0].geometry)
-            if collision_geom_type in ("BOX", "CYLINDER", "SPHERE"):
+            if collision_geom_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
                 props.collision_type = collision_geom_type
             elif collision_geom_type == GEOM_MESH:
                 # For mesh collisions, default to MESH (Simplified)

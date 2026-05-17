@@ -342,3 +342,11 @@ def test_builder_process_chunks_without_window_manager() -> None:
     with patch.object(builder, "_execute_task"):
         builder.process_next_chunk()
     assert builder.is_finished is True
+
+
+def test_builder_unknown_task_type() -> None:
+    """Verify that _execute_task safely ignores unknown task types, covering the implicit else branch of the task_type if-elif chain."""
+    mock_context = MagicMock()
+    builder = AsynchronousRobotBuilder(Robot(name="robot"), Path("/tmp/robot.urdf"), mock_context)
+    # This should run without raising any exceptions and execute the false path of all ifs/elifs
+    builder._execute_task("unknown_task_type", None)

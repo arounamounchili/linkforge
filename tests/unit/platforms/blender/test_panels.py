@@ -152,6 +152,68 @@ class TestExportPanel:
             props, "component_browser_search", text="", icon="VIEWZOOM"
         )
 
+    def test_export_panel_draw_detailed_branches(self, scene, blender_context, mock_layout) -> None:
+        """Test all missing branches inside export_panel.py."""
+        # scene is None path
+        panel = LINKFORGE_PT_export_panel()
+
+        class MockContextNone:
+            scene = None
+
+        assert panel.draw(MockContextNone()) is None
+
+        # layout is None path
+        class MockContextLayoutNone:
+            scene = bpy.context.scene
+            window_manager = bpy.context.window_manager
+
+        panel.layout = None
+        assert panel.draw(MockContextLayoutNone()) is None
+
+        # Restore layout
+        panel.layout = mock_layout
+
+        # Create objects to pass num_links > 0
+        create_robot_link("base_link", scene)
+
+        # Mock errors & warnings with codes, messages, suggestions, and affected objects
+        wm = bpy.context.window_manager
+        validation = getattr(wm, PROP_VALIDATION)
+        validation.has_results = True
+        validation.is_valid = False
+        validation.error_count = 1
+        validation.warning_count = 1
+        validation.show_errors = True
+        validation.show_warnings = True
+
+        err = validation.errors.add()
+        err.title = "Mock Error"
+        err.error_code = "ERR_MOCK"
+        err.message = (
+            "This is a very long error message to test line wrapping logic in the issue panel"
+        )
+        err.affected_objects = "base_link"
+        err.suggestion = "This is a suggestion for fixing the mock error"
+
+        warn = validation.warnings.add()
+        warn.title = "Mock Warning"
+        warn.error_code = "WARN_MOCK"
+        warn.message = "Warning message description goes here"
+        warn.affected_objects = "base_link"
+        warn.suggestion = "Fix warning suggestion"
+
+        panel.draw(bpy.context)
+
+        # Assert UI elements were drawn
+        mock_layout.label.assert_any_call(text="  Affected: base_link", icon="OBJECT_DATA")
+
+        # Component browser filtering empty matches path
+        props = getattr(scene, PROP_ROBOT)
+        props.show_kinematic_tree = True
+        props.component_browser_search = "nonexistent"
+        panel.draw(bpy.context)
+        mock_layout.label.assert_any_call(text="No matches", icon="INFO")
+
 
 class TestForgePanel:
     def test_forge_panel_draw(self, scene, blender_context, mock_layout) -> None:
@@ -181,6 +243,44 @@ class TestForgePanel:
             icon="CANCEL",
         )
 
+    def test_forge_panel_draw_missing_branches(self, scene, blender_context, mock_layout) -> None:
+        """Test drawing the forge panel with empty layout/row/box checks to cover False branches."""
+        panel = LINKFORGE_PT_forge()
+
+        # layout is None check
+        panel.layout = None
+        assert panel.draw(bpy.context) is None
+
+        # context.scene is None check
+        panel.layout = mock_layout
+        from unittest.mock import MagicMock
+
+        mock_ctx = MagicMock()
+        mock_ctx.scene = None
+        assert panel.draw(mock_ctx) is None
+
+        # box is None branch check
+        props = safe_get_linkforge_scene(scene)
+        props.is_importing = True
+        mock_layout.box.return_value = None
+        panel.draw(bpy.context)
+
+        # row is None branch check inside importing (first row is None)
+        mock_layout.box.return_value = mock_layout
+        mock_layout.row.side_effect = None
+        mock_layout.row.return_value = None
+        panel.draw(bpy.context)
+
+        # row is None branch check inside importing (second row is None)
+        mock_layout.row.side_effect = [mock_layout, None]
+        panel.draw(bpy.context)
+
+        # row is None branch check inside non-importing
+        props.is_importing = False
+        mock_layout.row.side_effect = None
+        mock_layout.row.return_value = None
+        panel.draw(bpy.context)
+
 
 class TestLinkPanel:
     def test_link_panel_draw_no_selection(self, scene, blender_context, mock_layout) -> None:
@@ -208,7 +308,7 @@ class TestLinkPanel:
         """Test drawing the link panel with virtual link and manual inertia branches."""
         from linkforge.blender.utils.property_helpers import get_link_props
 
-        # 1. Test virtual link status (no child geometry)
+        # Test virtual link status (no child geometry)
         link_obj = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = link_obj
@@ -220,7 +320,7 @@ class TestLinkPanel:
         panel.draw(bpy.context)
         mock_layout.label.assert_any_call(text="Status: Virtual Frame (No Geometry)", icon="INFO")
 
-        # 2. Test manual inertia input fields (use_auto_inertia = False) on non-virtual link
+        # Test manual inertia input fields (use_auto_inertia = False) on non-virtual link
         non_virtual_link = create_robot_link(
             "non_virtual_link", scene, with_visual=True, with_collision=False
         )
@@ -237,7 +337,7 @@ class TestLinkPanel:
         mock_layout.prop.assert_any_call(props, "inertia_ixx", text="Ixx")
         mock_layout.prop.assert_any_call(props, "inertia_origin_xyz", text="")
 
-        # 3. Test when visual/collision child of a link is active (falls back to parent properties)
+        # Test when visual/collision child of a link is active (falls back to parent properties)
         child_visual = create_test_object("non_virtual_link_visual", None, scene)
         child_visual.parent = non_virtual_link
 
@@ -430,6 +530,11 @@ class TestControlPanel:
         item.cmd_position = True
         item.cmd_velocity = True
 
+        base = create_robot_link("base", scene)
+        child = create_robot_link("child", scene)
+        joint_obj = create_robot_joint("test_joint_1", base, child, scene)
+        item.joint_obj = joint_obj
+
         ul = LINKFORGE_UL_ros2_control_joints()
         mock_layout = MagicMock()
         mock_row = MagicMock()
@@ -448,7 +553,7 @@ class TestControlPanel:
             0,
         )
 
-        mock_row.label.assert_any_call(text="test_joint", icon="EMPTY_AXIS")
+        mock_row.label.assert_any_call(text="test_joint_1", icon="EMPTY_AXIS")
         mock_row.label.assert_any_call(text="[P/V]", icon="NONE")
 
     def test_add_control_joint_menu(self, scene, blender_context, mock_layout) -> None:
@@ -466,6 +571,170 @@ class TestControlPanel:
             "linkforge.add_ros2_control_joint", text="test_joint_1"
         )
 
+    def test_control_panel_detailed_branches(self, scene, blender_context, mock_layout) -> None:
+        """Test all missing branches inside control_panel.py."""
+        panel = LINKFORGE_PT_control()
+
+        # layout and scene None checks
+        class MockContextNone:
+            scene = None
+
+        panel.layout = None
+        assert panel.draw(MockContextNone()) is None
+
+        # Restore layout
+        panel.layout = mock_layout
+
+        # get_robot_props(scene) is None check
+        from unittest.mock import patch
+
+        with patch("linkforge.blender.panels.control_panel.get_robot_props") as mock_get:
+            mock_get.return_value = None
+            assert panel.draw(bpy.context) is None
+
+        # ros2_control_type == "sensor" check
+        props = safe_get_linkforge_scene(scene)
+        props.use_ros2_control = True
+        props.ros2_control_type = "sensor"
+
+        # Override prop_type to bypass hardcoded mock defaults
+        from linkforge.blender.properties.control_props import (
+            Ros2ControlJointProperty,
+            Ros2ControlParameterProperty,
+        )
+
+        props.ros2_control_joints.prop_type = Ros2ControlJointProperty
+
+        joint_item = props.ros2_control_joints.add()
+        joint_item.name = "sensor_joint"
+        # Add parameter with show_parameters = False
+        joint_item.parameters.prop_type = Ros2ControlParameterProperty
+        joint_item.parameters.add()
+        joint_item.show_parameters = False
+
+        # Add global parameter with show_ros2_control_parameters = False
+        props.ros2_control_parameters.prop_type = Ros2ControlParameterProperty
+        props.ros2_control_parameters.add()
+        props.show_ros2_control_parameters = False
+
+        panel.draw(bpy.context)
+
+        # Empty ros2_control_joints draw fallback path
+        props.ros2_control_joints.clear()
+        panel.draw(bpy.context)
+
+        # active_idx out of bounds draw fallback path
+        props.ros2_control_joints.prop_type = Ros2ControlJointProperty
+        props.ros2_control_joints.add()
+        props.ros2_control_active_joint_index = 5
+        panel.draw(bpy.context)
+
+        # Reset active index and add parameters to cover 139-157
+        props.ros2_control_active_joint_index = 0
+        active_joint = props.ros2_control_joints[0]
+        active_joint.parameters.prop_type = Ros2ControlParameterProperty
+        p_item = active_joint.parameters.add()
+        p_item.name = "test_param"
+        p_item.value = "test_val"
+        active_joint.show_parameters = True
+        panel.draw(bpy.context)
+
+        # Clear global parameters to cover 192->215 False
+        props.ros2_control_parameters.clear()
+        panel.draw(bpy.context)
+
+        # UIList draw_item with GRID and cmd_effort
+        ul = LINKFORGE_UL_ros2_control_joints()
+        ul.layout_type = "GRID"
+        # Create item with empty interfaces (cmd_position/velocity/effort = False)
+        joint_item = props.ros2_control_joints[0]
+        joint_item.cmd_position = False
+        joint_item.cmd_velocity = False
+        joint_item.cmd_effort = False
+        ul.draw_item(
+            bpy.context,
+            mock_layout,
+            props.ros2_control_joints,
+            joint_item,
+            None,
+            props,
+            "ros2_control_active_joint_index",
+            0,
+            0,
+        )
+
+        # UIList draw_item with DEFAULT layout and empty interfaces to cover (67->exit True)
+        ul.layout_type = "DEFAULT"
+        ul.draw_item(
+            bpy.context,
+            mock_layout,
+            props.ros2_control_joints,
+            joint_item,
+            None,
+            props,
+            "ros2_control_active_joint_index",
+            0,
+            0,
+        )
+
+        # UIList draw_item with UNKNOWN layout type to cover (70->exit True)
+        ul.layout_type = "UNKNOWN"
+        ul.draw_item(
+            bpy.context,
+            mock_layout,
+            props.ros2_control_joints,
+            joint_item,
+            None,
+            props,
+            "ros2_control_active_joint_index",
+            0,
+            0,
+        )
+
+        # UIList draw_item with cmd_effort = True
+        ul.layout_type = "DEFAULT"
+        joint_item.cmd_effort = True
+        ul.draw_item(
+            bpy.context,
+            mock_layout,
+            props.ros2_control_joints,
+            joint_item,
+            None,
+            props,
+            "ros2_control_active_joint_index",
+            0,
+            0,
+        )
+
+        # Menu draw edge cases and already-added branch
+        menu = LINKFORGE_MT_add_control_joint()
+
+        # Context layout and scene None checks
+        menu.layout = None
+        assert menu.draw(MockContextNone()) is None
+
+        # Restore layout
+        menu.layout = mock_layout
+
+        # get_robot_props None check
+        with patch("linkforge.blender.panels.control_panel.get_robot_props") as mock_get:
+            mock_get.return_value = None
+            assert menu.draw(bpy.context) is None
+
+        # Create joint in scene and pre-add it to ros2_control_joints to hit (289->285)
+        base = create_robot_link("base", scene)
+        child = create_robot_link("child", scene)
+        joint_obj = create_robot_joint("test_joint_1", base, child, scene)
+
+        # Add it to the control joints list so it's considered "already added"
+        props.ros2_control_joints.clear()
+        added_item = props.ros2_control_joints.add()
+        added_item.name = "test_joint_1"
+        added_item.joint_obj = joint_obj
+
+        # Now drawing the menu will skip adding it since it's already there
+        menu.draw(bpy.context)
+
 
 class TestRobotOperators:
     def test_select_tree_object_operator(self, scene, blender_context) -> None:
@@ -481,6 +750,12 @@ class TestRobotOperators:
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
 
+        # Test view_layer is None path
+        mock_ctx = MagicMock()
+        mock_ctx.scene = scene
+        mock_ctx.view_layer = None
+        assert op.execute(mock_ctx) == {"FINISHED"}
+
         # Test object not found fallback
         op.object_name = "nonexistent"
         res_nonexistent = op.execute(bpy.context)
@@ -488,6 +763,8 @@ class TestRobotOperators:
 
     def test_select_root_link_operator(self, scene, blender_context) -> None:
         """Test select_root_link operator execution."""
+        from unittest.mock import MagicMock, patch
+
         from linkforge.blender.panels.robot_panel import LINKFORGE_OT_select_root_link
 
         op = LINKFORGE_OT_select_root_link()
@@ -499,6 +776,17 @@ class TestRobotOperators:
         create_robot_link("base_link", scene)
         res_success = op.execute(bpy.context)
         assert res_success == {"FINISHED"}
+
+        # Test view_layer is None path
+        mock_ctx = MagicMock()
+        mock_ctx.scene = scene
+        mock_ctx.view_layer = None
+        assert op.execute(mock_ctx) == {"FINISHED"}
+
+        # Test when root object does not exist in scene objects
+        with patch("linkforge.blender.panels.robot_panel.build_tree_from_stats") as mock_build:
+            mock_build.return_value = (None, "nonexistent_root", {}, {})
+            assert op.execute(bpy.context) == {"FINISHED"}
 
     def test_clear_component_search_operator(self, scene, blender_context) -> None:
         """Test clear_component_search operator poll and execute."""
@@ -517,6 +805,36 @@ class TestRobotOperators:
         assert res == {"FINISHED"}
         assert props.component_browser_search == ""
 
+    def test_panels_as_main(self) -> None:
+        """Test running each panel module as __main__."""
+        import importlib.util
+        import sys
+        from unittest.mock import patch
+
+        from linkforge.blender import panels
+
+        for name in [
+            "control_panel",
+            "export_panel",
+            "forge_panel",
+            "joint_panel",
+            "link_panel",
+            "robot_panel",
+            "sensor_panel",
+        ]:
+            module = getattr(panels, name)
+            spec = importlib.util.spec_from_file_location("__main__", module.__file__)
+            if spec and spec.loader:
+                main_mod = importlib.util.module_from_spec(spec)
+                main_mod.__package__ = "linkforge.blender.panels"
+                # Mock register to avoid actual bpy operations
+                with (
+                    patch("bpy.utils.register_class") as mock_reg,
+                    patch("bpy.utils.unregister_class"),
+                ):
+                    sys.modules["__main__"] = main_mod
+                    spec.loader.exec_module(main_mod)
+
 
 class TestGlobalPanels:
     def test_panels_global_registration(self) -> None:
@@ -530,12 +848,73 @@ class TestGlobalPanels:
             unregister as panels_unregister,
         )
 
+        # Force a ValueError on the very first register_class call to test the fallback unregister/register path
+        already_registered = False
+
+        def mock_register(cls):
+            nonlocal already_registered
+            if not already_registered:
+                already_registered = True
+                raise ValueError("Already registered")
+            return None
+
         with (
-            patch("bpy.utils.register_class") as mock_reg,
+            patch("bpy.utils.register_class", side_effect=mock_register) as mock_reg,
             patch("bpy.utils.unregister_class") as mock_unreg,
         ):
             panels_register()
             assert mock_reg.called
+            assert mock_unreg.called
 
             panels_unregister()
-            assert mock_unreg.called
+
+    def test_module_registrations_and_contexts(self) -> None:
+        """Test registration and error contexts for all panel modules."""
+        from unittest.mock import patch
+
+        from linkforge.blender import panels
+        from linkforge.blender.panels.robot_panel import (
+            LINKFORGE_OT_clear_component_search,
+            LINKFORGE_OT_select_root_link,
+            LINKFORGE_OT_select_tree_object,
+        )
+
+        for name in [
+            "control_panel",
+            "export_panel",
+            "forge_panel",
+            "joint_panel",
+            "link_panel",
+            "robot_panel",
+            "sensor_panel",
+        ]:
+            module = getattr(panels, name)
+            already_registered = False
+
+            def mock_register(cls):
+                nonlocal already_registered
+                if not already_registered:
+                    already_registered = True
+                    raise ValueError("Already registered")
+                return None
+
+            with (
+                patch("bpy.utils.register_class", side_effect=mock_register) as mock_reg,
+                patch("bpy.utils.unregister_class") as mock_unreg,
+            ):
+                module.register()
+                assert mock_reg.called
+                module.unregister()
+
+        # Test operator execute with context.scene = None
+        class MockContextSceneNone:
+            scene = None
+
+        op_select = LINKFORGE_OT_select_tree_object()
+        assert op_select.execute(MockContextSceneNone()) == {"CANCELLED"}
+
+        op_root = LINKFORGE_OT_select_root_link()
+        assert op_root.execute(MockContextSceneNone()) == {"CANCELLED"}
+
+        op_clear = LINKFORGE_OT_clear_component_search()
+        assert op_clear.execute(MockContextSceneNone()) == {"CANCELLED"}

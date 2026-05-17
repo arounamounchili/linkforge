@@ -9,7 +9,7 @@ from __future__ import annotations
 import typing
 
 if typing.TYPE_CHECKING:
-    import bpy
+    pass
 from linkforge.core._utils.string_utils import sanitize_name
 
 from ..utils.property_helpers import (
@@ -99,5 +99,7 @@ def register() -> None:
 
 def unregister() -> None:
     """Unregister name sync handler."""
+    import bpy
+
     if on_depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(on_depsgraph_update_post)

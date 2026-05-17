@@ -427,3 +427,58 @@ class TestMeshExhaustiveCoverage:
         path, offset = export_link_mesh(obj, "diff_data_link", "visual", "STL", tmp_path)
         assert path is None
         assert offset.is_identity
+
+    def test_export_mesh_glb_generic_exception(self, mocker, scene, tmp_path) -> None:
+        """Verify GLB export generic unexpected Exception is caught and propagated (covers line 253-255)."""
+        obj = create_mesh_object("glb_generic_err_mesh", scene=scene, with_cube=True)
+        filepath = tmp_path / "test.glb"
+
+        mocker.patch(
+            "linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf",
+            side_effect=Exception("Generic GLB error"),
+        )
+        with pytest.raises(Exception, match="Generic GLB error"):
+            export_mesh_glb(obj, filepath)
+
+    def test_export_link_mesh_simplification_returns_none(self, mocker, scene, tmp_path) -> None:
+        """Verify export_link_mesh handles create_simplified_mesh returning None (covers 370->374 false branch)."""
+        from mathutils import Vector
+
+        obj = create_mesh_object("simplify_none_mesh", scene=scene, with_cube=True)
+        obj.bound_box = [Vector((1.0, 1.0, 1.0))] * 8
+
+        mocker.patch("linkforge.blender.adapters.mesh_io.create_simplified_mesh", return_value=None)
+        mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", return_value=True)
+
+        filepath, offset = export_link_mesh(
+            obj,
+            "simplify_none_link",
+            "collision",
+            "STL",
+            tmp_path,
+            simplify=True,
+            decimation_ratio=0.5,
+        )
+        assert filepath is not None
+
+    def test_export_link_mesh_finally_cleanup_no_data(self, mocker, scene, tmp_path) -> None:
+        """Verify finally cleanup block when simplified_obj.data and temp_export_obj.data are None (covers 403->405 and 409->411 false branches)."""
+        import bpy
+
+        obj = create_mesh_object("no_data_mesh", scene=scene, with_cube=True)
+
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply")
+
+        def mock_export_stl(export_obj, filepath):
+            # Locate all temporary copy objects in bpy.data.objects and clear their data
+            for o in list(bpy.data.objects):
+                if "copy" in o.name or "decimate" in o.name:
+                    o.data = None
+            return True
+
+        mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", mock_export_stl)
+
+        filepath, offset = export_link_mesh(
+            obj, "no_data_link", "collision", "STL", tmp_path, simplify=True, decimation_ratio=0.5
+        )
+        assert filepath is not None

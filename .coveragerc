@@ -12,3 +12,11 @@ source =
     platforms/blender/src/linkforge/blender
     */linkforge/core
     */linkforge/blender
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if typing.TYPE_CHECKING:
+    if not typing.TYPE_CHECKING:
+    if TYPE_CHECKING:
+    \.\.\.

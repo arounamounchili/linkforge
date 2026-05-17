@@ -330,7 +330,9 @@ class TestValidateRobotOperator:
             )
 
     def test_registration(self) -> None:
-        """Test register and unregister functions for export operator."""
+        """Test register and unregister functions for export operator and package-level operators."""
+        from linkforge.blender import operators as operators_pkg
+
         with (
             patch("bpy.utils.register_class") as mock_reg,
             patch("bpy.utils.unregister_class") as mock_unreg,
@@ -340,3 +342,7 @@ class TestValidateRobotOperator:
 
             export_unregister()
             assert mock_unreg.called
+
+            # Cover package-level
+            operators_pkg.register()
+            operators_pkg.unregister()
