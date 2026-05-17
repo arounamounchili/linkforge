@@ -382,10 +382,13 @@ class MockMatrix:
                     res[i] += self.data[i][j] * v[j]
             return MockVector(res[0], res[1], res[2])
         elif isinstance(other, MockMatrix):
-            res_data = [[0.0] * 4 for _ in range(4)]
-            for i in range(4):
-                for j in range(4):
-                    for k in range(4):
+            rows_self = len(self.data)
+            cols_other = len(other.data[0])
+            common_dim = len(other.data)
+            res_data = [[0.0] * cols_other for _ in range(rows_self)]
+            for i in range(rows_self):
+                for j in range(cols_other):
+                    for k in range(common_dim):
                         res_data[i][j] += self.data[i][k] * other.data[k][j]
             res = MockMatrix(res_data)
             res._euler_hint = getattr(other, "_euler_hint", getattr(self, "_euler_hint", None))
