@@ -25,13 +25,13 @@ develop:
 # --- Test ---
 
 # Run all tests (Core + Blender)
-test: test-core test-blender-logic test-blender
+test: test-core test-blender
 
 # Run all unit tests (platform-independent + mock-blender)
-test-unit: test-unit-core test-blender-logic
+test-unit: test-unit-core test-unit-blender
 
 # Run all integration tests (Core + Blender)
-test-integration: test-integration-core test-blender
+test-integration: test-integration-core test-integration-blender
 
 # Run Core tests (unit + integration)
 test-core: test-unit-core test-integration-core
@@ -44,12 +44,15 @@ test-unit-core:
 test-integration-core:
 	uv run pytest tests/integration/core
 
-# Run Blender logic unit tests (Uses mock_bpy_env)
-test-blender-logic:
+# Run Blender tests (unit + integration)
+test-blender: test-unit-blender test-integration-blender
+
+# Run Blender unit tests (Uses mock_bpy_env)
+test-unit-blender:
 	uv run pytest tests/unit/platforms/blender
 
-# Run Blender integration tests (Requires real Blender)
-test-blender:
+# Run Blender integration tests (Requires real headlessly launched Blender)
+test-integration-blender:
 	uv run python scripts/blender_launcher.py -- --cov-append
 
 # Run tests with coverage
