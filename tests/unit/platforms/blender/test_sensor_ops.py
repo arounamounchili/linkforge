@@ -65,6 +65,7 @@ class TestSensorOperators:
 
         # Find created sensor empty
         sensor_obj = bpy.context.active_object
+        assert sensor_obj is not None
         assert sensor_obj.name.startswith("base_sensor")
         assert sensor_obj.parent == link
         assert safe_get_sensor(sensor_obj).is_robot_sensor
@@ -84,6 +85,7 @@ class TestSensorOperators:
         assert res == {"FINISHED"}
 
         sensor_obj = bpy.context.active_object
+        assert sensor_obj is not None
         assert sensor_obj.parent == link
         assert safe_get_sensor(sensor_obj).attached_link == link
 

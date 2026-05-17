@@ -153,6 +153,7 @@ class TestPreferences:
         """Test resolving addon ID and retrieving preferences."""
         addon_id = get_addon_id()
         assert addon_id == "linkforge"
+        assert bpy.context.preferences is not None
 
         # Mock context.preferences.addons.get to return None so get_addon_prefs returns None
         with patch.object(bpy.context.preferences.addons, "get", return_value=None):

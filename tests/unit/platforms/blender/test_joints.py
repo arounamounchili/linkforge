@@ -73,6 +73,7 @@ class TestJointOperations:
     def test_create_joint_operator_execute(self, scene, blender_context) -> None:
         """Test create joint operator execution."""
         link = create_robot_link("base", scene)
+        assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = link
         link.select_set(True)
 
@@ -82,6 +83,7 @@ class TestJointOperations:
 
         # Check joint was created
         joint = bpy.context.active_object
+        assert joint is not None
         assert joint.name.startswith("base_joint")
         assert safe_get_joint(joint).is_robot_joint
         assert safe_get_joint(joint).child_link == link
@@ -89,6 +91,7 @@ class TestJointOperations:
     def test_create_joint_operator_fallback(self, scene, blender_context) -> None:
         """Test create joint operator fallback when pref is missing."""
         link = create_robot_link("base", scene)
+        assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = link
         link.select_set(True)
 
@@ -111,10 +114,12 @@ class TestJointOperations:
         op = LINKFORGE_OT_delete_joint
 
         # Poll should fail if not joint or not empty
+        assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = base
         assert not op.poll(bpy.context)
 
         # Poll passes on joint
+        assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = joint_obj
         assert op.poll(bpy.context)
 
@@ -132,6 +137,7 @@ class TestJointOperations:
 
         op = LINKFORGE_OT_auto_detect_parent_child
 
+        assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = joint_obj
         joint_obj.select_set(True)
         assert op.poll(bpy.context)
@@ -146,6 +152,7 @@ class TestJointOperations:
     def test_auto_detect_parent_child_no_links(self, scene, blender_context) -> None:
         """Test auto-detect when no links are present in scene."""
         joint_obj = create_robot_joint("test_joint", None, None, scene)
+        assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = joint_obj
         joint_obj.select_set(True)
 
