@@ -19,17 +19,17 @@ from linkforge.core.validation.result import ValidationResult
 
 class DummyGenerator(RobotGenerator[str]):
     def generate(self, robot: Robot, **kwargs) -> str:
-        super().generate(robot, **kwargs)
+        super().generate(robot, **kwargs)  # type: ignore
         return "done"
 
 
 class DummyParser(RobotParser[str]):
     def parse(self, filepath: Path, **kwargs) -> str:
-        super().parse(filepath, **kwargs)
+        super().parse(filepath, **kwargs)  # type: ignore
         return "done"
 
     def parse_string(self, content: str, **kwargs) -> str:
-        super().parse_string(content, **kwargs)
+        super().parse_string(content, **kwargs)  # type: ignore
         return "done"
 
 
