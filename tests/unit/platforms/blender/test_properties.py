@@ -85,6 +85,61 @@ class TestValidationProperties:
         res.clear()
         assert res.has_results is False
 
+    def test_validation_issue_properties(self, scene, blender_context) -> None:
+        """Test the properties and helper methods of ValidationIssueProperty and ValidationResultProperty."""
+        wm = bpy.context.window_manager
+        res = safe_get_validation(wm)
+        res.clear()
+
+        # Add error
+        err = res.errors.add()
+        err.title = "Test Error"
+        err.message = "Error message"
+        err.suggestion = "Do this to fix it"
+        err.affected_objects = "obj1,obj2"
+
+        assert err.has_suggestion is True
+        assert err.has_objects is True
+        assert err.objects_str == "obj1,obj2"
+        assert len(err.suggestion_lines) >= 1
+
+        # Add warning
+        warn = res.warnings.add()
+        warn.title = "Test Warning"
+        warn.message = "Warning message"
+        warn.suggestion = ""
+        warn.affected_objects = ""
+
+        assert warn.has_suggestion is False
+        assert warn.has_objects is False
+        assert warn.objects_str == ""
+        assert warn.suggestion_lines == []
+
+        # Test index getters
+        res.error_count = 1
+        res.warning_count = 1
+        assert res.get_error(0) == err
+        assert res.get_warning(0) == warn
+
+    def test_validation_properties_registration(self) -> None:
+        """Test register and unregister functions for validation properties."""
+        from linkforge.blender.properties.validation_props import (
+            register as val_register,
+        )
+        from linkforge.blender.properties.validation_props import (
+            unregister as val_unregister,
+        )
+
+        with (
+            patch("bpy.utils.register_class") as mock_reg,
+            patch("bpy.utils.unregister_class") as mock_unreg,
+        ):
+            val_register()
+            assert mock_reg.called
+
+            val_unregister()
+            assert mock_unreg.called
+
 
 # Addon Preferences
 
