@@ -364,21 +364,64 @@ class TestGlobalPropertiesAndCallbacks:
             props.id_data = original_id_data
 
     def test_duplicate_registrations(self) -> None:
-        """Test duplicate registration handling in property groups."""
-        from linkforge.blender.properties.control_props import register as control_reg
-        from linkforge.blender.properties.control_props import unregister as control_unreg
-        from linkforge.blender.properties.validation_props import register as val_reg
-        from linkforge.blender.properties.validation_props import unregister as val_unreg
+        """Test duplicate registration handling and main blocks in property groups."""
+        import runpy
 
-        # Duplicate register on control props (raises ValueError internally)
-        control_reg()
-        control_unreg()
-        control_reg()
+        from linkforge.blender.properties import (
+            control_props,
+            joint_props,
+            link_props,
+            robot_props,
+            sensor_props,
+            transmission_props,
+            validation_props,
+        )
 
-        # Duplicate register on validation props (raises ValueError internally)
-        val_reg()
-        val_unreg()
-        val_reg()
+        modules = [
+            control_props,
+            validation_props,
+            link_props,
+            joint_props,
+            sensor_props,
+            transmission_props,
+            robot_props,
+        ]
+
+        # 1. Test standard register/unregister cycle
+        for mod in modules:
+            mod.register()
+            mod.unregister()
+            mod.register()
+
+        # 2. Test ValueError fallback handling in register()
+        # Mock register_class to raise ValueError on first call for each class, then succeed on retry
+        for mod in modules:
+            orig_register_class = bpy.utils.register_class
+            try:
+                failed_classes = set()
+
+                def mock_register_class(cls, failed=failed_classes, orig=orig_register_class):
+                    if cls not in failed:
+                        failed.add(cls)
+                        raise ValueError("Mock registration failure")
+                    return orig(cls)
+
+                bpy.utils.register_class = mock_register_class
+                mod.register()
+            finally:
+                bpy.utils.register_class = orig_register_class
+
+        # 3. Test execution under __main__ namespace using runpy
+        for mod_name in [
+            "linkforge.blender.properties.control_props",
+            "linkforge.blender.properties.validation_props",
+            "linkforge.blender.properties.link_props",
+            "linkforge.blender.properties.joint_props",
+            "linkforge.blender.properties.sensor_props",
+            "linkforge.blender.properties.transmission_props",
+            "linkforge.blender.properties.robot_props",
+        ]:
+            runpy.run_module(mod_name, run_name="__main__")
 
     def test_joint_properties_and_callbacks(self, scene, blender_context) -> None:
         """Test getters, setters, polls and hierarchy updates in JointPropertyGroup."""
@@ -494,3 +537,534 @@ class TestGlobalPropertiesAndCallbacks:
 
             trans_unregister()
             assert mock_unreg.called
+
+    def test_validation_props_extra_coverage(self, scene) -> None:
+        """Test validation_props properties and methods for 100% coverage."""
+        from linkforge.blender.constants import PROP_VALIDATION
+
+        # Get validation properties stored on window manager
+        wm = bpy.context.window_manager
+        vp = getattr(wm, PROP_VALIDATION)
+        vp.clear()
+
+        # Add an error
+        err = vp.errors.add()
+        err.message = "This is a very long error message that will definitely exceed the standard fifty eight character limit to force a wrapped line."
+        err.suggestion = "This is a very long suggestion that will definitely exceed the standard fifty eight character limit to force a wrapped line."
+
+        # Retrieve suggesting / message lines to verify they wrap
+        assert len(err.message_lines) > 1
+        assert len(err.suggestion_lines) > 1
+
+        # Test fallback with spacing-only inputs to get_error / get_warning / message_lines
+        err2 = vp.errors.add()
+        err2.message = "    "
+        err2.suggestion = "    "
+        assert len(err2.message_lines) == 0
+        assert len(err2.suggestion_lines) == 0
+
+        assert vp.get_error(0) == err
+
+        warn = vp.warnings.add()
+        assert vp.get_warning(0) == warn
+
+    def test_joint_props_extra_coverage(self, scene) -> None:
+        """Test joint_props edge cases for 100% coverage."""
+        from linkforge.blender.properties.joint_props import (
+            get_joint_name,
+            poll_robot_joint,
+            set_joint_name,
+            update_joint_hierarchy,
+        )
+
+        # Create mock joint property group without id_data
+        class MockJointProps:
+            id_data = None
+            source_name_stored = ""
+            is_robot_joint = True
+
+        mjp = MockJointProps()
+        assert get_joint_name(mjp) == ""
+
+        # Null value set name
+        set_joint_name(mjp, "")
+        set_joint_name(mjp, "test")  # When id_data is None
+
+        # Test deferred rename callback execution in GUI mode
+        bpy.app.background = False
+
+        class ReadOnlyNameObj:
+            def __init__(self) -> None:
+                self._name = "old"
+
+            @property
+            def name(self) -> str:
+                return self._name
+
+            @name.setter
+            def name(self, value: str) -> None:
+                raise AttributeError("Read-only")
+
+        ro_obj = ReadOnlyNameObj()
+        mjp.id_data = ro_obj
+        set_joint_name(mjp, "new_val")
+        # Run all pending timers
+        bpy.app.timers.run_all()
+
+        # Trigger Exception path in callback
+        mjp.id_data = ro_obj
+        set_joint_name(mjp, "exc_new")
+
+        class ExceptionObj:
+            @property
+            def name(self) -> str:
+                return "exc"
+
+            @name.setter
+            def name(self, val: str) -> None:
+                raise ValueError("Fail assignment")
+
+        mjp.id_data = ExceptionObj()
+        bpy.app.timers.run_all()
+
+        # Trigger None id_data path in callback
+        mjp.id_data = ro_obj
+        set_joint_name(mjp, "exc_new")
+        mjp.id_data = None
+        bpy.app.timers.run_all()
+
+        # Background mode name queue sync
+        from linkforge.blender.handlers.name_sync_handler import PENDING_RENAMES
+
+        orig_len = len(PENDING_RENAMES)
+        bpy.app.background = True
+        mjp.id_data = ro_obj
+        set_joint_name(mjp, "bg_val")
+        assert len(PENDING_RENAMES) == orig_len + 1
+
+        # update_joint_hierarchy early return if bpy is None
+        with patch("linkforge.blender.properties.joint_props.bpy", None):
+            assert update_joint_hierarchy(mjp, None) is None
+
+        # update_joint_hierarchy with missing context/scene or joint_obj None
+        assert update_joint_hierarchy(mjp, MagicMock()) is None
+
+        # update_joint_hierarchy child/parent unparenting loop
+        base = create_robot_link("base_link", scene)
+        child = create_robot_link("child_link", scene)
+        joint_obj = create_robot_joint("test_joint", base, child, scene)
+
+        # Setup another object parented to joint_obj to test clear child unparenting
+        other_child = create_test_object("other_child_collision", None, scene)
+        other_child.parent = joint_obj
+        # Ensure it has link properties so it matches criteria
+        lp = safe_get_linkforge(other_child)
+        lp.is_robot_link = True
+
+        jp = safe_get_joint(joint_obj)
+        jp.id_data = joint_obj
+        jp.child_link = None  # Trigger clearing parent/child logic
+        update_joint_hierarchy(jp, bpy.context)
+        # Ensure other_child was unparented
+        assert other_child.parent is None
+
+        # update_joint_hierarchy with missing scene inside context
+        mock_ctx_no_scene = MagicMock()
+        mock_ctx_no_scene.scene = None
+        update_joint_hierarchy(jp, mock_ctx_no_scene)
+
+        # poll_robot_joint checks
+        assert poll_robot_joint(jp, None) is False
+        non_empty = create_test_object("non_empty", None, scene)
+        non_empty.type = "MESH"
+        assert poll_robot_joint(jp, non_empty) is False
+
+        non_empty_empty = create_test_object("non_empty_empty", None, scene)
+        non_empty_empty.type = "EMPTY"
+        # Without joint props
+        with patch("linkforge.blender.utils.property_helpers.get_joint_props", return_value=None):
+            assert poll_robot_joint(jp, non_empty_empty) is False
+
+    def test_link_props_extra_coverage(self, scene) -> None:
+        """Test link_props edge cases for 100% coverage."""
+        from linkforge.blender.properties.link_props import (
+            get_kd_scientific,
+            get_kp_scientific,
+            get_link_name,
+            on_collision_quality_update,
+            set_kd_scientific,
+            set_kp_scientific,
+            set_link_name,
+            update_auto_inertia_toggle,
+            update_inertia_viz,
+        )
+
+        class MockLinkProps:
+            id_data = None
+            source_name_stored = ""
+            use_auto_inertia = True
+
+        mlp = MockLinkProps()
+        assert get_link_name(mlp) == ""
+
+        # Null value set name
+        set_link_name(mlp, "")
+
+        # Test scientific notation get/set methods
+        link_obj = create_test_object("real_link_props", None, scene)
+        lp = safe_get_linkforge(link_obj)
+        lp.id_data = link_obj
+        set_kp_scientific(lp, "1e5")
+        assert get_kp_scientific(lp) == "1.00e+05"
+        set_kd_scientific(lp, "2e3")
+        assert get_kd_scientific(lp) == "2.00e+03"
+
+        # Test deferred rename callback execution in GUI mode
+        bpy.app.background = False
+
+        class ReadOnlyNameObj:
+            def __init__(self) -> None:
+                self._name = "old"
+                self.children = []
+
+            @property
+            def name(self) -> str:
+                return self._name
+
+            @name.setter
+            def name(self, value: str) -> None:
+                raise AttributeError("Read-only")
+
+        ro_obj = ReadOnlyNameObj()
+        mlp.id_data = ro_obj
+        set_link_name(mlp, "new_val")
+        bpy.app.timers.run_all()
+
+        # Trigger Exception path in callback
+        mlp.id_data = ro_obj
+        set_link_name(mlp, "exc_new")
+
+        class ExceptionObj:
+            def __init__(self) -> None:
+                self.children = []
+
+            @property
+            def name(self) -> str:
+                return "exc"
+
+            @name.setter
+            def name(self, val: str) -> None:
+                raise ValueError("Fail assignment")
+
+        mlp.id_data = ExceptionObj()
+        bpy.app.timers.run_all()
+
+        # Trigger None id_data path in callback
+        mlp.id_data = ro_obj
+        set_link_name(mlp, "exc_new")
+        mlp.id_data = None
+        bpy.app.timers.run_all()
+
+        # Test child renaming logic in link_props.py (line 147)
+        # Clean up any potential conflicting names from prior tests/runs
+        for n in [
+            "unique_parent_link_x",
+            "unique_parent_link_x_visual",
+            "unique_new_parent_link",
+            "unique_new_parent_link_visual",
+        ]:
+            if n in bpy.data.objects:
+                bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
+
+        parent_link = create_test_object("unique_parent_link_x", None, scene)
+        child_visual = create_test_object("unique_parent_link_x_visual", None, scene)
+        child_visual.parent = parent_link
+        # Refresh parent_link children list mock
+        parent_link.children = [child_visual]
+
+        lp_parent = safe_get_linkforge(parent_link)
+        lp_parent.id_data = parent_link
+        lp_parent.source_name_stored = "unique_parent_link_x"
+        set_link_name(lp_parent, "unique_new_parent_link")
+        assert child_visual.name == "unique_new_parent_link_visual"
+
+        # Background sync queue coverage
+        from linkforge.blender.handlers.name_sync_handler import PENDING_RENAMES
+
+        orig_len = len(PENDING_RENAMES)
+
+        class ReadOnlyNameObjSync:
+            def __init__(self) -> None:
+                self._name = "link_obj"
+                self.children = []
+
+            @property
+            def name(self) -> str:
+                return self._name
+
+            @name.setter
+            def name(self, value: str) -> None:
+                raise AttributeError("Read-only")
+
+        fake_obj = ReadOnlyNameObjSync()
+
+        class MockLinkProps2:
+            id_data = fake_obj
+            source_name_stored = ""
+
+        mlp2 = MockLinkProps2()
+
+        with patch("bpy.app.background", True):
+            set_link_name(mlp2, "new_name")
+            assert len(PENDING_RENAMES) == orig_len + 1
+
+        # Test on_collision_quality_update when self has no id_data
+        assert on_collision_quality_update(mlp, None) is None
+
+        # Test on_collision_quality_update when object is not a robot link
+        link_obj = create_test_object("not_a_robot_link", None, scene)
+        mlp3 = safe_get_linkforge(link_obj)
+        mlp3.id_data = link_obj
+        mlp3.is_robot_link = False
+        on_collision_quality_update(mlp3, None)
+
+        # Test on_collision_quality_update when no collision child exists
+        mlp3.is_robot_link = True
+        on_collision_quality_update(mlp3, None)
+
+        # Test on_collision_quality_update when collision child has TAG_IMPORTED_SOURCE = True
+        collision_child = create_test_object("not_a_robot_link_collision", None, scene)
+        collision_child.parent = link_obj
+        from linkforge.blender.constants import TAG_IMPORTED_SOURCE
+
+        collision_child[TAG_IMPORTED_SOURCE] = True
+        on_collision_quality_update(mlp3, None)
+
+        # Test on_collision_quality_update when collision child has TAG_IMPORTED_SOURCE = False (branch 179->186)
+        collision_child[TAG_IMPORTED_SOURCE] = False
+        with patch(
+            "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
+        ) as mock_realtime:
+            on_collision_quality_update(mlp3, None)
+            assert mock_realtime.called
+
+        # Test on_collision_quality_update without TAG_IMPORTED_SOURCE (triggers regeneration line 181-188)
+        clean_link = create_test_object("clean_link", None, scene)
+        mlp_clean = safe_get_linkforge(clean_link)
+        mlp_clean.id_data = clean_link
+        mlp_clean.is_robot_link = True
+        clean_collision_child = create_test_object("clean_link_collision", None, scene)
+        clean_collision_child.parent = clean_link
+        # Delete TAG_IMPORTED_SOURCE if present to raise KeyError
+        if TAG_IMPORTED_SOURCE in clean_collision_child:
+            del clean_collision_child[TAG_IMPORTED_SOURCE]
+        with patch(
+            "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
+        ) as mock_realtime:
+            on_collision_quality_update(mlp_clean, None)
+            assert mock_realtime.called
+
+        # Test update_inertia_viz directly
+        with patch("linkforge.blender.properties.link_props.tag_redraw") as mock_redraw:
+            update_inertia_viz(None, None)
+            assert mock_redraw.called
+
+        # Test update_auto_inertia_toggle when object has no use_auto_inertia
+        class NonInertiaProps:
+            pass
+
+        nip = NonInertiaProps()
+        update_auto_inertia_toggle(nip, None)
+
+        # Test update_auto_inertia_toggle calling ensure_inertia_handler when use_auto_inertia is False
+        with patch(
+            "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
+        ) as mock_handler:
+            lp.id_data = link_obj
+            lp.use_auto_inertia = False
+            update_auto_inertia_toggle(lp, None)
+            assert mock_handler.called
+
+        # Test update_auto_inertia_toggle when use_auto_inertia is True (branch 205->exit)
+        with patch(
+            "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
+        ) as mock_handler:
+            lp.use_auto_inertia = True
+            update_auto_inertia_toggle(lp, None)
+            assert not mock_handler.called
+
+    def test_robot_props_extra_coverage(self, scene) -> None:
+        """Test robot_props edge cases for 100% coverage."""
+        from linkforge.blender.properties.robot_props import (
+            update_collision_visibility,
+        )
+
+        # Empty scene or context scene
+        assert update_collision_visibility(None, None) is None
+
+        class MockRobotProps:
+            show_collisions = True
+
+        mrp = MockRobotProps()
+
+        # Trigger visibility update on a structured object
+        link_obj = create_test_object("my_link", None, scene)
+        lp = safe_get_linkforge(link_obj)
+        lp.id_data = link_obj
+        lp.is_robot_link = True
+
+        collision_child = create_test_object("my_link_collision", None, scene)
+        collision_child.parent = link_obj
+
+        mock_ctx = MagicMock()
+        mock_ctx.scene = scene
+
+        # Enable collisions
+        update_collision_visibility(mrp, mock_ctx)
+        assert collision_child.hide_viewport is False
+
+        # Disable collisions
+        mrp.show_collisions = False
+        update_collision_visibility(mrp, mock_ctx)
+        assert collision_child.hide_viewport is True
+
+    def test_sensor_props_extra_coverage(self, scene) -> None:
+        """Test sensor_props edge cases for 100% coverage."""
+        from linkforge.blender.properties.sensor_props import (
+            get_sensor_name,
+            poll_robot_link,
+            set_sensor_name,
+            update_sensor_hierarchy,
+        )
+
+        class MockSensorProps:
+            id_data = None
+            source_name_stored = ""
+            is_robot_sensor = True
+            attached_link = None
+
+        msp = MockSensorProps()
+        assert get_sensor_name(msp) == ""
+
+        # Test get_sensor_name when source_name_stored is present
+        msp.source_name_stored = "my_stored_sensor"
+        assert get_sensor_name(msp) == "my_stored_sensor"
+
+        # Test get_sensor_name when source_name_stored is empty but id_data exists
+        class FakeSensorObj:
+            def __init__(self) -> None:
+                self.name = "my_sensor_obj"
+
+        fso = FakeSensorObj()
+        msp.source_name_stored = ""
+        msp.id_data = fso
+        assert get_sensor_name(msp) == "my_sensor_obj"
+
+        # Test set_sensor_name when name changes
+        set_sensor_name(msp, "new_sensor_name")
+        assert msp.source_name_stored == "new_sensor_name"
+        assert fso.name == "new_sensor_name"
+
+        # Test set_sensor_name when name is already equal (no assignment)
+        set_sensor_name(msp, "new_sensor_name")
+
+        # Test set_sensor_name when msp has no id_data or empty value
+        msp.id_data = None
+        set_sensor_name(msp, "")
+
+        # update_sensor_hierarchy with missing sensor_obj or not robot sensor
+        assert update_sensor_hierarchy(msp, MagicMock()) is None
+
+        # update_sensor_hierarchy reparenting when attached link is None but has parent
+        sensor_obj = create_test_object("test_sensor", None, scene)
+        parent_obj = create_test_object("some_parent", None, scene)
+        sensor_obj.parent = parent_obj
+
+        sp = safe_get_sensor(sensor_obj)
+        sp.id_data = sensor_obj
+        sp.is_robot_sensor = True
+        sp.attached_link = None
+
+        update_sensor_hierarchy(sp, bpy.context)
+        assert sensor_obj.parent is None
+
+        # update_sensor_hierarchy reparenting when attached link is present (line 130-137)
+        link_obj = create_robot_link("attached_link_obj", scene)
+        with (
+            patch(
+                "linkforge.blender.utils.transform_utils.set_parent_keep_transform"
+            ) as mock_set_parent,
+            patch("linkforge.blender.utils.scene_utils.sync_object_collections") as mock_sync_coll,
+        ):
+            sp.attached_link = link_obj
+            update_sensor_hierarchy(sp, bpy.context)
+            assert mock_set_parent.called
+            assert mock_sync_coll.called
+
+        # update_sensor_hierarchy when already parented to link_obj (branch 130->135)
+        sensor_obj.parent = link_obj
+        with (
+            patch(
+                "linkforge.blender.utils.transform_utils.set_parent_keep_transform"
+            ) as mock_set_parent,
+            patch("linkforge.blender.utils.scene_utils.sync_object_collections") as mock_sync_coll,
+        ):
+            update_sensor_hierarchy(sp, bpy.context)
+            assert not mock_set_parent.called
+            assert mock_sync_coll.called
+
+        # Test poll_robot_link
+        assert poll_robot_link(sp, None) is False
+        assert poll_robot_link(sp, link_obj) is True
+
+    def test_transmission_props_extra_coverage(self, scene) -> None:
+        """Test transmission_props edge cases for 100% coverage."""
+        from linkforge.blender.properties.transmission_props import (
+            get_transmission_name,
+            set_transmission_name,
+            update_transmission_hierarchy,
+        )
+
+        class MockTransProps:
+            id_data = None
+            source_name_stored = ""
+            is_robot_transmission = True
+            joint_name = None
+            joint1_name = None
+            transmission_type = "SIMPLE"
+
+        mtp = MockTransProps()
+        assert get_transmission_name(mtp) == ""
+
+        # Test get_transmission_name when source_name_stored is present
+        mtp.source_name_stored = "my_stored_trans"
+        assert get_transmission_name(mtp) == "my_stored_trans"
+
+        set_transmission_name(mtp, "")
+
+        # Test set_transmission_name when transmission name is already equal
+        class FakeTransObj:
+            def __init__(self) -> None:
+                self.name = "my_trans_obj"
+
+        fto = FakeTransObj()
+        mtp.id_data = fto
+        set_transmission_name(mtp, "my_trans_obj")
+
+        # update_transmission_hierarchy with missing transmission_obj or not robot transmission
+        assert update_transmission_hierarchy(mtp, MagicMock()) is None
+
+        # update_transmission_hierarchy clearing joint name but has parent
+        trans_obj = create_test_object("test_trans", None, scene)
+        parent_obj = create_test_object("some_parent", None, scene)
+        trans_obj.parent = parent_obj
+
+        from linkforge.blender.constants import PROP_TRANSMISSION
+
+        tp = getattr(trans_obj, PROP_TRANSMISSION)
+        tp.id_data = trans_obj
+        tp.is_robot_transmission = True
+        tp.joint_name = None
+
+        update_transmission_hierarchy(tp, bpy.context)
+        assert trans_obj.parent is None
