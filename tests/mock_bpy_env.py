@@ -2134,7 +2134,12 @@ def setup_mock_bpy():
     sys.modules["bpy_extras.io_utils"] = typing.cast(types.ModuleType, mock_io_utils)
     sys.modules["gpu_extras"] = typing.cast(types.ModuleType, mock_gpu_extras)
     sys.modules["gpu_extras.batch"] = typing.cast(types.ModuleType, mock_batch)
-    sys.modules["gpu"] = DynamicModule("gpu")
+    gpu_mock = DynamicModule("gpu")
+    sys.modules["gpu"] = gpu_mock
+    sys.modules["gpu.state"] = gpu_mock.state
+    sys.modules["gpu.types"] = gpu_mock.types
+    sys.modules["gpu.shader"] = gpu_mock.shader
+    sys.modules["gpu.matrix"] = gpu_mock.matrix
 
     # Finalize scene-context links
     def _new_collection(name):
