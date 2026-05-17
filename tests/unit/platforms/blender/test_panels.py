@@ -162,6 +162,25 @@ class TestForgePanel:
         panel.draw(bpy.context)
         mock_layout.label.assert_any_call(text="Create robot structure:", icon="TOOL_SETTINGS")
 
+    def test_forge_panel_draw_importing(self, scene, blender_context, mock_layout) -> None:
+        """Test drawing the forge panel when active importing is occurring."""
+        props = safe_get_linkforge_scene(scene)
+        props.is_importing = True
+        props.import_status = "Importing model..."
+
+        panel = LINKFORGE_PT_forge()
+        panel.layout = mock_layout
+
+        panel.draw(bpy.context)
+        mock_layout.label.assert_any_call(text="Importing model...", icon="URL")
+        mock_layout.prop.assert_any_call(
+            props,
+            "abort_import",
+            text="Stop Import",
+            toggle=True,
+            icon="CANCEL",
+        )
+
 
 class TestLinkPanel:
     def test_link_panel_draw_no_selection(self, scene, blender_context, mock_layout) -> None:
@@ -184,6 +203,52 @@ class TestLinkPanel:
 
         panel.draw(bpy.context)
         mock_layout.label.assert_any_call(text="Link: base_link", icon="LINKED")
+
+    def test_link_panel_draw_detailed_branches(self, scene, blender_context, mock_layout) -> None:
+        """Test drawing the link panel with virtual link and manual inertia branches."""
+        from linkforge.blender.utils.property_helpers import get_link_props
+
+        # 1. Test virtual link status (no child geometry)
+        link_obj = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = link_obj
+        link_obj.select_set(True)
+
+        panel = LINKFORGE_PT_links()
+        panel.layout = mock_layout
+
+        panel.draw(bpy.context)
+        mock_layout.label.assert_any_call(text="Status: Virtual Frame (No Geometry)", icon="INFO")
+
+        # 2. Test manual inertia input fields (use_auto_inertia = False) on non-virtual link
+        non_virtual_link = create_robot_link(
+            "non_virtual_link", scene, with_visual=True, with_collision=False
+        )
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = non_virtual_link
+        non_virtual_link.select_set(True)
+        link_obj.select_set(False)
+
+        props = get_link_props(non_virtual_link)
+        assert props is not None
+        props.use_auto_inertia = False
+
+        panel.draw(bpy.context)
+        mock_layout.prop.assert_any_call(props, "inertia_ixx", text="Ixx")
+        mock_layout.prop.assert_any_call(props, "inertia_origin_xyz", text="")
+
+        # 3. Test when visual/collision child of a link is active (falls back to parent properties)
+        child_visual = create_test_object("non_virtual_link_visual", None, scene)
+        child_visual.parent = non_virtual_link
+
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = child_visual
+        child_visual.select_set(True)
+        link_obj.select_set(False)
+
+        panel.draw(bpy.context)
+        # Should fall back to parent and render its title
+        mock_layout.label.assert_any_call(text="Link: non_virtual_link", icon="LINKED")
 
 
 class TestJointPanel:
@@ -400,3 +465,77 @@ class TestControlPanel:
         mock_layout.operator.assert_any_call(
             "linkforge.add_ros2_control_joint", text="test_joint_1"
         )
+
+
+class TestRobotOperators:
+    def test_select_tree_object_operator(self, scene, blender_context) -> None:
+        """Test select_tree_object operator execution and target lookup."""
+        from linkforge.blender.panels.robot_panel import LINKFORGE_OT_select_tree_object
+
+        link_obj = create_robot_link("test_link", scene)
+
+        op = LINKFORGE_OT_select_tree_object()
+        op.object_name = "test_link"
+        op.object_type = "link"
+
+        res = op.execute(bpy.context)
+        assert res == {"FINISHED"}
+
+        # Test object not found fallback
+        op.object_name = "nonexistent"
+        res_nonexistent = op.execute(bpy.context)
+        assert res_nonexistent == {"CANCELLED"}
+
+    def test_select_root_link_operator(self, scene, blender_context) -> None:
+        """Test select_root_link operator execution."""
+        from linkforge.blender.panels.robot_panel import LINKFORGE_OT_select_root_link
+
+        op = LINKFORGE_OT_select_root_link()
+        res = op.execute(bpy.context)
+        # No links created yet, should cancel
+        assert res == {"CANCELLED"}
+
+        # Create link, now should succeed
+        create_robot_link("base_link", scene)
+        res_success = op.execute(bpy.context)
+        assert res_success == {"FINISHED"}
+
+    def test_clear_component_search_operator(self, scene, blender_context) -> None:
+        """Test clear_component_search operator poll and execute."""
+        from linkforge.blender.panels.robot_panel import LINKFORGE_OT_clear_component_search
+
+        op = LINKFORGE_OT_clear_component_search()
+        props = safe_get_linkforge_scene(scene)
+
+        props.component_browser_search = ""
+        assert op.poll(bpy.context) is False
+
+        props.component_browser_search = "search_val"
+        assert op.poll(bpy.context) is True
+
+        res = op.execute(bpy.context)
+        assert res == {"FINISHED"}
+        assert props.component_browser_search == ""
+
+
+class TestGlobalPanels:
+    def test_panels_global_registration(self) -> None:
+        """Test global register and unregister functions for panels package."""
+        from unittest.mock import patch
+
+        from linkforge.blender.panels import (
+            register as panels_register,
+        )
+        from linkforge.blender.panels import (
+            unregister as panels_unregister,
+        )
+
+        with (
+            patch("bpy.utils.register_class") as mock_reg,
+            patch("bpy.utils.unregister_class") as mock_unreg,
+        ):
+            panels_register()
+            assert mock_reg.called
+
+            panels_unregister()
+            assert mock_unreg.called

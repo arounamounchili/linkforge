@@ -31,6 +31,8 @@ from linkforge.blender.utils.property_helpers import (
 )
 
 from tests.blender_test_utils import (
+    create_robot_joint,
+    create_robot_link,
     create_test_object,
     safe_get_joint,
     safe_get_linkforge,
@@ -244,4 +246,172 @@ class TestPreferences:
             assert mock_reg.called
 
             prefs_unregister()
+            assert mock_unreg.called
+
+
+class TestGlobalPropertiesAndCallbacks:
+    def test_properties_global_registration(self) -> None:
+        """Test calling global register and unregister from linkforge.blender.properties."""
+        from linkforge.blender.properties import (
+            register as props_register,
+        )
+        from linkforge.blender.properties import (
+            unregister as props_unregister,
+        )
+
+        with (
+            patch("bpy.utils.register_class") as mock_reg,
+            patch("bpy.utils.unregister_class") as mock_unreg,
+        ):
+            props_register()
+            assert mock_reg.called
+
+            props_unregister()
+            assert mock_unreg.called
+
+    def test_property_helpers_strategies(self, scene, blender_context) -> None:
+        """Test find_property_owner strategy fallbacks and get_transmission_props."""
+        from linkforge.blender.constants import PROP_LINK
+        from linkforge.blender.utils.property_helpers import (
+            find_property_owner,
+            get_transmission_props,
+        )
+
+        obj1 = create_test_object("test_strat_3", None, scene)
+        props = safe_get_linkforge(obj1)
+
+        # Mock Context with selected_objects for Strategy 3
+        mock_ctx = MagicMock()
+        mock_ctx.object = None
+        mock_ctx.selected_objects = [obj1]
+
+        owner = find_property_owner(mock_ctx, props, PROP_LINK)
+        assert owner == obj1
+
+        # Mock Context with scene for Strategy 4
+        mock_ctx_scene = MagicMock()
+        mock_ctx_scene.object = None
+        mock_ctx_scene.selected_objects = []
+        mock_ctx_scene.scene = scene
+
+        owner_scene = find_property_owner(mock_ctx_scene, props, PROP_LINK)
+        assert owner_scene == obj1
+
+        # Test get_transmission_props helper
+        assert get_transmission_props(None) is None
+        assert get_transmission_props(obj1) is not None
+
+    def test_joint_properties_and_callbacks(self, scene, blender_context) -> None:
+        """Test getters, setters, polls and hierarchy updates in JointPropertyGroup."""
+        from linkforge.blender.properties.joint_props import (
+            get_joint_name,
+            poll_robot_joint,
+            poll_robot_link,
+            set_joint_name,
+            update_joint_hierarchy,
+        )
+
+        # Create base/child links
+        base = create_robot_link("base_link", scene)
+        child = create_robot_link("child_link", scene)
+        joint_obj = create_robot_joint("test_joint", base, child, scene)
+
+        jp = safe_get_joint(joint_obj)
+
+        # Test getters and setters
+        assert get_joint_name(jp) == "test_joint"
+        set_joint_name(jp, "renamed_joint")
+        assert jp.source_name_stored == "renamed_joint"
+
+        # Test deferring renamed name set when read-only in depsgraph
+        with (
+            patch("bpy.app.background", False),
+            patch("bpy.app.timers") as mock_timers,
+        ):
+
+            class ReadOnlyNameObj:
+                def __init__(self) -> None:
+                    self._name = "test_joint"
+
+                @property
+                def name(self) -> str:
+                    return self._name
+
+                @name.setter
+                def name(self, value: str) -> None:
+                    raise AttributeError("Read-only")
+
+            fake_obj = ReadOnlyNameObj()
+            jp.id_data = fake_obj
+            set_joint_name(jp, "deferred_joint")
+            assert mock_timers.register.called
+
+        # Restore original id_data
+        jp.id_data = joint_obj
+
+        # Test poll filters
+        assert poll_robot_link(jp, base) is True
+        assert poll_robot_link(jp, joint_obj) is False
+        assert poll_robot_joint(jp, joint_obj) is False  # self-mimicry prevention
+
+        # Test hierarchy update when clearing parents
+        jp.parent_link = None
+        jp.child_link = None
+        update_joint_hierarchy(jp, bpy.context)
+        assert joint_obj.parent is None
+
+    def test_transmission_properties_and_callbacks(self, scene, blender_context) -> None:
+        """Test getters, setters, polls and hierarchy updates in TransmissionPropertyGroup."""
+        from linkforge.blender.constants import PROP_TRANSMISSION
+        from linkforge.blender.properties.transmission_props import (
+            get_transmission_name,
+            poll_robot_joint,
+            set_transmission_name,
+            update_transmission_hierarchy,
+        )
+        from linkforge.blender.properties.transmission_props import (
+            register as trans_register,
+        )
+        from linkforge.blender.properties.transmission_props import (
+            unregister as trans_unregister,
+        )
+        from linkforge.core.constants import TRANS_DIFFERENTIAL
+
+        base = create_robot_link("base_link", scene)
+        child = create_robot_link("child_link", scene)
+        joint_obj = create_robot_joint("test_joint", base, child, scene)
+
+        trans_obj = create_test_object("test_trans", None, scene)
+        tp = getattr(trans_obj, PROP_TRANSMISSION)
+        tp.is_robot_transmission = True
+
+        # Test getters and setters
+        assert get_transmission_name(tp) == "test_trans"
+        set_transmission_name(tp, "renamed_trans")
+        assert tp.source_name_stored == "renamed_trans"
+
+        # Test poll filters
+        assert poll_robot_joint(tp, joint_obj) is True
+        assert poll_robot_joint(tp, base) is False
+
+        # Test hierarchy update
+        tp.joint_name = joint_obj
+        update_transmission_hierarchy(tp, bpy.context)
+        assert trans_obj.parent == joint_obj
+
+        # Test differential transmission type hierarchy update
+        tp.transmission_type = TRANS_DIFFERENTIAL
+        tp.joint1_name = joint_obj
+        update_transmission_hierarchy(tp, bpy.context)
+        assert trans_obj.parent == joint_obj
+
+        # Test clean unregister/register
+        with (
+            patch("bpy.utils.register_class") as mock_reg,
+            patch("bpy.utils.unregister_class") as mock_unreg,
+        ):
+            trans_register()
+            assert mock_reg.called
+
+            trans_unregister()
             assert mock_unreg.called
