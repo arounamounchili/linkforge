@@ -36,8 +36,8 @@ We use `just` to run specific tiers of the suite:
 | Command | Role | Runs in |
 |---|---|---|
 | `just test-core` | Verifies Robotics Logic | System Python |
-| `just test-blender-logic` | Verifies Adapter Logic (Mocked) | System Python |
-| `just test-blender` | Verifies Scene Integration | Headless Blender |
+| `just test-unit-blender` | Verifies Adapter Logic (Mocked) | System Python |
+| `just test-integration-blender` | Verifies Scene Integration | Headless Blender |
 
 ### Blender Execution Model
 Blender tests use a **two-layer execution model** because Blender ships its own embedded Python interpreter:

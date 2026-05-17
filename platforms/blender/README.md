@@ -33,11 +33,11 @@ LinkForge uses a tiered testing strategy for Blender:
 
 1.  **Fast Logic Tests** (Mocked `bpy`):
     ```bash
-    just test-blender-logic
+    just test-unit-blender
     ```
 2.  **Full Integration Tests** (Real Blender):
     ```bash
-    just test-blender
+    just test-integration-blender
     ```
 
 For the complete testing strategy, see the [Tests README](../../tests/README.md).

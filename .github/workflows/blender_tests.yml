@@ -56,4 +56,4 @@ jobs:
       - name: Run Blender Tests
         env:
           BLENDER_PATH: ${{ github.workspace }}/blender/blender
-        run: xvfb-run just test-blender
+        run: xvfb-run just test-integration-blender

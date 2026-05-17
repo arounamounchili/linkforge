@@ -71,7 +71,7 @@ jobs:
           uv run sphinx-build -b html -W source build/html
 
       - name: Run Core & Logic Tests
-        run: just test-core test-blender-logic
+        run: just test-core test-unit-blender
 
       - name: Setup Blender
         id: setup-blender
@@ -82,7 +82,7 @@ jobs:
       - name: Run Blender Integration Tests
         env:
           BLENDER_PATH: ${{ steps.setup-blender.outputs.blender-path }}
-        run: just test-blender
+        run: just test-integration-blender
 
       - name: Build package
         if: github.ref == 'refs/heads/main' && github.event_name == 'push' && matrix.python-version == '3.12'

@@ -116,9 +116,9 @@ git checkout -b feature/your-feature-name
 just test
 
 # Run specific tiers
-just test-core           # Fast core logic
-just test-blender-logic  # Mocked platform logic
-just test-blender        # Full Blender integration
+just test-core                 # Fast core logic (unit + integration)
+just test-unit-blender         # Mocked platform logic unit tests
+just test-integration-blender  # Full Blender integration tests
 
 # Run linter and type checker
 just check
@@ -180,8 +180,8 @@ LinkForge uses a **Tiered Testing Architecture** to balance speed and fidelity:
 | Tier | Command | Scope |
 |---|---|---|
 | **Core** | `just test-core` | Models, Kinematics, Parsers (Zero-deps) |
-| **Logic** | `just test-blender-logic` | Blender Adapters & Math (Mocked `bpy`) |
-| **Integration** | `just test-blender` | Real Scene Interaction (Real Blender) |
+| **Logic** | `just test-unit-blender` | Blender Adapters & Math (Mocked `bpy`) |
+| **Integration** | `just test-integration-blender` | Real Scene Interaction (Real Blender) |
 
 See [Automated Testing](https://linkforge.readthedocs.io/en/latest/reference/testing/automated_testing.html) for our full strategy and coverage metrics.
 

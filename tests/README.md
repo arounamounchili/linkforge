@@ -29,13 +29,13 @@ just test-core
 ### 🚅 Tier 2: Platform Logic (Mocked)
 Tests the Blender integration logic without needing to boot Blender.
 ```bash
-just test-blender-logic
+just test-unit-blender
 ```
 
 ### 🛰️ Tier 3: Full Integration (Real Blender)
 The ultimate fidelity check. Runs tests inside a real Blender environment.
 ```bash
-just test-blender
+just test-integration-blender
 ```
 
 ## 📊 Coverage & Quality
