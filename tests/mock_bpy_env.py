@@ -716,6 +716,7 @@ class MockCollection(Generic[T]):
         is_real_collection: bool = False,
     ):
         self._items: list[T] = []
+
         self.prop_type = prop_type
         self.name = name
         self.is_real_collection = is_real_collection
@@ -724,7 +725,7 @@ class MockCollection(Generic[T]):
         self._id = id(self)
         self._objects = None
         self._children = None
-        self._parent_collection = None
+        self._parent_collection = self if is_real_collection else None
 
     def __hash__(self):
         return hash(self._id)
@@ -796,7 +797,7 @@ class MockCollection(Generic[T]):
         # If this is an 'objects' collection of a real Collection, update item.users_collection
         parent_coll = getattr(self, "_parent_collection", None)
         if (
-            parent_coll
+            parent_coll is not None
             and hasattr(item, "users_collection")
             and parent_coll not in item.users_collection
         ):
@@ -836,6 +837,9 @@ class MockCollection(Generic[T]):
     def __len__(self):
         return len(self._items)
 
+    def __bool__(self):
+        return True
+
     def __iter__(self) -> typing.Iterator[T]:
         return iter(self._items)
 
@@ -870,9 +874,18 @@ class MockCollection(Generic[T]):
     def remove(self, item, do_unlink=True):
         if isinstance(item, int):
             if 0 <= item < len(self._items):
+                item_obj = self._items[item]
                 self.pop(item)
+                if hasattr(item_obj, "users_collection") and do_unlink:
+                    for coll in list(item_obj.users_collection):
+                        if hasattr(coll, "objects"):
+                            coll.objects.unlink(item_obj)
         elif item in self._items:
             self._items.remove(item)
+            if hasattr(item, "users_collection") and do_unlink:
+                for coll in list(item.users_collection):
+                    if hasattr(coll, "objects"):
+                        coll.objects.unlink(item)
 
     def pop(self, index=-1):
         return self._items.pop(index)
@@ -894,6 +907,13 @@ class MockCollection(Generic[T]):
     def unlink(self, obj):
         if obj in self:
             self.remove(obj)
+            parent_coll = getattr(self, "_parent_collection", None)
+            if (
+                parent_coll is not None
+                and hasattr(obj, "users_collection")
+                and parent_coll in obj.users_collection
+            ):
+                obj.users_collection.remove(parent_coll)
 
 
 class MockHandlers:
@@ -1147,6 +1167,11 @@ class MockObject(MockPropertyGroup):
         if hasattr(self, "linkforge_joint") and hasattr(self.linkforge_joint, "joint_name"):
             self.linkforge_joint.joint_name = str(value)
 
+    @name.deleter
+    def name(self):
+        if hasattr(self, "_name"):
+            del self._name
+
     @property
     def matrix_world(self):
         if getattr(self, "_calculating_matrix_world", False):
@@ -1375,9 +1400,11 @@ class MockScene(MockPropertyGroup):
     def __init__(self, name="Scene", **kwargs):
         super().__init__(**kwargs)
         self.name = name
+        self.frame_current = 0
         self.objects = MockCollection(prop_type=MockObject)
         self.collection = MockCollection(name="Master Collection", is_real_collection=True)
-        self.collection.objects = self.objects
+        self.collection.objects = MockCollection(prop_type=MockObject)
+        self.collection.objects._parent_collection = self.collection
         self.collection.children = MockCollection()
         self.view_layers = MockCollection()
         self.view_layers.append(MockPropertyGroup(name="ViewLayer"))
@@ -1583,8 +1610,10 @@ def setup_mock_bpy():
 
     # Sync scene objects with data objects
     active_scene.objects = mock_data.objects
-    active_scene.collection.objects = mock_data.objects
+    active_scene.collection.objects = MockCollection(prop_type=MockObject)
     active_scene.collection.objects._parent_collection = active_scene.collection
+    for obj in mock_data.objects:
+        active_scene.collection.objects.append(obj)
 
     mock_context.evaluated_depsgraph_get = lambda: MagicMock(name="Depsgraph")
     mock_context.window_manager = MockPropertyGroup()
@@ -2109,7 +2138,7 @@ def setup_mock_bpy():
 
     # Finalize scene-context links
     def _new_collection(name):
-        coll = MockCollection()
+        coll = MockCollection(is_real_collection=True)
         coll.name = name
         mock_data.collections.append(coll)
         return coll

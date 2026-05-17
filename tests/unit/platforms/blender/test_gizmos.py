@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import bpy
-import gpu
 import linkforge.blender.visualization.inertia_gizmos as inertia_gizmos
 import linkforge.blender.visualization.joint_gizmos as joint_gizmos
 import pytest
@@ -48,6 +47,8 @@ class TestInertiaGizmos:
 
     def test_draw_inertia_gizmos_preferences_and_execution(self, scene) -> None:
         """Test drawing lifecycle with various preference combinations."""
+        gpu = inertia_gizmos.gpu
+
         # Scenario 1: Hidden by preference
         with patch("linkforge.blender.visualization.inertia_gizmos.get_addon_prefs") as mock_prefs:
             prefs = MagicMock()
@@ -232,6 +233,8 @@ class TestJointGizmos:
 
     def test_draw_joint_axes_preferences_and_rendering(self, scene) -> None:
         """Verify joint axes overlay rendering logic branches."""
+        gpu = joint_gizmos.gpu
+
         # Scenario 1: Disabled
         with patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs:
             prefs = MagicMock()

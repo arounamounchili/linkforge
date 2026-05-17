@@ -30,6 +30,7 @@ class TestPhysicsInertiaIntegration:
         # 2. Add a visual mesh child (cube side length 2.0m)
         vis = create_mesh_object("box_visual", scene=scene, with_cube=True)
         vis.parent = link_obj
+        vis.select_set(True)
 
         # Mass = 1.0kg, Side = 2.0m
         # Ixx = m * (y^2 + z^2) / 12 = 1.0 * (4 + 4) / 12 = 8/12 = 0.666...
