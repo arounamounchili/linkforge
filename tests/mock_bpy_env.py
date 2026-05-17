@@ -1336,7 +1336,7 @@ class MockObject(MockPropertyGroup):
         return slots
 
     def select_get(self):
-        return True
+        return getattr(self, "_selected", False)
 
     def select_set(self, state):
         self._selected = state

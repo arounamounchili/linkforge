@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+from unittest.mock import PropertyMock, patch
+
+import bpy
+from linkforge.blender.operators.transmission_ops import (
+    LINKFORGE_OT_create_transmission,
+    LINKFORGE_OT_delete_transmission,
+    create_transmission_for_joint,
+)
+
 from tests.blender_test_utils import (
     create_test_object,
     safe_get_joint,
@@ -10,27 +19,95 @@ from tests.blender_test_utils import (
 
 
 class TestTransmissionOperations:
-    def test_create_transmission(self, scene, blender_context) -> None:
-        """Test creating a transmission for a joint."""
+    def test_create_transmission_operator_poll(self, mocker, scene, blender_context) -> None:
+        """Test poll method of create transmission operator."""
+        op = LINKFORGE_OT_create_transmission
+
+        # Active object is None
+        mocker.patch.object(
+            type(bpy.context), "active_object", new_callable=PropertyMock, return_value=None
+        )
+        assert not op.poll(bpy.context)
+
+        # Active object exists but not selected
+        j = create_test_object("Joint", None, scene)
+        safe_get_joint(j).is_robot_joint = True
+        j.select_set(False)
+        mocker.patch.object(
+            type(bpy.context), "active_object", new_callable=PropertyMock, return_value=j
+        )
+        assert not op.poll(bpy.context)
+
+        # Selected and is joint
+        j.select_set(True)
+        assert op.poll(bpy.context)
+
+    def test_create_transmission_operator_execute(self, scene, blender_context) -> None:
+        """Test execute method of create transmission operator."""
+        j = create_test_object("Joint", None, scene)
+        safe_get_joint(j).is_robot_joint = True
+
+        blender_context.view_layer.objects.active = j
+        j.select_set(True)
+
+        op = LINKFORGE_OT_create_transmission()
+        res = op.execute(bpy.context)
+        assert res == {"FINISHED"}
+
+        trans = blender_context.get_active_object()
+        assert trans is not None
+        assert trans.name == "Joint_trans"
+        assert trans.parent == j
+        assert safe_get_transmission(trans).is_robot_transmission
+
+    def test_create_transmission_for_joint_axis_variations(self, scene, blender_context) -> None:
+        """Test creating a transmission with X, Y, Z, and CUSTOM joint axes."""
+        # Test axis X
+        j_x = create_test_object("JointX", None, scene)
+        jp_x = safe_get_joint(j_x)
+        jp_x.is_robot_joint = True
+        jp_x.axis = "X"
+        assert create_transmission_for_joint(j_x, blender_context)
+
+        # Test axis Y
+        j_y = create_test_object("JointY", None, scene)
+        jp_y = safe_get_joint(j_y)
+        jp_y.is_robot_joint = True
+        jp_y.axis = "Y"
+        assert create_transmission_for_joint(j_y, blender_context)
+
+        # Test axis Z
+        j_z = create_test_object("JointZ", None, scene)
+        jp_z = safe_get_joint(j_z)
+        jp_z.is_robot_joint = True
+        jp_z.axis = "Z"
+        assert create_transmission_for_joint(j_z, blender_context)
+
+        # Test axis CUSTOM
+        j_c = create_test_object("JointCustom", None, scene)
+        jp_c = safe_get_joint(j_c)
+        jp_c.is_robot_joint = True
+        jp_c.axis = "CUSTOM"
+        jp_c.custom_axis_x = 0.707
+        jp_c.custom_axis_y = 0.707
+        jp_c.custom_axis_z = 0.0
+        assert create_transmission_for_joint(j_c, blender_context)
+
+    def test_create_transmission_for_joint_fallback(self, scene, blender_context) -> None:
+        """Test fallback behavior when preferences are missing or joint_props is None."""
         # Setup Joint
         j = create_test_object("Joint", None, scene)
         safe_get_joint(j).is_robot_joint = True
 
-        # Ensure active and selected
-        # Use the adapter to manage state (works in both mock and real Blender)
-        blender_context.view_layer.objects.active = j
-        j.select_set(True)
+        with patch("linkforge.blender.preferences.get_addon_prefs", return_value=None):
+            assert create_transmission_for_joint(j, blender_context)
 
-        # Execute logic directly
-        from linkforge.blender.operators.transmission_ops import create_transmission_for_joint
-
-        create_transmission_for_joint(j, blender_context)
-
-        trans = blender_context.get_active_object()
-        assert trans is not None
-        assert trans.name == f"{j.name}_trans"
-        assert trans.parent == j
-        assert safe_get_transmission(trans).is_robot_transmission
+        # Fails when joint_props is not a valid robot joint
+        j_invalid = create_test_object("InvalidJoint", None, scene)
+        with patch(
+            "linkforge.blender.operators.transmission_ops.get_joint_props", return_value=None
+        ):
+            assert not create_transmission_for_joint(j_invalid, blender_context)
 
     def test_transmission_defaults(self, scene, blender_context) -> None:
         """Test transmission property defaults."""
@@ -38,22 +115,41 @@ class TestTransmissionOperations:
         props = safe_get_transmission(trans)
         assert props.is_robot_transmission is False
 
-    def test_delete_transmission(self, scene, blender_context) -> None:
-        """Test deleting a transmission."""
+    def test_delete_transmission_operator_poll(self, mocker, scene, blender_context) -> None:
+        """Test poll method of delete transmission operator."""
+        op = LINKFORGE_OT_delete_transmission
+
+        # Active object is None
+        mocker.patch.object(
+            type(bpy.context), "active_object", new_callable=PropertyMock, return_value=None
+        )
+        assert not op.poll(bpy.context)
+
+        # Active object exists but not selected
         trans = create_test_object("Trans", None, scene)
         safe_get_transmission(trans).is_robot_transmission = True
+        trans.select_set(False)
+        mocker.patch.object(
+            type(bpy.context), "active_object", new_callable=PropertyMock, return_value=trans
+        )
+        assert not op.poll(bpy.context)
 
-        # Use the adapter to manage state
-        blender_context.view_layer.objects.active = trans
+        # Selected and is transmission
         trans.select_set(True)
+        assert op.poll(bpy.context)
 
-        # Execute logic directly
-        from linkforge.blender.operators.transmission_ops import delete_transmission_for_object
+    def test_delete_transmission_operator_execute(self, mocker, scene, blender_context) -> None:
+        """Test execute method of delete transmission operator."""
+        trans = create_test_object("Trans", None, scene)
+        safe_get_transmission(trans).is_robot_transmission = True
+        mocker.patch.object(
+            type(bpy.context), "active_object", new_callable=PropertyMock, return_value=trans
+        )
 
-        trans_name = trans.name
-        delete_transmission_for_object(trans, blender_context)
-
-        assert trans_name not in [o.name for o in blender_context.data.objects]
+        op = LINKFORGE_OT_delete_transmission()
+        res = op.execute(bpy.context)
+        assert res == {"FINISHED"}
+        assert trans.name not in [o.name for o in blender_context.data.objects]
 
 
 # Transmission Hierarchy and Logic
