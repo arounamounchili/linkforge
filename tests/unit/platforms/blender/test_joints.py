@@ -1,4 +1,3 @@
-# pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportOptionalMemberAccess=false
 """Unit tests for Blender Joint operations, properties, and utilities."""
 
 from __future__ import annotations

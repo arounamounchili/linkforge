@@ -1,4 +1,3 @@
-# pyright: reportArgumentType=false, reportAttributeAccessIssue=false
 """Unit tests for Blender Properties, Validation, and Preferences."""
 
 from __future__ import annotations
