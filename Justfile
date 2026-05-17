@@ -53,6 +53,7 @@ test-blender:
 coverage:
 	@rm -f .coverage .coverage.*
 	COVERAGE_FILE=.coverage.core uv run pytest tests/unit/core tests/integration/core
+	COVERAGE_FILE=.coverage.blender_unit uv run pytest tests/unit/platforms/blender
 	COVERAGE_FILE=.coverage.blender uv run python scripts/blender_launcher.py
 	uv run coverage combine
 	uv run coverage html
