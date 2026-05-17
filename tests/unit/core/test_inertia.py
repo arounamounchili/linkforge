@@ -101,14 +101,14 @@ class TestInertiaIntegration:
 
         # Vertices (explicitly floats for type-checker)
         v = [
-            (float(-x), float(-y), float(-z)),
-            (float(x), float(-y), float(-z)),
-            (float(x), float(y), float(-z)),
-            (float(-x), float(y), float(-z)),
-            (float(-x), float(-y), float(z)),
-            (float(x), float(-y), float(z)),
-            (float(x), float(y), float(z)),
-            (float(-x), float(y), float(z)),
+            (-x, -y, -z),
+            (x, -y, -z),
+            (x, y, -z),
+            (-x, y, -z),
+            (-x, -y, z),
+            (x, -y, z),
+            (x, y, z),
+            (-x, y, z),
         ]
 
         # Triangles (standard CCW winding)
@@ -319,17 +319,11 @@ class TestInertiaUtils:
         assert isinstance(calculate_inertia(Sphere(radius=1), mass), InertiaTensor)
         assert isinstance(calculate_inertia(Mesh(resource="test.stl"), mass), InertiaTensor)
 
-        from linkforge.core.models.geometry import Geometry
-
-        class FakeGeometry(Geometry):  # type: ignore
-            def __init__(self):
-                super().__init__(type="fake")
-
-            def volume(self):
-                return 0.0
+        class FakeGeometry:
+            pass
 
         with pytest.raises(RobotPhysicsError, match="Unsupported geometry type"):
-            calculate_inertia(FakeGeometry(), mass)
+            calculate_inertia(FakeGeometry(), mass)  # type: ignore
 
     def test_cache_size_env_var(self, monkeypatch):
         """Verify that the cache size environment variable is respected."""
