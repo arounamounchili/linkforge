@@ -266,8 +266,6 @@ def calculate_mesh_inertia_from_triangles(
         )
 
     # Center of mass and density
-    # Defensive check: Vertices are pre-validated, so non-finite results here
-    # would imply extreme numerical summation errors (practically unreachable).
     if not all(isfinite(w) for w in weighted_com):
         raise RobotPhysicsError(
             ValidationErrorCode.PHYSICS_VIOLATION,
