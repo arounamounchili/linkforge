@@ -35,7 +35,7 @@ from tests.blender_test_utils import (
 from tests.mock_bpy_env import MockPropertyGroup, MockTimers
 
 # Monkeypatch missing mock timer method on the class itself to survive environment resets
-MockTimers.is_registered = lambda self, func: func in self._timers
+MockTimers.is_registered = lambda self, func: func in self._timers  # type: ignore
 
 
 class MockDecimateModifier(MockPropertyGroup):
@@ -119,7 +119,9 @@ class TestCollisionGeneration:
         assert not op.poll(bpy.context)
 
         link_obj = create_robot_link("empty_link", scene, with_visual=False, with_collision=False)
-        bpy.context.view_layer.objects.active = link_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = link_obj
         link_obj.select_set(True)
 
         assert op.poll(bpy.context)
@@ -130,12 +132,15 @@ class TestCollisionGeneration:
 
     def test_generate_collision_primitive_shapes(self, scene, blender_context) -> None:
         """Test generating Box, Sphere, Cylinder primitives, and Auto-Detect."""
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+
         # Test Box Primitive
         link_obj_box = create_robot_link(
             "test_link_box", scene, with_visual=True, with_collision=False
         )
         visual_obj_box = link_obj_box.children[0]
-        bpy.context.view_layer.objects.active = visual_obj_box
+        view_layer.objects.active = visual_obj_box
         visual_obj_box.select_set(True)
 
         assert LINKFORGE_OT_generate_collision.poll(bpy.context)
@@ -152,7 +157,7 @@ class TestCollisionGeneration:
             "test_link_sphere", scene, with_visual=True, with_collision=False
         )
         visual_obj_sphere = link_obj_sphere.children[0]
-        bpy.context.view_layer.objects.active = visual_obj_sphere
+        view_layer.objects.active = visual_obj_sphere
         visual_obj_sphere.select_set(True)
 
         op.collision_type = "sphere"
@@ -166,7 +171,7 @@ class TestCollisionGeneration:
             "test_link_cyl", scene, with_visual=True, with_collision=False
         )
         visual_obj_cyl = link_obj_cyl.children[0]
-        bpy.context.view_layer.objects.active = visual_obj_cyl
+        view_layer.objects.active = visual_obj_cyl
         visual_obj_cyl.select_set(True)
 
         op.collision_type = "cylinder"
@@ -180,7 +185,7 @@ class TestCollisionGeneration:
             "test_link_auto", scene, with_visual=True, with_collision=False
         )
         visual_obj_auto = link_obj_auto.children[0]
-        bpy.context.view_layer.objects.active = visual_obj_auto
+        view_layer.objects.active = visual_obj_auto
         visual_obj_auto.select_set(True)
 
         op.collision_type = "auto"
@@ -221,7 +226,9 @@ class TestCollisionVisibility:
         col_obj = next(c for c in link_obj.children if "collision" in c.name)
         col_obj.hide_viewport = False
 
-        bpy.context.view_layer.objects.active = link_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = link_obj
         link_obj.select_set(True)
         assert op.poll(bpy.context)
 
@@ -232,7 +239,7 @@ class TestCollisionVisibility:
 
         # Toggle on child visual
         visual_obj = link_obj.children[0]
-        bpy.context.view_layer.objects.active = visual_obj
+        view_layer.objects.active = visual_obj
         visual_obj.select_set(True)
         assert op.poll(bpy.context)
 
@@ -354,7 +361,9 @@ class TestInertiaCalculation:
     def test_calculate_inertia_operators(self, scene, blender_context) -> None:
         """Verify active and batch inertia calculation operators."""
         link_obj = create_robot_link("test_link", scene, with_visual=True, with_collision=False)
-        bpy.context.view_layer.objects.active = link_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = link_obj
         link_obj.select_set(True)
 
         # Single active link calculate
@@ -378,7 +387,9 @@ class TestLinkRemoval:
     def test_remove_virtual_empty_link(self, scene, blender_context) -> None:
         """Verify remove link operator on a virtual link frame (no visual mesh)."""
         link_obj = create_robot_link("virtual_link", scene, with_visual=False, with_collision=True)
-        bpy.context.view_layer.objects.active = link_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = link_obj
         link_obj.select_set(True)
 
         op = LINKFORGE_OT_remove_link()
@@ -391,7 +402,9 @@ class TestLinkRemoval:
         """Verify remove link operator correctly restores original mesh object."""
         link_obj = create_robot_link("mesh_link", scene, with_visual=True, with_collision=True)
         visual_obj = link_obj.children[0]
-        bpy.context.view_layer.objects.active = visual_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = visual_obj
         visual_obj.select_set(True)
 
         op = LINKFORGE_OT_remove_link()
@@ -414,7 +427,9 @@ class TestMaterialSlotSlotAddition:
     def test_add_material_slot_from_link(self, scene, blender_context) -> None:
         """Verify adding material slot to link active object."""
         link_obj = create_robot_link("mat_link", scene, with_visual=True, with_collision=False)
-        bpy.context.view_layer.objects.active = link_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = link_obj
         link_obj.select_set(True)
 
         op = LINKFORGE_OT_add_material_slot()
@@ -429,7 +444,9 @@ class TestMaterialSlotSlotAddition:
         """Verify adding material slot directly to visual child."""
         link_obj = create_robot_link("mat_link_2", scene, with_visual=True, with_collision=False)
         visual_obj = link_obj.children[0]
-        bpy.context.view_layer.objects.active = visual_obj
+        view_layer = bpy.context.view_layer
+        assert view_layer is not None
+        view_layer.objects.active = visual_obj
         visual_obj.select_set(True)
 
         op = LINKFORGE_OT_add_material_slot()
@@ -515,13 +532,13 @@ class TestRealtimePreviewsAndDebounce:
         link_obj = create_robot_link("debounce_link", scene, with_visual=True, with_collision=True)
 
         # Clear existing timers
-        bpy.app.timers._timers.clear()
+        getattr(bpy.app.timers, "_timers").clear()
 
         # Schedule preview
         schedule_collision_preview_update(link_obj)
 
         # Should be registered now
-        assert execute_collision_preview_update in bpy.app.timers._timers
+        assert execute_collision_preview_update in getattr(bpy.app.timers, "_timers")
 
         # Trigger execute within delay (should reschedule by returning remaining wait time)
         import linkforge.blender.operators.link_ops as link_ops
