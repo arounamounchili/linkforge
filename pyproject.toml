@@ -57,7 +57,8 @@ typeCheckingMode = "basic"
 pythonVersion = "3.13"
 
 executionEnvironments = [
-  { root = "platforms/blender", reportAttributeAccessIssue = "none", reportInvalidTypeForm = "none", reportReturnType = "none" }
+  { root = "platforms/blender", reportAttributeAccessIssue = "none", reportInvalidTypeForm = "none", reportReturnType = "none" },
+  { root = "tests", reportArgumentType = "none", reportAttributeAccessIssue = "none", reportOptionalMemberAccess = "none", reportMissingImports = "none" }
 ]
 
 
