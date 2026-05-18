@@ -124,6 +124,7 @@ jobs:
           args: >-
             --verbose --no-progress
             --exclude ".*\.local"
+            --exclude "https://hynek.me/.*"
             --exclude "https://www.mec.ed.tum.de/en/iwb/.*"
             --exclude "https://cmp.felk.cvut.cz/~peckama2/"
             --exclude "https://www.gnu.org/licenses/gpl-3.0"
