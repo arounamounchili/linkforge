@@ -856,7 +856,7 @@ def scene_to_robot(
     """Convert entire Blender scene to Core Robot using the Translator orchestrator."""
     from .context import BlenderContext
 
-    # Auto-wrap for legacy compatibility
+    # Auto-wrap raw context if passed directly
     if not isinstance(context, IBlenderContext):
         import bpy
 

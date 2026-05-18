@@ -1069,7 +1069,7 @@ def import_robot_to_scene(
     """
     from .context import BlenderContext
 
-    # Auto-wrap for legacy compatibility
+    # Auto-wrap raw context if passed directly
     if not isinstance(context, IBlenderContext):
         context = BlenderContext(context)
 

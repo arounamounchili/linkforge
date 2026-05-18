@@ -428,7 +428,7 @@ class TestLinkRemoval:
         assert bpy.data.objects["mesh_link"].parent is None
 
 
-class TestMaterialSlotSlotAddition:
+class TestMaterialSlotAddition:
     @pytest.fixture(autouse=True)
     def setup_cleanup(self, scene):
         cleanup_blender_scene(scene)
@@ -628,7 +628,7 @@ class TestCollisionScaling:
         assert abs(collision_obj.dimensions.z - 1.0) < 1e-5
 
 
-class TestLinkOperationsLegacy:
+class TestLinkCreationAndCollisionHelpers:
     def test_create_link_object(self, scene, blender_context) -> None:
         """Test creating a link object (empty) in Blender."""
         link_obj = create_robot_link("test_link", scene)
