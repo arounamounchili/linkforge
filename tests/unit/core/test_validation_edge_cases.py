@@ -123,3 +123,39 @@ def test_mass_properties_critical_low_mass():
     result = ValidationResult()
     check.run(robot, result)
     assert any("Critical low mass" in err.title for err in result.errors)
+
+
+class FailingCheck(ValidationCheck):
+    def run(self, robot: Robot, result: ValidationResult) -> None:
+        raise ValueError("Simulated failure")
+
+
+def test_robot_validator_check_exception() -> None:
+    """Verify that RobotValidator catches exceptions in validation checks."""
+    from linkforge.core.validation.validator import RobotValidator
+
+    robot = Robot(name="test_robot")
+    validator = RobotValidator(checks=[FailingCheck()])
+    result = validator.validate(robot)
+    assert any(
+        "Validation check FailingCheck failed: Simulated failure" in err.message
+        for err in result.errors
+    )
+
+
+def test_robot_validator_reindex_exception(mocker) -> None:
+    """Verify that RobotValidator catches indexing errors from _reindex."""
+    from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
+    from linkforge.core.validation.validator import RobotValidator
+
+    robot = Robot(name="test_robot")
+    mocker.patch.object(
+        robot,
+        "_reindex",
+        side_effect=RobotValidationError(
+            ValidationErrorCode.DUPLICATE_NAME, "Duplicate name detected", value="link1"
+        ),
+    )
+    validator = RobotValidator(checks=[])
+    result = validator.validate(robot)
+    assert any("Duplicate name detected" in err.message for err in result.errors)

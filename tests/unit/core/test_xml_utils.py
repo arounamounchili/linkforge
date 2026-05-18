@@ -78,6 +78,13 @@ def test_serialize_xml_with_namespaces() -> None:
     assert "test" in xml_str
 
 
+def test_serialize_xml_with_namespaces_non_robot() -> None:
+    """Test XML serialization with custom namespaces when root is not robot."""
+    root = ET.Element("gazebo")
+    xml_str = serialize_xml(root, namespaces={"custom": "http://example.com/custom"})
+    assert "<gazebo" in xml_str
+
+
 def test_parsing_fallbacks() -> None:
     """Test fallbacks for invalid numeric and boolean parsing."""
 

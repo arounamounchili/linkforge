@@ -239,3 +239,48 @@ def test_xml_base_parser_geometry_nones() -> None:
     assert parser._parse_cylinder(None) is None
     assert parser._parse_sphere(None) is None
     assert parser._parse_mesh(None, Path(".")) is None
+
+
+def test_xml_base_generators_and_parsers_edge_cases() -> None:
+    """Verify remaining edge cases in base XML generator and parser."""
+    # 1. Generators: _add_optional_bool_element (with False and None)
+    gen = MockXMLGenerator()
+    parent = ET.Element("parent")
+    gen._add_optional_bool_element(parent, "my_bool_f", False)
+    assert parent.find("my_bool_f") is not None
+    assert parent.find("my_bool_f").text == "false"
+
+    gen._add_optional_bool_element(parent, "my_bool_n", None)
+    assert parent.find("my_bool_n") is None
+
+    # 2. Generators: _add_optional_numeric_element (with float, int, and None)
+    gen._add_optional_numeric_element(parent, "my_num_f", 12.345)
+    assert parent.find("my_num_f") is not None
+    assert parent.find("my_num_f").text == "12.345"
+
+    gen._add_optional_numeric_element(parent, "my_num_i", 42)
+    assert parent.find("my_num_i") is not None
+    assert parent.find("my_num_i").text == "42"
+
+    gen._add_optional_numeric_element(parent, "my_num_n", None)
+    assert parent.find("my_num_n") is None
+
+    # 3. Generators: _add_geometry_element with default scale (1, 1, 1) mesh
+    mesh = Mesh(resource="package://my_robot/meshes/part.stl", scale=Vector3(1, 1, 1))
+    parent_mesh = ET.Element("parent_mesh")
+    gen._add_geometry_element(mesh, parent_mesh)
+    mesh_elem = parent_mesh.find("geometry/mesh")
+    assert mesh_elem is not None
+    assert mesh_elem.get("scale") is None
+
+    # 4. Parsers: _parse_material_element returning None (line 286)
+    class MockParser(RobotXMLParser[Any]):
+        def parse(self, filepath: Path, **kwargs: Any) -> Any:
+            return None
+
+        def parse_string(self, content: str, **kwargs: Any) -> Any:
+            return None
+
+    parser = MockParser()
+    empty_mat = ET.Element("material")
+    assert parser._parse_material_element(empty_mat, {}) is None

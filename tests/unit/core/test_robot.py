@@ -258,6 +258,34 @@ class TestRobot:
         with pytest.raises(RobotModelError):
             robot.add_transmission(bad_trans)
 
+    def test_add_group_all_branches(self) -> None:
+        """Test add_group with various truthy/falsy arguments to cover all branches."""
+        from linkforge.core import Chain
+
+        robot = Robot(
+            name="test",
+            links=[Link(name="base"), Link(name="child")],
+            joints=[Joint(name="j1", parent="base", child="child", type=JointType.FIXED)],
+        )
+
+        # 1. Links only
+        robot.add_group(name="g_links", links=["base"])
+        # 2. Joints only
+        robot.add_group(name="g_joints", joints=["j1"])
+        # 3. Chains only
+        robot.add_group(name="g_chains", chains=[Chain(base_link="base", tip_link="child")])
+        # 4. base_link and tip_link only
+        robot.add_group(name="g_base_tip", base_link="base", tip_link="child")
+
+        assert len(robot.semantic.groups) == 4
+
+        # 5. Missing elements validation
+        with pytest.raises(RobotModelError):
+            robot.add_group(name="bad", links=["missing"])
+
+        with pytest.raises(RobotModelError):
+            robot.add_group(name="bad", joints=["missing"])
+
     def test_robot_properties(self) -> None:
         """Test robot properties like mass and DOF."""
         # Create a robot with 2 links and 1 joint
@@ -804,3 +832,144 @@ class TestRobot:
         global_elements = [ge for ge in robot.get_gazebo_elements() if ge.reference is None]
         assert len(global_elements) == 1
         assert global_elements[0] == ge3
+
+    def test_robot_normalization(self) -> None:
+        """Test robot normalized method sorts everything alphabetically."""
+        l2 = Link(name="l2")
+        l1 = Link(name="l1")
+        j2 = Joint(name="j2", parent="l1", child="l2", type=JointType.FIXED)
+        j1 = Joint(name="j1", parent="l1", child="l2", type=JointType.FIXED)
+        robot = Robot(name="test", links=[l2, l1], joints=[j2, j1])
+
+        # Verify it starts unsorted
+        assert robot.links[0].name == "l2"
+        assert robot.joints[0].name == "j2"
+
+        normalized = robot.normalized()
+        assert normalized.links[0].name == "l1"
+        assert normalized.links[1].name == "l2"
+        assert normalized.joints[0].name == "j1"
+        assert normalized.joints[1].name == "j2"
+
+    def test_robot_prefix_all_empty(self) -> None:
+        """Verify prefix_all returns early on empty prefix."""
+        robot = Robot(name="test", links=[Link(name="base")])
+        robot.prefix_all("")
+        assert robot.name == "test"
+
+    def test_robot_merge_link_not_found(self) -> None:
+        """Verify merge raises validation error if attachment link doesn't exist."""
+        robot = Robot(name="test", links=[Link(name="base")])
+        other = Robot(name="other", links=[Link(name="other_base")])
+        with pytest.raises(RobotValidationError) as exc:
+            robot.merge(other, at_link="non_existent", joint_name="j1")
+        assert exc.value.code == ValidationErrorCode.NOT_FOUND
+
+    def test_robot_link_and_joint_not_found_raises(self) -> None:
+        """Verify link and joint lookup throw errors if missing."""
+        robot = Robot(name="test", links=[Link(name="base")])
+        with pytest.raises(RobotValidationError) as exc:
+            robot.link("ghost")
+        assert exc.value.code == ValidationErrorCode.NOT_FOUND
+
+        with pytest.raises(RobotValidationError) as exc:
+            robot.joint("ghost")
+        assert exc.value.code == ValidationErrorCode.NOT_FOUND
+
+    def test_robot_update_ros2_control_new(self) -> None:
+        """Verify update_ros2_control adds control block if not already in index."""
+        robot = Robot(name="test")
+        rc = Ros2Control(name="ctrl", hardware_plugin="fake", type="system")
+        robot.update_ros2_control(rc)
+        assert robot.ros2_controls[0] == rc
+
+        # Test retrieve missing
+        with pytest.raises(RobotValidationError) as exc:
+            robot.ros2_control("missing_ctrl")
+        assert exc.value.code == ValidationErrorCode.NOT_FOUND
+
+    def test_robot_semantic_builders(self) -> None:
+        """Test semantic method chaining and builders."""
+        robot = Robot(name="test")
+        robot.add_link(Link(name="l1"))
+        robot.add_link(Link(name="l2"))
+        j1 = Joint(name="j1", parent="l1", child="l2", type=JointType.FIXED)
+        robot.add_joint(j1)
+
+        # 1. add_group
+        from linkforge.core import Chain
+
+        robot.add_group(
+            name="group1",
+            links=["l1", "l2"],
+            joints=["j1"],
+            chains=[Chain(base_link="l1", tip_link="l2")],
+            base_link="l1",
+            tip_link="l2",
+        )
+        assert len(robot.semantic.groups) == 1
+        assert robot.semantic.groups[0].name == "group1"
+
+        # 2. enable_collisions
+        robot.enable_collisions("l1", "l2", reason="adjacent")
+        assert len(robot.semantic.enabled_collisions) == 1
+        assert robot.semantic.enabled_collisions[0].reason == "adjacent"
+
+        # 3. disable_default_collisions
+        robot.disable_default_collisions("l1")
+        assert "l1" in robot.semantic.no_default_collision_links
+
+        # 4. add_joint_property
+        robot.add_joint_property("j1", "test_prop", "val")
+        assert len(robot.semantic.joint_properties) == 1
+        assert robot.semantic.joint_properties[0].property_name == "test_prop"
+
+        # 5. approximate_link_collision
+        from linkforge.core import SrdfSphere
+
+        robot.approximate_link_collision(
+            "l1", [SrdfSphere(center_x=0.0, center_y=0.0, center_z=0.0, radius=0.1)]
+        )
+        assert len(robot.semantic.link_sphere_approximations) == 1
+
+    def test_robot_summary_failures_and_additions(self) -> None:
+        """Test summary edge case failures and extra blocks."""
+        robot = Robot(name="test")
+        robot.add_link(Link(name="l1"))
+        robot.add_link(Link(name="l2"))
+        robot.add_joint(Joint(name="j1", parent="l1", child="l2", type=JointType.FIXED))
+        robot.add_ros2_control(Ros2Control(name="ctrl", hardware_plugin="fake", type="system"))
+        robot.add_gazebo_element(GazeboElement(material="Gazebo/Blue"))
+
+        # Verify extra details are in summary
+        s = robot.summary()
+        assert "ros2_control blocks" in s
+        assert "gazebo tags" in s
+
+        # Force summary exception by patching graph
+        with patch(
+            "linkforge.core.models.graph.KinematicGraph.get_root_links",
+            side_effect=ValueError("Graph fail"),
+        ):
+            summary = robot.summary()
+            assert "Status: INVALID" in summary
+            assert "Root: Unknown" in summary
+
+    def test_root_link_exists_in_graph_but_not_link_index(self) -> None:
+        """Verify validation error raises when root link is in graph but missing from index."""
+        robot = Robot(name="test")
+        robot.add_link(Link(name="base"))
+
+        # Patch get_link to return None for base, simulate missing from index
+        original_get_link = robot.get_link
+
+        def mock_get_link(name: str):
+            if name == "base":
+                return None
+            return original_get_link(name)
+
+        with patch.object(robot, "get_link", side_effect=mock_get_link):
+            with pytest.raises(RobotValidationError) as exc:
+                _ = robot.root_link
+            assert exc.value.code == ValidationErrorCode.NOT_FOUND
+            assert "exists in graph but not in link index" in str(exc.value)

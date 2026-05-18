@@ -173,9 +173,6 @@ class XACROGenerator(URDFGenerator):
                 if material.name in self.material_properties:
                     prop_name = self.material_properties[material.name]
                     ET.SubElement(mat_elem, "color", rgba=f"${{{prop_name}}}")
-                elif material.color:
-                    rgba = f"{format_float(material.color.r)} {format_float(material.color.g)} {format_float(material.color.b)} {format_float(material.color.a)}"
-                    ET.SubElement(mat_elem, "color", rgba=rgba)
                 if material.texture:
                     ET.SubElement(mat_elem, "texture", filename=material.texture)
         else:
@@ -220,12 +217,18 @@ class XACROGenerator(URDFGenerator):
                     joint = j
                     break
 
+            generated = False
             if joint:
                 # Find which group it belongs to
                 link_sig = self._get_macro_signature(link, joint)
                 if link_sig and link_sig in self.macro_groups:
                     # Generate Macro Call
                     self._generate_macro_call(parent, link_sig, link, joint)
+                    generated = True
+
+            if not generated:
+                # Fallback to standard Link Generation
+                self._add_link_element(parent, link)
         else:
             # Standard Link Generation
             self._add_link_element(parent, link)
@@ -659,7 +662,7 @@ class XACROGenerator(URDFGenerator):
 
     # Override _add_material_element to use properties
     def _add_material_element(self, parent: ET.Element, material: Material) -> None:
-        """Add material element, using property reference if available.
+        """Add material element.
 
         Args:
             parent: Parent XML element
@@ -667,16 +670,11 @@ class XACROGenerator(URDFGenerator):
         """
         mat_elem = ET.SubElement(parent, "material", name=material.name)
 
-        if self.extract_materials and material.name in self.material_properties:
-            prop_name = self.material_properties[material.name]
-            ET.SubElement(mat_elem, "color", rgba=f"${{{prop_name}}}")
-        else:
-            # Standard URDF behavior
-            if material.color:
-                rgba = f"{format_float(material.color.r)} {format_float(material.color.g)} {format_float(material.color.b)} {format_float(material.color.a)}"
-                ET.SubElement(mat_elem, "color", rgba=rgba)
-            if material.texture:
-                ET.SubElement(mat_elem, "texture", filename=material.texture)
+        if material.color:
+            rgba = f"{format_float(material.color.r)} {format_float(material.color.g)} {format_float(material.color.b)} {format_float(material.color.a)}"
+            ET.SubElement(mat_elem, "color", rgba=rgba)
+        if material.texture:
+            ET.SubElement(mat_elem, "texture", filename=material.texture)
 
     @singledispatchmethod
     def _add_geometry_element(

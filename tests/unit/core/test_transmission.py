@@ -288,10 +288,10 @@ class TestTransmission:
         joint = TransmissionJoint(name="joint1")
         actuator1 = TransmissionActuator(name="motor1")
         actuator2 = TransmissionActuator(name="motor1")  # Duplicate
-        with pytest.raises(RobotModelError):
+        with pytest.raises(RobotModelError, match="Duplicate actuators in transmission"):
             Transmission(
                 name="trans1",
-                type=TransmissionType.SIMPLE.value,
+                type="custom",
                 joints=[joint],
                 actuators=[actuator1, actuator2],
             )
@@ -334,6 +334,34 @@ class TestTransmission:
         assert pre.name == "t_t1"
         assert pre.joints[0].name == "t_j1"
         assert pre.actuators[0].name == "t_a1"
+
+    def test_normalized(self) -> None:
+        """Test normalization of transmission joints, actuators, and transmission."""
+        tj = TransmissionJoint(name="j1", hardware_interfaces=["velocity", "position"])
+        ta = TransmissionActuator(name="a1", hardware_interfaces=["velocity", "position"])
+
+        # Test individual normalization
+        assert tj.normalized().hardware_interfaces == ("position", "velocity")
+        assert ta.normalized().hardware_interfaces == ("position", "velocity")
+
+        # Test transmission normalization
+        tj2 = TransmissionJoint(name="j2", hardware_interfaces=["position"])
+        ta2 = TransmissionActuator(name="a2", hardware_interfaces=["position"])
+        trans = Transmission(
+            name="trans1",
+            type="custom",
+            joints=[tj2, tj],  # Unsorted by name
+            actuators=[ta2, ta],  # Unsorted by name
+        )
+
+        norm = trans.normalized()
+        assert norm.joints[0].name == "j1"
+        assert norm.joints[1].name == "j2"
+        assert norm.joints[0].hardware_interfaces == ("position", "velocity")
+
+        assert norm.actuators[0].name == "a1"
+        assert norm.actuators[1].name == "a2"
+        assert norm.actuators[0].hardware_interfaces == ("position", "velocity")
 
 
 class TestTransmissionType:

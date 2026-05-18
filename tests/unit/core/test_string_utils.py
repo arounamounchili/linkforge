@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 from linkforge.core import RobotModelError
-from linkforge.core._utils.string_utils import is_valid_name, sanitize_name
+from linkforge.core._utils.string_utils import (
+    format_scientific,
+    is_valid_name,
+    parse_scientific,
+    sanitize_name,
+)
 
 
 def test_sanitize_name_basic() -> None:
@@ -95,3 +100,13 @@ def test_is_valid_name_mixed_case() -> None:
     assert is_valid_name("BaseLink") is True
     assert is_valid_name("base_Link") is True
     assert is_valid_name("BASE_LINK") is True
+
+
+def test_scientific_notation() -> None:
+    """Test formatting and parsing of scientific notation."""
+    assert format_scientific(0.000123) == "1.23e-04"
+    assert format_scientific(12345.0) == "1.23e+04"
+
+    assert parse_scientific("1.23e-04", 0.0) == pytest.approx(0.000123)
+    assert parse_scientific("12345.0", 0.0) == pytest.approx(12345.0)
+    assert parse_scientific("invalid", 4.2) == 4.2

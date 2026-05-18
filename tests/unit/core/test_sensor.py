@@ -149,6 +149,16 @@ class TestLidarInfo:
         with pytest.raises(RobotModelError):
             LidarInfo(horizontal_min_angle=1.0, horizontal_max_angle=-1.0)
 
+    def test_invalid_range_resolution(self) -> None:
+        """Test invalid range resolution."""
+        with pytest.raises(RobotModelError):
+            LidarInfo(range_resolution=0.0)
+
+    def test_invalid_vertical_angle_range(self) -> None:
+        """Test invalid vertical angle range for 3D scans."""
+        with pytest.raises(RobotModelError):
+            LidarInfo(vertical_samples=2, vertical_min_angle=1.0, vertical_max_angle=-1.0)
+
 
 class TestIMUInfo:
     """Tests for IMUInfo model."""

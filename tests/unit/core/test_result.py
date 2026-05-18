@@ -77,3 +77,22 @@ class TestValidationResult:
         assert result.is_valid  # Warnings don't invalidate
         assert len(result.issues) == 1
         assert result.issues[0].is_warning
+
+    def test_counts_and_str(self) -> None:
+        """Test counts and string representation."""
+        result = ValidationResult(robot_name="my_robot")
+        assert result.error_count == 0
+        assert result.warning_count == 0
+        assert not result.has_warnings
+        assert str(result) == "Robot 'my_robot' is valid"
+
+        result.add_warning(title="Warning 1", message="warn message")
+        assert result.error_count == 0
+        assert result.warning_count == 1
+        assert result.has_warnings
+        assert str(result) == "Robot 'my_robot' is valid with 1 warning(s)"
+
+        result.add_error(title="Error 1", message="err message")
+        assert result.error_count == 1
+        assert result.warning_count == 1
+        assert str(result) == "Robot 'my_robot' has 1 error(s) and 1 warning(s)"

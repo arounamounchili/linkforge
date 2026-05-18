@@ -60,3 +60,32 @@ def test_semantic_check_end_effector_invalid():
         "End effector 'gripper' references non-existent group 'non_existent_group'" in str(issue)
         for issue in result.errors
     )
+
+
+def test_semantic_check_valid_elements():
+    builder = RobotBuilder("valid_robot")
+    builder.link("base").root()
+    builder.link("tip", parent="base", joint_name="j1")
+
+    # Access the semantic builder to add valid elements
+    semantic = builder.semantic
+    # Group with valid link and joint
+    semantic.group("hand", links=["tip"])
+    semantic.group("arm", links=["base", "tip"], joints=["j1"], subgroups=["hand"])
+
+    # Group state referencing valid group
+    semantic.group_state("home", group="arm", values={"j1": 0.5})
+
+    # End effector referencing valid group, parent link, and parent group
+    semantic.end_effector("gripper", group="hand", parent_link="tip", parent_group="arm")
+
+    # Passive joint referencing valid joint
+    semantic.passive_joint("j1")
+
+    robot = builder.build(validate=False)
+    check = SemanticCheck()
+    result = ValidationResult()
+    check.run(robot, result)
+
+    # Everything should be 100% valid!
+    assert not result.errors

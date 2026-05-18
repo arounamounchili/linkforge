@@ -68,6 +68,17 @@ class TestColor:
         assert color2.r == 1.0
         assert color2.a == 1.0
 
+    def test_predefined_colors(self) -> None:
+        """Test predefined color classmethods."""
+        white = Color.white()
+        assert white.to_tuple() == (1.0, 1.0, 1.0, 1.0)
+
+        black = Color.black()
+        assert black.to_tuple() == (0.0, 0.0, 0.0, 1.0)
+
+        grey = Color.grey()
+        assert grey.to_tuple() == (0.7, 0.7, 0.7, 1.0)
+
 
 class TestMaterial:
     """Tests for Material class."""

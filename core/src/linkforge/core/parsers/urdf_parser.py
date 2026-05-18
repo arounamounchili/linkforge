@@ -844,16 +844,6 @@ class URDFParser(RobotXMLParser[Robot]):
                 noise=self._parse_sensor_noise(ft_elem),
             )
 
-        # Safety Fallbacks: Ensure info objects are initialized for known types
-        if sensor_type in (SensorType.CAMERA, SensorType.DEPTH_CAMERA) and camera_info is None:
-            camera_info = CameraInfo()
-        elif sensor_type == SensorType.LIDAR and lidar_info is None:
-            lidar_info = LidarInfo()
-        elif sensor_type == SensorType.IMU and imu_info is None:
-            imu_info = IMUInfo()
-        elif sensor_type == SensorType.GPS and gps_info is None:
-            gps_info = GPSInfo()
-
         topic = sensor_elem.findtext("{*}topic") or f"/{sensor_name}"
         return Sensor(
             name=sensor_name,
@@ -1027,7 +1017,7 @@ class URDFParser(RobotXMLParser[Robot]):
                     raise RobotParserUnexpectedError(
                         source_area="XML nesting", original_error=depth
                     )
-            elif event == "end":
+            else:
                 if depth == 1:
                     tag = strip_xml_namespace(elem.tag)
 

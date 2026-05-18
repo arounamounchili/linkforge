@@ -171,3 +171,11 @@ class TestMeshTopologyValidation:
             vertices, triangles, level=2, sliver_threshold=20000
         )
         assert not any(w.code == ValidationErrorCode.MESH_SLIVER for w in warnings_clean)
+
+    def test_collinear_non_degenerate_triangle(self) -> None:
+        """Collinear vertices have zero area, which should bypass sliver check to avoid ZeroDivisionError."""
+        vertices = [(0, 0, 0), (1, 0, 0), (2, 0, 0)]
+        triangles = [(0, 1, 2)]
+        warnings = validate_mesh_topology(vertices, triangles, level=2)
+        # Should not raise any division by zero error, and should not mark it as sliver
+        assert not any(w.code == ValidationErrorCode.MESH_SLIVER for w in warnings)

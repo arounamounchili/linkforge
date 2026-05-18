@@ -686,3 +686,151 @@ class TestXacroInfrastructure:
         """
         resolved = resolver.resolve_string(xml)
         assert "val1_val2" in resolved
+
+    def test_include_no_namespace_string(self, resolver, tmp_path) -> None:
+        """Test xacro:include without a namespace via resolve_string."""
+        inc_file = tmp_path / "inc.xacro"
+        inc_file.write_text(
+            '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:macro name="m"><link name="no_ns_link"/></xacro:macro></robot>'
+        )
+        xml = f'''
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:include filename="{inc_file}"/>
+          <xacro:m/>
+        </robot>
+        '''
+        resolved_xml = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved_xml)
+        assert len(root.findall("link")) == 1
+        assert root.findall("link")[0].get("name") == "no_ns_link"
+
+    def test_macro_param_spacing_variations(self, resolver) -> None:
+        """Test macro parameter parsing with multiple consecutive spaces and trailing spaces."""
+        xml = """
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:macro name="m" params="a   b ">
+            <link name="${a}_${b}"/>
+          </xacro:macro>
+          <xacro:m a="1" b="2"/>
+        </robot>
+        """
+        resolved = resolver.resolve_string(xml)
+        assert "1_2" in resolved
+
+    def test_insert_block_not_xml(self, resolver) -> None:
+        """Test insert_block with a property that is a string instead of XML element/list."""
+        resolver.properties["non_xml"] = "hello"
+        xml = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:insert_block name="non_xml"/></robot>'
+        resolved = resolver.resolve_string(xml)
+        assert "hello" not in resolved
+
+    def test_macro_call_nested_namespaces_and_block_container(self, resolver) -> None:
+        """Test macro lookup with active namespace stack, and block parameter resolving to container."""
+        # Define m inside my_ns
+        resolver.macros["my_ns.m"] = (["*block"], ET.Element("group"))
+
+        # Test active namespace stack lookup for a macro called from inside the namespace
+        resolver._ns_stack = ["my_ns"]
+        elem = ET.Element("xacro:m")
+        # Add a child that is a conditional (resolves to container)
+        child = ET.Element("{http://www.ros.org/wiki/xacro}if", value="true")
+        child.append(ET.Element("link", name="l1"))
+        elem.append(child)
+        # Also add a child that resolves to skip
+        elem.append(ET.Element("{http://www.ros.org/wiki/xacro}property", name="p", value="v"))
+
+        res = resolver._handle_macro_call("xacro:m", elem)
+        assert res.tag == "container"
+        # Reset namespace stack
+        resolver._ns_stack = []
+
+    def test_evaluate_dot_namespaces_and_local_lookup(self, resolver) -> None:
+        """Test evaluating hierarchical namespace property assignment and local lookup inside namespace stack."""
+        resolver.properties["ns.a"] = 10
+        resolver.properties["ns.b"] = 20
+
+        # This will evaluate and build the nested SimpleNamespace context in ctx
+        assert resolver._evaluate("ns.a + ns.b") == 30
+
+        # Test local lookup when inside a namespace
+        resolver._ns_stack = ["my_ns"]
+        resolver.properties["my_ns.local_prop"] = "hello"
+        resolver.properties["my_ns.nested.prop"] = "world"  # has dot in short name, skipped
+        assert resolver._evaluate("local_prop") == "hello"
+        resolver._ns_stack = []
+
+    def test_arg_function_missing(self, resolver) -> None:
+        """Test arg() function in expression returning empty string for missing arguments."""
+        xml = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><link name="${arg(\'missing_arg\')}"/></robot>'
+        resolved = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved)
+        assert root.findall("link")[0].get("name") == ""
+
+    def test_load_yaml_no_pyyaml(self, resolver) -> None:
+        """Test load_yaml raises RobotXacroError if PyYAML is not installed."""
+        import unittest.mock as mock
+
+        with (
+            mock.patch("linkforge.core.parsers.xacro_parser.yaml", None),
+            pytest.raises(RobotXacroError, match="PyYAML is not installed"),
+        ):
+            resolver._handle_load_yaml("dummy.yaml")
+
+    def test_load_yaml_and_json_success(self, resolver, tmp_path) -> None:
+        """Test successful loading of YAML and JSON files inside XACRO context."""
+        yaml_file = tmp_path / "data.yaml"
+        yaml_file.write_text("val: 42")
+
+        json_file = tmp_path / "data.json"
+        json_file.write_text('{"val": 100}')
+
+        resolver.start_dir = tmp_path
+        xml = f"""
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:property name="y" value="${{xacro.load_yaml('{yaml_file}')}}"/>
+          <xacro:property name="j" value="${{xacro.load_json('{json_file}')}}"/>
+          <link name="${{y.val}}_${{j.val}}"/>
+        </robot>
+        """
+        resolved = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved)
+        assert root.findall("link")[0].get("name") == "42_100"
+
+    def test_finalize_xml_direct(self, resolver) -> None:
+        """Test direct _finalize_xml cleanup for skip and xacro elements."""
+        root = ET.Element("robot")
+        child1 = ET.Element("skip")
+        child2 = ET.Element("{http://www.ros.org/wiki/xacro}macro")
+        root.append(child1)
+        root.append(child2)
+        res = resolver._finalize_xml(root)
+        assert "<skip" not in res
+        assert "macro" not in res
+
+    def test_xacro_parser_resolve_with_none_val(self, tmp_path) -> None:
+        """Test resolving with a kwarg set to None, checking if it is ignored."""
+        robot_file = tmp_path / "robot.xacro"
+        robot_file.write_text('<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><link/></robot>')
+        parser = XACROParser()
+        xml = parser.resolve(robot_file, dummy=None)
+        assert "<link" in xml
+
+    def test_xacro_parser_import_yaml_missing(self) -> None:
+        """Test that importing xacro_parser when yaml is not installed sets yaml to None."""
+        import importlib
+        import sys
+        from unittest import mock
+
+        # Mock the import of yaml to raise ImportError
+        with mock.patch.dict(sys.modules, {"yaml": None}):
+            # Reload the module to trigger the try/except block
+            import linkforge.core.parsers.xacro_parser as xacro_parser
+
+            importlib.reload(xacro_parser)
+            assert xacro_parser.yaml is None
+
+        # Clean up and reload again to restore normal yaml module
+        import linkforge.core.parsers.xacro_parser as xacro_parser
+
+        importlib.reload(xacro_parser)
+        assert xacro_parser.yaml is not None

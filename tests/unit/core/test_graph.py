@@ -120,3 +120,33 @@ def test_graph_diamond_dag() -> None:
     # This hits the in_degree[child] != 0 branch in get_topological_link_names
     order = graph.get_topological_link_names()
     assert order == ["A", "B", "C", "D"]
+
+
+def test_graph_topological_joints_dag() -> None:
+    """Verify topological joints sorting with a diamond DAG, cyclic exceptions, and ghost joints."""
+    links = [Link(name="A"), Link(name="B"), Link(name="C"), Link(name="D")]
+    joints = [
+        Joint(name="j1", parent="A", child="B", type=JointType.FIXED),
+        Joint(name="j2", parent="A", child="C", type=JointType.FIXED),
+        Joint(name="j3", parent="B", child="D", type=JointType.FIXED),
+        Joint(name="j4", parent="C", child="D", type=JointType.FIXED),
+    ]
+    graph = KinematicGraph(links, joints)
+    top_joints = graph.get_topological_joints()
+    assert len(top_joints) == 4
+
+    # Test the cycle raises in get_topological_joints
+    cyclic_links = [Link(name="A"), Link(name="B")]
+    cyclic_joints = [
+        Joint(name="j1", parent="A", child="B", type=JointType.FIXED),
+        Joint(name="j2", parent="B", child="A", type=JointType.FIXED),
+    ]
+    cyclic_graph = KinematicGraph(cyclic_links, cyclic_joints)
+    with pytest.raises(RobotModelError, match="cycles"):
+        cyclic_graph.get_topological_joints()
+
+    # Test ghost joint (none return from registry)
+    graph.adj["A"].append(("B", "ghost_joint"))
+    top_joints_ghost = graph.get_topological_joints()
+    # The length of returned joints is still 4 because ghost_joint is filtered out by `if joint:`
+    assert len(top_joints_ghost) == 4

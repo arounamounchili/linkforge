@@ -643,3 +643,14 @@ class TestRobotBuilder:
         dc2 = b1.robot.semantic.disabled_collisions[1]
         assert dc2.link1 == "base"
         assert dc2.link2 == "p1_root"
+
+    def test_attach_zero_axis_error(self) -> None:
+        """Test that RobotBuilder.attach catches zero-magnitude axis."""
+        b1 = RobotBuilder("main")
+        b1.link("base").root()
+
+        b2 = RobotBuilder("sub")
+        b2.link("sub_base").root()
+
+        with pytest.raises(RobotValidationError, match="Joint axis magnitude is too small"):
+            b1.attach(b2, at_link="base", axis=(0, 0, 0))

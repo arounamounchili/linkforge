@@ -350,7 +350,7 @@ class MimicChainCheck(ValidationCheck):
             visited: set[str] = {joint.name}
             current: str | None = joint.mimic.joint
 
-            while current:
+            while True:
                 if current not in joint_names:
                     result.add_error(
                         title="Invalid mimic target",

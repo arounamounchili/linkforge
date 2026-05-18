@@ -1629,3 +1629,89 @@ class TestURDFGenerator:
             xml = gen.generate(robot, validate=False)
             assert '<sensor name="s" type="force_torque">' in xml
             assert "<force_torque>" not in xml
+
+    def test_urdf_generator_coverage_edge_cases(self) -> None:
+        """Verify remaining edge cases in URDFGenerator for 100% coverage."""
+        # 1. GazeboElement with reference=None, material, and custom properties
+        robot = Robot(name="gz_edge_cases")
+        link = Link(name="base")
+        robot.add_link(link)
+        robot.add_link(Link(name="child"))
+
+        gz = GazeboElement(reference=None, material="Gazebo/Blue")
+        gz.properties["custom_prop"] = "custom_val"
+        robot.add_gazebo_element(gz)
+
+        # 2. Joint with partial safety controller (some fields None)
+        safety = JointSafetyController(
+            soft_lower_limit=None,
+            soft_upper_limit=None,
+            k_position=None,
+            k_velocity=5.0,
+        )
+        joint_safety = Joint(
+            name="j_safety",
+            type=JointType.REVOLUTE,
+            parent="base",
+            child="child",
+            axis=Vector3(1.0, 0.0, 0.0),
+            limits=JointLimits(lower=-1.57, upper=1.57, effort=10, velocity=5),
+            safety_controller=safety,
+        )
+        robot.add_joint(joint_safety)
+
+        # 3. Transmission / Joint with custom hardware interface to trigger fallback in _normalize_interface_name
+        trans = Transmission(
+            name="custom_trans",
+            type="transmission_interface/SimpleTransmission",
+            joints=[
+                TransmissionJoint(
+                    name="j_safety",
+                    hardware_interfaces=["CustomHardwareInterface"],
+                )
+            ],
+            actuators=[TransmissionActuator(name="actuator1")],
+        )
+        robot.add_transmission(trans)
+
+        gen = URDFGenerator(pretty_print=False)
+        # Call generate with unused kwargs to cover line 125
+        xml = gen.generate(robot, validate=False, unused_opt=True)
+
+        # Direct call to _add_gazebo_element to cover lines 796, 802, 817-818 of _add_gazebo_element
+        root_temp = ET.Element("robot")
+        gz_full = GazeboElement(reference="base", material="Gazebo/Blue")
+        gz_full.properties["custom_prop"] = "custom_val"
+        gen._add_gazebo_element(root_temp, gz_full)
+
+        # Assertions on direct call
+        gz_direct = root_temp.find("gazebo")
+        assert gz_direct is not None
+        assert gz_direct.get("reference") == "base"
+        assert gz_direct.find("material").text == "Gazebo/Blue"
+        assert gz_direct.find("custom_prop").text == "custom_val"
+
+        # Assertions on generate() output
+        root = ET.fromstring(xml)
+
+        # Check GazeboElement with reference=None (should have no reference attribute)
+        gz_elem = next(g for g in root.findall("gazebo") if g.find("material") is not None)
+        assert gz_elem is not None
+        assert gz_elem.get("reference") is None
+        assert gz_elem.find("material").text == "Gazebo/Blue"
+        assert gz_elem.find("custom_prop").text == "custom_val"
+
+        # Check safety_controller with None values (they should be omitted)
+        safety_elem = root.find(".//safety_controller")
+        assert safety_elem is not None
+        assert safety_elem.get("soft_lower_limit") is None
+        assert safety_elem.get("soft_upper_limit") is None
+        assert safety_elem.get("k_position") is None
+        assert safety_elem.get("k_velocity") == "5"
+
+        # Check customized hardware interface normalized to position (fallback)
+        trans_elem = root.find("transmission")
+        assert trans_elem is not None
+        hw_iface = trans_elem.find("joint/hardwareInterface")
+        assert hw_iface is not None
+        assert hw_iface.text == "position"

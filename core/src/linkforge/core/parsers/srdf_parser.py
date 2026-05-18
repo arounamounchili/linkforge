@@ -289,7 +289,7 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
                     raise RobotParserUnexpectedError(
                         source_area="XML nesting", original_error=depth
                     )
-            elif event == "end":
+            else:
                 if depth == 1:
                     tag = strip_xml_namespace(elem.tag)
 

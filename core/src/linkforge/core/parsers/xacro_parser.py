@@ -18,7 +18,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from .._utils.dependencies import get_yaml
 from .._utils.dict_utils import AttrDict
 from .._utils.path_utils import resolve_package_path
 from .._utils.xml_utils import (
@@ -38,7 +37,12 @@ from ..exceptions import (
 )
 from ..logging_config import get_logger
 
-yaml = get_yaml()
+try:
+    import yaml as _yaml_module
+
+    yaml: Any = _yaml_module
+except ImportError:
+    yaml = None
 
 logger = get_logger(__name__)
 DEFAULT_MAX_DEPTH = 2000  # Increased for extremely complex industrial robots
