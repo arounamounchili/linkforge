@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any, TypeVar, overload
 
-T = TypeVar("T", bound="dict[str, Any] | list[Any]")
+K = TypeVar("K")
+V = TypeVar("V")
+T = TypeVar("T")
 
 
 class AttrDict(dict[str, Any]):
@@ -81,17 +83,17 @@ class AttrDict(dict[str, Any]):
 
 
 @overload
-def filter_items_by_name(items: dict[str, Any], search_term: str | None) -> dict[str, Any]: ...
+def filter_items_by_name(items: dict[K, V], search_term: str | None) -> dict[K, V]: ...
 
 
 @overload
-def filter_items_by_name(items: list[Any], search_term: str | None) -> list[Any]: ...
+def filter_items_by_name(items: list[T], search_term: str | None) -> list[T]: ...
 
 
 def filter_items_by_name(
-    items: dict[str, Any] | list[Any],
+    items: dict[Any, Any] | list[Any],
     search_term: str | None,
-) -> dict[str, Any] | list[Any]:
+) -> dict[Any, Any] | list[Any]:
     """Filter items by non case-sensitive substring matching on their names.
 
     For dictionaries: filters by keys (dictionary keys treated as names).

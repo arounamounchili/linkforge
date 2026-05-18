@@ -18,6 +18,7 @@ class IComposer(Protocol):
 
     robot: Robot
     _active_link_builders: list[LinkBuilder]
+    _parent_stack: list[str]
 
     def link(
         self, name: str, parent: str | None = None, joint_name: str | None = None

@@ -11,6 +11,7 @@ Core Components:
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 from .._utils.math_utils import normalize_vector
@@ -56,6 +57,7 @@ class RobotBuilder:
             raise RobotModelError(msg)
 
         self._active_link_builders: list[LinkBuilder] = []
+        self._parent_stack: list[str] = []
 
     def link(
         self, name: str, parent: str | None = None, joint_name: str | None = None
@@ -70,6 +72,8 @@ class RobotBuilder:
         Returns:
             A LinkBuilder instance for fluent construction.
         """
+        if parent is None and self._parent_stack:
+            parent = self._parent_stack[-1]
         return LinkBuilder(self, name, parent=parent, joint_name=joint_name)
 
     def attach(
@@ -193,6 +197,21 @@ class RobotBuilder:
             >>> builder.semantic.group("arm", links=["link1", "link2"])
         """
         return SemanticBuilder(self)
+
+    def clone(self) -> RobotBuilder:
+        """Create a deep copy of the builder and its robot state.
+
+        Returns:
+            A new independent RobotBuilder instance with cloned state.
+        """
+        # Commit any in-progress link builders first to ensure the robot representation is complete
+        for lb in list(self._active_link_builders):
+            lb._commit()
+        self._active_link_builders.clear()
+
+        cloned_robot = copy.deepcopy(self.robot)
+        builder = RobotBuilder(robot=cloned_robot)
+        return builder
 
     def build(self, validate: bool = True) -> Robot:
         """Finalize the assembly and return the completed Robot model.

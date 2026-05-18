@@ -654,3 +654,94 @@ class TestRobotBuilder:
 
         with pytest.raises(RobotValidationError, match="Joint axis magnitude is too small"):
             b1.attach(b2, at_link="base", axis=(0, 0, 0))
+
+    def test_context_manager_hierarchical_nesting(self) -> None:
+        """Test that deeply nested context managers automatically assign parent links."""
+        builder = RobotBuilder("test_robot")
+
+        with builder.link("base_link").visual(box(0.5, 0.5, 0.1)).mass(10.0):  # noqa: SIM117
+            with (
+                builder.link("shoulder_link")
+                .visual(cylinder(0.05, 0.3))
+                .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57))
+            ):
+                builder.link("elbow_link").visual(cylinder(0.05, 0.3)).revolute(
+                    axis=(0, 1, 0), limits=(-1.57, 1.57)
+                )
+
+        robot = builder.build()
+
+        # Validate that links were created
+        assert robot.has_link("base_link")
+        assert robot.has_link("shoulder_link")
+        assert robot.has_link("elbow_link")
+
+        # Validate correct parent assignments
+        shoulder_joint = robot.joint("base_link_to_shoulder_link")
+        assert shoulder_joint.parent == "base_link"
+        assert shoulder_joint.child == "shoulder_link"
+
+        elbow_joint = robot.joint("shoulder_link_to_elbow_link")
+        assert elbow_joint.parent == "shoulder_link"
+        assert elbow_joint.child == "elbow_link"
+
+    def test_context_manager_mixed_explicit_and_implicit(self) -> None:
+        """Test mixing explicit parent args with context manager stack."""
+        builder = RobotBuilder("test_robot")
+
+        with builder.link("base_link"):
+            # This link implicitly attaches to base_link
+            builder.link("finger_1")
+            # This link explicitly overrides parent to base_link anyway
+            builder.link("finger_2", parent="base_link")
+
+        robot = builder.build()
+        assert robot.joint("base_link_to_finger_1").parent == "base_link"
+        assert robot.joint("base_link_to_finger_2").parent == "base_link"
+
+    def test_context_manager_exception_safety(self) -> None:
+        """Test that exceptions inside context pop the stack and clean up correctly."""
+        builder = RobotBuilder("test_robot")
+
+        try:
+            with builder.link("base_link"):
+                raise ValueError("Something went wrong")
+        except ValueError:
+            pass
+
+        # Parent stack should be empty despite exception
+        assert not builder._parent_stack
+        # The base_link was NOT committed because of the exception
+        assert "base_link" not in builder.robot.links
+
+    def test_robot_builder_clone(self) -> None:
+        """Test deep cloning of RobotBuilder state."""
+        builder = RobotBuilder("base_robot")
+        builder.material("steel", color=(0.5, 0.5, 0.5, 1.0))
+        builder.link("base_link").visual(box(1, 1, 1), material="steel").mass(5.0)
+
+        # Clone the builder
+        cloned_builder = builder.clone()
+
+        # Add features to original builder
+        builder.link("arm_link", parent="base_link").mass(1.0)
+
+        # Add features to cloned builder
+        cloned_builder.link("leg_link", parent="base_link").mass(2.0)
+
+        original_robot = builder.build()
+        cloned_robot = cloned_builder.build()
+
+        # Original should have arm_link, but NOT leg_link
+        assert original_robot.has_link("arm_link")
+        assert not original_robot.has_link("leg_link")
+
+        # Cloned should have leg_link, but NOT arm_link
+        assert cloned_robot.has_link("leg_link")
+        assert not cloned_robot.has_link("arm_link")
+
+        # Both should retain the original steel material and base_link
+        assert original_robot.has_link("base_link")
+        assert cloned_robot.has_link("base_link")
+        assert "steel" in original_robot.materials
+        assert "steel" in cloned_robot.materials
