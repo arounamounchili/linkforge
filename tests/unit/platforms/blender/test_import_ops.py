@@ -273,8 +273,19 @@ class TestImportRobotModelOperator:
             assert res == {"FINISHED"}
             op.report.assert_any_call({"WARNING"}, "Validation Error: Low mass detected")
 
-    def test_registration(self) -> None:
+    def test_import_ops_invalid_context(self) -> None:
+        """Verify import operator handles invalid context gracefully."""
+        op = LINKFORGE_OT_import_robot_model()
+
+        class MockContextNoScene:
+            scene = None
+
+        assert op.execute(MockContextNoScene()) == {"CANCELLED"}
+
+    def test_registration(self, mocker) -> None:
         """Test register and unregister functions for import operator."""
+        import linkforge.blender.operators.import_ops as import_ops
+
         with (
             patch("bpy.utils.register_class") as mock_reg,
             patch("bpy.utils.unregister_class") as mock_unreg,
@@ -284,3 +295,103 @@ class TestImportRobotModelOperator:
 
             import_unregister()
             assert mock_unreg.called
+
+        # Test register double-registration with ValueError fallback
+        mock_reg_err = mocker.patch(
+            "bpy.utils.register_class", side_effect=[ValueError("Already registered"), None]
+        )
+        mock_unreg_err = mocker.patch("bpy.utils.unregister_class")
+        import_ops.register()
+        assert mock_reg_err.call_count > 0
+        assert mock_unreg_err.call_count > 0
+
+        # Run __main__ entrypoint
+        import runpy
+
+        with patch.object(import_ops, "__name__", "__main__"):
+            runpy.run_module("linkforge.blender.operators.import_ops")
+
+    @patch("linkforge.core.URDFParser")
+    def test_execute_directory_single_valid_file(
+        self, mock_parser, tmp_path, scene, blender_context
+    ) -> None:
+        """Test directory selection auto-detects single robot file when it is the only valid one."""
+        dir_path = tmp_path / "single_file_dir"
+        dir_path.mkdir()
+        urdf_file = dir_path / "my_custom_name.urdf"
+        urdf_file.write_text("<robot name='single_robot'/>")
+
+        mock_robot = MagicMock()
+        mock_robot.name = "single_robot"
+        mock_robot.links = ["base_link"]
+        mock_robot.joints = []
+        mock_parser.return_value.parse.return_value = mock_robot
+
+        mock_val_res = MagicMock()
+        mock_val_res.is_valid = True
+        mock_val_res.has_warnings = False
+
+        op = LINKFORGE_OT_import_robot_model()
+        op.filepath = str(dir_path)
+        op.report = MagicMock()
+
+        with (
+            patch("linkforge.core.RobotValidator.validate", return_value=mock_val_res),
+            patch("linkforge.blender.preferences.get_addon_prefs", return_value=None),
+            patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
+        ):
+            res = op.execute(bpy.context)
+            assert res == {"FINISHED"}
+            op.report.assert_any_call(
+                {"INFO"}, "Auto-detected single robot file: my_custom_name.urdf"
+            )
+
+    @patch("linkforge.core.URDFParser")
+    def test_execute_unexpected_exception(
+        self, mock_parser, tmp_path, scene, blender_context
+    ) -> None:
+        """Verify import operator traps unexpected non-LinkForge exceptions during parsing."""
+        filepath = tmp_path / "robot.urdf"
+        filepath.write_text("<xml/>")
+
+        mock_parser.return_value.parse.side_effect = Exception("General OS read error")
+
+        op = LINKFORGE_OT_import_robot_model()
+        op.filepath = str(filepath)
+        op.report = MagicMock()
+
+        res = op.execute(bpy.context)
+        assert res == {"CANCELLED"}
+        op.report.assert_any_call({"ERROR"}, "Unexpected internal error: General OS read error")
+
+    @patch("linkforge.core.URDFParser")
+    def test_execute_validation_warnings_only(
+        self, mock_parser, tmp_path, scene, blender_context
+    ) -> None:
+        """Test reporting of validation warnings when robot is valid but has warnings."""
+        filepath = tmp_path / "warn_only.urdf"
+        filepath.write_text("<robot name='warn_only_robot'/>")
+
+        mock_robot = MagicMock()
+        mock_robot.name = "warn_only_robot"
+        mock_robot.links = ["base_link"]
+        mock_robot.joints = []
+        mock_parser.return_value.parse.return_value = mock_robot
+
+        mock_val_res = MagicMock()
+        mock_val_res.is_valid = True
+        mock_val_res.has_warnings = True
+        mock_val_res.warning_count = 3
+
+        op = LINKFORGE_OT_import_robot_model()
+        op.filepath = str(filepath)
+        op.report = MagicMock()
+
+        with (
+            patch("linkforge.core.RobotValidator.validate", return_value=mock_val_res),
+            patch("linkforge.blender.preferences.get_addon_prefs", return_value=None),
+            patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
+        ):
+            res = op.execute(bpy.context)
+            assert res == {"FINISHED"}
+            op.report.assert_any_call({"INFO"}, "Imported robot 'warn_only_robot' with 3 warnings.")

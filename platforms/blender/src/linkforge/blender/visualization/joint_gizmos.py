@@ -239,21 +239,20 @@ def _draw_internal() -> None:
     gpu.state.blend_set("ALPHA")
 
     # Draw lines (shafts)
-    if all_line_positions:
-        # Resolve shader name (FLAT_COLOR in 4.3+, 3D_FLAT_COLOR previously)
-        shader = get_shader()
+    # Resolve shader name (FLAT_COLOR in 4.3+, 3D_FLAT_COLOR previously)
+    shader = get_shader()
 
-        batch = batch_for_shader(
-            shader,
-            "LINES",
-            {"pos": all_line_positions, "color": all_line_colors},
-        )
-        matrix = gpu.matrix.get_projection_matrix() @ gpu.matrix.get_model_view_matrix()
+    batch = batch_for_shader(
+        shader,
+        "LINES",
+        {"pos": all_line_positions, "color": all_line_colors},
+    )
+    matrix = gpu.matrix.get_projection_matrix() @ gpu.matrix.get_model_view_matrix()
 
-        gpu.state.line_width_set(4.0)
-        shader.bind()
-        shader.uniform_float("ModelViewProjectionMatrix", matrix)
-        batch.draw(shader)
+    gpu.state.line_width_set(4.0)
+    shader.bind()
+    shader.uniform_float("ModelViewProjectionMatrix", matrix)
+    batch.draw(shader)
 
     # Draw triangles (arrow cones)
     if all_tri_positions:

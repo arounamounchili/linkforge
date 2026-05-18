@@ -918,3 +918,203 @@ class TestGlobalPanels:
 
         op_clear = LINKFORGE_OT_clear_component_search()
         assert op_clear.execute(MockContextSceneNone()) == {"CANCELLED"}
+
+
+class TestPanelsExtra:
+    @pytest.fixture(autouse=True)
+    def setup_cleanup(self, scene):
+        from tests.blender_test_utils import cleanup_blender_scene
+
+        cleanup_blender_scene(scene)
+        yield
+        cleanup_blender_scene(scene)
+
+    def test_export_panel_browser_no_select_box(self, scene, mock_layout) -> None:
+        """Test component browser exits early if box creation fails."""
+        from linkforge.blender.panels.export_panel import LINKFORGE_PT_export_panel
+
+        create_robot_link("base_link", scene)
+        panel = LINKFORGE_PT_export_panel()
+        mock_layout.box.return_value = None
+        panel.layout = mock_layout
+        assert panel.draw(bpy.context) is None
+
+    def test_export_panel_browser_falsy_search(self, scene, mock_layout) -> None:
+        """Test component browser with blank/falsy search term."""
+        from linkforge.blender.panels.export_panel import LINKFORGE_PT_export_panel
+
+        base = create_robot_link("base_link", scene)
+        child = create_robot_link("child_link", scene)
+        create_robot_joint("test_joint", base, child, scene)
+
+        sensor = create_test_object("test_sensor", None, scene)
+        sp = safe_get_sensor(sensor)
+        sp.is_robot_sensor = True
+        sensor.parent = base
+
+        props = getattr(scene, PROP_ROBOT)
+        props.show_kinematic_tree = True
+        props.component_browser_search = ""
+
+        panel = LINKFORGE_PT_export_panel()
+        panel.layout = mock_layout
+        panel.draw(bpy.context)
+
+        mock_layout.label.assert_any_call(text="Links (2):", icon="MESH_CUBE")
+        mock_layout.label.assert_any_call(text="Joints (1):", icon="EMPTY_AXIS")
+        mock_layout.label.assert_any_call(text="Sensors (1):", icon="TRACKER")
+
+    def test_joint_panel_missing_branches(self, scene, mock_layout) -> None:
+        """Test joint panel layout/scene is None and draw callbacks."""
+        from linkforge.blender.panels.joint_panel import LINKFORGE_PT_joints
+
+        panel = LINKFORGE_PT_joints()
+        panel.layout = None
+        assert panel.draw(bpy.context) is None
+
+        class MockContextSceneNone:
+            scene = None
+            active_object = None
+
+        panel.layout = mock_layout
+        assert panel.draw(MockContextSceneNone()) is None
+
+        base = create_robot_link("base", scene)
+        child = create_robot_link("child", scene)
+        joint_obj = create_robot_joint("j1", base, child, scene)
+
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = joint_obj
+        joint_obj.select_set(True)
+
+        jp = safe_get_joint(joint_obj)
+        jp.joint_type = "PRISMATIC"
+        jp.axis = "X"
+        jp.use_dynamics = False
+        jp.use_mimic = False
+        jp.use_safety_controller = False
+        jp.use_calibration = False
+
+        panel.draw(bpy.context)
+        mock_layout.prop.assert_any_call(jp, "joint_type")
+
+    def test_sensor_panel_missing_branches(self, scene, mock_layout) -> None:
+        """Test sensor panel layout/scene is None and sensor configurations."""
+        from linkforge.blender.panels.sensor_panel import LINKFORGE_PT_perceive
+
+        panel = LINKFORGE_PT_perceive()
+        panel.layout = None
+        assert panel.draw(bpy.context) is None
+
+        class MockContextSceneNone:
+            scene = None
+            active_object = None
+
+        panel.layout = mock_layout
+        assert panel.draw(MockContextSceneNone()) is None
+
+        base = create_robot_link("base", scene)
+        sensor_obj = create_test_object("sensor1", None, scene)
+        sp = safe_get_sensor(sensor_obj)
+        sp.is_robot_sensor = True
+        sp.sensor_type = "LIDAR"
+        sp.use_noise = False
+        sp.use_gazebo_plugin = False
+        sensor_obj.parent = base
+
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = sensor_obj
+        sensor_obj.select_set(True)
+
+        panel.draw(bpy.context)
+        mock_layout.prop.assert_any_call(sp, "sensor_type")
+
+    def test_link_panel_layout_none(self) -> None:
+        """Verify link panel exits early if layout is missing."""
+        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
+
+        panel = LINKFORGE_PT_links()
+        panel.layout = None
+        assert panel.draw(bpy.context) is None
+
+    def test_link_panel_mesh_simplification_slider(self, scene, mock_layout) -> None:
+        """Verify link panel collision quality simplification slider checks."""
+        from unittest.mock import patch
+
+        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
+
+        link_obj = create_robot_link("base_link", scene, with_visual=True, with_collision=True)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = link_obj
+        link_obj.select_set(True)
+
+        from tests.blender_test_utils import safe_get_linkforge
+
+        props = safe_get_linkforge(link_obj)
+        props.collision_type = "auto"
+
+        stats = MagicMock()
+        collision_mesh_obj = MagicMock()
+        collision_mesh_obj.get.return_value = False
+        stats.geometry_stats = {"base_link": (collision_mesh_obj, "mesh", False)}
+
+        panel = LINKFORGE_PT_links()
+        panel.layout = mock_layout
+
+        with patch("linkforge.blender.panels.link_panel.get_robot_statistics", return_value=stats):
+            panel.draw(bpy.context)
+            mock_layout.prop.assert_any_call(
+                props, "collision_quality", text="Collision Quality", slider=True
+            )
+
+    def test_link_panel_material_node_tree(self, scene, mock_layout) -> None:
+        """Verify link panel material slot template and BSDF node checks."""
+        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
+
+        link_obj = create_robot_link("base_link", scene, with_cube=True)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = link_obj
+        link_obj.select_set(True)
+
+        from tests.blender_test_utils import safe_get_linkforge
+
+        props = safe_get_linkforge(link_obj)
+        props.use_material = True
+
+        panel = LINKFORGE_PT_links()
+        panel.layout = mock_layout
+
+        visual_obj = next(c for c in link_obj.children if "visual" in c.name)
+        mat = bpy.data.materials.new("TestMaterial")
+        mat.use_nodes = True
+        visual_obj.data.materials.append(mat)
+
+        node = MagicMock()
+        node.type = "BSDF_PRINCIPLED"
+        node.inputs = {"Base Color": MagicMock()}
+        mat.node_tree.nodes = [node]
+
+        panel.draw(bpy.context)
+        mock_layout.template_ID.assert_called()
+        mock_layout.prop.assert_any_call(node.inputs["Base Color"], "default_value", text="")
+
+    def test_link_panel_simulation_advanced(self, scene, mock_layout) -> None:
+        """Verify link panel simulation properties inputs."""
+        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
+
+        link_obj = create_robot_link("base_link", scene)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = link_obj
+        link_obj.select_set(True)
+
+        from tests.blender_test_utils import safe_get_linkforge
+
+        props = safe_get_linkforge(link_obj)
+        props.use_simulation_props = True
+
+        panel = LINKFORGE_PT_links()
+        panel.layout = mock_layout
+        panel.draw(bpy.context)
+
+        mock_layout.prop.assert_any_call(props, "self_collide")
+        mock_layout.prop.assert_any_call(props, "kp_ui", text="kp (Stiffness)")

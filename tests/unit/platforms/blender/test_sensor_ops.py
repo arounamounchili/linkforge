@@ -114,3 +114,12 @@ class TestSensorOperators:
         res = op().execute(bpy.context)
         assert res == {"FINISHED"}
         assert sensor_obj.name not in scene.objects
+
+    def test_sensor_ops_invalid_context(self) -> None:
+        """Verify sensor operator handles invalid context gracefully."""
+        op = LINKFORGE_OT_create_sensor()
+
+        class MockContextNoScene:
+            scene = None
+
+        assert op.execute(MockContextNoScene()) == {"CANCELLED"}

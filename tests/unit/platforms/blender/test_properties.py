@@ -1068,3 +1068,277 @@ class TestGlobalPropertiesAndCallbacks:
 
         update_transmission_hierarchy(tp, bpy.context)
         assert trans_obj.parent is None
+
+
+class TestPreferencesExtra:
+    def test_update_joint_axes_visibility(self) -> None:
+        """Verify update_joint_axes_visibility triggers visualization update."""
+        from linkforge.blender.preferences import update_joint_axes_visibility
+
+        with patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle") as mock_update:
+            update_joint_axes_visibility(None, bpy.context)
+            mock_update.assert_called_once_with(bpy.context)
+
+    def test_update_empty_sizes_area_redraw(self, scene) -> None:
+        """Verify that updating empty sizes triggers redraw loops on VIEW_3D areas."""
+
+        class MockArea:
+            type = "VIEW_3D"
+
+            def __init__(self):
+                self.redraw_called = False
+
+            def tag_redraw(self):
+                self.redraw_called = True
+
+        class MockAreaOther:
+            type = "PROPERTIES"
+
+            def __init__(self):
+                self.redraw_called = False
+
+            def tag_redraw(self):
+                self.redraw_called = True
+
+        class MockScreen:
+            def __init__(self, areas):
+                self.areas = areas
+
+        class MockWindow:
+            def __init__(self, screen):
+                self.screen = screen
+
+        class MockWindowManager:
+            def __init__(self, windows):
+                self.windows = windows
+
+        # Create mock scene and objects
+        class MockObject:
+            def __init__(self, name, obj_type, is_robot=True):
+                self.name = name
+                self.type = obj_type
+                self.empty_display_size = 0.0
+
+                # Mock custom properties for getters
+                if "joint" in name:
+                    self.linkforge_joint = MagicMock()
+                    self.linkforge_joint.is_robot_joint = is_robot
+                elif "sensor" in name:
+                    self.linkforge_sensor = MagicMock()
+                    self.linkforge_sensor.is_robot_sensor = is_robot
+                elif "link" in name:
+                    self.linkforge = MagicMock()
+                    self.linkforge.is_robot_link = is_robot
+
+        class MockScene:
+            def __init__(self):
+                self.objects = [
+                    # Matching
+                    MockObject("r_joint", "EMPTY"),
+                    MockObject("r_sensor", "EMPTY"),
+                    MockObject("r_link", "EMPTY"),
+                    # Non-matching (non-empties)
+                    MockObject("r_mesh", "MESH"),
+                    # Non-matching (not robot)
+                    MockObject("non_robot_joint", "EMPTY", is_robot=False),
+                    MockObject("non_robot_sensor", "EMPTY", is_robot=False),
+                    MockObject("non_robot_link", "EMPTY", is_robot=False),
+                ]
+
+        class MockContext:
+            preferences = MagicMock()
+
+            def __init__(self, wm, scene_val):
+                self.window_manager = wm
+                self.scene = scene_val
+
+        mock_area = MockArea()
+        mock_area_other = MockAreaOther()
+        screen1 = MockScreen([mock_area, mock_area_other])
+        win1 = MockWindow(screen1)
+
+        mock_wm = MockWindowManager([win1])
+        mock_scene = MockScene()
+        mock_ctx = MockContext(mock_wm, mock_scene)
+
+        class FakePrefs:
+            joint_empty_size = 0.1
+            sensor_empty_size = 0.2
+            link_empty_size = 0.3
+            show_inertia_gizmos = False
+
+        prefs = FakePrefs()
+
+        with patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle"):
+            update_joint_empty_size(prefs, mock_ctx)
+            assert mock_area.redraw_called
+            assert not mock_area_other.redraw_called
+            assert mock_scene.objects[0].empty_display_size == 0.1
+
+            mock_area.redraw_called = False
+            update_sensor_empty_size(prefs, mock_ctx)
+            assert mock_area.redraw_called
+            assert mock_scene.objects[1].empty_display_size == 0.2
+
+            mock_area.redraw_called = False
+            update_link_empty_size(prefs, mock_ctx)
+            assert mock_area.redraw_called
+            assert mock_scene.objects[2].empty_display_size == 0.3
+
+        # Test when context.scene is None
+        mock_ctx_no_scene = MockContext(mock_wm, None)
+        with patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle"):
+            update_joint_empty_size(prefs, mock_ctx_no_scene)
+            update_sensor_empty_size(prefs, mock_ctx_no_scene)
+            update_link_empty_size(prefs, mock_ctx_no_scene)
+
+        # Test when window_manager is None
+        mock_ctx_no_wm = MockContext(None, mock_scene)
+        with patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle"):
+            update_joint_empty_size(prefs, mock_ctx_no_wm)
+            update_sensor_empty_size(prefs, mock_ctx_no_wm)
+            update_link_empty_size(prefs, mock_ctx_no_wm)
+
+    def test_update_inertia_visibility_false(self) -> None:
+        """Verify update_inertia_visibility behaves correctly when show_inertia_gizmos is False."""
+        from linkforge.blender.preferences import update_inertia_visibility
+
+        class FakePrefs:
+            show_inertia_gizmos = False
+
+        with (
+            patch("linkforge.blender.visualization.inertia_gizmos.tag_redraw") as mock_redraw,
+            patch(
+                "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
+            ) as mock_handler,
+        ):
+            update_inertia_visibility(FakePrefs(), bpy.context)
+            mock_redraw.assert_called_once()
+            mock_handler.assert_not_called()
+
+    def test_get_addon_prefs_no_preferences(self) -> None:
+        """Verify get_addon_prefs returns None when context.preferences is None."""
+
+        class MockContextNoPrefs:
+            preferences = None
+
+        from linkforge.blender.preferences import get_addon_prefs
+
+        assert get_addon_prefs(MockContextNoPrefs()) is None
+
+    def test_preferences_draw_conditional(self) -> None:
+        """Test drawing preferences when show_joint_axes and show_inertia_gizmos are False."""
+        prefs = LinkForgePreferences()
+        prefs.show_joint_axes = False
+        prefs.show_inertia_gizmos = False
+
+        class MockLayout:
+            def __init__(self):
+                self.box_calls = 0
+                self.separator_calls = 0
+                self.prop_calls = []
+                self.label_calls = []
+
+            def box(self):
+                self.box_calls += 1
+                return self
+
+            def separator(self):
+                self.separator_calls += 1
+                return self
+
+            def row(self):
+                return self
+
+            def column(self, align=False):
+                return self
+
+            def prop(self, data, attr, text=None, slider=False):
+                self.prop_calls.append(attr)
+
+            def label(self, text, icon=None):
+                self.label_calls.append(text)
+
+        prefs.layout = MockLayout()
+        prefs.draw(bpy.context)
+
+        # Verify it drew all basic sections
+        assert prefs.layout.box_calls > 0
+        assert "additional_search_paths" in prefs.layout.prop_calls
+
+    def test_get_addon_id_extension_prefix(self) -> None:
+        """Verify get_addon_id handles Blender 4.2+ extension namespaces correctly."""
+        with patch(
+            "linkforge.blender.preferences.__package__", "bl_ext.user_default.linkforge.something"
+        ):
+            res = get_addon_id()
+            assert res == "bl_ext.user_default.linkforge"
+
+    def test_preferences_registration_errors(self) -> None:
+        """Verify registration unregisters first if ValueError is raised."""
+        call_count = 0
+
+        def mock_register(cls):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ValueError("Already registered")
+            return None
+
+        with (
+            patch("bpy.utils.register_class", side_effect=mock_register) as mock_reg,
+            patch("bpy.utils.unregister_class") as mock_unreg,
+        ):
+            prefs_register()
+            assert mock_reg.call_count == 2
+            assert mock_unreg.called
+
+    def test_preferences_main_entrypoint(self) -> None:
+        """Test running preferences.py as __main__."""
+        import runpy
+
+        with (
+            patch("bpy.utils.register_class") as mock_reg,
+            patch("bpy.utils.unregister_class") as mock_unreg,
+        ):
+            runpy.run_module("linkforge.blender.preferences", run_name="__main__")
+            assert mock_reg.called
+
+
+class TestSimulationProperties:
+    """Tests for advanced simulation physics properties."""
+
+    def test_scientific_proxies(self) -> None:
+        """Test scientific notation conversion logic."""
+
+        # Create a mock instance (dataclass-like behavior for testing logic)
+        class MockProps:
+            def __init__(self):
+                self.kp = 0.0
+                self.kd = 0.0
+
+        from typing import Any
+
+        mock: Any = MockProps()
+        from linkforge.blender.properties.link_props import (
+            get_kd_scientific,
+            get_kp_scientific,
+            set_kd_scientific,
+            set_kp_scientific,
+        )
+
+        # Test KP (Large value)
+        mock.kp = 1.0e12
+        assert get_kp_scientific(mock) == "1.00e+12"
+
+        set_kp_scientific(mock, "5.5e+09")
+        assert mock.kp == 5.5e9
+        assert get_kp_scientific(mock) == "5.50e+09"
+
+        # Test KD (Small value)
+        mock.kd = 0.01
+        assert get_kd_scientific(mock) == "1.00e-02"
+
+        set_kd_scientific(mock, "1.0")
+        assert mock.kd == 1.0
+        assert get_kd_scientific(mock) == "1.00e+00"

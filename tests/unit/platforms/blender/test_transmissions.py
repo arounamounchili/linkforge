@@ -151,6 +151,17 @@ class TestTransmissionOperations:
         assert res == {"FINISHED"}
         assert trans.name not in [o.name for o in blender_context.data.objects]
 
+    def test_transmission_ops_invalid_context(self) -> None:
+        """Verify transmission operators handle missing objects gracefully."""
+        from linkforge.blender.operators.transmission_ops import LINKFORGE_OT_create_transmission
+
+        op = LINKFORGE_OT_create_transmission()
+
+        class MockContextNoScene:
+            scene = None
+
+        assert op.execute(MockContextNoScene()) == {"CANCELLED"}
+
 
 # Transmission Hierarchy and Logic
 

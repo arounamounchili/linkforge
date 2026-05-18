@@ -196,6 +196,102 @@ class TestControlOperations:
         assert len(props.ros2_control_joints) == 0
         assert len(props.ros2_control_parameters) == 0
 
+    def test_control_ops_exception_handling(self, scene) -> None:
+        """Verify control ops handle invalid context or registration issues."""
+        op = LINKFORGE_OT_add_ros2_control_joint()
+        op.joint_name = "invalid_joint"
+
+        class MockContextNoScene:
+            scene = None
+
+        assert op.execute(MockContextNoScene()) == {"CANCELLED"}
+
+        # Test poll methods with no scene
+        from linkforge.blender.operators.control_ops import (
+            LINKFORGE_OT_add_ros2_control_parameter,
+            LINKFORGE_OT_move_ros2_control_joint,
+            LINKFORGE_OT_purge_ros2_control_data,
+            LINKFORGE_OT_remove_ros2_control_joint,
+            LINKFORGE_OT_remove_ros2_control_parameter,
+        )
+
+        assert not LINKFORGE_OT_remove_ros2_control_joint.poll(MockContextNoScene())
+        assert not LINKFORGE_OT_move_ros2_control_joint.poll(MockContextNoScene())
+        assert not LINKFORGE_OT_add_ros2_control_parameter.poll(MockContextNoScene())
+        assert not LINKFORGE_OT_remove_ros2_control_parameter.poll(MockContextNoScene())
+        assert not LINKFORGE_OT_purge_ros2_control_data.poll(MockContextNoScene())
+
+        # Test execute methods with no scene
+        assert LINKFORGE_OT_remove_ros2_control_joint().execute(MockContextNoScene()) == {
+            "CANCELLED"
+        }
+        assert LINKFORGE_OT_move_ros2_control_joint().execute(MockContextNoScene()) == {"CANCELLED"}
+        assert LINKFORGE_OT_add_ros2_control_parameter().execute(MockContextNoScene()) == {
+            "CANCELLED"
+        }
+        assert LINKFORGE_OT_remove_ros2_control_parameter().execute(MockContextNoScene()) == {
+            "CANCELLED"
+        }
+        assert LINKFORGE_OT_purge_ros2_control_data().execute(MockContextNoScene()) == {"CANCELLED"}
+
+    def test_control_ops_parameter_boundaries(self, scene, blender_context) -> None:
+        """Test parameter addition and removal boundary cases."""
+        props = safe_get_linkforge_scene(scene)
+        props.ros2_control_parameters.clear()
+        props.ros2_control_joints.clear()
+
+        # Add parameter with target "JOINT" but no active joints
+        op_add = LINKFORGE_OT_add_ros2_control_parameter()
+        op_add.target = "JOINT"
+        assert op_add.execute(bpy.context) == {"FINISHED"}
+
+        # Remove parameter from JOINT but no active joints
+        op_rem = LINKFORGE_OT_remove_ros2_control_parameter()
+        op_rem.target = "JOINT"
+        op_rem.index = 0
+        assert op_rem.execute(bpy.context) == {"FINISHED"}
+
+        # Add a joint
+        joint = props.ros2_control_joints.add()
+        joint.name = "j1"
+        from tests.mock_bpy_env import MockCollection, MockPropertyGroup
+
+        joint.parameters = MockCollection(prop_type=MockPropertyGroup)
+        props.ros2_control_active_joint_index = 0
+
+        # Remove parameter with target "JOINT" and negative index (should default to last item, but list is empty)
+        op_rem.index = -1
+        assert op_rem.execute(bpy.context) == {"FINISHED"}
+
+        # Add parameter globally, try to remove with index out of bounds
+        props.ros2_control_parameters.add().name = "g1"
+        op_rem.target = "GLOBAL"
+        op_rem.index = 10
+        assert op_rem.execute(bpy.context) == {"FINISHED"}
+
+    def test_control_ops_registration_and_main(self, mocker) -> None:
+        """Verify registration and unregistration loops including double-registration."""
+        import linkforge.blender.operators.control_ops as control_ops
+
+        # Test unregister
+        control_ops.unregister()
+
+        # Test register with ValueError fallback
+        mock_reg = mocker.patch(
+            "bpy.utils.register_class",
+            side_effect=[ValueError("Already registered"), None, None, None, None, None, None],
+        )
+        mock_unreg = mocker.patch("bpy.utils.unregister_class")
+        control_ops.register()
+        assert mock_reg.call_count > 0
+        assert mock_unreg.call_count > 0
+
+        # Run __main__ entrypoint
+        import runpy
+
+        with patch.object(control_ops, "__name__", "__main__"):
+            runpy.run_module("linkforge.blender.operators.control_ops")
+
 
 class TestSensorOperations:
     def test_create_sensor(self, scene, blender_context) -> None:

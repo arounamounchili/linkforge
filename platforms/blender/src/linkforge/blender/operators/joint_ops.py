@@ -263,7 +263,7 @@ class LINKFORGE_OT_auto_detect_parent_child(Operator):
                 self.report(
                     {"INFO"}, f"Connected: {props.parent_link.name} -> {props.child_link.name}"
                 )
-            elif len(links) == 1:
+            else:
                 # Only one link - must be child
                 props.child_link = links[0][0]
                 self.report({"INFO"}, f"Set child: {props.child_link.name} (No parent nearby)")

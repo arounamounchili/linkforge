@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import bmesh
 import bpy
@@ -19,6 +19,7 @@ from linkforge.blender.operators.link_ops import (
     LINKFORGE_OT_remove_link,
     LINKFORGE_OT_toggle_collision_visibility,
     calculate_inertia_for_link,
+    create_collision_for_link,
     execute_collision_preview_update,
     regenerate_collision_mesh,
     schedule_collision_preview_update,
@@ -29,6 +30,7 @@ from tests.blender_test_utils import (
     cleanup_blender_scene,
     create_mesh_object,
     create_robot_link,
+    create_test_object,
     safe_get_linkforge,
     safe_update,
 )
@@ -102,6 +104,15 @@ class TestLinkOperators:
         assert (empty_obj.location - (1, 2, 3)).length < 1e-5
         assert visual_obj.matrix_parent_inverse.is_identity
         assert visual_obj.location.length < 1e-5
+
+    def test_link_ops_invalid_context(self) -> None:
+        """Verify link operators handle invalid context gracefully."""
+        op = LINKFORGE_OT_add_empty_link()
+
+        class MockContextNoScene:
+            scene = None
+
+        assert op.execute(MockContextNoScene()) == {"CANCELLED"}
 
 
 class TestCollisionGeneration:
@@ -556,3 +567,157 @@ class TestRealtimePreviewsAndDebounce:
         res = execute_collision_preview_update()
         assert res is None
         assert link_ops._preview_pending_object is None
+
+
+class TestCollisionAlignment:
+    def test_collision_alignment_on_rotated_link(self, scene, blender_context) -> None:
+        """Verify that generating collision for a rotated link avoids offsets."""
+        link_obj = create_test_object("link_obj", None, scene=scene)
+        safe_get_linkforge(link_obj).is_robot_link = True
+        link_obj.rotation_euler = (1.5708, 0, 0)  # 90 deg X
+
+        # Add a Visual mesh
+        visual_obj = create_mesh_object("part_visual", scene=scene)
+        visual_obj.parent = link_obj
+        visual_obj.matrix_parent_inverse.identity()
+
+        # Generate Collision
+        collision_obj = create_collision_for_link(link_obj, "mesh", bpy.context)
+
+        assert collision_obj is not None
+        assert collision_obj.parent == link_obj
+        # Local transform should be near identity
+        assert collision_obj.location.length < 1e-5
+        assert collision_obj.rotation_euler.x < 1e-5
+
+
+class TestCollisionQuality:
+    def test_collision_modifier_persistence(self, scene, blender_context) -> None:
+        """Verify that generating mesh collision preserves Decimate modifier."""
+        link_obj = create_mesh_object("link_obj", scene=scene)
+        safe_get_linkforge(link_obj).is_robot_link = True
+
+        safe_get_linkforge(link_obj).collision_quality = 50.0
+        create_collision_for_link(link_obj, "mesh", bpy.context)
+
+        collision_obj = next(c for c in link_obj.children if "_collision" in c.name)
+        from typing import cast
+
+        from bpy.types import DecimateModifier
+
+        decimate_mod = cast(
+            DecimateModifier, next(m for m in collision_obj.modifiers if m.type == "DECIMATE")
+        )
+        assert decimate_mod.ratio == 0.5
+
+
+class TestCollisionScaling:
+    def test_box_collision_scaling(self, scene, blender_context) -> None:
+        """Verify that a scaled cube results in a matching collision primitive."""
+        link_obj = create_mesh_object("scaled_link", scene=scene, with_cube=True)
+        link_obj.scale = (2.0, 1.5, 0.5)
+        safe_update(scene)
+
+        safe_get_linkforge(link_obj).is_robot_link = True
+
+        collision_obj = create_collision_for_link(link_obj, "box", bpy.context)
+        assert collision_obj is not None
+        # Dimensions should be 4x3x1
+        assert abs(collision_obj.dimensions.x - 4.0) < 1e-5
+        assert abs(collision_obj.dimensions.y - 3.0) < 1e-5
+        assert abs(collision_obj.dimensions.z - 1.0) < 1e-5
+
+
+class TestLinkOperationsLegacy:
+    def test_create_link_object(self, scene, blender_context) -> None:
+        """Test creating a link object (empty) in Blender."""
+        link_obj = create_robot_link("test_link", scene)
+        assert link_obj.name.startswith("test_link")
+        assert link_obj.type == "EMPTY"
+        assert safe_get_linkforge(link_obj).is_robot_link
+
+    def test_create_collision_no_geometry(self, scene, blender_context) -> None:
+        """Test robustness when creating collision for link with no geometry."""
+        link_obj = create_robot_link("empty_link", scene)
+
+        # No children, no geometry
+        col_obj = create_collision_for_link(link_obj, "box", bpy.context)
+        assert link_obj.type == "EMPTY"
+        assert safe_get_linkforge(link_obj).is_robot_link
+
+    def test_create_collision_for_link(self, scene, blender_context) -> None:
+        """Test generating a primitive collision for a link."""
+
+        link_obj = create_robot_link("link_with_collision", scene)
+
+        # Add visual context for size detection
+        from tests.blender_test_utils import create_mesh_object
+
+        vis = create_mesh_object("link_visual", scene)
+        vis.parent = link_obj
+
+        col_obj = create_collision_for_link(link_obj, "box", bpy.context)
+
+        assert col_obj is not None
+        assert col_obj.parent == link_obj
+        assert "collision" in col_obj.name.lower()
+
+
+class TestLinkProperties:
+    def test_link_property_persistence(self, scene, blender_context) -> None:
+        """Test setting and getting link forge properties."""
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("test_props", None, scene)
+        props = safe_get_linkforge(obj)
+        assert props is not None
+        obj.name = "Original Name"
+        safe_get_linkforge(obj).is_robot_link = True
+
+        # Getter should return sanitized name
+        assert safe_get_linkforge(obj).link_name == "Original_Name"
+
+        # Setter should update object name
+        safe_get_linkforge(obj).link_name = "New-Link-Name!"
+        assert obj.name == "New-Link-Name_"
+
+    def test_automatic_child_renaming(self, scene, blender_context) -> None:
+        """Test that renaming a link object also renames its children."""
+        from tests.blender_test_utils import create_test_object
+
+        link_obj = create_robot_link("base_link", scene)
+
+        # Create visual child
+        vis_obj = create_test_object("base_link_visual", None, scene)
+        vis_obj.parent = link_obj
+
+        # Rename the link
+        safe_get_linkforge(link_obj).link_name = "chassis"
+
+        assert link_obj.name == "chassis"
+        assert vis_obj.name.startswith("chassis_visual")
+
+
+class TestLinkRobustness:
+    def test_execute_collision_preview_update_branches(self, scene, blender_context) -> None:
+        """Test edge cases in collision preview update."""
+        link_obj = create_robot_link("Link", scene)
+
+        # Simulate missing view_layer context
+        with patch("linkforge.blender.operators.link_ops.bpy") as mock_bpy:
+            mock_bpy.data = bpy.data
+            mock_bpy.context = MagicMock()
+            mock_bpy.context.view_layer = None
+
+            import linkforge.blender.operators.link_ops as link_ops
+
+            link_ops._preview_pending_object = link_obj
+            assert execute_collision_preview_update() is None
+
+    def test_regenerate_collision_mesh_validation(self, scene, blender_context) -> None:
+        """Test validation in regenerate_collision_mesh."""
+        # Passing non-link object should not crash
+        from tests.blender_test_utils import create_test_object
+
+        obj = create_test_object("NotALink", None, scene)
+        regenerate_collision_mesh(obj, "auto", bpy.context)
