@@ -49,7 +49,16 @@ from ..models.link import Collision, Inertial, InertiaTensor, Link, LinkPhysics,
 from ..models.material import Material
 from ..models.robot import Robot
 from ..models.ros2_control import Ros2ControlJoint
-from ..models.sensor import CameraInfo, ContactInfo, GPSInfo, IMUInfo, LidarInfo, Sensor, SensorType
+from ..models.sensor import (
+    CameraInfo,
+    ContactInfo,
+    ForceTorqueInfo,
+    GPSInfo,
+    IMUInfo,
+    LidarInfo,
+    Sensor,
+    SensorType,
+)
 from ..models.transmission import Transmission
 from ..physics.inertia import calculate_inertia
 
@@ -827,7 +836,6 @@ class LinkBuilder:
             The LinkBuilder instance.
         """
         self._check_not_committed()
-        from linkforge.core.models.sensor import ForceTorqueInfo
 
         sensor = Sensor(
             name=name,
