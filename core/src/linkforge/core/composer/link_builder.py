@@ -128,8 +128,6 @@ class LinkBuilder:
         self._in_context = True
         # Create a skeletal Link so that child links/joints created inside the block
         # can refer to this link as a valid parent/child in the robot's indices.
-        from ..models.link import Link
-
         skeletal_link = Link(name=self._link_name)
         self._builder.robot.add_link(skeletal_link, overwrite=True)
 
