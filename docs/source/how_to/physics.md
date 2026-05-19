@@ -57,7 +57,7 @@ If your robot explodes or flies away immediately upon spawning:
 ## Programmatic Usage
 
 When building robots with the `RobotBuilder` Composer, inertia is calculated
-automatically when you call `.with_mass()` on the `LinkBuilder`. This is the
+automatically when you call `.mass()` on the `LinkBuilder`. This is the
 Python equivalent of enabling **Auto-Calculate Inertia** in Blender.
 
 ```python
