@@ -178,7 +178,6 @@ reference/index
 
 CHANGELOG
 CONTRIBUTING
-LICENSE
 citation
 ```
 
