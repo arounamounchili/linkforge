@@ -50,10 +50,7 @@ The `RobotBuilder` Composer is the recommended way to build robots in Python.
 It handles validation, prefixing, and SRDF generation automatically.
 
 ```python
-from linkforge.core import RobotBuilder
-from linkforge.core.models import Robot
-from linkforge.core.models.geometry import Vector3
-from linkforge.core.models.joint import JointLimits
+from linkforge.core import JointLimits, Robot, RobotBuilder, Vector3
 
 assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
 
@@ -72,7 +69,7 @@ and SRDF export.
 ### Parsing URDF
 
 ```python
-from linkforge.core.parsers import URDFParser
+from linkforge.core import URDFParser
 from pathlib import Path
 
 # Parse URDF file
@@ -91,8 +88,7 @@ for link in robot.links:
 ### Calculating Inertia
 
 ```python
-from linkforge.core.physics.inertia import calculate_box_inertia, calculate_cylinder_inertia
-from linkforge.core.models.geometry import Box, Cylinder, Vector3
+from linkforge.core import Box, Cylinder, Vector3, calculate_box_inertia, calculate_cylinder_inertia
 
 # Box inertia
 box = Box(size=Vector3(1.0, 0.5, 0.3))
