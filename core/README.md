@@ -3,7 +3,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/pypi/v/linkforge-core.svg?color=blue" alt="PyPI version"></a>
-  <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/pypi/pyversions/linkforge-core.svg" alt="Python versions"></a>
+  <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776AB" alt="Python versions"></a>
   <a href="https://linkforge.readthedocs.io/"><img src="https://img.shields.io/badge/docs-read%20the%20docs-brightgreen" alt="Documentation Status"></a>
   <a href="https://github.com/arounamounchili/linkforge/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
@@ -28,33 +28,38 @@ It provides a mathematically pure, zero-dependency Intermediate Representation (
 
 ---
 
-## 🚀 30-Second Quickstart
+## 🚀 Quickstart
 
 LinkForge Core exposes a flat, highly curated, and elegant public API. No nested import paths required.
 
 ```python
-from linkforge.core import RobotBuilder, Box, Vector3, JointLimits
+from linkforge.core import RobotBuilder, box, cylinder
 
-# Initialize a namespaced assembly
-assembly = RobotBuilder("forge_arm")
+# Initialize the assembly builder
+builder = RobotBuilder("forge_arm")
 
-# Create links and chains fluently
-assembly.add_link("base_link") \
-    .with_mass(5.0) \
-    .connect_to("world", "world_joint") \
-    .as_fixed()
+# Define the base link (root of the robot)
+builder.link("base_link") \
+    .visual(box(0.2, 0.2, 0.1)) \
+    .collision() \
+    .mass(5.0) \
+    .root()
 
-# geometry parameters automatically calculate exact inertia tensors
-assembly.add_link("upper_arm", geometry=Box(size=Vector3(0.1, 0.1, 0.8))) \
-    .with_mass(2.5) \
-    .connect_to("base_link", "shoulder_yaw") \
-    .as_revolute(
-        axis=Vector3(0, 0, 1),
-        limits=JointLimits(lower=-3.14, upper=3.14, effort=50.0, velocity=2.0)
-    )
+# Define and connect the upper arm link via a revolute joint
+builder.link("upper_arm", parent="base_link") \
+    .visual(cylinder(0.05, 0.8)) \
+    .collision() \
+    .mass(2.5) \
+    .revolute(
+        axis=(0, 0, 1),
+        limits=(-3.14, 3.14),
+        effort=50.0,
+        velocity=2.0
+    ) \
+    .commit()
 
-# Export production-ready, validated XML descriptions
-urdf_xml = assembly.export_urdf()
+# Export production-ready, validated URDF XML string
+urdf_xml = builder.export_urdf()
 ```
 
 ---
@@ -74,7 +79,7 @@ robot = read_urdf("my_robot.urdf")
 result = validate_robot(robot)
 
 if result.is_valid:
-    print("✓ Robot model is physically and kineamtically sound!")
+    print("✓ Robot model is physically and kinematically sound!")
 else:
     for issue in result.errors:
         print(f"  [{issue.code.name}] {issue.message} on {issue.affected_objects}")
@@ -84,11 +89,11 @@ else:
 Compute perfect principal moments of inertia and Center of Mass offsets for primitives or complex triangle meshes, hardened with local origin conditioning to preserve floating-point accuracy:
 
 ```python
-from linkforge.core import Box, Vector3, calculate_box_inertia
+from linkforge.core import Box, Vector3, calculate_inertia
 
 box = Box(size=Vector3(1.0, 0.5, 0.3))
 # Automatically computes exact ixx, iyy, izz principal moments
-inertia = calculate_box_inertia(box, mass=10.0)
+inertia = calculate_inertia(box, mass=10.0)
 ```
 
 ---
