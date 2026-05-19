@@ -7,7 +7,7 @@ The Composer provides a high-level, fluent API for programmatically constructing
 The main entry point for constructing a robot model.
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.composer.robot_builder.RobotBuilder
+.. autoclass:: linkforge.core.composer.RobotBuilder
    :members:
    :undoc-members:
    :show-inheritance:
@@ -19,7 +19,18 @@ The main entry point for constructing a robot model.
 A staged builder for configuring individual links and their parent joints.
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.composer.robot_builder.LinkBuilder
+.. autoclass:: linkforge.core.composer.LinkBuilder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+## SemanticBuilder
+
+A namespace for SRDF and MoveIt planning groups, named states, and self-collision settings.
+
+```{eval-rst}
+.. autoclass:: linkforge.core.composer.semantic_builder.SemanticBuilder
    :members:
    :undoc-members:
    :show-inheritance:
