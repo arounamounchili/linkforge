@@ -241,7 +241,7 @@ class MassPropertiesCheck(ValidationCheck):
     def run(self, robot: Robot, result: ValidationResult) -> None:
         """Check for mass property health."""
         for link in robot.links:
-            # 1. Mass Checks
+            # Mass Checks
             if link.mass < MIN_REASONABLE_MASS:
                 result.add_error(
                     title="Critical low mass",
@@ -262,7 +262,7 @@ class MassPropertiesCheck(ValidationCheck):
                     suggestion="Consider providing a more realistic mass for better simulation stability",
                 )
 
-            # 2. Inertia Checks
+            # Inertia Checks
             if link.inertial is None:
                 result.add_warning(
                     title="Missing inertia",
