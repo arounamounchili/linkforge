@@ -2,15 +2,37 @@
 
 Welcome to the official LinkForge documentation. LinkForge is the **LLVM for Robotics**, providing a universal, mathematical Intermediate Representation (IR) and a Blender-based digital twin platform for robot design, simulation, and deployment.
 
-## Workflow at a Glance
+## The LLVM for Robotics Architecture
+
+LinkForge decouples robot definition inputs from physical target configurations by acting as a compiler with standard **Frontends**, a **Universal Intermediate Representation (IR)**, and extensible **Backends**:
 
 ```{mermaid}
-graph LR
-    A[3D Modeling / Python Script] --> B[LinkForge: Setup Robot]
-    B --> C{Validation}
-    C -- Errors --> B
-    C -- Success --> D[Export URDF/XACRO]
-    D --> E[ROS 2 / Gazebo Simulation]
+graph TD
+    %% Frontends
+    subgraph Frontends [Frontends / Input Compilation]
+        A1[🎨 Blender Visual UI]
+        A2[⚙️ Programmatic Python API]
+        A3[📂 CAD Importers / Parsers]
+    end
+
+    %% Core IR
+    subgraph Core [LinkForge Middle-End]
+        B1[Universal Robot IR]
+        B2["Linter & Physicality Optimizer"]
+        B1 <-->|Kinematic Audits| B2
+    end
+
+    %% Backends
+    subgraph Backends [Backends / Target Generation]
+        C1[URDF Target]
+        C2[XACRO Target]
+        C3[SRDF Target]
+        C4[Future: MJCF / SDF]
+    end
+
+    %% Connections
+    Frontends -->|Compile / Ingest| B1
+    B1 -->|CodeGen / Export| Backends
 ```
 
 ---
@@ -19,8 +41,8 @@ graph LR
 
 LinkForge streamlines robotics modeling with the following capabilities:
 
-- **LLVM for Robotics**: A universal Intermediate Representation (IR) for cross-platform deployment.
-- **The .lf Standard**: A high-fidelity, metadata-rich format for the next generation of robots.
+- **LLVM for Robotics**: A decoupled compiler architecture featuring frontends, a universal IR, and customizable simulator backends.
+- **The .lf Standard (Upcoming)**: A platform-agnostic, metadata-rich file format currently under active design (Phase 2 Roadmap) for universal robot preservation.
 - **Dual-Mode Authoring**: Visual 3D editing inside Blender or programmatic Python coding.
 - **Production-Ready Export**: Strictly compliant URDF/XACRO files optimized for ROS/Gazebo.
 - **ROS2 Control Support**: Automatic hardware interface configuration.
