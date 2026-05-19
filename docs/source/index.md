@@ -1,12 +1,12 @@
 # LinkForge Documentation
 
-Welcome to the official LinkForge documentation. LinkForge is the **LLVM for Robotics**, a universal Intermediate Representation (IR) and Blender-based Digital Twin platform.
+Welcome to the official LinkForge documentation. LinkForge is the **LLVM for Robotics**, providing a universal, mathematical Intermediate Representation (IR) and a Blender-based digital twin platform for robot design, simulation, and deployment.
 
 ## Workflow at a Glance
 
 ```{mermaid}
 graph LR
-    A[3D Modeling in Blender] --> B[LinkForge: Setup Robot]
+    A[3D Modeling / Python Script] --> B[LinkForge: Setup Robot]
     B --> C{Validation}
     C -- Errors --> B
     C -- Success --> D[Export URDF/XACRO]
@@ -21,33 +21,65 @@ LinkForge streamlines robotics modeling with the following capabilities:
 
 - **LLVM for Robotics**: A universal Intermediate Representation (IR) for cross-platform deployment.
 - **The .lf Standard**: A high-fidelity, metadata-rich format for the next generation of robots.
-- **Bidirectional Workflow**: Import existing URDF/XACRO files or build from scratch.
+- **Dual-Mode Authoring**: Visual 3D editing inside Blender or programmatic Python coding.
 - **Production-Ready Export**: Strictly compliant URDF/XACRO files optimized for ROS/Gazebo.
 - **ROS2 Control Support**: Automatic hardware interface configuration.
 - **Complete Sensor Suite**: Integrated support for LiDAR, IMU, Depth Cameras, and more.
 - **Automatic Physics**: Scientific mass properties and inertia tensor calculation.
 - **Modular Robot Assembly**: Build and merge robots programmatically with the **Composer API** (v1.4.0).
-- **SRDF Generation**: Automatic creation of semantic metadata for complex systems (v1.4.0).
+- **SRDF Generation**: Automatic creation of semantic metadata for complex planning systems (v1.4.0).
 
 ---
 
 ## 📦 Installation
 
-**Requirements**: Blender 4.2 or later
+LinkForge is distributed as two separate, fully integrated packages depending on your workflow:
 
-1.  Open Blender → **Edit > Preferences > Get Extensions**
-2.  Search for **"LinkForge"**
-3.  Click **Install**
+### 🎨 Blender Extension (Visual UI Editor)
+For 3D modelers and roboticists who want to visual-draft digital twins:
+* **Prerequisite**: Blender 4.2 or later
+1. Open Blender → **Edit > Preferences > Get Extensions**
+2. Search for **"LinkForge"**
+3. Click **Install**
+
+### ⚙️ Standalone Python Library (`linkforge-core`)
+For developer pipelines, automated CI, and procedural robot generation:
+* **Prerequisite**: Python >= 3.11
+```bash
+pip install linkforge-core
+```
 
 ---
 
 ## 🎯 Quick Start
 
-1.  **Create Links**: Select a mesh and click **Create Link from Mesh** in the LinkForge panel.
-2.  **Connect Joints**: Select child link and click **Create Joint**.
-3.  **Create Sensors**: Attach cameras or LiDARs to your links.
-4.  **Configure Control**: Enable ROS 2 Control and configure interfaces in the Control Dashboard.
-5.  **Validate & Export**: Run the validator and export to URDF or XACRO.
+Choose your preferred entry point:
+
+### 🎨 Visual Workflow (Blender UI)
+1. **Create Links**: Select a mesh and click **Create Link** in the LinkForge panel.
+2. **Connect Joints**: Select a child link and click **Create Joint** to specify constraints.
+3. **Validate & Export**: Run the validator in the UI and click **Export URDF/XACRO**.
+
+### ⚙️ Programmatic Workflow (Python API)
+Create, validate, and export a complete kinematic robot description programmatically:
+
+```python
+from linkforge.core import RobotBuilder, box, cylinder
+
+# Initialize robot builder
+builder = RobotBuilder("my_robot")
+
+# Micro-construct links and joints programmatically
+builder.link("base_link").visual(box(0.5, 0.5, 0.1)).mass(5.0).root()
+builder.link("arm", parent="base_link") \
+    .visual(cylinder(0.05, 0.5)) \
+    .mass(2.0) \
+    .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57)) \
+    .commit()
+
+# Export strictly-compliant URDF
+urdf_xml = builder.export_urdf()
+```
 
 ---
 
@@ -60,7 +92,8 @@ LinkForge streamlines robotics modeling with the following capabilities:
 
 **Learning-oriented.** Start here if you are new to LinkForge. Step-by-step lessons to build your first robot.
 ^^^
-- [Building a Diff-Drive Robot](tutorials/building_diff_drive)
+- [Visual: Building a Diff-Drive Robot](tutorials/building_diff_drive)
+- [Programmatic: Building a Diff-Drive Robot](tutorials/building_diff_drive_programmatic)
 :::
 
 :::{grid-item-card} 🛠️ How-to Guides
