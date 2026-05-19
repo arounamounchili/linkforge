@@ -44,6 +44,12 @@ from linkforge.core import RobotBuilder
 
 # Initialize a new robot builder named 'diff_drive'
 builder = RobotBuilder("diff_drive")
+
+# Configure a global ros2_control hardware system (required for joint controllers)
+builder.ros2_control(
+    name="DiffDriveSystem",
+    hardware_plugin="mock_components/GenericSystem"
+)
 ```
 
 ---
@@ -175,7 +181,7 @@ print("✓ Successfully exported diff_drive.srdf!")
 
 ---
 
-## 完整 Python 脚本
+## Complete Python Script
 
 Here is the complete, self-contained Python script to build, validate, and export the robot:
 
@@ -185,6 +191,12 @@ from linkforge.core import RobotBuilder, box, cylinder, validate_robot
 def build_robot():
     # Initialize builder
     builder = RobotBuilder("diff_drive")
+
+    # Configure global ros2_control system
+    builder.ros2_control(
+        name="DiffDriveSystem",
+        hardware_plugin="mock_components/GenericSystem"
+    )
 
     # 1. Base link
     builder.link("base_link") \
