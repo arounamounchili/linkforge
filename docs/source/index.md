@@ -7,32 +7,19 @@ Welcome to the official LinkForge documentation. LinkForge is the **LLVM for Rob
 LinkForge decouples robot definition inputs from physical target configurations by acting as a compiler with standard **Frontends**, a **Universal Intermediate Representation (IR)**, and extensible **Backends**:
 
 ```{mermaid}
-graph TD
+graph LR
     %% Frontends
-    subgraph Frontends [Frontends / Input Compilation]
-        A1[🎨 Blender Visual UI]
-        A2[⚙️ Programmatic Python API]
-        A3[📂 CAD Importers / Parsers]
-    end
+    UI[🎨 Blender Visual UI] -->|Compile| IR(Universal Robot IR)
+    API[⚙️ Python Composer API] -->|Compile| IR
+    CAD[📂 CAD / URDF Parsers] -->|Ingest| IR
 
-    %% Core IR
-    subgraph Core [LinkForge Middle-End]
-        B1[Universal Robot IR]
-        B2["Linter & Physicality Optimizer"]
-        B1 <-->|Kinematic Audits| B2
-    end
+    %% Core IR & Validation
+    IR <-->|Audit & Verify| Val[🔍 Integrity Validator]
 
     %% Backends
-    subgraph Backends [Backends / Target Generation]
-        C1[URDF Target]
-        C2[XACRO Target]
-        C3[SRDF Target]
-        C4[Future: MJCF / SDF]
-    end
-
-    %% Connections
-    Frontends -->|Compile / Ingest| B1
-    B1 -->|CodeGen / Export| Backends
+    IR -->|Export| URDF[📄 URDF / XACRO]
+    IR -->|Export| SRDF[📂 SRDF / MoveIt]
+    IR -->|Export| Future[🚀 Future: MJCF / SDF]
 ```
 
 ---
