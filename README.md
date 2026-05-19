@@ -171,9 +171,6 @@ For complete instructions on testing, linting, and building, see our [Contributi
 - [ ] **v2.1.0**: **AI Engine Update** (Native MuJoCo/MJCF exporter).
 - [ ] **v2.2.0**: **Simulation Expansion** (Native Gazebo/SDF exporter).
 
-> [!TIP]
-> For a deep dive into our long-term technical strategy and the "Digital Twin" philosophy, see **[VISION.md](VISION.md)**.
-
 ## 🤝 Contributing
 
 We welcome contributions! LinkForge is a community-driven project.

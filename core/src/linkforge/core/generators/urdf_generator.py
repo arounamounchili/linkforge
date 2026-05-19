@@ -880,7 +880,7 @@ class URDFGenerator(RobotXMLGenerator):
         # Priority: use parsed ros2_control if available, otherwise generate from transmissions
         if robot.ros2_controls:
             # Use parsed ros2_control data (Preferred)
-            parent.append(ET.Comment(" ROS2 Control "))
+            parent.append(ET.Comment(COMMENT_ROS2_CONTROL))
             for rc in robot.ros2_controls:
                 self._add_parsed_ros2_control_element(parent, rc)
         elif robot.transmissions:
@@ -912,7 +912,7 @@ class URDFGenerator(RobotXMLGenerator):
         for gz in robot.gazebo_elements:
             grouped_elements[gz.reference].append(gz)
 
-        # 0. Check if we have any Gazebo content at all before adding header
+        # Check if we have any Gazebo content at all before adding header
         default_physics = LinkPhysics()
         has_modified_physics = any(lnk.physics != default_physics for lnk in robot.links)
         if not robot.gazebo_elements and not has_modified_physics:
@@ -920,7 +920,7 @@ class URDFGenerator(RobotXMLGenerator):
 
         parent.append(ET.Comment(COMMENT_GAZEBO))
 
-        # 1. Handle Link-level Gazebo tags (Physics + Extensions)
+        # Handle Link-level Gazebo tags (Physics + Extensions)
         # We only generate these if physics are non-default or if there are explicit elements
         for link in sorted(robot.links, key=lambda lnk: lnk.name):
             has_explicit = link.name in grouped_elements
@@ -944,7 +944,7 @@ class URDFGenerator(RobotXMLGenerator):
                 # Mark as handled
                 del grouped_elements[link.name]
 
-        # 2. Handle Robot-level (reference=None) and other Gazebo tags
+        # Handle Robot-level (reference=None) and other Gazebo tags
         # Sort by reference for deterministic output
         for ref in sorted(grouped_elements.keys(), key=lambda r: r or ""):
             attrib = {"reference": ref} if ref else {}
