@@ -10,10 +10,10 @@ This protocol defines the **Unified Flight Plan** required before every release.
 | Field | Value |
 | :--- | :--- |
 | **Maintainer Name** | (e.g., @arounamounchili) |
-| **Date** | 2026-04-04 |
+| **Date** | 2026-05-19 |
 | **Blender / OS** | (e.g., Blender 4.2 LTS / macOS Sonoma 14.4) |
-| **LinkForge Version** | (e.g., v1.3.0) |
-| **Build Artifact** | (e.g., linkforge-blender-1.3.0-macos_arm64.zip) |
+| **LinkForge Version** | (e.g., v1.4.0) |
+| **Build Artifact** | (e.g., linkforge-blender-1.4.0-macos_arm64.zip) |
 
 ---
 
