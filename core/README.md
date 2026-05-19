@@ -11,32 +11,31 @@
 
 ---
 
-LinkForge Core serves as the **"LLVM for Robotics."** It decouples the mathematical and physical description of a robot from external design tools (like Blender, FreeCAD, or Onshape). It provides a mathematically pure, zero-dependency Intermediate Representation (IR) with hardened validation, scientific inertia solvers, and lossless translation between **URDF**, **XACRO**, and **SRDF**.
+## 🔭 The LLVM for Robotics
+
+URDF is fragmented, XACRO is XML template hell, and physics engines frequently explode due to bad inertia tensors. LinkForge Core solves this by acting as a **unified intermediate compiler layer** for robot descriptions.
+
+It provides a mathematically pure, zero-dependency Intermediate Representation (IR) with hardened physical validation, scientific inertia solvers, and lossless translation between **URDF**, **XACRO**, and **SRDF**.
 
 ---
 
-## ✨ Features at a Glance
+## ⚡ Why LinkForge Core?
 
-* **Zero-Dependency Core**: Lightweight and highly portable. No complex C++ bindings or NumPy dependency for simulation logic.
-* **Unified Intermediate Representation (IR)**: A high-fidelity object model representing links, kinematic joints, sensors, actuators, and transmissions.
-* **Production-Grade Physics Hardening**: Bounded numerical integration using the **Mirtich algorithm** (Divergence Theorem) with local origin-shifting to avoid floating-point loss, physicality audits via **Sylvester’s Criterion**, and topology checks.
-* **Modular Validation Pipeline**: A compiler-like linter registry that executes kinematic, physical, and semantic invariants, catching bugs before they hit Gazebo or MoveIt.
-* **Lossless Parsing & Generation**: Gracefully parses and serializes XML, retaining custom and unrecognized tags while sanitizing package boundaries.
-* **Composer API**: Assemble complex kinematic chains, merge sub-assemblies, apply joint namespaces, and configure self-collision matrices programmatically.
+* **⚖️ Physically Guaranteed Sim Stability**: Zero-mass links or unphysical inertia tensors cause simulators like Gazebo or Isaac Sim to crash. LinkForge Core uses the **Mirtich algorithm** (Divergence Theorem) to calculate exact inertia properties from geometries, validated against **Sylvester's Criterion** to ensure physical validity.
+* **🔌 Standardized & Namespaced Assembly**: Easily compile complex robots, merge multiple sub-assemblies (e.g. attaching a gripper to an arm), and apply joint prefixing and limits programmatically using the fluent **Composer API**.
+* **🛡️ Hardened Sandboxed Security**: Safely parse untrusted third-party robot descriptions. LinkForge Core blocks path-traversal attacks and restrains file reading to designated package boundaries.
+* **📦 Light & Portable**: Zero external dependencies. No C++ compilation required, making it highly portable across standard Python environments, CLI tools, and servers.
 
 ---
 
-## 🚀 The Core Code Tour
+## 🚀 30-Second Quickstart
 
-LinkForge Core exposes a flat, highly curated, and elegant public API. No nested submodule imports required.
-
-### 1. Programmatic Assembly (The Composer API)
-The `RobotBuilder` Composer is the recommended way to model robots programmatically. It automatically computes solid-body mass dynamics, applies kinematic links, and configures joints in a single fluent interface.
+LinkForge Core exposes a flat, highly curated, and elegant public API. No nested import paths required.
 
 ```python
 from linkforge.core import RobotBuilder, Box, Vector3, JointLimits
 
-# Initialize the assembly
+# Initialize a namespaced assembly
 assembly = RobotBuilder("forge_arm")
 
 # Create links and chains fluently
@@ -45,6 +44,7 @@ assembly.add_link("base_link") \
     .connect_to("world", "world_joint") \
     .as_fixed()
 
+# geometry parameters automatically calculate exact inertia tensors
 assembly.add_link("upper_arm", geometry=Box(size=Vector3(0.1, 0.1, 0.8))) \
     .with_mass(2.5) \
     .connect_to("base_link", "shoulder_yaw") \
@@ -53,94 +53,48 @@ assembly.add_link("upper_arm", geometry=Box(size=Vector3(0.1, 0.1, 0.8))) \
         limits=JointLimits(lower=-3.14, upper=3.14, effort=50.0, velocity=2.0)
     )
 
-# Export complete, structured XML representations directly
+# Export production-ready, validated XML descriptions
 urdf_xml = assembly.export_urdf()
 ```
 
-### 2. Lossless Ingest & Multi-Phase Validation
-Ingest URDFs or XACRO files from the filesystem or memory strings, and run deep linter checks:
+---
+
+## 💎 Key Capabilities
+
+### Lossless Ingest & Multi-Phase Linter
+Parse existing URDF or XACRO files from the filesystem or memory strings. The parser is completely "lossless" — it preserves unrecognized or custom tags while sanitizing package paths and validating kinematics:
 
 ```python
 from linkforge.core import read_urdf, validate_robot
 
-# Lossless parsing (preserves custom tags, formats XML safely)
+# Ingest and auto-resolve package:// bounds
 robot = read_urdf("my_robot.urdf")
 
-# Perform full multi-phase structural, kinematic, and physical validation
+# Perform kinematic, structural, and physical checks
 result = validate_robot(robot)
 
 if result.is_valid:
-    print("✓ Robot model is physically and structurally sound!")
+    print("✓ Robot model is physically and kineamtically sound!")
 else:
-    print("✗ Validation failed:")
     for issue in result.errors:
         print(f"  [{issue.code.name}] {issue.message} on {issue.affected_objects}")
 ```
 
-### 3. Scientific Mass Properties & Inertia Solvers
-Calculate exact moments of inertia for standard primitives or complex triangle meshes, hardened with local origin conditioning and Sylvester criteria verification to ensure positive semi-definiteness:
+### Exact Solid-Body Inertia Solver
+Compute perfect principal moments of inertia and Center of Mass offsets for primitives or complex triangle meshes, hardened with local origin conditioning to preserve floating-point accuracy:
 
 ```python
-from linkforge.core import Box, Cylinder, Vector3, calculate_box_inertia
+from linkforge.core import Box, Vector3, calculate_box_inertia
 
 box = Box(size=Vector3(1.0, 0.5, 0.3))
-# Automatically computes exact moments of inertia: ixx, iyy, izz
+# Automatically computes exact ixx, iyy, izz principal moments
 inertia = calculate_box_inertia(box, mass=10.0)
-print(f"Computed mass properties tensor: {inertia}")
 ```
 
 ---
 
-## 📂 Architecture: Hexagonal Philosophy
+## 📚 Resources & Documentation
 
-LinkForge Core acts as the pure domain kernel under a **Ports & Adapters (Hexagonal)** architectural pattern:
-
-```
-        ┌──────────────────────────────────────────────────────────┐
-        │                    Platform Adapters                     │
-        │      (Blender Extension, FreeCAD Macros, ROS 2 Node)     │
-        └────────────────────────────┬─────────────────────────────┘
-                                     │
-                                     ▼
-                     ┌──────────────────────────────┐
-                     │     LinkForge Public API     │
-                     │          (io.py)             │
-                     └───────────────┬──────────────┘
-                                     │
-         ┌───────────────────────────┼───────────────────────────┐
-         ▼                           ▼                           ▼
- ┌───────────────┐           ┌───────────────┐           ┌───────────────┐
- │   Models IR   │           │    Physics    │           │  Validation   │
- │ (robot/joint) │           │ (Mirtich/COM) │           │ (linter/sec)  │
- └───────────────┘           └───────────────┘           └───────────────┘
-```
-
----
-
-## 🛠️ Local Development & Testing
-
-LinkForge Core uses [`uv`](https://docs.astral.sh/uv/) for high-speed package management and [`just`](https://github.com/casey/just) for streamlined multi-platform execution commands.
-
-```bash
-# Clone the repository
-git clone https://github.com/arounamounchili/linkforge.git
-cd linkforge
-
-# Setup a clean development environment and sync dependencies
-just install
-
-# Run the complete test suite (achieves 99% branch coverage)
-just test-unit-core
-
-# Run Ruff linter and MyPy type checks
-just check
-```
-
----
-
-## 👥 Community & Contributing
-
-We welcome issues, feedback, and contributions!
-* **Found a bug?** Let us know in our [GitHub Issue Tracker](https://github.com/arounamounchili/linkforge/issues).
-* **Have ideas?** Join our [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).
-* **License**: LinkForge is open-source software licensed under the **[Apache-2.0 License](https://github.com/arounamounchili/linkforge/blob/main/LICENSE)**.
+* **📚 Extensive Documentation**: Read the tutorials and how-to guides at [linkforge.readthedocs.io](https://linkforge.readthedocs.io/).
+* **🐙 Open Source Repository**: View source, open issues, and join discussions on [GitHub](https://github.com/arounamounchili/linkforge).
+* **📄 License**: Standard open-source **[Apache-2.0 License](https://github.com/arounamounchili/linkforge/blob/main/LICENSE)**.
