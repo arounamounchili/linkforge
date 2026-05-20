@@ -8,7 +8,7 @@ who need custom traversal or analysis logic.
 ## KinematicGraph
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.models.graph.KinematicGraph
+.. autoclass:: linkforge.core.KinematicGraph
    :members:
    :undoc-members:
    :show-inheritance:
@@ -21,8 +21,7 @@ who need custom traversal or analysis logic.
 ### Detect cycles in a robot
 
 ```python
-from linkforge.core.models.graph import KinematicGraph
-from linkforge.core.parsers import URDFParser
+from linkforge.core import KinematicGraph, URDFParser
 from pathlib import Path
 
 robot = URDFParser().parse(Path("my_robot.urdf"))
@@ -39,7 +38,7 @@ except Exception as e:
 ### Topological traversal
 
 ```python
-from linkforge.core.models.graph import KinematicGraph
+from linkforge.core import KinematicGraph
 
 graph = KinematicGraph(robot.links, robot.joints)
 

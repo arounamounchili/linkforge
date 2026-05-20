@@ -29,7 +29,6 @@ graph LR
 LinkForge streamlines robotics modeling with the following capabilities:
 
 - **LLVM for Robotics**: A decoupled compiler architecture featuring frontends, a universal IR, and customizable simulator backends.
-- **The .lf Standard (Upcoming)**: A platform-agnostic, metadata-rich file format currently under active design (Phase 2 Roadmap) for universal robot preservation.
 - **Dual-Mode Authoring**: Visual 3D editing inside Blender or programmatic Python coding.
 - **Production-Ready Export**: Strictly compliant URDF/XACRO files optimized for ROS/Gazebo.
 - **ROS2 Control Support**: Automatic hardware interface configuration.

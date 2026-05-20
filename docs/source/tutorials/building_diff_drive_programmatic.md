@@ -1,6 +1,6 @@
 # Tutorial: Building a Differential Drive Robot (Programmatic)
 
-In this tutorial, you will configure a complete differential drive mobile robot programmatically in Python using the standalone `linkforge-core` library. You will learn how to define links, joints, a LiDAR sensor, and `ros2_control` configurations, then export everything to standardized URDF and SRDF files.
+In this tutorial, you will configure a complete differential drive mobile robot programmatically in Python using the standalone `linkforge-core` library. You will learn how to define links, joints, a LiDAR sensor, and `ros2_control` configurations, then export everything to a standardized URDF file.
 
 ## What You Will Learn
 - How to initialize `RobotBuilder`.
@@ -8,7 +8,7 @@ In this tutorial, you will configure a complete differential drive mobile robot 
 - How to configure joint limits and axes.
 - How to attach a **LiDAR Sensor**.
 - How to define **Control Interfaces** using `ros2_control`.
-- How to **Validate** and **Export** URDF and SRDF data.
+- How to **Validate** and **Export** URDF data.
 
 ---
 
@@ -92,10 +92,10 @@ wheel_geom = cylinder(radius=0.1, length=0.05)
 builder.link("left_wheel", parent="base_link") \
     .visual(wheel_geom, rpy=(1.57, 0, 0)) \
     .collision() \
-    .mass(1.0) \
+    .mass(0.5) \
     .continuous(
         axis=(0, 1, 0),
-        xyz=(0.1, 0.15, 0.0),
+        xyz=(0.0, 0.175, 0.0),
         rpy=(0, 0, 0),
     ) \
     .ros2_control(
@@ -108,10 +108,10 @@ builder.link("left_wheel", parent="base_link") \
 builder.link("right_wheel", parent="base_link") \
     .visual(wheel_geom, rpy=(1.57, 0, 0)) \
     .collision() \
-    .mass(1.0) \
+    .mass(0.5) \
     .continuous(
         axis=(0, 1, 0),
-        xyz=(0.1, -0.15, 0.0),
+        xyz=(0.0, -0.175, 0.0),
         rpy=(0, 0, 0),
     ) \
     .ros2_control(
@@ -150,7 +150,7 @@ builder.link("lidar_link", parent="base_link") \
 
 ## Step 6: Validate & Export
 
-We are ready to validate our kinematic model and export both the physical robot description (URDF) and semantic description (SRDF):
+We are ready to validate our kinematic model and export the physical robot description (URDF):
 
 ```python
 # Validate the assembled robot using the built-in validation engine
@@ -171,12 +171,6 @@ urdf_xml = builder.export_urdf()
 with open("diff_drive.urdf", "w") as f:
     f.write(urdf_xml)
 print("✓ Successfully exported diff_drive.urdf!")
-
-# Export SRDF XML for MoveIt motion planning
-srdf_xml = builder.export_srdf()
-with open("diff_drive.srdf", "w") as f:
-    f.write(srdf_xml)
-print("✓ Successfully exported diff_drive.srdf!")
 ```
 
 ---
@@ -209,8 +203,8 @@ def build_robot():
     builder.link("left_wheel", parent="base_link") \
         .visual(cylinder(0.1, 0.05), rpy=(1.57, 0, 0)) \
         .collision() \
-        .mass(1.0) \
-        .continuous(axis=(0, 1, 0), xyz=(0.1, 0.15, 0)) \
+        .mass(0.5) \
+        .continuous(axis=(0, 1, 0), xyz=(0, 0.175, 0)) \
         .ros2_control(
             command_interfaces=["velocity"],
             state_interfaces=["position", "velocity"]
@@ -221,8 +215,8 @@ def build_robot():
     builder.link("right_wheel", parent="base_link") \
         .visual(cylinder(0.1, 0.05), rpy=(1.57, 0, 0)) \
         .collision() \
-        .mass(1.0) \
-        .continuous(axis=(0, 1, 0), xyz=(0.1, -0.15, 0)) \
+        .mass(0.5) \
+        .continuous(axis=(0, 1, 0), xyz=(0, -0.175, 0)) \
         .ros2_control(
             command_interfaces=["velocity"],
             state_interfaces=["position", "velocity"]
@@ -249,9 +243,7 @@ def build_robot():
     # Export
     with open("diff_drive.urdf", "w") as f:
         f.write(builder.export_urdf())
-    with open("diff_drive.srdf", "w") as f:
-        f.write(builder.export_srdf())
-    print("✓ Assembled and exported Robot URDF & SRDF successfully!")
+    print("✓ Assembled and exported Robot URDF successfully!")
 
 if __name__ == "__main__":
     build_robot()

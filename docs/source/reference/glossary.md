@@ -43,7 +43,7 @@ An XML format used alongside URDF to provide semantic information for motion pla
 A named subset of links and joints used by MoveIt to plan motion for one part of the robot (e.g., `arm`, `hand`). Planning groups are defined in the SRDF and managed through `builder.semantic.group()` in LinkForge.
 
 ## Composer (RobotBuilder)
-The programmatic Python API for building robots without Blender. `RobotBuilder` supports two workflows: **Macro-Assembly** (attaching complete sub-robots) and **Micro-Construction** (adding individual links and joints with the `LinkBuilder` fluent API). Produces validated `Robot` and `SemanticRobotDescription` objects ready for URDF and SRDF export.
+The programmatic Python API for building robots without Blender. `RobotBuilder` supports two workflows: **Macro-Assembly** (attaching complete sub-robots) and **Micro-Construction** (adding individual links and joints with the `LinkBuilder` fluent API). Produces a unified, validated `Robot` object ready for both URDF and SRDF export.
 
 ## Kinematic Graph
 An internal graph representation of the robot's link-joint topology. `KinematicGraph` is used by the validator to detect cycles, find the root link, and perform topological traversal. Available as a public API for advanced users who need custom graph analysis.
