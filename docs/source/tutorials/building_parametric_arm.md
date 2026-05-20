@@ -49,7 +49,7 @@ builder.link("base_link") \
 
 ## Step 2: Write the Parametric Generation Loop
 
-Now, we will write a dynamic loop to stack links and revolute joints. 
+Now, we will write a dynamic loop to stack links and revolute joints.
 As we build up the chain:
 1. Links closer to the base will be thicker and heavier.
 2. Joints will alternate between rotating around the Z-axis (yaw) and Y-axis (pitch) to give the arm full range of motion.
@@ -62,18 +62,18 @@ parent_link = "base_link"
 for i in range(1, num_joints + 1):
     link_name = f"link_{i}"
     joint_name = f"joint_{i}"
-    
+
     # Visual dimensions taper off along the chain
     length = 0.4 if i <= 2 else 0.3
     radius = 0.05 if i <= 2 else 0.03
     geom = cylinder(radius=radius, length=length)
-    
+
     # Calculate decreasing mass along the chain for physical consistency
     mass = max(3.0 - (i * 0.4), 0.5)
-    
+
     # Stack the joints on top of each other along the Z-axis
     offset_z = 0.04 if parent_link == "base_link" else length
-    
+
     builder.link(link_name, parent=parent_link) \
         .visual(geom, xyz=(0, 0, length / 2)) \
         .collision() \
@@ -84,7 +84,7 @@ for i in range(1, num_joints + 1):
             limits=(-3.14, 3.14)
         ) \
         .commit()
-        
+
     parent_link = link_name
 ```
 
@@ -194,31 +194,31 @@ from linkforge.core import RobotBuilder, cylinder, box, validate_robot
 def build_parametric_arm(num_joints: int = 6):
     print(f"Generating a {num_joints}-DOF parametric robotic arm...")
     builder = RobotBuilder(f"arm_{num_joints}dof")
-    
+
     # 1. Base link
     builder.link("base_link") \
         .visual(cylinder(radius=0.1, length=0.08)) \
         .collision() \
         .mass(5.0) \
         .root()
-    
+
     # 2. Sequential joints & links
     parent_link = "base_link"
     for i in range(1, num_joints + 1):
         link_name = f"link_{i}"
         joint_name = f"joint_{i}"
-        
+
         # Alternating link geometry size
         length = 0.4 if i <= 2 else 0.3
         radius = 0.05 if i <= 2 else 0.03
         geom = cylinder(radius=radius, length=length)
-        
+
         # Diminishing mass
         mass = max(3.0 - (i * 0.4), 0.5)
-        
+
         # Offset to place the joint at the end of the previous cylinder
         offset_z = 0.04 if parent_link == "base_link" else length
-        
+
         builder.link(link_name, parent=parent_link) \
             .visual(geom, xyz=(0, 0, length / 2)) \
             .collision() \
@@ -229,9 +229,9 @@ def build_parametric_arm(num_joints: int = 6):
                 limits=(-3.14, 3.14)
             ) \
             .commit()
-            
+
         parent_link = link_name
-        
+
     # 3. Tool flange
     builder.link("flange", parent=parent_link) \
         .visual(box(0.04, 0.04, 0.02)) \
@@ -239,14 +239,14 @@ def build_parametric_arm(num_joints: int = 6):
         .mass(0.2) \
         .fixed(xyz=(0, 0, 0.3)) \
         .commit()
-        
+
     # 4. Planning Groups (SRDF)
     builder.semantic.group(
         name="arm",
         base_link="base_link",
         tip_link="flange"
     )
-    
+
     # 5. Named group states
     home_angles = {f"joint_{i}": 0.0 for i in range(1, num_joints + 1)}
     builder.semantic.group_state(
@@ -254,7 +254,7 @@ def build_parametric_arm(num_joints: int = 6):
         group="arm",
         values=home_angles
     )
-    
+
     # 6. Self-collision exclusions
     builder.semantic.disable_collisions("base_link", "link_1")
     for i in range(1, num_joints):
@@ -268,13 +268,13 @@ def build_parametric_arm(num_joints: int = 6):
         for error in result.errors:
             print(f"  - {error.message}")
         return
-        
+
     # 8. Export both URDF and SRDF
     with open("manipulator.urdf", "w") as f:
         f.write(builder.export_urdf())
     with open("manipulator.srdf", "w") as f:
         f.write(builder.export_srdf())
-        
+
     print("✓ Successfully generated, validated, and exported URDF/SRDF models!")
 
 if __name__ == "__main__":
