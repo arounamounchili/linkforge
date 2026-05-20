@@ -57,22 +57,21 @@ If your robot explodes or flies away immediately upon spawning:
 ## Programmatic Usage
 
 When building robots with the `RobotBuilder` Composer, inertia is calculated
-automatically when you call `.with_mass()` on the `LinkBuilder`. This is the
+automatically when you call `.mass()` on the `LinkBuilder`. This is the
 Python equivalent of enabling **Auto-Calculate Inertia** in Blender.
 
 ```python
-from linkforge.core.composer import RobotBuilder
-from linkforge.core.models import Robot
-from linkforge.core.models.geometry import Box, Vector3
+from linkforge.core import box, RobotBuilder
 
-assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
+builder = RobotBuilder("my_robot")
 
-# with_mass() on a box geometry will compute the full inertia tensor
-# using the same solid-body dynamics formulas used in Blender.
-assembly.add_link("chassis") \
-    .with_mass(5.0) \
-    .connect_to("world", "world_joint") \
-    .as_fixed()
+# Defining chassis with a visual box, an inferred collision box, and 5.0 kg mass
+# This will automatically compute the physical inertia tensor
+builder.link("chassis") \
+    .visual(box(1.0, 0.8, 0.3)) \
+    .collision() \
+    .mass(5.0) \
+    .root()
 ```
 
 ::: {important}

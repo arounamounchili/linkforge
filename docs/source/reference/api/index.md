@@ -50,20 +50,18 @@ The `RobotBuilder` Composer is the recommended way to build robots in Python.
 It handles validation, prefixing, and SRDF generation automatically.
 
 ```python
-from linkforge.core import RobotBuilder
-from linkforge.core.models import Robot
-from linkforge.core.models.geometry import Vector3
-from linkforge.core.models.joint import JointLimits
+from linkforge.core import RobotBuilder, box, cylinder
 
-assembly = RobotBuilder("my_robot", Robot(name="my_robot"))
+builder = RobotBuilder("my_robot")
 
-assembly.add_link("base_link").with_mass(5.0).connect_to("world", "world_joint").as_fixed()
-assembly.add_link("arm").with_mass(2.0).connect_to("base_link", "shoulder").as_revolute(
-    axis=Vector3(0, 0, 1),
-    limits=JointLimits(lower=-1.57, upper=1.57, effort=10, velocity=1),
-)
+builder.link("base_link").visual(box(0.5, 0.5, 0.1)).mass(5.0).root()
+builder.link("arm", parent="base_link") \
+    .visual(cylinder(0.05, 0.5)) \
+    .mass(2.0) \
+    .revolute(axis=(0, 0, 1), limits=(-1.57, 1.57), effort=10, velocity=1) \
+    .commit()
 
-urdf = assembly.export_urdf()
+urdf = builder.export_urdf()
 ```
 
 See the [Composer reference](composer) for the full API, including macro-assembly
@@ -72,7 +70,7 @@ and SRDF export.
 ### Parsing URDF
 
 ```python
-from linkforge.core.parsers import URDFParser
+from linkforge.core import URDFParser
 from pathlib import Path
 
 # Parse URDF file
@@ -91,33 +89,31 @@ for link in robot.links:
 ### Calculating Inertia
 
 ```python
-from linkforge.core.physics.inertia import calculate_box_inertia, calculate_cylinder_inertia
-from linkforge.core.models.geometry import Box, Cylinder, Vector3
+from linkforge.core import Box, Cylinder, Vector3, calculate_inertia
 
 # Box inertia
 box = Box(size=Vector3(1.0, 0.5, 0.3))
-inertia = calculate_box_inertia(box, mass=10.0)
+inertia = calculate_inertia(box, mass=10.0)
 
 # Cylinder inertia
 cylinder = Cylinder(radius=0.1, length=0.5)
-inertia = calculate_cylinder_inertia(cylinder, mass=5.0)
+inertia = calculate_inertia(cylinder, mass=5.0)
 ```
 
 ### Validation
 
 ```python
-from linkforge.core import RobotValidator
+from linkforge.core import validate_robot
 
 # Validate robot
-validator = RobotValidator()
-result = validator.validate(robot)
+result = validate_robot(robot)
 
 if result.is_valid:
     print("✓ Robot is valid!")
 else:
     print("✗ Validation errors:")
     for error in result.errors:
-        print(f"  - {error}")
+        print(f"  - {error.message}")
 ```
 
 ## Module Index

@@ -7,7 +7,57 @@ planning groups, named poses, and collision filters.
 ## Data Models
 
 ```{eval-rst}
-.. automodule:: linkforge.core.models.srdf
+.. autoclass:: linkforge.core.SemanticRobotDescription
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.PlanningGroup
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.Chain
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.GroupState
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.EndEffector
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.PassiveJoint
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.VirtualJoint
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.CollisionPair
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.LinkSphereApproximation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.SrdfSphere
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.JointProperty
    :members:
    :undoc-members:
    :show-inheritance:
@@ -18,7 +68,7 @@ planning groups, named poses, and collision filters.
 ## SRDF Parser
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.parsers.srdf_parser.SRDFParser
+.. autoclass:: linkforge.core.SRDFParser
    :members:
    :undoc-members:
    :show-inheritance:
@@ -29,7 +79,7 @@ planning groups, named poses, and collision filters.
 ## SRDF Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.generators.srdf_generator.SRDFGenerator
+.. autoclass:: linkforge.core.SRDFGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -42,7 +92,7 @@ planning groups, named poses, and collision filters.
 ### Parse an existing SRDF file
 
 ```python
-from linkforge.core.parsers.srdf_parser import SRDFParser
+from linkforge.core import SRDFParser
 from pathlib import Path
 
 srdf = SRDFParser().parse(Path("my_robot.srdf"))
@@ -55,11 +105,11 @@ for group in srdf.groups:
 ### Build SRDF programmatically
 
 ```python
-from linkforge.core.models.srdf import (
+from linkforge.core import (
     SemanticRobotDescription,
     PlanningGroup,
     GroupState,
-    DisabledCollision,
+    CollisionPair,
 )
 
 srdf = SemanticRobotDescription(
@@ -75,7 +125,7 @@ srdf = SemanticRobotDescription(
         GroupState(name="home", group="arm", joint_values={"joint1": 0.0, "joint2": 0.0})
     ],
     disabled_collisions=[
-        DisabledCollision(link1="base_link", link2="link1", reason="Adjacent"),
+        CollisionPair(link1="base_link", link2="link1", reason="Adjacent"),
     ],
 )
 ```
@@ -83,7 +133,7 @@ srdf = SemanticRobotDescription(
 ### Generate SRDF XML
 
 ```python
-from linkforge.core.generators.srdf_generator import SRDFGenerator
+from linkforge.core import SRDFGenerator
 
 generator = SRDFGenerator()
 srdf_string = generator.generate(srdf)
@@ -95,9 +145,7 @@ with open("my_robot.srdf", "w") as f:
 ### Round-trip (parse → modify → re-generate)
 
 ```python
-from linkforge.core.parsers.srdf_parser import SRDFParser
-from linkforge.core.generators.srdf_generator import SRDFGenerator
-from linkforge.core.models.srdf import DisabledCollision
+from linkforge.core import SRDFParser, SRDFGenerator, CollisionPair
 from pathlib import Path
 import dataclasses
 
@@ -108,7 +156,7 @@ updated = dataclasses.replace(
     original,
     disabled_collisions=[
         *original.disabled_collisions,
-        DisabledCollision(link1="hand_link", link2="wrist_link", reason="Adjacent"),
+        CollisionPair(link1="hand_link", link2="wrist_link", reason="Adjacent"),
     ],
 )
 

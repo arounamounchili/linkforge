@@ -8,19 +8,19 @@ While URDF describes **what the robot is**, SRDF describes **how to use it**.
 
 ## 1. Planning Groups
 
-A Planning Group is a collection of links and joints that are planned together (e.g., an "arm" or a "gripper"). In LinkForge, you define these using the ``group()`` method.
+A Planning Group is a collection of links and joints that are planned together (e.g., an "arm" or a "gripper"). In LinkForge, you define these using the ``group()`` method on the ``semantic`` builder namespace.
 
 ```python
-from linkforge.core.composer import RobotBuilder
+from linkforge.core import RobotBuilder
 
 builder = RobotBuilder("my_robot")
 # ... (build your robot links and joints)
 
 # Define an arm group using a chain shorthand
-builder.group("arm", base_link="base_link", tip_link="flange")
+builder.semantic.group("arm", base_link="base_link", tip_link="flange")
 
 # Define a gripper group using a list of links
-builder.group("gripper", links=["left_finger", "right_finger", "palm"])
+builder.semantic.group("gripper", links=["left_finger", "right_finger", "palm"])
 ```
 
 ::: {tip}
@@ -33,10 +33,10 @@ Group states allow you to save specific joint configurations with meaningful nam
 
 ```python
 # Add a 'home' pose for the arm
-builder.group_state(
+builder.semantic.group_state(
     name="home",
     group="arm",
-    joint_values={
+    values={
         "joint_1": 0.0,
         "joint_2": -1.57,
         "joint_3": 1.57,
@@ -50,10 +50,10 @@ By default, motion planners check for collisions between all pairs of links. You
 
 ```python
 # Disable collision between specific adjacent links
-builder.disable_collisions("link_1", "link_2", reason="Adjacent")
+builder.semantic.disable_collisions("link_1", "link_2", reason="Adjacent")
 
 # Disable all collisions for a set of links (e.g., wheels vs chassis)
-builder.disable_all_collisions(["left_wheel", "right_wheel", "chassis"], reason="Never")
+builder.robot.disable_all_collisions(["left_wheel", "right_wheel", "chassis"], reason="Never")
 ```
 
 ## 4. Exporting SRDF

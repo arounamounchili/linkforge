@@ -155,7 +155,5 @@ class RobotXMLGenerator(RobotGenerator[str]):
     ) -> None:
         """Add optional numeric XML element if value is not None."""
         if value is not None:
-            from .._utils.math_utils import format_float
-
             elem = ET.SubElement(parent, tag)
             elem.text = format_float(float(value))

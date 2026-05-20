@@ -1,51 +1,105 @@
 # LinkForge Core
-**The Universal Intermediate Representation (IR) for Robotics.**
+**The platform-independent Intermediate Representation (IR) and "Robotics Intelligence" engine.**
 
-LinkForge Core is the platform-independent "Robotics Intelligence" engine. It serves as the **LLVM for Robotics**, providing a mathematically pure, high-fidelity IR for parsing, generating, and validating robot descriptions across any platform.
+<p align="center">
+  <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/pypi/v/linkforge-core.svg?color=blue" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/badge/python-3.11+-3776AB" alt="Python versions"></a>
+  <a href="https://linkforge.readthedocs.io/"><img src="https://img.shields.io/badge/docs-read%20the%20docs-brightgreen" alt="Documentation Status"></a>
+  <a href="https://github.com/arounamounchili/linkforge/blob/main/core/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+</p>
 
-## 🚀 The "Front Door" API
+---
 
-LinkForge Core provides a clean, centralized, and curated API designed for high-fidelity robotics workflows.
+## 🔭 The LLVM for Robotics
+
+URDF is fragmented, XACRO is XML template hell, and physics engines frequently explode due to bad inertia tensors. LinkForge Core solves this by acting as a **unified intermediate compiler layer** for robot descriptions.
+
+It provides a mathematically pure, zero-dependency Intermediate Representation (IR) with hardened physical validation, scientific inertia solvers, and lossless translation between **URDF**, **XACRO**, and **SRDF**.
+
+---
+
+## ⚡ Why LinkForge Core?
+
+* **⚖️ Physically Guaranteed Sim Stability**: Zero-mass links or unphysical inertia tensors cause simulators like Gazebo or Isaac Sim to crash. LinkForge Core uses the **Mirtich algorithm** (Divergence Theorem) to calculate exact inertia properties from geometries, validated against **Sylvester's Criterion** to ensure physical validity.
+* **🔌 Standardized & Namespaced Assembly**: Easily compile complex robots, merge multiple sub-assemblies (e.g. attaching a gripper to an arm), and apply joint prefixing and limits programmatically using the fluent **Composer API**.
+* **🛡️ Hardened Sandboxed Security**: Safely parse untrusted third-party robot descriptions. LinkForge Core blocks path-traversal attacks and restrains file reading to designated package boundaries.
+* **📦 Light & Portable**: Zero external dependencies. No C++ compilation required, making it highly portable across standard Python environments, CLI tools, and servers.
+
+---
+
+## 🚀 Quickstart
+
+LinkForge Core exposes a flat, highly curated, and elegant public API. No nested import paths required.
 
 ```python
-import linkforge.core as lf
+from linkforge.core import RobotBuilder, box, cylinder
 
-# 1. Ingest
-robot = lf.read_urdf("my_robot.urdf")
+# Initialize the assembly builder
+builder = RobotBuilder("forge_arm")
 
-# 2. Hardened Validation (Physics & Kinematics)
-result = lf.validate_robot(robot)
-if not result.is_valid:
-    print(f"Danger! {result.errors[0].message}")
+# Define the base link (root of the robot)
+builder.link("base_link") \
+    .visual(box(0.2, 0.2, 0.1)) \
+    .collision() \
+    .mass(5.0) \
+    .root()
 
-# 3. Deploy
-lf.write_xacro(robot, "hardened_robot.xacro")
+# Define and connect the upper arm link via a revolute joint
+builder.link("upper_arm", parent="base_link") \
+    .visual(cylinder(0.05, 0.8)) \
+    .collision() \
+    .mass(2.5) \
+    .revolute(
+        axis=(0, 0, 1),
+        limits=(-3.14, 3.14),
+        effort=50.0,
+        velocity=2.0
+    ) \
+    .commit()
+
+# Export production-ready, validated URDF XML string
+urdf_xml = builder.export_urdf()
 ```
 
-## 🏗️ Architectural Pillars
+---
 
-- **Fidelity-First Models**: High-precision data structures for Links, Joints, Sensors, and Transmissions.
-- **Physics Hardening**: Built-in guardrails for mass properties and numerical stability.
-- **Bi-directional IO**: Lossless translation between URDF, XACRO, and SRDF.
-- **Composer API**: Programmatic robot assembly and namespaced merging.
-- **Modular Validation**: A registry-based linter that catches simulation-breaking errors early.
+## 💎 Key Capabilities
 
-## 📂 Internal Structure
+### Lossless Ingest & Multi-Phase Linter
+Parse existing URDF or XACRO files from the filesystem or memory strings. The parser is completely "lossless" — it preserves unrecognized or custom tags while sanitizing package paths and validating kinematics:
 
-- `src/linkforge/core/`: The heart of the IR.
-  - `models/`: Entity representations (Robot, Link, Sensor, etc.).
-  - `composer/`: Modular assembly and factory patterns.
-  - `physics/`: Scientific inertia and stability guardrails.
-  - `validation/`: The "Linter for Robotics" check suite.
-  - `parsers/` & `generators/`: High-fidelity XML translation.
-  - `io.py`: Functional entry points for quick tasks.
+```python
+from linkforge.core import read_urdf, validate_robot
 
-## 🛠️ Development
+# Ingest and auto-resolve package:// bounds
+robot = read_urdf("my_robot.urdf")
 
-Managed with [`uv`](https://docs.astral.sh/uv/) and [`just`](https://github.com/casey/just).
+# Perform kinematic, structural, and physical checks
+result = validate_robot(robot)
 
-```bash
-just install   # Setup dev environment
-just test-core # Run core suite
-just check     # Run lint & type checks
+if result.is_valid:
+    print("✓ Robot model is physically and kinematically sound!")
+else:
+    for issue in result.errors:
+        print(f"  [{issue.code.name}] {issue.message} on {issue.affected_objects}")
 ```
+
+### Exact Solid-Body Inertia Solver
+Compute perfect principal moments of inertia and Center of Mass offsets for primitives or complex triangle meshes, hardened with local origin conditioning to preserve floating-point accuracy:
+
+```python
+from linkforge.core import Box, Vector3, calculate_inertia
+
+box = Box(size=Vector3(1.0, 0.5, 0.3))
+# Automatically computes exact ixx, iyy, izz principal moments
+inertia = calculate_inertia(box, mass=10.0)
+```
+
+---
+
+## 📚 Resources & Documentation
+
+* **📚 Extensive Documentation**: Read the tutorials and how-to guides at [linkforge.readthedocs.io](https://linkforge.readthedocs.io/).
+* **🐙 Open Source Repository**: View source, open issues, and join discussions on [GitHub](https://github.com/arounamounchili/linkforge).
+* **📄 License**: Standard open-source **[Apache-2.0 License](https://github.com/arounamounchili/linkforge/blob/main/core/LICENSE)**.

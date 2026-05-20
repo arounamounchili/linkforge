@@ -5,9 +5,44 @@ description = "LinkForge Core: The LLVM for Robotics Intermediate Representation
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
+authors = [
+    { name = "Arouna Patouossa Mounchili", email = "patouossa.mounchili@gmail.com" }
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Typing :: Typed",
+]
+keywords = [
+    "robotics",
+    "urdf",
+    "xacro",
+    "srdf",
+    "kinematics",
+    "physics",
+    "inertia",
+    "blender",
+    "digital-twin"
+]
 dependencies = [
     "pyyaml>=6.0.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/arounamounchili/linkforge"
+Documentation = "https://linkforge.readthedocs.io/"
+Repository = "https://github.com/arounamounchili/linkforge.git"
+Issues = "https://github.com/arounamounchili/linkforge/issues"
+Changelog = "https://github.com/arounamounchili/linkforge/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["hatchling"]
