@@ -5,7 +5,7 @@ Robot validation and security checks.
 ## Robot Validator
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.validation.validator.RobotValidator
+.. autoclass:: linkforge.core.RobotValidator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,7 +14,7 @@ Robot validation and security checks.
 ## Validation Result
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.validation.result.ValidationResult
+.. autoclass:: linkforge.core.ValidationResult
    :members:
    :undoc-members:
    :show-inheritance:
@@ -34,7 +34,7 @@ Robot validation and security checks.
 ### Validate Robot
 
 ```python
-from linkforge.core.validation.validator import RobotValidator
+from linkforge.core import RobotValidator
 
 validator = RobotValidator()
 result = validator.validate(robot)
@@ -54,13 +54,14 @@ else:
 ### Security Checks
 
 ```python
-from linkforge.core.validation.security import validate_mesh_path, find_sandbox_root
+from linkforge.core.validation import validate_mesh_path, find_sandbox_root
+from linkforge.core import RobotSecurityError
 from pathlib import Path
 
 # Validate mesh path (prevents path traversal)
 try:
-    validate_mesh_path(Path("../../etc/passwd"), Path("/tmp"))  # Raises RobotModelError
-except RobotModelError as e:
+    validate_mesh_path(Path("../../etc/passwd"), Path("/tmp"))  # Raises RobotSecurityError
+except RobotSecurityError as e:
     print(f"Security error: {e}")
 
 # Valid paths within sandbox

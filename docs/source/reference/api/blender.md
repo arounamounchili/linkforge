@@ -185,12 +185,13 @@ for link in robot.links:
 
 ```python
 import bpy
-from linkforge.blender.operators import LinkForgeOperator
+from linkforge.blender.utils.decorators import safe_execute
 
-class LINKFORGE_OT_my_custom_op(LinkForgeOperator):
+class LINKFORGE_OT_my_custom_op(bpy.types.Operator):
     bl_idname = "linkforge.my_custom_op"
     bl_label = "My Custom Operation"
 
+    @safe_execute
     def execute(self, context):
         # Your code here
         self.report({'INFO'}, "Operation complete!")

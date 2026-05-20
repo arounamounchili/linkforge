@@ -7,7 +7,7 @@ URDF, XACRO, and SRDF generators for converting Python objects to files.
 All XML-based generators in LinkForge inherit from a shared base engine that handles common geometry, inertial, and origin logic.
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.generators.xml_base.RobotXMLGenerator
+.. autoclass:: linkforge.core.RobotXMLGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -16,7 +16,7 @@ All XML-based generators in LinkForge inherit from a shared base engine that han
 ## URDF Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.generators.urdf_generator.URDFGenerator
+.. autoclass:: linkforge.core.URDFGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -25,7 +25,7 @@ All XML-based generators in LinkForge inherit from a shared base engine that han
 ## XACRO Generator
 
 ```{eval-rst}
-.. autoclass:: linkforge.core.generators.xacro_generator.XACROGenerator
+.. autoclass:: linkforge.core.XACROGenerator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -41,8 +41,7 @@ on the dedicated [SRDF reference page](srdf.md).
 ### Generate URDF
 
 ```python
-from linkforge.core.models import Robot, Link, Inertial, InertiaTensor
-from linkforge.core import URDFGenerator
+from linkforge.core import Robot, Link, Inertial, InertiaTensor, URDFGenerator
 
 # Create robot
 robot = Robot(
@@ -103,7 +102,7 @@ urdf = generator.generate(robot)
 ### Round-Trip Verification
 
 ```python
-from linkforge.core.parsers import URDFParser
+from linkforge.core import URDFParser
 
 # Original robot
 robot1 = create_robot()

@@ -21,9 +21,13 @@ from .._utils.string_utils import sanitize_name
 from .._utils.xml_utils import serialize_xml
 from ..base import RobotGeneratorError
 from ..constants import (
+    COMMENT_GAZEBO,
     COMMENT_MACROS,
     COMMENT_MATERIALS,
     COMMENT_PROPERTIES,
+    COMMENT_ROS2_CONTROL,
+    COMMENT_SENSORS,
+    COMMENT_TRANSMISSIONS,
     XACRO_DEFAULT_PARAMS,
     XACRO_PARAM_NAME,
     XACRO_PARAM_PARENT,
@@ -783,7 +787,7 @@ class XACROGenerator(URDFGenerator):
         # Extract top-level properties (materials, dimensions, etc.)
         properties_root = ET.Element("robot")
         if root.findall(f"{XACRO_NS}property"):
-            properties_root.append(ET.Comment(" Properties "))
+            properties_root.append(ET.Comment(COMMENT_PROPERTIES))
 
         # Extract properties
         for prop in list(root.findall(f"{XACRO_NS}property")):
@@ -793,7 +797,7 @@ class XACROGenerator(URDFGenerator):
         # Extract macros (top-level)
         macros_root = ET.Element("robot")
         if root.findall(f"{XACRO_NS}macro"):
-            macros_root.append(ET.Comment(" Macros "))
+            macros_root.append(ET.Comment(COMMENT_MACROS))
 
         for macro_elem in list(root.findall(f"{XACRO_NS}macro")):
             macros_root.append(macro_elem)
@@ -821,19 +825,19 @@ class XACROGenerator(URDFGenerator):
 
         # Add includes at the top with comments
         if len(properties_root) > 1:  # Comment + at least one property
-            main_root.append(ET.Comment(" Properties "))
+            main_root.append(ET.Comment(COMMENT_PROPERTIES))
             include_props = ET.Element(f"{XACRO_NS}include")
             include_props.set("filename", f"{robot_name}_properties.xacro")
             main_root.append(include_props)
 
         if len(macros_root) > 1:  # Comment + at least one macro
-            main_root.append(ET.Comment(" Macros "))
+            main_root.append(ET.Comment(COMMENT_MACROS))
             include_mac = ET.Element(f"{XACRO_NS}include")
             include_mac.set("filename", f"{robot_name}_macros.xacro")
             main_root.append(include_mac)
 
         if has_control:
-            main_root.append(ET.Comment(" ROS2 Control "))
+            main_root.append(ET.Comment(COMMENT_ROS2_CONTROL))
             include_control = ET.Element(f"{XACRO_NS}include")
             include_control.set("filename", f"{robot_name}_ros2_control.xacro")
             main_root.append(include_control)
@@ -846,15 +850,20 @@ class XACROGenerator(URDFGenerator):
                 is_comment
                 and child.text
                 and child.text.strip()
-                in ("Properties", "Macros", "ROS2 Control", "Gazebo", "Sensors", "Transmissions")
+                in (
+                    COMMENT_PROPERTIES.strip(),
+                    COMMENT_MACROS.strip(),
+                    COMMENT_ROS2_CONTROL.strip(),
+                    COMMENT_GAZEBO.strip(),
+                    COMMENT_SENSORS.strip(),
+                    COMMENT_TRANSMISSIONS.strip(),
+                )
             ):
                 root.remove(child)
 
         # Copy remaining content (Links, Joints, etc.)
         for child in list(root):
             main_root.append(child)
-
-        from .. import __version__
 
         ns = {"xacro": XACRO_URI}
 

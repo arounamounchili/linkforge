@@ -442,7 +442,7 @@ class SemanticRobotDescription:
                     seen.add(item.name)
             return tuple(result)
 
-        # 1. Merge name-indexed collections
+        # Merge name-indexed collections
         # These elements are identified uniquely by their 'name' attribute.
         new_groups = merge_by_name(self.groups, other.groups)
         new_vjoints = merge_by_name(self.virtual_joints, other.virtual_joints)
@@ -450,7 +450,7 @@ class SemanticRobotDescription:
         new_ee = merge_by_name(self.end_effectors, other.end_effectors)
         new_gs = merge_by_name(self.group_states, other.group_states)
 
-        # 2. Merge Symmetric Collections (Collisions)
+        # Merge Symmetric Collections (Collisions)
         # Collision rules are symmetric: {link1, link2} == {link2, link1}.
         # We use frozensets to ensure we don't duplicate rules regardless of link order.
         def merge_collisions(
@@ -470,7 +470,7 @@ class SemanticRobotDescription:
         new_disabled = merge_collisions(self.disabled_collisions, other.disabled_collisions)
         new_enabled = merge_collisions(self.enabled_collisions, other.enabled_collisions)
 
-        # 3. Merge Specialized Collections
+        # Merge Specialized Collections
         # no_default_collision_links is a simple list of strings
         new_no_default = list(self.no_default_collision_links)
         current_no_default = set(new_no_default)

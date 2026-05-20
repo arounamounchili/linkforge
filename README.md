@@ -16,11 +16,6 @@ LinkForge brings the **"LLVM architecture" to Robotics**. It utilizes a universa
 
 By treating robot descriptions as **"Source Code"** rather than compiled **"Executables"**, LinkForge bridges the gap between CAD, Simulation, and AI training with zero data loss. Currently featuring a native **Blender integration**, it acts as a strict safety net to guarantee your robot is rigorous, physics-compliant, and simulation-ready.
 
- 1.  **Model & Import**: Build natively or ingest legacy URDF/XACRO files losslessly.
- 2.  **Lint & Validate**: Catch kinematic and physical errors before they hit your simulator.
- 3.  **The `.lf` Standard**: Store your robot as a metadata-rich, mathematically pure IR.
- 4.  **Deploy Anywhere**: Export hardened URDF, XACRO, or SRDF (with MJCF and SDF coming soon).
-
 ## 💎 Why LinkForge?
 
 | Feature | Legacy Exporters | LinkForge |
@@ -170,9 +165,6 @@ For complete instructions on testing, linting, and building, see our [Contributi
 - [ ] **v2.0.0**: Official launch of the **`.lf` File Standard**.
 - [ ] **v2.1.0**: **AI Engine Update** (Native MuJoCo/MJCF exporter).
 - [ ] **v2.2.0**: **Simulation Expansion** (Native Gazebo/SDF exporter).
-
-> [!TIP]
-> For a deep dive into our long-term technical strategy and the "Digital Twin" philosophy, see **[VISION.md](VISION.md)**.
 
 ## 🤝 Contributing
 
