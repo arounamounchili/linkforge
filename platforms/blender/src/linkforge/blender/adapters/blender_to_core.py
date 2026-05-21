@@ -6,7 +6,8 @@ and LinkForge's core data models.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any, cast
 
 from linkforge.core.constants import (
     DEFAULT_MATERIAL_RGBA,
@@ -28,9 +29,6 @@ from ..constants import (
     TAG_SOURCE_GEOM,
 )
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 try:
     import numpy as np  # type: ignore[import-not-found]
 except ImportError:
@@ -50,13 +48,11 @@ from linkforge.core import (
     RobotBuilder,
     RobotValidationError,
     Sphere,
-    Transform,
     ValidationErrorCode,
     ValidationResult,
     Vector3,
     get_logger,
 )
-from linkforge.core._utils.math_utils import clean_float
 from linkforge.core._utils.string_utils import sanitize_name
 from mathutils import Matrix
 
@@ -74,39 +70,7 @@ from .translator import (
     TransmissionTranslator,
 )
 
-# Constants
 logger = get_logger(__name__)
-
-
-def matrix_to_transform(matrix: Any) -> Transform:
-    """Convert Blender 4x4 matrix to Transform.
-
-    Args:
-        matrix: Blender mathutils.Matrix (4x4)
-
-    Returns:
-        Core Transform with XYZ position and RPY rotation.
-
-    """
-    if matrix is None or Matrix is None:
-        return Transform.identity()
-
-    # Extract translation and rotation (Euler angles in radians)
-    translation = matrix.to_translation()
-    rotation = matrix.to_euler("XYZ")
-
-    xyz = Vector3(
-        clean_float(translation.x),
-        clean_float(translation.y),
-        clean_float(translation.z),
-    )
-    rpy = Vector3(
-        clean_float(rotation.x),
-        clean_float(rotation.y),
-        clean_float(rotation.z),
-    )
-
-    return Transform(xyz=xyz, rpy=rpy)
 
 
 def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
@@ -127,17 +91,12 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
         return None
 
     mesh = obj.data
-    # Type-narrowing for Mypy, with resilience for mocked test environments
     is_mesh = isinstance(mesh, bpy.types.Mesh)
     if not is_mesh and obj.type == "MESH" and mesh is not None:
-        # Fallback for mocked environments where isinstance might fail
         is_mesh = hasattr(mesh, "vertices") and hasattr(mesh, "polygons")
 
     if not is_mesh or mesh is None:
         return None
-
-    # Narrow type for Mypy
-    from typing import cast
 
     mesh_obj = cast(bpy.types.Mesh, mesh)
 
@@ -151,14 +110,12 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
             if tag_val_lower == GEOM_MESH:
                 return None
 
-    # Count vertices and faces
     vert_count = len(mesh_obj.vertices)
     face_count = len(mesh_obj.polygons)
 
     if face_count > PRIMITIVE_MAX_FACES:
         return None
 
-    # Get config for primitive detection thresholds
     config = DEFAULT_PRIMITIVE_CONFIG
 
     # Match Box: 8 vertices, 6 quad faces
@@ -247,11 +204,9 @@ def get_object_geometry(
     if obj is None:
         return None, Matrix.Identity(4)
 
-    # Determine actual geometry type to use (AUTO requires detection)
     actual_geometry_type = geometry_type
     if actual_geometry_type == GEOM_AUTO:
         detected_type = detect_primitive_type(obj)
-        # Use detected primitive (cleaner URDF) or fallback to mesh for complex shapes
         actual_geometry_type = detected_type or GEOM_MESH
 
     if actual_geometry_type == GEOM_MESH:
@@ -273,19 +228,15 @@ def get_object_geometry(
             )
 
             if mesh_path:
-                # Return Mesh geometry with file path
                 return Mesh(
                     resource=str(mesh_path), scale=Vector3(1.0, 1.0, 1.0)
                 ), geom_world_matrix
 
-        # Fallback: approximate with bounding box if export failed or not requested
         actual_geometry_type = GEOM_BOX
 
-    # For primitives, the pose is just the current object matrix
     geom_world_matrix = obj.matrix_world
 
     if actual_geometry_type == GEOM_BOX:
-        # Use bounding box dimensions
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:
             return None, Matrix.Identity(4)
@@ -298,7 +249,6 @@ def get_object_geometry(
         return Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z)), geom_world_matrix
 
     elif actual_geometry_type == GEOM_CYLINDER:
-        # Approximate with bounding cylinder
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:
             return None, Matrix.Identity(4)
@@ -308,7 +258,6 @@ def get_object_geometry(
         return Cylinder(radius=radius, length=length), geom_world_matrix
 
     elif actual_geometry_type == GEOM_SPHERE:
-        # Approximate with bounding sphere
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:
             return None, Matrix.Identity(4)
@@ -360,15 +309,12 @@ def extract_mesh_triangles(
     # The inertia tensor is always computed relative to the object's center of mass
     scale_matrix = obj.matrix_world.to_scale()
 
-    # Fast O(N) extraction via NumPy
     if np is not None:
-        # Fast vertex extraction via foreach_get
         num_verts = len(mesh_data.vertices)
         verts = np.zeros(num_verts * 3, dtype=np.float32)
         mesh_data.vertices.foreach_get("co", verts)
         vertices_array = verts.reshape((-1, 3))
 
-        # Fast face index extraction (triangles)
         num_tris = len(mesh_data.loop_triangles)
         tris = np.zeros(num_tris * 3, dtype=np.int32)
         mesh_data.loop_triangles.foreach_get("vertices", tris)
@@ -379,7 +325,6 @@ def extract_mesh_triangles(
         vertices_array[:, 1] *= scale_matrix.y
         vertices_array[:, 2] *= scale_matrix.z
 
-        # Optional: Return arrays directly
         if as_numpy:
             eval_obj.to_mesh_clear()
             return vertices_array, triangles_array
@@ -397,7 +342,6 @@ def extract_mesh_triangles(
     ]
     triangles = [tuple(t.vertices) for t in mesh_data.loop_triangles]
 
-    # Cleanup memory
     eval_obj.to_mesh_clear()
     return vertices, triangles
 
@@ -416,8 +360,7 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
     if not props.use_material:
         return None
 
-    # Use Blender material name, sanitized for XACRO compatibility
-    mat_name = f"{sanitize_name(obj.name)}_material"  # Default fallback
+    mat_name = f"{sanitize_name(obj.name)}_material"
     if obj.material_slots and obj.material_slots[0].material:
         # Sanitize material name to be valid Python identifier (required for XACRO)
         mat_name = sanitize_name(obj.material_slots[0].material.name)

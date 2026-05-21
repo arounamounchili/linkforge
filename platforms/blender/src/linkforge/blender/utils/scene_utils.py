@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-import typing
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -35,9 +34,6 @@ from ..utils.property_helpers import (
     get_sensor_props,
     get_transmission_props,
 )
-
-if typing.TYPE_CHECKING:
-    pass
 
 
 def is_robot_link(obj: Any) -> bool:

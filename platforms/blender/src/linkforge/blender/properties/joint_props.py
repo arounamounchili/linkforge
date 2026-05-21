@@ -35,10 +35,6 @@ from linkforge.core.constants import (
 from ..constants import (
     PROP_JOINT,
 )
-
-if typing.TYPE_CHECKING:
-    pass
-
 from ..utils.property_helpers import find_property_owner, get_link_props
 from ..utils.scene_utils import clear_stats_cache
 

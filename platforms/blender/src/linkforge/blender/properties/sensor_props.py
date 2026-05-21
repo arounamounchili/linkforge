@@ -60,12 +60,8 @@ from linkforge.core.constants import (
 from ..constants import (
     PROP_SENSOR,
 )
-from ..utils.scene_utils import clear_stats_cache
-
-if typing.TYPE_CHECKING:
-    pass
-
 from ..utils.property_helpers import find_property_owner, get_link_props
+from ..utils.scene_utils import clear_stats_cache
 
 
 def get_sensor_name(self: SensorPropertyGroup) -> str:

@@ -6,7 +6,9 @@ import contextlib
 import typing
 
 import bpy
+from mathutils import Vector
 
+from ..preferences import get_addon_prefs
 from ..properties.link_props import sanitize_name
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.property_helpers import get_joint_props, get_transmission_props
@@ -84,8 +86,6 @@ def create_transmission_for_joint(joint_obj: typing.Any, context: Context) -> bo
     """
     # Get preferred empty size from addon preferences
     empty_size = 0.05  # Default fallback
-    from ..preferences import get_addon_prefs
-
     addon_prefs = get_addon_prefs(context)
     if addon_prefs:
         empty_size = getattr(addon_prefs, "transmission_empty_size", empty_size)
@@ -131,8 +131,6 @@ def create_transmission_for_joint(joint_obj: typing.Any, context: Context) -> bo
             axis_vec = (jp.custom_axis_x, jp.custom_axis_y, jp.custom_axis_z)
 
         if axis_vec:
-            from mathutils import Vector
-
             vec = Vector(axis_vec)
             if vec.length > 0:
                 rot_quat = Vector((0, 0, 1)).rotation_difference(vec)

@@ -6,6 +6,19 @@ import contextlib
 import typing
 from pathlib import Path
 
+from linkforge.core import (
+    Box,
+    Color,
+    Cylinder,
+    Geometry,
+    Joint,
+    Link,
+    LinkPhysics,
+    Mesh,
+    Robot,
+    Sphere,
+    get_logger,
+)
 from linkforge.core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
@@ -30,6 +43,14 @@ from linkforge.core.constants import (
     SENSOR_LIDAR,
 )
 
+if typing.TYPE_CHECKING:
+    bpy: typing.Any
+    Matrix: typing.Any
+
+if not typing.TYPE_CHECKING:
+    import bpy
+    from mathutils import Matrix
+
 from ..constants import (
     DEFAULT_JOINT_GIZMO_SIZE,
     DEFAULT_LINK_GIZMO_SIZE,
@@ -43,35 +64,11 @@ from ..constants import (
     TAG_SOURCE_GEOM,
     TAG_SOURCE_NAME,
 )
-
-if typing.TYPE_CHECKING:
-    bpy: typing.Any
-    Matrix: typing.Any
-
-from .context import IBlenderContext
-
-if not typing.TYPE_CHECKING:
-    import bpy
-    from mathutils import Matrix
-
-from linkforge.core import (
-    Box,
-    Color,
-    Cylinder,
-    Geometry,
-    Joint,
-    Link,
-    LinkPhysics,
-    Mesh,
-    Robot,
-    Sphere,
-    get_logger,
-)
-
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.property_helpers import get_joint_props, get_link_props
 from ..utils.scene_utils import move_to_collection, sync_object_collections
+from .context import IBlenderContext
 
 logger = get_logger(__name__)
 
@@ -90,31 +87,24 @@ def create_material_from_color(
         Blender Material or None
 
     """
-    # Check if material already exists
     if name in context.data.materials:
         return context.data.materials[name]
 
-    # Create new material
     mat = context.data.materials.new(name=name)
     mat.use_nodes = True
 
-    # Get Principled BSDF node
     if mat.node_tree:
         nodes = mat.node_tree.nodes
         links = mat.node_tree.links
 
-        # Clear existing nodes
         nodes.clear()
 
-        # Create basic PBR nodes
         node_principled = nodes.new(type="ShaderNodeBsdfPrincipled")
         node_output = nodes.new(type="ShaderNodeOutputMaterial")
 
-        # Set color
         if hasattr(node_principled.inputs[0], "default_value"):
             node_principled.inputs[0].default_value = (color.r, color.g, color.b, color.a)
 
-        # Link nodes
         links.new(node_principled.outputs[0], node_output.inputs[0])
 
     return mat
@@ -424,21 +414,17 @@ def create_link_object(
         Blender Object or None (returns the link Empty object with properties)
 
     """
-    # Create an Empty object to represent the link (always)
     link_obj = context.data.objects.new(link.name, None)
     link_obj.empty_display_type = "PLAIN_AXES"
     link_obj.rotation_mode = "XYZ"
     link_obj.location = (0, 0, 0)
 
-    # Set display size from preferences
     prefs = get_addon_prefs()
     link_obj.empty_display_size = prefs.link_empty_size if prefs else DEFAULT_LINK_GIZMO_SIZE
 
-    # Add to collection
     if collection:
         move_to_collection(link_obj, collection)
 
-    # Set link properties on the main link object
     if props := get_link_props(link_obj):
         props.is_robot_link = True
         props.source_name_stored = link.name
@@ -456,9 +442,7 @@ def create_link_object(
             suffix = visual.name if visual.name else str(idx)
             visual_name = f"{link.name}{SUFFIX_VISUAL}_{suffix}"
 
-        # Create geometry
         if isinstance(visual.geometry, Mesh):
-            # Resolve mesh path using unified Robot resolver
             try:
                 mesh_path = robot.resolve_resource(
                     visual.geometry.resource, relative_to=source_directory
@@ -468,16 +452,13 @@ def create_link_object(
                 logger.warning(f"Mesh not found for visual '{visual_name}': {e}")
                 visual_obj = None
 
-            # Apply scale from URDF
             if visual_obj and visual.geometry.scale:
                 scale = visual.geometry.scale
                 visual_obj.scale = (scale.x, scale.y, scale.z)
         else:
-            # Create primitive geometry
             visual_obj = create_primitive_mesh(context, visual.geometry, visual_name)
 
         if visual_obj:
-            # Parent to link object
             visual_obj.parent = link_obj
 
             # Reset matrix_parent_inverse to ensure clean local transform
@@ -495,15 +476,12 @@ def create_link_object(
                 visual_obj.location = (0, 0, 0)
                 visual_obj.rotation_euler = (0, 0, 0)
 
-            # Store robot model name attribute for round-trip
             if visual.name:
                 visual_obj[TAG_SOURCE_NAME] = visual.name
 
-            # Add visual mesh to collection
             if collection:
                 move_to_collection(visual_obj, collection)
 
-            # Apply material to visual mesh
             if visual.material and visual.material.color:
                 mat = create_material_from_color(
                     context, visual.material.color, visual.material.name
@@ -526,9 +504,7 @@ def create_link_object(
             suffix = collision.name if collision.name else str(idx)
             collision_name = f"{link.name}{SUFFIX_COLLISION}_{suffix}"
 
-        # Create geometry
         if isinstance(collision.geometry, Mesh):
-            # Resolve mesh path using unified Robot resolver
             try:
                 mesh_path = robot.resolve_resource(
                     collision.geometry.resource, relative_to=source_directory
@@ -538,16 +514,13 @@ def create_link_object(
                 logger.warning(f"Mesh not found for collision '{collision_name}': {e}")
                 collision_obj = None
 
-            # Apply scale from URDF
             if collision_obj and collision.geometry.scale:
                 scale = collision.geometry.scale
                 collision_obj.scale = (scale.x, scale.y, scale.z)
         else:
-            # Create primitive geometry
             collision_obj = create_primitive_mesh(context, collision.geometry, collision_name)
 
         if collision_obj:
-            # Parent to link object
             collision_obj.parent = link_obj
 
             # Reset matrix_parent_inverse to ensure clean local transform
@@ -565,7 +538,6 @@ def create_link_object(
                 collision_obj.location = (0, 0, 0)
                 collision_obj.rotation_euler = (0, 0, 0)
 
-            # Store robot model name attribute for round-trip
             if collision.name:
                 collision_obj[TAG_SOURCE_NAME] = collision.name
 
@@ -573,7 +545,6 @@ def create_link_object(
             # Without this, collision meshes degrade with each import-export cycle.
             collision_obj[TAG_IMPORTED_SOURCE] = True
 
-            # Add collision mesh to link's collections
             sync_object_collections(collision_obj, link_obj)
 
             # Clear materials from collision mesh (collision doesn't need materials)
@@ -582,14 +553,12 @@ def create_link_object(
                 mesh_data = typing.cast(bpy.types.Mesh, collision_obj.data)
                 mesh_data.materials.clear()
 
-            # Set display properties for collision (wireframe, non-rendering)
             collision_obj.display_type = "WIRE"
             collision_obj.show_in_front = (
                 True  # X-ray mode for consistency with generated collisions
             )
             collision_obj.hide_render = True
 
-            # Set collision geometry type for UI consistency
             if isinstance(collision.geometry, Box):
                 collision_obj[TAG_COLLISION_GEOM] = GEOM_BOX
             elif isinstance(collision.geometry, Cylinder):
@@ -599,7 +568,6 @@ def create_link_object(
             elif isinstance(collision.geometry, Mesh):
                 collision_obj[TAG_COLLISION_GEOM] = GEOM_MESH
 
-    # Set mass and inertia properties on link object
     if link.inertial and (props := get_link_props(link_obj)):
         props.mass = link.inertial.mass
 
@@ -619,7 +587,6 @@ def create_link_object(
             props.inertia_origin_xyz = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
             props.inertia_origin_rpy = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
-    # Set physics properties on link object (friction, stiffness, damping)
     if props := get_link_props(link_obj):
         phys = link.physics
 
@@ -645,7 +612,6 @@ def create_link_object(
         props.mass = 0.0
         props.use_auto_inertia = False
 
-    # Set geometry types on link properties (use first element if multiple)
     if props := get_link_props(link_obj):
         if link.collisions:
             # Set collision quality to 100% for imported meshes (preserve original detail)
@@ -695,14 +661,12 @@ def create_joint_object(
         else DEFAULT_JOINT_GIZMO_SIZE
     )
 
-    # Create Empty object (ARROWS shows RGB colored axes)
     empty = context.data.objects.new(joint.name, None)
     empty.empty_display_type = "ARROWS"
     empty.empty_display_size = empty_size
     empty.rotation_mode = "XYZ"
     empty.location = (0, 0, 0)
 
-    # Add to collection (hierarchy-aware)
     if collection:
         if isinstance(collection, bpy.types.Collection):
             collection.objects.link(empty)
@@ -712,13 +676,11 @@ def create_joint_object(
     elif context.scene and context.scene.collection:
         context.scene.collection.objects.link(empty)
 
-    # Set joint properties
     if props := get_joint_props(empty):
         props.is_robot_joint = True
         props.source_name_stored = joint.name
         props.joint_name = joint.name
 
-        # Set joint type
         type_map = {
             JOINT_REVOLUTE: JOINT_REVOLUTE,
             JOINT_CONTINUOUS: JOINT_CONTINUOUS,
@@ -733,7 +695,6 @@ def create_joint_object(
         props.parent_link = link_objects.get(joint.parent)
         props.child_link = link_objects.get(joint.child)
 
-        # Set axis
         if joint.axis:
             # Check if it's a standard axis (X, Y, or Z)
             if joint.axis.x == 1.0 and joint.axis.y == 0.0 and joint.axis.z == 0.0:
@@ -749,7 +710,6 @@ def create_joint_object(
                 props.custom_axis_y = joint.axis.y
                 props.custom_axis_z = joint.axis.z
 
-        # Set limits
         if joint.limits:
             props.use_limits = True
             # Continuous joints may have None for lower/upper (no position limits)
@@ -759,13 +719,11 @@ def create_joint_object(
             props.limit_effort = joint.limits.effort
             props.limit_velocity = joint.limits.velocity
 
-        # Set dynamics
         if joint.dynamics:
             props.use_dynamics = True
             props.dynamics_damping = joint.dynamics.damping
             props.dynamics_friction = joint.dynamics.friction
 
-        # Set mimic
         if joint.mimic:
             props.use_mimic = True
             # Mimic joint pointer will be resolved in a second pass in import_robot_to_scene
@@ -773,7 +731,6 @@ def create_joint_object(
             props.mimic_multiplier = joint.mimic.multiplier
             props.mimic_offset = joint.mimic.offset
 
-        # Set safety controller
         if joint.safety_controller:
             props.use_safety_controller = True
             props.safety_soft_lower_limit = joint.safety_controller.soft_lower_limit
@@ -781,7 +738,6 @@ def create_joint_object(
             props.safety_k_position = joint.safety_controller.k_position
             props.safety_k_velocity = joint.safety_controller.k_velocity
 
-        # Set calibration
         if joint.calibration:
             props.use_calibration = True
             if joint.calibration.rising is not None:
@@ -791,7 +747,6 @@ def create_joint_object(
                 props.use_calibration_falling = True
                 props.calibration_falling = joint.calibration.falling
 
-    # Set up parent-child relationship in Blender
     parent_obj = link_objects.get(joint.parent)
     child_obj = link_objects.get(joint.child)
 
@@ -816,7 +771,6 @@ def create_joint_object(
         # Force update of parent's world matrix
         _ = empty.matrix_world
 
-        # Set child link's local position to origin (0,0,0)
         child_obj.rotation_mode = "XYZ"
         child_obj.location = (0, 0, 0)
         child_obj.rotation_euler = (0, 0, 0)
@@ -827,7 +781,6 @@ def create_joint_object(
             f"Existing links: {list(link_objects.keys())}"
         )
 
-    # Add to collection
     if collection:
         move_to_collection(empty, collection)
 
@@ -861,21 +814,17 @@ def create_sensor_object(
         logger.warning(f"Sensor '{sensor.name}' attached to unknown link '{sensor.link_name}'")
         return None
 
-    # Create Empty object for sensor (SPHERE for sensors)
     empty = context.data.objects.new(sensor.name, None)
     empty.empty_display_type = "SPHERE"
 
-    # Set display size from preferences
     prefs = get_addon_prefs()
     empty.empty_display_size = prefs.sensor_empty_size if prefs else 0.1
 
-    # Set sensor properties
     if hasattr(empty, PROP_SENSOR):
         props = getattr(empty, PROP_SENSOR)
         props.is_robot_sensor = True
         props.sensor_name = sensor.name
 
-        # Map sensor type
         type_map = {
             SENSOR_CAMERA: SENSOR_CAMERA,
             SENSOR_DEPTH_CAMERA: SENSOR_DEPTH_CAMERA,
@@ -957,25 +906,21 @@ def create_sensor_object(
             if sensor.plugin.raw_xml:
                 props.plugin_raw_xml = sensor.plugin.raw_xml
 
-    # Set up parenting
     link_obj = link_objects[sensor.link_name]
     empty.parent = link_obj
 
     # Reset matrix_parent_inverse to ensure clean local transform
     empty.matrix_parent_inverse.identity()
 
-    # Display basic properties
     if sensor.origin:
         origin = sensor.origin
         empty.rotation_mode = "XYZ"
         empty.location = (origin.xyz.x, origin.xyz.y, origin.xyz.z)
         empty.rotation_euler = (origin.rpy.x, origin.rpy.y, origin.rpy.z)
 
-    # Add to collection
     if collection:
         move_to_collection(empty, collection)
 
-    # Hide from render
     empty.hide_render = True
 
     return empty
@@ -992,13 +937,9 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
         robot: Robot model to extract settings from
     """
     scene = context.scene
-    # Set robot name in scene properties
     if hasattr(scene, PROP_ROBOT):
         getattr(scene, PROP_ROBOT).robot_name = robot.name
 
-    # Reset Global LinkForge State
-    # Since LinkForge manages a single centralized configuration per scene,
-    # Populate centralized ROS2 Control
     if robot.ros2_controls:
         lp = getattr(scene, PROP_ROBOT)
         lp.use_ros2_control = True
@@ -1007,14 +948,12 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
         lp.ros2_control_type = control.type
         lp.hardware_plugin = control.hardware_plugin
 
-        # Map global parameters
         lp.ros2_control_parameters.clear()
         for key, value in control.parameters.items():
             param_item = lp.ros2_control_parameters.add()
             param_item.name = key
             param_item.value = value
 
-        # Map joints
         lp.ros2_control_joints.clear()
         for rc_joint in control.joints:
             item = lp.ros2_control_joints.add()
@@ -1026,7 +965,6 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
             item.state_velocity = HW_IF_VELOCITY in rc_joint.state_interfaces
             item.state_effort = HW_IF_EFFORT in rc_joint.state_interfaces
 
-            # Map joint-level parameters
             item.parameters.clear()
             for key, value in rc_joint.parameters.items():
                 param_item = item.parameters.add()
@@ -1073,24 +1011,18 @@ def import_robot_to_scene(
     if not isinstance(context, IBlenderContext):
         context = BlenderContext(context)
 
-    # Setup global scene properties (ros2_control, metadata, etc.)
     if context.scene:
         setup_scene_for_robot(context, robot)
 
-    # Create collection for this robot
     collection = context.data.collections.new(robot.name)
     if context.scene:
         context.scene.collection.children.link(collection)
 
-    # Get source directory for resolving mesh paths
     source_directory = source_path.parent
 
-    # Count additional elements for better logging
     sensor_count = len(robot.sensors) if hasattr(robot, "sensors") else 0
 
-    # Create link objects
     link_objects = {}
-    # Prepare logging info
     parts = [f"{len(robot.links)} links", f"{len(robot.joints)} joints"]
     if sensor_count > 0:
         parts.append(f"{sensor_count} sensors")
@@ -1102,7 +1034,6 @@ def import_robot_to_scene(
         if obj:
             link_objects[link.name] = obj
 
-    # Create joint objects in topological order
     sorted_joints = robot.graph.get_topological_joints()
     joint_objects = {}
     for joint in sorted_joints:
@@ -1115,7 +1046,6 @@ def import_robot_to_scene(
     all_joints_list = list(robot.joints)
     resolve_mimic_joints(all_joints_list, joint_objects)
 
-    # Create sensor objects
     sensors_created = 0
     if hasattr(robot, "sensors") and robot.sensors:
         for sensor in robot.sensors:
@@ -1127,7 +1057,6 @@ def import_robot_to_scene(
     if context.view_layer is not None:
         context.view_layer.update()
 
-    # Build completion message
     completion_parts = [
         f"{len(link_objects)}/{len(robot.links)} links",
         f"{len(joint_objects)}/{len(robot.joints)} joints",
@@ -1136,6 +1065,7 @@ def import_robot_to_scene(
         completion_parts.append(f"{sensors_created}/{sensor_count} sensors")
 
     logger.info(f"Import complete - {', '.join(completion_parts)} created")
+
     # Sync collision visibility with scene property
     # This ensures that if 'Show Collisions' is off (default), the newly imported collision meshes are hidden
     if (

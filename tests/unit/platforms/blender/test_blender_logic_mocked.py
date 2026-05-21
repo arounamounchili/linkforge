@@ -11,8 +11,8 @@ from unittest.mock import MagicMock
 import bpy
 from linkforge.blender.adapters.blender_to_core import (
     detect_primitive_type,
-    matrix_to_transform,
 )
+from linkforge.blender.utils.transform_utils import matrix_to_transform
 
 from tests.mock_bpy_env import MockEuler, MockMatrix, MockMesh, MockObject, MockVector
 

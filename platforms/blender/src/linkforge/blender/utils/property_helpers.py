@@ -18,6 +18,15 @@ from ..constants import (
     PROP_TRANSMISSION,
 )
 
+if TYPE_CHECKING:
+    from linkforge.blender.properties.joint_props import JointPropertyGroup
+    from linkforge.blender.properties.link_props import LinkPropertyGroup
+    from linkforge.blender.properties.robot_props import RobotPropertyGroup
+    from linkforge.blender.properties.sensor_props import SensorPropertyGroup
+    from linkforge.blender.properties.transmission_props import (
+        TransmissionPropertyGroup,
+    )
+
 
 def find_property_owner(context: Context, property_group: Any, property_attr: str) -> Any | None:
     """Find the Blender object that owns a given property group instance.
@@ -69,16 +78,6 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
                 return obj
 
     return None
-
-
-if TYPE_CHECKING:
-    from linkforge.blender.properties.joint_props import JointPropertyGroup
-    from linkforge.blender.properties.link_props import LinkPropertyGroup
-    from linkforge.blender.properties.robot_props import RobotPropertyGroup
-    from linkforge.blender.properties.sensor_props import SensorPropertyGroup
-    from linkforge.blender.properties.transmission_props import (
-        TransmissionPropertyGroup,
-    )
 
 
 def get_link_props(obj: bpy.types.Object | None) -> LinkPropertyGroup | None:

@@ -12,29 +12,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
-# --- Health Checks & Dev Mode ---
-def _check_health() -> bool:
-    """Verify the extension environment and dependencies."""
-    # In production, core is bundled. In dev, we use mypy/PYTHONPATH.
-    try:
-        from . import core  # type: ignore[attr-defined] # noqa: F401
-
-        return True
-    except ImportError:
-        # Fallback for dev mode
-        try:
-            import linkforge.core  # noqa: F401
-
-            return True
-        except ImportError:
-            return False
-
-
-_HEALTHY = _check_health()
-
-from . import handlers, operators, panels, preferences, properties  # noqa: E402
-from .visualization import inertia_gizmos, joint_gizmos  # noqa: E402
+from . import handlers, operators, panels, preferences, properties
+from .visualization import inertia_gizmos, joint_gizmos
 
 # Registration order matters: properties first, then operators, then panels, then gizmos
 modules = [
