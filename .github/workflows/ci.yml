@@ -99,7 +99,7 @@ jobs:
           retention-days: 7
 
   check-and-build:
-    name: All Required Checks Passed
+    name: Check & Build
     needs: [lint-and-type, tests, link-checker]
     runs-on: ubuntu-latest
     if: always()
