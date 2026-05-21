@@ -2,6 +2,12 @@
 
 This module provides high-level, Pandas-style functional entry points for
 reading and writing robot models in various formats (URDF, XACRO, SRDF).
+
+Core Components:
+    - read_urdf, write_urdf: High-level functional APIs for URDF I/O.
+    - read_xacro, write_xacro: High-level functional APIs for XACRO I/O.
+    - read_srdf, write_srdf: High-level functional APIs for SRDF I/O.
+    - validate_robot: High-level functional validation entrypoint.
 """
 
 from __future__ import annotations
