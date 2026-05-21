@@ -2,6 +2,10 @@
 
 This module provides centralized logging configuration for the LinkForge extension.
 It supports both console and file logging with configurable log levels.
+
+Core Components:
+    - setup_logging: Configures loggers, handlers, and formats.
+    - get_logger: Utility to fetch sub-loggers with standard prefixing.
 """
 
 from __future__ import annotations

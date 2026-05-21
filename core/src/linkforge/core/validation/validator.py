@@ -4,10 +4,8 @@ This module provides the :class:`RobotValidator`, which coordinates a suite
 of modular :class:`ValidationCheck` instances to verify the structural,
 kinematic, and physical integrity of a robot model.
 
-Core Responsibilities:
-- **Orchestration**: Running multiple checks in a specific order.
-- **Reporting**: Aggregating issues into a unified :class:`ValidationResult`.
-- **Consistency**: Ensuring internal model indices are fresh before validation.
+Core Components:
+    - RobotValidator: Main orchestration component that runs validation checks.
 """
 
 from __future__ import annotations

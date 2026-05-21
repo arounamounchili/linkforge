@@ -98,6 +98,7 @@ class Box:
 
     @property
     def type(self) -> GeometryType:
+        """Get the geometry primitive type (BOX)."""
         return GeometryType.BOX
 
     def volume(self) -> float:
@@ -131,6 +132,7 @@ class Cylinder:
 
     @property
     def type(self) -> GeometryType:
+        """Get the geometry primitive type (CYLINDER)."""
         return GeometryType.CYLINDER
 
     def volume(self) -> float:
@@ -156,6 +158,7 @@ class Sphere:
 
     @property
     def type(self) -> GeometryType:
+        """Get the geometry primitive type (SPHERE)."""
         return GeometryType.SPHERE
 
     def volume(self) -> float:
@@ -182,6 +185,7 @@ class Mesh:
 
     @property
     def type(self) -> GeometryType:
+        """Get the geometry primitive type (MESH)."""
         return GeometryType.MESH
 
 
