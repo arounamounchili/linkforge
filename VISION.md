@@ -3,7 +3,7 @@
 ![LinkForge: The Universal Robotics Bridge](docs/assets/linkforge_master_vision.png)
 
 ## 🎯 Our Mission
-To build the **LLVM for Robotics**. We are eliminating the fundamental gap between creative 3D design and high-fidelity robotics engineering by providing a unified, lossless Intermediate Representation (IR). We empower roboticists to lint, validate, and deploy their "Digital Twins" from a single source of truth: the `.lf` standard.
+To build the **LLVM for Robotics**. We are eliminating the fundamental gap between creative 3D design and high-fidelity robotics engineering by providing a unified, lossless Intermediate Representation (IR). We empower roboticists to lint, validate, and deploy their "Digital Twins" from a single source of truth: our upcoming, unified `.lf` standard.
 
 ## 🎓 Who Uses LinkForge?
 
@@ -22,8 +22,8 @@ Currently, the robotics ecosystem treats formats like URDF, SDF, and MJCF as the
 
 When you export a robot to URDF, you are "compiling" it. If you manually fix a joint limit in the XML, you cannot easily "decompile" that change back into your CAD model. Your design intent is lost in a one-way, destructive pipeline.
 
-### The Solution: The `.lf` Standard
-LinkForge introduces the `.lf` file format—the **"Source Code"** for robotics.
+### The Solution: The `.lf` Standard (Roadmap)
+LinkForge is designing the `.lf` file format—the upcoming **"Source Code"** standard for robotics.
 *   **The Git for Robotics**: Just as Git tracks code changes, LinkForge tracks the physical intent of your robot.
 *   **Unified Truth**: The `.lf` format acts as a high-fidelity translator ensuring your design intent is mathematically preserved across the entire development lifecycle:
 
@@ -47,7 +47,7 @@ Why LinkForge is the infrastructure for the next generation of robotics:
 | Feature | Legacy Tooling | LinkForge Platform |
 | :--- | :--- | :--- |
 | **Architecture** | Monolithic / Tied to one CAD tool | **Hexagonal / Multi-Host & Multi-Target** |
-| **Format** | XML-based, Lossy, Fragmented | **JSON/YAML `.lf` Standard (Metadata-Rich)** |
+| **Format** | XML-based, Lossy, Fragmented | **JSON/YAML `.lf` Standard (Planned / Roadmap)** |
 | **Validation** | Post-Export (Fail in Sim) | **Automated Linting (Fail in Editor)** |
 | **Physics** | "Close Enough" Mesh Export | **Scientific Inertia & Mass Sanity** |
 | **Asset Loading** | Fragile Local File Paths | **Cloud-Native `lf://` URI Resolution** |
@@ -58,13 +58,14 @@ Why LinkForge is the infrastructure for the next generation of robotics:
 
 LinkForge is the **"LLVM for Robotics."** By utilizing a **Hexagonal Architecture**, we remain framework-independent:
 *   **Decoupled Intelligence**: Our "Robotics Brain" (`linkforge.core`) is isolated from specific UI hosts or simulation engines.
-*   **Model Once, Deploy Anywhere**: Write your robot once in `.lf`, and swappable adapters generate the exact MJCF, URDF, or SDF needed for your specific runtime.
+*   **Model Once, Deploy Anywhere**: (Roadmap) Write your robot once in the unified `.lf` format, and swappable adapters generate the exact MJCF, URDF, or SDF needed for your specific runtime.
 
 ---
 
 ## 🚀 Future Horizons
 
 We are building the infrastructure for the next generation of autonomy:
+*   **📝 The `.lf` Format Specification**: Formalizing the JSON/YAML schema for the lossless, metadata-rich `.lf` standard to act as our universal IR serialization format.
 *   **🛡️ Kinematic Intelligence**: Built-in solvers to validate workspace reachability inside the visual editor.
 *   **🧠 Intelligence-Driven Rigging**: Graph Neural Networks (GNNs) that automate joint placement based on mesh topology.
 *   **📦 The LinkForge Package Manager (LPM)**: A decentralized registry for verified robot components.
