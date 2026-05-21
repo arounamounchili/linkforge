@@ -15,7 +15,14 @@ from typing import TYPE_CHECKING, Any
 import bpy
 from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
-from linkforge.core import get_logger
+from linkforge.core import (
+    LinkForgeError,
+    RobotGeneratorError,
+    RobotValidator,
+    URDFGenerator,
+    XACROGenerator,
+    get_logger,
+)
 
 from ..constants import (
     PROP_ROBOT,
@@ -81,9 +88,6 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the export."""
-        # Import here to avoid circular dependencies
-        from linkforge.core import URDFGenerator, XACROGenerator
-
         from ..adapters.blender_to_core import scene_to_robot
         from ..adapters.context import BlenderContext
 
@@ -113,9 +117,6 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         logger.info(f"Exporting robot to: {output_path}")
         logger.debug(f"Mesh directory: {meshes_dir}")
 
-        from linkforge.core import LinkForgeError, RobotGeneratorError, RobotValidator
-
-        # Validate if requested
         if robot_props.validate_before_export:
             try:
                 robot_dry_run, conversion_result = scene_to_robot(
@@ -139,8 +140,6 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
                 )
                 return {"CANCELLED"}
 
-        # Second pass: Actual export
-        # If export_meshes is False, we run in dry_run mode (generate paths but don't write files)
         should_write_meshes = robot_props.export_meshes
         try:
             robot, _ = scene_to_robot(
@@ -202,9 +201,6 @@ class LINKFORGE_OT_validate_robot(Operator):
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute validation."""
-        from linkforge.core import RobotValidator
-
-        # Clear previous results
         if not context.window_manager or not hasattr(context.window_manager, PROP_VALIDATION):
             self.report({"ERROR"}, "Validation system not initialized")
             return {"CANCELLED"}
@@ -214,7 +210,6 @@ class LINKFORGE_OT_validate_robot(Operator):
         )
         validation_props.clear()
 
-        # Convert scene to robot
         from ..adapters.blender_to_core import scene_to_robot
         from ..adapters.context import BlenderContext
 

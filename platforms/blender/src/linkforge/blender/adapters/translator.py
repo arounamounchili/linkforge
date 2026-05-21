@@ -56,6 +56,8 @@ from linkforge.core.constants import (
 from ..constants import (
     FORMAT_STL,
     GEOM_AUTO,
+    PURPOSE_COLLISION,
+    PURPOSE_VISUAL,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
     TAG_IMPORTED_SOURCE,
@@ -72,6 +74,7 @@ from ..utils.property_helpers import (
     get_sensor_props,
     get_transmission_props,
 )
+from ..utils.transform_utils import matrix_to_transform
 
 logger = logging.getLogger(__name__)
 
@@ -125,11 +128,7 @@ class LinkTranslator(ITranslator):
         **_kwargs: Any,
     ) -> LinkBuilder | None:
         """Translate a Blender link to a Core Link using RobotBuilder."""
-        from .blender_to_core import (
-            get_object_geometry,
-            get_object_material,
-            matrix_to_transform,
-        )
+        from .blender_to_core import get_object_geometry, get_object_material
 
         props = get_link_props(obj)
         if not props:
@@ -152,7 +151,7 @@ class LinkTranslator(ITranslator):
                     child,
                     GEOM_AUTO,
                     link_name,
-                    "visual",
+                    PURPOSE_VISUAL,
                     meshes_dir,
                     mesh_format,
                     dry_run=dry_run,
@@ -175,7 +174,7 @@ class LinkTranslator(ITranslator):
                     )
                     # Mesh Topology Validation
                     self._validate_mesh(
-                        child, link_name, "visual", validation_result, depsgraph=depsgraph
+                        child, link_name, PURPOSE_VISUAL, validation_result, depsgraph=depsgraph
                     )
 
         # 2. Translate collisions
@@ -189,7 +188,7 @@ class LinkTranslator(ITranslator):
                     child,
                     GEOM_AUTO,
                     link_name,
-                    "collision",
+                    PURPOSE_COLLISION,
                     meshes_dir,
                     FORMAT_STL,  # Collisions always use STL for maximum physics compatibility
                     simplify=(quality < 1.0) and not is_imported,
@@ -209,7 +208,7 @@ class LinkTranslator(ITranslator):
                     )
                     # Mesh Topology Validation
                     self._validate_mesh(
-                        child, link_name, "collision", validation_result, depsgraph=depsgraph
+                        child, link_name, PURPOSE_COLLISION, validation_result, depsgraph=depsgraph
                     )
 
         # 3. Translate Physics (Inertia & Mass)
@@ -313,8 +312,6 @@ class JointTranslator(ITranslator):
         **_kwargs: Any,
     ) -> None:
         """Translate a Blender joint to a Core Joint using the LinkBuilder."""
-        from .blender_to_core import matrix_to_transform
-
         props = get_joint_props(obj)
         if not props or not props.is_robot_joint:
             return
@@ -450,12 +447,11 @@ class SensorTranslator(ITranslator):
         try:
             sensor = self._blender_sensor_to_core(obj)
             if sensor:
-                # Calculate origin relative to link
                 link_name = sensor.link_name
                 if link_frames and link_name in link_frames:
                     link_frame_inv = link_frames[link_name].inverted()
                     sensor_relative = link_frame_inv @ obj.matrix_world
-                    corrected_origin = self._matrix_to_transform(sensor_relative)
+                    corrected_origin = matrix_to_transform(sensor_relative)
                     sensor = replace(sensor, origin=corrected_origin)
 
                 builder.robot.add_sensor(sensor)
@@ -471,12 +467,6 @@ class SensorTranslator(ITranslator):
                 # If no validation result is provided, let the exception bubble up
                 # to avoid silent failures in tests or scripts.
                 raise
-
-    def _matrix_to_transform(self, matrix: Any) -> Any:
-        """Helper to convert matrix to transform without circular import."""
-        from .blender_to_core import matrix_to_transform
-
-        return matrix_to_transform(matrix)
 
     def _blender_sensor_to_core(self, obj: Any) -> Sensor | None:
         """Convert a Blender sensor Empty and its properties to a Core Sensor model."""
@@ -510,7 +500,7 @@ class SensorTranslator(ITranslator):
             )
 
         # Build sensor origin from object transform
-        origin = self._matrix_to_transform(obj.matrix_world)
+        origin = matrix_to_transform(obj.matrix_world)
 
         # Type-specific info
         camera_info = None

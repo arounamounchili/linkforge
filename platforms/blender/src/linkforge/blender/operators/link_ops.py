@@ -6,7 +6,7 @@ import contextlib
 import time
 import typing
 
-from linkforge.core import InertiaTensor, get_logger
+from linkforge.core import InertiaTensor, Vector3, get_logger
 from linkforge.core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
@@ -200,7 +200,6 @@ def create_collision_for_link(
         for col in existing_collisions:
             bpy.data.objects.remove(col, do_unlink=True)
 
-        # Import here to avoid circular dependency
         from ..adapters.blender_to_core import detect_primitive_type
 
         # Determine collision type
@@ -537,7 +536,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     from linkforge.core import Box, Cylinder, Sphere, calculate_inertia, validate_mesh_topology
     from linkforge.core.physics import calculate_mesh_inertia_from_triangles
 
-    from ..adapters.blender_to_core import extract_mesh_triangles
+    from ..adapters.blender_to_core import detect_primitive_type, extract_mesh_triangles
 
     # Calculate inertia from child meshes (new architecture: link Empty + children)
     try:
@@ -572,8 +571,6 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             mass = 1.0  # Default to 1kg if not set
 
         # Try to detect primitive type first (faster/cleaner)
-        from ..adapters.blender_to_core import detect_primitive_type
-
         prim_type = detect_primitive_type(target_obj)
         tensor = None
 
@@ -584,8 +581,6 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             # Primitive calculation expects dimensions
             if prim_type == GEOM_BOX:
                 # Convert mathutils.Vector to core Vector3
-                from linkforge.core import Vector3
-
                 size = Vector3(dims.x, dims.y, dims.z)
                 tensor = calculate_inertia(Box(size=size), mass)
             elif prim_type == GEOM_SPHERE:

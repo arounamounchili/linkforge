@@ -25,7 +25,6 @@ from linkforge.blender.adapters.blender_to_core import (
     extract_mesh_triangles,
     get_object_geometry,
     get_object_material,
-    matrix_to_transform,
     sanitize_name,
     scene_to_robot,
 )
@@ -35,6 +34,7 @@ from linkforge.blender.adapters.translator import (
     SensorTranslator,
     TransmissionTranslator,
 )
+from linkforge.blender.utils.transform_utils import matrix_to_transform
 from linkforge.core import (
     Box,
     Cylinder,
@@ -699,7 +699,7 @@ def test_matrix_to_transform_conversion(scene, blender_context) -> None:
     import math
 
     import mathutils
-    from linkforge.blender.adapters.blender_to_core import matrix_to_transform
+    from linkforge.blender.utils.transform_utils import matrix_to_transform
 
     # Identity
     mat = mathutils.Matrix.Identity(4)
@@ -1890,19 +1890,17 @@ def test_detect_primitive_type_tags(scene, blender_context) -> None:
     assert detect_primitive_type(obj) == "sphere"
 
 
-def test_blender_to_core_matrix_nulls_and_fallbacks() -> None:
+def test_matrix_to_transform_nulls_and_fallbacks() -> None:
     """Test matrix_to_transform with Matrix or matrix None/missing."""
     from unittest.mock import patch
 
-    import linkforge.blender.adapters.blender_to_core as b2c
-
     # matrix is None
-    res = b2c.matrix_to_transform(None)
+    res = matrix_to_transform(None)
     assert res.xyz.x == 0.0
 
     # Matrix is None (patched)
-    with patch("linkforge.blender.adapters.blender_to_core.Matrix", None):
-        res = b2c.matrix_to_transform(MagicMock())
+    with patch("linkforge.blender.utils.transform_utils.Matrix", None):
+        res = matrix_to_transform(MagicMock())
         assert res.xyz.x == 0.0
 
 
