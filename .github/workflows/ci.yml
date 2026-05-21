@@ -41,7 +41,7 @@ jobs:
         uses: reviewdog/action-actionlint@v1
 
   tests:
-    name: Tests (${{ matrix.python-version }})
+    name: Core Tests (Python ${{ matrix.python-version }})
     needs: lint-and-type
     runs-on: ubuntu-latest
     strategy:
@@ -99,7 +99,7 @@ jobs:
           retention-days: 7
 
   check-and-build:
-    name: Check & Build
+    name: All Required Checks Passed
     needs: [lint-and-type, tests, link-checker]
     runs-on: ubuntu-latest
     if: always()

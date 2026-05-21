@@ -16,7 +16,7 @@ on:
 
 jobs:
   blender-tests:
-    name: Blender Unit Tests (Blender ${{ matrix.blender-version }})
+    name: Blender Compatibility Matrix (Blender ${{ matrix.blender-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
