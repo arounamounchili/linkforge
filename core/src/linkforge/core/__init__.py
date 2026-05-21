@@ -26,7 +26,7 @@ from . import (
     validation,
 )
 
-# Base Architecture (Interfaces and Resolvers)  # noqa: ERA001
+# Base Architecture: Interfaces and Resolvers
 from .base import (
     FileSystemResolver,
     IResourceResolver,
@@ -35,7 +35,7 @@ from .base import (
     RobotParser,
 )
 
-# Composer API (The "LinkForge way" to build robots)  # noqa: ERA001
+# Composer API: The LinkForge way to build robots
 from .composer import (
     LinkBuilder,
     RobotBuilder,
@@ -45,7 +45,7 @@ from .composer import (
     sphere,
 )
 
-# Core Infrastructure (Constants and Exceptions)  # noqa: ERA001
+# Core Infrastructure: Constants and Exceptions
 from .constants import (
     DEFAULT_GRAVITY,
     DEFAULT_LINK_MASS,
@@ -69,7 +69,7 @@ from .exceptions import (
     XacroDetectedError,
 )
 
-# Generators and Functional I/O  # noqa: ERA001
+# Generators and Functional I/O
 from .generators import (
     RobotXMLGenerator,
     SRDFGenerator,
@@ -87,7 +87,7 @@ from .io import (
 )
 from .logging_config import get_logger, setup_logging
 
-# IR Models (Entities, Sensors and Hardware)  # noqa: ERA001
+# IR Models: Entities, Sensors and Hardware
 from .models import (
     Box,
     CameraInfo,
@@ -145,7 +145,7 @@ from .models import (
     Visual,
 )
 
-# Parsers and Resolvers  # noqa: ERA001
+# Parsers and Resolvers
 from .parsers import (
     RobotXMLParser,
     SRDFParser,
@@ -155,7 +155,7 @@ from .parsers import (
     clear_xacro_cache,
 )
 
-# Processing and Validation (Physics and Checks)  # noqa: ERA001
+# Processing and Validation: Physics and Checks
 from .physics import (
     calculate_inertia,
     validate_mesh_topology,
@@ -244,7 +244,7 @@ __all__ = [
     "JointSafetyController",
     "JointCalibration",
     "JointType",
-    # IO (Parsers & Generators)  # noqa: ERA001
+    # File Parsers and Generators
     "URDFParser",
     "XACROParser",
     "SRDFParser",
