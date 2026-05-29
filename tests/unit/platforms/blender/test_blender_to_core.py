@@ -785,6 +785,27 @@ def test_scene_to_robot_conversion(scene, blender_context) -> None:
     assert any(link.name == "base_link" for link in robot.links)
 
 
+def test_scene_to_robot_conversion_disconnected_links(scene, blender_context) -> None:
+    """Verify that disconnected links in the scene are converted and added to the robot model."""
+    # Setup base_link (root)
+    base_obj = create_test_object("base_link", None, scene)
+    safe_get_linkforge(base_obj).is_robot_link = True
+    safe_get_linkforge(base_obj).link_name = "base_link"
+
+    # Setup a disconnected link
+    island_obj = create_test_object("island_link", None, scene)
+    safe_get_linkforge(island_obj).is_robot_link = True
+    safe_get_linkforge(island_obj).link_name = "island_link"
+
+    # Convert
+    robot, errors = scene_to_robot(bpy.context)
+
+    # Verify
+    assert robot is not None
+    assert robot.has_link("base_link")
+    assert robot.has_link("island_link")
+
+
 def test_extract_mesh_triangles_logic(scene, blender_context) -> None:
     """Test raw triangle extraction from a primitive."""
     bpy.ops.mesh.primitive_cube_add(size=1.0)

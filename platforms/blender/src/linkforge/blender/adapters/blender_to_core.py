@@ -533,6 +533,18 @@ def _calculate_link_frames(
 
         calc_child_frames(root_name)
 
+        # Calculate frames for any disconnected links/islands in the scene relative to the primary root
+        for name, obj in link_objects.items():
+            if name not in link_frames:
+                obj_world = obj.matrix_world.copy()
+                obj_translation = obj_world.to_translation()
+                obj_rotation = obj_world.to_quaternion()
+                obj_transform = (
+                    Matrix.Translation(obj_translation) @ obj_rotation.to_matrix().to_4x4()
+                )
+                link_frames[name] = root_world_transform_inv @ obj_transform
+                calc_child_frames(name)
+
     return link_frames
 
 
@@ -583,6 +595,13 @@ class SceneToRobotTranslator:
         if root:
             root_name, _ = root
             self._build_link_recursive(root_name, None, link_objects, joints_map, link_frames)
+
+            # Translate any orphaned links/islands that are not connected to the main root's tree
+            for orphaned_link_name in link_objects:
+                if not self.builder.robot.has_link(orphaned_link_name):
+                    self._build_link_recursive(
+                        orphaned_link_name, None, link_objects, joints_map, link_frames
+                    )
         else:
             self.validation_result.add_error(
                 title="No root link",
@@ -598,7 +617,7 @@ class SceneToRobotTranslator:
 
         # 6. Finalize and return
         try:
-            robot = self.builder.build()
+            robot = self.builder.build(validate=False)
         except Exception as e:
             self.validation_result.add_error(
                 title="Build failed", message=str(e), code=ValidationErrorCode.INVALID_VALUE

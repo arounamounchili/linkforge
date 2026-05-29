@@ -389,7 +389,7 @@ class TestJointPanel:
         joint_obj = create_robot_joint("test_joint", base, child, scene)
 
         jp = safe_get_joint(joint_obj)
-        jp.joint_type = "REVOLUTE"
+        jp.joint_type = "revolute"
         jp.axis = "CUSTOM"
         jp.use_dynamics = True
         jp.use_mimic = True
@@ -429,7 +429,7 @@ class TestSensorPanel:
         sp = safe_get_sensor(sensor_obj)
         sp.is_robot_sensor = True
         sp.sensor_name = "test_sensor"
-        sp.sensor_type = "CAMERA"
+        sp.sensor_type = "camera"
         sp.use_noise = True
         sp.use_gazebo_plugin = True
         sensor_obj.parent = base
@@ -454,7 +454,7 @@ class TestSensorPanel:
         sensor_obj = create_test_object("test_sensor", None, scene)
         sp = safe_get_sensor(sensor_obj)
         sp.is_robot_sensor = True
-        sp.sensor_type = "LIDAR"
+        sp.sensor_type = "lidar"
         sensor_obj.parent = base
 
         if bpy.context.view_layer:
@@ -467,7 +467,7 @@ class TestSensorPanel:
         panel.draw(bpy.context)
         mock_layout.prop.assert_any_call(sp, "lidar_horizontal_samples")
 
-        sp.sensor_type = "CONTACT"
+        sp.sensor_type = "contact"
         panel.draw(bpy.context)
         mock_layout.prop.assert_any_call(sp, "contact_collision")
 
@@ -1017,7 +1017,7 @@ class TestPanelsExtra:
         sensor_obj = create_test_object("sensor1", None, scene)
         sp = safe_get_sensor(sensor_obj)
         sp.is_robot_sensor = True
-        sp.sensor_type = "LIDAR"
+        sp.sensor_type = "lidar"
         sp.use_noise = False
         sp.use_gazebo_plugin = False
         sensor_obj.parent = base

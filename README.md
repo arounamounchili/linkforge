@@ -189,7 +189,7 @@ For third-party component licenses, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOT
 
 ## ✨ Our Contributors
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/en/emoji-key/)):
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
