@@ -8,22 +8,22 @@ LinkForge decouples robot definition inputs from physical target configurations 
 
 ```{mermaid}
 graph LR
-    subgraph Frontends["⬅ Frontends"]
-        UI["🎨 Blender Visual UI"]
-        API["⚙️ Python Composer API"]
-        CAD["📂 URDF / XACRO Parsers"]
+    subgraph Frontends["Frontends"]
+        UI["Blender Visual UI"]
+        API["Python Composer API"]
+        CAD["URDF / XACRO Parsers"]
     end
 
-    subgraph Core["🔩 Core Engine"]
+    subgraph Core["Core Engine"]
         IR("Universal Robot IR")
-        Val["🔍 Integrity Validator"]
+        Val["Integrity Validator"]
         IR <-->|"Audit & Verify"| Val
     end
 
-    subgraph Targets["Output Targets ➡"]
-        URDF["📄 URDF / XACRO"]
-        SRDF["📂 SRDF / MoveIt 2"]
-        Future["🚀 MJCF / SDF"]
+    subgraph Targets["Output Targets"]
+        URDF["URDF / XACRO"]
+        SRDF["SRDF / MoveIt 2"]
+        Future["MJCF / SDF"]
     end
 
     UI  -->|Compile| IR
@@ -34,7 +34,7 @@ graph LR
     IR  -->|Export| SRDF
     IR  -.->|"Planned"| Future
 
-    style Future fill:#f5f5f5,stroke:#aaa,stroke-dasharray:5 5,color:#888
+    style Future fill:#f5f5f5,stroke:#aaa,stroke-dasharray:5,color:#888
 ```
 
 ---

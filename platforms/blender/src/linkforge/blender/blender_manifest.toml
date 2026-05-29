@@ -14,7 +14,7 @@ name = "LinkForge"
 
 # Short description (tagline) - max ~100 characters
 # Short description (tagline) - max ~100 characters
-tagline = "The LLVM for Robotics: Visual Digital Twin & IR Editor"
+tagline = "Build, validate, and export robot descriptions (URDF/SRDF) from Blender with physics integrity"
 
 # Extension type
 type = "add-on"
