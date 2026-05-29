@@ -7,7 +7,7 @@ Welcome to the official LinkForge documentation. LinkForge is **the programmable
 LinkForge decouples robot definition inputs from physical target configurations using a **Frontends → IR → Backends** pipeline:
 
 ```{mermaid}
-graph LR
+graph TD
     subgraph Frontends["Frontends"]
         UI["Blender Visual UI"]
         API["Python Composer API"]
