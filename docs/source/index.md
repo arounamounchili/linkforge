@@ -7,19 +7,32 @@ Welcome to the official LinkForge documentation. LinkForge is **the programmable
 LinkForge decouples robot definition inputs from physical target configurations using a **Frontends → IR → Backends** pipeline:
 
 ```{mermaid}
-graph LR
+graph TB
     %% Frontends
-    UI[🎨 Blender Visual UI] -->|Compile| IR(Universal Robot IR)
-    API[⚙️ Python Composer API] -->|Compile| IR
-    CAD[📂 CAD / URDF Parsers] -->|Ingest| IR
+    UI["🎨 Blender Visual UI"]
+    API["⚙️ Python Composer API"]
+    CAD["📂 CAD / URDF Parsers"]
 
-    %% Core IR & Validation
-    IR <-->|Audit & Verify| Val[🔍 Integrity Validator]
+    %% Core IR
+    IR("🔩 Universal Robot IR")
+
+    %% Validation
+    Val["🔍 Integrity Validator"]
 
     %% Backends
-    IR -->|Export| URDF[📄 URDF / XACRO]
-    IR -->|Export| SRDF[📂 SRDF / MoveIt]
-    IR -->|Export| Future[🚀 Future: MJCF / SDF]
+    URDF["📄 URDF / XACRO"]
+    SRDF["📂 SRDF / MoveIt 2"]
+    Future["🚀 Future: MJCF / SDF"]
+
+    UI  -->|Compile|  IR
+    API -->|Compile|  IR
+    CAD -->|Ingest|   IR
+
+    IR  <-->|Audit & Verify| Val
+
+    IR  -->|Export|   URDF
+    IR  -->|Export|   SRDF
+    IR  -->|Export|   Future
 ```
 
 ---
