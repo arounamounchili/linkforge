@@ -13,8 +13,7 @@ version = "1.3.0" # x-release-please-version
 name = "LinkForge"
 
 # Short description (tagline) - max ~100 characters
-# Short description (tagline) - max ~100 characters
-tagline = "The LLVM for Robotics: Visual Digital Twin & IR Editor"
+tagline = "Visual Designer for LinkForge: Build, validate, and export URDF/XACRO robot models"
 
 # Extension type
 type = "add-on"

@@ -6,16 +6,15 @@
   <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/badge/python-3.11+-3776AB" alt="Python versions"></a>
   <a href="https://linkforge.readthedocs.io/"><img src="https://img.shields.io/badge/docs-read%20the%20docs-brightgreen" alt="Documentation Status"></a>
   <a href="https://github.com/arounamounchili/linkforge/blob/main/core/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
 </p>
 
 ---
 
-## 🔭 The LLVM for Robotics
+## 🔭 What Is LinkForge Core?
 
-URDF is fragmented, XACRO is XML template hell, and physics engines frequently explode due to bad inertia tensors. LinkForge Core solves this by acting as a **unified intermediate compiler layer** for robot descriptions.
+Writing and maintaining URDF or SRDF by hand is fragile: inertia values are guessed, collision geometries drift, and physics bugs surface only after a simulator crash (or worse, on hardware). LinkForge Core solves this by treating your robot as **source code with physical constraints**, not a static XML document.
 
-It provides a mathematically pure, zero-dependency Intermediate Representation (IR) with hardened physical validation, scientific inertia solvers, and lossless translation between **URDF**, **XACRO**, and **SRDF**.
+It provides a mathematically rigorous, zero-dependency Intermediate Representation (IR) engine with hardened physical validation, scientific inertia solvers (Mirtich / Sylvester), and lossless round-trip translation between **URDF**, **XACRO**, and **SRDF**.
 
 ---
 
@@ -67,7 +66,7 @@ urdf_xml = builder.export_urdf()
 ## 💎 Key Capabilities
 
 ### Lossless Ingest & Multi-Phase Linter
-Parse existing URDF or XACRO files from the filesystem or memory strings. The parser is completely "lossless" — it preserves unrecognized or custom tags while sanitizing package paths and validating kinematics:
+Parse existing URDF or XACRO files from the filesystem or memory strings. The parser is completely "lossless" - it preserves unrecognized or custom tags while sanitizing package paths and validating kinematics:
 
 ```python
 from linkforge.core import read_urdf, validate_robot

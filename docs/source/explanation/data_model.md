@@ -55,8 +55,8 @@ programmatic assembly API for engineers who need to build robots dynamically in 
 
 The `RobotBuilder` class provides a coordinated interface to construct a unified `Robot` object, which encapsulates both:
 
-- **Kinematic Description** — links, joints, sensors, and physics.
-- **Semantic Overlay** — planning groups, named poses, and collision filters for MoveIt (stored internally as a `SemanticRobotDescription`).
+- **Kinematic Description**: links, joints, sensors, and physics.
+- **Semantic Overlay**: planning groups, named poses, and collision filters for MoveIt (stored internally as a `SemanticRobotDescription`).
 
 This unified model mirrors the real-world split between a URDF file (what the robot
 looks like) and an SRDF file (how the planner should think about it), allowing you to generate both formats from a single source of truth.
@@ -76,7 +76,7 @@ from linkforge.core import RobotBuilder
 
 # Both patterns produce the same output: a validated Robot + SRDF ready for
 # export to URDF, SRDF, or any future format (MJCF, SDF).
-assembly = RobotBuilder("my_robot", ...)
+assembly = RobotBuilder("my_robot")
 urdf_str = assembly.export_urdf()
 srdf_str = assembly.export_srdf()
 ```

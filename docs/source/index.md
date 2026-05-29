@@ -1,25 +1,24 @@
 # LinkForge Documentation
 
-Welcome to the official LinkForge documentation. LinkForge is the **LLVM for Robotics**, providing a universal, mathematical Intermediate Representation (IR) and a Blender-based digital twin platform for robot design, simulation, and deployment.
+Welcome to the official LinkForge documentation. LinkForge is **the programmable robot description engine** - a rigorous Intermediate Representation (IR) and Blender-based platform for building, validating, and deploying robot models with scientific precision.
 
-## The LLVM for Robotics Architecture
+## 🏗️ LinkForge Architecture: IR-Based Compilation
 
-LinkForge decouples robot definition inputs from physical target configurations by acting as a compiler with standard **Frontends**, a **Universal Intermediate Representation (IR)**, and extensible **Backends**:
+LinkForge decouples robot definition inputs from physical target configurations using a **Frontends → IR → Backends** pipeline:
 
 ```{mermaid}
 graph LR
-    %% Frontends
-    UI[🎨 Blender Visual UI] -->|Compile| IR(Universal Robot IR)
-    API[⚙️ Python Composer API] -->|Compile| IR
-    CAD[📂 CAD / URDF Parsers] -->|Ingest| IR
+    UI["Blender Visual UI"] -->|Compile| IR("Universal Robot IR")
+    API["Python Composer API"] -->|Compile| IR
+    CAD["URDF / XACRO Parsers"] -->|Ingest| IR
 
-    %% Core IR & Validation
-    IR <-->|Audit & Verify| Val[🔍 Integrity Validator]
+    IR -->|Audit & Verify| Val["Integrity Validator"]
 
-    %% Backends
-    IR -->|Export| URDF[📄 URDF / XACRO]
-    IR -->|Export| SRDF[📂 SRDF / MoveIt]
-    IR -->|Export| Future[🚀 Future: MJCF / SDF]
+    IR -->|Export| URDF["URDF / XACRO"]
+    IR -->|Export| SRDF["SRDF / MoveIt 2"]
+    IR -.->|Planned| Future["MJCF / SDF"]
+
+    style Future fill:#f5f5f5,stroke:#aaa,stroke-dasharray:5,color:#888
 ```
 
 ---
@@ -28,7 +27,7 @@ graph LR
 
 LinkForge streamlines robotics modeling with the following capabilities:
 
-- **LLVM for Robotics**: A decoupled compiler architecture featuring frontends, a universal IR, and customizable simulator backends.
+- **IR-Based Compilation**: A decoupled pipeline with multiple frontends (Blender UI, Python API, URDF import), a validated IR, and extensible simulator backends.
 - **Dual-Mode Authoring**: Visual 3D editing inside Blender or programmatic Python coding.
 - **Production-Ready Export**: Strictly compliant URDF/XACRO files optimized for ROS/Gazebo.
 - **ROS2 Control Support**: Automatic hardware interface configuration.

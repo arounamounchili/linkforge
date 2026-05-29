@@ -1,6 +1,6 @@
-# LinkForge Architecture: The Universal Robotics Bridge
+# LinkForge Architecture: The Programmable Robot Description Engine
 
-This document provides a high-level map of LinkForge's architecture. It is designed to help contributors understand the "Hexagonal" philosophy and the flow of data between Design and Robotics.
+This document provides a high-level map of LinkForge's architecture. It is designed to help contributors understand the **Frontends → IR → Backends** philosophy and the flow of data between design tools and simulation targets.
 
 ## 🔭 Architectural Philosophy: Hexagonal Core
 LinkForge is built on the **Ports & Adapters (Hexagonal)** pattern. The goal is to keep the "Robotics Intelligence" (Core) completely isolated from the "Design Tool" (Blender/FreeCAD).
@@ -77,7 +77,7 @@ sequenceDiagram
 | **Physics is Truth** | We prioritize numerical accuracy. If a mesh is broken, the linter "Fails in Editor" rather than "Fails in Sim." |
 | **Zero-Dependency** | The Core must remain lightweight and portable. No NumPy or C++ dependencies in the simulation logic. |
 | **Bake the Transforms** | To prevent "Origin Drift" between tools, we automatically normalize and bake transforms during import/export. |
-| **Resilient Parsing** | Our URDF parser is "Lossless"—it preserves unknown tags and handles malformed XML gracefully. |
+| **Resilient Parsing** | Our URDF parser is "Lossless" - it preserves unknown tags and handles malformed XML gracefully. |
 
 ---
 

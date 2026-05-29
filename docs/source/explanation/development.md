@@ -43,10 +43,10 @@ just coverage
 
 ## ✨ Code Quality
 
-To maintain high standards, we use `ruff` for linting and `mypy` for strict type checking.
+To maintain high standards, we use `ruff` for linting, `mypy` and `pyright` for strict type checking.
 
 ```bash
-# Check everything (Lint + Types)
+# Check everything (Format + Lint + Types: mypy + pyright)
 just check
 
 # Fix linting issues automatically
