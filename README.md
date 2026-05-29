@@ -77,9 +77,11 @@ base_builder.attach(
 )
 
 # Add a MoveIt 2 planning group for the combined assembly
-base_builder.semantic \
-    .group("arm_chain") \
-    .chain(base_link="top_plate", tip_link="left_arm_end_effector")
+base_builder.semantic.group(
+    "arm_chain",
+    base_link="top_plate",
+    tip_link="left_arm_end_effector",
+)
 
 robot = base_builder.build(validate=True)
 urdf_xml = base_builder.export_urdf()
