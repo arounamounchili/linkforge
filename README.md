@@ -145,7 +145,7 @@ Install via Blender Extensions and design robots visually — all physics valida
 
 ### Headless Python Core
 
-**Requirements**: Python 3.10+
+**Requirements**: Python 3.11+
 
 ```bash
 pip install linkforge-core

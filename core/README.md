@@ -6,7 +6,6 @@
   <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/badge/python-3.11+-3776AB" alt="Python versions"></a>
   <a href="https://linkforge.readthedocs.io/"><img src="https://img.shields.io/badge/docs-read%20the%20docs-brightgreen" alt="Documentation Status"></a>
   <a href="https://github.com/arounamounchili/linkforge/blob/main/core/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
 </p>
 
 ---
