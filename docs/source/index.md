@@ -17,7 +17,7 @@ graph LR
     subgraph Core["Core Engine"]
         IR("Universal Robot IR")
         Val["Integrity Validator"]
-        IR -->|"Audit & Verify"| Val
+        IR -->|Audit & Verify| Val
         Val --> IR
     end
 
@@ -27,13 +27,12 @@ graph LR
         Future["MJCF / SDF"]
     end
 
-    UI  -->|Compile| IR
+    UI -->|Compile| IR
     API -->|Compile| IR
-    CAD -->|Ingest|  IR
-
-    IR  -->|Export| URDF
-    IR  -->|Export| SRDF
-    IR  -.->|"Planned"| Future
+    CAD -->|Ingest| IR
+    IR -->|Export| URDF
+    IR -->|Export| SRDF
+    IR -.->|Planned| Future
 
     style Future fill:#f5f5f5,stroke:#aaa,stroke-dasharray:5,color:#888
 ```
