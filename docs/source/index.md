@@ -18,7 +18,6 @@ graph LR
         IR("Universal Robot IR")
         Val["Integrity Validator"]
         IR -->|Audit & Verify| Val
-        Val --> IR
     end
 
     subgraph Targets["Output Targets"]
