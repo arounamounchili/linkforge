@@ -1,5 +1,5 @@
 # LinkForge Core
-**The platform-independent Intermediate Representation (IR) and "Robotics Intelligence" engine.**
+**The platform-independent Intermediate Representation (IR) engine for robot descriptions.**
 
 <p align="center">
   <a href="https://pypi.org/project/linkforge-core/"><img src="https://img.shields.io/pypi/v/linkforge-core.svg?color=blue" alt="PyPI version"></a>
