@@ -25,7 +25,7 @@ from ..constants import (
 from ..exceptions import RobotValidationError, ValidationErrorCode
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class VirtualJoint:
     """Connects the robot to a fixed frame in the world."""
 
@@ -36,9 +36,10 @@ class VirtualJoint:
 
     def __post_init__(self) -> None:
         """Validate virtual joint."""
-        if not self.name:
+        if not self.name.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Virtual joint name cannot be empty"
+                ValidationErrorCode.NAME_EMPTY,
+                "Virtual joint name cannot be empty or whitespace-only",
             )
         if self.type not in (SRDF_VJOIN_FIXED, SRDF_VJOIN_PLANAR, SRDF_VJOIN_FLOATING):
             raise RobotValidationError(
@@ -64,7 +65,7 @@ class VirtualJoint:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class GroupState:
     """A named set of joint values for a planning group (a pose)."""
 
@@ -74,12 +75,15 @@ class GroupState:
 
     def __post_init__(self) -> None:
         """Validate and normalize group state."""
-        if not self.name:
+        if not self.name.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Group state name cannot be empty"
+                ValidationErrorCode.NAME_EMPTY,
+                "Group state name cannot be empty or whitespace-only",
             )
-        if not self.group:
-            raise RobotValidationError(ValidationErrorCode.NAME_EMPTY, "Group name cannot be empty")
+        if not self.group.strip():
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY, "Group name cannot be empty or whitespace-only"
+            )
 
         # Normalize and isolate joint values (ensure tuples)
         normalized = {}
@@ -109,7 +113,7 @@ class GroupState:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EndEffector:
     """Defines a planning group as an end effector."""
 
@@ -120,12 +124,15 @@ class EndEffector:
 
     def __post_init__(self) -> None:
         """Validate end effector."""
-        if not self.name:
+        if not self.name.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "End effector name cannot be empty"
+                ValidationErrorCode.NAME_EMPTY,
+                "End effector name cannot be empty or whitespace-only",
             )
-        if not self.group:
-            raise RobotValidationError(ValidationErrorCode.NAME_EMPTY, "Group name cannot be empty")
+        if not self.group.strip():
+            raise RobotValidationError(
+                ValidationErrorCode.NAME_EMPTY, "Group name cannot be empty or whitespace-only"
+            )
 
     def with_prefix(self, prefix: str) -> EndEffector:
         """Create a new end effector with prefixed name, group, and links.
@@ -145,7 +152,7 @@ class EndEffector:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PassiveJoint:
     """A joint that is not actuated but exists in the kinematic chain."""
 
@@ -153,9 +160,10 @@ class PassiveJoint:
 
     def __post_init__(self) -> None:
         """Validate passive joint."""
-        if not self.name:
+        if not self.name.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Passive joint name cannot be empty"
+                ValidationErrorCode.NAME_EMPTY,
+                "Passive joint name cannot be empty or whitespace-only",
             )
 
     def with_prefix(self, prefix: str) -> PassiveJoint:
@@ -170,7 +178,7 @@ class PassiveJoint:
         return replace(self, name=f"{prefix}{self.name}")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CollisionPair:
     """Represents a collision rule between two specific links."""
 
@@ -180,9 +188,10 @@ class CollisionPair:
 
     def __post_init__(self) -> None:
         """Validate collision pair."""
-        if not self.link1 or not self.link2:
+        if not self.link1.strip() or not self.link2.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Collision link names cannot be empty"
+                ValidationErrorCode.NAME_EMPTY,
+                "Collision link names cannot be empty or whitespace-only",
             )
         if self.link1 == self.link2:
             raise RobotValidationError(
@@ -207,7 +216,7 @@ class CollisionPair:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Chain:
     """A kinematic chain defined by a base link and a tip link."""
 
@@ -216,9 +225,10 @@ class Chain:
 
     def __post_init__(self) -> None:
         """Validate chain."""
-        if not self.base_link or not self.tip_link:
+        if not self.base_link.strip() or not self.tip_link.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Chain base and tip link names cannot be empty"
+                ValidationErrorCode.NAME_EMPTY,
+                "Chain base and tip link names cannot be empty or whitespace-only",
             )
 
     def with_prefix(self, prefix: str) -> Chain:
@@ -237,7 +247,7 @@ class Chain:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PlanningGroup:
     """A named collection of links, joints, or chains used for motion planning."""
 
@@ -255,9 +265,10 @@ class PlanningGroup:
         object.__setattr__(self, "chains", tuple(self.chains))
         object.__setattr__(self, "subgroups", tuple(self.subgroups))
 
-        if not self.name:
+        if not self.name.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Planning group name cannot be empty"
+                ValidationErrorCode.NAME_EMPTY,
+                "Planning group name cannot be empty or whitespace-only",
             )
         if not any([self.links, self.joints, self.chains, self.subgroups]):
             raise RobotValidationError(
@@ -285,7 +296,7 @@ class PlanningGroup:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SrdfSphere:
     """A collision sphere approximation."""
 
@@ -303,7 +314,7 @@ class SrdfSphere:
             )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class LinkSphereApproximation:
     """Sphere-based collision geometry for a link."""
 
@@ -311,9 +322,10 @@ class LinkSphereApproximation:
     spheres: Sequence[SrdfSphere] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
-        if not self.link:
+        if not self.link.strip():
             raise RobotValidationError(
-                ValidationErrorCode.NAME_EMPTY, "Link sphere approximation requires a link name"
+                ValidationErrorCode.NAME_EMPTY,
+                "Link sphere approximation requires a non-blank link name",
             )
         object.__setattr__(self, "spheres", tuple(self.spheres))
 
@@ -329,7 +341,7 @@ class LinkSphereApproximation:
         return replace(self, link=f"{prefix}{self.link}")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class JointProperty:
     """Key-value metadata for a joint."""
 
@@ -338,10 +350,10 @@ class JointProperty:
     value: str
 
     def __post_init__(self) -> None:
-        if not self.joint_name or not self.property_name or not self.value:
+        if not self.joint_name.strip() or not self.property_name.strip() or not self.value.strip():
             raise RobotValidationError(
                 ValidationErrorCode.VALUE_EMPTY,
-                "Joint property must have a joint_name, property_name, and value",
+                "Joint property must have a non-blank joint_name, property_name, and value",
             )
 
     def with_prefix(self, prefix: str) -> JointProperty:

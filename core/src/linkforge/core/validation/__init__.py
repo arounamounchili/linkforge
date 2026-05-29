@@ -17,6 +17,7 @@ from .checks import (
     MimicChainCheck,
     Ros2ControlCheck,
     SemanticCheck,
+    SemanticConsistencyCheck,
     TreeStructureCheck,
     ValidationCheck,
 )
@@ -41,6 +42,8 @@ __all__ = [
     "GeometryCheck",
     "Ros2ControlCheck",
     "MimicChainCheck",
+    "SemanticCheck",
+    "SemanticConsistencyCheck",
     # Result types
     "ValidationResult",
     "ValidationIssue",
@@ -52,5 +55,4 @@ __all__ = [
     "validate_mesh_path",
     "validate_package_uri",
     "find_sandbox_root",
-    "SemanticCheck",
 ]

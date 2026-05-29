@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ..constants import (
     MIN_MASS_STABILITY_THRESHOLD,
@@ -498,6 +498,221 @@ class SemanticCheck(ValidationCheck):
         _dfs(group.name, [group.name])
 
 
+class SemanticConsistencyCheck(ValidationCheck):
+    """Cross-layer consistency check between URDF kinematics, SRDF semantics, and ros2_control.
+
+    The existing :class:`SemanticCheck` validates *intra-SRDF* references
+    (e.g., a group referencing a missing link). This check validates
+    *inter-layer* contradictions: cases where two layers are individually
+    valid but contradict each other when composed.
+
+    Rules:
+    1. **GroupState joint range**: a named pose must not exceed the kinematic
+       joint limits it was designed for.
+    2. **Chain reachability**: a ``Chain.base_link → tip_link`` path must be
+       traversable in the kinematic graph.
+    3. **EndEffector parent link in group**: the ``EndEffector.parent_link``
+       must be a direct member of the referenced planning group.
+    4. **Passive vs. command interface contradiction**: a joint declared as
+       ``passive`` in SRDF must not also have a ``command_interface`` in
+       ros2_control (you cannot command what is passive).
+    5. **Collision pair link existence**: links referenced in
+       ``disabled_collisions`` / ``enabled_collisions`` must exist in the robot.
+    """
+
+    def run(self, robot: Robot, result: ValidationResult) -> None:
+        """Run all cross-layer consistency rules."""
+        if not robot.links:
+            return  # Nothing to validate without links
+
+        semantic = robot.semantic
+        if (
+            not semantic.groups
+            and not semantic.disabled_collisions
+            and not semantic.enabled_collisions
+        ):
+            return  # No semantic data at all
+
+        joint_map = {j.name: j for j in robot.joints}
+        link_names = {link.name for link in robot.links}
+
+        self._check_group_state_joint_ranges(semantic, joint_map, result)
+        self._check_chain_reachability(robot, semantic, result)
+        self._check_end_effector_parent_in_group(semantic, result)
+        self._check_passive_command_contradiction(semantic, robot, result)
+        self._check_collision_pair_link_existence(semantic, link_names, result)
+
+    @staticmethod
+    def _check_group_state_joint_ranges(
+        semantic: Any,
+        joint_map: dict[str, Any],
+        result: ValidationResult,
+    ) -> None:
+        """Rule 1: GroupState joint values must be within kinematic joint limits."""
+        for state in semantic.group_states:
+            for joint_name, values in state.joint_values.items():
+                joint = joint_map.get(joint_name)
+                if joint is None or joint.limits is None:
+                    continue  # Missing joint reported elsewhere; no limits means unconstrained
+
+                limits = joint.limits
+                for val in values:
+                    if not isinstance(val, (int, float)):
+                        continue
+                    if not (limits.lower <= float(val) <= limits.upper):
+                        result.add_error(
+                            title="GroupState joint value out of range",
+                            message=(
+                                f"State '{state.name}' sets joint '{joint_name}' to {val:.4f}, "
+                                f"which is outside its limits "
+                                f"[{limits.lower:.4f}, {limits.upper:.4f}]"
+                            ),
+                            affected_objects=[state.name, joint_name],
+                            code=ValidationErrorCode.INVALID_VALUE,
+                            suggestion=(
+                                f"Adjust the joint value for '{joint_name}' in state "
+                                f"'{state.name}' to be within [{limits.lower:.4f}, "
+                                f"{limits.upper:.4f}]"
+                            ),
+                        )
+
+    @staticmethod
+    def _check_chain_reachability(
+        robot: Robot,
+        semantic: Any,
+        result: ValidationResult,
+    ) -> None:
+        """Rule 2: Chain base_link → tip_link path must exist in the kinematic graph."""
+        # Build a child -> parent map for upward traversal
+        child_to_parent: dict[str, str] = {j.child: j.parent for j in robot.joints}
+
+        for group in semantic.groups:
+            for chain in group.chains:
+                # Walk from tip_link upward until we hit base_link or the tree root
+                visited: set[str] = set()
+                current: str | None = chain.tip_link
+                found = False
+
+                while current is not None:
+                    if current == chain.base_link:
+                        found = True
+                        break
+                    if current in visited:
+                        break  # Cycle guard (cycle detected elsewhere)
+                    visited.add(current)
+                    current = child_to_parent.get(current)
+
+                if not found:
+                    result.add_error(
+                        title="Unreachable kinematic chain",
+                        message=(
+                            f"Group '{group.name}' defines a chain from "
+                            f"'{chain.base_link}' to '{chain.tip_link}', "
+                            f"but no such path exists in the kinematic tree"
+                        ),
+                        affected_objects=[group.name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                        suggestion=(
+                            f"Ensure '{chain.tip_link}' is a descendant of "
+                            f"'{chain.base_link}' in the kinematic tree"
+                        ),
+                    )
+
+    @staticmethod
+    def _check_end_effector_parent_in_group(
+        semantic: Any,
+        result: ValidationResult,
+    ) -> None:
+        """Rule 3: EndEffector.parent_link must be a member of its referenced group."""
+        group_link_map: dict[str, set[str]] = {g.name: set(g.links) for g in semantic.groups}
+
+        for ee in semantic.end_effectors:
+            group_links = group_link_map.get(ee.group)
+            if group_links is None:
+                continue  # Missing group reported by SemanticCheck
+
+            if group_links and ee.parent_link not in group_links:
+                result.add_warning(
+                    title="End effector parent link not in group",
+                    message=(
+                        f"End effector '{ee.name}' references parent_link '{ee.parent_link}', "
+                        f"which is not an explicit link member of group '{ee.group}'"
+                    ),
+                    affected_objects=[ee.name],
+                    code=ValidationErrorCode.INVALID_VALUE,
+                    suggestion=(
+                        f"Add '{ee.parent_link}' to the links of group '{ee.group}', "
+                        f"or verify the end effector configuration is correct"
+                    ),
+                )
+
+    @staticmethod
+    def _check_passive_command_contradiction(
+        semantic: Any,
+        robot: Robot,
+        result: ValidationResult,
+    ) -> None:
+        """Rule 4: A joint declared passive in SRDF must not have a ros2_control command_interface.
+
+        Commanding a passive joint is a physical contradiction: passive joints
+        are not actuated by definition, so a command_interface on one would
+        silently produce no motion while consuming controller resources.
+        """
+        passive_joint_names = {pj.name for pj in semantic.passive_joints}
+        if not passive_joint_names:
+            return
+
+        for control in robot.ros2_controls:
+            for ctrl_joint in control.joints:
+                if ctrl_joint.name not in passive_joint_names:
+                    continue
+                if ctrl_joint.command_interfaces:
+                    result.add_error(
+                        title="Passive joint has command interface",
+                        message=(
+                            f"Joint '{ctrl_joint.name}' is declared passive in SRDF "
+                            f"but has command_interface(s) in ros2_control '{control.name}': "
+                            f"{list(ctrl_joint.command_interfaces)}. "
+                            f"Passive joints cannot be commanded."
+                        ),
+                        affected_objects=[ctrl_joint.name],
+                        code=ValidationErrorCode.INVALID_VALUE,
+                        suggestion=(
+                            f"Remove the command_interface from '{ctrl_joint.name}' in "
+                            f"ros2_control, or remove it from the SRDF passive joints list"
+                        ),
+                    )
+
+    @staticmethod
+    def _check_collision_pair_link_existence(
+        semantic: Any,
+        link_names: set[str],
+        result: ValidationResult,
+    ) -> None:
+        """Rule 5: Links referenced in collision rules must exist in the robot."""
+        for collection_name, pairs in [
+            ("disabled_collisions", semantic.disabled_collisions),
+            ("enabled_collisions", semantic.enabled_collisions),
+        ]:
+            for pair in pairs:
+                for link_ref in (pair.link1, pair.link2):
+                    if link_ref not in link_names:
+                        result.add_error(
+                            title="Collision rule references missing link",
+                            message=(
+                                f"{collection_name}: link '{link_ref}' does not exist "
+                                f"in the robot (referenced in pair with '{pair.link1}' "
+                                f"and '{pair.link2}')"
+                            ),
+                            affected_objects=[link_ref],
+                            code=ValidationErrorCode.NOT_FOUND,
+                            suggestion=(
+                                f"Add a link named '{link_ref}' to the robot, "
+                                f"or remove it from the {collection_name} list"
+                            ),
+                        )
+
+
 __all__ = [
     "ValidationCheck",
     "HasLinksCheck",
@@ -509,4 +724,5 @@ __all__ = [
     "Ros2ControlCheck",
     "MimicChainCheck",
     "SemanticCheck",
+    "SemanticConsistencyCheck",
 ]

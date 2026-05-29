@@ -245,7 +245,6 @@ class Transmission:
         joint_name: str,
         actuator_name: str | None = None,
         mechanical_reduction: float = 1.0,
-        hardware_interface: str | None = None,
         hardware_interfaces: list[str] | None = None,
     ) -> Transmission:
         """Create a simple 1-to-1 transmission.
@@ -255,7 +254,6 @@ class Transmission:
             joint_name: Name of the joint
             actuator_name: Name of the actuator (defaults to joint_name + "_motor")
             mechanical_reduction: Gear ratio (default 1.0)
-            hardware_interface: Single interface type (deprecated alias)
             hardware_interfaces: Interface types (default [HW_IF_POSITION])
 
         Returns:
@@ -265,10 +263,8 @@ class Transmission:
         if actuator_name is None:
             actuator_name = f"{joint_name}_motor"
 
-        # Handle plural/singular interfaces
+        # Handle interfaces
         actual_interfaces = hardware_interfaces or []
-        if hardware_interface:
-            actual_interfaces.append(hardware_interface)
         if not actual_interfaces:
             actual_interfaces = [HW_IF_POSITION]
 
@@ -300,7 +296,6 @@ class Transmission:
         actuator1_name: str | None = None,
         actuator2_name: str | None = None,
         mechanical_reduction: float = 1.0,
-        hardware_interface: str | None = None,
         hardware_interfaces: list[str] | None = None,
     ) -> Transmission:
         """Create a differential transmission (2 actuators, 2 joints).
@@ -312,7 +307,6 @@ class Transmission:
             actuator1_name: First actuator name (defaults to joint1_name + "_motor")
             actuator2_name: Second actuator name (defaults to joint2_name + "_motor")
             mechanical_reduction: Gear ratio (default 1.0)
-            hardware_interface: Single interface type (deprecated alias)
             hardware_interfaces: Interface types (default [HW_IF_POSITION])
 
         Returns:
@@ -324,10 +318,8 @@ class Transmission:
         if actuator2_name is None:
             actuator2_name = f"{joint2_name}_motor"
 
-        # Handle plural/singular interfaces
+        # Handle interfaces
         actual_interfaces = hardware_interfaces or []
-        if hardware_interface:
-            actual_interfaces.append(hardware_interface)
         if not actual_interfaces:
             actual_interfaces = [HW_IF_POSITION]
 
