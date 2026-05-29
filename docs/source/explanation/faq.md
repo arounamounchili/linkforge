@@ -11,8 +11,11 @@ While LinkForge exports standard URDF files that are technically compatible with
 ## Can I use exported models in Unreal Engine or Unity?
 Yes! Since LinkForge exports standard URDFs, you can use any URDF importer for these engines. However, the specialized Gazebo/ROS 2 control tags will likely be ignored by those engines.
 
+## Can I use LinkForge without Blender?
+**Yes.** The `linkforge-core` package is a fully standalone Python library with zero GUI dependencies. Install it with `pip install linkforge-core` and use the programmatic `RobotBuilder` API to build, validate, and export robot descriptions in headless CI pipelines or ML training loops - no Blender required.
+
 ## Why does LinkForge calculate inertia automatically?
-Physics engines are extremely sensitive to incorrect inertia tensors. A common cause of "exploding" simulations is a mass that is too large for its inertia. As a **Linter for Robotics**, LinkForge uses proven geometric formulas to ensure your robot stays physically stable and catches invalid inertia data before it reaches your simulator.
+Physics engines are extremely sensitive to incorrect inertia tensors. A common cause of "exploding" simulations is a mass that is too large for its inertia. As the **Programmable Robot Description Engine**, LinkForge uses proven geometric formulas to ensure your robot stays physically stable and catches invalid inertia data before it reaches your simulator.
 
 ## What mesh formats should I use? (DAE vs. GLB)
 While LinkForge supports **DAE (Collada)** for legacy compatibility (supported in Blender 4.x), we strongly recommend **glTF/GLB** for modern workflows. GLB is the professional standard for PBR materials and is natively supported by Gazebo Sim (Garden+) and modern RViz2 configurations. LinkForge acts as a bridge to help you migrate your assets to these modern formats.
