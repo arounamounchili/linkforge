@@ -1,6 +1,6 @@
 # LinkForge Documentation
 
-Welcome to the official LinkForge documentation. LinkForge is **the programmable robot description engine** — a rigorous Intermediate Representation (IR) and Blender-based platform for building, validating, and deploying robot models with scientific precision.
+Welcome to the official LinkForge documentation. LinkForge is **the programmable robot description engine** - a rigorous Intermediate Representation (IR) and Blender-based platform for building, validating, and deploying robot models with scientific precision.
 
 ## 🏗️ LinkForge Architecture: IR-Based Compilation
 

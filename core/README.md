@@ -12,7 +12,7 @@
 
 ## 🔭 What Is LinkForge Core?
 
-Writing and maintaining URDF or SRDF by hand is fragile: inertia values are guessed, collision geometries drift, and physics bugs surface only after a simulator crash — or worse, on hardware. LinkForge Core solves this by treating your robot as **source code with physical constraints**, not a static XML document.
+Writing and maintaining URDF or SRDF by hand is fragile: inertia values are guessed, collision geometries drift, and physics bugs surface only after a simulator crash (or worse, on hardware). LinkForge Core solves this by treating your robot as **source code with physical constraints**, not a static XML document.
 
 It provides a mathematically rigorous, zero-dependency Intermediate Representation (IR) engine with hardened physical validation, scientific inertia solvers (Mirtich / Sylvester), and lossless round-trip translation between **URDF**, **XACRO**, and **SRDF**.
 
@@ -66,7 +66,7 @@ urdf_xml = builder.export_urdf()
 ## 💎 Key Capabilities
 
 ### Lossless Ingest & Multi-Phase Linter
-Parse existing URDF or XACRO files from the filesystem or memory strings. The parser is completely "lossless" — it preserves unrecognized or custom tags while sanitizing package paths and validating kinematics:
+Parse existing URDF or XACRO files from the filesystem or memory strings. The parser is completely "lossless" - it preserves unrecognized or custom tags while sanitizing package paths and validating kinematics:
 
 ```python
 from linkforge.core import read_urdf, validate_robot

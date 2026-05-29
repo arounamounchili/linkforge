@@ -15,7 +15,7 @@
 
 ---
 
-Writing and maintaining robot descriptions in URDF or SRDF is fragile by design. Inertia values are guessed by hand, collision geometries drift from visual meshes, and physics bugs are discovered only after export — or worse, on physical hardware.
+Writing and maintaining robot descriptions in URDF or SRDF is fragile by design. Inertia values are guessed by hand, collision geometries drift from visual meshes, and physics bugs are discovered only after export (or worse, on physical hardware).
 
 **LinkForge treats your robot as source code, not a static document.**
 
@@ -88,7 +88,7 @@ srdf_xml = base_builder.export_srdf()
 
 ### 🎨 Blender Visual Designer (Full Platform)
 
-Install via Blender Extensions and design robots visually — all physics validation and export pipelines are backed by the same `linkforge-core` engine:
+Install via Blender Extensions and design robots visually - all physics validation and export pipelines are backed by the same `linkforge-core` engine:
 
 1. Open Blender → **Edit › Preferences › Get Extensions**
 2. Search for **"LinkForge"** → Click **Install**
@@ -183,11 +183,11 @@ just develop  # Links workspace into Blender for live development
 
 ### Creating a Robot from Scratch
 
-1. **Create Links** — Select a mesh → **Forge** panel → **Create Link**. Configure mass, inertia, and collision geometry in the **Physics** section.
-2. **Connect with Joints** — Select child link → **Forge** panel → **Create Joint**. Set type, limits, axis, and dynamics.
-3. **Add Sensors** *(Optional)* — Select a link → **Perceive** panel → **Add Sensor**.
-4. **Configure Control** *(Optional)* — Go to **Control** panel → Enable **Use ROS2 Control** → configure command/state interfaces.
-5. **Validate & Export** — **Validate & Export** panel → click **Validate Robot** → choose URDF/XACRO/SRDF → click **Export**.
+1. **Create Links**: Select a mesh → **Forge** panel → **Create Link**. Configure mass, inertia, and collision geometry in the **Physics** section.
+2. **Connect with Joints**: Select child link → **Forge** panel → **Create Joint**. Set type, limits, axis, and dynamics.
+3. **Add Sensors** *(Optional)*: Select a link → **Perceive** panel → **Add Sensor**.
+4. **Configure Control** *(Optional)*: Go to **Control** panel → Enable **Use ROS2 Control** → configure command/state interfaces.
+5. **Validate & Export**: **Validate & Export** panel → click **Validate Robot** → choose URDF/XACRO/SRDF → click **Export**.
 
 ### Importing Existing URDF
 
@@ -209,17 +209,17 @@ Complete examples in the `examples/` directory:
 | `urdf/quadruped_robot.urdf` | 4-legged robot demonstrating complex kinematic chains |
 
 Programmatic tutorials in the documentation:
-- **Parametric Robotic Arm** — Build a fully-jointed manipulator from mathematical definitions using `RobotBuilder`.
-- **Modular Differential Drive** — Compose a chassis with automated wheel spacing, track calculations, and SRDF collision matrices.
+- **Parametric Robotic Arm** - Build a fully-jointed manipulator from mathematical definitions using `RobotBuilder`.
+- **Modular Differential Drive** - Compose a chassis with automated wheel spacing, track calculations, and SRDF collision matrices.
 
 ---
 
 ## 📚 Documentation
 
-- **[User Guide](https://linkforge.readthedocs.io/en/latest/tutorials/index.html)** — Comprehensive tutorials and getting started.
-- **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** — Technical reference for the `linkforge-core` library.
-- **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** — System design, Hexagonal Core, and data flow.
-- **[CHANGELOG](CHANGELOG.md)** — Version history.
+- **[User Guide](https://linkforge.readthedocs.io/en/latest/tutorials/index.html)** - Comprehensive tutorials and getting started.
+- **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** - Technical reference for the `linkforge-core` library.
+- **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** - System design, Hexagonal Core, and data flow.
+- **[CHANGELOG](CHANGELOG.md)** - Version history.
 
 ---
 
@@ -245,14 +245,14 @@ For complete instructions on testing, linting, and building, see our [Contributi
 ## 🗺️ Roadmap
 
 ### Phase 1: Professional Foundation (Current)
-- [x] **v1.0–v1.2**: Core URDF/XACRO export, Sensors, `ros2_control`, and Hexagonal Architecture.
+- [x] **v1.0-v1.2**: Core URDF/XACRO export, Sensors, `ros2_control`, and Hexagonal Architecture.
 - [x] **v1.3.0**: Performance & Control (Depsgraph, ROS 2 Control enhancements).
 - [x] **v1.4.0**: Headless core decoupling, Composer API, Namespaced Merging, and MoveIt 2 SRDF generation.
 - [ ] **v1.5.0**: Visual SRDF Editor in Blender & Semantic planning assistant.
 - [ ] **v1.6.0**: LinkForge CLI & GitHub Actions for automated validation in CI pipelines.
 
 ### Phase 2: Universal Interoperability (Upcoming)
-- [ ] **v2.0.0**: Official specification of the **`.lf` File Standard** — a lossless, source-level IR for robotics.
+- [ ] **v2.0.0**: Official specification of the **`.lf` File Standard** - a lossless, source-level IR for robotics.
 - [ ] **v2.1.0**: Native MuJoCo/MJCF exporter.
 - [ ] **v2.2.0**: Native Gazebo/SDF exporter.
 
