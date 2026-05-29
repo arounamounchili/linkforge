@@ -11,11 +11,11 @@
 
 ---
 
-## 🔭 The LLVM for Robotics
+## 🔭 What Is LinkForge Core?
 
-URDF is fragmented, XACRO is XML template hell, and physics engines frequently explode due to bad inertia tensors. LinkForge Core solves this by acting as a **unified intermediate compiler layer** for robot descriptions.
+Writing and maintaining URDF or SRDF by hand is fragile: inertia values are guessed, collision geometries drift, and physics bugs surface only after a simulator crash — or worse, on hardware. LinkForge Core solves this by treating your robot as **source code with physical constraints**, not a static XML document.
 
-It provides a mathematically pure, zero-dependency Intermediate Representation (IR) with hardened physical validation, scientific inertia solvers, and lossless translation between **URDF**, **XACRO**, and **SRDF**.
+It provides a mathematically rigorous, zero-dependency Intermediate Representation (IR) engine with hardened physical validation, scientific inertia solvers (Mirtich / Sylvester), and lossless round-trip translation between **URDF**, **XACRO**, and **SRDF**.
 
 ---
 
