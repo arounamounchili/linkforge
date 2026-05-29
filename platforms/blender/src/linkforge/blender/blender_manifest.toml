@@ -13,7 +13,7 @@ version = "1.3.0" # x-release-please-version
 name = "LinkForge"
 
 # Short description (tagline) - max ~100 characters
-tagline = "Build, validate, and export robot descriptions (URDF/XACRO) from Blender with physics integrity"
+tagline = "Visual UI Editor for the Programmable Robot Description Engine (URDF/XACRO)"
 
 # Extension type
 type = "add-on"
