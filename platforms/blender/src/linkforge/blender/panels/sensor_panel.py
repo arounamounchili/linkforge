@@ -7,6 +7,12 @@ import typing
 
 import bpy
 from bpy.types import Context, Panel, UILayout
+from linkforge.core.constants import (
+    SENSOR_CAMERA,
+    SENSOR_CONTACT,
+    SENSOR_DEPTH_CAMERA,
+    SENSOR_LIDAR,
+)
 
 from ..utils.property_helpers import get_link_props, get_sensor_props
 
@@ -94,13 +100,13 @@ class LINKFORGE_PT_perceive(Panel):
             # === TYPE-SPECIFIC SETTINGS ===
             sensor_type = props.sensor_type
 
-            if sensor_type == "CAMERA":
+            if sensor_type == SENSOR_CAMERA:
                 self._draw_camera_settings(box, props, is_depth=False)
-            elif sensor_type == "DEPTH_CAMERA":
+            elif sensor_type == SENSOR_DEPTH_CAMERA:
                 self._draw_camera_settings(box, props, is_depth=True)
-            elif sensor_type == "LIDAR":
+            elif sensor_type == SENSOR_LIDAR:
                 self._draw_lidar_settings(box, props)
-            elif sensor_type == "CONTACT":
+            elif sensor_type == SENSOR_CONTACT:
                 self._draw_contact_settings(box, props)
 
             # GPS, Contact, and Force/Torque sensors have no type-specific settings
