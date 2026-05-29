@@ -23,6 +23,23 @@ Define it programmatically, validate rigid-body physics before export, and compi
 
 ---
 
+## 💎 Why LinkForge?
+
+| Feature | Legacy Exporters | LinkForge |
+| :--- | :--- | :--- |
+| **Architecture** | Monolithic / Tied to one CAD tool | **Hexagonal / Multi-Host & Multi-Target** |
+| **Validation** | Post-Export (Fail in Sim) | **Automated Linting (Fail in Editor / CI)** |
+| **Physics** | "Close Enough" Mesh Export | **Scientific Inertia & Mass Integrity** |
+| **Composition** | Manual URDF merging | **Safe Programmatic Assembly with Namespace Resolution** |
+| **Control** | Manual `ros2_control` XML | **Centralized Dashboard with auto-generation** |
+| **Fidelity** | One-way export | **Round-Trip Precision (Import → Edit → Export)** |
+| **ML Integration** | GUI-dependent tooling | **Headless `linkforge-core` for cluster / RL pipelines** |
+
+> [!TIP]
+> For a deep dive into our long-term technical strategy and the IR philosophy, see **[VISION.md](VISION.md)**.
+
+---
+
 ## 🚀 Quick Start
 
 ### 🐍 Headless Core (CI / ML Pipelines / Scripting)
@@ -90,27 +107,7 @@ srdf_xml = base_builder.export_srdf()
 
 ### 🎨 Blender Visual Designer (Full Platform)
 
-Install via Blender Extensions and design robots visually - all physics validation and export pipelines are backed by the same `linkforge-core` engine:
-
-1. Open Blender → **Edit › Preferences › Get Extensions**
-2. Search for **"LinkForge"** → Click **Install**
-
----
-
-## 💎 Why LinkForge?
-
-| Feature | Legacy Exporters | LinkForge |
-| :--- | :--- | :--- |
-| **Architecture** | Monolithic / Tied to one CAD tool | **Hexagonal / Multi-Host & Multi-Target** |
-| **Validation** | Post-Export (Fail in Sim) | **Automated Linting (Fail in Editor / CI)** |
-| **Physics** | "Close Enough" Mesh Export | **Scientific Inertia & Mass Integrity** |
-| **Composition** | Manual URDF merging | **Safe Programmatic Assembly with Namespace Resolution** |
-| **Control** | Manual `ros2_control` XML | **Centralized Dashboard with auto-generation** |
-| **Fidelity** | One-way export | **Round-Trip Precision (Import → Edit → Export)** |
-| **ML Integration** | GUI-dependent tooling | **Headless `linkforge-core` for cluster / RL pipelines** |
-
-> [!TIP]
-> For a deep dive into our long-term technical strategy and the IR philosophy, see **[VISION.md](VISION.md)**.
+Design robots visually in Blender - all physics validation and export pipelines are backed by the same `linkforge-core` engine. See the **[Installation](#-installation)** section below to set it up.
 
 ---
 
@@ -123,29 +120,17 @@ Install via Blender Extensions and design robots visually - all physics validati
 | **Sensors** | ✅ Full | Camera, LiDAR, IMU, GPS, **Contact**, **Force/Torque** |
 | **Control** | ✅ Full | `ros2_control` Dashboard & Gazebo Plugin Integration |
 | **Validation** | ✅ Pro | Kinematic linter catches topology errors, disconnected links, non-physical inertias |
-| **Fidelity** | ✅ Pro | **Round-Trip Precision** for lossless Import/Export |
+| **Fidelity** | ✅ Pro | **Round-Trip Precision** for lossless Import → Edit → Export |
 | **Formats** | ✅ Full | URDF 1.0, XACRO (Macros, Properties, Multi-file), **SRDF (MoveIt 2)** |
 | **Headless** | ✅ Full | Zero-dependency `linkforge-core` runs in CI/CD, HPC clusters, RL training loops |
-
----
-
-## 🚀 Key Features
-
-- **Programmable IR**: Define your robot as Python source code, not XML. Use the fluent `RobotBuilder` API to compose links, joints, and sensors in a readable, testable, version-controlled workflow.
-- **Physical Validation Linter**: Built-in integrity checks inspect robot topology, rigid-body physics, and joint limits. Catches simulation-breaking errors (negative inertias, detached links, kinematic loops) *before* export.
-- **Safe Modular Composition**: Attach sub-assemblies (`attach()`) with automatic prefix-based namespace resolution. Merge MoveIt 2 planning groups and SRDF collision matrices across components without manual XML editing.
-- **Headless & Zero-Dependency Core**: `linkforge-core` runs independently of Blender or any GUI, making it suitable for CI pipelines, HPC clusters, and Reinforcement Learning domain randomization loops.
-- **Bidirectional Workflow**: Import existing URDF or XACRO files, edit them in Blender or Python, and re-export with full round-trip precision.
-- **Production-Ready Export**: Generates strictly compliant URDF, XACRO, and MoveIt 2 SRDF. ROS-agnostic asset resolution for cross-platform compatibility.
-- **ROS 2 Control Support**: Auto-generates `ros2_control` hardware interface configurations, compatible with Gazebo and physical hardware.
-- **Complete Sensor Suite**: Integrated support for Camera, Depth Camera, LiDAR, IMU, GPS, Force/Torque, and Contact sensors with configurable noise models.
-- **Automatic Physics**: Scientifically accurate inertia tensor calculation for primitive shapes and complex arbitrary meshes.
+| **Composition** | ✅ Full | Modular assembly via `attach()` with automatic prefix-based namespace resolution |
+| **Physics** | ✅ Full | Scientifically accurate inertia tensor calculation for primitives and arbitrary meshes |
 
 ---
 
 ## 📦 Installation
 
-### Headless Python Core
+### 🐍 Headless Python Core
 
 **Requirements**: Python 3.11+
 
@@ -155,7 +140,7 @@ pip install linkforge-core
 
 No Blender, no GUI dependencies. Full Composer API, parsers, generators, validators, and physics engine.
 
-### Blender Visual Designer
+### 🎨 Blender Visual Designer
 
 **Requirements**: Blender 4.2 or later
 
@@ -200,7 +185,9 @@ just develop  # Links workspace into Blender for live development
 
 ---
 
-## 📚 Examples
+## 📚 Examples & Documentation
+
+### Example Files
 
 Complete examples in the `examples/` directory:
 
@@ -214,33 +201,12 @@ Programmatic tutorials in the documentation:
 - **Parametric Robotic Arm** - Build a fully-jointed manipulator from mathematical definitions using `RobotBuilder`.
 - **Modular Differential Drive** - Compose a chassis with automated wheel spacing, track calculations, and SRDF collision matrices.
 
----
-
-## 📚 Documentation
+### Documentation Links
 
 - **[User Guide](https://linkforge.readthedocs.io/en/latest/tutorials/index.html)** - Comprehensive tutorials and getting started.
 - **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** - Technical reference for the `linkforge-core` library.
 - **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** - System design, Hexagonal Core, and data flow.
 - **[CHANGELOG](CHANGELOG.md)** - Version history.
-
----
-
-## 💻 Development
-
-```bash
-# 1. Install 'just' command runner (see Contributing Guide for OS-specific instructions)
-# 2. Clone repository
-git clone https://github.com/arounamounchili/linkforge.git
-cd linkforge
-
-# 3. Install dependencies and setup venv
-just install
-
-# 4. Link to Blender for live development
-just develop
-```
-
-For complete instructions on testing, linting, and building, see our [Contributing Guide](CONTRIBUTING.md).
 
 ---
 
@@ -260,6 +226,25 @@ For complete instructions on testing, linting, and building, see our [Contributi
 
 ### Phase 3: AI & Ecosystem (Research)
 - [ ] **v3.0+**: AI-assisted kinematic rigging, LinkForge Package Manager (LPM), and cloud-native `lf://` URI resolution.
+
+---
+
+## 💻 Development
+
+```bash
+# 1. Install 'just' command runner (see Contributing Guide for OS-specific instructions)
+# 2. Clone repository
+git clone https://github.com/arounamounchili/linkforge.git
+cd linkforge
+
+# 3. Install dependencies and setup venv
+just install
+
+# 4. Link to Blender for live development
+just develop
+```
+
+For complete instructions on testing, linting, and building, see our [Contributing Guide](CONTRIBUTING.md).
 
 ---
 
