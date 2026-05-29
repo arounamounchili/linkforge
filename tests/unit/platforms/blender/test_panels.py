@@ -389,7 +389,7 @@ class TestJointPanel:
         joint_obj = create_robot_joint("test_joint", base, child, scene)
 
         jp = safe_get_joint(joint_obj)
-        jp.joint_type = "REVOLUTE"
+        jp.joint_type = "revolute"
         jp.axis = "CUSTOM"
         jp.use_dynamics = True
         jp.use_mimic = True

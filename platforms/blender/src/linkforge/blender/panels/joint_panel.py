@@ -84,7 +84,7 @@ class LINKFORGE_PT_joints(Panel):
         box.prop(props, "child_link", icon="OUTLINER_OB_EMPTY")
 
         # Joint axis (only for revolute, continuous, prismatic)
-        if props.joint_type in {"REVOLUTE", "CONTINUOUS", "PRISMATIC"}:
+        if props.joint_type in {"revolute", "continuous", "prismatic"}:
             box.separator()
             box.label(text="Axis:", icon="ORIENTATION_GIMBAL")
             box.prop(props, "axis", expand=True)
@@ -96,7 +96,7 @@ class LINKFORGE_PT_joints(Panel):
                 col.prop(props, "custom_axis_z", text="Z")
 
         # Joint limits (dynamic based on joint type per robot model spec)
-        if props.joint_type in {"REVOLUTE", "PRISMATIC"}:
+        if props.joint_type in {"revolute", "prismatic"}:
             # REVOLUTE/PRISMATIC: Limits are REQUIRED (no checkbox)
             box.separator()
             col = box.column(align=True)
@@ -105,7 +105,7 @@ class LINKFORGE_PT_joints(Panel):
             col.prop(props, "limit_upper")
             col.prop(props, "limit_effort")
             col.prop(props, "limit_velocity")
-        elif props.joint_type == "CONTINUOUS":
+        elif props.joint_type == "continuous":
             # CONTINUOUS: Limits are OPTIONAL (show checkbox, only effort/velocity)
             box.separator()
             box.prop(props, "use_limits", text="Use Limits (Optional)")
