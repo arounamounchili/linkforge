@@ -22,6 +22,7 @@ from .checks import (
     MimicChainCheck,
     Ros2ControlCheck,
     SemanticCheck,
+    SemanticConsistencyCheck,
     TreeStructureCheck,
     ValidationCheck,
 )
@@ -62,6 +63,7 @@ class RobotValidator:
         Ros2ControlCheck,
         MimicChainCheck,
         SemanticCheck,
+        SemanticConsistencyCheck,  # Cross-layer: URDF vs SRDF vs ros2_control
     ]
 
     def __init__(

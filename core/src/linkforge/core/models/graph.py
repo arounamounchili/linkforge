@@ -13,6 +13,7 @@ Core Functionality:
 from __future__ import annotations
 
 import collections
+import heapq
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
@@ -68,46 +69,54 @@ class KinematicGraph:
             self.inv_adj[joint.child].append((joint.parent, joint.name))
 
     def has_cycle(self) -> bool:
-        """Detect kinematic loops using iterative DFS.
+        """Detect kinematic loops using iterative DFS with WHITE/GREY/BLACK colouring.
 
         Kinematic cycles are generally illegal in URDF and many physics solvers
         unless explicitly handled by parallel linkage plugins.
+
+        Uses three-colour marking to identify back-edges in the directed graph:
+        - WHITE (0): not yet visited
+        - GREY  (1): currently in the DFS recursion stack
+        - BLACK (2): fully processed, all descendants explored
+
+        A back-edge (node pointing to a GREY ancestor) indicates a cycle.
+        The iterative stack avoids Python's default recursion limit.
         """
         if not self.joints:
             return False
 
-        visited: set[str] = set()
-        rec_stack: set[str] = set()
+        white, grey, black = 0, 1, 2
+        colour: dict[str, int] = dict.fromkeys(self.link_names, white)
 
-        for start_node in self.link_names:
-            if start_node in visited:
+        for start in self.link_names:
+            if colour[start] != white:
                 continue
 
-            # Stack contains: (node, child_idx, is_backtracking)
-            stack: list[tuple[str, int, bool]] = [(start_node, 0, False)]
+            # Each stack entry: (node, child_iterator, entered_grey)
+            # We push a sentinel "backtrack" entry alongside the children.
+            stack: list[tuple[str, int]] = [(start, 0)]
+            colour[start] = grey
 
             while stack:
-                node, child_idx, backtracking = stack.pop()
-
-                if backtracking:
-                    rec_stack.discard(node)
-                    continue
-
-                if child_idx == 0:
-                    visited.add(node)
-                    rec_stack.add(node)
-                    stack.append((node, 0, True))
-
+                node, child_idx = stack[-1]
                 children = self.adj.get(node, [])
-                if child_idx < len(children):
-                    child_name, _ = children[child_idx]
-                    # Push next sibling
-                    stack.append((node, child_idx + 1, False))
 
-                    if child_name not in visited:
-                        stack.append((child_name, 0, False))
-                    elif child_name in rec_stack:
+                if child_idx < len(children):
+                    # Advance to next child
+                    stack[-1] = (node, child_idx + 1)
+                    child_name, _ = children[child_idx]
+
+                    if colour[child_name] == grey:
+                        # Back-edge found → cycle exists
                         return True
+                    if colour[child_name] == white:
+                        colour[child_name] = grey
+                        stack.append((child_name, 0))
+                else:
+                    # All children processed → mark BLACK and backtrack
+                    colour[node] = black
+                    stack.pop()
+
         return False
 
     def get_root_links(self) -> list[str]:
@@ -176,21 +185,22 @@ class KinematicGraph:
             )
 
         order: list[str] = []
-        # Implement Kahn's algorithm for topological sorting.
-        # This provides a level-by-level ordering useful for recursive solvers.
+        # Implement Kahn's algorithm for topological sorting using a min-heap.
+        # heapq gives O(n log n) overall instead of O(n² log n) from list.sort() + pop(0).
+        # This provides a level-by-level ordering useful for recursive solvers,
+        # and the heap's natural ordering guarantees alphabetical determinism.
         in_degree = {name: len(self.inv_adj.get(name, [])) for name in self.link_names}
-        queue = [name for name, deg in in_degree.items() if deg == 0]
+        heap = [name for name, deg in in_degree.items() if deg == 0]
+        heapq.heapify(heap)
 
-        while queue:
-            # Sort for determinism
-            queue.sort()
-            curr = queue.pop(0)
+        while heap:
+            curr = heapq.heappop(heap)
             order.append(curr)
 
             for child, _ in self.adj.get(curr, []):
                 in_degree[child] -= 1
                 if in_degree[child] == 0:
-                    queue.append(child)
+                    heapq.heappush(heap, child)
 
         return order
 

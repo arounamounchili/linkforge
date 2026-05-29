@@ -1638,8 +1638,9 @@ class TestURDFGenerator:
         robot.add_link(link)
         robot.add_link(Link(name="child"))
 
-        gz = GazeboElement(reference=None, material="Gazebo/Blue")
-        gz.properties["custom_prop"] = "custom_val"
+        gz = GazeboElement(
+            reference=None, material="Gazebo/Blue", properties={"custom_prop": "custom_val"}
+        )
         robot.add_gazebo_element(gz)
 
         # 2. Joint with partial safety controller (some fields None)
@@ -1680,8 +1681,9 @@ class TestURDFGenerator:
 
         # Direct call to _add_gazebo_element to cover lines 796, 802, 817-818 of _add_gazebo_element
         root_temp = ET.Element("robot")
-        gz_full = GazeboElement(reference="base", material="Gazebo/Blue")
-        gz_full.properties["custom_prop"] = "custom_val"
+        gz_full = GazeboElement(
+            reference="base", material="Gazebo/Blue", properties={"custom_prop": "custom_val"}
+        )
         gen._add_gazebo_element(root_temp, gz_full)
 
         # Assertions on direct call

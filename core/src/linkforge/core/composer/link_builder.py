@@ -1052,7 +1052,7 @@ class LinkBuilder:
             joint_name=joint.name,
             actuator_name=self._transmission_params["actuator"],
             mechanical_reduction=self._transmission_params["reduction"],
-            hardware_interface=self._transmission_params["interface"],
+            hardware_interfaces=[self._transmission_params["interface"]],
         )
         self._builder.robot.add_transmission(trans)
 

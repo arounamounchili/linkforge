@@ -145,7 +145,7 @@ class TestTransmission:
             name="trans1",
             joint_name="shoulder_joint",
             mechanical_reduction=100.0,
-            hardware_interface="effort",
+            hardware_interfaces=["effort"],
         )
         assert trans.name == "trans1"
         assert trans.type == TransmissionType.SIMPLE.value
@@ -172,7 +172,7 @@ class TestTransmission:
             joint1_name="left_wheel_joint",
             joint2_name="right_wheel_joint",
             mechanical_reduction=50.0,
-            hardware_interface="velocity",
+            hardware_interfaces=["velocity"],
         )
         assert trans.name == "diff_trans"
         assert trans.type == TransmissionType.DIFFERENTIAL.value

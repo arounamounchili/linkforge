@@ -194,7 +194,7 @@ def test_transmission_types_roundtrip() -> None:
     # Simple
     robot.add_transmission(
         Transmission.create_simple(
-            "t1", "j1", mechanical_reduction=50.0, hardware_interface="effort"
+            "t1", "j1", mechanical_reduction=50.0, hardware_interfaces=["effort"]
         )
     )
 
