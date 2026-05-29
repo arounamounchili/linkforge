@@ -13,8 +13,7 @@ version = "1.3.0" # x-release-please-version
 name = "LinkForge"
 
 # Short description (tagline) - max ~100 characters
-# Short description (tagline) - max ~100 characters
-tagline = "Build, validate, and export robot descriptions (URDF/SRDF) from Blender with physics integrity"
+tagline = "Build, validate, and export robot descriptions (URDF/XACRO) from Blender with physics integrity"
 
 # Extension type
 type = "add-on"
