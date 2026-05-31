@@ -4,8 +4,6 @@
 **Status**: Specification Draft
 **Target Runtimes**: ROS 2, MuJoCo, Gazebo, Isaac Sim
 
----
-
 ## 1. Overview
 The `.lf` (LinkForge) format is the "Source Code" for robotics. It is a high-fidelity, metadata-rich Intermediate Representation (IR) designed to bridge the gap between CAD tools and simulation engines without data loss.
 
@@ -13,8 +11,6 @@ The `.lf` (LinkForge) format is the "Source Code" for robotics. It is a high-fid
 1.  **Physics is Truth**: Every inertial property must be physically plausible (validated via the triangle inequality).
 2.  **Lossless Round-Trips**: All data required for simulation must be syncable back to the visual modeling environment.
 3.  **Modular Assembly**: Support for referencing external components via `lf://` URIs.
-
----
 
 ## 2. File Structure
 The `.lf` standard uses **JSON** or **YAML** as its primary exchange format.
@@ -41,8 +37,6 @@ The `.lf` standard uses **JSON** or **YAML** as its primary exchange format.
   "sim_specific": "SimulationObject"
 }
 ```
-
----
 
 ## 3. Core Components
 
@@ -80,18 +74,12 @@ To support high-fidelity Reinforcement Learning, `.lf` supports torque/effort cu
 }
 ```
 
----
-
 ## 4. Namespacing & Modular Assembly
 When merging robots (e.g., attaching an arm to a torso), LinkForge uses **Prefix Namespacing** to avoid collisions.
 *   Sub-robot `arm` link `hand` becomes `arm_hand` in the final IR.
 
----
-
 ## 5. Future: Binary IR
 For high-performance loading in large-scale simulation environments (e.g., thousands of robots in Isaac Sim), LinkForge will introduce a **Binary IR** based on **Protocol Buffers (protobuf)**. This will serve as the "Object File" (`.lfo`) to the `.lf` "Source Code."
-
----
 
 > [!TIP]
 > For implementation details, see the `linkforge.core.models` Python module in the source code.

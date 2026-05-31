@@ -40,6 +40,11 @@ Core data structures for representing robots.
    :show-inheritance:
 ```
 
+.. autoclass:: linkforge.core.models.link.LinkPhysics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ## Joint
 
 ```{eval-rst}
@@ -68,6 +73,11 @@ Core data structures for representing robots.
    :undoc-members:
    :show-inheritance:
 ```
+
+.. autoclass:: linkforge.core.models.joint.JointSafetyController
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 ## Geometry
 
@@ -103,6 +113,11 @@ Core data structures for representing robots.
    :show-inheritance:
 ```
 
+.. autoclass:: linkforge.core.models.geometry.GeometryType
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ## Sensor
 
 ```{eval-rst}
@@ -136,6 +151,21 @@ Core data structures for representing robots.
    :undoc-members:
    :show-inheritance:
 ```
+
+.. autoclass:: linkforge.core.models.sensor.ContactInfo
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.models.sensor.ForceTorqueInfo
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.models.sensor.SensorNoise
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 ## Transmission
 
@@ -197,6 +227,9 @@ While `Ros2Control` provides a modern dashboard-based workflow, `Transmission` r
    :show-inheritance:
 
 .. autoclass:: linkforge.core.Ros2ControlJoint
+   :members:
+   :undoc-members:
+.. autoclass:: linkforge.core.models.ros2_control.Ros2ControlSensor
    :members:
    :undoc-members:
    :show-inheritance:

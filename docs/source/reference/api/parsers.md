@@ -47,6 +47,16 @@ be evaluated many times with different parameters (e.g., different `prefix=` val
 two arms) without re-reading or re-parsing any files.
 :::
 
+
+### RobotXMLParser Class (Base)
+
+```{eval-rst}
+.. autoclass:: linkforge.core.parsers.xml_base.RobotXMLParser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
 ---
 
 ## SRDF Parser

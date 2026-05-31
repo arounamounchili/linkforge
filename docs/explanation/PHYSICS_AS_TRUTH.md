@@ -11,7 +11,7 @@ In many robotics tools, a robot model is just a collection of strings and number
 ## 2. Implementation Layers
 
 ### Layer 1: Atomic Validation (The Guardrails)
-Every core model (`Link`, `Joint`, `Sensor`) implements self-validation logic in its `__post_init__` method. These checks are "atomic"—they only care about the internal consistency of that specific object.
+Every core model (`Link`, `Joint`, `Sensor`) implements self-validation logic at the point of instantiation. These checks are "atomic", meaning they only care about the internal consistency of that specific object.
 
 - **Links**: Must have non-negative mass. Inertia tensors must satisfy the triangle inequality ($I_{xx} + I_{yy} \ge I_{zz}$, etc.) and must be positive semi-definite.
 - **Joints**: Axes must be normalized unit vectors. Limits must be logically ordered (lower < upper). Type-specific constraints (e.g., fixed joints cannot have limits) are strictly enforced.
@@ -25,7 +25,7 @@ The `RobotValidator` runs checks that require knowledge of the entire robot asse
 - **Semantics**: Motion planning groups and collision filters must reference existing links and joints.
 
 ### Layer 3: Platform Adapters (The Bridge)
-When translating from a DCC tool like Blender, LinkForge does not just copy values. It *interprets* them.
+When translating from a Digital Content Creation (DCC) tool like Blender, LinkForge does not just copy values. It *interprets* them.
 
 - **Auto-Inertia**: LinkForge can automatically calculate mass properties based on mesh geometry, ensuring that the exported inertia tensor is always physically accurate relative to the visual/collision models.
 - **Unit Normalization**: All units are strictly SI (meters, kilograms, radians) in the IR, regardless of the source platform's settings.
@@ -42,5 +42,5 @@ By treating physics as the "source of truth," LinkForge provides several benefit
 
 When adding new features to LinkForge:
 - **Ask**: "What are the physical constraints of this feature?"
-- **Implement**: Add those constraints to the model's `__post_init__`.
+- **Implement**: Add those constraints directly to the model's instantiation logic (e.g., Python's `__post_init__`).
 - **Verify**: Add a test case that specifically tries to break those constraints to ensure the guardrails work.

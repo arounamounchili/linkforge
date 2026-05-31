@@ -317,11 +317,11 @@ LinkForge follows a strict **Physics as Truth** philosophy. The Intermediate Rep
 - **Fail Fast**: We prefer a `RobotValidationError` at construction time over a physics engine crash at runtime.
 
 ```python
-# Good ✅
+# Good
 def parse_float(text: str | None, default: float | None = None) -> float:
     ...
 
-# Bad ❌
+# Bad
 def parse_float(text, default=None):
     ...
 ```
@@ -464,7 +464,7 @@ We value every contribution! To keep things simple for maintainers, **contributo
 - **`CHANGELOG.md` & Release Notes**: Automated via `release-please` based on commit messages.
 - **GitHub Contributors**: Managed automatically by GitHub's platform.
 
-### 🤖 All Contributors Bot
+### All Contributors Bot
 
 We use the [@all-contributors](https://allcontributors.org/) bot to automatically recognize all types of contributions.
 
@@ -482,4 +482,4 @@ For profound core contributions (e.g., advanced mathematical noise models, novel
 
 *(Note: Standard features, basic sensor additions, and bug fixes are highly valued and will be celebrated via our standard Open Source contributors framework, but they do not automatically qualify for academic co-authorship).*
 
-Thank you for contributing to LinkForge! 🚀
+Thank you for contributing to LinkForge!

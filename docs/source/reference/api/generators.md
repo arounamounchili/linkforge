@@ -13,6 +13,20 @@ All XML-based generators in LinkForge inherit from a shared base engine that han
    :show-inheritance:
 ```
 
+## Abstract Generators
+
+```{eval-rst}
+.. autoclass:: linkforge.core.base.RobotGenerator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.base.IResourceResolver
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
 ## URDF Generator
 
 ```{eval-rst}

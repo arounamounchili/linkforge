@@ -3,7 +3,7 @@
 
 LinkForge uses a **Tiered Testing Architecture** to ensure that robot models remain physically stable and structurally sound across all platforms.
 
-## 📂 Directory Structure
+## Directory Structure
 
 ### 1. `unit/`: Component-Level Isolation
 - **`unit/core/`**: Tests for IR models, parsers, and physics guardrails (Zero dependencies).
@@ -18,34 +18,34 @@ LinkForge uses a **Tiered Testing Architecture** to ensure that robot models rem
 - `mock_bpy_env.py`: A high-fidelity mock of the Blender API for sub-second logic testing.
 - `conftest.py`: Shared fixtures (e.g., `robot_factory`, `examples_dir`).
 
-## 🧪 How to Run Tests
+## How to Run Tests
 
-### ⚡ Tier 1: Core Logic
+### Tier 1: Core Logic
 Fast, zero-dependency tests for the heart of LinkForge.
 ```bash
 just test-core
 ```
 
-### 🚅 Tier 2: Platform Logic (Mocked)
+### Tier 2: Platform Logic (Mocked)
 Tests the Blender integration logic without needing to boot Blender.
 ```bash
 just test-unit-blender
 ```
 
-### 🛰️ Tier 3: Full Integration (Real Blender)
+### Tier 3: Full Integration (Real Blender)
 The ultimate fidelity check. Runs tests inside a real Blender environment.
 ```bash
 just test-integration-blender
 ```
 
-## 📊 Coverage & Quality
+## Coverage & Quality
 
 To run the full suite and generate a combined HTML coverage report:
 ```bash
 just coverage
 ```
 
-## 🏗️ Contributor Standards
+## Contributor Standards
 
 1. **Physics as Truth**: When adding a new model property, add a unit test in `unit/core/` verifying its physical guardrails.
 2. **Round-Trip Fidelity**: Every new feature must include an integration test verifying that data survives a full import-export cycle.
