@@ -2,15 +2,13 @@
 
 This document provides a high-level map of LinkForge's architecture. It is designed to help contributors understand the **Frontends → IR → Backends** philosophy and the flow of data between design tools and simulation targets.
 
-## 🔭 Architectural Philosophy: Hexagonal Core
+## Architectural Philosophy: Hexagonal Core
 LinkForge is built on the **Ports & Adapters (Hexagonal)** pattern. The goal is to keep the "Robotics Intelligence" (Core) completely isolated from the "Design Tool" (Blender/FreeCAD).
 
 1.  **The Core**: Zero-dependency Python logic. Contains the "Truth" about physics (Mirtich/Sylvester), URDF structure, and robot topology.
 2.  **The Platform Layer**: Adapters that translate Host data (like Blender Mesh/Objects) into Core models.
 
----
-
-## 🏗️ Module Structure
+## Module Structure
 
 ### 1. Platform Layer (`platforms/blender/`)
 Handles UI, Viewport visualization, and user interaction.
@@ -45,9 +43,7 @@ graph TB
     Shortcuts --> Physics
 ```
 
----
-
-## 🌊 Data Workflows
+## Data Workflows
 
 ### The "Bridge" Flow (Blender ➜ Robot Model)
 This is how LinkForge converts design intent into physical parameters.
@@ -68,9 +64,7 @@ sequenceDiagram
     Adapter->>File: Write URDF/XACRO/SRDF
 ```
 
----
-
-## 💎 Core Engineering Principles
+## Core Engineering Principles
 
 | Principle | Description |
 | :--- | :--- |
@@ -79,14 +73,10 @@ sequenceDiagram
 | **Bake the Transforms** | To prevent "Origin Drift" between tools, we automatically normalize and bake transforms during import/export. |
 | **Resilient Parsing** | Our URDF parser is "Lossless" - it preserves unknown tags and handles malformed XML gracefully. |
 
----
-
-## ⚡ Performance & Security
+## Performance & Security
 *   **Numerical Stability**: We use local origin-shifting (numerical conditioning) for all inertia integrals.
 *   **Linear Scaling**: Inertia and Topology checks scale linearly with vertex/triangle count ($O(V+T)$).
 *   **Resource Guards**: Hard limits on XML nesting (2000 levels) and file sizes (100MB) to prevent resource exhaustion attacks.
-
----
 
 **Last Updated:** 2026-05-19
 **Version:** 1.4.0
