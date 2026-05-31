@@ -18,10 +18,11 @@ body:
   - type: input
     id: blender_version
     attributes:
-      label: "Blender Version"
+      label: "Blender Version (if applicable)"
+      description: "Leave blank if this bug is in the core library and unrelated to Blender."
       placeholder: "e.g. 4.2.0"
     validations:
-      required: true
+      required: false
   - type: dropdown
     id: os
     attributes:
