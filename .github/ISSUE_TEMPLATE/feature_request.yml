@@ -32,3 +32,12 @@ body:
     attributes:
       label: "Additional context"
       description: "Add any other context or screenshots about the feature request here."
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: "Checklist"
+      options:
+        - label: I searched existing issues before creating this request.
+          required: true
+        - label: I checked VISION.md to see if this aligns with project goals.
+          required: false
