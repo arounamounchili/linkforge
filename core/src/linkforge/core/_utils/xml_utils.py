@@ -136,11 +136,14 @@ def serialize_xml(
 
     # Ensure namespaces are explicitly present on root if ElementTree dropped them
     if namespaces:
+        import re
+
         for prefix, uri in namespaces.items():
             ns_attr = f'xmlns:{prefix}="{uri}"'
-            # Using a more robust check for root tag insertion
-            if ns_attr not in xml_str and "<robot" in xml_str:
-                xml_str = xml_str.replace("<robot", f"<robot {ns_attr}", 1)
+            if ns_attr not in xml_str:
+                xml_str = re.sub(
+                    rf"<{element.tag}\b", f"<{element.tag} {ns_attr}", xml_str, count=1
+                )
 
     return get_xml_header(element, version) + xml_str
 
@@ -348,28 +351,6 @@ def xml_add_text(parent: ET.Element, tag: str, value: Any) -> ET.Element:
     if value is not None:
         elem.text = str(value)
     return elem
-
-
-def xml_add_vector(
-    parent: ET.Element,
-    tag: str,
-    vector: Vector3,
-    formatter: Callable[[float], str],
-) -> ET.Element:
-    """Create a sub-element for a vector relying on a formatter for the values.
-
-    Args:
-        parent: The parent XML element.
-        tag: The tag name for the new element.
-        vector: The Vector3 object containing the values.
-        formatter: A callable that takes a float and returns a string (e.g., format_float).
-
-    Returns:
-        The newly created XML element with the formatted text string.
-    """
-    # Create text from formatted components
-    text_val = f"{formatter(vector.x)} {formatter(vector.y)} {formatter(vector.z)}"
-    return xml_add_text(parent, tag, text_val)
 
 
 def create_xml_element(

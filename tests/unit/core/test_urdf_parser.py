@@ -1430,10 +1430,10 @@ class TestURDFParser:
         # 14. Lines 1126-1127: robot.add_sensor exception
         # 15. Lines 1152-1153: robot.add_gazebo_element exception
         with (
-            patch.object(Robot, "add_transmission", side_effect=RuntimeError("trans fail")),
-            patch.object(Robot, "add_ros2_control", side_effect=RuntimeError("ctrl fail")),
-            patch.object(Robot, "add_sensor", side_effect=RuntimeError("sensor fail")),
-            patch.object(Robot, "add_gazebo_element", side_effect=RuntimeError("gazebo fail")),
+            patch.object(Robot, "add_transmission", side_effect=ValueError("trans fail")),
+            patch.object(Robot, "add_ros2_control", side_effect=ValueError("ctrl fail")),
+            patch.object(Robot, "add_sensor", side_effect=ValueError("sensor fail")),
+            patch.object(Robot, "add_gazebo_element", side_effect=ValueError("gazebo fail")),
         ):
             xml_add_exc = """
             <robot name="add_exc_bot">

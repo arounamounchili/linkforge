@@ -75,10 +75,6 @@ MAX_XML_DEPTH: Final[int] = 2000
 
 # Geometric and Mesh thresholds
 DEGENERATE_VOL_THRESHOLD: Final[float] = 1e-12  # m³
-NEGATIVE_INERTIA_THRESHOLD: Final[float] = -1e-06
-MESH_PROXIMITY_THRESHOLD: Final[int] = 6
-MESH_SLIVER_THRESHOLD: Final[float] = 1000.0
-MIN_MESH_AREA: Final[float] = 1e-15  # m²
 
 
 # 4. Global Physics Defaults
@@ -105,13 +101,11 @@ DEFAULT_SELF_COLLIDE: Final[bool] = False
 DEFAULT_LINK_MASS: Final[float] = 1.0  # kg
 DEFAULT_MATERIAL_RGBA: Final[tuple[float, float, float, float]] = (0.7, 0.7, 0.7, 1.0)
 DEFAULT_MATERIAL_RGBA_STR: Final[str] = "0.7 0.7 0.7 1.0"
-DEFAULT_MESH_SCALE_STR: Final[str] = "1 1 1"
 DEFAULT_GEOMETRY_RADIUS: Final[float] = 0.1  # m
 DEFAULT_GEOMETRY_LENGTH: Final[float] = 0.5  # m
 
 # Joint Defaults
 DEFAULT_AXIS_XYZ: Final[tuple[float, float, float]] = (0.0, 0.0, 1.0)
-DEFAULT_AXIS_XYZ_STR: Final[str] = "0 0 1"
 DEFAULT_URDF_AXIS_XYZ: Final[tuple[float, float, float]] = (1.0, 0.0, 0.0)  # URDF spec default
 DEFAULT_URDF_AXIS_XYZ_STR: Final[str] = "1 0 0"
 
@@ -146,7 +140,6 @@ CAM_FORMAT_BAYER_BGGR8: Final[str] = "BAYER_BGGR8"
 
 # LIDAR Horizontal Parameters
 DEFAULT_LIDAR_SAMPLES: Final[int] = 640
-DEFAULT_LIDAR_HORIZONTAL_RESOLUTION: Final[float] = 1.0
 DEFAULT_LIDAR_RANGE_MIN: Final[float] = 0.1  # m
 DEFAULT_LIDAR_RANGE_MAX: Final[float] = 10.0  # m
 DEFAULT_LIDAR_RANGE_RESOLUTION: Final[float] = 0.01  # m
@@ -213,20 +206,14 @@ SRDF_VJOIN_PLANAR: Final[str] = "planar"
 SRDF_VJOIN_FLOATING: Final[str] = "floating"
 
 SRDF_REASON_ADJACENT: Final[str] = "Adjacent"
-SRDF_REASON_NEVER: Final[str] = "Never"
-SRDF_REASON_USER: Final[str] = "User"
-SRDF_REASON_DEFAULT: Final[str] = "Default"
 
 # Standard fallback names
 UNNAMED_LINK: Final[str] = "unnamed_link"
 UNNAMED_JOINT: Final[str] = "unnamed_joint"
-UNNAMED_SENSOR: Final[str] = "unnamed_sensor"
 
 # Sensor Update Rates (Industry standard defaults)
 DEFAULT_UPDATE_RATE_IMU: Final[float] = 100.0  # Hz
 DEFAULT_UPDATE_RATE_GPS: Final[float] = 5.0  # Hz
-DEFAULT_UPDATE_RATE_LIDAR: Final[float] = 30.0  # Hz
-DEFAULT_UPDATE_RATE_CAMERA: Final[float] = 30.0  # Hz
 DEFAULT_UPDATE_RATE_CONTACT: Final[float] = 50.0  # Hz
 DEFAULT_UPDATE_RATE_FORCE_TORQUE: Final[float] = 100.0  # Hz
 
@@ -260,13 +247,6 @@ GZ_SENSOR_DEPTH_CAMERA: Final[str] = "depth_camera"
 GZ_SENSOR_IMU: Final[str] = "imu"
 GZ_SENSOR_CONTACT: Final[str] = "contact"
 GZ_SENSOR_FORCE_TORQUE: Final[str] = "force_torque"
-
-# Gazebo / GZ XML Elements and Attributes
-GZ_ELEM_GAZEBO: Final[str] = "gazebo"
-GZ_ELEM_SENSOR: Final[str] = "sensor"
-GZ_ELEM_PLUGIN: Final[str] = "plugin"
-GZ_ATTR_REFERENCE: Final[str] = "reference"
-COLLISION_ADJACENT: Final[str] = "Adjacent"
 
 # XACRO Parameters and Attributes
 XACRO_PARAM_NAME: Final[str] = "name"

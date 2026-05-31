@@ -1031,13 +1031,13 @@ class URDFParser(RobotXMLParser[Robot]):
                         try:
                             link = self._parse_link(elem, materials, source_directory)
                             robot.add_link(link)
-                        except (RobotModelError, ValueError, Exception) as e:
+                        except (RobotModelError, ValueError) as e:
                             logger.warning(f"Skipping invalid link '{elem.get('name')}': {e}")
 
                     elif tag == "joint":
                         try:
                             delayed_joints.append(self._parse_joint(elem))
-                        except (RobotModelError, ValueError, Exception) as e:
+                        except (RobotModelError, ValueError) as e:
                             logger.warning(f"Skipping invalid joint '{elem.get('name')}': {e}")
 
                     elif tag == "transmission":
@@ -1045,7 +1045,7 @@ class URDFParser(RobotXMLParser[Robot]):
                             trans = self._parse_transmission(elem)
                             if trans:
                                 delayed_transmissions.append(trans)
-                        except (RobotModelError, ValueError, Exception) as e:
+                        except (RobotModelError, ValueError) as e:
                             logger.warning(
                                 f"Skipping invalid transmission '{elem.get('name')}': {e}"
                             )
@@ -1055,7 +1055,7 @@ class URDFParser(RobotXMLParser[Robot]):
                             ros2_ctrl = self._parse_ros2_control(elem)
                             if ros2_ctrl:
                                 delayed_ros2_controls.append(ros2_ctrl)
-                        except (RobotModelError, ValueError, Exception) as e:
+                        except (RobotModelError, ValueError) as e:
                             logger.warning(
                                 f"Skipping invalid ros2_control '{elem.get('name')}': {e}"
                             )
@@ -1082,7 +1082,7 @@ class URDFParser(RobotXMLParser[Robot]):
                             # 3. Extract other Gazebo metadata (plugins, material, properties)
                             gazebo_elem = self._parse_gazebo_element(elem)
                             delayed_gazebo_elements.append((gazebo_elem, physics_data))
-                        except (RobotModelError, ValueError, Exception) as e:
+                        except (RobotModelError, ValueError) as e:
                             logger.warning(
                                 f"Skipping invalid gazebo element '{elem.get('name') or elem.get('reference')}': {e}"
                             )
@@ -1095,25 +1095,25 @@ class URDFParser(RobotXMLParser[Robot]):
         for joint in delayed_joints:
             try:
                 robot.add_joint(joint)
-            except Exception as e:
+            except (RobotModelError, ValueError) as e:
                 logger.warning(f"Skipping invalid joint '{joint.name}': {e}")
 
         for trans in delayed_transmissions:
             try:
                 robot.add_transmission(trans)
-            except Exception as e:
+            except (RobotModelError, ValueError) as e:
                 logger.warning(f"Skipping invalid transmission '{trans.name}': {e}")
 
         for ros2_ctrl in delayed_ros2_controls:
             try:
                 robot.add_ros2_control(ros2_ctrl)
-            except Exception as e:
+            except (RobotModelError, ValueError) as e:
                 logger.warning(f"Skipping invalid ros2_control '{ros2_ctrl.name}': {e}")
 
         for sensor in delayed_sensors:
             try:
                 robot.add_sensor(sensor)
-            except Exception as e:
+            except (RobotModelError, ValueError) as e:
                 logger.warning(f"Skipping invalid sensor '{sensor.name}': {e}")
 
         for gazebo_elem, physics_data in delayed_gazebo_elements:
@@ -1139,7 +1139,7 @@ class URDFParser(RobotXMLParser[Robot]):
                     or gazebo_elem.implicit_spring_damper is not None
                 ):
                     robot.add_gazebo_element(gazebo_elem)
-            except Exception as e:
+            except (RobotModelError, ValueError) as e:
                 logger.warning(f"Skipping invalid gazebo element '{gazebo_elem.reference}': {e}")
 
         return robot

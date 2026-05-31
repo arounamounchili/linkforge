@@ -112,6 +112,11 @@ class TestValidateMeshPath:
         # Should decode to normal path
         assert "my file.stl" in str(result)
 
+        # Double URL-encoded path traversal attempt (%252e%252e%252f -> %2e%2e%2f -> ../)
+        double_encoded = Path("%252e%252e%252foutside.stl")
+        with pytest.raises(RobotModelError):
+            validate_mesh_path(double_encoded, urdf_dir, sandbox_root=urdf_dir)
+
 
 def test_find_sandbox_root(tmp_path) -> None:
     """Test the sandbox root detection logic."""
@@ -225,6 +230,10 @@ def test_package_uri_security_validation() -> None:
         validate_package_uri("package://pkg/./mesh.stl")
     with pytest.raises(RobotModelError):
         validate_package_uri("package://pkg//mesh.stl")
+
+    # Double URL-encoded traversal (%252e%252e%252f -> %2e%2e%2f -> ../)
+    with pytest.raises(RobotModelError, match="Path traversal"):
+        validate_package_uri("package://pkg/%252e%252e%252fmesh.stl")
 
 
 class TestParserSecurity:

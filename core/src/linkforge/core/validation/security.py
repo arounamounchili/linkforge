@@ -43,9 +43,11 @@ def validate_mesh_path(
         RobotSecurityError: If the mesh path attempts to escape the source directory
         RobotSecurityError: If absolute paths are not allowed but one is provided
     """
-    # Decode URL encoding to catch encoded path traversal attempts (e.g., %2e%2e%2f -> ../)
+    # Decode URL encoding to catch encoded path traversal attempts (e.g., %252e%252e%252f -> ../)
     mesh_str = str(mesh_filepath)
     decoded_str = unquote(mesh_str)
+    while unquote(decoded_str) != decoded_str:
+        decoded_str = unquote(decoded_str)
 
     # Recreate Path from decoded string for further validation
     if decoded_str != mesh_str:
@@ -122,6 +124,8 @@ def validate_package_uri(uri: str) -> str:
 
     # Decode URL encoding to catch encoded path traversal attempts
     decoded_uri = unquote(uri)
+    while unquote(decoded_uri) != decoded_uri:
+        decoded_uri = unquote(decoded_uri)
 
     # Check both original and decoded for path traversal
     if ".." in uri or ".." in decoded_uri:

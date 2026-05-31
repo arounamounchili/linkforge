@@ -128,22 +128,26 @@ def test_robot_security_error():
 def test_robot_math_error():
     """Verify RobotMathError message formatting branches (Lines 178->180, 180->183)."""
     # Test neither target nor value
-    err_none = RobotMathError(ValidationErrorCode.MATH_ERROR, "divide by zero")
-    assert str(err_none) == "[MATH_MATH_ERROR] divide by zero"
+    err_none = RobotMathError(ValidationErrorCode.OUT_OF_RANGE, "divide by zero")
+    assert str(err_none) == "[MATH_OUT_OF_RANGE] divide by zero"
 
     # Test only target
-    err_target = RobotMathError(ValidationErrorCode.MATH_ERROR, "divide by zero", target="joint_a")
+    err_target = RobotMathError(
+        ValidationErrorCode.OUT_OF_RANGE, "divide by zero", target="joint_a"
+    )
     assert "target: joint_a" in str(err_target)
     assert "value" not in str(err_target)
 
     # Test only value
-    err_value = RobotMathError(ValidationErrorCode.MATH_ERROR, "divide by zero", value=float("nan"))
+    err_value = RobotMathError(
+        ValidationErrorCode.OUT_OF_RANGE, "divide by zero", value=float("nan")
+    )
     assert "value: nan" in str(err_value)
     assert "target" not in str(err_value)
 
     # Test both target and value
     err_both = RobotMathError(
-        ValidationErrorCode.MATH_ERROR,
+        ValidationErrorCode.OUT_OF_RANGE,
         "divide by zero",
         target="joint_a",
         value=float("nan"),
