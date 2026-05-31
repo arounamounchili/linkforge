@@ -1064,8 +1064,8 @@ class TestURDFGenerator:
         p = GazeboPlugin(name="p1", filename="f1.so", raw_xml=raw_xml)
         gz = GazeboElement(plugins=[p])
         gen = URDFGenerator()
-        root = ET.Element("gz")
-        gen._add_gazebo_element(root, gz)
+        root = ET.Element("gazebo")
+        gen._fill_gazebo_element(root, gz)
 
         xml = ET.tostring(root, encoding="unicode")
         assert "<child />" in xml or "<child/>" in xml
@@ -1073,8 +1073,8 @@ class TestURDFGenerator:
         # Test Case 2: Malformed XML fallback
         p2 = GazeboPlugin(name="p2", filename="f2.so", raw_xml="<malformed", parameters={"p": "v"})
         gz2 = GazeboElement(plugins=[p2])
-        root2 = ET.Element("gz")
-        gen._add_gazebo_element(root2, gz2)
+        root2 = ET.Element("gazebo")
+        gen._fill_gazebo_element(root2, gz2)
         xml2 = ET.tostring(root2, encoding="unicode")
         assert "<p>v</p>" in xml2
 
@@ -1679,15 +1679,15 @@ class TestURDFGenerator:
         # Call generate with unused kwargs to cover line 125
         xml = gen.generate(robot, validate=False, unused_opt=True)
 
-        # Direct call to _add_gazebo_element to cover lines 796, 802, 817-818 of _add_gazebo_element
-        root_temp = ET.Element("robot")
+        # Direct call to _fill_gazebo_element to cover lines 796, 802, 817-818
+        root_temp = ET.Element("gazebo", reference="base")
         gz_full = GazeboElement(
             reference="base", material="Gazebo/Blue", properties={"custom_prop": "custom_val"}
         )
-        gen._add_gazebo_element(root_temp, gz_full)
+        gen._fill_gazebo_element(root_temp, gz_full)
 
         # Assertions on direct call
-        gz_direct = root_temp.find("gazebo")
+        gz_direct = root_temp
         assert gz_direct is not None
         assert gz_direct.get("reference") == "base"
         assert gz_direct.find("material").text == "Gazebo/Blue"

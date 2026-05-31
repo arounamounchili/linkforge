@@ -782,45 +782,6 @@ class URDFGenerator(RobotXMLGenerator):
             bias_stddev_elem = ET.SubElement(noise_elem, "bias_stddev")
             bias_stddev_elem.text = format_float(noise.bias_stddev)
 
-    def _add_gazebo_element(self, parent: ET.Element, gazebo_elem: GazeboElement) -> None:
-        """Add Gazebo extension element to parent.
-
-        Args:
-            parent: Parent XML element
-            gazebo_elem: GazeboElement model
-
-        """
-        # Create gazebo element with optional reference attribute
-        attrib: dict[str, str] = {}
-        if gazebo_elem.reference is not None:
-            attrib["reference"] = gazebo_elem.reference
-
-        gz_elem = create_xml_element(parent, "gazebo", formatter=self._format_value, **attrib)
-
-        # Add material if specified
-        if gazebo_elem.material is not None:
-            xml_add_text(gz_elem, "material", gazebo_elem.material)
-
-        # Add boolean properties
-        self._add_optional_bool_element(gz_elem, "static", gazebo_elem.static)
-        self._add_optional_bool_element(gz_elem, "provideFeedback", gazebo_elem.provide_feedback)
-        self._add_optional_bool_element(
-            gz_elem, "implicitSpringDamper", gazebo_elem.implicit_spring_damper
-        )
-
-        # Add numeric properties
-        self._add_optional_numeric_element(gz_elem, "stopCfm", gazebo_elem.stop_cfm)
-        self._add_optional_numeric_element(gz_elem, "stopErp", gazebo_elem.stop_erp)
-
-        # Add custom properties (sort by key for deterministic output)
-        for key in sorted(gazebo_elem.properties.keys()):
-            prop_elem = ET.SubElement(gz_elem, key)
-            prop_elem.text = gazebo_elem.properties[key]
-
-        # Add plugins (sort by name for deterministic output)
-        for plugin in sorted(gazebo_elem.plugins, key=lambda p: p.name):
-            self._add_gazebo_plugin_element(gz_elem, plugin)
-
     def _add_gazebo_plugin_element(self, parent: ET.Element, plugin: GazeboPlugin) -> None:
         """Add Gazebo plugin element to parent.
 

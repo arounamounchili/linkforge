@@ -24,8 +24,8 @@ from typing import Any
 from .._utils.string_utils import is_valid_name
 from ..base import FileSystemResolver, IResourceResolver
 from ..constants import (
-    COLLISION_ADJACENT,
     IR_VERSION,
+    SRDF_REASON_ADJACENT,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from .gazebo import GazeboElement
@@ -856,13 +856,15 @@ class Robot:
         self.semantic = replace(self.semantic, groups=tuple(self.semantic.groups) + (group,))
         return self
 
-    def disable_collisions(self, link1: str, link2: str, reason: str = COLLISION_ADJACENT) -> Robot:
+    def disable_collisions(
+        self, link1: str, link2: str, reason: str = SRDF_REASON_ADJACENT
+    ) -> Robot:
         """Disable collision checking between two links.
 
         Args:
             link1: First link name.
             link2: Second link name.
-            reason: Reason for disabling (default: COLLISION_ADJACENT).
+            reason: Reason for disabling (default: SRDF_REASON_ADJACENT).
 
         Returns:
             The robot instance for chaining.
@@ -881,7 +883,7 @@ class Robot:
         )
         return self
 
-    def disable_all_collisions(self, links: list[str], reason: str = COLLISION_ADJACENT) -> Robot:
+    def disable_all_collisions(self, links: list[str], reason: str = SRDF_REASON_ADJACENT) -> Robot:
         """Disable collision checking between all pairs in the provided list.
 
         Args:

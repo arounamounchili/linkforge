@@ -353,28 +353,6 @@ def xml_add_text(parent: ET.Element, tag: str, value: Any) -> ET.Element:
     return elem
 
 
-def xml_add_vector(
-    parent: ET.Element,
-    tag: str,
-    vector: Vector3,
-    formatter: Callable[[float], str],
-) -> ET.Element:
-    """Create a sub-element for a vector relying on a formatter for the values.
-
-    Args:
-        parent: The parent XML element.
-        tag: The tag name for the new element.
-        vector: The Vector3 object containing the values.
-        formatter: A callable that takes a float and returns a string (e.g., format_float).
-
-    Returns:
-        The newly created XML element with the formatted text string.
-    """
-    # Create text from formatted components
-    text_val = f"{formatter(vector.x)} {formatter(vector.y)} {formatter(vector.z)}"
-    return xml_add_text(parent, tag, text_val)
-
-
 def create_xml_element(
     parent: ET.Element,
     tag: str,

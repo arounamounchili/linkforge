@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from linkforge.core import RobotMathError, RobotModelError, RobotValidationError, Vector3
+from linkforge.core import RobotMathError, RobotModelError, RobotValidationError
 from linkforge.core._utils.xml_utils import (
     create_xml_element,
     parse_float,
@@ -13,7 +13,6 @@ from linkforge.core._utils.xml_utils import (
     serialize_xml,
     validate_xml_depth,
     xml_add_text,
-    xml_add_vector,
 )
 from linkforge.core.constants import MAX_XML_DEPTH
 from linkforge.core.validation import is_suspicious_location, validate_package_uri
@@ -190,23 +189,6 @@ def test_xml_add_text() -> None:
     elem3 = xml_add_text(parent, "child3", None)
     assert elem3.tag == "child3"
     assert elem3.text is None
-
-
-def test_xml_add_vector() -> None:
-    """Test xml_add_vector utility function."""
-
-    parent = ET.Element("root")
-    vec = Vector3(1.1234, 2.0, -3.5)
-
-    # Custom formatter for testing
-    def mock_formatter(val: float) -> str:
-        return f"{val:.2f}"
-
-    elem = xml_add_vector(parent, "origin", vec, formatter=mock_formatter)
-
-    assert elem.tag == "origin"
-    assert elem.text == "1.12 2.00 -3.50"
-    assert parent.find("origin") is not None
 
 
 def test_create_xml_element_no_formatter() -> None:

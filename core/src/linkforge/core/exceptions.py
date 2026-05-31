@@ -29,14 +29,12 @@ class ValidationErrorCode(StrEnum):
     HAS_CYCLE = "has_cycle"
     NO_ROOT = "no_root"
     MULTIPLE_ROOTS = "multiple_roots"
-    DISCONNECTED = "disconnected"
 
     # Physics and Values
     OUT_OF_RANGE = "out_of_range"
     VALUE_EMPTY = "value_empty"
     INVALID_VALUE = "invalid_value"
     PHYSICS_VIOLATION = "physics_violation"
-    MATH_ERROR = "math_error"
     INERTIA_TRIANGLE_INEQUALITY = "inertia_triangle_inequality"
 
     # Mesh Topology
@@ -49,7 +47,6 @@ class ValidationErrorCode(StrEnum):
     MESH_SLIVER = "mesh_sliver"
 
     # Configuration and Misc
-    MISMATCH = "mismatch"
     GENERIC_FAILURE = "generic_failure"
 
 
@@ -114,7 +111,6 @@ class RobotPhysicsError(RobotModelError):
         self.code = code
         self.target = target
         self.value = value
-        self.raw_message = message
 
         full_msg = f"[PHYSICS_{code.name}] {message}"
         if target:
@@ -141,7 +137,6 @@ class RobotValidationError(RobotModelError):
         self.code = code
         self.target = target
         self.value = value
-        self.raw_message = message
 
         full_msg = f"[{code.name}] {message}"
         if target:
@@ -172,7 +167,6 @@ class RobotMathError(RobotModelError):
         self.code = code
         self.target = target
         self.value = value
-        self.raw_message = message
 
         full_msg = f"[MATH_{code.name}] {message}"
         if target:
