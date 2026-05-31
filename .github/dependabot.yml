@@ -9,6 +9,13 @@ updates:
       github-actions:
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "actions/checkout"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "astral-sh/setup-uv"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "github/codeql-action"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "pip"
     directory: "/"

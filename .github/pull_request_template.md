@@ -8,9 +8,10 @@
 <!-- Summarize the changes and link the relevant issue -->
 - Fixes # (issue)
 
-## 🖼️ Visual Proof (Recommended)
+## 🖼️ Visual Proof
 > [!TIP]
-> For UI changes, 3D viewport features, or URDF exports, verification is much faster with a visual.
+> - **Required for**: UI changes, 3D viewport features, or URDF exports.
+> - **Optional for**: core logic changes, refactors, or documentation.
 > Drag and drop screenshots or GIFs here.
 
 ## 🧪 How to Test
@@ -34,8 +35,14 @@
 - [ ] ⚙️ Maintenance (chore)
 - [ ] ⚠️ Breaking change
 
+## 🤖 CI Compatibility
+- [ ] Compatible with Python 3.11 / 3.12 / 3.13
+- [ ] Compatible with Blender 4.2, 4.5, 5.1 (verified via CI matrix)
+- [ ] No CI regressions expected
+
 ## ✅ Checklist
-- [ ] I have run `uv run pytest` and all tests pass
-- [ ] I have run `uv run pre-commit run --all-files` and all hooks pass
+- [ ] `just test-core` passes (Core unit + integration)
+- [ ] `just test-unit-blender` passes (Blender unit tests)
+- [ ] `just pre-commit` passes (format, lint, type checks)
 - [ ] I have verified the changes manually in the Blender viewport
 - [ ] I have updated the documentation or verified no changes are needed
