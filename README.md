@@ -13,17 +13,13 @@
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/download/)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://www.conventionalcommits.org)
 
----
-
 Writing and maintaining robot descriptions in URDF or SRDF is fragile by design. Inertia values are guessed by hand, collision geometries drift from visual meshes, and physics bugs are discovered only after export (or worse, on physical hardware).
 
 **LinkForge treats your robot as source code, not a static document.**
 
 Define it programmatically, validate rigid-body physics before export, and compile safely to any standard target. Whether you are building a single prototype in Blender or generating thousands of variants in a headless RL training loop, LinkForge is the validation layer between your design intent and your simulation.
 
----
-
-## 💎 Why LinkForge?
+## Why LinkForge?
 
 | Feature | Legacy Exporters | LinkForge |
 | :--- | :--- | :--- |
@@ -38,11 +34,9 @@ Define it programmatically, validate rigid-body physics before export, and compi
 > [!TIP]
 > For a deep dive into our long-term technical strategy and the IR philosophy, see **[VISION.md](VISION.md)**.
 
----
+## Quick Start
 
-## 🚀 Quick Start
-
-### 🐍 Headless Core (CI / ML Pipelines / Scripting)
+### Headless Core (CI / ML Pipelines / Scripting)
 
 ```bash
 pip install linkforge-core
@@ -75,7 +69,7 @@ urdf_xml = builder.export_urdf()
 srdf_xml = builder.export_srdf()
 ```
 
-### 🔗 Modular Assembly
+### Modular Assembly
 
 Compose validated sub-assemblies from reusable robot components:
 
@@ -105,13 +99,11 @@ urdf_xml = base_builder.export_urdf()
 srdf_xml = base_builder.export_srdf()
 ```
 
-### 🎨 Blender Visual Designer (Full Platform)
+### Blender Visual Designer (Full Platform)
 
 Design robots visually in Blender - all physics validation and export pipelines are backed by the same `linkforge-core` engine. See the **[Installation](#-installation)** section below to set it up.
 
----
-
-## 🛠️ Technical Specifications
+## Technical Specifications
 
 | Feature | Support | Details |
 | :--- | :--- | :--- |
@@ -126,11 +118,9 @@ Design robots visually in Blender - all physics validation and export pipelines 
 | **Composition** | ✅ Full | Modular assembly via `attach()` with automatic prefix-based namespace resolution |
 | **Physics** | ✅ Full | Scientifically accurate inertia tensor calculation for primitives and arbitrary meshes |
 
----
+## Installation
 
-## 📦 Installation
-
-### 🐍 Headless Python Core
+### Headless Python Core
 
 **Requirements**: Python 3.11+
 
@@ -140,7 +130,7 @@ pip install linkforge-core
 
 No Blender, no GUI dependencies. Full Composer API, parsers, generators, validators, and physics engine.
 
-### 🎨 Blender Visual Designer
+### Blender Visual Designer
 
 **Requirements**: Blender 4.2 or later
 
@@ -164,9 +154,7 @@ just install
 just develop  # Links workspace into Blender for live development
 ```
 
----
-
-## 🤖 Using the Blender Visual Designer
+## Using the Blender Visual Designer
 
 ### Creating a Robot from Scratch
 
@@ -183,9 +171,7 @@ just develop  # Links workspace into Blender for live development
 3. Select your file and edit the robot structure normally.
 4. Export back via the **Validate & Export** panel.
 
----
-
-## 📚 Examples & Documentation
+## Examples & Documentation
 
 ### Example Files
 
@@ -208,9 +194,7 @@ Programmatic tutorials in the documentation:
 - **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** - System design, Hexagonal Core, and data flow.
 - **[CHANGELOG](CHANGELOG.md)** - Version history.
 
----
-
-## 🗺️ Roadmap
+## Roadmap
 
 ### Phase 1: Professional Foundation (Current)
 - [x] **v1.0-v1.2**: Core URDF/XACRO export, Sensors, `ros2_control`, and Hexagonal Architecture.
@@ -227,9 +211,7 @@ Programmatic tutorials in the documentation:
 ### Phase 3: AI & Ecosystem (Research)
 - [ ] **v3.0+**: AI-assisted kinematic rigging, LinkForge Package Manager (LPM), and cloud-native `lf://` URI resolution.
 
----
-
-## 💻 Development
+## Development
 
 ```bash
 # 1. Install 'just' command runner (see Contributing Guide for OS-specific instructions)
@@ -246,24 +228,18 @@ just develop
 
 For complete instructions on testing, linting, and building, see our [Contributing Guide](CONTRIBUTING.md).
 
----
-
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! LinkForge is a community-driven project.
-- 🙋 Review our [Contributing Guide](CONTRIBUTING.md).
-- 🏗️ Check our [Architecture](ARCHITECTURE.md) to understand the internals.
-- 💬 Join the conversation on [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).
+- Review our [Contributing Guide](CONTRIBUTING.md).
+- Check our [Architecture](ARCHITECTURE.md) to understand the internals.
+- Join the conversation on [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).
 
----
-
-## 📝 Citing LinkForge
+## Citing LinkForge
 
 If you use LinkForge in academic research, please cite it using the provided `CITATION.cff` file. You can find the citation format in the "Cite this repository" button on GitHub's sidebar.
 
----
-
-## 📄 License
+## License
 
 LinkForge follows a **Split-License Model** designed for both community-driven innovation and industrial-scale integration:
 
@@ -273,9 +249,7 @@ LinkForge follows a **Split-License Model** designed for both community-driven i
 For more details, see the [LICENSE](LICENSE) (GPL) and [core/LICENSE](core/LICENSE) (Apache) files.
 For third-party component licenses, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
----
-
-## ✨ Our Contributors
+## Our Contributors
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
