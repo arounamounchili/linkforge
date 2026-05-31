@@ -136,11 +136,14 @@ def serialize_xml(
 
     # Ensure namespaces are explicitly present on root if ElementTree dropped them
     if namespaces:
+        import re
+
         for prefix, uri in namespaces.items():
             ns_attr = f'xmlns:{prefix}="{uri}"'
-            # Using a more robust check for root tag insertion
-            if ns_attr not in xml_str and "<robot" in xml_str:
-                xml_str = xml_str.replace("<robot", f"<robot {ns_attr}", 1)
+            if ns_attr not in xml_str:
+                xml_str = re.sub(
+                    rf"<{element.tag}\b", f"<{element.tag} {ns_attr}", xml_str, count=1
+                )
 
     return get_xml_header(element, version) + xml_str
 
