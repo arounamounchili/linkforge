@@ -164,6 +164,15 @@ Blender-specific helpers.
    :show-inheritance:
 ```
 
+## Context
+
+```{eval-rst}
+.. autoclass:: linkforge.blender.adapters.context.IBlenderContext
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
 ## Usage in Blender
 
 ### Accessing from Blender Python Console

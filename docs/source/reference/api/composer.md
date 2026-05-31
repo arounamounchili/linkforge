@@ -35,3 +35,12 @@ A namespace for SRDF and MoveIt planning groups, named states, and self-collisio
    :undoc-members:
    :show-inheritance:
 ```
+
+## Interfaces
+
+```{eval-rst}
+.. autoclass:: linkforge.core.composer.interfaces.IComposer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```

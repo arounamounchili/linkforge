@@ -125,14 +125,23 @@ intersphinx_mapping = {
 nitpick_ignore = [
     ("py:obj", "type"),
     ("py:attr", "type"),
+    ("py:class", "vertices"),
+    ("py:class", "triangles"),
+    ("py:class", "None if not a mesh"),
 ]
 
-# -- Quality checks & Warning resolution --------------------------------------
-
-# Resolve ambiguous cross-references for 'type' which is used across many models
-nitpick_ignore = [
-    ("py:obj", "type"),
-    ("py:attr", "type"),
+# Regular expressions to ignore missing references for external dependencies
+nitpick_ignore_regex = [
+    # Ignore mocked Blender modules
+    (r"py:.*", r"bpy\..*"),
+    (r"py:.*", r"bpy_extras\..*"),
+    (r"py:.*", r"mathutils\..*"),
+    (r"py:.*", r"gpu\..*"),
+    (r"py:.*", r"gpu_extras\..*"),
+    # Ignore sphinx mock module leaks
+    (r"py:.*", r"sphinx\.ext\.autodoc\._dynamic\._mock\.MockModule"),
+    # Ignore internal python types not resolving
+    (r"py:.*", r"pathlib\._local\.Path"),
 ]
 
 # MyST parser settings

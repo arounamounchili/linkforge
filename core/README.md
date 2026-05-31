@@ -8,17 +8,13 @@
   <a href="https://github.com/arounamounchili/linkforge/blob/main/core/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
 </p>
 
----
-
-## 🔭 What Is LinkForge Core?
+## What Is LinkForge Core?
 
 Writing and maintaining URDF or SRDF by hand is fragile: inertia values are guessed, collision geometries drift, and physics bugs surface only after a simulator crash (or worse, on hardware). LinkForge Core solves this by treating your robot as **source code with physical constraints**, not a static XML document.
 
 It provides a mathematically rigorous, zero-dependency Intermediate Representation (IR) engine with hardened physical validation, scientific inertia solvers (Mirtich / Sylvester), and lossless round-trip translation between **URDF**, **XACRO**, and **SRDF**.
 
----
-
-## 📦 Installation
+## Installation
 
 ```bash
 pip install linkforge-core
@@ -26,18 +22,14 @@ pip install linkforge-core
 
 Zero external dependencies. No Blender, no ROS installation, no C++ compilation required.
 
----
+## Why LinkForge Core?
 
-## ⚡ Why LinkForge Core?
+- **Physically Guaranteed Sim Stability**: Zero-mass links or unphysical inertia tensors cause simulators like Gazebo or Isaac Sim to crash. LinkForge Core uses the **Mirtich algorithm** (Divergence Theorem) to calculate exact inertia properties from geometries, validated against **Sylvester's Criterion** to ensure physical validity.
+- **Standardized & Namespaced Assembly**: Easily compile complex robots, merge multiple sub-assemblies (e.g. attaching a gripper to an arm), and apply joint prefixing and limits programmatically using the fluent **Composer API**.
+- **Hardened Sandboxed Security**: Safely parse untrusted third-party robot descriptions. LinkForge Core blocks path-traversal attacks and restrains file reading to designated package boundaries.
+- **Light & Portable**: Zero external dependencies. No C++ compilation required, making it highly portable across standard Python environments, CI/CD pipelines, and HPC clusters.
 
-- **⚖️ Physically Guaranteed Sim Stability**: Zero-mass links or unphysical inertia tensors cause simulators like Gazebo or Isaac Sim to crash. LinkForge Core uses the **Mirtich algorithm** (Divergence Theorem) to calculate exact inertia properties from geometries, validated against **Sylvester's Criterion** to ensure physical validity.
-- **🔌 Standardized & Namespaced Assembly**: Easily compile complex robots, merge multiple sub-assemblies (e.g. attaching a gripper to an arm), and apply joint prefixing and limits programmatically using the fluent **Composer API**.
-- **🛡️ Hardened Sandboxed Security**: Safely parse untrusted third-party robot descriptions. LinkForge Core blocks path-traversal attacks and restrains file reading to designated package boundaries.
-- **📦 Light & Portable**: Zero external dependencies. No C++ compilation required, making it highly portable across standard Python environments, CI/CD pipelines, and HPC clusters.
-
----
-
-## 🚀 Quickstart
+## Quickstart
 
 LinkForge Core exposes a flat, curated public API. No nested import paths required.
 
@@ -71,9 +63,7 @@ builder.link("upper_arm", parent="base_link") \
 urdf_xml = builder.export_urdf()
 ```
 
----
-
-## 💎 Key Capabilities
+## Key Capabilities
 
 ### Parse, Validate & Compile (Full Round-Trip)
 
@@ -96,8 +86,6 @@ else:
     for issue in result.errors:
         print(f"  [{issue.code.name}] {issue.message} on {issue.affected_objects}")
 ```
-
----
 
 ### MoveIt 2 & SRDF Semantic Composition
 
@@ -133,8 +121,6 @@ semantic = read_srdf("my_robot.srdf")
 write_srdf(semantic, "my_robot_updated.srdf")
 ```
 
----
-
 ### Exact Solid-Body Inertia Solver
 
 Compute principal moments of inertia and Center of Mass offsets for primitives or complex triangle meshes, hardened with local origin conditioning for floating-point accuracy:
@@ -146,8 +132,6 @@ geometry = Box(size=Vector3(1.0, 0.5, 0.3))
 # Automatically computes exact ixx, iyy, izz principal moments
 inertia = calculate_inertia(geometry, mass=10.0)
 ```
-
----
 
 ### Sensor Suite
 
@@ -169,8 +153,6 @@ builder.link("camera_link", parent="base_link") \
     .camera("front_camera", width=1280, height=720) \
     .commit()
 ```
-
----
 
 ### Headless Use in CI / ML Pipelines
 
@@ -198,10 +180,8 @@ pip install linkforge-core
 python ci_validate.py
 ```
 
----
+## Resources & Documentation
 
-## 📚 Resources & Documentation
-
-- **📚 Extensive Documentation**: Read the tutorials and how-to guides at [linkforge.readthedocs.io](https://linkforge.readthedocs.io/).
-- **🐙 Open Source Repository**: View source, open issues, and join discussions on [GitHub](https://github.com/arounamounchili/linkforge).
-- **📄 License**: Standard open-source **[Apache-2.0 License](https://github.com/arounamounchili/linkforge/blob/main/core/LICENSE)**.
+- **Extensive Documentation**: Read the tutorials and how-to guides at [linkforge.readthedocs.io](https://linkforge.readthedocs.io/).
+- **Open Source Repository**: View source, open issues, and join discussions on [GitHub](https://github.com/arounamounchili/linkforge).
+- **License**: Standard open-source **[Apache-2.0 License](https://github.com/arounamounchili/linkforge/blob/main/core/LICENSE)**.
