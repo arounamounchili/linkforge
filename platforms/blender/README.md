@@ -3,7 +3,7 @@
 
 This package integrates the LinkForge core logic directly into Blender's UI and Operator system, transforming Blender into a robust, physics-compliant robotics editor.
 
-## 📂 Structure
+## Structure
 
 - `src/linkforge/blender/`: The main integration logic.
   - `adapters/`: Unified translators between Core IR and Blender data models.
@@ -18,7 +18,7 @@ This package integrates the LinkForge core logic directly into Blender's UI and 
 > [!NOTE]
 > The **LinkForge Core** library is located at the project root (`../../core`) and is automatically bundled into this extension during the build process to ensure zero-loss translation.
 
-## 🛠️ Development
+## Development
 
 To work on the Blender extension, ensure `uv` and `just` are installed:
 
@@ -27,7 +27,7 @@ just install   # Setup dev environment
 just develop   # Link workspace to Blender for live-editing
 ```
 
-### 🧪 Running Tests
+### Running Tests
 
 LinkForge uses a tiered testing strategy for Blender:
 
