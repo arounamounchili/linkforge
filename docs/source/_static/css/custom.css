@@ -8,8 +8,10 @@
 }
 
 .mermaid svg {
-    max-width: 100% !important;
+    max-width: 600px !important;
     height: auto !important;
+    display: block;
+    margin: 0 auto;
 }
 
 /* Landing page grid styling */
