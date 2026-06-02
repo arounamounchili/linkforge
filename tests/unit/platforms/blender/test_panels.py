@@ -410,6 +410,48 @@ class TestJointPanel:
         mock_layout.prop.assert_any_call(jp, "mimic_joint")
         mock_layout.prop.assert_any_call(jp, "safety_soft_lower_limit")
 
+    def test_joint_panel_draw_detailed_branches(self, scene, blender_context, mock_layout) -> None:
+        """Test drawing joint panel detailed branches."""
+        panel = LINKFORGE_PT_joints()
+        panel.layout = mock_layout
+
+        # Test creation mode with target link selection (lines 51-55)
+        base = create_robot_link("base_link", scene)
+        visual = create_test_object("visual", None, scene)
+        visual.parent = base
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = visual
+        visual.select_set(True)
+        panel.draw(bpy.context)
+        # Verify the "Create Joint" button was drawn
+        mock_layout.operator.assert_any_call(
+            "linkforge.create_joint", icon="ADD", text="Create Joint"
+        )
+        visual.select_set(False)
+
+        # Test editing joint where Blender obj name differs from joint_name (lines 73-75)
+        joint_obj = create_robot_joint("test_joint", base, base, scene)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = joint_obj
+        joint_obj.select_set(True)
+
+        from unittest.mock import patch
+
+        with patch("linkforge.blender.panels.joint_panel.get_joint_props") as mock_get_props:
+            mock_jp = MagicMock()
+            mock_jp.is_robot_joint = True
+            mock_jp.joint_name = "OriginalName"
+            mock_jp.joint_type = "continuous"
+            mock_jp.use_limits = True
+            mock_get_props.return_value = mock_jp
+
+            panel.draw(bpy.context)
+
+            mock_layout.label.assert_any_call(text="Joint: OriginalName", icon="EMPTY_ARROWS")
+            mock_layout.label.assert_any_call(text="Blender Obj: test_joint", icon="INFO")
+            mock_layout.prop.assert_any_call(mock_jp, "use_limits", text="Use Limits (Optional)")
+            mock_layout.prop.assert_any_call(mock_jp, "limit_effort")
+
 
 class TestSensorPanel:
     def test_sensor_panel_draw(self, scene, blender_context, mock_layout) -> None:
