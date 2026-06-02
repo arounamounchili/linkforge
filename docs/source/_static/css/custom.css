@@ -4,11 +4,12 @@
 .mermaid {
     background-color: transparent !important;
     text-align: center;
-    margin-bottom: 20px;
+    margin: 0 auto 20px auto !important;
+    max-width: 600px !important;
 }
 
 .mermaid svg {
-    max-width: 600px !important;
+    max-width: 100% !important;
     height: auto !important;
     display: block;
     margin: 0 auto;

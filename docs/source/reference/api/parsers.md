@@ -39,7 +39,7 @@ The internal engine used by `XACROParser` for hierarchical property resolution a
 ```
 
 :::{note}
-**Structural Caching (v1.4.0)**: `XacroResolver` implements a two-phase approach for
+**Structural Caching**: `XacroResolver` implements a two-phase approach for
 large modular robot cascades. In the **Structural Phase**, all `xacro:include` tags are
 resolved once into an in-memory template tree. In the **Evaluation Phase**, arguments and
 conditional blocks are injected into the cached tree. This means a single Xacro file can

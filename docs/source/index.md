@@ -33,8 +33,8 @@ LinkForge streamlines robotics modeling with the following capabilities:
 - **ROS2 Control Support**: Automatic hardware interface configuration.
 - **Complete Sensor Suite**: Integrated support for LiDAR, IMU, Depth Cameras, and more.
 - **Automatic Physics**: Scientific mass properties and inertia tensor calculation.
-- **Modular Robot Assembly**: Build and merge robots programmatically with the **Composer API** (v1.4.0).
-- **SRDF Generation**: Automatic creation of semantic metadata for complex planning systems (v1.4.0).
+- **Modular Robot Assembly**: Build and merge robots programmatically with the **Composer API**.
+- **SRDF Generation**: Automatic creation of semantic metadata for complex planning systems.
 
 ---
 
