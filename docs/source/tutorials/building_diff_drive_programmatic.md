@@ -123,7 +123,7 @@ with builder.link("base_link").visual(chassis_geom).collision().mass(5.0).root()
         .visual(lidar_geom) \
         .collision() \
         .mass(0.2) \
-        .fixed(xyz=(0.15, 0.0, 0.08)) \
+        .fixed(xyz=(0, 0, 0.08)) \
         .lidar(
             name="chassis_laser",
             range_min=0.1,
@@ -208,7 +208,7 @@ def build_robot():
             .visual(cylinder(0.05, 0.06)) \
             .collision() \
             .mass(0.2) \
-            .fixed(xyz=(0.15, 0, 0.08)) \
+            .fixed(xyz=(0, 0, 0.08)) \
             .lidar(name="chassis_laser", range_min=0.1, range_max=10.0, samples=360)
 
     # Validate
