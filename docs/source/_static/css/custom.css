@@ -3,16 +3,15 @@
 /* Improve Mermaid diagram display */
 .mermaid {
     background-color: transparent !important;
-    text-align: center;
-    margin: 0 auto 20px auto !important;
-    max-width: 600px !important;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
 }
 
 .mermaid svg {
     max-width: 100% !important;
+    width: auto !important;
     height: auto !important;
-    display: block;
-    margin: 0 auto;
 }
 
 /* Landing page grid styling */
