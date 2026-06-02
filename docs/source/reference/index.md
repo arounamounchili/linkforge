@@ -1,7 +1,7 @@
 # Overview
 
 
-Reference is **information-oriented**. It provides technical descriptions, specifications, and API documentation for experienced users.
+This section provides technical descriptions, specifications, and API documentation for experienced users.
 
 ::::{grid} 2
 :gutter: 3

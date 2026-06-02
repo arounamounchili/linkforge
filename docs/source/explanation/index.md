@@ -1,7 +1,7 @@
 # Overview
 
 
-Explanation is **understanding-oriented**. It provides background, context, and deep dives into the "why" and "how" behind LinkForge's design.
+This section provides background, context, and deep dives into the "why" and "how" behind LinkForge's design.
 
 ::::{grid} 2
 :gutter: 3

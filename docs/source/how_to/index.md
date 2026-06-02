@@ -1,7 +1,7 @@
 # Overview
 
 
-How-to guides are **task-oriented**. They provide specific "recipes" to help you solve a particular problem or complete a specific task.
+These guides provide specific recipes to help you solve a particular problem or complete a specific task.
 
 ::::{grid} 2
 :gutter: 3
