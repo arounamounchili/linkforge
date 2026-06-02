@@ -9,8 +9,7 @@
 }
 
 .mermaid svg {
-    max-width: 100% !important;
-    width: auto !important;
+    max-width: 350px !important;
     height: auto !important;
 }
 
