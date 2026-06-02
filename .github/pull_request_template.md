@@ -35,11 +35,6 @@
 - [ ] ⚙️ Maintenance (chore)
 - [ ] ⚠️ Breaking change
 
-## 🤖 CI Compatibility
-- [ ] Compatible with Python 3.11 / 3.12 / 3.13
-- [ ] Compatible with Blender 4.2, 4.5, 5.1 (verified via CI matrix)
-- [ ] No CI regressions expected
-
 ## ✅ Checklist
 - [ ] `just test-core` passes (Core unit + integration)
 - [ ] `just test-unit-blender` passes (Blender unit tests)
