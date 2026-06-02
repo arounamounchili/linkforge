@@ -6,7 +6,7 @@ Reference is **information-oriented**. It provides technical descriptions, speci
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card} 📁 API Reference
+:::{grid-item-card}  API Reference
 :link: api/index
 :link-type: doc
 
@@ -20,7 +20,7 @@ Detailed documentation of classes, functions, and the Blender operator API.
 Technical mapping of joints, links, and sensor hierarchies.
 :::
 
-:::{grid-item-card} 📖 Glossary
+:::{grid-item-card}  Glossary
 :link: glossary
 :link-type: doc
 

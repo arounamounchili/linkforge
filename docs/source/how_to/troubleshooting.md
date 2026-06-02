@@ -2,7 +2,7 @@
 
 This guide addresses common challenges in the LinkForge-to-Simulation workflow, focusing on physics stability, kinematic integrity, and asset management.
 
-## ⚖️ Physics Stability
+## ️ Physics Stability
 
 ### Robot "folds," "explodes," or jitters in simulation
 **Cause**: Numerical instability, usually caused by inconsistent mass data, misaligned origins, or "Double-Offsets" from world-baked meshes.
@@ -18,7 +18,7 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 - **Check Control Dashboard**: Ensure the joint is added to the **Control** panel's dashboard and has a valid Command Interface.
 - **Interface Mismatch**: Ensure your hardware interface (Position, Velocity, or Effort) matches your ROS 2 controller configuration.
 
-## 🌳 Kinematic Integrity
+##  Kinematic Integrity
 
 ### Disconnected Links or "Falling Parts"
 **Cause**: Broken chain in the kinematic tree.
@@ -39,7 +39,7 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 - This is normal and expected in robotics.
 - To "lock" a value, manually type the desired number (e.g., `0` or `1.5708`) into the LinkForge property field. This prevents the tiny matrix flickers from affecting your export over multiple design cycles.
 
-## 📦 Asset & Export Management
+##  Asset & Export Management
 
 ### Invisible Robot or Broken Meshes in Gazebo
 **Cause**: Incorrect mesh export paths or missing package metadata.
@@ -62,14 +62,14 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 - If you change the mass of one link and others change unexpectedly, the objects are sharing Mesh Data.
 - Fix: `Object > Relations > Make Single User > Object & Data`.
 
-## 🛠️ UI & Viewport
+## ️ UI & Viewport
 
 ### Viewport is cluttered with giant icons
 **Solutions**:
 - **Global Scale**: Adjust the **Empty Display > Size** slider in **Blender Preferences > Add-ons > LinkForge**.
 - **Hide Helpers**: Toggle the **Show Collisions** checkbox in the **Validate & Export** panel or use the standard Blender **Hide Extras** viewport overlay to see only the robot geometry.
 
-## 🛡️ Context & Mode Reliability
+## ️ Context & Mode Reliability
 
 ### "Context is Incorrect" or Operator failed
 **Status**: Resolved
@@ -77,7 +77,7 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 - **Edit Mode Support**: You can run any LinkForge command (like generating collisions or adding sensors) while in **Edit Mode**. LinkForge will safely switch to Object Mode internally and then automatically **restore your Edit Mode** so your flow is never interrupted.
 - **Background Execution**: Background processes like imports or timers now use explicit context overrides, preventing the common "Context is Incorrect" crashes that plague many standard Blender add-ons.
 
-## 💡 Pro Tips for Experts
+##  Pro Tips for Experts
 
 - **Selection via Outliner**: When your robot gets complex, clicking small joint empties in the 3D Viewport can be difficult. Use the **Blender Outliner** to select components by name; the LinkForge panels will update instantly.
 - **Naming Discipline**: While **LinkForge automatically sanitizes** names during export (e.g., "My Arm!" -> `my_arm`), it is best practice to use alphanumeric characters and underscores in Blender. This ensures your Blender Outliner matches your generated ROS 2 topics 1:1.

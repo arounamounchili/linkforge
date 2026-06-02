@@ -6,28 +6,28 @@ Explanation is **understanding-oriented**. It provides background, context, and 
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card} 🏗️ System Architecture
+:::{grid-item-card} ️ System Architecture
 :link: ARCHITECTURE
 :link-type: doc
 
 Understand the relationship between Blender data types and URDF elements.
 :::
 
-:::{grid-item-card} 📊 Data Model
+:::{grid-item-card}  Data Model
 :link: data_model
 :link-type: doc
 
 Deep dive into how LinkForge stores robot metadata inside Blender's properties.
 :::
 
-:::{grid-item-card} 💻 Development
+:::{grid-item-card}  Development
 :link: development
 :link-type: doc
 
 Setup your local environment, run tests, and bundle the extension.
 :::
 
-:::{grid-item-card} ❓ FAQ
+:::{grid-item-card}  FAQ
 :link: faq
 :link-type: doc
 

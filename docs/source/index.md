@@ -2,7 +2,7 @@
 
 Welcome to the official LinkForge documentation. LinkForge is **the programmable robot description engine** - a rigorous Intermediate Representation (IR) and Blender-based platform for building, validating, and deploying robot models with scientific precision.
 
-## 🏗️ LinkForge Architecture: IR-Based Compilation
+## ️ LinkForge Architecture: IR-Based Compilation
 
 LinkForge decouples robot definition inputs from physical target configurations using a **Frontends → IR → Backends** pipeline:
 
@@ -23,7 +23,7 @@ graph LR
 
 ---
 
-## 🚀 Key Features
+##  Key Features
 
 LinkForge streamlines robotics modeling with the following capabilities:
 
@@ -38,18 +38,18 @@ LinkForge streamlines robotics modeling with the following capabilities:
 
 ---
 
-## 📦 Installation
+##  Installation
 
 LinkForge is distributed as two separate, fully integrated packages depending on your workflow:
 
-### 🎨 Blender Extension (Visual UI Editor)
+###  Blender Extension (Visual UI Editor)
 For 3D modelers and roboticists who want to visual-draft digital twins:
 * **Prerequisite**: Blender 4.2 or later
 1. Open Blender → **Edit > Preferences > Get Extensions**
 2. Search for **"LinkForge"**
 3. Click **Install**
 
-### ⚙️ Standalone Python Library (`linkforge-core`)
+### ️ Standalone Python Library (`linkforge-core`)
 For developer pipelines, automated CI, and procedural robot generation:
 * **Prerequisite**: Python >= 3.11
 ```bash
@@ -58,16 +58,16 @@ pip install linkforge-core
 
 ---
 
-## 🎯 Quick Start
+##  Quick Start
 
 Choose your preferred entry point:
 
-### 🎨 Visual Workflow (Blender UI)
+###  Visual Workflow (Blender UI)
 1. **Create Links**: Select a mesh and click **Create Link** in the LinkForge panel.
 2. **Connect Joints**: Select a child link and click **Create Joint** to specify constraints.
 3. **Validate & Export**: Run the validator in the UI and click **Export URDF/XACRO**.
 
-### ⚙️ Programmatic Workflow (Python API)
+### ️ Programmatic Workflow (Python API)
 Create, validate, and export a complete kinematic robot description programmatically:
 
 ```python
@@ -93,7 +93,7 @@ urdf_xml = builder.export_urdf()
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card} 🚀 Tutorials
+:::{grid-item-card}  Tutorials
 :link: tutorials/index
 :link-type: doc
 
@@ -103,7 +103,7 @@ urdf_xml = builder.export_urdf()
 - [Programmatic: Building a Diff-Drive Robot](tutorials/building_diff_drive_programmatic)
 :::
 
-:::{grid-item-card} 🛠️ How-to Guides
+:::{grid-item-card} ️ How-to Guides
 :link: how_to/index
 :link-type: doc
 
@@ -113,7 +113,7 @@ urdf_xml = builder.export_urdf()
 - [Defining Joints](how_to/index)
 :::
 
-:::{grid-item-card} 💡 Explanation
+:::{grid-item-card}  Explanation
 :link: explanation/index
 :link-type: doc
 
@@ -123,7 +123,7 @@ urdf_xml = builder.export_urdf()
 - [Data Model](explanation/data_model)
 :::
 
-:::{grid-item-card} 📚 Reference
+:::{grid-item-card}  Reference
 :link: reference/index
 :link-type: doc
 
@@ -185,7 +185,7 @@ citation
 **Physics Accuracy**: All inertia calculations use solid-body dynamics formulas to ensure simulation fidelity.
 :::
 
-## 👥 Community & Support
+##  Community & Support
 
 - **Found a bug?** Open an issue on our [GitHub Issue Tracker](https://github.com/arounamounchili/linkforge/issues).
 - **Have a question?** Join the discussion on [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).

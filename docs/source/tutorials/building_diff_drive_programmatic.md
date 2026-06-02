@@ -12,7 +12,7 @@ In this tutorial, you will configure a complete differential drive mobile robot 
 
 ---
 
-## 🌳 Kinematic Tree
+##  Kinematic Tree
 
 The structure of the robot we will construct is identical to the one modeled visually in Blender:
 
@@ -145,9 +145,9 @@ from linkforge.core import validate_robot
 result = validate_robot(builder.robot)
 
 if result.is_valid:
-    print("✓ Robot is physically and structurally valid!")
+    print(" Robot is physically and structurally valid!")
 else:
-    print("✗ Validation failed:")
+    print(" Validation failed:")
     for error in result.errors:
         print(f"  - {error.message}")
     exit(1)
@@ -156,7 +156,7 @@ else:
 urdf_xml = builder.export_urdf()
 with open("diff_drive.urdf", "w") as f:
     f.write(urdf_xml)
-print("✓ Successfully exported diff_drive.urdf!")
+print(" Successfully exported diff_drive.urdf!")
 ```
 
 ---
@@ -222,7 +222,7 @@ def build_robot():
     # Export
     with open("diff_drive.urdf", "w") as f:
         f.write(builder.export_urdf())
-    print("✓ Assembled and exported Robot URDF successfully!")
+    print(" Assembled and exported Robot URDF successfully!")
 
 if __name__ == "__main__":
     build_robot()

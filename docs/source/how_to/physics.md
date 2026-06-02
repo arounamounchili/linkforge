@@ -30,7 +30,7 @@ Sometimes, the geometric center is not the physical center of mass (e.g., a batt
    - **Pos**: XYZ offset from the link origin.
    - **Rot**: RPY rotation of the inertia frame (radians, **XYZ order**).
 
-### 🎯 Visualizing the Center of Mass
+###  Visualizing the Center of Mass
 When you modify the Inertial Origin:
 - A **Yellow Wireframe Sphere** (Center of Mass) with **Orange/White Axes** will be **permanently visible** in the viewport.
 - This represents the **Principal Axes of Inertia** and the exact physical center of the object.

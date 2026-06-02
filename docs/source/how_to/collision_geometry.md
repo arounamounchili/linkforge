@@ -51,7 +51,7 @@ If you want to provide your own hand-optimized collision mesh:
 When you import a robot from a URDF or XACRO file, LinkForge enters a **Data Integrity Mode** to protect your calibrated physics:
 
 - **Geometry Preservation**: Imported collision meshes (primitives, or raw meshes) are protected from accidental regeneration. This ensures that custom-designed collision shapes are never overwritten.
-- **Visual Status Label**: In the **Links** panel, a 🔒 **Imported collision: Geometry preserved** status appears.
+- **Visual Status Label**: In the **Links** panel, a  **Imported collision: Geometry preserved** status appears.
 - **Quality Slider Lock**: The **Collision Quality** slider is disabled for imported meshes. This prevents accidental mesh degradation of your "Source of Truth" assets.
 - **Inertia Protection**: LinkForge also disables **Auto-Calculate Inertia** for imported links, preserving the original `<inertial>` tags from your URDF.
 

@@ -110,9 +110,9 @@ from linkforge.core import validate_robot
 result = validate_robot(robot)
 
 if result.is_valid:
-    print("✓ Robot is valid!")
+    print(" Robot is valid!")
 else:
-    print("✗ Validation errors:")
+    print(" Validation errors:")
     for error in result.errors:
         print(f"  - {error.message}")
 ```

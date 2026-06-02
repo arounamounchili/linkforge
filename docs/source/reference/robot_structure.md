@@ -76,7 +76,7 @@ Both Blender and URDF use **Z-up, right-handed** coordinate systems. LinkForge u
 
 ## Data Integrity & Status
 When working with imported robots, LinkForge displays status labels on the Link Empty to communicate data safety:
-- 🔒 **Imported collision: Geometry preserved**: Indicates the collision mesh is locked to the original URDF source.
+-  **Imported collision: Geometry preserved**: Indicates the collision mesh is locked to the original URDF source.
 - **Auto-Calculate Inertia (Locked)**: Physics properties are preserved from the original `<inertial>` tags.
 
 ## Performance & Scalability
