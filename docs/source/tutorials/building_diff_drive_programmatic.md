@@ -12,7 +12,7 @@ In this tutorial, you will configure a complete differential drive mobile robot 
 
 ---
 
-## 🌳 Kinematic Tree
+##  Kinematic Tree
 
 The structure of the robot we will construct is identical to the one modeled visually in Blender:
 
@@ -64,12 +64,9 @@ from linkforge.core import box
 # Create a box primitive for the chassis (dimensions: 0.4m x 0.3m x 0.1m)
 chassis_geom = box(0.4, 0.3, 0.1)
 
-# Stage the base_link
-builder.link("base_link") \
-    .visual(chassis_geom) \
-    .collision() \
-    .mass(5.0) \
-    .root()
+# Stage the base_link using a context manager.
+# Any links created inside the `with` block will automatically parent to `base_link`.
+with builder.link("base_link").visual(chassis_geom).collision().mass(5.0).root():
 ```
 
 ::: {tip}
@@ -88,62 +85,51 @@ from linkforge.core import cylinder
 # Create a cylinder primitive for the wheels (radius: 0.1m, length: 0.05m)
 wheel_geom = cylinder(radius=0.1, length=0.05)
 
-# 1. Left Wheel
-builder.link("left_wheel", parent="base_link") \
-    .visual(wheel_geom, rpy=(1.57, 0, 0)) \
-    .collision() \
-    .mass(0.5) \
-    .continuous(
-        axis=(0, 1, 0),
-        xyz=(0.0, 0.175, 0.0),
-        rpy=(0, 0, 0),
-    ) \
-    .ros2_control(
-        command_interfaces=["velocity"],
-        state_interfaces=["position", "velocity"],
-    ) \
-    .commit()
+with builder.link("base_link").visual(chassis_geom).collision().mass(5.0).root():
+    # 1. Left Wheel (parent automatically inferred as 'base_link')
+    builder.link("left_wheel") \
+        .visual(wheel_geom, rpy=(1.57, 0, 0)) \
+        .collision() \
+        .mass(0.5) \
+        .continuous(
+            axis=(0, 1, 0),
+            xyz=(0.0, 0.175, 0.0),
+            rpy=(0, 0, 0),
+        ) \
+        .ros2_control(
+            command_interfaces=["velocity"],
+            state_interfaces=["position", "velocity"],
+        )
+        # Note: when exiting a context manager, child links are automatically committed!
 
-# 2. Right Wheel
-builder.link("right_wheel", parent="base_link") \
-    .visual(wheel_geom, rpy=(1.57, 0, 0)) \
-    .collision() \
-    .mass(0.5) \
-    .continuous(
-        axis=(0, 1, 0),
-        xyz=(0.0, -0.175, 0.0),
-        rpy=(0, 0, 0),
-    ) \
-    .ros2_control(
-        command_interfaces=["velocity"],
-        state_interfaces=["position", "velocity"],
-    ) \
-    .commit()
-```
+    # 2. Right Wheel
+    builder.link("right_wheel") \
+        .visual(wheel_geom, rpy=(1.57, 0, 0)) \
+        .collision() \
+        .mass(0.5) \
+        .continuous(
+            axis=(0, 1, 0),
+            xyz=(0.0, -0.175, 0.0),
+            rpy=(0, 0, 0),
+        ) \
+        .ros2_control(
+            command_interfaces=["velocity"],
+            state_interfaces=["position", "velocity"],
+        )
 
----
-
-## Step 5: Create a Lidar Sensor
-
-Finally, add a LiDAR link on top of the base. We will connect it with a fixed joint, and attach a pre-configured LiDAR sensor using the `.lidar()` helper method:
-
-```python
-# Create a small cylinder for the LiDAR visual representation
-lidar_geom = cylinder(radius=0.05, length=0.06)
-
-# Stage and build the lidar link
-builder.link("lidar_link", parent="base_link") \
-    .visual(lidar_geom) \
-    .collision() \
-    .mass(0.2) \
-    .fixed(xyz=(0.15, 0.0, 0.08)) \
-    .lidar(
-        name="chassis_laser",
-        range_min=0.1,
-        range_max=10.0,
-        samples=360,
-    ) \
-    .commit()
+    # 3. Lidar Link & Sensor
+    lidar_geom = cylinder(radius=0.05, length=0.06)
+    builder.link("lidar_link") \
+        .visual(lidar_geom) \
+        .collision() \
+        .mass(0.2) \
+        .fixed(xyz=(0, 0, 0.08)) \
+        .lidar(
+            name="chassis_laser",
+            range_min=0.1,
+            range_max=10.0,
+            samples=360,
+        )
 ```
 
 ---
@@ -159,9 +145,9 @@ from linkforge.core import validate_robot
 result = validate_robot(builder.robot)
 
 if result.is_valid:
-    print("✓ Robot is physically and structurally valid!")
+    print(" Robot is physically and structurally valid!")
 else:
-    print("✗ Validation failed:")
+    print(" Validation failed:")
     for error in result.errors:
         print(f"  - {error.message}")
     exit(1)
@@ -170,7 +156,7 @@ else:
 urdf_xml = builder.export_urdf()
 with open("diff_drive.urdf", "w") as f:
     f.write(urdf_xml)
-print("✓ Successfully exported diff_drive.urdf!")
+print(" Successfully exported diff_drive.urdf!")
 ```
 
 ---
@@ -192,45 +178,38 @@ def build_robot():
         hardware_plugin="mock_components/GenericSystem"
     )
 
-    # 1. Base link
-    builder.link("base_link") \
-        .visual(box(0.4, 0.3, 0.1)) \
-        .collision() \
-        .mass(5.0) \
-        .root()
+    # 1. Base link context
+    with builder.link("base_link").visual(box(0.4, 0.3, 0.1)).collision().mass(5.0).root():
 
-    # 2. Left wheel
-    builder.link("left_wheel", parent="base_link") \
-        .visual(cylinder(0.1, 0.05), rpy=(1.57, 0, 0)) \
-        .collision() \
-        .mass(0.5) \
-        .continuous(axis=(0, 1, 0), xyz=(0, 0.175, 0)) \
-        .ros2_control(
-            command_interfaces=["velocity"],
-            state_interfaces=["position", "velocity"]
-        ) \
-        .commit()
+        # 2. Left wheel
+        builder.link("left_wheel") \
+            .visual(cylinder(0.1, 0.05), rpy=(1.57, 0, 0)) \
+            .collision() \
+            .mass(0.5) \
+            .continuous(axis=(0, 1, 0), xyz=(0, 0.175, 0)) \
+            .ros2_control(
+                command_interfaces=["velocity"],
+                state_interfaces=["position", "velocity"]
+            )
 
-    # 3. Right wheel
-    builder.link("right_wheel", parent="base_link") \
-        .visual(cylinder(0.1, 0.05), rpy=(1.57, 0, 0)) \
-        .collision() \
-        .mass(0.5) \
-        .continuous(axis=(0, 1, 0), xyz=(0, -0.175, 0)) \
-        .ros2_control(
-            command_interfaces=["velocity"],
-            state_interfaces=["position", "velocity"]
-        ) \
-        .commit()
+        # 3. Right wheel
+        builder.link("right_wheel") \
+            .visual(cylinder(0.1, 0.05), rpy=(1.57, 0, 0)) \
+            .collision() \
+            .mass(0.5) \
+            .continuous(axis=(0, 1, 0), xyz=(0, -0.175, 0)) \
+            .ros2_control(
+                command_interfaces=["velocity"],
+                state_interfaces=["position", "velocity"]
+            )
 
-    # 4. LiDAR Link & Sensor
-    builder.link("lidar_link", parent="base_link") \
-        .visual(cylinder(0.05, 0.06)) \
-        .collision() \
-        .mass(0.2) \
-        .fixed(xyz=(0.15, 0, 0.08)) \
-        .lidar(name="chassis_laser", range_min=0.1, range_max=10.0, samples=360) \
-        .commit()
+        # 4. LiDAR Link & Sensor
+        builder.link("lidar_link") \
+            .visual(cylinder(0.05, 0.06)) \
+            .collision() \
+            .mass(0.2) \
+            .fixed(xyz=(0, 0, 0.08)) \
+            .lidar(name="chassis_laser", range_min=0.1, range_max=10.0, samples=360)
 
     # Validate
     result = validate_robot(builder.robot)
@@ -243,7 +222,7 @@ def build_robot():
     # Export
     with open("diff_drive.urdf", "w") as f:
         f.write(builder.export_urdf())
-    print("✓ Assembled and exported Robot URDF successfully!")
+    print(" Assembled and exported Robot URDF successfully!")
 
 if __name__ == "__main__":
     build_robot()

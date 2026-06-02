@@ -435,3 +435,63 @@ def test_robot_validator_integration(empty_robot):
             print(f"Issue: {issue}")
     assert result.has_warnings
     assert any("visual" in w.message for w in result.warnings)
+
+
+def test_semantic_consistency_check_coverage(empty_robot, result):
+    from linkforge.core import JointLimits
+    from linkforge.core.models.ros2_control import Ros2Control, Ros2ControlJoint
+    from linkforge.core.models.srdf import (
+        Chain,
+        EndEffector,
+        GroupState,
+        PassiveJoint,
+        PlanningGroup,
+    )
+    from linkforge.core.models.srdf import SemanticRobotDescription as Semantic
+    from linkforge.core.validation.checks import SemanticConsistencyCheck
+
+    empty_robot.add_link(Link(name="base"))
+    empty_robot.add_link(Link(name="l1"))
+    empty_robot.add_link(Link(name="l2"))
+
+    # Add cycle to trigger cycle guard in chain reachability
+    empty_robot.add_joint(
+        Joint(
+            name="j1",
+            type=JointType.CONTINUOUS,
+            parent="base",
+            child="l1",
+            axis=Vector3(0, 0, 1),
+            limits=JointLimits(lower=-1.0, upper=1.0, effort=1.0, velocity=1.0),
+        )
+    )
+    empty_robot.add_joint(
+        Joint(name="j2", type=JointType.CONTINUOUS, parent="l1", child="l2", axis=Vector3(0, 0, 1))
+    )
+    empty_robot.add_joint(
+        Joint(name="j3", type=JointType.CONTINUOUS, parent="l2", child="l1", axis=Vector3(0, 0, 1))
+    )
+
+    empty_robot.ros2_controls = (
+        Ros2Control(
+            name="hw",
+            hardware_plugin="mock",
+            joints=(
+                Ros2ControlJoint(name="j1", command_interfaces=("position",)),
+                Ros2ControlJoint(name="j2", command_interfaces=("position",)),
+            ),
+        ),
+    )
+
+    empty_robot.semantic = Semantic(
+        groups=(PlanningGroup(name="g1", chains=(Chain(base_link="base", tip_link="l2"),)),),
+        group_states=(GroupState(name="s1", group="g1", joint_values={"j1": [-2.0, "invalid"]}),),
+        end_effectors=(EndEffector(name="ee2", group="non_existent", parent_link="base"),),
+        passive_joints=(PassiveJoint(name="j1"),),
+    )
+
+    check = SemanticConsistencyCheck()
+    check.run(empty_robot, result)
+
+    assert any("GroupState joint value out of range" in err.title for err in result.errors)
+    assert any("Passive joint has command interface" in err.title for err in result.errors)

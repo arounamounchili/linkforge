@@ -3,12 +3,13 @@
 /* Improve Mermaid diagram display */
 .mermaid {
     background-color: transparent !important;
-    text-align: center;
+    display: flex;
+    justify-content: center;
     margin-bottom: 20px;
 }
 
 .mermaid svg {
-    max-width: 100% !important;
+    max-width: 350px !important;
     height: auto !important;
 }
 

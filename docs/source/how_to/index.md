@@ -1,26 +1,26 @@
 # Overview
 
 
-How-to guides are **task-oriented**. They provide specific "recipes" to help you solve a particular problem or complete a specific task.
+These guides provide specific recipes to help you solve a particular problem or complete a specific task.
 
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card} 🛠️ Best Practices
+:::{grid-item-card} ️ Best Practices
 :link: best_practices
 :link-type: doc
 
 Guidelines for cross-platform compatibility and efficient robot modeling.
 :::
 
-:::{grid-item-card} 📡 Adding Sensors
+:::{grid-item-card}  Adding Sensors
 :link: add_sensors
 :link-type: doc
 
 How to attach and configure LiDAR, Cameras, and IMU sensors.
 :::
 
-:::{grid-item-card} 🎮 Control Dashboard
+:::{grid-item-card}  Control Dashboard
 :link: control_dashboard
 :link-type: doc
 
@@ -34,7 +34,7 @@ Actuate your robot with ros2_control interfaces (Position, Velocity, Effort).
 Optimize simulation performance with simplified collision primitives.
 :::
 
-:::{grid-item-card} 👁️ Joint Visualization
+:::{grid-item-card} ️ Joint Visualization
 :link: joint_viz
 :link-type: doc
 
@@ -48,7 +48,7 @@ Debug your robot topology with visual axis and limit indicators.
 Solutions for common import/export issues and validation errors.
 :::
 
-:::{grid-item-card} ⚖️ Physics & Inertia
+:::{grid-item-card} ️ Physics & Inertia
 :link: physics
 :link-type: doc
 
@@ -62,11 +62,25 @@ Configure mass, inertia tensors, and manual Center of Mass offsets.
 Programmatically assemble robots, attach sub-models, and export URDF and SRDF using the Composer API.
 :::
 
-:::{grid-item-card} 📑 Semantic Data (SRDF)
+:::{grid-item-card}  Semantic Data (SRDF)
 :link: srdf
 :link-type: doc
 
 Define planning groups, named poses, and collision filters for MoveIt.
+:::
+
+:::{grid-item-card}  Gazebo Integration
+:link: gazebo
+:link-type: doc
+
+Configure Gazebo physics plugins.
+:::
+
+:::{grid-item-card}  Xacro Macros
+:link: xacro
+:link-type: doc
+
+Configure Xacro properties and mathematical expressions.
 :::
 
 ::::
@@ -82,5 +96,7 @@ collision_geometry
 joint_viz
 physics
 srdf
+gazebo
+xacro
 troubleshooting
 ```

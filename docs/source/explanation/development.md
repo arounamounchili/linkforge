@@ -2,7 +2,7 @@
 
 This guide covers how to set up LinkForge for development, running tests, and building the extension.
 
-## 💻 Setup
+##  Setup
 
 LinkForge uses `uv` for dependency management and `just` as a command runner.
 
@@ -41,7 +41,7 @@ just test-blender
 just coverage
 ```
 
-## ✨ Code Quality
+##  Code Quality
 
 To maintain high standards, we use `ruff` for linting, `mypy` and `pyright` for strict type checking.
 
@@ -53,7 +53,7 @@ just check
 just fix
 ```
 
-## 📦 Building & Distribution
+##  Building & Distribution
 
 To package LinkForge as a Blender extension:
 

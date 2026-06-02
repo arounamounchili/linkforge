@@ -11,7 +11,7 @@ In this tutorial, you will write a parametric Python script using the standalone
 
 ---
 
-## 🌳 Kinematic Tree
+##  Kinematic Tree
 
 Unlike a mobile robot (which has a flat kinematic tree), a robotic arm has a deep, sequential kinematic tree. For a 3-joint manipulator, the kinematic chain looks like this:
 
@@ -179,7 +179,7 @@ with open("manipulator.urdf", "w") as f:
 with open("manipulator.srdf", "w") as f:
     f.write(builder.export_srdf())
 
-print("✓ Successfully exported manipulator.urdf and manipulator.srdf!")
+print(" Successfully exported manipulator.urdf and manipulator.srdf!")
 ```
 
 ---
@@ -264,7 +264,7 @@ def build_parametric_arm(num_joints: int = 6):
     # 7. Validate
     result = validate_robot(builder.robot)
     if not result.is_valid:
-        print("✗ Validation failed:")
+        print(" Validation failed:")
         for error in result.errors:
             print(f"  - {error.message}")
         return
@@ -275,7 +275,7 @@ def build_parametric_arm(num_joints: int = 6):
     with open("manipulator.srdf", "w") as f:
         f.write(builder.export_srdf())
 
-    print("✓ Successfully generated, validated, and exported URDF/SRDF models!")
+    print(" Successfully generated, validated, and exported URDF/SRDF models!")
 
 if __name__ == "__main__":
     build_parametric_arm(6)

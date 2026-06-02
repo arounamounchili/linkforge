@@ -40,9 +40,9 @@ validator = RobotValidator()
 result = validator.validate(robot)
 
 if result.is_valid:
-    print("✓ Robot is valid!")
+    print(" Robot is valid!")
 else:
-    print("✗ Validation errors:")
+    print(" Validation errors:")
     for error in result.errors:
         print(f"  - {error}")
 

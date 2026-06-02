@@ -177,3 +177,29 @@ class TestLinkBuilderAdvanced:
                 break
         assert sensor is not None
         assert sensor.type.name == "GPU_LIDAR"
+
+    def test_link_builder_exit_stack_manipulation(self) -> None:
+        """Test the edge case where the link name is in the stack but not at the top."""
+        builder = RobotBuilder("stack_test")
+        builder.link("base").root()
+        builder.link("some_other_link").root()
+
+        with builder.link("link1", parent="base") as lb:
+            # Inject another name into the stack to push "link1" down
+            builder._parent_stack.append("some_other_link")
+            # When this context exits, "link1" is not at the top of the stack
+            # so it hits the `elif self._link_name in self._builder._parent_stack:` branch
+
+        assert "link1" not in builder._parent_stack
+        assert builder._parent_stack[-1] == "some_other_link"
+
+        # Test case where it's not in the stack at all (hits False branch of elif)
+        with builder.link("link2") as lb2:
+            builder._parent_stack.clear()
+
+    def test_duplicate_link_commit(self) -> None:
+        """Test duplicate link commit error."""
+        builder = RobotBuilder("dup_test")
+        builder.link("dup_link").commit()
+        with pytest.raises(RobotValidationError, match="Duplicate: Link"):
+            builder.link("dup_link").commit()

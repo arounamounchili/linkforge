@@ -70,3 +70,11 @@ with open("robot.srdf", "w") as f:
 :::{tip}
 The ``export_srdf()`` method automatically validates your groups and states. For example, it will warn you if a group state references a joint that doesn't belong to the specified group.
 :::
+
+## 5. Semantic Validation Linting
+
+LinkForge includes deep semantic linting. The built-in validator (`validate_robot()`) will now aggressively verify your semantic configuration against the physical kinematic tree. It catches:
+- Group states containing invalid joints or limits out of bounds.
+- Planning groups containing non-existent links.
+- Semantic collision disabling referencing missing or duplicate links.
+- Kinematic chains (`base_link` -> `tip_link`) that are physically disconnected or broken.

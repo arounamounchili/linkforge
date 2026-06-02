@@ -9,7 +9,7 @@ In this tutorial, you will configure a differential drive mobile robot in Blende
 - How to configure **Control Interfaces**.
 - How to **Validate** and **Export** your robot.
 
-## 🌳 Kinematic Tree
+##  Kinematic Tree
 
 Before we start building, here is the structure of the robot we are going to create:
 
@@ -125,7 +125,7 @@ Exporting without validation may result in a URDF that causes simulators to cras
 
 ---
 
-### 🎉 Success!
+###  Success!
 
 ![Final Robot](../_static/screenshots/diff_drive_06_final.png)
 
@@ -133,7 +133,7 @@ You now have a production-ready, actuable URDF file. You can now load this file 
 
 ---
 
-### 📄 Sample URDF Output
+###  Sample URDF Output
 
 If you followed the steps correctly, your exported URDF should look similar to the following. Note the clean `ros2_control` block and absence of legacy `<transmission>` tags.
 

@@ -45,6 +45,13 @@ class TestGazeboPlugin:
         with pytest.raises(RobotModelError, match="cannot be empty"):
             GazeboPlugin(name="test", filename="")
 
+    def test_plugin_deepcopy(self) -> None:
+        """Test deepcopy returns self for immutable plugin."""
+        import copy
+
+        plugin = GazeboPlugin(name="p1", filename="f1")
+        assert copy.deepcopy(plugin) is plugin
+
 
 class TestGazeboElement:
     """Tests for GazeboElement model."""
@@ -114,3 +121,22 @@ class TestGazeboElement:
         """Test that empty string reference raises error."""
         with pytest.raises(RobotModelError, match="cannot be empty"):
             GazeboElement(reference="")
+
+    def test_invalid_stop_cfm(self) -> None:
+        """Test that negative stop_cfm raises an error."""
+        with pytest.raises(RobotModelError, match="stop_cfm must be >= 0"):
+            GazeboElement(stop_cfm=-1.0)
+
+    def test_invalid_stop_erp(self) -> None:
+        """Test that stop_erp outside [0, 1] raises an error."""
+        with pytest.raises(RobotModelError, match=r"stop_erp must be in \[0.0, 1.0\]"):
+            GazeboElement(stop_erp=-0.1)
+        with pytest.raises(RobotModelError, match=r"stop_erp must be in \[0.0, 1.0\]"):
+            GazeboElement(stop_erp=1.1)
+
+    def test_element_deepcopy(self) -> None:
+        """Test deepcopy returns self for immutable element."""
+        import copy
+
+        element = GazeboElement(reference="l1")
+        assert copy.deepcopy(element) is element

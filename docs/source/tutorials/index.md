@@ -1,20 +1,20 @@
 # Overview
 
-Tutorials are **learning-oriented** guides that take you by the hand through a series of steps to achieve a specific result.
+These guides will take you by the hand through a series of steps to achieve a specific result.
 
 Start here if you are new to LinkForge or want to learn the fundamental workflows.
 
 ::::{grid} 3
 :gutter: 3
 
-:::{grid-item-card} 🎨 Visual Robot Construction (Blender UI)
+:::{grid-item-card}  Visual Robot Construction (Blender UI)
 :link: building_diff_drive
 :link-type: doc
 
 Learn how to build a complete mobile robot visually from scratch in Blender, configuring joints, collision, sensors, and ROS 2 control.
 :::
 
-:::{grid-item-card} ⚙️ Programmatic Robot Construction (Python API)
+:::{grid-item-card} ️ Programmatic Robot Construction (Python API)
 :link: building_diff_drive_programmatic
 :link-type: doc
 
