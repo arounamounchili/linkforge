@@ -69,6 +69,20 @@ Programmatically assemble robots, attach sub-models, and export URDF and SRDF us
 Define planning groups, named poses, and collision filters for MoveIt.
 :::
 
+:::{grid-item-card} 🏭 Gazebo Integration
+:link: gazebo
+:link-type: doc
+
+Configure Gazebo physics plugins.
+:::
+
+:::{grid-item-card} 📐 Xacro Macros
+:link: xacro
+:link-type: doc
+
+Configure Xacro properties and mathematical expressions.
+:::
+
 ::::
 
 ```{toctree}
@@ -82,5 +96,7 @@ collision_geometry
 joint_viz
 physics
 srdf
+gazebo
+xacro
 troubleshooting
 ```

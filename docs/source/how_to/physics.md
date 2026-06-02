@@ -75,7 +75,7 @@ builder.link("chassis") \
 ```
 
 ::: {important}
-**Hardened Physics (v1.3.0)**: In this version, LinkForge has been upgraded with
+**Hardened Physics**: LinkForge has been upgraded with
 production-grade numerical hardening. The mesh inertia pipeline now uses the
 **Mirtich algorithm** (Divergence Theorem) combined with:
 - **Numerical Conditioning**: Automatically translates meshes to a local origin

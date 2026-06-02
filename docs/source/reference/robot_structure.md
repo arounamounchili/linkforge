@@ -84,6 +84,7 @@ When working with imported robots, LinkForge displays status labels on the Link 
 LinkForge uses an **O(1) hash-based indexing** system for robot components. Large-scale robots (100+ links) maintain interactive performance during selection and property editing.
 - **Lazy Kinematic Tree**: The parent-child graph (used for IK and gravity compensation) is computed lazily and cached.
 - **Validation**: Real-time linting of 90+ physical and kinematic constraints happens in the background without blocking the UI.
+  - **Disconnected Links**: The validator now aggressively checks the kinematic graph to ensure no disconnected islands exist. Every link must ultimately trace back to the `root_link` (or be the root itself), otherwise export is blocked to prevent broken simulations.
 
 **Coordinate Conventions:**
 - **Blender Default:** Z-up, Y-forward, X-right

@@ -6,6 +6,11 @@ The Composer provides a high-level, fluent API for programmatically constructing
 
 The main entry point for constructing a robot model.
 
+:::{tip} **Context Managers & Cloning**
+`RobotBuilder` supports deep cloning via `.clone()`, allowing you to use a base builder as a template and fork it into multiple variations.
+Additionally, `LinkBuilder` supports context managers (`with builder.link(...)`) to automatically set the parent context for nested links, removing the need to manually specify the `parent=` argument.
+:::
+
 ```{eval-rst}
 .. autoclass:: linkforge.core.RobotBuilder
    :members:
