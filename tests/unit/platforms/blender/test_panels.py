@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+import importlib.util
+import sys
+from unittest.mock import MagicMock, patch
 
 import bpy
 import pytest
@@ -849,10 +851,6 @@ class TestRobotOperators:
 
     def test_panels_as_main(self) -> None:
         """Test running each panel module as __main__."""
-        import importlib.util
-        import sys
-        from unittest.mock import patch
-
         from linkforge.blender import panels
 
         for name in [
