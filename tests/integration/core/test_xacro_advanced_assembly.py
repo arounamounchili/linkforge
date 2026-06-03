@@ -9,23 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from linkforge.core import Box, Robot, RobotXacroError, URDFParser, XACROParser
-
-
-@pytest.fixture
-def xacro_to_robot():
-    """Helper to resolve xacro and parse as robot."""
-
-    def _parse(path: Path, **kwargs) -> Robot:
-        xml_str = XACROParser().resolve(path, **kwargs)
-        return URDFParser().parse_string(xml_str, source_directory=path.parent)
-
-    return _parse
+from linkforge.core import Box, RobotXacroError, XACROParser
 
 
 def test_nested_namespaces_and_property_isolation(tmp_path: Path, xacro_to_robot) -> None:
     """Test deeply nested namespaces and property access."""
-    # Level 2 (deepest)
     file_c = tmp_path / "sensor.xacro"
     file_c.write_text("""
     <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
@@ -40,8 +28,6 @@ def test_nested_namespaces_and_property_isolation(tmp_path: Path, xacro_to_robot
       </xacro:macro>
     </robot>
     """)
-
-    # Level 1
     file_b = tmp_path / "arm.xacro"
     file_b.write_text(f'''
     <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
@@ -58,8 +44,6 @@ def test_nested_namespaces_and_property_isolation(tmp_path: Path, xacro_to_robot
       </xacro:macro>
     </robot>
     ''')
-
-    # Level 0 (main)
     file_a = tmp_path / "main.xacro"
     file_a.write_text(f'''
     <robot name="nested_bot" xmlns:xacro="http://www.ros.org/wiki/xacro">

@@ -10,7 +10,7 @@ If LinkForge has been useful for your research or project, please consider citin
   author       = {Patouossa Mounchili, Arouna},
   title        = {{LinkForge: The LLVM for Robotics}},
   year         = {2026},
-  version      = {1.3.0},
+  version      = {1.4.0},
   publisher    = {GitHub},
   journal      = {GitHub repository},
   howpublished = {\url{https://github.com/arounamounchili/linkforge}}
@@ -18,7 +18,7 @@ If LinkForge has been useful for your research or project, please consider citin
 ```
 
 ### APA
-Patouossa Mounchili, A. (2026). LinkForge: The LLVM for Robotics (Version 1.3.0) [Computer software]. https://github.com/arounamounchili/linkforge
+Patouossa Mounchili, A. (2026). LinkForge: The LLVM for Robotics (Version 1.4.0) [Computer software]. https://github.com/arounamounchili/linkforge
 
 ## GitHub Citation
 You can also use the **"Cite this repository"** button in the [LinkForge GitHub sidebar](https://github.com/arounamounchili/linkforge) to export the citation in various formats.

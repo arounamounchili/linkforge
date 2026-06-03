@@ -137,7 +137,6 @@ def test_visual_origin_normalization_roundtrip() -> None:
     )
     # Link with NO origin (should be identity)
     robot.add_link(Link(name="link_none", visuals=[Visual(geometry=Box(size=Vector3(1, 1, 1)))]))
-    # Connect them to avoid multiple roots
     robot.add_joint(
         Joint(name="j1", type=JointType.FIXED, parent="link_identity", child="link_none")
     )

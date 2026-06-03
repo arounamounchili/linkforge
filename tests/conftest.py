@@ -18,9 +18,24 @@ from linkforge.core import (
     Link,
     Material,
     Robot,
+    SRDFGenerator,
+    SRDFParser,
+    URDFParser,
     Vector3,
     Visual,
+    XACROParser,
 )
+
+
+@pytest.fixture
+def xacro_to_robot():
+    """Helper to resolve xacro and parse as robot."""
+
+    def _parse(path: Path, **kwargs) -> Robot:
+        xml_str = XACROParser().resolve(path, **kwargs)
+        return URDFParser().parse_string(xml_str, source_directory=path.parent)
+
+    return _parse
 
 
 @pytest.fixture
@@ -104,3 +119,21 @@ def simple_robot(simple_link: Link, simple_joint: Joint) -> Robot:
     robot.add_joint(joint)
 
     return robot
+
+
+@pytest.fixture
+def urdf_parser() -> URDFParser:
+    """Fixture to get a fresh URDFParser instance."""
+    return URDFParser()
+
+
+@pytest.fixture
+def srdf_parser() -> SRDFParser:
+    """Fixture to get a fresh SRDFParser instance."""
+    return SRDFParser()
+
+
+@pytest.fixture
+def srdf_generator() -> SRDFGenerator:
+    """Fixture to get a fresh SRDFGenerator instance."""
+    return SRDFGenerator()

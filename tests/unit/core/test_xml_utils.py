@@ -128,7 +128,6 @@ def test_validate_xml_depth_exceeded() -> None:
     old_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(max(old_limit, MAX_XML_DEPTH + 100))
     try:
-        # Create very deep XML
         root = ET.Element("root")
         curr = root
         for _ in range(MAX_XML_DEPTH + 1):
@@ -174,18 +173,15 @@ def test_xml_add_text() -> None:
 
     parent = ET.Element("root")
 
-    # Test adding a string
     elem1 = xml_add_text(parent, "child1", "value1")
     assert elem1.tag == "child1"
     assert elem1.text == "value1"
     assert parent.find("child1") is not None
 
-    # Test adding a number
     elem2 = xml_add_text(parent, "child2", 42)
     assert elem2.tag == "child2"
     assert elem2.text == "42"
 
-    # Test adding None (should not set text)
     elem3 = xml_add_text(parent, "child3", None)
     assert elem3.tag == "child3"
     assert elem3.text is None

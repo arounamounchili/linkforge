@@ -150,7 +150,6 @@ class TestURDFGenerator:
         names = sorted([str(m.get("name")) for m in materials])
         assert names == ["blue", "red"]
 
-        # Check references in visuals
         # Visuals should only have name attribute inside geometry block?
         # No, <visual><material name="red"/></visual>
 
@@ -360,7 +359,6 @@ class TestURDFGenerator:
         robot = Robot(name="rel_robot")
         link = Link(name="base")
 
-        # Create a mesh file
         mesh_dir = tmp_path / "meshes"
         mesh_dir.mkdir()
         mesh_file = mesh_dir / "geom.stl"
@@ -589,7 +587,6 @@ class TestURDFGenerator:
             )
         )
 
-        # Add a transmission
         trans = Transmission(
             name="arm_trans",
             type="transmission_interface/SimpleTransmission",
@@ -965,12 +962,10 @@ class TestURDFGenerator:
         """Test that the generator produces deterministic output by sorting elements."""
         robot = Robot(name="sorting_robot")
 
-        # Add links in non-alphabetical order
         robot.add_link(Link(name="link_C"))
         robot.add_link(Link(name="link_A"))
         robot.add_link(Link(name="link_B"))
 
-        # Add joints in non-alphabetical order
         robot.add_joint(
             Joint(name="joint_Z", parent="link_A", child="link_B", type=JointType.FIXED)
         )
@@ -978,7 +973,6 @@ class TestURDFGenerator:
             Joint(name="joint_X", parent="link_B", child="link_C", type=JointType.FIXED)
         )
 
-        # Add materials in non-alphabetical order
         mat_red = Material(name="red", color=Color(1, 0, 0, 1))
         mat_blue = Material(name="blue", color=Color(0, 0, 1, 1))
 
@@ -999,7 +993,6 @@ class TestURDFGenerator:
         xml_str = generator.generate(robot, validate=False)
         root = ET.fromstring(xml_str)
 
-        # Check links order
         links = [link_elem.get("name") for link_elem in root.findall("link")]
         # Note: links which are not roots will be sorted alphabetically after root
         # base_link is usually first if it's the only root.
@@ -1007,11 +1000,9 @@ class TestURDFGenerator:
         assert links == ["link_A", "link_B", "link_C", "mat_link_1", "mat_link_2"]
         # link_B and link_C should follow
 
-        # Check joints order
         joint_names = [joint_elem.get("name") for joint_elem in root.findall("joint")]
         assert joint_names == ["joint_X", "joint_Z"]
 
-        # Check materials order
         material_names = [mat_elem.get("name") for mat_elem in root.findall("material")]
         assert material_names == ["blue", "red"]
 
@@ -1059,7 +1050,6 @@ class TestURDFGenerator:
     def test_generate_gazebo_plugin_whitespace_handling(self) -> None:
         """Test Gazebo plugin whitespace stripping and malformed XML fallback."""
 
-        # Test Case 1: Whitespace stripping
         raw_xml = "<parent>  <child>   </child>  </parent>   "
         p = GazeboPlugin(name="p1", filename="f1.so", raw_xml=raw_xml)
         gz = GazeboElement(plugins=[p])
@@ -1070,7 +1060,6 @@ class TestURDFGenerator:
         xml = ET.tostring(root, encoding="unicode")
         assert "<child />" in xml or "<child/>" in xml
 
-        # Test Case 2: Malformed XML fallback
         p2 = GazeboPlugin(name="p2", filename="f2.so", raw_xml="<malformed", parameters={"p": "v"})
         gz2 = GazeboElement(plugins=[p2])
         root2 = ET.Element("gazebo")
@@ -1632,7 +1621,6 @@ class TestURDFGenerator:
 
     def test_urdf_generator_coverage_edge_cases(self) -> None:
         """Verify remaining edge cases in URDFGenerator for 100% coverage."""
-        # 1. GazeboElement with reference=None, material, and custom properties
         robot = Robot(name="gz_edge_cases")
         link = Link(name="base")
         robot.add_link(link)
@@ -1643,7 +1631,6 @@ class TestURDFGenerator:
         )
         robot.add_gazebo_element(gz)
 
-        # 2. Joint with partial safety controller (some fields None)
         safety = JointSafetyController(
             soft_lower_limit=None,
             soft_upper_limit=None,
@@ -1661,7 +1648,6 @@ class TestURDFGenerator:
         )
         robot.add_joint(joint_safety)
 
-        # 3. Transmission / Joint with custom hardware interface to trigger fallback in _normalize_interface_name
         trans = Transmission(
             name="custom_trans",
             type="transmission_interface/SimpleTransmission",
@@ -1696,14 +1682,12 @@ class TestURDFGenerator:
         # Assertions on generate() output
         root = ET.fromstring(xml)
 
-        # Check GazeboElement with reference=None (should have no reference attribute)
         gz_elem = next(g for g in root.findall("gazebo") if g.find("material") is not None)
         assert gz_elem is not None
         assert gz_elem.get("reference") is None
         assert gz_elem.find("material").text == "Gazebo/Blue"
         assert gz_elem.find("custom_prop").text == "custom_val"
 
-        # Check safety_controller with None values (they should be omitted)
         safety_elem = root.find(".//safety_controller")
         assert safety_elem is not None
         assert safety_elem.get("soft_lower_limit") is None
@@ -1711,7 +1695,6 @@ class TestURDFGenerator:
         assert safety_elem.get("k_position") is None
         assert safety_elem.get("k_velocity") == "5"
 
-        # Check customized hardware interface normalized to position (fallback)
         trans_elem = root.find("transmission")
         assert trans_elem is not None
         hw_iface = trans_elem.find("joint/hardwareInterface")

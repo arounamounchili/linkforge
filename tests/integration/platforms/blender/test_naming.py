@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import time
 
+import bpy
+
 from tests.blender_test_utils import (
     create_test_object,
     safe_get_linkforge,
@@ -15,8 +17,6 @@ from tests.blender_test_utils import (
 class TestNaming:
     def test_link_outliner_rename_sync(self, blender_clean_scene) -> None:
         """Verify that link outliner renames are synchronized to properties."""
-        import bpy
-
         obj = create_test_object("base_link", None, bpy.context.scene)
         obj_lf = safe_get_linkforge(obj)
         obj_lf.is_robot_link = True
@@ -29,8 +29,6 @@ class TestNaming:
 
     def test_name_sanitization(self, blender_clean_scene) -> None:
         """Verify that renames are sanitized for URDF compatibility."""
-        import bpy
-
         obj = create_test_object("wheel", None, bpy.context.scene)
         obj_lf = safe_get_linkforge(obj)
         obj_lf.is_robot_link = True
@@ -57,8 +55,6 @@ class TestNaming:
     # Robustness and Edge Cases
     def test_empty_name_guard(self, blender_clean_scene) -> None:
         """Verify that empty names are rejected and revert to object name."""
-        import bpy
-
         obj = create_test_object("my_sensor", None, bpy.context.scene)
         obj_lf = safe_get_sensor(obj)
         obj_lf.is_robot_sensor = True

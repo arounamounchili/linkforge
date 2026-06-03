@@ -62,28 +62,24 @@ class TestTransmissionOperations:
 
     def test_create_transmission_for_joint_axis_variations(self, scene, blender_context) -> None:
         """Test creating a transmission with X, Y, Z, and CUSTOM joint axes."""
-        # Test axis X
         j_x = create_test_object("JointX", None, scene)
         jp_x = safe_get_joint(j_x)
         jp_x.is_robot_joint = True
         jp_x.axis = "X"
         assert create_transmission_for_joint(j_x, blender_context)
 
-        # Test axis Y
         j_y = create_test_object("JointY", None, scene)
         jp_y = safe_get_joint(j_y)
         jp_y.is_robot_joint = True
         jp_y.axis = "Y"
         assert create_transmission_for_joint(j_y, blender_context)
 
-        # Test axis Z
         j_z = create_test_object("JointZ", None, scene)
         jp_z = safe_get_joint(j_z)
         jp_z.is_robot_joint = True
         jp_z.axis = "Z"
         assert create_transmission_for_joint(j_z, blender_context)
 
-        # Test axis CUSTOM
         j_c = create_test_object("JointCustom", None, scene)
         jp_c = safe_get_joint(j_c)
         jp_c.is_robot_joint = True
@@ -95,7 +91,6 @@ class TestTransmissionOperations:
 
     def test_create_transmission_for_joint_fallback(self, scene, blender_context) -> None:
         """Test fallback behavior when preferences are missing or joint_props is None."""
-        # Setup Joint
         j = create_test_object("Joint", None, scene)
         safe_get_joint(j).is_robot_joint = True
 
@@ -163,17 +158,12 @@ class TestTransmissionOperations:
         assert op.execute(MockContextNoScene()) == {"CANCELLED"}
 
 
-# Transmission Hierarchy and Logic
-
-
 class TestTransmissionLogic:
     def test_transmission_hierarchy_simple(self, scene, blender_context) -> None:
         """Test that a simple transmission is reparented to its joint."""
-        # Create joint
         joint_obj = create_test_object("joint_obj", None, scene)
         safe_get_joint(joint_obj).is_robot_joint = True
 
-        # Create transmission
         trans_obj = create_test_object("trans_obj", None, scene)
         props = safe_get_transmission(trans_obj)
         props.is_robot_transmission = True

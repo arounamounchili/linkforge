@@ -135,7 +135,6 @@ def test_graph_topological_joints_dag() -> None:
     top_joints = graph.get_topological_joints()
     assert len(top_joints) == 4
 
-    # Test the cycle raises in get_topological_joints
     cyclic_links = [Link(name="A"), Link(name="B")]
     cyclic_joints = [
         Joint(name="j1", parent="A", child="B", type=JointType.FIXED),
@@ -145,7 +144,6 @@ def test_graph_topological_joints_dag() -> None:
     with pytest.raises(RobotModelError, match="cycles"):
         cyclic_graph.get_topological_joints()
 
-    # Test ghost joint (none return from registry)
     graph.adj["A"].append(("B", "ghost_joint"))
     top_joints_ghost = graph.get_topological_joints()
     # The length of returned joints is still 4 because ghost_joint is filtered out by `if joint:`

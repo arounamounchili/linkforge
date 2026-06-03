@@ -68,14 +68,12 @@ def test_resolve_package_path_case_b_failure(tmp_path: Path) -> None:
     search_dir = ws / "urdf"
     search_dir.mkdir()
 
-    # Verify that we don't return a path if the package.xml name is different
     # from the requested package name (even if the folder exists).
     result = resolve_package_path("package://right_pkg/mesh.stl", start_dir=search_dir)
     assert result is None
 
 
 def test_resolve_package_path_uri_variations(tmp_path: Path) -> None:
-    # Test different uri scheme variations (package:/ and package:)
     pkg_dir = tmp_path / "franka_description"
     pkg_dir.mkdir()
     mesh_file = pkg_dir / "meshes" / "link0.stl"

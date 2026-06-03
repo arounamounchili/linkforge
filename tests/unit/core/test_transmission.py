@@ -340,11 +340,9 @@ class TestTransmission:
         tj = TransmissionJoint(name="j1", hardware_interfaces=["velocity", "position"])
         ta = TransmissionActuator(name="a1", hardware_interfaces=["velocity", "position"])
 
-        # Test individual normalization
         assert tj.normalized().hardware_interfaces == ("position", "velocity")
         assert ta.normalized().hardware_interfaces == ("position", "velocity")
 
-        # Test transmission normalization
         tj2 = TransmissionJoint(name="j2", hardware_interfaces=["position"])
         ta2 = TransmissionActuator(name="a2", hardware_interfaces=["position"])
         trans = Transmission(

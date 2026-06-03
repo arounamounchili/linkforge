@@ -89,7 +89,6 @@ class TestSceneHelperChecks:
 class TestSceneAnalysis:
     def test_get_robot_statistics_basic(self, scene, blender_context) -> None:
         """Test gathering basic robot statistics from the scene."""
-        # Create a link
         link_obj = create_test_object("link1", None, scene)
         safe_get_linkforge(link_obj).is_robot_link = True
         safe_get_linkforge(link_obj).link_name = "link1"
@@ -216,7 +215,6 @@ class TestSceneAnalysis:
         collision_child.parent = link_obj
         collision_child[TAG_COLLISION_GEOM] = "INVALID"
 
-        # Mock detect_primitive_type to raise an exception
         with patch(
             "linkforge.blender.utils.scene_utils.detect_primitive_type",
             side_effect=ValueError("Failed"),
@@ -235,7 +233,6 @@ class TestSceneAnalysis:
         cache_key = (id(scene), getattr(scene, "frame_current", 0), len(scene.objects))
 
         with patch.dict(os.environ, {"LINKFORGE_DISABLE_CACHE": "0"}):
-            # 1. Test ReferenceError on joint_obj
             bad_joint = MagicMock()
             type(bad_joint).name = PropertyMock(side_effect=ReferenceError("deleted"))
             stats = RobotSceneStatistics(
@@ -253,7 +250,6 @@ class TestSceneAnalysis:
             get_robot_statistics(scene)
             assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
 
-            # 2. Test ReferenceError on sensor_obj
             bad_sensor = MagicMock()
             type(bad_sensor).name = PropertyMock(side_effect=ReferenceError("deleted"))
             stats = RobotSceneStatistics(
@@ -270,7 +266,6 @@ class TestSceneAnalysis:
             get_robot_statistics(scene)
             assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
 
-            # 3. Test ReferenceError on transmission_obj
             bad_trans = MagicMock()
             type(bad_trans).name = PropertyMock(side_effect=ReferenceError("deleted"))
             stats = RobotSceneStatistics(
@@ -287,7 +282,6 @@ class TestSceneAnalysis:
             get_robot_statistics(scene)
             assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
 
-            # 4. Test ReferenceError on geometry_stats
             bad_geo = MagicMock()
             type(bad_geo).name = PropertyMock(side_effect=ReferenceError("deleted"))
             stats = RobotSceneStatistics(
@@ -305,7 +299,6 @@ class TestSceneAnalysis:
             get_robot_statistics(scene)
             assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
 
-            # 5. Test ReferenceError on manual_inertia_objects
             bad_inertia = MagicMock()
             type(bad_inertia).name = PropertyMock(side_effect=ReferenceError("deleted"))
             stats = RobotSceneStatistics(
@@ -355,17 +348,14 @@ class TestSceneAnalysis:
         collision_child = create_test_object("link_geom_mesh_collision", None, scene)
         collision_child.parent = link_obj
 
-        # 1. stored_type == GEOM_MESH
         collision_child[TAG_COLLISION_GEOM] = GEOM_MESH
         stats = get_robot_statistics(scene, force_refresh=True)
         assert stats.geometry_stats["link_geom_mesh"][1] == GEOM_MESH
         assert link_obj in stats.manual_inertia_objects
 
-        # 2. non-string stored_type
         collision_child[TAG_COLLISION_GEOM] = 123
         get_robot_statistics(scene, force_refresh=True)
 
-        # 3. Heuristic primitive detection returning a value
         collision_child[TAG_COLLISION_GEOM] = "AUTO"
         with patch(
             "linkforge.blender.utils.scene_utils.detect_primitive_type", return_value="box"
@@ -534,7 +524,6 @@ class TestTreeBuilding:
         """Test build_tree_from_stats with various uncommon branches (missing parents, missing properties)."""
         from linkforge.blender.utils.scene_utils import RobotSceneStatistics, build_tree_from_stats
 
-        # 1. parent_name not in tree (parent_name not in links)
         joint_obj1 = MagicMock()
         stats = RobotSceneStatistics(
             num_links=1,
@@ -551,7 +540,6 @@ class TestTreeBuilding:
         tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
         assert "unknown_parent" not in tree
 
-        # 2. get_joint_props returns None
         joint_obj2 = MagicMock()
         with patch("linkforge.blender.utils.scene_utils.get_joint_props", return_value=None):
             stats = RobotSceneStatistics(
@@ -568,7 +556,6 @@ class TestTreeBuilding:
             tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
             assert len(tree["parent"]) == 0
 
-        # 3. ReferenceError raised when accessing joint properties
         joint_obj3 = MagicMock()
         with patch(
             "linkforge.blender.utils.scene_utils.get_joint_props",

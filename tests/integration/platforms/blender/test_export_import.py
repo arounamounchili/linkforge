@@ -27,14 +27,12 @@ class TestExportImportRoundtrip:
         lf_scene.robot_name = "roundtrip_bot"
         lf_scene.export_format = "URDF"
 
-        # 1. Setup a simple 2-link robot in Blender
         # base_link (at origin)
         base = create_robot_link("base_link", scene, with_visual=True)
         # child_link (offset)
         child = create_robot_link("child_link", scene, with_visual=True)
         child.location = (0, 0, 1.0)
 
-        # Connect with a revolute joint
         joint = create_robot_joint("joint1", base, child, scene, joint_type="revolute")
         j_props = safe_get_joint(joint)
         j_props.limit_lower = -1.57
@@ -42,7 +40,6 @@ class TestExportImportRoundtrip:
 
         safe_update()
 
-        # 2. Export to URDF
         export_path = tmp_path / "robot.urdf"
 
         # We need to mock the operator's filepath since it uses ExportHelper
@@ -52,18 +49,15 @@ class TestExportImportRoundtrip:
             def report(self, level, message):
                 pass
 
-        # Execute export
         res = LINKFORGE_OT_export_robot_model.execute(MockExportOp(), bpy.context)
         assert res == {"FINISHED"}
         assert export_path.exists()
 
-        # 3. Clear scene and Re-import
         from tests.blender_test_utils import cleanup_blender_scene
 
         cleanup_blender_scene(scene)
         assert len(bpy.data.objects) == 0
 
-        # Execute import
         class MockImportOp:
             filepath = str(export_path)
 
@@ -73,7 +67,6 @@ class TestExportImportRoundtrip:
         res = LINKFORGE_OT_import_robot_model.execute(MockImportOp(), bpy.context)
         assert res == {"FINISHED"}
 
-        # 4. Wait for asynchronous import to complete
         start_time = time.time()
         timeout = 10.0
         while time.time() - start_time < timeout:
@@ -84,7 +77,6 @@ class TestExportImportRoundtrip:
 
         assert not lf_scene.is_importing, "Import timed out"
 
-        # 5. Verify the imported structure
         # In Blender, links are Empties named after the link
         # Visuals are children of the Empties
         assert bpy.data.objects.get("base_link") is not None
@@ -95,11 +87,9 @@ class TestExportImportRoundtrip:
         new_child = bpy.data.objects["child_link"]
         new_joint = bpy.data.objects["joint1"]
 
-        # Verify Link Properties
         assert safe_get_linkforge(new_base).is_robot_link is True
         assert safe_get_linkforge(new_child).is_robot_link is True
 
-        # Verify Joint Properties
         nj_props = safe_get_joint(new_joint)
         assert nj_props.is_robot_joint is True
         assert nj_props.parent_link == new_base
@@ -136,7 +126,6 @@ class TestExportImportRoundtrip:
         res = LINKFORGE_OT_import_robot_model.execute(MockImportOp(), bpy.context)
         assert res == {"FINISHED"}
 
-        # Wait for it to finish (or fail)
         lf_scene = safe_get_linkforge_scene(bpy.context.scene)
         start_time = time.time()
         while time.time() - start_time < 5.0:

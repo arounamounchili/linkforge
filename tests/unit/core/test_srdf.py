@@ -44,7 +44,6 @@ def generator() -> SRDFGenerator:
 
 
 # ==========================================
-# 1. SRDF Models and Validations
 # ==========================================
 
 
@@ -138,7 +137,6 @@ class TestSRDFModels:
             PlanningGroup(name="arm")
         assert exc.value.code == ValidationErrorCode.VALUE_EMPTY
 
-        # Test list conversion to tuple
         pg = PlanningGroup(name="arm", links=["l1", "l2"])
         assert isinstance(pg.links, tuple)
         assert pg.links == ("l1", "l2")
@@ -162,7 +160,6 @@ class TestSRDFModels:
         assert exc.value.code == ValidationErrorCode.VALUE_EMPTY
 
     # ==========================================
-    # 2. Namespace Prefixing
     # ==========================================
 
     def test_with_prefix(self) -> None:
@@ -221,7 +218,6 @@ class TestSRDFModels:
         assert prefixed.joint_properties[0].joint_name == "prefix_j1"
 
     # ==========================================
-    # 3. Merging and Deduplication
     # ==========================================
 
     def test_merge_with(self) -> None:
@@ -324,7 +320,6 @@ class TestSRDFModels:
 
 
 # ==========================================
-# 4. SRDF Parser Edge Cases
 # ==========================================
 
 
@@ -488,7 +483,6 @@ class TestSRDFParserCoverage:
         assert len(srdf.link_sphere_approximations) == 1
         assert len(srdf.joint_properties) == 1
 
-        # Test cross reference warning for end effector and group state
         xml_warnings = """<?xml version="1.0"?>
         <robot name="warn_robot">
             <group_state name="gs" group="unknown_group"/>
@@ -497,7 +491,6 @@ class TestSRDFParserCoverage:
         """
         parser.parse_string(xml_warnings)
 
-        # Mock constructors to raise exceptions during parser iteration
         import unittest.mock as mock
 
         with mock.patch(
@@ -570,7 +563,6 @@ class TestSRDFParserCoverage:
             res = parser.parse_string(xml_gs_err)
             assert len(res.group_states) == 0
 
-        # Mock iterparse exceptions in parse_string
         with mock.patch("xml.etree.ElementTree.iterparse", side_effect=StopIteration):
             with pytest.raises(RobotParserUnexpectedError) as exc:
                 parser.parse_string("<robot/>")
@@ -595,7 +587,6 @@ class TestSRDFParserCoverage:
                 parser.parse_string("<robot/>")
             assert "unexpected error" in str(exc.value)
 
-        # Mock parse file exceptions
         with mock.patch.object(parser, "_validate_file"):
             with mock.patch("xml.etree.ElementTree.iterparse", side_effect=StopIteration):
                 with pytest.raises(RobotParserUnexpectedError) as exc:
@@ -611,7 +602,6 @@ class TestSRDFParserCoverage:
 
 
 # ==========================================
-# 5. SRDF Generator Edge Cases
 # ==========================================
 
 
@@ -711,7 +701,6 @@ class TestSRDFGeneratorCoverage:
 
 def test_srdf_parser_remaining_coverage(parser) -> None:
     """Verify all remaining branch paths in srdf_parser.py."""
-    # 1. Missing attributes inside group (link, joint, chain, subgroup)
     xml_groups = """<?xml version="1.0"?>
     <robot name="r">
         <group name="arm">
@@ -732,7 +721,6 @@ def test_srdf_parser_remaining_coverage(parser) -> None:
     assert len(srdf.groups[0].chains) == 0
     assert len(srdf.groups[0].subgroups) == 0
 
-    # 2. Joint state with whitespace/empty values in j_val_str
     xml_joint_val = """<?xml version="1.0"?>
     <robot name="r">
         <group name="arm"/>
@@ -745,7 +733,6 @@ def test_srdf_parser_remaining_coverage(parser) -> None:
     assert len(srdf2.group_states) == 1
     assert len(srdf2.group_states[0].joint_values) == 0
 
-    # 3. Unknown root-level elements skipped
     xml_unknown = """<?xml version="1.0"?>
     <robot name="r">
         <unknown_tag attribute="val"/>

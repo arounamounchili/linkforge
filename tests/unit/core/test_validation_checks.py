@@ -190,7 +190,6 @@ def test_ros2_control_check(empty_robot, result):
 
 def test_mimic_chain_circular(empty_robot, result):
     axis = Vector3(0, 0, 1)
-    # Initialize with mimic to avoid FrozenInstanceError
     j1 = Joint(
         name="j1",
         type=JointType.CONTINUOUS,
@@ -216,7 +215,6 @@ def test_mimic_chain_circular(empty_robot, result):
 
 
 def test_semantic_check_subgroup_cycle(empty_robot, result):
-    # Create SRDF with circular subgroup dependencies
     srdf_xml = """<?xml version="1.0" encoding="UTF-8"?>
     <robot name="test">
         <group name="g1">
@@ -353,15 +351,12 @@ def test_tree_structure_check_exceptions(empty_robot, result, mocker):
     from linkforge.core import RobotModelError, RobotValidationError
     from linkforge.core.models.graph import KinematicGraph
 
-    # 1. TreeStructureCheck on robot without links (line 140)
     check = TreeStructureCheck()
     check.run(empty_robot, result)
     assert not result.errors  # already reported by HasLinksCheck
 
-    # Add a link so subsequent checks can run
     empty_robot.add_link(Link(name="base"))
 
-    # 2. robot.has_cycle raises RobotModelError (lines 160-165)
     mocker.patch.object(
         KinematicGraph, "has_cycle", side_effect=RobotModelError("mocked cycle error")
     )
@@ -377,7 +372,6 @@ def test_tree_structure_check_exceptions(empty_robot, result, mocker):
     check.run(empty_robot, result)
     assert not any("Kinematic graph error" in err.title for err in result.errors)
 
-    # 3. robot.root_link raises unexpected RobotValidationError (line 196)
     result.issues = []
     mocker.patch.object(
         Robot,
@@ -389,7 +383,6 @@ def test_tree_structure_check_exceptions(empty_robot, result, mocker):
     check.run(empty_robot, result)
     assert any("Root link error" in err.title for err in result.errors)
 
-    # 4. robot.root_link raises RobotModelError (lines 202-208)
     result.issues = []
     mocker.patch.object(
         Robot, "get_root_link", side_effect=RobotModelError("mocked root model error")
@@ -454,7 +447,6 @@ def test_semantic_consistency_check_coverage(empty_robot, result):
     empty_robot.add_link(Link(name="l1"))
     empty_robot.add_link(Link(name="l2"))
 
-    # Add cycle to trigger cycle guard in chain reachability
     empty_robot.add_joint(
         Joint(
             name="j1",

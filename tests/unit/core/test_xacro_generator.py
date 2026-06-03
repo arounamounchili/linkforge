@@ -40,7 +40,6 @@ class TestXacroGenerator:
     @pytest.fixture
     def simple_robot(self):
         robot = Robot(name="simple_robot")
-        # Add basic link and joint to make it a valid robot model
         link_base = Link(name="base_link", inertial=Inertial(mass=1.0))
         link_child = Link(name="child_link", inertial=Inertial(mass=1.0))
         joint = Joint(
@@ -105,11 +104,9 @@ class TestXacroGenerator:
         xml_str = gen.generate(simple_robot)
         root = ET.fromstring(xml_str)
 
-        # Check property elements
         ns = {"xacro": XACRO_URI}
         properties = root.findall(".//xacro:property", ns)
 
-        # Verify property names are sanitized and assigned values
         prop_names = {p.get("name"): p.get("value") for p in properties}
         assert "my_red" in prop_names
         assert prop_names["my_red"] == "1 0 0 1"
@@ -118,7 +115,6 @@ class TestXacroGenerator:
         # Texture-only material shouldn't be extracted as property
         assert "my_texture" not in prop_names
 
-        # Verify global materials reference these properties
         global_materials = root.findall("./material")
         assert len(global_materials) == 3
         mat_dict = {m.get("name"): m for m in global_materials}
@@ -126,7 +122,6 @@ class TestXacroGenerator:
         rgba_color = mat_dict["My-Red"].find("color").get("rgba")
         assert rgba_color == "${my_red}"
 
-        # Verify standard URDF fallback when material extraction is disabled
         gen_std = XACROGenerator(extract_materials=False)
         xml_std = gen_std.generate(simple_robot)
         root_std = ET.fromstring(xml_std)
@@ -135,19 +130,15 @@ class TestXacroGenerator:
 
     def test_dimensions_extraction(self, simple_robot):
         """Test extracting common dimensions as properties."""
-        # 1. Box dimensions
         visual1 = Visual(geometry=Box(size=Vector3(0.5, 0.2, 0.8)))
         visual2 = Visual(geometry=Box(size=Vector3(0.5, 0.2, 0.8)))
 
-        # 2. Cylinder dimensions
         visual3 = Visual(geometry=Cylinder(radius=0.05, length=0.2))
         visual4 = Visual(geometry=Cylinder(radius=0.05, length=0.2))
 
-        # 3. Sphere dimensions
         visual5 = Visual(geometry=Sphere(radius=0.03))
         visual6 = Visual(geometry=Sphere(radius=0.03))
 
-        # Add prefix name matching triggers (wheel, leg, ball)
         link1 = Link(name="left_wheel", inertial=Inertial(mass=1.0))
         link2 = Link(name="right_wheel", inertial=Inertial(mass=1.0))
         link1.add_visual(visual3)
@@ -282,14 +273,12 @@ class TestXacroGenerator:
 
         ns = {"xacro": XACRO_URI}
 
-        # Verify macro definition was generated
         macros = root.findall(".//xacro:macro", ns)
         assert len(macros) == 1
         macro = macros[0]
         assert macro.get("name").startswith("cylinder_")
         assert macro.get("params") == "name parent xyz rpy"
 
-        # Verify macro calls (fl_wheel and fr_wheel)
         macro_name = macro.get("name")
         calls = root.findall(f".//xacro:{macro_name}", ns)
         assert len(calls) == 2
@@ -358,7 +347,6 @@ class TestXacroGenerator:
         simple_robot.add_joint(joint_fl)
         simple_robot.add_joint(joint_fr)
 
-        # Transmission/ROS2 Control triggers
         trans = Transmission(
             name="trans_fl",
             type="TransmissionType",
@@ -388,7 +376,6 @@ class TestXacroGenerator:
         assert mac_file.exists()
         assert ctrl_file.exists()
 
-        # Check main file contains the includes
         main_xml = ET.fromstring(main_file.read_text())
         ns = {"xacro": XACRO_URI}
         includes = main_xml.findall("xacro:include", ns)
@@ -398,19 +385,16 @@ class TestXacroGenerator:
         assert "simple_robot_macros.xacro" in include_filenames
         assert "simple_robot_ros2_control.xacro" in include_filenames
 
-        # Verify property file contains extracted material
         prop_xml = ET.fromstring(prop_file.read_text())
         props = prop_xml.findall("xacro:property", ns)
         prop_names = [p.get("name") for p in props]
         assert "custom_red" in prop_names
 
-        # Verify macros file contains macro definition
         mac_xml = ET.fromstring(mac_file.read_text())
         macros = mac_xml.findall("xacro:macro", ns)
         assert len(macros) == 1
         assert macros[0].get("name").startswith("cylinder_")
 
-        # Verify control file contains transmission
         ctrl_xml = ET.fromstring(ctrl_file.read_text())
         assert ctrl_xml.find("ros2_control") is not None
 
@@ -426,7 +410,6 @@ class TestXacroGenerator:
 
     def test_split_files_generation_empty(self, empty_robot, tmp_path):
         """Test split file generation on a robot with no properties, macros, or control elements."""
-        # Add basic link so it has at least some content
         empty_robot.add_link(Link(name="base_link"))
         generator = XACROGenerator(
             split_files=True,
@@ -449,12 +432,10 @@ class TestXacroGenerator:
 
         generator = XACROGenerator()
 
-        # 1. No visuals returns None
         link_no_vis = Link(name="l")
         joint = Joint(name="j", type=JointType.FIXED, parent="p", child="c")
         assert generator._get_macro_signature(link_no_vis, joint) is None
 
-        # 2. Exhaustive visuals and collisions
         link = Link(name="l")
 
         # Visual sphere
@@ -533,13 +514,11 @@ class TestXacroGenerator:
         generator = XACROGenerator()
         parent = ET.Element("geometry")
 
-        # Test unregistered geometry fallback
         generator._add_geometry_element(object(), parent)
         assert len(parent) == 1
         assert parent[0].tag == "geometry"
         assert len(parent[0]) == 0
 
-        # Test mesh with 1.0 scale (default)
         mesh_geom = Mesh(resource="package://test/mesh.stl", scale=Vector3(1.0, 1.0, 1.0))
         generator._add_geometry_element(mesh_geom, parent)
         mesh_elem = parent.find(".//mesh")
@@ -570,7 +549,6 @@ class TestXacroGenerator:
         test_link.add_visual(Visual(geometry=Box(size=Vector3(1, 1, 1)), material=mat))
         robot.add_link(test_link)
 
-        # Run macro signatures check with material in global dict
         generator.global_materials = generator._collect_materials(robot)
         root = ET.Element("robot")
         generator._add_material_element(root, mat)
@@ -621,7 +599,6 @@ class TestXacroGenerator:
         robot = Robot(name="test")
         generator._current_robot = robot
 
-        # 1. Box visual inside _get_macro_signature
         link = Link(name="l1")
         link.add_visual(Visual(geometry=Box(size=Vector3(1, 2, 3))))
         joint = Joint(name="j1", type=JointType.FIXED, parent="p", child="l1")
@@ -630,7 +607,6 @@ class TestXacroGenerator:
         assert "v_box" in sig
         assert "1.000_2.000_3.000" in sig
 
-        # 2. Inline material is serialized inline rather than referenced
         link.add_visual(
             Visual(
                 geometry=Sphere(radius=1.0),
@@ -689,7 +665,6 @@ class TestXacroGenerator:
         robot.add_link(l2)
 
         parent = generator.generate_robot_element(robot, validate=False)
-        # Verify that unique properties were not extracted (they only extract for 2+ instances)
         properties = parent.findall(f"{{{XACRO_URI}}}property")
         assert not any("1.11" in str(p.get("value")) for p in properties)
 
@@ -853,7 +828,6 @@ class TestXacroGenerator:
 
         mocker.patch.object(XACROGenerator, "_identify_macro_groups", mock_identify)
 
-        # Run generator in split files mode
         gen = XACROGenerator(generate_macros=True, split_files=True)
         main_filepath = tmp_path / "comprehensive_robot.xacro"
         gen.write(robot, main_filepath, validate=False)

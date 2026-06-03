@@ -73,7 +73,6 @@ class TestValidationProperties:
         err = res.errors.add()
         err.message = "This is a very long message that should be split into multiple lines."
 
-        # Verify splitting logic (assuming 60 chars limit)
         lines = err.message_lines
         assert len(lines) >= 1
         for line in lines:
@@ -93,7 +92,6 @@ class TestValidationProperties:
         res = safe_get_validation(wm)
         res.clear()
 
-        # Add error
         err = res.errors.add()
         err.title = "Test Error"
         err.message = "Error message"
@@ -105,7 +103,6 @@ class TestValidationProperties:
         assert err.objects_str == "obj1,obj2"
         assert len(err.suggestion_lines) >= 1
 
-        # Add warning
         warn = res.warnings.add()
         warn.title = "Test Warning"
         warn.message = "Warning message"
@@ -117,7 +114,6 @@ class TestValidationProperties:
         assert warn.objects_str == ""
         assert warn.suggestion_lines == []
 
-        # Test index getters
         res.error_count = 1
         res.warning_count = 1
         assert res.get_error(0) == err
@@ -212,12 +208,10 @@ class TestPreferences:
         assert addon_id == "linkforge"
         assert bpy.context.preferences is not None
 
-        # Mock context.preferences.addons.get to return None so get_addon_prefs returns None
         with patch.object(bpy.context.preferences.addons, "get", return_value=None):
             prefs = get_addon_prefs(bpy.context)
             assert prefs is None
 
-        # Mock context.preferences.addons.get to return an addon with preferences
         mock_addon = MagicMock()
         mock_prefs = LinkForgePreferences()
         mock_addon.preferences = mock_prefs
@@ -280,7 +274,6 @@ class TestGlobalPropertiesAndCallbacks:
         obj1 = create_test_object("test_strat_3", None, scene)
         props = safe_get_linkforge(obj1)
 
-        # Mock Context with selected_objects for Strategy 3 (original test pattern)
         original_id_data = getattr(props, "id_data", None)
         try:
             # Clear id_data to bypass Strategy 1 and test fallbacks
@@ -299,7 +292,6 @@ class TestGlobalPropertiesAndCallbacks:
             owner_obj = find_property_owner(mock_ctx_obj, props, PROP_LINK)
             assert owner_obj == obj1
 
-            # Mock Context with scene for Strategy 4
             mock_ctx_scene = MagicMock()
             mock_ctx_scene.object = None
             mock_ctx_scene.selected_objects = []
@@ -319,11 +311,9 @@ class TestGlobalPropertiesAndCallbacks:
         finally:
             props.id_data = original_id_data
 
-        # Test get_transmission_props helper
         assert get_transmission_props(None) is None
         assert get_transmission_props(obj1) is not None
 
-        # Test get_robot_props helper with a valid scene
         assert get_robot_props(scene) is not None
 
         # Clear id_data for fallback testing
@@ -331,14 +321,12 @@ class TestGlobalPropertiesAndCallbacks:
         try:
             props.id_data = None
 
-            # Test selected_objects loop fall-through (empty list)
             mock_ctx_empty_sel = MagicMock()
             mock_ctx_empty_sel.object = None
             mock_ctx_empty_sel.selected_objects = []
             mock_ctx_empty_sel.scene = None
             assert find_property_owner(mock_ctx_empty_sel, props, PROP_LINK) is None
 
-            # Test selected_objects loop continuation with non-matching object
             non_matching_obj = create_test_object("non_match", None, scene)
             mock_ctx_non_match_sel = MagicMock()
             mock_ctx_non_match_sel.object = None
@@ -346,7 +334,6 @@ class TestGlobalPropertiesAndCallbacks:
             mock_ctx_non_match_sel.scene = None
             assert find_property_owner(mock_ctx_non_match_sel, props, PROP_LINK) is None
 
-            # Test scene.objects loop continuation and fall-through
             mock_ctx_non_match_scene = MagicMock()
             mock_ctx_non_match_scene.object = None
             mock_ctx_non_match_scene.selected_objects = []
@@ -354,7 +341,6 @@ class TestGlobalPropertiesAndCallbacks:
             mock_ctx_non_match_scene.scene.objects = [non_matching_obj]
             assert find_property_owner(mock_ctx_non_match_scene, props, PROP_LINK) is None
 
-            # Test context without selected_objects attribute (covers 60->66 branch)
             mock_ctx_no_sel = MagicMock()
             del mock_ctx_no_sel.selected_objects
             mock_ctx_no_sel.object = None
@@ -387,14 +373,11 @@ class TestGlobalPropertiesAndCallbacks:
             robot_props,
         ]
 
-        # 1. Test standard register/unregister cycle
         for mod in modules:
             mod.register()
             mod.unregister()
             mod.register()
 
-        # 2. Test ValueError fallback handling in register()
-        # Mock register_class to raise ValueError on first call for each class, then succeed on retry
         for mod in modules:
             orig_register_class = bpy.utils.register_class
             try:
@@ -411,7 +394,6 @@ class TestGlobalPropertiesAndCallbacks:
             finally:
                 bpy.utils.register_class = orig_register_class
 
-        # 3. Test execution under __main__ namespace using runpy
         for mod_name in [
             "linkforge.blender.properties.control_props",
             "linkforge.blender.properties.validation_props",
@@ -433,19 +415,16 @@ class TestGlobalPropertiesAndCallbacks:
             update_joint_hierarchy,
         )
 
-        # Create base/child links
         base = create_robot_link("base_link", scene)
         child = create_robot_link("child_link", scene)
         joint_obj = create_robot_joint("test_joint", base, child, scene)
 
         jp = safe_get_joint(joint_obj)
 
-        # Test getters and setters
         assert get_joint_name(jp) == "test_joint"
         set_joint_name(jp, "renamed_joint")
         assert jp.source_name_stored == "renamed_joint"
 
-        # Test deferring renamed name set when read-only in depsgraph
         with (
             patch("bpy.app.background", False),
             patch("bpy.app.timers") as mock_timers,
@@ -471,12 +450,10 @@ class TestGlobalPropertiesAndCallbacks:
         # Restore original id_data
         jp.id_data = joint_obj
 
-        # Test poll filters
         assert poll_robot_link(jp, base) is True
         assert poll_robot_link(jp, joint_obj) is False
         assert poll_robot_joint(jp, joint_obj) is False  # self-mimicry prevention
 
-        # Test hierarchy update when clearing parents
         jp.parent_link = None
         jp.child_link = None
         update_joint_hierarchy(jp, bpy.context)
@@ -507,27 +484,22 @@ class TestGlobalPropertiesAndCallbacks:
         tp = getattr(trans_obj, PROP_TRANSMISSION)
         tp.is_robot_transmission = True
 
-        # Test getters and setters
         assert get_transmission_name(tp) == "test_trans"
         set_transmission_name(tp, "renamed_trans")
         assert tp.source_name_stored == "renamed_trans"
 
-        # Test poll filters
         assert poll_robot_joint(tp, joint_obj) is True
         assert poll_robot_joint(tp, base) is False
 
-        # Test hierarchy update
         tp.joint_name = joint_obj
         update_transmission_hierarchy(tp, bpy.context)
         assert trans_obj.parent == joint_obj
 
-        # Test differential transmission type hierarchy update
         tp.transmission_type = TRANS_DIFFERENTIAL
         tp.joint1_name = joint_obj
         update_transmission_hierarchy(tp, bpy.context)
         assert trans_obj.parent == joint_obj
 
-        # Test clean unregister/register
         with (
             patch("bpy.utils.register_class") as mock_reg,
             patch("bpy.utils.unregister_class") as mock_unreg,
@@ -547,7 +519,6 @@ class TestGlobalPropertiesAndCallbacks:
         vp = getattr(wm, PROP_VALIDATION)
         vp.clear()
 
-        # Add an error
         err = vp.errors.add()
         err.message = "This is a very long error message that will definitely exceed the standard fifty eight character limit to force a wrapped line."
         err.suggestion = "This is a very long suggestion that will definitely exceed the standard fifty eight character limit to force a wrapped line."
@@ -556,7 +527,6 @@ class TestGlobalPropertiesAndCallbacks:
         assert len(err.message_lines) > 1
         assert len(err.suggestion_lines) > 1
 
-        # Test fallback with spacing-only inputs to get_error / get_warning / message_lines
         err2 = vp.errors.add()
         err2.message = "    "
         err2.suggestion = "    "
@@ -577,7 +547,6 @@ class TestGlobalPropertiesAndCallbacks:
             update_joint_hierarchy,
         )
 
-        # Create mock joint property group without id_data
         class MockJointProps:
             id_data = None
             source_name_stored = ""
@@ -590,7 +559,6 @@ class TestGlobalPropertiesAndCallbacks:
         set_joint_name(mjp, "")
         set_joint_name(mjp, "test")  # When id_data is None
 
-        # Test deferred rename callback execution in GUI mode
         bpy.app.background = False
 
         class ReadOnlyNameObj:
@@ -608,7 +576,6 @@ class TestGlobalPropertiesAndCallbacks:
         ro_obj = ReadOnlyNameObj()
         mjp.id_data = ro_obj
         set_joint_name(mjp, "new_val")
-        # Run all pending timers
         bpy.app.timers.run_all()
 
         # Trigger Exception path in callback
@@ -654,7 +621,6 @@ class TestGlobalPropertiesAndCallbacks:
         child = create_robot_link("child_link", scene)
         joint_obj = create_robot_joint("test_joint", base, child, scene)
 
-        # Setup another object parented to joint_obj to test clear child unparenting
         other_child = create_test_object("other_child_collision", None, scene)
         other_child.parent = joint_obj
         # Ensure it has link properties so it matches criteria
@@ -710,7 +676,6 @@ class TestGlobalPropertiesAndCallbacks:
         # Null value set name
         set_link_name(mlp, "")
 
-        # Test scientific notation get/set methods
         link_obj = create_test_object("real_link_props", None, scene)
         lp = safe_get_linkforge(link_obj)
         lp.id_data = link_obj
@@ -719,7 +684,6 @@ class TestGlobalPropertiesAndCallbacks:
         set_kd_scientific(lp, "2e3")
         assert get_kd_scientific(lp) == "2.00e+03"
 
-        # Test deferred rename callback execution in GUI mode
         bpy.app.background = False
 
         class ReadOnlyNameObj:
@@ -765,8 +729,6 @@ class TestGlobalPropertiesAndCallbacks:
         mlp.id_data = None
         bpy.app.timers.run_all()
 
-        # Test child renaming logic in link_props.py (line 147)
-        # Clean up any potential conflicting names from prior tests/runs
         for n in [
             "unique_parent_link_x",
             "unique_parent_link_x_visual",
@@ -818,21 +780,17 @@ class TestGlobalPropertiesAndCallbacks:
             set_link_name(mlp2, "new_name")
             assert len(PENDING_RENAMES) == orig_len + 1
 
-        # Test on_collision_quality_update when self has no id_data
         assert on_collision_quality_update(mlp, None) is None
 
-        # Test on_collision_quality_update when object is not a robot link
         link_obj = create_test_object("not_a_robot_link", None, scene)
         mlp3 = safe_get_linkforge(link_obj)
         mlp3.id_data = link_obj
         mlp3.is_robot_link = False
         on_collision_quality_update(mlp3, None)
 
-        # Test on_collision_quality_update when no collision child exists
         mlp3.is_robot_link = True
         on_collision_quality_update(mlp3, None)
 
-        # Test on_collision_quality_update when collision child has TAG_IMPORTED_SOURCE = True
         collision_child = create_test_object("not_a_robot_link_collision", None, scene)
         collision_child.parent = link_obj
         from linkforge.blender.constants import TAG_IMPORTED_SOURCE
@@ -840,7 +798,6 @@ class TestGlobalPropertiesAndCallbacks:
         collision_child[TAG_IMPORTED_SOURCE] = True
         on_collision_quality_update(mlp3, None)
 
-        # Test on_collision_quality_update when collision child has TAG_IMPORTED_SOURCE = False (branch 179->186)
         collision_child[TAG_IMPORTED_SOURCE] = False
         with patch(
             "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
@@ -848,7 +805,6 @@ class TestGlobalPropertiesAndCallbacks:
             on_collision_quality_update(mlp3, None)
             assert mock_realtime.called
 
-        # Test on_collision_quality_update without TAG_IMPORTED_SOURCE (triggers regeneration line 181-188)
         clean_link = create_test_object("clean_link", None, scene)
         mlp_clean = safe_get_linkforge(clean_link)
         mlp_clean.id_data = clean_link
@@ -864,19 +820,16 @@ class TestGlobalPropertiesAndCallbacks:
             on_collision_quality_update(mlp_clean, None)
             assert mock_realtime.called
 
-        # Test update_inertia_viz directly
         with patch("linkforge.blender.properties.link_props.tag_redraw") as mock_redraw:
             update_inertia_viz(None, None)
             assert mock_redraw.called
 
-        # Test update_auto_inertia_toggle when object has no use_auto_inertia
         class NonInertiaProps:
             pass
 
         nip = NonInertiaProps()
         update_auto_inertia_toggle(nip, None)
 
-        # Test update_auto_inertia_toggle calling ensure_inertia_handler when use_auto_inertia is False
         with patch(
             "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
         ) as mock_handler:
@@ -885,7 +838,6 @@ class TestGlobalPropertiesAndCallbacks:
             update_auto_inertia_toggle(lp, None)
             assert mock_handler.called
 
-        # Test update_auto_inertia_toggle when use_auto_inertia is True (branch 205->exit)
         with patch(
             "linkforge.blender.visualization.inertia_gizmos.ensure_inertia_handler"
         ) as mock_handler:
@@ -946,11 +898,9 @@ class TestGlobalPropertiesAndCallbacks:
         msp = MockSensorProps()
         assert get_sensor_name(msp) == ""
 
-        # Test get_sensor_name when source_name_stored is present
         msp.source_name_stored = "my_stored_sensor"
         assert get_sensor_name(msp) == "my_stored_sensor"
 
-        # Test get_sensor_name when source_name_stored is empty but id_data exists
         class FakeSensorObj:
             def __init__(self) -> None:
                 self.name = "my_sensor_obj"
@@ -960,15 +910,12 @@ class TestGlobalPropertiesAndCallbacks:
         msp.id_data = fso
         assert get_sensor_name(msp) == "my_sensor_obj"
 
-        # Test set_sensor_name when name changes
         set_sensor_name(msp, "new_sensor_name")
         assert msp.source_name_stored == "new_sensor_name"
         assert fso.name == "new_sensor_name"
 
-        # Test set_sensor_name when name is already equal (no assignment)
         set_sensor_name(msp, "new_sensor_name")
 
-        # Test set_sensor_name when msp has no id_data or empty value
         msp.id_data = None
         set_sensor_name(msp, "")
 
@@ -1013,7 +960,6 @@ class TestGlobalPropertiesAndCallbacks:
             assert not mock_set_parent.called
             assert mock_sync_coll.called
 
-        # Test poll_robot_link
         assert poll_robot_link(sp, None) is False
         assert poll_robot_link(sp, link_obj) is True
 
@@ -1036,13 +982,11 @@ class TestGlobalPropertiesAndCallbacks:
         mtp = MockTransProps()
         assert get_transmission_name(mtp) == ""
 
-        # Test get_transmission_name when source_name_stored is present
         mtp.source_name_stored = "my_stored_trans"
         assert get_transmission_name(mtp) == "my_stored_trans"
 
         set_transmission_name(mtp, "")
 
-        # Test set_transmission_name when transmission name is already equal
         class FakeTransObj:
             def __init__(self) -> None:
                 self.name = "my_trans_obj"
@@ -1112,14 +1056,12 @@ class TestPreferencesExtra:
             def __init__(self, windows):
                 self.windows = windows
 
-        # Create mock scene and objects
         class MockObject:
             def __init__(self, name, obj_type, is_robot=True):
                 self.name = name
                 self.type = obj_type
                 self.empty_display_size = 0.0
 
-                # Mock custom properties for getters
                 if "joint" in name:
                     self.linkforge_joint = MagicMock()
                     self.linkforge_joint.is_robot_joint = is_robot
@@ -1185,14 +1127,12 @@ class TestPreferencesExtra:
             assert mock_area.redraw_called
             assert mock_scene.objects[2].empty_display_size == 0.3
 
-        # Test when context.scene is None
         mock_ctx_no_scene = MockContext(mock_wm, None)
         with patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle"):
             update_joint_empty_size(prefs, mock_ctx_no_scene)
             update_sensor_empty_size(prefs, mock_ctx_no_scene)
             update_link_empty_size(prefs, mock_ctx_no_scene)
 
-        # Test when window_manager is None
         mock_ctx_no_wm = MockContext(None, mock_scene)
         with patch("linkforge.blender.visualization.joint_gizmos.update_viz_handle"):
             update_joint_empty_size(prefs, mock_ctx_no_wm)
@@ -1262,7 +1202,6 @@ class TestPreferencesExtra:
         prefs.layout = MockLayout()
         prefs.draw(bpy.context)
 
-        # Verify it drew all basic sections
         assert prefs.layout.box_calls > 0
         assert "additional_search_paths" in prefs.layout.prop_calls
 
@@ -1311,7 +1250,6 @@ class TestSimulationProperties:
     def test_scientific_proxies(self) -> None:
         """Test scientific notation conversion logic."""
 
-        # Create a mock instance (dataclass-like behavior for testing logic)
         class MockProps:
             def __init__(self):
                 self.kp = 0.0
@@ -1327,7 +1265,6 @@ class TestSimulationProperties:
             set_kp_scientific,
         )
 
-        # Test KP (Large value)
         mock.kp = 1.0e12
         assert get_kp_scientific(mock) == "1.00e+12"
 
@@ -1335,7 +1272,6 @@ class TestSimulationProperties:
         assert mock.kp == 5.5e9
         assert get_kp_scientific(mock) == "5.50e+09"
 
-        # Test KD (Small value)
         mock.kd = 0.01
         assert get_kd_scientific(mock) == "1.00e-02"
 

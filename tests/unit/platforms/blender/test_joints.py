@@ -81,7 +81,6 @@ class TestJointOperations:
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
 
-        # Check joint was created
         joint = bpy.context.active_object
         assert joint is not None
         assert joint.name.startswith("base_joint")
@@ -106,7 +105,6 @@ class TestJointOperations:
         child = create_robot_link("child", scene)
         joint_obj = create_robot_joint("test_joint", base, child, scene)
 
-        # Setup ROS2 control items to test cleanup
         props = safe_get_linkforge_scene(scene)
         non_match = props.ros2_control_joints.add()
         non_match.name = "non_matching_joint"
@@ -125,7 +123,6 @@ class TestJointOperations:
         bpy.context.view_layer.objects.active = joint_obj
         assert op.poll(bpy.context)
 
-        # Execute
         res = op().execute(bpy.context)
         assert res == {"FINISHED"}
         assert joint_obj.name not in scene.objects
@@ -145,7 +142,6 @@ class TestJointOperations:
         joint_obj.select_set(True)
         assert op.poll(bpy.context)
 
-        # Execute auto detect when both links exist
         res = op().execute(bpy.context)
         assert res == {"FINISHED"}
 
@@ -177,7 +173,6 @@ class TestJointOperations:
         }
         assert not LINKFORGE_OT_auto_detect_parent_child.poll(MockContextNoScene())
 
-        # Test delete_joint when scene is None but active_object is valid
         joint_obj = create_robot_joint("test_joint", None, None, scene)
 
         class MockContextNoSceneWithActive:
@@ -233,15 +228,12 @@ class TestJointOperations:
         bpy.context.view_layer.objects.active = mesh_obj
         mesh_obj.select_set(True)
 
-        # Check poll passes
         op = LINKFORGE_OT_create_joint
         assert op.poll(bpy.context)
 
-        # Check execute succeeds and sets parent-child link appropriately
         res = op().execute(bpy.context)
         assert res == {"FINISHED"}
 
-        # Verify joint was created and has base link as child_link
         joint = bpy.context.active_object
         assert joint is not None
         assert safe_get_joint(joint).child_link == link
@@ -300,20 +292,17 @@ class TestJointOperations:
 
         jp = safe_get_joint(joint_obj)
 
-        # 1. Child is already set to base -> parent should auto-detect as child
         jp.child_link = base
         res = LINKFORGE_OT_auto_detect_parent_child().execute(bpy.context)
         assert res == {"FINISHED"}
         assert jp.parent_link == child
 
-        # 2. Child is already set to child -> parent should auto-detect as base
         jp.child_link = child
         jp.parent_link = None
         res = LINKFORGE_OT_auto_detect_parent_child().execute(bpy.context)
         assert res == {"FINISHED"}
         assert jp.parent_link == base
 
-        # 3. Only 1 link in the scene -> should set child to that link, parent to None
         bpy.data.objects.remove(child, do_unlink=True)
         jp.child_link = None
         jp.parent_link = None
@@ -370,7 +359,6 @@ class TestJointOperations:
 
         mocker.patch.object(type(jp), "__setattr__", mock_setattr)
 
-        # Execute should still return finished (it logs warning and returns FINISHED)
         res = LINKFORGE_OT_auto_detect_parent_child().execute(bpy.context)
         assert res == {"FINISHED"}
 
@@ -397,10 +385,8 @@ class TestJointOperations:
         """Verify registration and unregistration loops including double-registration."""
         import linkforge.blender.operators.joint_ops as joint_ops
 
-        # Test unregister
         joint_ops.unregister()
 
-        # Test register with ValueError fallback
         mock_reg = mocker.patch(
             "bpy.utils.register_class", side_effect=[ValueError("Already registered")] + [None] * 10
         )
@@ -409,7 +395,6 @@ class TestJointOperations:
         assert mock_reg.call_count > 0
         assert mock_unreg.call_count > 0
 
-        # Run __main__ entrypoint via compile + exec to trigger coverage for line 303
         with open(joint_ops.__file__) as f:
             code = compile(f.read(), joint_ops.__file__, "exec")
 
@@ -531,7 +516,6 @@ class TestJointUtils:
             "joint2": joint2_obj,
         }
 
-        # 1. Normal resolution: joint2 mimics joint1
         joints = [
             Joint(
                 name="joint2",
@@ -550,7 +534,6 @@ class TestJointUtils:
         assert jp2.mimic_multiplier == pytest.approx(1.5)
         assert jp2.mimic_offset == pytest.approx(0.2)
 
-        # 2. Branch: mimic joint target not in joint_objects
         joint3_obj = create_robot_joint("joint3", None, None, scene)
         joint_objects_missing = {
             "joint3": joint3_obj,
@@ -571,7 +554,6 @@ class TestJointUtils:
         assert jp3.mimic_multiplier == pytest.approx(2.0)
         assert jp3.mimic_offset == pytest.approx(0.5)
 
-        # 3. Branch: get_joint_props returns None
         class FakeObject:
             def __init__(self) -> None:
                 self.linkforge_joint = None
@@ -591,7 +573,6 @@ class TestJointUtils:
         ]
         resolve_mimic_joints(joints_fake, joint_objects_fake)
 
-        # 4. Branch: joint does not mimic or joint name not in joint_objects
         joints_no_mimic = [
             Joint(
                 name="joint_no_mimic",

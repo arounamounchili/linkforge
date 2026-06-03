@@ -15,15 +15,6 @@ def test_builder_prepare_tasks(scene, blender_context) -> None:
 
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
-    # Expected tasks:
-    # setup_scene
-    # create_collection
-    # create_link (base_link)
-    # create_link (link1)
-    # create_joint (joint1)
-    # resolve_mimics
-    # finalize
-
     task_types = [t[0] for t in builder.tasks]
     assert "setup_scene" in task_types
     assert "create_collection" in task_types
@@ -61,13 +52,11 @@ def test_builder_execution_flow(scene, blender_context) -> None:
         # Chunk 3: create_link
         builder.process_next_chunk()
         assert builder.completed_tasks == 3
-        # Check that status was updated
         assert scene.linkforge.import_status != ""
 
 
 def test_builder_abort(scene, blender_context) -> None:
     """Test that import can be aborted via scene property."""
-    # Add a link to ensure there are tasks to process
     robot = Robot(name="test_robot", links=[Link(name="base_link")])
     builder = AsynchronousRobotBuilder(robot, Path("/tmp/robot.urdf"), blender_context)
 
@@ -109,14 +98,12 @@ def test_builder_timer_start(scene, blender_context) -> None:
 
 def test_builder_timer_callback_interval(scene, blender_context) -> None:
     """Test that the callback returns a float interval while running."""
-    # Add many tasks so it doesn't finish immediately
     robot = Robot(name="test_robot", links=[Link(name=f"link{i}") for i in range(10)])
 
     builder = AsynchronousRobotBuilder(
         robot, Path("/tmp/robot.urdf"), blender_context, chunk_size=1
     )
 
-    # Mock task execution to avoid real Blender calls
     with patch.object(builder, "_execute_task"):
         result = builder.process_next_chunk()
         # Should return real-time interval (float)
@@ -134,7 +121,6 @@ def test_builder_full_completion(scene, blender_context) -> None:
     """Test that builder runs all tasks and finishes correctly."""
     robot = Robot(name="test_robot", links=[Link(name="link1")])
 
-    # Mock all task executors
     with (
         patch("linkforge.blender.logic.asynchronous_builder.setup_scene_for_robot"),
         patch("linkforge.blender.logic.asynchronous_builder.create_link_object"),
@@ -145,7 +131,6 @@ def test_builder_full_completion(scene, blender_context) -> None:
             robot, Path("/tmp/robot.urdf"), blender_context, chunk_size=100
         )
 
-        # Run first chunk (should finish all since chunk_size=100 and only ~6 tasks)
         result = builder.process_next_chunk()
         assert result is None
         assert builder.is_finished is True
@@ -158,7 +143,6 @@ def test_builder_with_joints_and_sensors(scene, blender_context) -> None:
     l1 = Link(name="l1")
     l2 = Link(name="l2")
     j1 = Joint(name="j1", type=JointType.FIXED, parent="l1", child="l2")
-    # Mock sensor as it's just a data object for the builder
     s1 = MagicMock()
     s1.name = "s1"
     s1.link_name = "l1"

@@ -6,7 +6,6 @@ def test_semantic_check_group_cycles():
     builder = RobotBuilder("cycle_robot")
     builder.link("base").root()
 
-    # Create circular subgroup dependency
     # Group A -> Group B -> Group A
     semantic = builder.semantic
     semantic.group("group_a", subgroups=["group_b"])

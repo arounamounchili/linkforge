@@ -8,14 +8,12 @@ from linkforge.core import Joint, JointType, KinematicGraph, Link, RobotValidati
 
 def test_get_topological_joints() -> None:
     """Test that joints are sorted correctly (parents before children)."""
-    # Create links
     base = Link(name="base")
     link1 = Link(name="link1")
     link2 = Link(name="link2")
     link3 = Link(name="link3")
     links = [base, link1, link2, link3]
 
-    # Create joints (out of order)
     # base -> link1
     # link1 -> link2
     # link1 -> link3
@@ -55,7 +53,6 @@ def test_get_topological_joints_complex_tree() -> None:
 
     assert len(sorted_joints) == 4
 
-    # Check dependencies
     indices = {j.name: i for i, j in enumerate(sorted_joints)}
     assert indices["j1"] < indices["j2"]  # l0->l1 before l1->l2
     assert indices["j3"] < indices["j4"]  # l0->l3 before l3->l4

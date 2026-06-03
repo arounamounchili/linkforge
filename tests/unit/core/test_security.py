@@ -145,7 +145,6 @@ def test_find_sandbox_root(tmp_path) -> None:
     # It should find the package.xml root from the grandparent
     assert find_sandbox_root(robot_file_2) == other_root
 
-    # Test loop termination (root reached)
     # If we are at the root, it should just return the parent
     root_file = tmp_path / "root.urdf"
     assert find_sandbox_root(root_file) == tmp_path
@@ -159,7 +158,6 @@ def test_find_sandbox_root(tmp_path) -> None:
 
 def test_security_sandbox_root_loop(tmp_path) -> None:
     """Test find_sandbox_root loop termination (depth limit)."""
-    # Create a structure deep enough to hit the 5-level limit
     # root/a/b/c/d/e/f/file.urdf
     deep_path = tmp_path / "a/b/c/d/e/f"
     deep_path.mkdir(parents=True)

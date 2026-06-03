@@ -708,11 +708,9 @@ class TestGizmosExtra:
         inertia_gizmos.register()
         inertia_gizmos.register()
 
-        # Test ensure_inertia_handler twice to hit _draw_handle is not None branch
         inertia_gizmos.ensure_inertia_handler()
         inertia_gizmos.ensure_inertia_handler()
 
-        # Test unregister when check_manual_inertia_on_load is not in load_post
         if inertia_gizmos.check_manual_inertia_on_load in bpy.app.handlers.load_post:
             bpy.app.handlers.load_post.remove(inertia_gizmos.check_manual_inertia_on_load)
 
@@ -898,7 +896,6 @@ class TestGizmosExtra:
 
         mock_handler = MagicMock()
 
-        # Mock dictionary to return key during get, but claim it doesn't contain it in "in" check
         class TrickDict(dict):
             def __contains__(self, key):
                 return False
@@ -957,15 +954,12 @@ class TestGizmosExtra:
         joint_gizmos.register()
         joint_gizmos.register()
 
-        # Test unregister when fix_existing_joints is not in load_post
         if joint_gizmos.fix_existing_joints in bpy.app.handlers.load_post:
             bpy.app.handlers.load_post.remove(joint_gizmos.fix_existing_joints)
 
-        # Mock driver_namespace to have no handler
         with patch.dict(bpy.app.driver_namespace, {}, clear=True):
             joint_gizmos.unregister()
 
-        # Test unregister when handler is not None but not in namespace dictionary during deletion
         mock_handler = MagicMock()
 
         class TrickDict(dict):

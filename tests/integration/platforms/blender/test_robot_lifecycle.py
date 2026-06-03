@@ -24,7 +24,6 @@ class TestPhysicsIntegration:
         link_lf.is_robot_link = True
         link_lf.mass = 1.0
 
-        # Add a visual mesh — a 2x2x2 unit cube (size=2.0 in bmesh = 1m side length)
         vis = create_mesh_object("link_visual", scene=scene, with_cube=True)
         vis.parent = link_obj
 

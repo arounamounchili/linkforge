@@ -39,7 +39,6 @@ class TestControlOperations:
         props = safe_get_linkforge_scene(scene)
         props.ros2_control_joints.clear()
 
-        # Create joint in scene
         joint_obj = create_robot_joint("test_j", None, None, scene)
         joint_props = safe_get_joint(joint_obj)
         joint_props.is_robot_joint = True
@@ -55,7 +54,6 @@ class TestControlOperations:
         assert props.ros2_control_joints[0].name == "test_j"
         assert props.ros2_control_joints[0].joint_obj == joint_obj
 
-        # Execute again with same name (should fail/cancel)
         res = op.execute(bpy.context)
         assert res == {"CANCELLED"}
 
@@ -69,7 +67,6 @@ class TestControlOperations:
         # Poll fails when list is empty
         assert not op.poll(bpy.context)
 
-        # Add joint to system
         item = props.ros2_control_joints.add()
         item.name = "test_j"
         props.ros2_control_active_joint_index = 0
@@ -77,12 +74,10 @@ class TestControlOperations:
         # Poll passes
         assert op.poll(bpy.context)
 
-        # Execute successful remove
         res = op().execute(bpy.context)
         assert res == {"FINISHED"}
         assert len(props.ros2_control_joints) == 0
 
-        # Execute with invalid active index
         props.ros2_control_joints.add().name = "test_j"
         props.ros2_control_active_joint_index = 5
         res = op().execute(bpy.context)
@@ -98,7 +93,6 @@ class TestControlOperations:
         # Poll fails with <= 1 joints
         assert not op.poll(bpy.context)
 
-        # Add two joints
         props.ros2_control_joints.add().name = "j1"
         props.ros2_control_joints.add().name = "j2"
 
@@ -130,7 +124,6 @@ class TestControlOperations:
         props.ros2_control_parameters.clear()
         props.ros2_control_joints.clear()
 
-        # Add global param
         op = LINKFORGE_OT_add_ros2_control_parameter()
         op.target = "GLOBAL"
         res = op.execute(bpy.context)
@@ -138,7 +131,6 @@ class TestControlOperations:
         assert len(props.ros2_control_parameters) == 1
         assert props.ros2_control_parameters[0].name == "param"
 
-        # Add joint param
         joint = props.ros2_control_joints.add()
         joint.name = "j1"
         from tests.mock_bpy_env import MockCollection, MockPropertyGroup
@@ -158,7 +150,6 @@ class TestControlOperations:
         props.ros2_control_parameters.clear()
         props.ros2_control_joints.clear()
 
-        # Setup global params
         p1 = props.ros2_control_parameters.add()
         p1.name = "g1"
 
@@ -169,7 +160,6 @@ class TestControlOperations:
         assert res == {"FINISHED"}
         assert len(props.ros2_control_parameters) == 0
 
-        # Setup joint params
         joint = props.ros2_control_joints.add()
         joint.name = "j1"
         from tests.mock_bpy_env import MockCollection, MockPropertyGroup
@@ -206,7 +196,6 @@ class TestControlOperations:
 
         assert op.execute(MockContextNoScene()) == {"CANCELLED"}
 
-        # Test poll methods with no scene
         from linkforge.blender.operators.control_ops import (
             LINKFORGE_OT_add_ros2_control_parameter,
             LINKFORGE_OT_move_ros2_control_joint,
@@ -221,7 +210,6 @@ class TestControlOperations:
         assert not LINKFORGE_OT_remove_ros2_control_parameter.poll(MockContextNoScene())
         assert not LINKFORGE_OT_purge_ros2_control_data.poll(MockContextNoScene())
 
-        # Test execute methods with no scene
         assert LINKFORGE_OT_remove_ros2_control_joint().execute(MockContextNoScene()) == {
             "CANCELLED"
         }
@@ -240,7 +228,6 @@ class TestControlOperations:
         props.ros2_control_parameters.clear()
         props.ros2_control_joints.clear()
 
-        # Add parameter with target "JOINT" but no active joints
         op_add = LINKFORGE_OT_add_ros2_control_parameter()
         op_add.target = "JOINT"
         assert op_add.execute(bpy.context) == {"FINISHED"}
@@ -251,7 +238,6 @@ class TestControlOperations:
         op_rem.index = 0
         assert op_rem.execute(bpy.context) == {"FINISHED"}
 
-        # Add a joint
         joint = props.ros2_control_joints.add()
         joint.name = "j1"
         from tests.mock_bpy_env import MockCollection, MockPropertyGroup
@@ -263,7 +249,6 @@ class TestControlOperations:
         op_rem.index = -1
         assert op_rem.execute(bpy.context) == {"FINISHED"}
 
-        # Add parameter globally, try to remove with index out of bounds
         props.ros2_control_parameters.add().name = "g1"
         op_rem.target = "GLOBAL"
         op_rem.index = 10
@@ -273,10 +258,8 @@ class TestControlOperations:
         """Verify registration and unregistration loops including double-registration."""
         import linkforge.blender.operators.control_ops as control_ops
 
-        # Test unregister
         control_ops.unregister()
 
-        # Test register with ValueError fallback
         mock_reg = mocker.patch(
             "bpy.utils.register_class",
             side_effect=[ValueError("Already registered"), None, None, None, None, None, None],
@@ -286,7 +269,6 @@ class TestControlOperations:
         assert mock_reg.call_count > 0
         assert mock_unreg.call_count > 0
 
-        # Run __main__ entrypoint
         import runpy
 
         with patch.object(control_ops, "__name__", "__main__"):
@@ -299,7 +281,6 @@ class TestSensorOperations:
         link_obj = create_test_object("link_obj", None, scene=scene)
         safe_get_linkforge(link_obj).is_robot_link = True
 
-        # Create sensor object explicitly
         sensor_obj = create_test_object("link_obj_sensor", None, scene=scene)
         sensor_obj.parent = link_obj
         safe_get_sensor(sensor_obj).is_robot_sensor = True
