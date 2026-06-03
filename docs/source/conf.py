@@ -48,6 +48,9 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static", "../assets"]
 html_logo = "../assets/linkforge_logo.png"
 
+# Disable mermaid zoom which forces 100% width and ruins aspect ratio
+mermaid_d3_zoom = False
+
 # -- HTML Theme Options ------------------------------------------------------
 
 html_theme_options = {
