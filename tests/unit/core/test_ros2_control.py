@@ -13,9 +13,6 @@ def parser() -> URDFParser:
     return URDFParser()
 
 
-# ROS 2 Control Model Tests
-
-
 class TestRos2ControlModels:
     def test_ros2_control_joint_creation(self) -> None:
         """Test creating a ROS 2 control joint."""
@@ -87,39 +84,32 @@ class TestRos2ControlModels:
         from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
         from linkforge.core.models.ros2_control import Ros2ControlSensor
 
-        # 1. Empty name
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="", hardware_plugin="fake")
         assert exc.value.code == ValidationErrorCode.NAME_EMPTY
 
-        # 2. Invalid control type
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="c1", type="invalid", hardware_plugin="fake")
         assert exc.value.code == ValidationErrorCode.INVALID_VALUE
 
-        # 3. Empty plugin
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="c1", hardware_plugin="")
         assert exc.value.code == ValidationErrorCode.VALUE_EMPTY
 
-        # 4. Duplicate joints
         j1 = Ros2ControlJoint(name="j1", command_interfaces=["position"])
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="c1", hardware_plugin="fake", joints=[j1, j1])
         assert exc.value.code == ValidationErrorCode.DUPLICATE_NAME
 
-        # 5. Duplicate sensors
         s1 = Ros2ControlSensor(name="s1")
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="c1", hardware_plugin="fake", sensors=[s1, s1])
         assert exc.value.code == ValidationErrorCode.DUPLICATE_NAME
 
-        # 6. Sensor type with command interfaces in joint
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="c1", type="sensor", hardware_plugin="fake", joints=[j1])
         assert exc.value.code == ValidationErrorCode.INVALID_VALUE
 
-        # 7. Actuator type with != 1 joint
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="c1", type="actuator", hardware_plugin="fake", joints=[])
         assert exc.value.code == ValidationErrorCode.INVALID_VALUE
@@ -175,9 +165,6 @@ class TestRos2ControlModels:
             joints=[],
         )
         assert ctrl_empty.name == "sensor_empty"
-
-
-# ROS 2 Control Parsing Tests
 
 
 class TestRos2ControlParsing:

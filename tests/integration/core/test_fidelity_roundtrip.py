@@ -93,23 +93,16 @@ def test_urdf_fidelity_roundtrip() -> None:
     parser = URDFParser()
     generator = URDFGenerator()
 
-    # 1. Parse original URDF
     robot = parser.parse_string(COMPLEX_URDF)
 
-    # 2. Validate internal model
     validator = RobotValidator()
     result = validator.validate(robot)
     assert result.is_valid, f"Initial parse failed validation: {result.errors}"
 
-    # 3. Generate new URDF
     generated_xml = generator.generate(robot)
 
-    # 4. Re-parse the generated URDF
     robot_roundtrip = parser.parse_string(generated_xml)
 
-    # 5. Assert equality of critical fields
-
-    # Link: base_link
     orig_base = robot.link("base_link")
     rt_base = robot_roundtrip.link("base_link")
 
@@ -120,7 +113,6 @@ def test_urdf_fidelity_roundtrip() -> None:
     assert len(rt_base.visuals) == len(orig_base.visuals)
     assert isinstance(rt_base.visuals[0].geometry, type(orig_base.visuals[0].geometry))
 
-    # Joint: joint_1
     orig_j1 = robot.joint("joint_1")
     rt_j1 = robot_roundtrip.joint("joint_1")
 
@@ -133,13 +125,11 @@ def test_urdf_fidelity_roundtrip() -> None:
     assert rt_j1.safety_controller is not None and orig_j1.safety_controller is not None
     assert rt_j1.safety_controller.k_position == orig_j1.safety_controller.k_position
 
-    # Transmission
     assert len(robot_roundtrip.transmissions) == 1
     rt_trans = robot_roundtrip.transmissions[0]
     assert rt_trans.name == "trans_1"
     assert rt_trans.joints[0].name == "joint_1"
 
-    # ROS 2 Control
     assert len(robot_roundtrip.ros2_controls) == 1
     rt_rc = robot_roundtrip.ros2_controls[0]
     assert rt_rc.hardware_plugin == "mock_components/GenericSystem"
@@ -147,7 +137,6 @@ def test_urdf_fidelity_roundtrip() -> None:
     assert len(rt_rc.joints[0].command_interfaces) == 1
     assert "position" in rt_rc.joints[0].command_interfaces
 
-    # Gazebo / Sensors
     assert len(robot_roundtrip.sensors) == 1
     rt_sensor = robot_roundtrip.sensors[0]
     assert rt_sensor.name == "camera"
@@ -187,15 +176,9 @@ def test_urdf_string_equivalence() -> None:
         sort_elem(root)
         return ET.tostring(root, encoding="unicode")
 
-    # This is a bit strict but good for detecting unexpected changes
-    # We allow some differences in how LinkForge structures output (like material definitions)
-    # so we focus on the core link/joint/transmission blocks
-
     orig_norm = normalize_xml(COMPLEX_URDF)
     rt_norm = normalize_xml(generated_xml)
 
-    # Instead of full string comparison (which might fail due to LinkForge's specific style),
-    # we verify that all original elements exist in the roundtrip
     root_orig = ET.fromstring(orig_norm)
     root_rt = ET.fromstring(rt_norm)
 

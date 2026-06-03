@@ -21,7 +21,6 @@ class TestSensorsPluginsIntegration:
         scene = bpy.context.scene
         ops: Any = bpy.ops
 
-        # 1. Create an Empty as link frame
         ops.linkforge.add_empty_link()
         link = bpy.context.active_object
         assert link is not None, "Failed to create or set active link frame"
@@ -30,7 +29,6 @@ class TestSensorsPluginsIntegration:
         # Ensure it has a name for the sensor naming logic
         safe_get_linkforge(link).link_name = "base_link"
 
-        # 2. Add sensor
         if bpy.context.view_layer is not None:
             bpy.context.view_layer.objects.active = link
         else:
@@ -39,7 +37,6 @@ class TestSensorsPluginsIntegration:
 
         safe_update()
 
-        # Execute sensor creation
         res = ops.linkforge.create_sensor()
         assert res == {"FINISHED"}
 
@@ -54,7 +51,6 @@ class TestSensorsPluginsIntegration:
 
         safe_update()
 
-        # Export and verify XML
         export_path = tmp_path / "sensor_test.urdf"
         res = ops.linkforge.export_robot_model(filepath=str(export_path))
         assert res == {"FINISHED"}
@@ -71,7 +67,6 @@ class TestSensorsPluginsIntegration:
         lf_scene = safe_get_linkforge_scene(scene)
         ops: Any = bpy.ops
 
-        # Add a robot link so there is something to export
         create_robot_link("base_link", scene)
 
         # Set scene-level Gazebo plugin (simplified for now, might need dedicated operator)

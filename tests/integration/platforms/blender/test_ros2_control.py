@@ -8,8 +8,6 @@ from tests.blender_test_utils import (
     safe_get_linkforge_scene,
 )
 
-# ROS 2 Control Parameter Extraction
-
 
 class TestROS2ControlIntegration:
     def test_ros2_control_parameters(self, blender_clean_scene) -> None:
@@ -17,7 +15,6 @@ class TestROS2ControlIntegration:
         scene = bpy.context.scene
         lf_scene = safe_get_linkforge_scene(scene)
 
-        # Add a joint to control config
         item = lf_scene.ros2_control_joints.add()
         item.name = "joint1"
         item.cmd_position = True

@@ -23,7 +23,6 @@ class TestControlTransmissionsIntegration:
         lf_scene.export_format = "URDF"
         lf_scene.xacro_split_files = False
 
-        # Add a joint
         base = create_robot_link("base", scene)
         child = create_robot_link("child", scene)
         joint = create_robot_joint("joint1", base, child, scene)
@@ -59,7 +58,6 @@ class TestControlTransmissionsIntegration:
         """Verify that a transmission linking two joints is correctly exported."""
         scene = bpy.context.scene
 
-        # Setup 2-link chain with 2 joints (simplified)
         base = create_robot_link("base", scene)
         l1 = create_robot_link("l1", scene)
         l2 = create_robot_link("l2", scene)
@@ -69,7 +67,6 @@ class TestControlTransmissionsIntegration:
 
         safe_update()
 
-        # Create transmission
         # We need to select one of the joints or the scene
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = j1

@@ -74,8 +74,6 @@ class TestLinkBuilderAdvanced:
         comp_builder = RobotBuilder("arm")
         comp_builder.link("link1").root()
 
-        # Attach with revolute joint
-
         builder.attach(
             comp_builder,
             at_link="base",
@@ -98,13 +96,11 @@ class TestLinkBuilderAdvanced:
         builder = RobotBuilder("missing_branches_bot")
         builder.link("base").root()
 
-        # 1. Test committed exception (Line 124)
         lb = builder.link("link1", parent="base")
         lb.commit()
         with pytest.raises(RuntimeError, match="already committed"):
             lb.visual(geometry=None)  # type: ignore
 
-        # 2. Test continuous joint with only effort or only velocity provided (Line 355-359 branch)
         builder.link("link2", parent="base").continuous(
             axis=(0, 0, 1), effort=5.0, velocity=None
         ).commit()
@@ -123,7 +119,6 @@ class TestLinkBuilderAdvanced:
         assert j3.limits.effort == 0.0
         assert j3.limits.velocity == 10.0
 
-        # Test continuous joint with both effort and velocity as None (covers False branch of effort or velocity)
         builder.link("link2b", parent="base").continuous(
             axis=(0, 0, 1), effort=None, velocity=None
         ).commit()
@@ -131,13 +126,11 @@ class TestLinkBuilderAdvanced:
         assert j2b is not None
         assert j2b.limits is None
 
-        # 3. Test floating joint (Line 409-411)
         builder.link("link4", parent="base").floating(name="float_joint").commit()
         j4 = builder.robot.get_joint("float_joint")
         assert j4 is not None
         assert j4.type == JointType.FLOATING
 
-        # 4. Test planar joint (Line 431-434)
         builder.link("link5", parent="base").planar(axis=(0, 0, 1), name="planar_joint").commit()
         j5 = builder.robot.get_joint("planar_joint")
         assert j5 is not None
@@ -145,7 +138,6 @@ class TestLinkBuilderAdvanced:
         assert j5.axis is not None
         assert j5.axis.z == 1.0
 
-        # 5. Test physics with raw gazebo params (Line 525->529, 531, 967-968)
         builder.link("link6", parent="base").physics(
             mu=0.8, kp=1e6, material="Gazebo/Red", static=True
         ).commit()
@@ -158,7 +150,6 @@ class TestLinkBuilderAdvanced:
         assert gz.material == "Gazebo/Red"
         assert gz.static is True
 
-        # Test physics with ONLY raw gazebo params (covers False branch of phys_updates)
         builder.link("link6b", parent="base").physics(material="Gazebo/Blue").commit()
         gzb = None
         for element in builder.robot.gazebo_elements:
@@ -168,7 +159,6 @@ class TestLinkBuilderAdvanced:
         assert gzb is not None
         assert gzb.material == "Gazebo/Blue"
 
-        # 6. Test gpu_lidar (Line 707-717)
         builder.link("link7", parent="base").gpu_lidar(name="mylidar").commit()
         sensor = None
         for s in builder.robot.sensors:
@@ -193,7 +183,6 @@ class TestLinkBuilderAdvanced:
         assert "link1" not in builder._parent_stack
         assert builder._parent_stack[-1] == "some_other_link"
 
-        # Test case where it's not in the stack at all (hits False branch of elif)
         with builder.link("link2") as lb2:
             builder._parent_stack.clear()
 

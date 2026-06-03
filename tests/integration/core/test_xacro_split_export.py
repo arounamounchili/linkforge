@@ -23,7 +23,6 @@ def test_split_files_and_reimport_simulated() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
 
-        # Create a robot
         base_link = Link(name="base_link")
         wheel_geom = Cylinder(radius=0.1, length=0.05)
         wheel_mat = Material(name="black", color=Color(0.1, 0.1, 0.1, 1))
@@ -46,7 +45,6 @@ def test_split_files_and_reimport_simulated() -> None:
 
         robot = Robot(name="test_bot", links=links, joints=joints)
 
-        # Export with ALL features enabled
         gen = XACROGenerator(
             extract_materials=True, extract_dimensions=True, generate_macros=True, split_files=True
         )
@@ -54,23 +52,19 @@ def test_split_files_and_reimport_simulated() -> None:
         main_file = tmp_path / "test_bot.xacro"
         gen.write(robot, main_file, validate=False)
 
-        # Verify files exist
         assert main_file.exists()
         assert (tmp_path / "test_bot_properties.xacro").exists()
         assert (tmp_path / "test_bot_macros.xacro").exists()
 
-        # Verify contents of main file (should have includes)
         main_content = main_file.read_text()
         assert '<xacro:include filename="test_bot_properties.xacro"' in main_content
         assert '<xacro:include filename="test_bot_macros.xacro"' in main_content
 
-        # Verify properties file (should have properties)
         mat_content = (tmp_path / "test_bot_properties.xacro").read_text()
         pass
         assert '<xacro:property name="black"' in mat_content
         assert 'value="0.1 0.1 0.1 1"' in mat_content
 
-        # Verify macros file (should have the macro)
         macro_content = (tmp_path / "test_bot_macros.xacro").read_text()
         pass
         assert '<xacro:macro name="cylinder_' in macro_content

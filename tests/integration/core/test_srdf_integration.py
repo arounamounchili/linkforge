@@ -50,13 +50,11 @@ def test_full_robot_description_integration():
     srdf_parser = SRDFParser()
     robot.semantic = srdf_parser.parse_string(SAMPLE_SRDF)
 
-    # Verify Integration
     assert robot.semantic is not None
     assert robot.semantic.virtual_joints[0].name == "virtual_joint"
     assert robot.semantic.groups[0].name == "panda_arm"
     assert "base_link" in robot.semantic.groups[0].links
 
-    # Check joint consistency (SRDF joint exists in URDF robot)
     srdf_joint_name = robot.semantic.groups[0].joints[0]
     assert any(j.name == srdf_joint_name for j in robot.joints)
 

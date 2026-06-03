@@ -388,10 +388,8 @@ class TestURDFParser:
         assert len(robot.transmissions) == 1
         assert len(robot.gazebo_elements) == 1
 
-        # Check that material stayed in GazeboElement
         assert robot.gazebo_elements[0].material == "Gazebo/Blue"
 
-        # Check global material resolution
         assert robot.links[0].visuals[0].material.name == "blue"
         assert robot.links[0].visuals[0].material.color.b == 1.0
 
@@ -408,7 +406,6 @@ class TestURDFParser:
     def test_urdf_parser_security(self) -> None:
         """Test security limits."""
 
-        # Test max file size
         parser = URDFParser(max_file_size=10)
         with pytest.raises(RobotParserError, match="Content too large"):
             parser.parse_string("<robot>..............</robot>")
@@ -876,7 +873,6 @@ class TestURDFParser:
         xml = '<material name="empty"/>'
         assert parser._parse_material_element(ET.fromstring(xml), {}) is None
 
-        # Transmission Errors
         # Invalid mechanicalReduction
         xml = '<joint name="j1"><mechanicalReduction>not_number</mechanicalReduction></joint>'
         # parse_float raises RobotMathError for non-numeric strings
@@ -971,7 +967,6 @@ class TestURDFParser:
         path.touch()
         parser = URDFParser()
 
-        # Mock ET.iterparse to raise ParseError
         with (
             mock.patch("xml.etree.ElementTree.iterparse", side_effect=ET.ParseError("Bad XML")),
             pytest.raises(RobotParserError, match="URDF XML"),
@@ -1326,33 +1321,27 @@ class TestURDFParser:
         from linkforge.core.exceptions import XacroDetectedError
         from linkforge.core.models.robot import Robot
 
-        # 1. Line 200: Visual element missing geometry
         visual_elem = ET.fromstring("<visual></visual>")
         assert parser._parse_visual_element(visual_elem, {}) is None
 
-        # 2. Line 230: Collision element missing geometry
         collision_elem = ET.fromstring("<collision></collision>")
         assert parser._parse_collision_element(collision_elem) is None
 
-        # 3. Line 311: _parse_joint_axis with a JointType that isn't fixed, floating, or revolute/continuous/prismatic/planar
         joint_elem = ET.fromstring("<joint></joint>")
         assert parser._parse_joint_axis(joint_elem, "dummy") is None
 
-        # 4. Lines 349-350 and 352-353: Joint limits negative effort/velocity
         joint_elem_lim = ET.fromstring('<joint><limit effort="-5.0" velocity="-2.0"/></joint>')
         limits = parser._parse_joint_limits(joint_elem_lim, JointType.REVOLUTE, "test_joint")
         assert limits is not None
         assert limits.effort == 0.0
         assert limits.velocity == 0.0
 
-        # 5. Lines 582-583: mechanicalReduction is 0
         reduction_elem = ET.fromstring(
             '<joint name="test_comp"><mechanicalReduction>0.0</mechanicalReduction></joint>'
         )
         comp = parser._parse_transmission_component(reduction_elem, "joint")
         assert comp.mechanical_reduction == 1.0
 
-        # 6. Line 705: Gazebo sensor pose with at least 6 values
         sensor_xml = """
         <gazebo reference="l">
             <sensor name="s" type="camera">
@@ -1366,7 +1355,6 @@ class TestURDFParser:
         assert sensor.origin.xyz.x == 1.0
         assert sensor.origin.rpy.x == 0.1
 
-        # 7. Lines 849, 851, 853, 855: safety fallbacks when camera, lidar, imu, gps infos are None
         # Camera fallback
         xml_cam = '<gazebo reference="l"><sensor name="s" type="camera"></sensor></gazebo>'
         sensor_cam = parser._parse_sensor_from_gazebo(ET.fromstring(xml_cam))
@@ -1392,7 +1380,6 @@ class TestURDFParser:
         sensor_gps = parser._parse_sensor_from_gazebo(ET.fromstring(xml_gps))
         assert sensor_gps.gps_info is not None
 
-        # 8. Lines 964-965: XACRO namespace in a child element tag (detected xacro)
         xml_xacro_child = """
         <robot xmlns:myprefix="http://www.ros.org/wiki/xacro">
             <myprefix:macro/>
@@ -1401,14 +1388,11 @@ class TestURDFParser:
         with pytest.raises(XacroDetectedError):
             parser.parse_string(xml_xacro_child)
 
-        # 9. Line 1004: kwargs["resource_resolver"] when resource_resolver is not None
         resolver = FileSystemResolver()
         resolver_parser = URDFParser(resource_resolver=resolver)
         robot = resolver_parser.parse_string('<robot name="resolver_robot"></robot>')
         assert robot.resource_resolver is resolver
 
-        # 10. Lines 1058-1059: parse exception for invalid transmission
-        # 11. Lines 1068-1069: parse exception for invalid ros2_control
         with (
             patch.object(
                 URDFParser, "_parse_transmission", side_effect=ValueError("Invalid trans")
@@ -1425,10 +1409,6 @@ class TestURDFParser:
             assert len(robot.transmissions) == 0
             assert len(robot.ros2_controls) == 0
 
-        # 12. Lines 1114-1115: robot.add_transmission exception
-        # 13. Lines 1120-1121: robot.add_ros2_control exception
-        # 14. Lines 1126-1127: robot.add_sensor exception
-        # 15. Lines 1152-1153: robot.add_gazebo_element exception
         with (
             patch.object(Robot, "add_transmission", side_effect=ValueError("trans fail")),
             patch.object(Robot, "add_ros2_control", side_effect=ValueError("ctrl fail")),
@@ -1497,7 +1477,6 @@ def test_ros2_control_missing_hardware_and_param_edge_cases() -> None:
     # Hardware plugin is empty, which raises RobotValidationError, so it is skipped (0 controls)
     assert len(robot.ros2_controls) == 0
 
-    # Test param without name or without text
     xml_bad_params = """<robot name="r">
         <link name="base"/>
         <link name="child"/>

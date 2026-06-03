@@ -32,14 +32,12 @@ class TestImportRobotModelOperator:
         filepath = tmp_path / "robot.urdf"
         filepath.write_text("<robot name='test_robot'/>")
 
-        # Mock parsed robot model
         mock_robot = MagicMock()
         mock_robot.name = "test_robot"
         mock_robot.links = ["base_link"]
         mock_robot.joints = []
         mock_parser.return_value.parse.return_value = mock_robot
 
-        # Mock validation result
         mock_val_res = MagicMock()
         mock_val_res.is_valid = True
         mock_val_res.has_warnings = False
@@ -68,17 +66,14 @@ class TestImportRobotModelOperator:
         filepath = tmp_path / "robot.xacro"
         filepath.write_text("<robot name='xacro_robot'/>")
 
-        # Mock Xacro resolve
         mock_xacro_resolver.return_value.resolve_file.return_value = "<robot name='xacro_robot'/>"
 
-        # Mock parsed robot
         mock_robot = MagicMock()
         mock_robot.name = "xacro_robot"
         mock_robot.links = ["base_link"]
         mock_robot.joints = []
         mock_parser.return_value.parse_string.return_value = mock_robot
 
-        # Mock validation
         mock_val_res = MagicMock()
         mock_val_res.is_valid = True
         mock_val_res.has_warnings = False
@@ -107,14 +102,12 @@ class TestImportRobotModelOperator:
         urdf_file = dir_path / "robot_dir.urdf"
         urdf_file.write_text("<robot name='dir_robot'/>")
 
-        # Mock parsed robot
         mock_robot = MagicMock()
         mock_robot.name = "dir_robot"
         mock_robot.links = ["base_link"]
         mock_robot.joints = []
         mock_parser.return_value.parse.return_value = mock_robot
 
-        # Mock validation
         mock_val_res = MagicMock()
         mock_val_res.is_valid = True
         mock_val_res.has_warnings = False
@@ -169,14 +162,12 @@ class TestImportRobotModelOperator:
         # Raise XacroDetectedError on URDF parse, then mock XACRO resolution success
         mock_parser.return_value.parse.side_effect = XacroDetectedError("Xacro elements detected")
 
-        # Mock Xacro resolve
         mock_robot = MagicMock()
         mock_robot.name = "fallback_robot"
         mock_robot.links = ["base_link"]
         mock_robot.joints = []
         mock_parser.return_value.parse_string.return_value = mock_robot
 
-        # Mock validation
         mock_val_res = MagicMock()
         mock_val_res.is_valid = True
         mock_val_res.has_warnings = False
@@ -251,7 +242,6 @@ class TestImportRobotModelOperator:
         mock_robot.joints = []
         mock_parser.return_value.parse.return_value = mock_robot
 
-        # Create validation issues
         mock_issue = MagicMock()
         mock_issue.message = "Low mass detected"
 
@@ -296,7 +286,6 @@ class TestImportRobotModelOperator:
             import_unregister()
             assert mock_unreg.called
 
-        # Test register double-registration with ValueError fallback
         mock_reg_err = mocker.patch(
             "bpy.utils.register_class", side_effect=[ValueError("Already registered"), None]
         )
@@ -305,7 +294,6 @@ class TestImportRobotModelOperator:
         assert mock_reg_err.call_count > 0
         assert mock_unreg_err.call_count > 0
 
-        # Run __main__ entrypoint
         import runpy
 
         with patch.object(import_ops, "__name__", "__main__"):

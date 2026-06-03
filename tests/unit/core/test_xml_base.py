@@ -50,11 +50,9 @@ def test_add_origin_element() -> None:
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
 
-    # Test identity transform (should not add an element)
     gen._add_origin_element(parent, Transform.identity())
     assert parent.find("origin") is None
 
-    # Test custom tag
     transform = Transform(xyz=Vector3(1, 2, 3), rpy=Vector3(0.1, 0.2, 0.3))
     gen._add_origin_element(parent, transform, tag="custom_origin")
 
@@ -86,17 +84,14 @@ def test_add_inertial_element() -> None:
     elem = parent.find("inertial")
     assert elem is not None
 
-    # Check mass
     mass_elem = elem.find("mass")
     assert mass_elem is not None
     assert mass_elem.get("value") == "5.5"
 
-    # Check origin
     origin_elem = elem.find("origin")
     assert origin_elem is not None
     assert origin_elem.get("xyz") == "0 0 1"
 
-    # Check inertia
     inertia_elem = elem.find("inertia")
     assert inertia_elem is not None
     assert inertia_elem.get("ixx") == "1"
@@ -155,7 +150,6 @@ def test_add_geometry_element_sphere() -> None:
 
 def test_add_geometry_element_mesh() -> None:
     """Test geometry element generation for Mesh."""
-    # Test with output_path set (relative path)
     gen = MockXMLGenerator(output_path=Path("/tmp/robot/robot.urdf"))
     parent = ET.Element("parent")
     mesh = Mesh(resource="package://my_robot/meshes/part.stl", scale=Vector3(2, 2, 2))
@@ -197,7 +191,6 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
 
     parser = MockParser()
     elem = ET.Element("geometry")
-    # Add a mesh with invalid scale to trigger the float conversion error
     ET.SubElement(elem, "mesh", filename="model.stl", scale="invalid_scale_string")
 
     with patch("linkforge.core.parsers.xml_base.logger") as mock_logger:
@@ -243,7 +236,6 @@ def test_xml_base_parser_geometry_nones() -> None:
 
 def test_xml_base_generators_and_parsers_edge_cases() -> None:
     """Verify remaining edge cases in base XML generator and parser."""
-    # 1. Generators: _add_optional_bool_element (with False and None)
     gen = MockXMLGenerator()
     parent = ET.Element("parent")
     gen._add_optional_bool_element(parent, "my_bool_f", False)
@@ -253,7 +245,6 @@ def test_xml_base_generators_and_parsers_edge_cases() -> None:
     gen._add_optional_bool_element(parent, "my_bool_n", None)
     assert parent.find("my_bool_n") is None
 
-    # 2. Generators: _add_optional_numeric_element (with float, int, and None)
     gen._add_optional_numeric_element(parent, "my_num_f", 12.345)
     assert parent.find("my_num_f") is not None
     assert parent.find("my_num_f").text == "12.345"
@@ -265,7 +256,6 @@ def test_xml_base_generators_and_parsers_edge_cases() -> None:
     gen._add_optional_numeric_element(parent, "my_num_n", None)
     assert parent.find("my_num_n") is None
 
-    # 3. Generators: _add_geometry_element with default scale (1, 1, 1) mesh
     mesh = Mesh(resource="package://my_robot/meshes/part.stl", scale=Vector3(1, 1, 1))
     parent_mesh = ET.Element("parent_mesh")
     gen._add_geometry_element(mesh, parent_mesh)
@@ -273,7 +263,6 @@ def test_xml_base_generators_and_parsers_edge_cases() -> None:
     assert mesh_elem is not None
     assert mesh_elem.get("scale") is None
 
-    # 4. Parsers: _parse_material_element returning None (line 286)
     class MockParser(RobotXMLParser[Any]):
         def parse(self, filepath: Path, **kwargs: Any) -> Any:
             return None

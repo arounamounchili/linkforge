@@ -61,7 +61,6 @@ def test_check_root_model_error_coverage(mocker):
     # We need to make sure HasLinksCheck doesn't stop us
     robot.add_link(Link(name="link1"))
 
-    # Mock robot.root_link to raise RobotModelError
     # Note: root_link is a property, but Robot.root_link might be tricky to patch on instance
     # if it's already computed.
     mocker.patch(
@@ -83,7 +82,6 @@ def test_geometry_check_warnings():
     """Cover missing visual/collision warnings in GeometryCheck."""
     check = GeometryCheck()
     robot = Robot(name="test_robot")
-    # Add a link with no visuals/collisions
     link = Link(name="empty_link")
     robot.add_link(link)
 
@@ -97,7 +95,6 @@ def test_geometry_check_warnings():
 def test_semantic_check_no_semantic():
     """Cover early return in SemanticCheck if no semantic model."""
     check = SemanticCheck()
-    # Create robot with default semantic (which is empty)
     robot = Robot(name="test_robot")
     # Force semantic to None to hit the branch if applicable,
     # but wait, SemanticCheck checks 'if not robot.semantic:'

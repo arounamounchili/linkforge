@@ -101,7 +101,6 @@ class TestExportOperators:
         op.filepath = str(filepath)
         op.report = MagicMock()
 
-        # Mock robot properties
         mock_props = MagicMock()
         mock_props.export_format = "URDF"
         mock_props.mesh_directory_name = "meshes"
@@ -110,7 +109,6 @@ class TestExportOperators:
         mock_props.use_ros2_control = True
         setattr(scene, PROP_ROBOT, mock_props)
 
-        # Mock robot parsing and validation
         mock_robot = MagicMock()
         mock_robot.name = "test_robot"
         mock_scene_to_robot.return_value = (mock_robot, MagicMock(issues=[]))
@@ -136,7 +134,6 @@ class TestExportOperators:
         op.filepath = str(filepath)
         op.report = MagicMock()
 
-        # Mock robot properties
         mock_props = MagicMock()
         mock_props.export_format = "XACRO"
         mock_props.mesh_directory_name = "meshes"
@@ -149,7 +146,6 @@ class TestExportOperators:
         mock_props.use_ros2_control = False
         setattr(scene, PROP_ROBOT, mock_props)
 
-        # Mock robot parsing
         mock_robot = MagicMock()
         mock_robot.name = "xacro_robot"
         mock_scene_to_robot.return_value = (mock_robot, MagicMock(issues=[]))
@@ -170,14 +166,12 @@ class TestExportOperators:
         op.filepath = str(filepath)
         op.report = MagicMock()
 
-        # Mock robot properties
         mock_props = MagicMock()
         mock_props.export_format = "URDF"
         mock_props.mesh_directory_name = "meshes"
         mock_props.validate_before_export = True
         setattr(scene, PROP_ROBOT, mock_props)
 
-        # Mock validation result with failures
         mock_scene_to_robot.return_value = (MagicMock(), MagicMock(issues=[]))
         mock_val_res = MagicMock()
         mock_val_res.is_valid = False
@@ -200,7 +194,6 @@ class TestExportOperators:
         op.filepath = str(filepath)
         op.report = MagicMock()
 
-        # Mock robot properties
         mock_props = MagicMock()
         mock_props.export_format = "URDF"
         mock_props.validate_before_export = True
@@ -267,7 +260,6 @@ class TestValidateRobotOperator:
         mock_val_prop.warnings = MagicMock()
         setattr(wm, PROP_VALIDATION, mock_val_prop)
 
-        # Mock robot and validation result
         mock_robot = MagicMock()
         mock_robot.name = "clean_robot"
         mock_robot.links = ["link1", "link2"]
@@ -301,12 +293,10 @@ class TestValidateRobotOperator:
         mock_val_prop = MagicMock()
         setattr(wm, PROP_VALIDATION, mock_val_prop)
 
-        # Mock robot and validation result with errors/warnings
         mock_robot = MagicMock()
         mock_robot.name = "warn_err_robot"
         mock_scene_to_robot.return_value = (mock_robot, MagicMock(issues=[]))
 
-        # Mock error
         mock_error = MagicMock()
         mock_error.title = "Circular mimic"
         mock_error.message = "Circular chain detected"
@@ -314,7 +304,6 @@ class TestValidateRobotOperator:
         mock_error.affected_objects = ["joint1"]
         mock_error.code = MagicMock(name="CIRCULAR_MIMIC_CHAIN")
 
-        # Mock warning
         mock_warning = MagicMock()
         mock_warning.title = "No limits"
         mock_warning.message = "Continuous joint limit warning"
@@ -356,7 +345,6 @@ class TestValidateRobotOperator:
             operators_pkg.register()
             operators_pkg.unregister()
 
-        # Test register double-registration with ValueError fallback
         mock_reg_err = mocker.patch(
             "bpy.utils.register_class", side_effect=[ValueError("Already registered"), None, None]
         )
@@ -365,7 +353,6 @@ class TestValidateRobotOperator:
         assert mock_reg_err.call_count > 0
         assert mock_unreg_err.call_count > 0
 
-        # Run __main__ entrypoint
         import runpy
 
         with patch.object(export_ops, "__name__", "__main__"):
@@ -430,7 +417,6 @@ class TestRobotValidation:
         """Test the validate_robot operator in a success scenario."""
         mock_self = MagicMock()
 
-        # Mock validation result
         val_res = MagicMock()
         val_res.is_valid = True
         val_res.has_warnings = False
@@ -450,7 +436,6 @@ class TestRobotValidation:
         """Test the validate_robot operator in a failure scenario."""
         mock_self = MagicMock()
 
-        # Mock validation result with errors
         val_res = MagicMock()
         val_res.is_valid = False
         val_res.error_count = 1
@@ -518,7 +503,6 @@ class TestRobotExport:
         mock_self.filepath = "/tmp/robot.urdf"
         mock_self.report = MagicMock()
 
-        # Mock conversion result with valid but "failing" robot
         val_res = MagicMock()
         val_res.is_valid = False
         val_res.error_count = 1

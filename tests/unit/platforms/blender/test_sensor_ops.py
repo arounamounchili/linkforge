@@ -110,7 +110,6 @@ class TestSensorOperators:
         sensor_obj.select_set(True)
         assert op.poll(bpy.context)
 
-        # Execute
         res = op().execute(bpy.context)
         assert res == {"FINISHED"}
         assert sensor_obj.name not in scene.objects

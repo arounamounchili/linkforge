@@ -171,7 +171,6 @@ def test_urdf_parser_transmission_parsing_robustness() -> None:
     elem = ET.fromstring("<transmission/>")
     assert parser._parse_transmission(elem) is None
 
-    # Transmission component missing name
     elem = ET.fromstring("<actuator/>")
     assert parser._parse_transmission_component(elem, "actuator") is None
 

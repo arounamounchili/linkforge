@@ -22,7 +22,6 @@ def test_matrix_to_transform_mocked() -> None:
 
     This confirms the logic is decoupled from the mathutils.Matrix implementation.
     """
-    # Setup mock matrix
     mock_matrix = MockMatrix.Identity(4)
     mock_matrix.data[0][3] = 1.0
     mock_matrix.data[1][3] = 2.0
@@ -34,7 +33,6 @@ def test_matrix_to_transform_mocked() -> None:
 
     transform = matrix_to_transform(typing.cast(mathutils.Matrix, mock_matrix))
 
-    # Verify
     assert transform.xyz.x == 1.0
     assert transform.xyz.y == 2.0
     assert transform.xyz.z == 3.0
@@ -51,7 +49,6 @@ def test_detect_primitive_type_box_mocked() -> None:
     mock_obj = MockObject(name="Box")
     mock_obj.type = "MESH"
 
-    # Mock mesh data using high-fidelity MockMesh to satisfy isinstance checks
     mock_mesh = MockMesh(name="BoxMesh")
     mock_mesh.vertices.clear()
     mock_mesh.vertices.extend([MagicMock() for _ in range(8)])

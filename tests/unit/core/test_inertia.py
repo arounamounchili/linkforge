@@ -140,12 +140,10 @@ class TestInertiaIntegration:
         v, f = self.create_box_mesh(size)
         numerical = calculate_mesh_inertia_from_triangles(v, f, mass)
 
-        # Check diagonals (within float precision)
         assert numerical.ixx == pytest.approx(analytic.ixx, rel=1e-6)
         assert numerical.iyy == pytest.approx(analytic.iyy, rel=1e-6)
         assert numerical.izz == pytest.approx(analytic.izz, rel=1e-6)
 
-        # Check off-diagonals (should be near zero)
         assert abs(numerical.ixy) < 1e-9
         assert abs(numerical.ixz) < 1e-9
         assert abs(numerical.iyz) < 1e-9
@@ -273,15 +271,12 @@ class TestInertiaIntegration:
         v, f = self.create_box_mesh((1, 1, 1))
         mass = 1.0
 
-        # Mock input validation to do nothing so we can control isfinite calls
         mocker.patch("linkforge.core.physics.inertia._validate_mesh_inputs")
 
-        # 1. Trigger weighted_com non-finite check
         mocker.patch("linkforge.core.physics.inertia.isfinite", return_value=False)
         with pytest.raises(RobotPhysicsError, match="weighted center of mass is non-finite"):
             calculate_mesh_inertia_from_triangles(v, f, mass)
 
-        # 2. Trigger final com non-finite check
         # We need isfinite to be True for weighted_com (3 calls) then False
         mocker.patch(
             "linkforge.core.physics.inertia.isfinite", side_effect=[True, True, True, False]

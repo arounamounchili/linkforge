@@ -154,7 +154,6 @@ class TestExportPanel:
         child = create_robot_link("child_link", scene)
         joint = create_robot_joint("test_joint", base, child, scene)
 
-        # Add a sensor
         sensor = create_test_object("test_sensor", None, scene)
         sp = safe_get_sensor(sensor)
         sp.is_robot_sensor = True
@@ -194,10 +193,8 @@ class TestExportPanel:
         # Restore layout
         panel.layout = mock_layout
 
-        # Create objects to pass num_links > 0
         create_robot_link("base_link", scene)
 
-        # Mock errors & warnings with codes, messages, suggestions, and affected objects
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
         validation.has_results = True
@@ -225,7 +222,6 @@ class TestExportPanel:
 
         panel.draw(bpy.context)
 
-        # Assert UI elements were drawn
         mock_layout.label.assert_any_call(text="  Affected: base_link", icon="OBJECT_DATA")
 
         # Component browser filtering empty matches path
@@ -327,7 +323,6 @@ class TestLinkPanel:
     def test_link_panel_draw_detailed_branches(self, scene, blender_context, mock_layout) -> None:
         """Test drawing the link panel with virtual link and manual inertia branches."""
 
-        # Test virtual link status (no child geometry)
         link_obj = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = link_obj
@@ -339,7 +334,6 @@ class TestLinkPanel:
         panel.draw(bpy.context)
         mock_layout.label.assert_any_call(text="Status: Virtual Frame (No Geometry)", icon="INFO")
 
-        # Test manual inertia input fields (use_auto_inertia = False) on non-virtual link
         non_virtual_link = create_robot_link(
             "non_virtual_link", scene, with_visual=True, with_collision=False
         )
@@ -356,7 +350,6 @@ class TestLinkPanel:
         mock_layout.prop.assert_any_call(props, "inertia_ixx", text="Ixx")
         mock_layout.prop.assert_any_call(props, "inertia_origin_xyz", text="")
 
-        # Test when visual/collision child of a link is active (falls back to parent properties)
         child_visual = create_test_object("non_virtual_link_visual", None, scene)
         child_visual.parent = non_virtual_link
 
@@ -434,7 +427,6 @@ class TestJointPanel:
         panel = LINKFORGE_PT_joints()
         panel.layout = mock_layout
 
-        # Test creation mode with target link selection (lines 51-55)
         base = create_robot_link("base_link", scene)
         visual = create_test_object("visual", None, scene)
         visual.parent = base
@@ -442,13 +434,11 @@ class TestJointPanel:
             bpy.context.view_layer.objects.active = visual
         visual.select_set(True)
         panel.draw(bpy.context)
-        # Verify the "Create Joint" button was drawn
         mock_layout.operator.assert_any_call(
             "linkforge.create_joint", icon="ADD", text="Create Joint"
         )
         visual.select_set(False)
 
-        # Test editing joint where Blender obj name differs from joint_name (lines 73-75)
         joint_obj = create_robot_joint("test_joint", base, base, scene)
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = joint_obj
@@ -661,12 +651,10 @@ class TestControlPanel:
 
         joint_item = props.ros2_control_joints.add()
         joint_item.name = "sensor_joint"
-        # Add parameter with show_parameters = False
         joint_item.parameters.prop_type = Ros2ControlParameterProperty
         joint_item.parameters.add()
         joint_item.show_parameters = False
 
-        # Add global parameter with show_ros2_control_parameters = False
         props.ros2_control_parameters.prop_type = Ros2ControlParameterProperty
         props.ros2_control_parameters.add()
         props.show_ros2_control_parameters = False
@@ -700,7 +688,6 @@ class TestControlPanel:
         # UIList draw_item with GRID and cmd_effort
         ul = LINKFORGE_UL_ros2_control_joints()
         ul.layout_type = "GRID"
-        # Create item with empty interfaces (cmd_position/velocity/effort = False)
         joint_item = props.ros2_control_joints[0]
         joint_item.cmd_position = False
         joint_item.cmd_velocity = False
@@ -775,12 +762,10 @@ class TestControlPanel:
             mock_get.return_value = None
             assert menu.draw(bpy.context) is None
 
-        # Create joint in scene and pre-add it to ros2_control_joints to hit (289->285)
         base = create_robot_link("base", scene)
         child = create_robot_link("child", scene)
         joint_obj = create_robot_joint("test_joint_1", base, child, scene)
 
-        # Add it to the control joints list so it's considered "already added"
         props.ros2_control_joints.clear()
         added_item = props.ros2_control_joints.add()
         added_item.name = "test_joint_1"
@@ -803,13 +788,11 @@ class TestRobotOperators:
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
 
-        # Test view_layer is None path
         mock_ctx = MagicMock()
         mock_ctx.scene = scene
         mock_ctx.view_layer = None
         assert op.execute(mock_ctx) == {"FINISHED"}
 
-        # Test object not found fallback
         op.object_name = "nonexistent"
         res_nonexistent = op.execute(bpy.context)
         assert res_nonexistent == {"CANCELLED"}
@@ -822,18 +805,15 @@ class TestRobotOperators:
         # No links created yet, should cancel
         assert res == {"CANCELLED"}
 
-        # Create link, now should succeed
         create_robot_link("base_link", scene)
         res_success = op.execute(bpy.context)
         assert res_success == {"FINISHED"}
 
-        # Test view_layer is None path
         mock_ctx = MagicMock()
         mock_ctx.scene = scene
         mock_ctx.view_layer = None
         assert op.execute(mock_ctx) == {"FINISHED"}
 
-        # Test when root object does not exist in scene objects
         with patch("linkforge.blender.panels.robot_panel.build_tree_from_stats") as mock_build:
             mock_build.return_value = (None, "nonexistent_root", {}, {})
             assert op.execute(bpy.context) == {"FINISHED"}
@@ -871,7 +851,6 @@ class TestRobotOperators:
             if spec and spec.loader:
                 main_mod = importlib.util.module_from_spec(spec)
                 main_mod.__package__ = "linkforge.blender.panels"
-                # Mock register to avoid actual bpy operations
                 with (
                     patch("bpy.utils.register_class") as mock_reg,
                     patch("bpy.utils.unregister_class"),
@@ -934,7 +913,6 @@ class TestGlobalPanels:
                 assert mock_reg.called
                 module.unregister()
 
-        # Test operator execute with context.scene = None
         class MockContextSceneNone:
             scene = None
 

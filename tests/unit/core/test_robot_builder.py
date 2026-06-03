@@ -54,7 +54,6 @@ class TestRobotBuilder:
         assert material.color.r == 1.0
         assert material.color.a == 1.0
 
-        # Attach to visual to hit existing material branch
         builder.link("l1").visual(box(1, 1, 1), material="red").root()
         link = builder.robot.link("l1")
         assert len(link.visuals) > 0
@@ -74,12 +73,10 @@ class TestRobotBuilder:
         assert root is not None
         assert root.name == "base"
 
-        # Add child
         builder.link("link1", parent="base").revolute(axis=(0, 0, 1), limits=(-1, 1)).commit()
         assert builder.robot.has_link("link1")
         assert builder.robot.has_joint("base_to_link1")
 
-        # Add another child using parent param
         builder.link("link2", parent="link1").fixed().commit()
         assert builder.robot.has_link("link2")
         assert builder.robot.has_joint("link1_to_link2")
@@ -187,7 +184,6 @@ class TestRobotBuilder:
     def test_root_validation(self) -> None:
         """Test that build() fails if no root is defined."""
         builder = RobotBuilder("no_root")
-        # Test error when build is called on empty robot
         with pytest.raises(RobotValidationError, match="No root link found"):
             builder.build()
 
@@ -226,7 +222,6 @@ class TestRobotBuilder:
         b2.link("sub_base").root()
         b2.link("tool", parent="sub_base").fixed().commit()
 
-        # Attach with empty prefix
         b1.attach(b2, at_link="base_attach", joint_name="attachment", xyz=(0, 0, 1))
 
         assert b1.robot.has_link("sub_base")
@@ -385,7 +380,6 @@ class TestRobotBuilder:
         builder.link("base_as").root()
         builder.link("l1_as", parent="base_as").fixed().commit()
 
-        # Test disable_all_collisions through Robot model indirectly
         builder.robot.disable_all_collisions(["base_as", "l1_as"])
         assert len(builder.robot.semantic.disabled_collisions) == 1
 
@@ -409,7 +403,6 @@ class TestRobotBuilder:
         assert SensorType.FORCE_TORQUE in types
         assert SensorType.CONTACT in types
 
-        # Check sub-info existence
         ft_sensor = next(s for s in builder.robot.sensors if s.type == SensorType.FORCE_TORQUE)
         assert ft_sensor.force_torque_info is not None
         contact_sensor = next(s for s in builder.robot.sensors if s.type == SensorType.CONTACT)
@@ -520,7 +513,6 @@ class TestRobotBuilder:
         b4.link("l_origin").collision(box(1, 1, 1)).mass(1.0, origin_xyz=(0, 0, 1)).root()
         assert b4.robot.link("l_origin").inertial_origin.xyz.z == 1.0
 
-        # Export jumps (validate=False)
         b5 = RobotBuilder("b5")
         b5.link("base").root()
         b5.export_urdf(validate=False)
@@ -610,7 +602,6 @@ class TestRobotBuilder:
             .commit()
         )
 
-        # Verify it attached to the correct one
         assert len(builder.robot.ros2_controls[0].joints) == 0
         system2 = builder.robot.ros2_controls[1]
         assert len(system2.joints) == 1
@@ -625,7 +616,6 @@ class TestRobotBuilder:
         b2 = RobotBuilder("gripper")
         b2.link("gripper_base").root()
 
-        # Attach with collision disable
         b1.attach(b2, at_link="base", disable_collision=True, reason="Adjacent")
 
         assert len(b1.robot.semantic.disabled_collisions) == 1
@@ -634,7 +624,6 @@ class TestRobotBuilder:
         assert dc.link2 == "gripper_base"
         assert dc.reason == "Adjacent"
 
-        # Test with prefix
         b3 = RobotBuilder("prefixed")
         b3.link("root").root()
         b1.attach(b3, at_link="base", prefix="p1_", disable_collision=True)
@@ -723,10 +712,8 @@ class TestRobotBuilder:
         # Clone the builder
         cloned_builder = builder.clone()
 
-        # Add features to original builder
         builder.link("arm_link", parent="base_link").mass(1.0)
 
-        # Add features to cloned builder
         cloned_builder.link("leg_link", parent="base_link").mass(2.0)
 
         original_robot = builder.build()

@@ -46,7 +46,6 @@ def test_context_and_mode_guard_override_kwargs() -> None:
     context.area = None
     context.window = None
 
-    # Setup windows and areas
     mock_window = MagicMock()
     mock_area = MagicMock()
     mock_area.type = "VIEW_3D"

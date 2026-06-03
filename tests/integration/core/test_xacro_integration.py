@@ -13,7 +13,6 @@ from linkforge.core import Box
 
 def test_xacro_includes_and_macros(tmp_path: Path, xacro_to_robot) -> None:
     """Test Xacro includes and macros with complex dependencies."""
-    # Create macro file
     macro_file = tmp_path / "macros.xacro"
     macro_file.write_text("""<?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
@@ -27,7 +26,6 @@ def test_xacro_includes_and_macros(tmp_path: Path, xacro_to_robot) -> None:
 </robot>
 """)
 
-    # Create main file
     main_file = tmp_path / "main.xacro"
     main_file.write_text(f"""<?xml version="1.0"?>
 <robot name="test_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">

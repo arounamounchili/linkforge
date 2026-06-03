@@ -24,21 +24,17 @@ class TestValidationWorkflow:
         robot_props = safe_get_linkforge_scene(scene)
         robot_props.robot_name = "my_disconnected_robot"
 
-        # Setup base_link (root)
         base_obj = create_test_object("base_link", None, scene)
         safe_get_linkforge(base_obj).is_robot_link = True
         safe_get_linkforge(base_obj).link_name = "base_link"
 
-        # Setup a disconnected link
         island_obj = create_test_object("island_link", None, scene)
         safe_get_linkforge(island_obj).is_robot_link = True
         safe_get_linkforge(island_obj).link_name = "island_link"
 
-        # Setup validation property group on window manager
         wm = bpy.context.window_manager
         assert wm is not None
 
-        # Run validation operator
         op = LINKFORGE_OT_validate_robot()
         op.report = unittest.mock.MagicMock()
 
@@ -47,7 +43,6 @@ class TestValidationWorkflow:
         # The operator execution should fail (CANCELLED) because there are disconnected links (multiple roots)
         assert result == {"CANCELLED"}
 
-        # Assert that the window manager's validation properties are correctly populated
         validation_props = getattr(wm, PROP_VALIDATION)
         assert validation_props.has_results is True
         assert validation_props.is_valid is False

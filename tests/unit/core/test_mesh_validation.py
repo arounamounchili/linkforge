@@ -152,7 +152,6 @@ class TestMeshTopologyValidation:
         with pytest.raises(RobotPhysicsError, match="invalid"):
             validate_mesh_topology(vertices, [(0, 1)], strict=True, level=1)
 
-        # Test string characters trip ValueError -> invalid_count
         warnings = validate_mesh_topology(vertices, [("a", "b", "c")], level=1)
         assert any(w.code == ValidationErrorCode.INVALID_VALUE for w in warnings)
 

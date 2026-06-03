@@ -63,12 +63,10 @@ class TestLinkOperators:
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
 
-        # Verify object creation
         assert "base_link" in bpy.data.objects
         link_obj = bpy.data.objects["base_link"]
         assert link_obj.type == "EMPTY"
 
-        # Verify LinkForge properties
         lf = safe_get_linkforge(link_obj)
         assert lf.is_robot_link is True
         assert lf.link_name == "base_link"
@@ -89,7 +87,6 @@ class TestLinkOperators:
         mesh_obj.select_set(True)
         assert op.poll(bpy.context)
 
-        # Run operator
         res = op().execute(bpy.context)
         assert res == {"FINISHED"}
 
@@ -103,7 +100,6 @@ class TestLinkOperators:
         visual_obj = bpy.data.objects["arm_segment_visual"]
         assert visual_obj.parent == empty_obj
 
-        # Verify transforms
         assert (empty_obj.location - (1, 2, 3)).length < 1e-5
         assert visual_obj.matrix_parent_inverse.is_identity
         assert visual_obj.location.length < 1e-5
@@ -149,7 +145,6 @@ class TestCollisionGeneration:
         view_layer = bpy.context.view_layer
         assert view_layer is not None
 
-        # Test Box Primitive
         link_obj_box = create_robot_link(
             "test_link_box", scene, with_visual=True, with_collision=False
         )
@@ -166,7 +161,6 @@ class TestCollisionGeneration:
         col_box = next(c for c in link_obj_box.children if "collision" in c.name)
         assert col_box["collision_geometry_type"] == "box"
 
-        # Test Sphere Primitive
         link_obj_sphere = create_robot_link(
             "test_link_sphere", scene, with_visual=True, with_collision=False
         )
@@ -180,7 +174,6 @@ class TestCollisionGeneration:
         col_sphere = next(c for c in link_obj_sphere.children if "collision" in c.name)
         assert col_sphere["collision_geometry_type"] == "sphere"
 
-        # Test Cylinder Primitive
         link_obj_cyl = create_robot_link(
             "test_link_cyl", scene, with_visual=True, with_collision=False
         )
@@ -194,7 +187,6 @@ class TestCollisionGeneration:
         col_cylinder = next(c for c in link_obj_cyl.children if "collision" in c.name)
         assert col_cylinder["collision_geometry_type"] == "cylinder"
 
-        # Test Auto-Detect type
         link_obj_auto = create_robot_link(
             "test_link_auto", scene, with_visual=True, with_collision=False
         )
@@ -213,7 +205,6 @@ class TestCollisionGeneration:
         link1 = create_robot_link("link1", scene, with_visual=True, with_collision=False)
         link2 = create_robot_link("link2", scene, with_visual=True, with_collision=False)
 
-        # Add a non-link object to verify iteration skips it
         non_link = create_mesh_object("non_link", scene)
 
         op = LINKFORGE_OT_generate_collision_all()
@@ -579,7 +570,6 @@ class TestCollisionAlignment:
         safe_get_linkforge(link_obj).is_robot_link = True
         link_obj.rotation_euler = (1.5708, 0, 0)  # 90 deg X
 
-        # Add a Visual mesh
         visual_obj = create_mesh_object("part_visual", scene=scene)
         visual_obj.parent = link_obj
         visual_obj.matrix_parent_inverse.identity()
@@ -653,7 +643,6 @@ class TestLinkCreationAndCollisionHelpers:
 
         link_obj = create_robot_link("link_with_collision", scene)
 
-        # Add visual context for size detection
         from tests.blender_test_utils import create_mesh_object
 
         vis = create_mesh_object("link_visual", scene)
@@ -690,7 +679,6 @@ class TestLinkProperties:
 
         link_obj = create_robot_link("base_link", scene)
 
-        # Create visual child
         vis_obj = create_test_object("base_link_visual", None, scene)
         vis_obj.parent = link_obj
 
@@ -746,7 +734,6 @@ class TestLinkRobustness:
         link_ops._preview_last_request_time = 0
         assert execute_collision_preview_update() is None
 
-        # Add collision obj
         col = create_test_object("MyLink_collision", None, scene)
         col.parent = link_obj
 
@@ -855,7 +842,6 @@ class TestLinkRobustness:
         res = bpy.ops.linkforge.generate_collision_all()
         assert res in [{"FINISHED"}, {"CANCELLED"}]
 
-        # add material slot
         mesh = create_mesh_object("MatMesh", scene)
         bpy.context.view_layer.objects.active = mesh
         mesh.select_set(True)

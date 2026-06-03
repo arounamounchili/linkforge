@@ -28,7 +28,6 @@ class TestConcurrencyStress:
         context = BlenderContext(bpy.context)
 
         for _ in range(5):
-            # Import
             async_builder = AsynchronousRobotBuilder(
                 robot, Path("/tmp/dummy.urdf"), context, chunk_size=100
             )

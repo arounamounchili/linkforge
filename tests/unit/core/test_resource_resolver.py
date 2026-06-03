@@ -74,7 +74,6 @@ def test_robot_custom_resolver() -> None:
 
     assert resolved == Path("/mock/resolved/some_uri")
 
-    # Verify relative_to is passed (conceptually, MockResolver doesn't use it but it shouldn't crash)
     resolved_rel = robot.resolve_resource("some_uri", relative_to=Path("/tmp"))
     assert resolved_rel == Path("/mock/resolved/some_uri")
 
@@ -83,7 +82,6 @@ def test_filesystem_resolver_errors_and_fallbacks(tmp_path) -> None:
     """Test resolution successes, failures, and relative path fallbacks."""
     resolver = FileSystemResolver()
 
-    # Create dummy files for success cases
     pkg_file = tmp_path / "my_pkg" / "test.urdf"
     pkg_file.parent.mkdir()
     pkg_file.write_text("<robot/>")

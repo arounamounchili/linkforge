@@ -65,7 +65,6 @@ def test_multi_visual_collision_building() -> None:
     builder = RobotBuilder(name="multi_element_robot")
     builder.robot.add_link(Link(name="base_link"))
 
-    # Add complex link
     link = Link(name="complex_link")
     for i in range(3):
         link.add_visual(Visual(geometry=Box(size=Vector3(i + 1, i + 1, i + 1))))

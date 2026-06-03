@@ -410,7 +410,6 @@ class TestXacroInfrastructure:
         resolved = resolver.resolve_string(xml)
         root = ET.fromstring(resolved)
 
-        # Test manual comment insertion for cleanup coverage
         comment_root = ET.Element("robot")
         comment_root.append(ET.Comment("manual comment"))
         clean_xml = resolver._finalize_xml(comment_root)
@@ -531,7 +530,6 @@ class TestXacroInfrastructure:
         with pytest.raises(RobotXacroRecursionError):
             parser.resolve(file_a)
 
-        # Test cache by resolving a successful file twice
         file_c = tmp_path / "c.xacro"
         file_c.write_text('<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><link/></robot>')
         parser.resolve(file_c)
@@ -605,14 +603,12 @@ class TestXacroInfrastructure:
     def test_xacro_package_and_find_resolution(self, resolver, tmp_path) -> None:
         resolver.start_dir = tmp_path
 
-        # Test $(find) substitution
         assert resolver._substitute("$(find my_pkg)/test.xacro") == "package://my_pkg/test.xacro"
         assert (
             resolver._substitute("file://$(find my_pkg)/test.xacro")
             == "package://my_pkg/test.xacro"
         )
 
-        # Test _find_file with package://
         import unittest.mock as mock
 
         with mock.patch(
@@ -729,10 +725,8 @@ class TestXacroInfrastructure:
         # Define m inside my_ns
         resolver.macros["my_ns.m"] = (["*block"], ET.Element("group"))
 
-        # Test active namespace stack lookup for a macro called from inside the namespace
         resolver._ns_stack = ["my_ns"]
         elem = ET.Element("xacro:m")
-        # Add a child that is a conditional (resolves to container)
         child = ET.Element("{http://www.ros.org/wiki/xacro}if", value="true")
         child.append(ET.Element("link", name="l1"))
         elem.append(child)
@@ -752,7 +746,6 @@ class TestXacroInfrastructure:
         # This will evaluate and build the nested SimpleNamespace context in ctx
         assert resolver._evaluate("ns.a + ns.b") == 30
 
-        # Test local lookup when inside a namespace
         resolver._ns_stack = ["my_ns"]
         resolver.properties["my_ns.local_prop"] = "hello"
         resolver.properties["my_ns.nested.prop"] = "world"  # has dot in short name, skipped
@@ -821,7 +814,6 @@ class TestXacroInfrastructure:
         import sys
         from unittest import mock
 
-        # Mock the import of yaml to raise ImportError
         with mock.patch.dict(sys.modules, {"yaml": None}):
             # Reload the module to trigger the try/except block
             import linkforge.core.parsers.xacro_parser as xacro_parser
@@ -829,7 +821,6 @@ class TestXacroInfrastructure:
             importlib.reload(xacro_parser)
             assert xacro_parser.yaml is None
 
-        # Clean up and reload again to restore normal yaml module
         import linkforge.core.parsers.xacro_parser as xacro_parser
 
         importlib.reload(xacro_parser)

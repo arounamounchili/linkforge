@@ -78,14 +78,12 @@ class TestMeshIO:
         obj = create_mesh_object("error_mesh", scene=scene, with_cube=True)
         filepath = tmp_path / "error.stl"
 
-        # Mock ops to raise RuntimeError - patch on the module where it's used
         mocker.patch(
             "linkforge.blender.adapters.mesh_io.bpy.ops.wm.stl_export",
             side_effect=RuntimeError("Blender error"),
         )
         assert export_mesh_stl(obj, filepath) is False
 
-        # Mock Path.mkdir to raise OSError
         mocker.patch("pathlib.Path.mkdir", side_effect=OSError("Disk full"))
         assert export_mesh_stl(obj, filepath) is False
 
@@ -104,7 +102,6 @@ class TestMeshIO:
     def test_create_simplified_mesh(self, mocker, scene, blender_context) -> None:
         """Test mesh simplification logic."""
         obj = create_mesh_object("decimate_me", scene=scene, with_cube=True)
-        # Mock modifier apply
         mocker.patch(
             "linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply",
             return_value={"FINISHED"},
@@ -125,7 +122,6 @@ class TestMeshIO:
 
     def test_export_link_mesh_full(self, mocker, scene, tmp_path, blender_context) -> None:
         """Verify full link mesh export workflow including directory creation."""
-        # Create nested directory to test auto-creation
         export_dir = tmp_path / "meshes" / "sub"
         obj = create_mesh_object("link_part", scene=scene, with_cube=True)
 
@@ -143,7 +139,6 @@ class TestMeshIO:
         assert str(filepath).endswith("link_part_visual.stl")
         mock_stl.assert_called_once()
 
-        # Verify filepath passed to exporter matches what was returned
         call_args = mock_stl.call_args
         assert call_args.args[1] == filepath
         assert os.path.isabs(call_args.args[1])
@@ -214,16 +209,11 @@ class TestMeshExhaustiveCoverage:
         mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf")
         mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply")
 
-        # 1. STL export
         assert export_mesh_stl(obj, filepath) is True
-        # 2. OBJ export
         assert export_mesh_obj(obj, filepath.with_suffix(".obj")) is True
-        # 3. GLB export
         assert export_mesh_glb(obj, filepath.with_suffix(".glb")) is True
-        # 4. Simplification
         simplified = create_simplified_mesh(obj, 0.5)
         assert simplified is not None
-        # Clean up the simplified mesh from blender database
         if simplified:
             bpy.data.objects.remove(simplified, do_unlink=True)
 
@@ -232,14 +222,12 @@ class TestMeshExhaustiveCoverage:
         obj = create_mesh_object("glb_error_mesh", scene=scene, with_cube=True)
         filepath = tmp_path / "test.glb"
 
-        # Test RuntimeError/OSError fallback
         mocker.patch(
             "linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf",
             side_effect=RuntimeError("GLB fail"),
         )
         assert export_mesh_glb(obj, filepath) is False
 
-        # Test unexpected TypeError/AttributeError
         mocker.patch(
             "linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf",
             side_effect=TypeError("Unexpected GLB error"),
@@ -312,19 +300,16 @@ class TestMeshExhaustiveCoverage:
         mock_obj = mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.obj_export")
         mock_glb = mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.export_scene.gltf")
 
-        # Test OBJ format
         path_obj, _ = export_link_mesh(obj, "link_obj", "visual", "OBJ", tmp_path)
         assert path_obj is not None
         assert path_obj.suffix == ".obj"
         mock_obj.assert_called_once()
 
-        # Test GLB format
         path_glb, _ = export_link_mesh(obj, "link_glb", "visual", "GLB", tmp_path)
         assert path_glb is not None
         assert path_glb.suffix == ".glb"
         mock_glb.assert_called_once()
 
-        # Test Unknown format fallback
         path_fallback, _ = export_link_mesh(obj, "link_fallback", "visual", "PLY", tmp_path)
         assert path_fallback is not None
         assert path_fallback.suffix == ".obj"
@@ -383,7 +368,6 @@ class TestMeshExhaustiveCoverage:
         obj.bound_box = [Vector((2.0, 2.0, 2.0))] * 8
 
         mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.wm.stl_export", return_value=True)
-        # Mock modifier apply for simplify
         mocker.patch(
             "linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply",
             return_value={"FINISHED"},
