@@ -69,8 +69,6 @@ class TestSensorsPluginsIntegration:
 
         create_robot_link("base_link", scene)
 
-        # Set scene-level Gazebo plugin (simplified for now, might need dedicated operator)
-        # Note: In linkforge, robot-level plugins are often managed in scene properties
         lf_scene.gazebo_plugin_name = "libmy_plugin.so"
 
         safe_update()
