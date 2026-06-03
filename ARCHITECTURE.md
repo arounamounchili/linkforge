@@ -51,10 +51,10 @@ This is how LinkForge converts design intent into physical parameters.
 ```mermaid
 sequenceDiagram
     participant User
-    participant Blender as Blender Viewport
-    participant Adapter as blender_to_core
-    participant Core as Physics Core
-    participant File as Robot Description
+    participant Blender as "Blender Viewport"
+    participant Adapter as "blender_to_core"
+    participant Core as "Physics Core"
+    participant File as "Robot Description"
 
     User->>Blender: Click Export
     Blender->>Adapter: Extract geometry & props
