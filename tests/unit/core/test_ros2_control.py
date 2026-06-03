@@ -5,12 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge.core import Ros2Control, Ros2ControlJoint, URDFParser
-
-
-@pytest.fixture
-def parser() -> URDFParser:
-    return URDFParser()
+from linkforge.core import Ros2Control, Ros2ControlJoint
 
 
 class TestRos2ControlModels:
@@ -168,7 +163,7 @@ class TestRos2ControlModels:
 
 
 class TestRos2ControlParsing:
-    def test_parse_ros2_control_block(self, parser) -> None:
+    def test_parse_ros2_control_block(self, urdf_parser) -> None:
         """Test parsing a ros2_control block from URDF."""
         xml = """
         <ros2_control name="RealRobot" type="system">
@@ -185,7 +180,7 @@ class TestRos2ControlParsing:
         </ros2_control>
         """
         elem = ET.fromstring(xml)
-        rc = parser._parse_ros2_control(elem)
+        rc = urdf_parser._parse_ros2_control(elem)
 
         assert rc.name == "RealRobot"
         assert rc.hardware_plugin == "my_robot_hardware/MyRobotSystem"

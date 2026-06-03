@@ -7,7 +7,6 @@ from linkforge.core import (
     RobotXacroError,
     RobotXacroExpressionError,
     RobotXacroRecursionError,
-    XACROGenerator,
     XACROParser,
     XacroResolver,
     clear_xacro_cache,
@@ -17,11 +16,6 @@ from linkforge.core import (
 @pytest.fixture
 def resolver() -> XacroResolver:
     return XacroResolver()
-
-
-@pytest.fixture
-def generator() -> XACROGenerator:
-    return XACROGenerator()
 
 
 # Xacro Resolver and Macro Tests
