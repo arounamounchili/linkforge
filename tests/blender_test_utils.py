@@ -313,7 +313,6 @@ def cleanup_blender_scene(scene: typing.Any | None = None) -> None:
     Resets only relevant bpy.data collections and linkforge property groups
     to avoid expensive addon re-registration cycles.
     """
-    import bpy
 
     # Delete all objects in all collections
     for obj in list(bpy.data.objects):
@@ -372,7 +371,6 @@ def safe_update(scene: typing.Any | None = None) -> None:
 
     Attempts to resolve the scene from context, then falls back to global data.
     """
-    import bpy
 
     # Fallback order: provided scene -> context scene -> first scene in data
     target_scene = (

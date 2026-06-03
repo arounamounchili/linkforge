@@ -18,9 +18,22 @@ from linkforge.core import (
     Link,
     Material,
     Robot,
+    URDFParser,
     Vector3,
     Visual,
+    XACROParser,
 )
+
+
+@pytest.fixture
+def xacro_to_robot():
+    """Helper to resolve xacro and parse as robot."""
+
+    def _parse(path: Path, **kwargs) -> Robot:
+        xml_str = XACROParser().resolve(path, **kwargs)
+        return URDFParser().parse_string(xml_str, source_directory=path.parent)
+
+    return _parse
 
 
 @pytest.fixture

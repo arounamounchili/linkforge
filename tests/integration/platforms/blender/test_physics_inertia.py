@@ -77,9 +77,3 @@ class TestPhysicsInertiaIntegration:
         assert collision_obj.type == "MESH"
         assert collision_obj.parent == link_obj
         assert collision_obj.display_type == "WIRE"
-
-    def test_mass_calculation_from_volume(self, blender_clean_scene) -> None:
-        """Verify mass calculation based on volume and density."""
-        # Note: I need to check if LINKFORGE_OT_calculate_mass_from_volume exists
-        # Let's assume it does based on link_ops.py analysis
-        pass

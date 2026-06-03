@@ -115,7 +115,6 @@ def test_matrix_to_transform_precision(scene, blender_context) -> None:
 
 def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     """Verify auto-detection of sphere and cylinder primitives via get_object_geometry."""
-    import bpy
 
     # Sphere: use real UV sphere (default: 32 segs, 16 rings = 482 verts, 480 faces)
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.5)
@@ -139,7 +138,6 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
 
 def test_detect_primitive_type_box(scene, blender_context) -> None:
     """Verify that a basic cube mesh is detected as BOX."""
-    import bpy
 
     # Use Blender's real primitive cube (8 verts, 6 quad faces)
     bpy.ops.mesh.primitive_cube_add()
@@ -150,7 +148,6 @@ def test_detect_primitive_type_box(scene, blender_context) -> None:
 
 def test_detect_primitive_type_sphere(scene, blender_context) -> None:
     """Verify that a UV sphere is detected as SPHERE."""
-    import bpy
 
     # Use Blender's real UV sphere (default 32 segs x 16 rings = 482 verts, 480 faces)
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0)
@@ -161,7 +158,6 @@ def test_detect_primitive_type_sphere(scene, blender_context) -> None:
 
 def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
     """Verify that a cylinder is detected as CYLINDER."""
-    import bpy
 
     # Use Blender's real cylinder (32 vertices matches the cylinder topology detection range)
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.0, depth=3.0)
@@ -2406,7 +2402,6 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     """Cover the final remaining branches in blender_to_core.py."""
     from unittest.mock import MagicMock, patch
 
-    import bpy
     from linkforge.blender.adapters.blender_to_core import (
         SceneToRobotTranslator,
         _categorize_scene_objects,

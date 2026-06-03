@@ -17,14 +17,11 @@ def test_flush_deferred_renames_all_paths(scene):
     """Test flush_deferred_renames covering all branches (success, no name attribute, exception)."""
     cleanup_blender_scene(scene)
 
-    # 1. Success path
     obj_ok = MagicMock()
     obj_ok.name = "old"
 
-    # 2. No name attribute path
     obj_no_name = object()  # plain object without "name"
 
-    # 3. Exception path
     class BadObject:
         @property
         def name(self):

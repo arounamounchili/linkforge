@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
+import bpy
 import pytest
 from linkforge.blender.adapters.mesh_io import (
     create_simplified_mesh,
@@ -203,8 +204,6 @@ class TestMeshRobustness:
 class TestMeshExhaustiveCoverage:
     def test_export_mesh_view_layer_none(self, mocker, scene, tmp_path) -> None:
         """Verify export and simplification functions handle view_layer being None gracefully."""
-        import bpy
-
         obj = create_mesh_object("test_cube_view_none", scene=scene, with_cube=True)
         filepath = tmp_path / "test.stl"
 
@@ -286,8 +285,6 @@ class TestMeshExhaustiveCoverage:
 
     def test_export_link_mesh_depsgraph_provided(self, mocker, scene, tmp_path) -> None:
         """Verify export_link_mesh uses the provided depsgraph if passed."""
-        import bpy
-
         obj = create_mesh_object("depsgraph_mesh", scene=scene, with_cube=True)
         depsgraph = bpy.context.evaluated_depsgraph_get()
 
@@ -401,8 +398,6 @@ class TestMeshExhaustiveCoverage:
 
     def test_export_link_mesh_finally_cleanup_different_data(self, mocker, scene, tmp_path) -> None:
         """Verify the finally block clean up path when final_mesh_data is different from temp_export_obj.data."""
-        import bpy
-
         obj = create_mesh_object("diff_data_mesh", scene=scene, with_cube=True)
 
         # We want final_mesh_data.transform to throw an exception so that final_mesh_data != temp_export_obj.data
@@ -463,8 +458,6 @@ class TestMeshExhaustiveCoverage:
 
     def test_export_link_mesh_finally_cleanup_no_data(self, mocker, scene, tmp_path) -> None:
         """Verify finally cleanup block when simplified_obj.data and temp_export_obj.data are None (covers 403->405 and 409->411 false branches)."""
-        import bpy
-
         obj = create_mesh_object("no_data_mesh", scene=scene, with_cube=True)
 
         mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply")

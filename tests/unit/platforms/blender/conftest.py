@@ -2,6 +2,7 @@ import contextlib
 import os
 from unittest.mock import MagicMock
 
+import bpy
 import pytest
 
 # Relative import from the mock environment package
@@ -13,8 +14,6 @@ from tests.mock_bpy_env import setup_mock_bpy  # noqa: E402
 
 # Check if we are running inside real Blender
 try:
-    import bpy
-
     # Real Blender has a valid binary_path. fake-bpy-module usually has it empty or missing.
     # We also check for 'version' to be sure it's a fully-formed app object.
     is_real_blender = (
@@ -42,7 +41,6 @@ else:
 @pytest.fixture
 def blender_context():
     """Returns the Blender context adapter."""
-    import bpy
     from linkforge.blender.adapters.context import BlenderContext
 
     return BlenderContext(bpy)
@@ -64,7 +62,6 @@ def clean_scene(blender_context):
         linkforge.blender.register()
 
     # Real Blender removal of all objects and underlying data
-    import bpy
 
     # Clear scene-level LinkForge property collections (persisted on bpy.data.scenes)
     scene = bpy.context.scene

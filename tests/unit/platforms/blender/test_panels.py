@@ -8,7 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import bpy
 import pytest
+from linkforge.blender import panels
 from linkforge.blender.constants import PROP_ROBOT, PROP_VALIDATION
+from linkforge.blender.panels import (
+    register as panels_register,
+)
+from linkforge.blender.panels import (
+    unregister as panels_unregister,
+)
 from linkforge.blender.panels.control_panel import (
     LINKFORGE_MT_add_control_joint,
     LINKFORGE_PT_control,
@@ -18,13 +25,25 @@ from linkforge.blender.panels.export_panel import LINKFORGE_PT_export_panel
 from linkforge.blender.panels.forge_panel import LINKFORGE_PT_forge
 from linkforge.blender.panels.joint_panel import LINKFORGE_PT_joints
 from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
+from linkforge.blender.panels.robot_panel import (
+    LINKFORGE_OT_clear_component_search,
+    LINKFORGE_OT_select_root_link,
+    LINKFORGE_OT_select_tree_object,
+)
 from linkforge.blender.panels.sensor_panel import LINKFORGE_PT_perceive
+from linkforge.blender.properties.control_props import (
+    Ros2ControlJointProperty,
+    Ros2ControlParameterProperty,
+)
+from linkforge.blender.utils.property_helpers import get_link_props
 
 from tests.blender_test_utils import (
+    cleanup_blender_scene,
     create_robot_joint,
     create_robot_link,
     create_test_object,
     safe_get_joint,
+    safe_get_linkforge,
     safe_get_linkforge_scene,
     safe_get_sensor,
 )
@@ -255,7 +274,6 @@ class TestForgePanel:
 
         # context.scene is None check
         panel.layout = mock_layout
-        from unittest.mock import MagicMock
 
         mock_ctx = MagicMock()
         mock_ctx.scene = None
@@ -308,7 +326,6 @@ class TestLinkPanel:
 
     def test_link_panel_draw_detailed_branches(self, scene, blender_context, mock_layout) -> None:
         """Test drawing the link panel with virtual link and manual inertia branches."""
-        from linkforge.blender.utils.property_helpers import get_link_props
 
         # Test virtual link status (no child geometry)
         link_obj = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
@@ -436,8 +453,6 @@ class TestJointPanel:
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = joint_obj
         joint_obj.select_set(True)
-
-        from unittest.mock import patch
 
         with patch("linkforge.blender.panels.joint_panel.get_joint_props") as mock_get_props:
             mock_jp = MagicMock()
@@ -630,7 +645,6 @@ class TestControlPanel:
         panel.layout = mock_layout
 
         # get_robot_props(scene) is None check
-        from unittest.mock import patch
 
         with patch("linkforge.blender.panels.control_panel.get_robot_props") as mock_get:
             mock_get.return_value = None
@@ -642,10 +656,6 @@ class TestControlPanel:
         props.ros2_control_type = "sensor"
 
         # Override prop_type to bypass hardcoded mock defaults
-        from linkforge.blender.properties.control_props import (
-            Ros2ControlJointProperty,
-            Ros2ControlParameterProperty,
-        )
 
         props.ros2_control_joints.prop_type = Ros2ControlJointProperty
 
@@ -783,7 +793,6 @@ class TestControlPanel:
 class TestRobotOperators:
     def test_select_tree_object_operator(self, scene, blender_context) -> None:
         """Test select_tree_object operator execution and target lookup."""
-        from linkforge.blender.panels.robot_panel import LINKFORGE_OT_select_tree_object
 
         link_obj = create_robot_link("test_link", scene)
 
@@ -807,9 +816,6 @@ class TestRobotOperators:
 
     def test_select_root_link_operator(self, scene, blender_context) -> None:
         """Test select_root_link operator execution."""
-        from unittest.mock import MagicMock, patch
-
-        from linkforge.blender.panels.robot_panel import LINKFORGE_OT_select_root_link
 
         op = LINKFORGE_OT_select_root_link()
         res = op.execute(bpy.context)
@@ -834,7 +840,6 @@ class TestRobotOperators:
 
     def test_clear_component_search_operator(self, scene, blender_context) -> None:
         """Test clear_component_search operator poll and execute."""
-        from linkforge.blender.panels.robot_panel import LINKFORGE_OT_clear_component_search
 
         op = LINKFORGE_OT_clear_component_search()
         props = safe_get_linkforge_scene(scene)
@@ -851,7 +856,6 @@ class TestRobotOperators:
 
     def test_panels_as_main(self) -> None:
         """Test running each panel module as __main__."""
-        from linkforge.blender import panels
 
         for name in [
             "control_panel",
@@ -879,14 +883,6 @@ class TestRobotOperators:
 class TestGlobalPanels:
     def test_panels_global_registration(self) -> None:
         """Test global register and unregister functions for panels package."""
-        from unittest.mock import patch
-
-        from linkforge.blender.panels import (
-            register as panels_register,
-        )
-        from linkforge.blender.panels import (
-            unregister as panels_unregister,
-        )
 
         # Force a ValueError on the very first register_class call to test the fallback unregister/register path
         already_registered = False
@@ -910,14 +906,6 @@ class TestGlobalPanels:
 
     def test_module_registrations_and_contexts(self) -> None:
         """Test registration and error contexts for all panel modules."""
-        from unittest.mock import patch
-
-        from linkforge.blender import panels
-        from linkforge.blender.panels.robot_panel import (
-            LINKFORGE_OT_clear_component_search,
-            LINKFORGE_OT_select_root_link,
-            LINKFORGE_OT_select_tree_object,
-        )
 
         for name in [
             "control_panel",
@@ -963,7 +951,6 @@ class TestGlobalPanels:
 class TestPanelsExtra:
     @pytest.fixture(autouse=True)
     def setup_cleanup(self, scene):
-        from tests.blender_test_utils import cleanup_blender_scene
 
         cleanup_blender_scene(scene)
         yield
@@ -971,7 +958,6 @@ class TestPanelsExtra:
 
     def test_export_panel_browser_no_select_box(self, scene, mock_layout) -> None:
         """Test component browser exits early if box creation fails."""
-        from linkforge.blender.panels.export_panel import LINKFORGE_PT_export_panel
 
         create_robot_link("base_link", scene)
         panel = LINKFORGE_PT_export_panel()
@@ -981,7 +967,6 @@ class TestPanelsExtra:
 
     def test_export_panel_browser_falsy_search(self, scene, mock_layout) -> None:
         """Test component browser with blank/falsy search term."""
-        from linkforge.blender.panels.export_panel import LINKFORGE_PT_export_panel
 
         base = create_robot_link("base_link", scene)
         child = create_robot_link("child_link", scene)
@@ -1006,7 +991,6 @@ class TestPanelsExtra:
 
     def test_joint_panel_missing_branches(self, scene, mock_layout) -> None:
         """Test joint panel layout/scene is None and draw callbacks."""
-        from linkforge.blender.panels.joint_panel import LINKFORGE_PT_joints
 
         panel = LINKFORGE_PT_joints()
         panel.layout = None
@@ -1040,7 +1024,6 @@ class TestPanelsExtra:
 
     def test_sensor_panel_missing_branches(self, scene, mock_layout) -> None:
         """Test sensor panel layout/scene is None and sensor configurations."""
-        from linkforge.blender.panels.sensor_panel import LINKFORGE_PT_perceive
 
         panel = LINKFORGE_PT_perceive()
         panel.layout = None
@@ -1071,7 +1054,6 @@ class TestPanelsExtra:
 
     def test_link_panel_layout_none(self) -> None:
         """Verify link panel exits early if layout is missing."""
-        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
 
         panel = LINKFORGE_PT_links()
         panel.layout = None
@@ -1079,16 +1061,11 @@ class TestPanelsExtra:
 
     def test_link_panel_mesh_simplification_slider(self, scene, mock_layout) -> None:
         """Verify link panel collision quality simplification slider checks."""
-        from unittest.mock import patch
-
-        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
 
         link_obj = create_robot_link("base_link", scene, with_visual=True, with_collision=True)
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = link_obj
         link_obj.select_set(True)
-
-        from tests.blender_test_utils import safe_get_linkforge
 
         props = safe_get_linkforge(link_obj)
         props.collision_type = "auto"
@@ -1109,14 +1086,11 @@ class TestPanelsExtra:
 
     def test_link_panel_material_node_tree(self, scene, mock_layout) -> None:
         """Verify link panel material slot template and BSDF node checks."""
-        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
 
         link_obj = create_robot_link("base_link", scene, with_cube=True)
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = link_obj
         link_obj.select_set(True)
-
-        from tests.blender_test_utils import safe_get_linkforge
 
         props = safe_get_linkforge(link_obj)
         props.use_material = True
@@ -1140,14 +1114,11 @@ class TestPanelsExtra:
 
     def test_link_panel_simulation_advanced(self, scene, mock_layout) -> None:
         """Verify link panel simulation properties inputs."""
-        from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
 
         link_obj = create_robot_link("base_link", scene)
         if bpy.context.view_layer:
             bpy.context.view_layer.objects.active = link_obj
         link_obj.select_set(True)
-
-        from tests.blender_test_utils import safe_get_linkforge
 
         props = safe_get_linkforge(link_obj)
         props.use_simulation_props = True

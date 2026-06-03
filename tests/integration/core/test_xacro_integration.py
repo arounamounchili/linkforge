@@ -8,19 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-from linkforge.core import Box, Robot, URDFParser, XACROParser
-
-
-@pytest.fixture
-def xacro_to_robot():
-    """Helper to resolve xacro and parse as robot."""
-
-    def _parse(path: Path) -> Robot:
-        xml_str = XACROParser().resolve(path)
-        return URDFParser().parse_string(xml_str, source_directory=path.parent)
-
-    return _parse
+from linkforge.core import Box
 
 
 def test_xacro_includes_and_macros(tmp_path: Path, xacro_to_robot) -> None:
