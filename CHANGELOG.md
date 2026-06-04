@@ -5,6 +5,25 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1](https://github.com/arounamounchili/linkforge/compare/v1.4.0...v1.4.1) (2026-06-04)
+
+
+### 🐞 Bug Fixes
+
+* **ci:** exclude github commits urls from link checker ([d652f36](https://github.com/arounamounchili/linkforge/commit/d652f362b0f7e3fe8b5fb39d723c0dd976678338))
+
+
+### 📚 Documentation
+
+* fix Sphinx warnings, document missing APIs, and refine architectural guides ([d3c9bec](https://github.com/arounamounchili/linkforge/commit/d3c9becbf1837161efcebe6690d4202ac773f77d))
+
+
+### 🛠️ Refactors
+
+* clean up test suite comments/fixtures and update docs ([77399d4](https://github.com/arounamounchili/linkforge/commit/77399d4bdd10ca282ed5cc179c80f94c26d3f273))
+* **core:** address API design findings for ergonomics and stability ([eba7d18](https://github.com/arounamounchili/linkforge/commit/eba7d18153d7c0a9706459e8d22f7c1a64050e9c))
+* **core:** remove dead code and deduplicate constants ([17cf8cf](https://github.com/arounamounchili/linkforge/commit/17cf8cf28b40586b44048d7cf1d0b04b0e5397ee))
+
 ## [1.4.0](https://github.com/arounamounchili/linkforge/compare/v1.3.0...v1.4.0) (2026-05-29)
 
 
