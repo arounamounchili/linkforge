@@ -27,13 +27,13 @@ from linkforge.core.constants import (
     DEFAULT_CONTACT_KP,
     DEFAULT_FRICTION_MU,
     DEFAULT_FRICTION_MU2,
-    DEFAULT_GRAVITY,
     DEFAULT_LINK_MASS,
     DEFAULT_SELF_COLLIDE,
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,
     GEOM_SPHERE,
+    GRAVITY_ENABLED,
 )
 
 from ..constants import (
@@ -338,7 +338,7 @@ class LinkPropertyGroup(PropertyGroup):
     gravity: BoolProperty(  # type: ignore
         name="Gravity",
         description="Whether this link is affected by gravity",
-        default=DEFAULT_GRAVITY,
+        default=GRAVITY_ENABLED,
     )
 
     mu: FloatProperty(  # type: ignore

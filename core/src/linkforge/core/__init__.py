@@ -47,9 +47,9 @@ from .composer import (
 
 # Core Infrastructure: Constants and Exceptions
 from .constants import (
-    DEFAULT_GRAVITY,
     DEFAULT_LINK_MASS,
     EPSILON,
+    GRAVITY_ENABLED,
     PI,
 )
 from .exceptions import (
@@ -293,7 +293,7 @@ __all__ = [
     # Constants
     "PI",
     "EPSILON",
-    "DEFAULT_GRAVITY",
+    "GRAVITY_ENABLED",
     "DEFAULT_LINK_MASS",
     # Logging
     "get_logger",

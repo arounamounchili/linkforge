@@ -50,6 +50,7 @@ from ..constants import (
     SENSOR_GPU_LIDAR,
     SENSOR_IMU,
     SENSOR_LIDAR,
+    SENSOR_RAY,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
 from .gazebo import GazeboPlugin
@@ -57,11 +58,17 @@ from .geometry import Transform
 
 
 class SensorType(StrEnum):
-    """Enumeration of supported sensor types in the LinkForge IR."""
+    """Enumeration of supported sensor types in the LinkForge IR.
+
+    Note on LIDAR vs RAY:
+    - LIDAR is the modern Gazebo Harmonic/GZ standard ("lidar")
+    - RAY is provided for Gazebo Classic / ROS1 compatibility ("ray")
+    """
 
     CAMERA = SENSOR_CAMERA
     DEPTH_CAMERA = SENSOR_DEPTH_CAMERA
     LIDAR = SENSOR_LIDAR
+    RAY = SENSOR_RAY
     GPU_LIDAR = SENSOR_GPU_LIDAR
     IMU = SENSOR_IMU
     GPS = SENSOR_GPS

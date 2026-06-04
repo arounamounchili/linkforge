@@ -21,8 +21,8 @@ from linkforge.core.constants import (
     DEFAULT_CONTACT_KD,
     DEFAULT_CONTACT_KP,
     DEFAULT_FRICTION_MU,
-    DEFAULT_GRAVITY,
     DEFAULT_SELF_COLLIDE,
+    GRAVITY_ENABLED,
 )
 
 
@@ -106,7 +106,7 @@ class TestInertiaTensor:
 
     def test_zero_tensor(self) -> None:
         """Test zero inertia tensor."""
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         # Zero tensor has minimal valid values
         assert tensor.ixx > 0
         assert tensor.iyy > 0
@@ -133,7 +133,7 @@ class TestInertial:
 
     def test_creation(self) -> None:
         """Test creating inertial properties."""
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         inertial = Inertial(
             mass=10.0,
             inertia=tensor,
@@ -143,7 +143,7 @@ class TestInertial:
 
     def test_negative_mass(self) -> None:
         """Test that negative mass raises error."""
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         with pytest.raises(RobotModelError):
             Inertial(
                 mass=-1.0,  # Invalid
@@ -152,13 +152,13 @@ class TestInertial:
 
     def test_zero_mass(self) -> None:
         """Test that zero mass is valid (massless link)."""
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         inertial = Inertial(mass=0.0, inertia=tensor)
         assert inertial.mass == 0.0
 
     def test_with_origin(self) -> None:
         """Test inertial with custom origin."""
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         origin = Transform(xyz=Vector3(0.1, 0.2, 0.3))
         inertial = Inertial(
             mass=5.0,
@@ -248,7 +248,7 @@ class TestLinkPhysics:
         physics = LinkPhysics()
 
         assert physics.self_collide == DEFAULT_SELF_COLLIDE
-        assert physics.gravity == DEFAULT_GRAVITY
+        assert physics.gravity == GRAVITY_ENABLED
         assert physics.mu == DEFAULT_FRICTION_MU
         assert physics.kp == DEFAULT_CONTACT_KP
         assert physics.kd == DEFAULT_CONTACT_KD
@@ -317,7 +317,7 @@ class TestLink:
 
     def test_link_with_inertial(self) -> None:
         """Test link with inertial properties."""
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         inertial = Inertial(mass=5.0, inertia=tensor)
         link = Link(name="link1", inertial=inertial)
         assert link.inertial == inertial
@@ -329,7 +329,7 @@ class TestLink:
         assert link1.mass == 0.0
 
         # Link with inertial
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         inertial = Inertial(mass=10.0, inertia=tensor)
         link2 = Link(name="link2", inertial=inertial)
         assert link2.mass == 10.0
@@ -340,7 +340,7 @@ class TestLink:
         material = Material(name="blue", color=Color(0.0, 0.0, 1.0, 1.0))
         visual = Visual(geometry=geom, material=material)
         collision = Collision(geometry=geom)
-        tensor = InertiaTensor.zero()
+        tensor = InertiaTensor.stability_floor()
         inertial = Inertial(mass=5.0, inertia=tensor)
 
         link = Link(

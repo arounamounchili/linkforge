@@ -315,7 +315,7 @@ class TestURDFGenerator:
         inertial = Inertial(
             mass=10.0,
             origin=Transform(xyz=Vector3(0, 0, 0.5)),
-            inertia=InertiaTensor(ixx=1.0, iyy=1.0, izz=1.0, ixy=0, ixz=0, iyz=0),
+            inertia=InertiaTensor(ixx=1.0, iyy=1.0, izz=1.0),
         )
         # Link is frozen, pass inertial in constructor
         link = Link(name="body", inertial=inertial)
@@ -571,9 +571,7 @@ class TestURDFGenerator:
         robot = Robot(name="auto_control")
         link = Link(
             name="base",
-            inertial=Inertial(
-                mass=1.0, inertia=InertiaTensor(ixx=1, iyy=1, izz=1, ixy=0, ixz=0, iyz=0)
-            ),
+            inertial=Inertial(mass=1.0, inertia=InertiaTensor(ixx=1, iyy=1, izz=1)),
         )
         robot.add_link(link)
         robot.add_link(Link(name="child"))

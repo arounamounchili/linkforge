@@ -317,8 +317,8 @@ class RobotXMLParser(RobotParser[T], Generic[T]):
                 inertia = InertiaTensor(ixx=ixx, iyy=iyy, izz=izz, ixy=ixy, ixz=ixz, iyz=iyz)
             except RobotModelError:
                 # If triangle inequality is still violated, fall back to minimal valid
-                inertia = InertiaTensor.zero()
+                inertia = InertiaTensor.stability_floor()
         else:
-            inertia = InertiaTensor.zero()
+            inertia = InertiaTensor.stability_floor()
 
         return Inertial(mass=mass, origin=origin, inertia=inertia)

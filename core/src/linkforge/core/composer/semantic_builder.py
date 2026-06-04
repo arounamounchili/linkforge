@@ -36,6 +36,10 @@ class SemanticBuilder:
         """Initialize semantic builder."""
         self._builder = builder
 
+    def done(self) -> IComposer:
+        """Return to the parent RobotBuilder."""
+        return self._builder
+
     def group(
         self,
         name: str,
@@ -45,7 +49,7 @@ class SemanticBuilder:
         subgroups: list[str] | None = None,
         base_link: str | None = None,
         tip_link: str | None = None,
-    ) -> IComposer:
+    ) -> SemanticBuilder:
         """Define a planning group for MoveIt.
 
         Args:
@@ -75,11 +79,11 @@ class SemanticBuilder:
 
         semantic = self._builder.robot.semantic
         self._builder.robot.semantic = replace(semantic, groups=tuple(semantic.groups) + (group,))
-        return self._builder
+        return self
 
     def group_state(
         self, name: str, group: str, values: dict[str, float | tuple[float, ...]]
-    ) -> IComposer:
+    ) -> SemanticBuilder:
         """Define a named state (e.g. 'home') for a planning group.
 
         Args:
@@ -98,11 +102,11 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(
             semantic, group_states=tuple(semantic.group_states) + (state,)
         )
-        return self._builder
+        return self
 
     def end_effector(
         self, name: str, group: str, parent_link: str, parent_group: str | None = None
-    ) -> IComposer:
+    ) -> SemanticBuilder:
         """Define an end effector for MoveIt.
 
         Args:
@@ -119,9 +123,9 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(
             semantic, end_effectors=tuple(semantic.end_effectors) + (ee,)
         )
-        return self._builder
+        return self
 
-    def passive_joint(self, name: str) -> IComposer:
+    def passive_joint(self, name: str) -> SemanticBuilder:
         """Mark a joint as passive (not actuated) for MoveIt.
 
         Args:
@@ -135,7 +139,7 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(
             semantic, passive_joints=tuple(semantic.passive_joints) + (pj,)
         )
-        return self._builder
+        return self
 
     def virtual_joint(
         self,
@@ -143,7 +147,7 @@ class SemanticBuilder:
         child_link: str,
         parent_frame: str = "world",
         joint_type: str = SRDF_VJOIN_FIXED,
-    ) -> IComposer:
+    ) -> SemanticBuilder:
         """Define a virtual joint connecting the robot to the world frame.
 
         Args:
@@ -162,11 +166,11 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(
             semantic, virtual_joints=tuple(semantic.virtual_joints) + (vj,)
         )
-        return self._builder
+        return self
 
     def disable_collisions(
         self, link1: str, link2: str, reason: str = SRDF_REASON_ADJACENT
-    ) -> IComposer:
+    ) -> SemanticBuilder:
         """Instruct MoveIt to ignore collisions between two specific links.
 
         Args:
@@ -181,9 +185,11 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(
             semantic, disabled_collisions=tuple(semantic.disabled_collisions) + (dc,)
         )
-        return self._builder
+        return self
 
-    def enable_collisions(self, link1: str, link2: str, reason: str | None = None) -> IComposer:
+    def enable_collisions(
+        self, link1: str, link2: str, reason: str | None = None
+    ) -> SemanticBuilder:
         """Explicitly re-enable collision checking between two specific links.
 
         Args:
@@ -198,9 +204,9 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(
             semantic, enabled_collisions=tuple(semantic.enabled_collisions) + (ec,)
         )
-        return self._builder
+        return self
 
-    def disable_default_collisions(self, link: str) -> IComposer:
+    def disable_default_collisions(self, link: str) -> SemanticBuilder:
         """Disable all default collisions for a specific link.
 
         Args:
@@ -214,9 +220,9 @@ class SemanticBuilder:
             semantic,
             no_default_collision_links=tuple(semantic.no_default_collision_links) + (link,),
         )
-        return self._builder
+        return self
 
-    def joint_property(self, joint_name: str, property_name: str, value: str) -> IComposer:
+    def joint_property(self, joint_name: str, property_name: str, value: str) -> SemanticBuilder:
         """Add a custom property/metadata to a joint.
 
         Args:
@@ -232,9 +238,9 @@ class SemanticBuilder:
         self._builder.robot.semantic = replace(
             semantic, joint_properties=tuple(semantic.joint_properties) + (jp,)
         )
-        return self._builder
+        return self
 
-    def approximate_link_collision(self, link: str, spheres: list[SrdfSphere]) -> IComposer:
+    def approximate_link_collision(self, link: str, spheres: list[SrdfSphere]) -> SemanticBuilder:
         """Add sphere-based collision approximation for a link.
 
         Args:
@@ -250,4 +256,4 @@ class SemanticBuilder:
             semantic,
             link_sphere_approximations=tuple(semantic.link_sphere_approximations) + (lsa,),
         )
-        return self._builder
+        return self
