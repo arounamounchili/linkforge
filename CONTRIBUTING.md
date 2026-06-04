@@ -216,7 +216,7 @@ def test_link_creation():
         name="test_link",
         visuals=[],
         collisions=[],
-        inertial=Inertial(mass=1.0, inertia=InertiaTensor.zero())
+        inertial=Inertial(mass=1.0, inertia=InertiaTensor.stability_floor())
     )
     assert link.name == "test_link"
     assert link.inertial.mass == 1.0

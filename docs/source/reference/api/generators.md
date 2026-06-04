@@ -65,7 +65,7 @@ robot = Robot(
             name="base_link",
             inertial=Inertial(
                 mass=10.0,
-                inertia=InertiaTensor(ixx=1.0, ixy=0.0, ixz=0.0, iyy=1.0, iyz=0.0, izz=1.0)
+                inertia=InertiaTensor(ixx=1.0, iyy=1.0, izz=1.0)
             )
         )
     ]
