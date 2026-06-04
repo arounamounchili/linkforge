@@ -230,15 +230,15 @@ class RobotBuilder:
         self._active_link_builders.clear()
 
         if validate:
-            # Trigger root search to verify connectivity (raises error if no root)
-            _ = self.robot.root_link
-
             if self.robot.has_cycle:
                 raise RobotValidationError(
                     ValidationErrorCode.HAS_CYCLE,
                     "Robot kinematic chain contains a cycle (not supported in URDF)",
                     target="KinematicTree",
                 )
+
+            # Trigger root search to verify connectivity (raises error if no root)
+            _ = self.robot.root_link
 
         return self.robot
 

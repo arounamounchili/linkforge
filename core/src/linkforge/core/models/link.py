@@ -21,9 +21,9 @@ from ..constants import (
     DEFAULT_CONTACT_KP,
     DEFAULT_FRICTION_MU,
     DEFAULT_FRICTION_MU2,
-    DEFAULT_GRAVITY,
     DEFAULT_SELF_COLLIDE,
     EPSILON,
+    GRAVITY_ENABLED,
     MIN_REASONABLE_INERTIA,
 )
 from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
@@ -46,11 +46,11 @@ class InertiaTensor:
     """
 
     ixx: float
-    ixy: float
-    ixz: float
     iyy: float
-    iyz: float
     izz: float
+    ixy: float = 0.0
+    ixz: float = 0.0
+    iyz: float = 0.0
 
     def __post_init__(self) -> None:
         """Validate inertia tensor values."""
@@ -78,15 +78,16 @@ class InertiaTensor:
             )
 
     @classmethod
-    def zero(cls) -> InertiaTensor:
-        """Create a minimal valid inertia tensor (for massless links)."""
+    def stability_floor(cls) -> InertiaTensor:
+        """Create a minimal valid inertia tensor for stability (e.g. massless links).
+
+        Returns a tensor with MIN_REASONABLE_INERTIA on the diagonals to prevent
+        physics solver instability.
+        """
         return cls(
-            MIN_REASONABLE_INERTIA,
-            0.0,
-            0.0,
-            MIN_REASONABLE_INERTIA,
-            0.0,
-            MIN_REASONABLE_INERTIA,
+            ixx=MIN_REASONABLE_INERTIA,
+            iyy=MIN_REASONABLE_INERTIA,
+            izz=MIN_REASONABLE_INERTIA,
         )
 
 
@@ -96,7 +97,7 @@ class Inertial:
 
     mass: float
     origin: Transform = Transform.identity()
-    inertia: InertiaTensor = field(default_factory=InertiaTensor.zero)
+    inertia: InertiaTensor = field(default_factory=InertiaTensor.stability_floor)
 
     def __post_init__(self) -> None:
         """Validate inertial properties.
@@ -122,7 +123,7 @@ class LinkPhysics:
     """
 
     self_collide: bool = DEFAULT_SELF_COLLIDE
-    gravity: bool = DEFAULT_GRAVITY
+    gravity: bool = GRAVITY_ENABLED
     mu: float = DEFAULT_FRICTION_MU
     mu2: float = DEFAULT_FRICTION_MU2
     kp: float = DEFAULT_CONTACT_KP
@@ -211,7 +212,7 @@ class Link:
     @property
     def inertia(self) -> InertiaTensor:
         """Get link inertia tensor (zero tensor if not defined)."""
-        return self.inertial.inertia if self.inertial else InertiaTensor.zero()
+        return self.inertial.inertia if self.inertial else InertiaTensor.stability_floor()
 
     @property
     def inertial_origin(self) -> Transform:

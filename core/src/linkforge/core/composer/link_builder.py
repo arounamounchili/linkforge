@@ -983,7 +983,7 @@ class LinkBuilder:
                 if l_state.inertial_origin is None:
                     l_state.inertial_origin = source_origin
             else:
-                l_state.inertia = InertiaTensor.zero()
+                l_state.inertia = InertiaTensor.stability_floor()
 
         return Inertial(
             mass=l_state.mass,

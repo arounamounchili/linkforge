@@ -811,7 +811,7 @@ class TestLinkRobustness:
         safe_get_linkforge(link_obj).mass = 0
 
         with patch("linkforge.core.physics.calculate_mesh_inertia_from_triangles") as mock_calc:
-            mock_calc.return_value = MagicMock(ixx=1, iyy=1, izz=1, ixy=0, ixz=0, iyz=0)
+            mock_calc.return_value = MagicMock(ixx=1, iyy=1, izz=1)
             with patch(
                 "linkforge.blender.adapters.blender_to_core.extract_mesh_triangles"
             ) as mock_ext:

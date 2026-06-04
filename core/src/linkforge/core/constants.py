@@ -90,7 +90,7 @@ DEFAULT_CONTACT_KP: Final[float] = 1e12  # N/m
 DEFAULT_CONTACT_KD: Final[float] = 1.0  # N·s/m
 
 # Simulation toggles
-DEFAULT_GRAVITY: Final[bool] = True
+GRAVITY_ENABLED: Final[bool] = True
 DEFAULT_SELF_COLLIDE: Final[bool] = False
 
 
@@ -178,6 +178,7 @@ DEFAULT_JOINT_TYPE: Final[str] = JOINT_REVOLUTE
 SENSOR_CAMERA: Final[str] = "camera"
 SENSOR_DEPTH_CAMERA: Final[str] = "depth_camera"
 SENSOR_LIDAR: Final[str] = "lidar"
+SENSOR_RAY: Final[str] = "ray"
 SENSOR_GPU_LIDAR: Final[str] = "gpu_lidar"
 SENSOR_IMU: Final[str] = "imu"
 SENSOR_GPS: Final[str] = "gps"

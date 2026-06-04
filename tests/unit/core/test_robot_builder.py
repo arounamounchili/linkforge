@@ -353,7 +353,7 @@ class TestRobotBuilder:
         """Test passing InertiaTensor directly to mass()."""
 
         builder = RobotBuilder("direct_inertia")
-        it = InertiaTensor(ixx=2, iyy=2, izz=2, ixy=0, ixz=0, iyz=0)
+        it = InertiaTensor(ixx=2, iyy=2, izz=2)
         builder.link("l1_di").mass(1.0, inertia=it).root()
         assert builder.robot.link("l1_di").inertia.iyy == 2.0
 
@@ -428,7 +428,7 @@ class TestRobotBuilder:
         builder.robot.add_joint(Joint("j1_kv", JointType.FIXED, "l1_kv", "l2_kv"))
         builder.robot.add_joint(Joint("j2_kv", JointType.FIXED, "l2_kv", "l1_kv"))
 
-        with pytest.raises(RobotValidationError, match="(cyclic|NO_ROOT)"):
+        with pytest.raises(RobotValidationError, match="HAS_CYCLE"):
             builder.build(validate=True)
 
         # Cycle with a root (Root -> L1 -> L2 -> L1)
@@ -438,7 +438,7 @@ class TestRobotBuilder:
         builder3.link("l2_kv_2", parent="l1_kv_2").fixed().commit()
         builder3.robot.add_joint(Joint("cycle_joint", JointType.FIXED, "l2_kv_2", "l1_kv_2"))
 
-        with pytest.raises(RobotValidationError, match="contains a cycle"):
+        with pytest.raises(RobotValidationError, match="HAS_CYCLE"):
             builder3.build(validate=True)
 
     def test_advanced_joint_properties(self) -> None:

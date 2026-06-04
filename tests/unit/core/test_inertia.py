@@ -36,20 +36,20 @@ class TestInertiaModels:
     def test_valid_inertia_tensor(self) -> None:
         """Test creating a valid inertia tensor."""
         # Now requires all 6 components
-        it = InertiaTensor(ixx=1.0, iyy=1.0, izz=1.0, ixy=0.0, ixz=0.0, iyz=0.0)
+        it = InertiaTensor(ixx=1.0, iyy=1.0, izz=1.0)
         assert it.ixx == 1.0
         assert it.ixy == 0.0
 
     def test_invalid_inertia_tensor(self) -> None:
         """Test that invalid diagonal elements raise error."""
         with pytest.raises(RobotPhysicsError) as exc:
-            InertiaTensor(ixx=-1.0, iyy=1.0, izz=1.0, ixy=0.0, ixz=0.0, iyz=0.0)
+            InertiaTensor(ixx=-1.0, iyy=1.0, izz=1.0)
         assert exc.value.code == ValidationErrorCode.OUT_OF_RANGE
 
     def test_triangle_inequality_validation(self) -> None:
         """Test that triangle inequality violation raises error."""
         with pytest.raises(RobotPhysicsError, match="triangle inequality"):
-            InertiaTensor(ixx=10.0, iyy=1.0, izz=1.0, ixy=0.0, ixz=0.0, iyz=0.0)
+            InertiaTensor(ixx=10.0, iyy=1.0, izz=1.0)
 
 
 # Analytical Formula Verification
