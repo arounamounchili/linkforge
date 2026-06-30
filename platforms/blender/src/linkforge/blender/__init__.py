@@ -12,6 +12,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+# When loaded as a Blender 4.2+ extension, the module name is often nested
+# (e.g. bl_ext.user_default.linkforge). To support absolute imports in the source
+# tree (e.g., `from linkforge.core import X`) during local development, we alias it here.
+if __name__ != "linkforge" and "linkforge" not in sys.modules:
+    sys.modules["linkforge"] = sys.modules[__name__]
+    sys.modules["linkforge.blender"] = sys.modules[__name__]
+
 from . import handlers, operators, panels, preferences, properties
 from .visualization import inertia_gizmos, joint_gizmos
 

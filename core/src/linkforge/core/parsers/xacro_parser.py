@@ -6,9 +6,11 @@ properties, and includes.
 
 from __future__ import annotations
 
+import ast
 import copy
 import json
 import math
+import operator
 import os
 import re
 import sys
@@ -48,8 +50,6 @@ logger = get_logger(__name__)
 DEFAULT_MAX_DEPTH = 2000  # Increased for extremely complex industrial robots
 RECURSION_LIMIT_BOOST = 5000  # Safer limit that prevents C-stack segmentation faults
 
-_DUNDER_PATTERN: re.Pattern[str] = re.compile(r"__\w+__")
-
 # Safe math context for evaluations
 MATH_CONTEXT: dict[str, Any] = {
     name: getattr(math, name) for name in dir(math) if not name.startswith("__")
@@ -71,6 +71,118 @@ MATH_CONTEXT["__builtins__"] = {
 # Standard XACRO booleans
 MATH_CONTEXT["true"] = True
 MATH_CONTEXT["false"] = False
+
+_SAFE_OPERATORS: dict[type[ast.AST], Any] = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+    ast.BitXor: operator.xor,
+    ast.BitOr: operator.or_,
+    ast.BitAnd: operator.and_,
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+    ast.Not: operator.not_,
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+    ast.And: lambda a, b: a and b,
+    ast.Or: lambda a, b: a or b,
+}
+
+
+def _safe_eval(expr: str, context: dict[str, Any]) -> Any:
+    """Safe evaluation of an AST expression using a restricted context."""
+
+    def _eval_node(node: ast.AST) -> Any:
+        if isinstance(node, ast.Expression):
+            return _eval_node(node.body)
+        elif isinstance(node, ast.Constant):
+            return node.value
+        elif isinstance(node, ast.Name):
+            if node.id.startswith("__") and node.id.endswith("__"):
+                raise RobotXacroExpressionError(expr, f"Forbidden dunder attributes: '{node.id}'")
+            if node.id in context:
+                return context[node.id]
+            if "__builtins__" in context and node.id in context["__builtins__"]:
+                return context["__builtins__"][node.id]
+            raise NameError(f"Unknown variable '{node.id}'")  # noqa: TRY003
+        elif isinstance(node, ast.BinOp):
+            op = _SAFE_OPERATORS.get(type(node.op))
+            if not op:
+                raise TypeError(f"Unsupported operator {type(node.op)}")  # noqa: TRY003
+            return op(_eval_node(node.left), _eval_node(node.right))
+        elif isinstance(node, ast.UnaryOp):
+            op = _SAFE_OPERATORS.get(type(node.op))
+            if not op:
+                raise TypeError(f"Unsupported unary operator {type(node.op)}")  # noqa: TRY003
+            return op(_eval_node(node.operand))
+        elif isinstance(node, ast.BoolOp):
+            if isinstance(node.op, ast.And):
+                res = _eval_node(node.values[0])
+                for val in node.values[1:]:
+                    res = res and _eval_node(val)
+                return res
+            elif isinstance(node.op, ast.Or):
+                res = _eval_node(node.values[0])
+                for val in node.values[1:]:
+                    res = res or _eval_node(val)
+                return res
+            raise TypeError(f"Unsupported boolean operator {type(node.op)}")  # noqa: TRY003
+        elif isinstance(node, ast.Compare):
+            left = _eval_node(node.left)
+            for cmp_op, right_node in zip(node.ops, node.comparators, strict=False):
+                op_func = _SAFE_OPERATORS.get(type(cmp_op))
+                if not op_func:
+                    raise TypeError(f"Unsupported comparison operator {type(cmp_op)}")  # noqa: TRY003
+                right = _eval_node(right_node)
+                if not op_func(left, right):
+                    return False
+                left = right
+            return True
+        elif isinstance(node, ast.Call):
+            func = _eval_node(node.func)
+            if not callable(func):
+                raise TypeError(f"'{type(func)}' object is not callable")  # noqa: TRY003
+            args = [_eval_node(arg) for arg in node.args]
+            kwargs = {kw.arg: _eval_node(kw.value) for kw in node.keywords if kw.arg is not None}
+            return func(*args, **kwargs)
+        elif isinstance(node, ast.Attribute):
+            if node.attr.startswith("__") and node.attr.endswith("__"):
+                raise RobotXacroExpressionError(expr, f"Forbidden dunder attributes: '{node.attr}'")
+            val = _eval_node(node.value)
+            if hasattr(val, node.attr):
+                return getattr(val, node.attr)
+            elif isinstance(val, dict) and node.attr in val:
+                return val[node.attr]
+            raise AttributeError(f"Object has no attribute '{node.attr}'")  # noqa: TRY003
+        elif isinstance(node, ast.Subscript):
+            val = _eval_node(node.value)
+            slice_val = _eval_node(node.slice)
+            return val[slice_val]
+        elif isinstance(node, ast.List):
+            return [_eval_node(elt) for elt in node.elts]
+        elif isinstance(node, ast.Dict):
+            return {
+                _eval_node(k) if k else None: _eval_node(v)
+                for k, v in zip(node.keys, node.values, strict=False)
+            }
+        elif isinstance(node, ast.Tuple):
+            return tuple(_eval_node(elt) for elt in node.elts)
+        else:
+            raise TypeError(f"Unsupported AST node {type(node)}")  # noqa: TRY003
+
+    # We no longer catch SyntaxError and wrap it, allowing it to bubble up
+    # just like eval() did, so the existing try/except blocks work as before.
+    tree = ast.parse(expr, mode="eval")
+    return _eval_node(tree)
+
 
 # Internal XML tags used for structural processing
 _TAG_CONTAINER = "container"
@@ -733,10 +845,8 @@ class XacroResolver:
         else:
             try:
                 # Standard expression evaluation
-                if _DUNDER_PATTERN.search(condition_str):
-                    raise RobotXacroExpressionError(condition_str, "Forbidden dunder attributes")
                 ctx = {**self.eval_context, **self.properties, **self.args}
-                return bool(eval(condition_str, ctx, {}))
+                return bool(_safe_eval(condition_str, ctx))
             except Exception as e:
                 if isinstance(e, RobotParserError):
                     raise
@@ -894,9 +1004,6 @@ class XacroResolver:
         Raises:
             RobotXacroExpressionError: If the expression is invalid or contains forbidden dunder attributes.
         """
-        if _DUNDER_PATTERN.search(expr):
-            raise RobotXacroExpressionError(expr, "Forbidden dunder attributes")
-
         try:
             # Build nested context for hierarchical namespaces (e.g. arm.mass)
             ctx = self.eval_context.copy()
@@ -925,7 +1032,7 @@ class XacroResolver:
                         if "." not in short_name:
                             ctx[short_name] = val
 
-            return eval(expr, ctx, {})
+            return _safe_eval(expr, ctx)
         except Exception as e:
             # CRITICAL: Do not silent-fail! If math fails (e.g. missing variable),
             # we must tell the user immediately rather than producing a corrupt output.

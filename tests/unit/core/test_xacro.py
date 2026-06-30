@@ -594,6 +594,50 @@ class TestXacroInfrastructure:
         with pytest.raises(RobotXacroError):
             resolver._eval_condition("fail()")
 
+    def test_safe_eval_comprehensive(self, resolver) -> None:
+        from linkforge.core.parsers.xacro_parser import _safe_eval
+
+        ctx = {"a": 1, "b": 2, "d": {"k": "v"}}
+
+        # Builtins check
+        assert _safe_eval("a", {"__builtins__": {"a": 42}}) == 42
+
+        # UnaryOps
+        assert _safe_eval("-a", ctx) == -1
+        assert _safe_eval("not False", ctx) is True
+
+        # BoolOps
+        assert _safe_eval("a == 1 and b == 2", ctx) is True
+        assert _safe_eval("a == 2 or b == 2", ctx) is True
+        assert _safe_eval("False or False", ctx) is False  # Hits line 137
+
+        # Subscript, List, Dict, Tuple
+        assert _safe_eval("[a, b][1]", ctx) == 2
+        assert _safe_eval("[]", ctx) == []  # Hits line 163
+        assert _safe_eval("{'a': 1, 'b': b}['b']", ctx) == 2
+        assert _safe_eval("(a, b)[0]", ctx) == 1
+        assert _safe_eval("d['k']", ctx) == "v"
+        assert _safe_eval("d.k", ctx) == "v"  # Hits line 158
+
+        # Unsupported operations
+        with pytest.raises(TypeError, match="Unsupported AST node"):
+            _safe_eval("{1, 2, 3}", ctx)  # ast.Set
+
+        with pytest.raises(TypeError, match="Unsupported operator"):
+            _safe_eval("a @ b", ctx)  # Matrix multiplication not in _SAFE_OPERATORS
+
+        with pytest.raises(TypeError, match="Unsupported unary operator"):
+            _safe_eval("~a", ctx)  # Invert not in _SAFE_OPERATORS if removed
+
+        with pytest.raises(TypeError, match="Unsupported comparison"):
+            _safe_eval("a is b", ctx)  # Is not in _SAFE_OPERATORS
+
+        with pytest.raises(TypeError, match="object is not callable"):
+            _safe_eval("a()", ctx)
+
+        with pytest.raises(AttributeError, match="Object has no attribute"):
+            _safe_eval("a.missing", ctx)
+
     def test_xacro_package_and_find_resolution(self, resolver, tmp_path) -> None:
         resolver.start_dir = tmp_path
 
