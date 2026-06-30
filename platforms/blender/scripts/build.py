@@ -45,7 +45,7 @@ DEP_CONFIG: dict[str, dict[str, typing.Any]] = {
             "macosx_10_13_x86_64",
             "manylinux2014_x86_64",
         ],
-        "py_versions": ["311", "312", "313"],  # Blender 4.2, 5.0, 5.1+
+        "py_versions": ["311", "313"],  # Blender 4.2-5.0 (3.11), 5.1+ (3.13)
     }
 }
 

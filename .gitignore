@@ -105,3 +105,6 @@ site/
 
 # Linting Tools
 actionlint
+
+# Blender Development Symlinks
+platforms/blender/src/linkforge/blender/core
