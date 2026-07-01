@@ -9,8 +9,12 @@ from __future__ import annotations
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
 from bpy.types import Context, PropertyGroup
-from linkforge.core._utils.string_utils import sanitize_name
-from linkforge.core.constants import (
+
+from ..constants import (
+    PROP_TRANSMISSION,
+)
+from ..core._utils.string_utils import sanitize_name
+from ..core.constants import (
     HW_IF_EFFORT,
     HW_IF_POSITION,
     HW_IF_VELOCITY,
@@ -18,10 +22,6 @@ from linkforge.core.constants import (
     TRANS_DIFFERENTIAL,
     TRANS_FOUR_BAR,
     TRANS_SIMPLE,
-)
-
-from ..constants import (
-    PROP_TRANSMISSION,
 )
 from ..utils.property_helpers import find_property_owner, get_joint_props
 from ..utils.scene_utils import clear_stats_cache

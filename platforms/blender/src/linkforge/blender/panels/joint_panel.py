@@ -6,12 +6,12 @@ import contextlib
 
 import bpy
 from bpy.types import Context, Panel
-from linkforge.core.constants import (
+
+from ..core.constants import (
     JOINT_CONTINUOUS,
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
 )
-
 from ..utils.property_helpers import get_joint_props, get_link_props
 
 

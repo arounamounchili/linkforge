@@ -7,13 +7,13 @@ import typing
 
 import bpy
 from bpy.types import Context, Panel, UILayout
-from linkforge.core.constants import (
+
+from ..core.constants import (
     SENSOR_CAMERA,
     SENSOR_CONTACT,
     SENSOR_DEPTH_CAMERA,
     SENSOR_LIDAR,
 )
-
 from ..utils.property_helpers import get_link_props, get_sensor_props
 
 

@@ -15,18 +15,18 @@ from typing import TYPE_CHECKING, Any
 import bpy
 from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
-from linkforge.core import (
+
+from ..constants import (
+    PROP_ROBOT,
+    PROP_VALIDATION,
+)
+from ..core import (
     LinkForgeError,
     RobotGeneratorError,
     RobotValidator,
     URDFGenerator,
     XACROGenerator,
     get_logger,
-)
-
-from ..constants import (
-    PROP_ROBOT,
-    PROP_VALIDATION,
 )
 from ..utils.decorators import OperatorReturn, safe_execute
 

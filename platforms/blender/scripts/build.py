@@ -410,19 +410,45 @@ def clean() -> None:
     # We will skip cleaning wheels to be safe for now, as syncing manages them.
 
 
-if __name__ == "__main__":
+def link_core() -> None:
+    """Create a relative symlink to the core library for development."""
+    import os
+    import shutil
+
+    core_link_target = SOURCE_DIR / "core"
+
+    if core_link_target.exists() or core_link_target.is_symlink():
+        if core_link_target.is_symlink():
+            core_link_target.unlink()
+        else:
+            shutil.rmtree(core_link_target)
+
+    # Use relative path so it's resilient
+    rel_core_dir = "../../../../../core/src/linkforge/core"
+    os.symlink(rel_core_dir, core_link_target, target_is_directory=True)
+    print(f"✅ Linked core library: {core_link_target} -> {rel_core_dir}")
+
+
+def main() -> None:
+    """Entry point."""
     cmd = sys.argv[1] if len(sys.argv) > 1 else "build"
 
-    if cmd == "sync":
-        sync_dependencies()
-    elif cmd == "build":
+    if cmd == "build":
         if DEP_CONFIG:
             update_manifest_wheels()
         build_extension()
-    elif cmd == "develop":
-        develop_extension()
+    elif cmd == "sync":
+        sync_dependencies()
     elif cmd == "clean":
         clean()
+    elif cmd == "develop":
+        develop_extension()
+    elif cmd == "link-core":
+        link_core()
     else:
-        print(f"Unknown command: {cmd}")
-        print("Usage: python3 scripts/build_blender.py [sync|build|develop|clean]")
+        print("Usage: python3 scripts/build_blender.py [sync|build|develop|clean|link-core]")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

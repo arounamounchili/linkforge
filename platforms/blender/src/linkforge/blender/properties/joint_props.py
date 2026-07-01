@@ -16,8 +16,12 @@ from bpy.props import (
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
-from linkforge.core._utils.string_utils import sanitize_name
-from linkforge.core.constants import (
+
+from ..constants import (
+    PROP_JOINT,
+)
+from ..core._utils.string_utils import sanitize_name
+from ..core.constants import (
     DEFAULT_JOINT_DAMPING,
     DEFAULT_JOINT_EFFORT,
     DEFAULT_JOINT_FRICTION,
@@ -30,10 +34,6 @@ from linkforge.core.constants import (
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
     PI,
-)
-
-from ..constants import (
-    PROP_JOINT,
 )
 from ..utils.property_helpers import find_property_owner, get_link_props
 from ..utils.scene_utils import clear_stats_cache

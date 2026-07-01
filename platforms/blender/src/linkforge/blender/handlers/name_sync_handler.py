@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import typing
 
-from linkforge.core._utils.string_utils import sanitize_name
-
+from ..core._utils.string_utils import sanitize_name
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
