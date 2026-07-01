@@ -11,7 +11,7 @@ for parsing, generating, and validating robot descriptions across formats.
 from __future__ import annotations
 
 # Versioning
-__version__ = "1.4.2"  # x-release-please-version
+__version__ = "1.4.3"  # x-release-please-version
 
 # Sub-Package Exposure
 # (Ensures lf.models, lf.parsers, etc. are accessible via dot-notation)
