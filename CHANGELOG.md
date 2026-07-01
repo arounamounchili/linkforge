@@ -5,6 +5,13 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3](https://github.com/arounamounchili/linkforge/compare/v1.4.2...v1.4.3) (2026-07-01)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** resolve top-level module policy violation via relative imports ([13a1fd8](https://github.com/arounamounchili/linkforge/commit/13a1fd88dad4d17aed6dc67b478cb2392af2c0d0))
+
 ## [1.4.2](https://github.com/arounamounchili/linkforge/compare/v1.4.1...v1.4.2) (2026-06-30)
 
 
