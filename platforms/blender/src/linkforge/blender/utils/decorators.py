@@ -5,7 +5,7 @@ import traceback
 import typing
 from collections.abc import Callable
 
-from linkforge.core import get_logger
+from ..core import get_logger
 
 logger = get_logger(__name__)
 

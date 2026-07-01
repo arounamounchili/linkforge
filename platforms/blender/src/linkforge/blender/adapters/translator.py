@@ -10,7 +10,17 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from linkforge.core import (
+from ..constants import (
+    FORMAT_STL,
+    GEOM_AUTO,
+    PURPOSE_COLLISION,
+    PURPOSE_VISUAL,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
+    TAG_SOURCE_NAME,
+)
+from ..core import (
     CameraInfo,
     ContactInfo,
     ForceTorqueInfo,
@@ -37,8 +47,8 @@ from linkforge.core import (
     get_logger,
     validate_mesh_topology,
 )
-from linkforge.core._utils.string_utils import sanitize_name
-from linkforge.core.constants import (
+from ..core._utils.string_utils import sanitize_name
+from ..core.constants import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
     CONTROL_TYPE_SYSTEM,
@@ -51,17 +61,6 @@ from linkforge.core.constants import (
     TRANS_DIFFERENTIAL,
     TRANS_FOUR_BAR,
     TRANS_SIMPLE,
-)
-
-from ..constants import (
-    FORMAT_STL,
-    GEOM_AUTO,
-    PURPOSE_COLLISION,
-    PURPOSE_VISUAL,
-    SUFFIX_COLLISION,
-    SUFFIX_VISUAL,
-    TAG_IMPORTED_SOURCE,
-    TAG_SOURCE_NAME,
 )
 
 if TYPE_CHECKING:

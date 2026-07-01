@@ -6,7 +6,7 @@ import contextlib
 import typing
 from pathlib import Path
 
-from linkforge.core import (
+from ..core import (
     Box,
     Color,
     Cylinder,
@@ -19,7 +19,7 @@ from linkforge.core import (
     Sphere,
     get_logger,
 )
-from linkforge.core.constants import (
+from ..core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
     GEOM_MESH,

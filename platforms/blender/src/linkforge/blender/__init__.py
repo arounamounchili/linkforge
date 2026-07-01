@@ -12,15 +12,36 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# When loaded as a Blender 4.2+ extension, the module name is often nested
-# (e.g. bl_ext.user_default.linkforge). To support absolute imports in the source
-# tree (e.g., `from linkforge.core import X`) during local development, we alias it here.
-if __name__ != "linkforge" and "linkforge" not in sys.modules:
-    sys.modules["linkforge"] = sys.modules[__name__]
-    sys.modules["linkforge.blender"] = sys.modules[__name__]
+_pkg = __package__ or __name__
 
-from . import handlers, operators, panels, preferences, properties
-from .visualization import inertia_gizmos, joint_gizmos
+# --- Module Identity Resolution ---
+# Blender 4.5+ strictly forbids top-level module names in `sys.modules` that are
+# not prefixed with the extension's `bl_ext.*` namespace.
+# To comply, all source files use relative imports (e.g. `from ..core import X`).
+#
+# However, in local testing (`pytest`), this causes the `core` symlink to be loaded
+# as `linkforge.blender.core`, while tests import it as `linkforge.core`. This creates
+# duplicate class objects in memory and breaks `isinstance()` checks.
+#
+# To fix this, we map `linkforge.blender.core` -> `linkforge.core` ONLY during local tests.
+if not _pkg.startswith("bl_ext."):
+    try:
+        import linkforge.core
+
+        _blender_core_prefix = f"{_pkg}.core"
+        sys.modules[_blender_core_prefix] = linkforge.core
+
+        # Map any currently loaded submodules
+        for _key, _mod in list(sys.modules.items()):
+            if _key.startswith("linkforge.core."):
+                _mapped_key = _key.replace("linkforge.core", _blender_core_prefix, 1)
+                sys.modules[_mapped_key] = _mod
+    except ImportError:
+        pass
+
+
+from . import handlers, operators, panels, preferences, properties  # noqa: E402
+from .visualization import inertia_gizmos, joint_gizmos  # noqa: E402
 
 # Registration order matters: properties first, then operators, then panels, then gizmos
 modules = [
@@ -36,8 +57,6 @@ modules = [
 
 def register() -> None:
     """Register all Blender components."""
-    # Populate scene properties from modules
-    pass
     for module in modules:
         module.register()
 

@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: just install
 
+      - name: Link Core for Linting
+        run: uv run python platforms/blender/scripts/build.py link-core
+
       - name: Code Quality
         run: just check
 
@@ -64,6 +67,9 @@ jobs:
 
       - name: Install dependencies
         run: just install
+
+      - name: Link Core for Tests
+        run: uv run python platforms/blender/scripts/build.py link-core
 
       - name: Build documentation
         run: |

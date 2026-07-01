@@ -9,15 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
-from linkforge.core.constants import (
-    DEFAULT_MATERIAL_RGBA,
-    GEOM_BOX,
-    GEOM_CYLINDER,
-    GEOM_EPSILON,
-    GEOM_MESH,
-    GEOM_SPHERE,
-)
-
 from ..constants import (
     DEFAULT_PRIMITIVE_CONFIG,
     FORMAT_STL,
@@ -28,6 +19,14 @@ from ..constants import (
     TAG_COLLISION_GEOM,
     TAG_SOURCE_GEOM,
 )
+from ..core.constants import (
+    DEFAULT_MATERIAL_RGBA,
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_EPSILON,
+    GEOM_MESH,
+    GEOM_SPHERE,
+)
 
 try:
     import numpy as np  # type: ignore[import-not-found]
@@ -35,7 +34,9 @@ except ImportError:
     np = None
 
 import bpy
-from linkforge.core import (
+from mathutils import Matrix
+
+from ..core import (
     Box,
     Color,
     Cylinder,
@@ -53,9 +54,7 @@ from linkforge.core import (
     Vector3,
     get_logger,
 )
-from linkforge.core._utils.string_utils import sanitize_name
-from mathutils import Matrix
-
+from ..core._utils.string_utils import sanitize_name
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,

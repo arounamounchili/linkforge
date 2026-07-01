@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from linkforge.core import Transform, Vector3
-from linkforge.core._utils.math_utils import clean_float
+from ..core import Transform, Vector3
+from ..core._utils.math_utils import clean_float
 
 try:
     from mathutils import Matrix

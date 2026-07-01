@@ -67,6 +67,7 @@ type-check: type-check-mypy type-check-pyright
 
 # Run MyPy type checker
 type-check-mypy:
+	uv run python platforms/blender/scripts/build.py link-core
 	MYPYPATH=core/src:platforms/blender/src uv run mypy -p linkforge.core -p linkforge.blender
 
 # Run Pyright type checker

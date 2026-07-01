@@ -289,6 +289,23 @@ logger.error(f"Debug: {variable}")
 
 ### Python Style Guide
 
+### Blender Import Policy (Relative Imports Only)
+
+Blender 4.5+ enforces a strict sandbox for extensions. If the extension loads any module from within its own directory, Blender's policy checker strictly demands that the module name does not pollute the global namespace.
+
+Because of this, **you must use relative imports** for any intra-package imports inside the `linkforge.blender` extension layer:
+
+```python
+# Good (Complies with Blender Sandbox)
+from ..core import RobotBuilder
+from . import utils
+
+# Bad (Will trigger a Blender Policy Violation)
+from linkforge.core import RobotBuilder
+```
+
+Tests and standalone scripts (outside of the Blender runtime) may continue to use absolute imports safely.
+
 ### Documentation Standards (Lean Google Style)
 
 We follow a **Lean Google Style** for documentation. Every module and class must be documented to provide high-level context and component breakdowns:
