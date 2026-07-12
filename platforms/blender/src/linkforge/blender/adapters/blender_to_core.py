@@ -62,6 +62,7 @@ from ..utils.property_helpers import (
     get_sensor_props,
     get_transmission_props,
 )
+from ..utils.transform_utils import get_local_bounding_box_center
 from .context import IBlenderContext
 from .translator import (
     Ros2ControlTranslator,
@@ -233,7 +234,11 @@ def get_object_geometry(
 
         actual_geometry_type = GEOM_BOX
 
-    geom_world_matrix = obj.matrix_world
+    if actual_geometry_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
+        # Calculate local geometric center from bounding box
+        local_center = get_local_bounding_box_center(obj)
+        # Apply offset to get the true center of the geometry
+        geom_world_matrix = obj.matrix_world @ Matrix.Translation(local_center)
 
     if actual_geometry_type == GEOM_BOX:
         dimensions = getattr(obj, "dimensions", None)

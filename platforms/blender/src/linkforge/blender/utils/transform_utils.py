@@ -86,3 +86,26 @@ def clear_parent_keep_transform(child_obj: Any) -> None:
 
     # Restore world transform (since parent is now None, World == Local)
     child_obj.matrix_world = pk_mw
+
+
+def get_local_bounding_box_center(obj: Any) -> Any:
+    """Calculate the geometric center of an object's bounding box in local space.
+
+    Args:
+        obj: Blender object (must have bound_box attribute)
+
+    Returns:
+        mathutils.Vector representing the local center offset.
+    """
+    if not hasattr(obj, "bound_box") or not obj.bound_box:
+        # Fallback for objects without bounding boxes
+        from mathutils import Vector
+
+        return Vector((0.0, 0.0, 0.0))
+
+    from mathutils import Vector
+
+    local_corners = [Vector(corner) for corner in obj.bound_box]
+    min_v = Vector(tuple(min(v[i] for v in local_corners) for i in range(3)))
+    max_v = Vector(tuple(max(v[i] for v in local_corners) for i in range(3)))
+    return (min_v + max_v) / 2
