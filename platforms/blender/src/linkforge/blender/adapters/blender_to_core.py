@@ -240,34 +240,25 @@ def get_object_geometry(
         # Apply offset to get the true center of the geometry
         geom_world_matrix = obj.matrix_world @ Matrix.Translation(local_center)
 
-    if actual_geometry_type == GEOM_BOX:
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:
             return None, Matrix.Identity(4)
 
-        # Robustness Check: Skip zero-size objects (e.g. empties from failed imports)
         if dimensions.length < GEOM_EPSILON:
             logger.warning(f"Skipping geometry for '{obj.name}': Dimensions are zero.")
             return None, Matrix.Identity(4)
 
-        return Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z)), geom_world_matrix
+        if actual_geometry_type == GEOM_BOX:
+            return Box(size=Vector3(dimensions.x, dimensions.y, dimensions.z)), geom_world_matrix
 
-    elif actual_geometry_type == GEOM_CYLINDER:
-        dimensions = getattr(obj, "dimensions", None)
-        if dimensions is None:
-            return None, Matrix.Identity(4)
+        elif actual_geometry_type == GEOM_CYLINDER:
+            radius = max(dimensions.x, dimensions.y) / 2.0
+            length = dimensions.z
+            return Cylinder(radius=radius, length=length), geom_world_matrix
 
-        radius = max(dimensions.x, dimensions.y) / 2.0
-        length = dimensions.z
-        return Cylinder(radius=radius, length=length), geom_world_matrix
-
-    elif actual_geometry_type == GEOM_SPHERE:
-        dimensions = getattr(obj, "dimensions", None)
-        if dimensions is None:
-            return None, Matrix.Identity(4)
-
-        radius = max(dimensions) / 2.0
-        return Sphere(radius=radius), geom_world_matrix
+        elif actual_geometry_type == GEOM_SPHERE:
+            radius = max(dimensions) / 2.0
+            return Sphere(radius=radius), geom_world_matrix
 
     return None, Matrix.Identity(4)
 
