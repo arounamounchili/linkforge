@@ -8,9 +8,10 @@ from ..core import Transform, Vector3
 from ..core._utils.math_utils import clean_float
 
 try:
-    from mathutils import Matrix
+    from mathutils import Matrix, Vector
 except ImportError:
     Matrix = None  # type: ignore[assignment,misc]
+    Vector = None  # type: ignore[assignment,misc]
 
 
 def matrix_to_transform(matrix: Any) -> Transform:
@@ -99,11 +100,7 @@ def get_local_bounding_box_center(obj: Any) -> Any:
     """
     if not hasattr(obj, "bound_box") or not obj.bound_box:
         # Fallback for objects without bounding boxes
-        from mathutils import Vector
-
         return Vector((0.0, 0.0, 0.0))
-
-    from mathutils import Vector
 
     local_corners = [Vector(corner) for corner in obj.bound_box]
     min_v = Vector(tuple(min(v[i] for v in local_corners) for i in range(3)))
