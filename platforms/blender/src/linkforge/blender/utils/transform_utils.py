@@ -98,6 +98,9 @@ def get_local_bounding_box_center(obj: Any) -> Any:
     Returns:
         mathutils.Vector representing the local center offset.
     """
+    if Vector is None:
+        return (0.0, 0.0, 0.0)
+
     if not hasattr(obj, "bound_box") or not obj.bound_box:
         # Fallback for objects without bounding boxes
         return Vector((0.0, 0.0, 0.0))
