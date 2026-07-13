@@ -87,6 +87,36 @@ class TestJointOperations:
         assert safe_get_joint(joint).is_robot_joint
         assert safe_get_joint(joint).child_link == link
 
+    def test_create_joint_preserves_child_rotation(self, scene, blender_context) -> None:
+        """Test that creating a joint preserves the link's world rotation."""
+        from mathutils import Euler
+
+        link = create_robot_link("rotated_link", scene)
+        # Apply some initial rotation to the link
+        link.rotation_euler = Euler((0.1, 0.2, 0.3), "XYZ")
+
+        assert bpy.context.view_layer is not None
+        bpy.context.view_layer.update()
+
+        # Save original world matrix rotation
+        original_matrix_world = link.matrix_world.copy()
+        original_rot = original_matrix_world.to_euler()
+
+        bpy.context.view_layer.objects.active = link
+        link.select_set(True)
+
+        op = LINKFORGE_OT_create_joint()
+        res = op.execute(bpy.context)
+        assert res == {"FINISHED"}
+
+        bpy.context.view_layer.update()
+
+        # The global rotation of the link should remain exactly the same
+        new_rot = link.matrix_world.to_euler()
+        assert new_rot.x == pytest.approx(original_rot.x, abs=1e-4)
+        assert new_rot.y == pytest.approx(original_rot.y, abs=1e-4)
+        assert new_rot.z == pytest.approx(original_rot.z, abs=1e-4)
+
     def test_create_joint_operator_fallback(self, scene, blender_context) -> None:
         """Test create joint operator fallback when pref is missing."""
         link = create_robot_link("base", scene)

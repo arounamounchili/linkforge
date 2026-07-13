@@ -16,6 +16,7 @@ Physics engines like Gazebo or Bullet are highly sensitive to how geometry and m
 
 ### 3. Orientation
 - **X-Forward, Z-Up**: LinkForge uses **direct 1:1 coordinate mapping** (no automatic rotations). Following the ROS standard (X-axis forward, Y-axis left, Z-axis up) when modeling your robot in Blender will make joint configuration intuitive and match ROS expectations.
+- **Root Base Link Origin**: To comply with URDF kinematics standards, LinkForge automatically treats the root base link as the center of the local coordinate system `(0, 0, 0)`. Any global translation or rotation applied to the root base link in Blender will be stripped upon export. You should position your robot wherever it is easiest to model in Blender, and spawn it at the desired world coordinates dynamically inside your simulator.
 
 ---
 

@@ -123,6 +123,11 @@ class LINKFORGE_OT_create_joint(Operator):
             # User can disable if not needed
             joint_props.use_limits = True
 
+            # Update the view layer so that joint_empty.matrix_world is correctly calculated
+            # with the newly assigned rotation before parenting logic runs.
+            if context.view_layer:
+                context.view_layer.update()
+
             # Auto-set child link to the selected link (parent must be set manually)
             joint_props.child_link = link_obj
 

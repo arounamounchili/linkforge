@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Matrix
 
 from ..constants import (
     FORMAT_GLB,
@@ -22,6 +22,7 @@ from ..core._utils.string_utils import sanitize_name
 from ..core.constants import (
     EPSILON,
 )
+from ..utils.transform_utils import get_local_bounding_box_center
 
 logger = get_logger(__name__)
 
@@ -328,12 +329,8 @@ def export_link_mesh(
             depsgraph = bpy.context.evaluated_depsgraph_get()
         obj_eval = obj.evaluated_get(depsgraph)
 
-        # Corners are in local space
-        local_corners = [Vector(corner) for corner in obj_eval.bound_box]
-
-        min_v = Vector(tuple(min(v[i] for v in local_corners) for i in range(3)))
-        max_v = Vector(tuple(max(v[i] for v in local_corners) for i in range(3)))
-        local_center = (min_v + max_v) / 2
+        # Calculate local geometric center of the EVALUATED mesh
+        local_center = get_local_bounding_box_center(obj_eval)
 
         # Create the final mesh data (evaluated with modifiers applied)
         final_mesh_data = bpy.data.meshes.new_from_object(
