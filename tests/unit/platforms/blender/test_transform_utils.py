@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from linkforge.blender.utils.transform_utils import (
     clear_parent_keep_transform,
+    get_local_bounding_box_center,
     set_parent_keep_transform,
 )
 
@@ -52,6 +53,33 @@ class TestTransformUtilities:
     def test_clear_parent_keep_transform_none_input(self) -> None:
         """Test clearing parent guard with None input."""
         clear_parent_keep_transform(None)
+
+    def test_get_local_bounding_box_center(self, scene) -> None:
+        """Test bounding box center extraction logic."""
+        # Object with no bound box (fallback)
+        obj_no_bbox = create_test_object("test_empty", None, scene)
+        center_empty = get_local_bounding_box_center(obj_no_bbox)
+        assert center_empty.x == 0.0
+        assert center_empty.y == 0.0
+        assert center_empty.z == 0.0
+
+        # Object with actual bounding box (offset)
+        # Mock bound_box: A box from (0,0,0) to (2,4,6)
+        # The center should be at (1,2,3)
+        obj_no_bbox.bound_box = [
+            (0.0, 0.0, 0.0),
+            (0.0, 4.0, 0.0),
+            (2.0, 4.0, 0.0),
+            (2.0, 0.0, 0.0),
+            (0.0, 0.0, 6.0),
+            (0.0, 4.0, 6.0),
+            (2.0, 4.0, 6.0),
+            (2.0, 0.0, 6.0),
+        ]
+        center = get_local_bounding_box_center(obj_no_bbox)
+        assert center.x == 1.0
+        assert center.y == 2.0
+        assert center.z == 3.0
 
 
 # Rotation Normalization

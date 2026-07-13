@@ -27,6 +27,13 @@ Technical mapping of joints, links, and sensor hierarchies.
 A quick reference for robotics and Blender terminology used in the project.
 :::
 
+:::{grid-item-card} 🔌 Blender Properties Schema
+:link: blender_properties_schema
+:link-type: doc
+
+Full reference of all LinkForge property keys, types, and defaults. Useful for any external tool consuming LinkForge data via glTF Custom Properties.
+:::
+
 :::{grid-item-card} 🧪 Testing
 :link: testing/automated_testing
 :link-type: doc
@@ -43,6 +50,7 @@ Automated test protocols, integration subdirectories, and Manual QA requirements
 api/index
 robot_structure
 glossary
+blender_properties_schema
 testing/automated_testing
 testing/manual_qa
 ```
