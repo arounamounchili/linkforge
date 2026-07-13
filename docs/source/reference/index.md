@@ -31,7 +31,7 @@ A quick reference for robotics and Blender terminology used in the project.
 :link: blender_properties_schema
 :link-type: doc
 
-Full reference of all LinkForge property keys, types, and defaults. Useful for external tools (Godot, Unity, custom pipelines) consuming LinkForge data via glTF Custom Properties.
+Full reference of all LinkForge property keys, types, and defaults. Useful for any external tool consuming LinkForge data via glTF Custom Properties.
 :::
 
 :::{grid-item-card} 🧪 Testing
