@@ -85,7 +85,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/1177508?v=4",
       "profile": "https://linktr.ee/razcore.rad",
       "contributions": [
-        "bug"
+        "bug",
+        "test"
       ]
     }
   ],
