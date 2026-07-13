@@ -268,7 +268,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/nulcode-lab"><img src="https://avatars.githubusercontent.com/u/50703745?v=4?s=64" width="64px;" alt="Lionel Fung"/><br /><sub><b>Lionel Fung</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/issues?q=author%3Anulcode-lab" title="Bug reports">🐛</a></td>
     </tr>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://linktr.ee/razcore.rad"><img src="https://avatars.githubusercontent.com/u/1177508?v=4?s=64" width="64px;" alt="Răzvan C. Rădulescu"/><br /><sub><b>Răzvan C. Rădulescu</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/issues?q=author%3Arazcore-rad" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://linktr.ee/razcore.rad"><img src="https://avatars.githubusercontent.com/u/1177508?v=4?s=64" width="64px;" alt="Răzvan C. Rădulescu"/><br /><sub><b>Răzvan C. Rădulescu</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/issues?q=author%3Arazcore-rad" title="Bug reports">🐛</a> <a href="https://github.com/arounamounchili/linkforge/commits?author=razcore-rad" title="Tests">⚠️</a></td>
     </tr>
   </tbody>
 </table>
