@@ -3,15 +3,21 @@
 LinkForge stores all robot data as structured Blender custom properties on scene objects.
 This page is the authoritative reference for every property key, its type, and its default value.
 
-## Why This Matters — Using LinkForge Data in External Tools
+## Using LinkForge Data in External Tools
 
-Because all LinkForge data is stored as standard Blender custom properties, you can export it
-to any glTF-compatible tool (Godot, Unity, custom pipelines) **without writing a URDF importer**:
+Because all LinkForge data is stored as standard Blender custom properties, any tool that
+supports **glTF 2.0 Custom Properties** can read it — game engines (Godot, Unity, Unreal),
+web renderers (Three.js, Babylon.js), or any custom C++/Python pipeline — **without needing
+a URDF parser**.
 
-1. In Blender, go to **File → Export → glTF 2.0**.
-2. Under **Data**, enable **Custom Properties**.
-3. All LinkForge robot data (mass, joints, limits, sensors…) will be embedded as JSON metadata
-   inside the `.glb` file and readable in Godot via `node.get_meta("linkforge")`.
+The workflow is straightforward:
+
+1. Author your robot in Blender using LinkForge as normal.
+2. Go to **File → Export → glTF 2.0**.
+3. Under the **Data** section, enable **Custom Properties**.
+4. The exported `.glb` file will contain all LinkForge robot data (mass, joints, limits,
+   sensors…) embedded as JSON metadata alongside the 3D geometry.
+5. In your target tool, read the metadata using its standard glTF custom properties API.
 
 ```{important}
 These property keys are **stable**. They will not be renamed without a major version bump and
