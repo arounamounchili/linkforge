@@ -6,9 +6,9 @@ This page is the authoritative reference for every property key, its type, and i
 ## Using LinkForge Data in External Tools
 
 Because all LinkForge data is stored as standard Blender custom properties, any tool that
-supports **glTF 2.0 Custom Properties** can read it — game engines (Godot, Unity, Unreal),
-web renderers (Three.js, Babylon.js), or any custom C++/Python pipeline — **without needing
-a URDF parser**.
+supports **glTF 2.0 Custom Properties** can read it without needing a URDF parser. This
+includes game engines (Godot, Unity, Unreal), web renderers (Three.js, Babylon.js), and
+any custom C++ or Python pipeline.
 
 The workflow is straightforward:
 
