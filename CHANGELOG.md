@@ -5,6 +5,18 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4](https://github.com/arounamounchili/linkforge/compare/v1.4.3...v1.4.4) (2026-07-13)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** resolve primitive bounding box centers and joint rotation doubling ([dc75a9f](https://github.com/arounamounchili/linkforge/commit/dc75a9f8541e12ebd114d98935205985bcc87ee5))
+
+
+### 📚 Documentation
+
+* add razcore-rad as a contributor for bug and test ([a0f5a82](https://github.com/arounamounchili/linkforge/commit/a0f5a82165971c5c31c38ab0f48935c085e1851e))
+
 ## [1.4.3](https://github.com/arounamounchili/linkforge/compare/v1.4.2...v1.4.3) (2026-07-01)
 
 
