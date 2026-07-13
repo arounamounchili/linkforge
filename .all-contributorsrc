@@ -78,6 +78,16 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "razcore-rad",
+      "name": "Răzvan C. Rădulescu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177508?v=4",
+      "profile": "https://linktr.ee/razcore.rad",
+      "contributions": [
+        "bug",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
