@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from ..constants import (
     FORMAT_STL,
-    GEOM_AUTO,
     PURPOSE_COLLISION,
     PURPOSE_VISUAL,
     SUFFIX_COLLISION,
@@ -62,6 +61,7 @@ from ..core.constants import (
     TRANS_FOUR_BAR,
     TRANS_SIMPLE,
 )
+from ..properties.geom_props import PROP_GEOM
 
 if TYPE_CHECKING:
     from .context import IBlenderContext
@@ -148,7 +148,6 @@ class LinkTranslator(ITranslator):
 
                 geom, world_mat = get_object_geometry(
                     child,
-                    GEOM_AUTO,
                     link_name,
                     PURPOSE_VISUAL,
                     meshes_dir,
@@ -180,12 +179,13 @@ class LinkTranslator(ITranslator):
         for child in obj.children:
             if SUFFIX_COLLISION in child.name:
                 suffix = self._get_geom_suffix(child, obj, SUFFIX_COLLISION, sanitize_name)
-                quality = props.collision_quality / 100.0
+
+                geom_props = getattr(child, PROP_GEOM, None)
+                quality = (geom_props.collision_quality / 100.0) if geom_props else 0.5
                 is_imported = child.get(TAG_IMPORTED_SOURCE, False)
 
                 geom, world_mat = get_object_geometry(
                     child,
-                    GEOM_AUTO,
                     link_name,
                     PURPOSE_COLLISION,
                     meshes_dir,

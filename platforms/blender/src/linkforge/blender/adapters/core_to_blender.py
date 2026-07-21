@@ -59,12 +59,11 @@ from ..constants import (
     PROP_SENSOR,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
-    TAG_COLLISION_GEOM,
     TAG_IMPORTED_SOURCE,
-    TAG_SOURCE_GEOM,
     TAG_SOURCE_NAME,
 )
 from ..preferences import get_addon_prefs
+from ..properties.geom_props import PROP_GEOM
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.property_helpers import get_joint_props, get_link_props
 from ..utils.scene_utils import move_to_collection, sync_object_collections
@@ -142,7 +141,10 @@ def create_primitive_mesh(
                 # Force update to ensure dimensions are applied correctly before return
                 if context.view_layer is not None:
                     context.view_layer.update()
-                obj[TAG_SOURCE_GEOM] = GEOM_BOX
+
+                geom_props = getattr(obj, PROP_GEOM, None)
+                if geom_props:
+                    geom_props.geometry_type = GEOM_BOX
 
         elif isinstance(geometry, Cylinder):
             context.ops.mesh.primitive_cylinder_add(location=(0, 0, 0))
@@ -153,7 +155,10 @@ def create_primitive_mesh(
                 # Force update to ensure dimensions are applied correctly
                 if hasattr(context.scene, "update"):
                     context.scene.update()
-                obj[TAG_SOURCE_GEOM] = GEOM_CYLINDER
+
+                geom_props = getattr(obj, PROP_GEOM, None)
+                if geom_props:
+                    geom_props.geometry_type = GEOM_CYLINDER
 
         elif isinstance(geometry, Sphere):
             context.ops.mesh.primitive_uv_sphere_add(location=(0, 0, 0))
@@ -163,7 +168,10 @@ def create_primitive_mesh(
                 obj.dimensions = (geometry.radius * 2, geometry.radius * 2, geometry.radius * 2)
                 if hasattr(context.scene, "update"):
                     context.scene.update()
-                obj[TAG_SOURCE_GEOM] = GEOM_SPHERE
+
+                geom_props = getattr(obj, PROP_GEOM, None)
+                if geom_props:
+                    geom_props.geometry_type = GEOM_SPHERE
 
         else:
             return None
@@ -482,6 +490,19 @@ def create_link_object(
             if collection:
                 move_to_collection(visual_obj, collection)
 
+            geom_props = getattr(visual_obj, PROP_GEOM, None)
+            if geom_props:
+                geom_props.geom_role = "VISUAL"
+
+                if isinstance(visual.geometry, Box):
+                    geom_props.geometry_type = GEOM_BOX
+                elif isinstance(visual.geometry, Cylinder):
+                    geom_props.geometry_type = GEOM_CYLINDER
+                elif isinstance(visual.geometry, Sphere):
+                    geom_props.geometry_type = GEOM_SPHERE
+                elif isinstance(visual.geometry, Mesh):
+                    geom_props.geometry_type = GEOM_MESH
+
             if visual.material and visual.material.color:
                 mat = create_material_from_color(
                     context, visual.material.color, visual.material.name
@@ -559,14 +580,19 @@ def create_link_object(
             )
             collision_obj.hide_render = True
 
-            if isinstance(collision.geometry, Box):
-                collision_obj[TAG_COLLISION_GEOM] = GEOM_BOX
-            elif isinstance(collision.geometry, Cylinder):
-                collision_obj[TAG_COLLISION_GEOM] = GEOM_CYLINDER
-            elif isinstance(collision.geometry, Sphere):
-                collision_obj[TAG_COLLISION_GEOM] = GEOM_SPHERE
-            elif isinstance(collision.geometry, Mesh):
-                collision_obj[TAG_COLLISION_GEOM] = GEOM_MESH
+            geom_props = getattr(collision_obj, PROP_GEOM, None)
+            if geom_props:
+                geom_props.geom_role = "COLLISION"
+                geom_props.collision_quality = 100.0  # Preserve imported mesh fully
+
+                if isinstance(collision.geometry, Box):
+                    geom_props.geometry_type = GEOM_BOX
+                elif isinstance(collision.geometry, Cylinder):
+                    geom_props.geometry_type = GEOM_CYLINDER
+                elif isinstance(collision.geometry, Sphere):
+                    geom_props.geometry_type = GEOM_SPHERE
+                elif isinstance(collision.geometry, Mesh):
+                    geom_props.geometry_type = GEOM_MESH
 
     if link.inertial and (props := get_link_props(link_obj)):
         props.mass = link.inertial.mass
@@ -612,26 +638,10 @@ def create_link_object(
         props.mass = 0.0
         props.use_auto_inertia = False
 
-    if props := get_link_props(link_obj):
-        if link.collisions:
-            # Set collision quality to 100% for imported meshes (preserve original detail)
-            # This prevents degradation on re-export and gives user full control
-            props.collision_quality = 100.0  # 100% preservation for imported collision
-
-            # Set collision_type based on imported geometry (for UI display)
-            # This ensures the UI shows the correct type instead of defaulting to "Auto"
-            collision_geom_type = _get_geometry_type_str(link.collisions[0].geometry)
-            if collision_geom_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
-                props.collision_type = collision_geom_type
-            elif collision_geom_type == GEOM_MESH:
-                # For mesh collisions, default to MESH (Simplified)
-                # (most imported mesh collisions are simplified meshes)
-                props.collision_type = GEOM_MESH
-
+    if (props := get_link_props(link_obj)) and link.visuals and link.visuals[0].material:
         # Enable material export if imported URDF has material
-        if link.visuals and link.visuals[0].material:
-            props.use_material = True
-            # Material name will come from Blender material assigned to visual child
+        props.use_material = True
+        # Material name will come from Blender material assigned to visual child
 
     return link_obj
 

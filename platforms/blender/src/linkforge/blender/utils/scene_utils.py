@@ -9,12 +9,8 @@ from typing import Any
 
 import bpy
 
-from ..adapters.blender_to_core import detect_primitive_type
 from ..constants import (
-    GEOM_AUTO,
     SUFFIX_COLLISION,
-    TAG_COLLISION_GEOM,
-    TAG_SOURCE_GEOM,
 )
 from ..core.constants import (
     GEOM_BOX,
@@ -251,32 +247,12 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             if collision_obj:
                 detected_type = GEOM_MESH
                 is_primitive = False
+                from ..properties.geom_props import PROP_GEOM
 
-                # 1. Check explicit URDF tag
-                if collision_obj.get(TAG_SOURCE_GEOM):
-                    tag_val = str(collision_obj[TAG_SOURCE_GEOM]).lower()
-                    detected_type = tag_val
-                    is_primitive = tag_val in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE)
-                # 2. Check generator tag
-                else:
-                    stored_type = collision_obj.get(TAG_COLLISION_GEOM, GEOM_AUTO)
-                    if isinstance(stored_type, str):
-                        stored_type = stored_type.lower()
-
-                    if stored_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
-                        detected_type = stored_type
-                        is_primitive = True
-                    elif stored_type == GEOM_MESH:
-                        detected_type = GEOM_MESH
-                    # 3. Fallback to heuristic
-                    else:
-                        try:
-                            heuristic_type = detect_primitive_type(collision_obj)
-                            if heuristic_type:
-                                detected_type = heuristic_type
-                                is_primitive = True
-                        except Exception:
-                            pass
+                geom_props = getattr(collision_obj, PROP_GEOM, None)
+                if geom_props:
+                    detected_type = geom_props.geometry_type
+                    is_primitive = detected_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE)
 
                 geometry_stats[link_name] = (collision_obj, detected_type, is_primitive)
 

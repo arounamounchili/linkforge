@@ -33,15 +33,14 @@ PURPOSE_COLLISION: Final[str] = "collision"
 # ----------------------------
 # These keys are used in object['key'] storage for persistence
 TAG_SOURCE_NAME: Final[str] = "source_name"
-TAG_SOURCE_GEOM: Final[str] = "source_geometry_type"
 TAG_IMPORTED_SOURCE: Final[str] = "imported_from_source"
-TAG_COLLISION_GEOM: Final[str] = "collision_geometry_type"
 TAG_SENSOR_TYPE: Final[str] = "sensor_type"
 
 # Blender Property Group Identifiers
 # ----------------------------
 # Used for registration and access via bpy.types.Object.linkforge_...
 PROP_LINK: Final[str] = "linkforge"
+PROP_GEOM: Final[str] = "linkforge_geom"
 PROP_JOINT: Final[str] = "linkforge_joint"
 PROP_SENSOR: Final[str] = "linkforge_sensor"
 PROP_TRANSMISSION: Final[str] = "linkforge_transmission"
