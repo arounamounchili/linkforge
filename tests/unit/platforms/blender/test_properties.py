@@ -22,6 +22,10 @@ from linkforge.blender.preferences import (
 from linkforge.blender.preferences import (
     unregister as prefs_unregister,
 )
+from linkforge.blender.properties.geom_props import (
+    PROP_GEOM,
+    on_collision_quality_update,
+)
 from linkforge.blender.utils.property_helpers import (
     find_property_owner,
     get_joint_props,
@@ -657,7 +661,6 @@ class TestGlobalPropertiesAndCallbacks:
             get_kd_scientific,
             get_kp_scientific,
             get_link_name,
-            on_collision_quality_update,
             set_kd_scientific,
             set_kp_scientific,
             set_link_name,
@@ -788,36 +791,16 @@ class TestGlobalPropertiesAndCallbacks:
         mlp3.is_robot_link = False
         on_collision_quality_update(mlp3, None)
 
-        mlp3.is_robot_link = True
-        on_collision_quality_update(mlp3, None)
-
-        collision_child = create_test_object("not_a_robot_link_collision", None, scene)
+        collision_child = create_test_object("collision_child", None, scene)
         collision_child.parent = link_obj
-        from linkforge.blender.constants import TAG_IMPORTED_SOURCE
 
-        collision_child[TAG_IMPORTED_SOURCE] = True
-        on_collision_quality_update(mlp3, None)
-
-        collision_child[TAG_IMPORTED_SOURCE] = False
+        mgp = getattr(collision_child, PROP_GEOM)
+        mgp.id_data = collision_child
+        mgp.geom_role = "COLLISION"
         with patch(
             "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
         ) as mock_realtime:
-            on_collision_quality_update(mlp3, None)
-            assert mock_realtime.called
-
-        clean_link = create_test_object("clean_link", None, scene)
-        mlp_clean = safe_get_linkforge(clean_link)
-        mlp_clean.id_data = clean_link
-        mlp_clean.is_robot_link = True
-        clean_collision_child = create_test_object("clean_link_collision", None, scene)
-        clean_collision_child.parent = clean_link
-        # Delete TAG_IMPORTED_SOURCE if present to raise KeyError
-        if TAG_IMPORTED_SOURCE in clean_collision_child:
-            del clean_collision_child[TAG_IMPORTED_SOURCE]
-        with patch(
-            "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
-        ) as mock_realtime:
-            on_collision_quality_update(mlp_clean, None)
+            on_collision_quality_update(mgp, None)
             assert mock_realtime.called
 
         with patch("linkforge.blender.properties.link_props.tag_redraw") as mock_redraw:

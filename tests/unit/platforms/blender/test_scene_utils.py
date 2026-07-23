@@ -8,8 +8,6 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import bpy
 from linkforge.blender.constants import (
     SUFFIX_COLLISION,
-    TAG_COLLISION_GEOM,
-    TAG_SOURCE_GEOM,
 )
 from linkforge.blender.utils.scene_utils import (
     build_tree_from_stats,
@@ -22,7 +20,7 @@ from linkforge.blender.utils.scene_utils import (
     move_to_collection,
     sync_object_collections,
 )
-from linkforge.core.constants import GEOM_BOX, GEOM_MESH, GEOM_SPHERE
+from linkforge.core.constants import GEOM_BOX, GEOM_MESH
 
 from tests.blender_test_utils import (
     create_test_object,
@@ -179,29 +177,17 @@ class TestSceneAnalysis:
 
         collision_child = create_test_object(f"link_geom{SUFFIX_COLLISION}", None, scene)
         collision_child.parent = link_obj
-        collision_child[TAG_SOURCE_GEOM] = GEOM_BOX
+
+        from linkforge.blender.properties.geom_props import PROP_GEOM
+
+        geom_props = getattr(collision_child, PROP_GEOM, None)
+        if geom_props:
+            geom_props.geometry_type = GEOM_BOX
 
         stats = get_robot_statistics(scene, force_refresh=True)
         geo_info = stats.geometry_stats.get("link_geom")
         assert geo_info is not None
         assert geo_info[1] == GEOM_BOX
-        assert geo_info[2] is True
-
-    def test_get_robot_statistics_geometry_detection_generator_tag(
-        self, scene, blender_context
-    ) -> None:
-        """Test generator tag parsing for geometry detection."""
-        link_obj = create_test_object("link_gen", None, scene)
-        safe_get_linkforge(link_obj).is_robot_link = True
-
-        collision_child = create_test_object(f"link_gen{SUFFIX_COLLISION}", None, scene)
-        collision_child.parent = link_obj
-        collision_child[TAG_COLLISION_GEOM] = GEOM_SPHERE
-
-        stats = get_robot_statistics(scene, force_refresh=True)
-        geo_info = stats.geometry_stats.get("link_gen")
-        assert geo_info is not None
-        assert geo_info[1] == GEOM_SPHERE
         assert geo_info[2] is True
 
     def test_get_robot_statistics_geometry_heuristic_fallback_error(
@@ -213,17 +199,13 @@ class TestSceneAnalysis:
 
         collision_child = create_test_object(f"link_heur{SUFFIX_COLLISION}", None, scene)
         collision_child.parent = link_obj
-        collision_child[TAG_COLLISION_GEOM] = "INVALID"
 
-        with patch(
-            "linkforge.blender.utils.scene_utils.detect_primitive_type",
-            side_effect=ValueError("Failed"),
-        ):
-            stats = get_robot_statistics(scene, force_refresh=True)
-            geo_info = stats.geometry_stats.get("link_heur")
-            assert geo_info is not None
-            assert geo_info[1] == GEOM_MESH  # Fallback to GEOM_MESH
-            assert geo_info[2] is False
+        # Test fallback to GEOM_MESH when there are no valid geom_props
+        stats = get_robot_statistics(scene, force_refresh=True)
+        geo_info = stats.geometry_stats.get("link_heur")
+        assert geo_info is not None
+        assert geo_info[1] == GEOM_MESH  # Fallback to GEOM_MESH
+        assert geo_info[2] is False
 
     def test_get_robot_statistics_cache_validation_errors(self, scene, blender_context) -> None:
         """Test cache validation for all object types (joints, sensors, etc.)."""
@@ -348,20 +330,15 @@ class TestSceneAnalysis:
         collision_child = create_test_object("link_geom_mesh_collision", None, scene)
         collision_child.parent = link_obj
 
-        collision_child[TAG_COLLISION_GEOM] = GEOM_MESH
+        from linkforge.blender.properties.geom_props import PROP_GEOM
+
+        geom_props = getattr(collision_child, PROP_GEOM, None)
+        if geom_props:
+            geom_props.geometry_type = GEOM_MESH
+
         stats = get_robot_statistics(scene, force_refresh=True)
         assert stats.geometry_stats["link_geom_mesh"][1] == GEOM_MESH
         assert link_obj in stats.manual_inertia_objects
-
-        collision_child[TAG_COLLISION_GEOM] = 123
-        get_robot_statistics(scene, force_refresh=True)
-
-        collision_child[TAG_COLLISION_GEOM] = "AUTO"
-        with patch(
-            "linkforge.blender.utils.scene_utils.detect_primitive_type", return_value="box"
-        ) as mock_det:
-            stats = get_robot_statistics(scene, force_refresh=True)
-            assert stats.geometry_stats["link_geom_mesh"][1] == "box"
 
         # Joint props Falsy branches in loop
         joint_obj = create_test_object("joint_empty", None, scene)
