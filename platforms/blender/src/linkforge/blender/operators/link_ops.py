@@ -264,7 +264,7 @@ def create_collision_for_link(
         if geom_props:
             geom_props.geom_role = "COLLISION"
             geom_props.geometry_type = collision_type
-        collision_obj.hide_viewport = True
+        collision_obj.hide_viewport = False
         collision_obj.hide_render = True
 
         return collision_obj
