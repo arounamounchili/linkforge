@@ -312,6 +312,11 @@ def export_link_mesh(
     temp_export_obj = obj.copy()
     temp_export_obj.data = obj.data.copy()
 
+    # CRITICAL: Ensure the temporary object is fully visible and renderable.
+    # Exporters (like STL) will export 0 triangles if hide_render is True!
+    temp_export_obj.hide_viewport = False
+    temp_export_obj.hide_render = False
+
     # Link to the same collections as the original
     for col in obj.users_collection:
         col.objects.link(temp_export_obj)
