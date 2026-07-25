@@ -180,6 +180,8 @@ class LINKFORGE_PT_links(Panel):
         row = box.row(align=True)
         row.operator("linkforge.assign_as_collision", text="Assign Selected", icon="ADD")
         row.operator("linkforge.remove_collision", text="", icon="REMOVE")
+
+        row = box.row(align=True)
         row.operator("linkforge.generate_collision", text="Auto-Generate", icon="FILE_REFRESH")
 
         # Physics properties
