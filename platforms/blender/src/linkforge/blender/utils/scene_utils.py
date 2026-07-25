@@ -247,7 +247,9 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             if collision_obj:
                 detected_type = GEOM_MESH
                 is_primitive = False
-                from ..properties.geom_props import PROP_GEOM
+                # Defer import to avoid circular dependency:
+                # scene_utils -> geom_props -> properties -> joint_props -> scene_utils
+                from ..properties.geom_props import PROP_GEOM  # noqa: PLC0415
 
                 geom_props = getattr(collision_obj, PROP_GEOM, None)
                 if geom_props:

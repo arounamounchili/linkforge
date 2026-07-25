@@ -40,7 +40,6 @@ TAG_SENSOR_TYPE: Final[str] = "sensor_type"
 # ----------------------------
 # Used for registration and access via bpy.types.Object.linkforge_...
 PROP_LINK: Final[str] = "linkforge"
-PROP_GEOM: Final[str] = "linkforge_geom"
 PROP_JOINT: Final[str] = "linkforge_joint"
 PROP_SENSOR: Final[str] = "linkforge_sensor"
 PROP_TRANSMISSION: Final[str] = "linkforge_transmission"
@@ -68,9 +67,6 @@ DEFAULT_LINK_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_JOINT_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_SENSOR_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.1
-
-# Default simplification ratio for generated collision meshes
-DEFAULT_COLLISION_QUALITY: Final[float] = 50.0
 
 # Heuristic Thresholds (Primitive Detection)
 # ----------------------------

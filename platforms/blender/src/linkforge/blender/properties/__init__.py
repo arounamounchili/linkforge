@@ -45,12 +45,12 @@ def unregister() -> None:
     import bpy
 
     from ..constants import (
-        PROP_GEOM,
         PROP_JOINT,
         PROP_LINK,
         PROP_SENSOR,
         PROP_TRANSMISSION,
     )
+    from .geom_props import PROP_GEOM
 
     # 1. Unpatch global types first to break references
     obj_props = [PROP_GEOM, PROP_LINK, PROP_JOINT, PROP_SENSOR, PROP_TRANSMISSION]
