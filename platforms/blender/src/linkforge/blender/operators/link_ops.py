@@ -1383,6 +1383,51 @@ class LINKFORGE_OT_assign_as_collision(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_set_active_geometry(Operator):
+    """Set the active geometry index and select it."""
+
+    bl_idname = "linkforge.set_active_geometry"
+    bl_label = "Set Active Geometry"
+    bl_description = "Set this geometry as active and select it in the viewport"
+    bl_options = {"REGISTER", "UNDO"}
+
+    geometry_type: bpy.props.EnumProperty(  # type: ignore
+        items=[
+            ("VISUAL", "Visual", ""),
+            ("COLLISION", "Collision", ""),
+        ],
+        name="Geometry Type",
+    )
+    index: bpy.props.IntProperty(name="Index", default=0)  # type: ignore
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        return _resolve_active_link(context) is not None
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the operator."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return {"CANCELLED"}
+
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+
+        if self.geometry_type == "VISUAL":
+            lf.active_visual_index = self.index
+            from ..properties.link_props import update_active_visual
+
+            update_active_visual(lf, context)
+        elif self.geometry_type == "COLLISION":
+            lf.active_collision_index = self.index
+            from ..properties.link_props import update_active_collision
+
+            update_active_collision(lf, context)
+
+        return {"FINISHED"}
+
+
 class LINKFORGE_OT_remove_visual(Operator):
     """Remove the active visual mesh from the link."""
 
@@ -1706,6 +1751,7 @@ classes = [
     LINKFORGE_OT_create_link_from_mesh,
     LINKFORGE_OT_assign_as_visual,
     LINKFORGE_OT_assign_as_collision,
+    LINKFORGE_OT_set_active_geometry,
     LINKFORGE_OT_remove_visual,
     LINKFORGE_OT_remove_collision,
     LINKFORGE_OT_generate_collision,

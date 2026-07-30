@@ -446,9 +446,9 @@ def create_link_object(
         if len(link.visuals) == 1:
             visual_name = f"{link.name}{SUFFIX_VISUAL}"
         else:
-            # Use robot model name attribute if available, otherwise use index
-            suffix = visual.name if visual.name else str(idx)
-            visual_name = f"{link.name}{SUFFIX_VISUAL}_{suffix}"
+            # Use robot model name attribute if available, otherwise match manual assignment logic
+            suffix = f"_{visual.name}" if visual.name else (f"_{idx}" if idx > 0 else "")
+            visual_name = f"{link.name}{SUFFIX_VISUAL}{suffix}"
 
         if isinstance(visual.geometry, Mesh):
             try:
@@ -521,9 +521,9 @@ def create_link_object(
         if len(link.collisions) == 1:
             collision_name = f"{link.name}{SUFFIX_COLLISION}"
         else:
-            # Use robot model name attribute if available, otherwise use index
-            suffix = collision.name if collision.name else str(idx)
-            collision_name = f"{link.name}{SUFFIX_COLLISION}_{suffix}"
+            # Use robot model name attribute if available, otherwise match manual assignment logic
+            suffix = f"_{collision.name}" if collision.name else (f"_{idx}" if idx > 0 else "")
+            collision_name = f"{link.name}{SUFFIX_COLLISION}{suffix}"
 
         if isinstance(collision.geometry, Mesh):
             try:

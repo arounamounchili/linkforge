@@ -48,7 +48,7 @@ class GeomPropertyGroup(PropertyGroup):
 
     geometry_type: EnumProperty(  # type: ignore
         name="Geometry Type",
-        description="How this mesh will be exported. Set at assignment time.",
+        description="Sets how this geometry is exported in URDF. The 3D mesh is kept as a visual proxy.",
         items=[
             (GEOM_BOX, "Box", "Export as <box> primitive"),
             (GEOM_CYLINDER, "Cylinder", "Export as <cylinder> primitive"),

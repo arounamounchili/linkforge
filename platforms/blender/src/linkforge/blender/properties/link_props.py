@@ -164,6 +164,34 @@ def update_auto_inertia_toggle(self: PropertyGroup, _context: Context) -> None:
         ensure_inertia_handler()
 
 
+def update_active_visual(self: LinkPropertyGroup, context: Context) -> None:
+    """Sync active visual index with viewport selection."""
+    if not self.id_data:
+        return
+    visuals = [c for c in self.id_data.children if SUFFIX_VISUAL in c.name.lower()]
+    if 0 <= self.active_visual_index < len(visuals):
+        target = visuals[self.active_visual_index]
+        if context.view_layer and context.view_layer.objects.active != target:
+            for obj in context.selected_objects:
+                obj.select_set(False)
+            target.select_set(True)
+            context.view_layer.objects.active = target
+
+
+def update_active_collision(self: LinkPropertyGroup, context: Context) -> None:
+    """Sync active collision index with viewport selection."""
+    if not self.id_data:
+        return
+    collisions = [c for c in self.id_data.children if SUFFIX_COLLISION in c.name.lower()]
+    if 0 <= self.active_collision_index < len(collisions):
+        target = collisions[self.active_collision_index]
+        if context.view_layer and context.view_layer.objects.active != target:
+            for obj in context.selected_objects:
+                obj.select_set(False)
+            target.select_set(True)
+            context.view_layer.objects.active = target
+
+
 class LinkPropertyGroup(PropertyGroup):
     """Properties for a robot link stored on a Blender object."""
 
@@ -341,11 +369,13 @@ class LinkPropertyGroup(PropertyGroup):
     active_visual_index: IntProperty(  # type: ignore
         name="Active Visual Index",
         default=0,
+        update=update_active_visual,
     )
 
     active_collision_index: IntProperty(  # type: ignore
         name="Active Collision Index",
         default=0,
+        update=update_active_collision,
     )
 
     # Material properties

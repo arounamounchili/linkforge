@@ -134,54 +134,87 @@ class LINKFORGE_PT_links(Panel):
         box.label(text="Visuals", icon="SHADING_RENDERED")
 
         visual_children = [c for c in obj.children if SUFFIX_VISUAL in c.name.lower()]
+
+        row = box.row()
+        col_list = row.column()
+        list_box = col_list.box()
+
         if not visual_children:
-            box.label(text="No visual geometry", icon="INFO")
+            list_box.label(text="No visual geometry", icon="INFO")
         else:
-            list_box = box.box()
             for idx, vis in enumerate(visual_children):
-                row = list_box.row(align=True)
+                item_row = list_box.row(align=True)
                 is_active = getattr(props, "active_visual_index", 0) == idx
+
+                op_row = item_row.row(align=True)
+                op_row.alignment = "LEFT"
+
                 icon = "RIGHTARROW_THIN" if is_active else "BLANK1"
-                row.label(text="", icon=icon)  # type: ignore
-                row.label(text=vis.name, icon="SHADING_RENDERED")
+                op_row.label(text="", icon=icon)  # type: ignore
+
+                op = op_row.operator(
+                    "linkforge.set_active_geometry",
+                    text=vis.name,
+                    icon="SHADING_RENDERED",
+                    emboss=False,
+                )
+                op.geometry_type = "VISUAL"
+                op.index = idx
 
                 geom_props = getattr(vis, PROP_GEOM, None)
                 if geom_props:
-                    row.prop(geom_props, "geometry_type", text="")
+                    item_row.prop(geom_props, "geometry_type", text="")
 
         # Visual Actions
-        row = box.row(align=True)
-        row.operator("linkforge.assign_as_visual", text="Assign Selected", icon="ADD")
-        row.operator("linkforge.remove_visual", text="", icon="REMOVE")
+        col_btns = row.column(align=True)
+        col_btns.operator("linkforge.assign_as_visual", text="", icon="ADD")
+        col_btns.operator("linkforge.remove_visual", text="", icon="REMOVE")
 
         # Geometry section — Collisions
         box.separator()
         box.label(text="Collisions", icon="MOD_PHYSICS")
 
         collision_children = [c for c in obj.children if SUFFIX_COLLISION in c.name.lower()]
+
+        row = box.row()
+        col_list = row.column()
+        list_box = col_list.box()
+
         if not collision_children:
-            box.label(text="No collision geometry", icon="INFO")
+            list_box.label(text="No collision geometry", icon="INFO")
         else:
-            list_box = box.box()
             for idx, col_obj in enumerate(collision_children):
-                row = list_box.row(align=True)
+                item_row = list_box.row(align=True)
                 is_active = getattr(props, "active_collision_index", 0) == idx
+
+                op_row = item_row.row(align=True)
+                op_row.alignment = "LEFT"
+
                 icon = "RIGHTARROW_THIN" if is_active else "BLANK1"
-                row.label(text="", icon=icon)  # type: ignore
-                row.label(text=col_obj.name, icon="MOD_PHYSICS")
+                op_row.label(text="", icon=icon)  # type: ignore
+
+                op = op_row.operator(
+                    "linkforge.set_active_geometry",
+                    text=col_obj.name,
+                    icon="MOD_PHYSICS",
+                    emboss=False,
+                )
+                op.geometry_type = "COLLISION"
+                op.index = idx
 
                 geom_props = getattr(col_obj, PROP_GEOM, None)
                 if geom_props:
-                    row.prop(geom_props, "geometry_type", text="")
+                    item_row.prop(geom_props, "geometry_type", text="")
                     if geom_props.geometry_type == GEOM_MESH:
-                        row.prop(geom_props, "collision_quality", text="")
+                        item_row.prop(geom_props, "collision_quality", text="")
 
         # Collision Actions
-        row = box.row(align=True)
-        row.operator("linkforge.assign_as_collision", text="Assign Selected", icon="ADD")
-        row.operator("linkforge.remove_collision", text="", icon="REMOVE")
+        col_btns = row.column(align=True)
+        col_btns.operator("linkforge.assign_as_collision", text="", icon="ADD")
+        col_btns.operator("linkforge.remove_collision", text="", icon="REMOVE")
 
-        row = box.row(align=True)
+        # Auto-generate is unique to collisions, place it under the list
+        row = box.row()
         row.operator("linkforge.generate_collision", text="Auto-Generate", icon="FILE_REFRESH")
 
         # Physics properties

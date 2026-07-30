@@ -1051,11 +1051,15 @@ def test_multi_visual_collision_naming(clean_scene, scene, blender_context) -> N
     )
     assert obj is not None
 
-    visuals = [c for c in obj.children if "_visual_" in c.name]
+    visuals = [c for c in obj.children if "_visual" in c.name]
     assert len(visuals) == 2, f"Expected 2 visuals, found {[c.name for c in obj.children]}"
+    assert any(c.name == "multi_link_visual" for c in visuals)
+    assert any(c.name == "multi_link_visual_1" for c in visuals)
 
-    collisions = [c for c in obj.children if "_collision_" in c.name]
+    collisions = [c for c in obj.children if "_collision" in c.name]
     assert len(collisions) == 2, f"Expected 2 collisions, found {[c.name for c in obj.children]}"
+    assert any(c.name == "multi_link_collision" for c in collisions)
+    assert any(c.name == "multi_link_collision_1" for c in collisions)
 
 
 def test_normalize_consolidate_empty_cleanup(clean_scene, scene, blender_context) -> None:

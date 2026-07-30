@@ -26,6 +26,10 @@ from linkforge.blender.properties.geom_props import (
     PROP_GEOM,
     on_collision_quality_update,
 )
+from linkforge.blender.properties.link_props import (
+    update_active_collision,
+    update_active_visual,
+)
 from linkforge.blender.utils.property_helpers import (
     find_property_owner,
     get_joint_props,
@@ -995,6 +999,55 @@ class TestGlobalPropertiesAndCallbacks:
 
         update_transmission_hierarchy(tp, bpy.context)
         assert trans_obj.parent is None
+
+    def test_link_props_active_geometry_callbacks(self, scene) -> None:
+        """Test update_active_visual and update_active_collision syncs selection."""
+        link_obj = create_test_object("test_link", None, scene)
+        visual_obj = create_test_object("test_link_visual", None, scene)
+        collision_obj = create_test_object("test_link_collision", None, scene)
+
+        visual_obj.parent = link_obj
+        collision_obj.parent = link_obj
+
+        # Explicitly initialize children for MockObject
+        link_obj.children = [visual_obj, collision_obj]
+
+        lp = safe_get_linkforge(link_obj)
+        lp.id_data = link_obj
+
+        # Select something else initially
+        bpy.ops.object.select_all(action="DESELECT")
+        link_obj.select_set(True)
+        bpy.context.view_layer.objects.active = link_obj
+        bpy.context.selected_objects = [link_obj]
+
+        # Test visual selection
+        lp.active_visual_index = 0
+        update_active_visual(lp, bpy.context)
+        assert visual_obj.select_get() is True
+        assert bpy.context.view_layer.objects.active == visual_obj
+        assert link_obj.select_get() is False
+
+        # Select something else
+        bpy.ops.object.select_all(action="DESELECT")
+        link_obj.select_set(True)
+        bpy.context.view_layer.objects.active = link_obj
+        bpy.context.selected_objects = [link_obj]
+
+        # Test collision selection
+        lp.active_collision_index = 0
+        update_active_collision(lp, bpy.context)
+        assert collision_obj.select_get() is True
+        assert bpy.context.view_layer.objects.active == collision_obj
+        assert link_obj.select_get() is False
+
+        # Test invalid index
+        lp.active_visual_index = 99
+        bpy.ops.object.select_all(action="DESELECT")
+        link_obj.select_set(True)
+        bpy.context.selected_objects = [link_obj]
+        update_active_visual(lp, bpy.context)
+        assert link_obj.select_get() is True  # Unchanged
 
 
 class TestPreferencesExtra:
