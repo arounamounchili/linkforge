@@ -25,6 +25,7 @@ from linkforge.blender.preferences import (
 from linkforge.blender.properties.geom_props import (
     PROP_GEOM,
     on_collision_quality_update,
+    on_geometry_type_update,
 )
 from linkforge.blender.properties.link_props import (
     update_active_collision,
@@ -788,12 +789,14 @@ class TestGlobalPropertiesAndCallbacks:
             assert len(PENDING_RENAMES) == orig_len + 1
 
         assert on_collision_quality_update(mlp, None) is None
+        assert on_geometry_type_update(mlp, None) is None
 
         link_obj = create_test_object("not_a_robot_link", None, scene)
         mlp3 = safe_get_linkforge(link_obj)
         mlp3.id_data = link_obj
         mlp3.is_robot_link = False
         on_collision_quality_update(mlp3, None)
+        on_geometry_type_update(mlp3, None)
 
         collision_child = create_test_object("collision_child", None, scene)
         collision_child.parent = link_obj
@@ -805,6 +808,9 @@ class TestGlobalPropertiesAndCallbacks:
             "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
         ) as mock_realtime:
             on_collision_quality_update(mgp, None)
+            assert mock_realtime.called
+            mock_realtime.reset_mock()
+            on_geometry_type_update(mgp, None)
             assert mock_realtime.called
 
         with patch("linkforge.blender.properties.link_props.tag_redraw") as mock_redraw:

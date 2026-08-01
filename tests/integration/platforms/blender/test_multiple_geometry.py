@@ -85,6 +85,18 @@ class TestMultipleGeometryWorkflow:
         assert cylinder_mesh.display_type == "WIRE"
         assert cylinder_mesh.show_in_front is True
         assert cylinder_mesh.hide_render is True
+        assert col_geom.collision_quality == 100.0
+        assert not any(m.type == "DECIMATE" for m in cylinder_mesh.modifiers)
+
+        # Test Primitive Invariance & Modifier Cleanup:
+        # Switch to MESH and lower quality to 50% to trigger decimation
+        col_geom.geometry_type = GEOM_MESH
+        col_geom.collision_quality = 50.0
+        assert any(m.type == "DECIMATE" for m in cylinder_mesh.modifiers)
+
+        # Switch back to a primitive shape and verify decimate modifier is removed automatically
+        col_geom.geometry_type = GEOM_CYLINDER
+        assert not any(m.type == "DECIMATE" for m in cylinder_mesh.modifiers)
 
         # Export URDF
         export_path = tmp_path / "multi_geom_bot.urdf"

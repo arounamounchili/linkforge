@@ -1376,7 +1376,7 @@ class LINKFORGE_OT_assign_as_collision(Operator):
             if geom_props:
                 geom_props.geometry_type = detected
                 geom_props.geom_role = "COLLISION"
-                geom_props.collision_quality = 50.0
+                geom_props.collision_quality = 100.0
 
         self.report({"INFO"}, f"Assigned {len(meshes)} collision(s) to '{link_name}'")
         clear_stats_cache()
@@ -1726,6 +1726,16 @@ def update_collision_quality_realtime(
     geom_props = getattr(collision_obj, PROP_GEOM, None)
     if not geom_props:
         return
+
+    # PRIMITIVE INVARIANCE GUARANTEE:
+    # Do not decimate primitive shapes (Box, Sphere, Cylinder). Decimation corrupts their bounding geometry
+    # and distorts their representation in the 3D viewport. If any Decimate modifier exists, cleanly remove it.
+    if geom_props.geometry_type != GEOM_MESH:
+        decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
+        if decimate_mod:
+            collision_obj.modifiers.remove(decimate_mod)
+        return
+
     quality_ratio = geom_props.collision_quality / 100.0
 
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)

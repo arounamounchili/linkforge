@@ -32,6 +32,25 @@ def on_collision_quality_update(self: GeomPropertyGroup, _context: bpy.types.Con
     update_collision_quality_realtime(link_obj, collision_obj)
 
 
+def on_geometry_type_update(self: GeomPropertyGroup, _context: bpy.types.Context) -> None:
+    collision_obj = getattr(self, "id_data", None)
+    if not collision_obj:
+        return
+
+    # Only applies to collision objects
+    if self.geom_role != "COLLISION" and "collision" not in collision_obj.name.lower():
+        return
+
+    # The parent object should be the link frame
+    link_obj = collision_obj.parent
+    if not link_obj:
+        return
+
+    from ..operators.link_ops import update_collision_quality_realtime
+
+    update_collision_quality_realtime(link_obj, collision_obj)
+
+
 class GeomPropertyGroup(PropertyGroup):
     """Properties stored directly on each visual/collision mesh object."""
 
@@ -56,6 +75,7 @@ class GeomPropertyGroup(PropertyGroup):
             (GEOM_MESH, "Mesh", "Export as mesh file"),
         ],
         default=GEOM_MESH,
+        update=on_geometry_type_update,
     )
 
     collision_quality: FloatProperty(  # type: ignore
