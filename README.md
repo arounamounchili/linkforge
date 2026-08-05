@@ -200,16 +200,13 @@ Programmatic tutorials in the documentation:
 - [x] **v1.0-v1.2**: Core URDF/XACRO export, Sensors, `ros2_control`, and Hexagonal Architecture.
 - [x] **v1.3.0**: Performance & Control (Depsgraph, ROS 2 Control enhancements).
 - [x] **v1.4.0**: Headless core decoupling, Composer API, Namespaced Merging, and MoveIt 2 SRDF generation.
-- [ ] **v1.5.0**: Visual SRDF Editor in Blender & Semantic planning assistant.
-- [ ] **v1.6.0**: LinkForge CLI & GitHub Actions for automated validation in CI pipelines.
+- [ ] **v1.5.0**: SRDF Configuration Panel (Expose existing planning logic to Blender UI).
+- [ ] **v1.6.0**: LinkForge CLI & GitHub Actions (Headless generation in CI pipelines).
 
-### Phase 2: Universal Interoperability (Upcoming)
-- [ ] **v2.0.0**: Official specification of the **`.lf` File Standard** - a lossless, source-level IR for robotics.
-- [ ] **v2.1.0**: Native MuJoCo/MJCF exporter.
-- [ ] **v2.2.0**: Native Gazebo/SDF exporter.
-
-### Phase 3: AI & Ecosystem (Research)
-- [ ] **v3.0+**: AI-assisted kinematic rigging, LinkForge Package Manager (LPM), and cloud-native `lf://` URI resolution.
+### Phase 2: Multi-Physics Interoperability (Upcoming)
+- [ ] **v2.0.0**: The **`.lf` Intermediate Representation (IR)**. A lossless JSON or YAML format exported from any supported CAD plugin that `linkforge-core` can use to build robots completely headless.
+- [ ] **v2.1.0**: Native MuJoCo / MJCF exporter (Translating `.lf` to MJCF).
+- [ ] **v2.2.0**: Native Gazebo / SDF exporter (Translating `.lf` to SDF).
 
 ## Development
 

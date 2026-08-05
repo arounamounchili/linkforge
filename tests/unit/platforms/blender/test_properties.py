@@ -22,6 +22,15 @@ from linkforge.blender.preferences import (
 from linkforge.blender.preferences import (
     unregister as prefs_unregister,
 )
+from linkforge.blender.properties.geom_props import (
+    PROP_GEOM,
+    on_collision_quality_update,
+    on_geometry_type_update,
+)
+from linkforge.blender.properties.link_props import (
+    update_active_collision,
+    update_active_visual,
+)
 from linkforge.blender.utils.property_helpers import (
     find_property_owner,
     get_joint_props,
@@ -657,7 +666,6 @@ class TestGlobalPropertiesAndCallbacks:
             get_kd_scientific,
             get_kp_scientific,
             get_link_name,
-            on_collision_quality_update,
             set_kd_scientific,
             set_kp_scientific,
             set_link_name,
@@ -781,43 +789,28 @@ class TestGlobalPropertiesAndCallbacks:
             assert len(PENDING_RENAMES) == orig_len + 1
 
         assert on_collision_quality_update(mlp, None) is None
+        assert on_geometry_type_update(mlp, None) is None
 
         link_obj = create_test_object("not_a_robot_link", None, scene)
         mlp3 = safe_get_linkforge(link_obj)
         mlp3.id_data = link_obj
         mlp3.is_robot_link = False
         on_collision_quality_update(mlp3, None)
+        on_geometry_type_update(mlp3, None)
 
-        mlp3.is_robot_link = True
-        on_collision_quality_update(mlp3, None)
-
-        collision_child = create_test_object("not_a_robot_link_collision", None, scene)
+        collision_child = create_test_object("collision_child", None, scene)
         collision_child.parent = link_obj
-        from linkforge.blender.constants import TAG_IMPORTED_SOURCE
 
-        collision_child[TAG_IMPORTED_SOURCE] = True
-        on_collision_quality_update(mlp3, None)
-
-        collision_child[TAG_IMPORTED_SOURCE] = False
+        mgp = getattr(collision_child, PROP_GEOM)
+        mgp.id_data = collision_child
+        mgp.geom_role = "COLLISION"
         with patch(
             "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
         ) as mock_realtime:
-            on_collision_quality_update(mlp3, None)
+            on_collision_quality_update(mgp, None)
             assert mock_realtime.called
-
-        clean_link = create_test_object("clean_link", None, scene)
-        mlp_clean = safe_get_linkforge(clean_link)
-        mlp_clean.id_data = clean_link
-        mlp_clean.is_robot_link = True
-        clean_collision_child = create_test_object("clean_link_collision", None, scene)
-        clean_collision_child.parent = clean_link
-        # Delete TAG_IMPORTED_SOURCE if present to raise KeyError
-        if TAG_IMPORTED_SOURCE in clean_collision_child:
-            del clean_collision_child[TAG_IMPORTED_SOURCE]
-        with patch(
-            "linkforge.blender.operators.link_ops.update_collision_quality_realtime"
-        ) as mock_realtime:
-            on_collision_quality_update(mlp_clean, None)
+            mock_realtime.reset_mock()
+            on_geometry_type_update(mgp, None)
             assert mock_realtime.called
 
         with patch("linkforge.blender.properties.link_props.tag_redraw") as mock_redraw:
@@ -1012,6 +1005,55 @@ class TestGlobalPropertiesAndCallbacks:
 
         update_transmission_hierarchy(tp, bpy.context)
         assert trans_obj.parent is None
+
+    def test_link_props_active_geometry_callbacks(self, scene) -> None:
+        """Test update_active_visual and update_active_collision syncs selection."""
+        link_obj = create_test_object("test_link", None, scene)
+        visual_obj = create_test_object("test_link_visual", None, scene)
+        collision_obj = create_test_object("test_link_collision", None, scene)
+
+        visual_obj.parent = link_obj
+        collision_obj.parent = link_obj
+
+        # Explicitly initialize children for MockObject
+        link_obj.children = [visual_obj, collision_obj]
+
+        lp = safe_get_linkforge(link_obj)
+        lp.id_data = link_obj
+
+        # Select something else initially
+        bpy.ops.object.select_all(action="DESELECT")
+        link_obj.select_set(True)
+        bpy.context.view_layer.objects.active = link_obj
+        bpy.context.selected_objects = [link_obj]
+
+        # Test visual selection
+        lp.active_visual_index = 0
+        update_active_visual(lp, bpy.context)
+        assert visual_obj.select_get() is True
+        assert bpy.context.view_layer.objects.active == visual_obj
+        assert link_obj.select_get() is False
+
+        # Select something else
+        bpy.ops.object.select_all(action="DESELECT")
+        link_obj.select_set(True)
+        bpy.context.view_layer.objects.active = link_obj
+        bpy.context.selected_objects = [link_obj]
+
+        # Test collision selection
+        lp.active_collision_index = 0
+        update_active_collision(lp, bpy.context)
+        assert collision_obj.select_get() is True
+        assert bpy.context.view_layer.objects.active == collision_obj
+        assert link_obj.select_get() is False
+
+        # Test invalid index
+        lp.active_visual_index = 99
+        bpy.ops.object.select_all(action="DESELECT")
+        link_obj.select_set(True)
+        bpy.context.selected_objects = [link_obj]
+        update_active_visual(lp, bpy.context)
+        assert link_obj.select_get() is True  # Unchanged
 
 
 class TestPreferencesExtra:

@@ -14,6 +14,7 @@ from linkforge.blender.adapters.core_to_blender import (
     import_robot_to_scene,
     normalize_and_consolidate_imported_objects,
 )
+from linkforge.blender.properties.geom_props import PROP_GEOM
 from linkforge.core import (
     Box,
     CameraInfo,
@@ -803,8 +804,8 @@ def test_create_link_with_collision_mesh(tmp_path, scene, blender_context) -> No
     assert obj is not None
     coll_obj = next(c for c in obj.children if "_collision" in c.name)
     assert coll_obj["imported_from_source"] is True
-    assert coll_obj["collision_geometry_type"] == "mesh"
-    assert safe_get_linkforge(obj).collision_quality == 100.0
+    assert getattr(coll_obj, PROP_GEOM).geometry_type == "mesh"
+    assert getattr(coll_obj, PROP_GEOM).collision_quality == 100.0
 
 
 def test_create_primitive_mesh_cylinder_sphere(scene, blender_context) -> None:
@@ -813,14 +814,14 @@ def test_create_primitive_mesh_cylinder_sphere(scene, blender_context) -> None:
     cyl = Cylinder(radius=0.5, length=2.0)
     obj_cyl = create_primitive_mesh(blender_context, cyl, "test_cyl")
     assert obj_cyl is not None
-    assert obj_cyl["source_geometry_type"] == "cylinder"
+    assert getattr(obj_cyl, PROP_GEOM).geometry_type == "cylinder"
     assert pytest.approx(obj_cyl.dimensions.z) == 2.0
 
     # Sphere
     sphere = Sphere(radius=1.0)
     obj_sphere = create_primitive_mesh(blender_context, sphere, "test_sphere")
     assert obj_sphere is not None
-    assert obj_sphere["source_geometry_type"] == "sphere"
+    assert getattr(obj_sphere, PROP_GEOM).geometry_type == "sphere"
     assert pytest.approx(obj_sphere.dimensions.x) == 2.0
 
 
@@ -1050,11 +1051,15 @@ def test_multi_visual_collision_naming(clean_scene, scene, blender_context) -> N
     )
     assert obj is not None
 
-    visuals = [c for c in obj.children if "_visual_" in c.name]
+    visuals = [c for c in obj.children if "_visual" in c.name]
     assert len(visuals) == 2, f"Expected 2 visuals, found {[c.name for c in obj.children]}"
+    assert any(c.name == "multi_link_visual" for c in visuals)
+    assert any(c.name == "multi_link_visual_1" for c in visuals)
 
-    collisions = [c for c in obj.children if "_collision_" in c.name]
+    collisions = [c for c in obj.children if "_collision" in c.name]
     assert len(collisions) == 2, f"Expected 2 collisions, found {[c.name for c in obj.children]}"
+    assert any(c.name == "multi_link_collision" for c in collisions)
+    assert any(c.name == "multi_link_collision_1" for c in collisions)
 
 
 def test_normalize_consolidate_empty_cleanup(clean_scene, scene, blender_context) -> None:
@@ -1270,7 +1275,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         obj_cyl = create_link_object(blender_context, link_cyl, robot, Path("/tmp"))
         assert obj_cyl is not None
         coll_child = next(c for c in obj_cyl.children if "_collision" in c.name)
-        assert coll_child["collision_geometry_type"] == "cylinder"
+        assert getattr(coll_child, PROP_GEOM).geometry_type == "cylinder"
 
         inertial_no_tensor = Inertial(mass=2.5, origin=Transform(xyz=Vector3(1, 2, 3)))
         link_inertial = Link(name="inertial_link", inertial=inertial_no_tensor)
@@ -1781,8 +1786,8 @@ class TestCoreToBlenderExhaustiveCoverage:
         )
         obj_box = create_link_object(blender_context, link_box, robot, tmp_path)
         assert obj_box is not None
-        props = safe_get_linkforge(obj_box)
-        assert props.collision_type == GEOM_BOX
+        coll_box = next(c for c in obj_box.children if "_collision" in c.name)
+        assert getattr(coll_box, PROP_GEOM).geometry_type == GEOM_BOX
 
         link_cyl = Link(
             name="link_cyl",
@@ -1790,7 +1795,8 @@ class TestCoreToBlenderExhaustiveCoverage:
         )
         obj_cyl = create_link_object(blender_context, link_cyl, robot, tmp_path)
         assert obj_cyl is not None
-        assert safe_get_linkforge(obj_cyl).collision_type == GEOM_CYLINDER
+        coll_cyl_obj = next(c for c in obj_cyl.children if "_collision" in c.name)
+        assert getattr(coll_cyl_obj, PROP_GEOM).geometry_type == GEOM_CYLINDER
 
         link_sph = Link(
             name="link_sph",
@@ -1798,7 +1804,8 @@ class TestCoreToBlenderExhaustiveCoverage:
         )
         obj_sph_l = create_link_object(blender_context, link_sph, robot, tmp_path)
         assert obj_sph_l is not None
-        assert safe_get_linkforge(obj_sph_l).collision_type == GEOM_SPHERE
+        coll_sph_obj = next(c for c in obj_sph_l.children if "_collision" in c.name)
+        assert getattr(coll_sph_obj, PROP_GEOM).geometry_type == GEOM_SPHERE
 
         # Collision unrecognized type (covers 660->666 False branch)
         mocker.patch(

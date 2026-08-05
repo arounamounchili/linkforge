@@ -33,9 +33,7 @@ PURPOSE_COLLISION: Final[str] = "collision"
 # ----------------------------
 # These keys are used in object['key'] storage for persistence
 TAG_SOURCE_NAME: Final[str] = "source_name"
-TAG_SOURCE_GEOM: Final[str] = "source_geometry_type"
 TAG_IMPORTED_SOURCE: Final[str] = "imported_from_source"
-TAG_COLLISION_GEOM: Final[str] = "collision_geometry_type"
 TAG_SENSOR_TYPE: Final[str] = "sensor_type"
 
 # Blender Property Group Identifiers
@@ -69,9 +67,6 @@ DEFAULT_LINK_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_JOINT_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_SENSOR_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.1
-
-# Default simplification ratio for generated collision meshes
-DEFAULT_COLLISION_QUALITY: Final[float] = 50.0
 
 # Heuristic Thresholds (Primitive Detection)
 # ----------------------------

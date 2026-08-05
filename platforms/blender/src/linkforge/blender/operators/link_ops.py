@@ -12,7 +12,6 @@ from ..constants import (
     PROP_LINK,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
-    TAG_COLLISION_GEOM,
     TAG_IMPORTED_SOURCE,
 )
 from ..core import InertiaTensor, Vector3, get_logger
@@ -22,6 +21,7 @@ from ..core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
+from ..properties.geom_props import PROP_GEOM
 from ..properties.link_props import sanitize_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
@@ -117,7 +117,9 @@ def execute_collision_preview_update() -> None | float:
 
     # Regenerate collision mesh with new quality
     # The collision_type is stored on the collision_obj itself
-    collision_type = collision_obj.get(TAG_COLLISION_GEOM, GEOM_MESH)
+
+    geom_props = getattr(collision_obj, PROP_GEOM, None)
+    collision_type = geom_props.geometry_type if geom_props else GEOM_MESH
     regenerate_collision_mesh(obj, str(collision_type), bpy.context)
 
     return None  # All caught up
@@ -257,8 +259,12 @@ def create_collision_for_link(
         collision_obj.display_type = "WIRE"
         collision_obj.show_in_front = True
         collision_obj.rotation_mode = "XYZ"
-        collision_obj[TAG_COLLISION_GEOM] = collision_type
-        collision_obj.hide_viewport = True
+
+        geom_props = getattr(collision_obj, PROP_GEOM, None)
+        if geom_props:
+            geom_props.geom_role = "COLLISION"
+            geom_props.geometry_type = collision_type
+        collision_obj.hide_viewport = False
         collision_obj.hide_render = True
 
         return collision_obj
@@ -460,8 +466,8 @@ def _create_mesh_collision_compound(
     merged_obj.data.update()
 
     # Add decimation modifier for live quality adjustment
-    lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
-    quality_ratio = lf.collision_quality / 100.0
+    # Default to 50% for newly generated simplified meshes
+    quality_ratio = 0.5
 
     decimate_mod = typing.cast(
         bpy.types.DecimateModifier, merged_obj.modifiers.new(name="Decimate", type="DECIMATE")
@@ -495,7 +501,11 @@ def _create_mesh_collision_compound(
         merged_obj.hide_render = old_hide_render
 
         # Persist collision type for UI consistency
-        merged_obj[TAG_COLLISION_GEOM] = GEOM_MESH
+
+        geom_props = getattr(merged_obj, PROP_GEOM, None)
+        if geom_props:
+            geom_props.geom_role = "COLLISION"
+            geom_props.geometry_type = GEOM_MESH
 
         # Ensure it's in the same collection
         for collection in merged_obj.users_collection:
@@ -532,7 +542,7 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
 
     # Import here to avoid circular dependency
-    from ..adapters.blender_to_core import detect_primitive_type, extract_mesh_triangles
+    from ..adapters.blender_to_core import extract_mesh_triangles
     from ..core import Box, Cylinder, Sphere, calculate_inertia, validate_mesh_topology
     from ..core.physics import calculate_mesh_inertia_from_triangles
 
@@ -569,10 +579,22 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
             mass = 1.0  # Default to 1kg if not set
 
         # Try to detect primitive type first (faster/cleaner)
-        prim_type = detect_primitive_type(target_obj)
+
+        geom_props = getattr(target_obj, PROP_GEOM, None)
+        if geom_props and getattr(geom_props, "geometry_type", None) in (
+            GEOM_BOX,
+            GEOM_CYLINDER,
+            GEOM_SPHERE,
+        ):
+            prim_type = geom_props.geometry_type
+        else:
+            from ..adapters.blender_to_core import detect_primitive_type
+
+            prim_type = detect_primitive_type(target_obj)
+
         tensor = None
 
-        if prim_type:
+        if prim_type and prim_type != "mesh":
             # Use primitive calculation
             dims = target_obj.dimensions
 
@@ -817,6 +839,15 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             # Auto-calculate inertia enabled by default
             link_props.use_auto_inertia = True
 
+            # Detect and store geometry properties on the mesh
+            from ..adapters.blender_to_core import detect_primitive_type
+
+            detected = detect_primitive_type(mesh_obj) or GEOM_MESH
+            geom_props = getattr(mesh_obj, PROP_GEOM, None)
+            if geom_props:
+                geom_props.geometry_type = detected
+                geom_props.geom_role = "VISUAL"
+
             # Select the new link Empty
             ops = getattr(context, "ops", None) or bpy.ops
             ops.object.select_all(action="DESELECT")
@@ -929,12 +960,6 @@ class LINKFORGE_OT_generate_collision(Operator):
         # Determine collision type
         # Priority: Operator property (if changed in redo) > Link property > Default GEOM_AUTO
         collision_type = self.collision_type
-        if collision_type == GEOM_AUTO and hasattr(link_obj, PROP_LINK):
-            # If operator is AUTO (default), check if link has specific setting
-            # Note: Link property also defaults to AUTO, so this works out
-            collision_type = typing.cast(
-                "LinkPropertyGroup", getattr(link_obj, PROP_LINK)
-            ).collision_type
 
         # Create collision
         collision_obj = create_collision_for_link(link_obj, collision_type, context)
@@ -1001,9 +1026,7 @@ class LINKFORGE_OT_generate_collision_all(Operator):
                 # Resolve primary mesh to use for detection
                 visual_children = [c for c in obj.children if SUFFIX_VISUAL in c.name.lower()]
                 if visual_children:
-                    collision_type = typing.cast(
-                        "LinkPropertyGroup", getattr(obj, PROP_LINK)
-                    ).collision_type
+                    collision_type = GEOM_AUTO
                     if create_collision_for_link(obj, collision_type, context):
                         count += 1
                     else:
@@ -1199,6 +1222,301 @@ class LINKFORGE_OT_calculate_inertia_all(Operator):
             self.report({"WARNING"}, f"Failed to calculate inertia for {failed} links")
         else:
             self.report({"INFO"}, "No links found needing inertia calculation")
+
+        return {"FINISHED"}
+
+
+def _resolve_active_link(context: Context) -> bpy.types.Object | None:
+    """Resolve the active link object from selection."""
+    obj = context.active_object
+    if not obj:
+        return None
+    if (
+        hasattr(obj, PROP_LINK)
+        and typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK)).is_robot_link
+    ):
+        return obj
+    if (
+        obj.parent
+        and hasattr(obj.parent, PROP_LINK)
+        and typing.cast("LinkPropertyGroup", getattr(obj.parent, PROP_LINK)).is_robot_link
+    ):
+        return obj.parent
+
+    # If active object is not a link (e.g. it's a loose mesh), check selected objects
+    for sel_obj in context.selected_objects:
+        if (
+            hasattr(sel_obj, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(sel_obj, PROP_LINK)).is_robot_link
+        ):
+            return sel_obj
+        if (
+            sel_obj.parent
+            and hasattr(sel_obj.parent, PROP_LINK)
+            and typing.cast("LinkPropertyGroup", getattr(sel_obj.parent, PROP_LINK)).is_robot_link
+        ):
+            return sel_obj.parent
+
+    return None
+
+
+class LINKFORGE_OT_assign_as_visual(Operator):
+    """Parent selected mesh(es) to the active link as visual geometry."""
+
+    bl_idname = "linkforge.assign_as_visual"
+    bl_label = "Assign Selected as Visual"
+    bl_description = "Parent selected mesh(es) to the active link as visual geometry"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        link_obj = _resolve_active_link(context)
+        return link_obj is not None and any(
+            o.type == "MESH" and o != link_obj and o.parent != link_obj
+            for o in context.selected_objects
+        )
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the operator."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return {"CANCELLED"}
+
+        meshes = [
+            o
+            for o in context.selected_objects
+            if o.type == "MESH" and o != link_obj and o.parent != link_obj
+        ]
+        if not meshes:
+            self.report({"WARNING"}, "Select at least one loose mesh to assign")
+            return {"CANCELLED"}
+
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+        link_name = lf.link_name or link_obj.name
+
+        from ..adapters.blender_to_core import detect_primitive_type
+
+        for mesh in meshes:
+            detected = detect_primitive_type(mesh) or GEOM_MESH
+
+            idx = sum(1 for c in link_obj.children if SUFFIX_VISUAL in c.name.lower())
+            suffix = f"_{idx}" if idx > 0 else ""
+            mesh.name = f"{link_name}{SUFFIX_VISUAL}{suffix}"
+
+            mesh.parent = link_obj
+            mesh.matrix_parent_inverse = link_obj.matrix_world.inverted()
+            mesh.rotation_mode = "XYZ"
+
+            geom_props = getattr(mesh, PROP_GEOM, None)
+            if geom_props:
+                geom_props.geometry_type = detected
+                geom_props.geom_role = "VISUAL"
+
+        self.report({"INFO"}, f"Assigned {len(meshes)} visual(s) to '{link_name}'")
+        clear_stats_cache()
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_assign_as_collision(Operator):
+    """Parent selected mesh(es) to the active link as collision geometry."""
+
+    bl_idname = "linkforge.assign_as_collision"
+    bl_label = "Assign Selected as Collision"
+    bl_description = "Parent selected mesh(es) to the active link as collision geometry"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        link_obj = _resolve_active_link(context)
+        return link_obj is not None and any(
+            o.type == "MESH" and o != link_obj and o.parent != link_obj
+            for o in context.selected_objects
+        )
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the operator."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return {"CANCELLED"}
+
+        meshes = [
+            o
+            for o in context.selected_objects
+            if o.type == "MESH" and o != link_obj and o.parent != link_obj
+        ]
+        if not meshes:
+            self.report({"WARNING"}, "Select at least one loose mesh to assign")
+            return {"CANCELLED"}
+
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+        link_name = lf.link_name or link_obj.name
+
+        from ..adapters.blender_to_core import detect_primitive_type
+
+        for mesh in meshes:
+            detected = detect_primitive_type(mesh) or GEOM_MESH
+
+            idx = sum(1 for c in link_obj.children if SUFFIX_COLLISION in c.name.lower())
+            suffix = f"_{idx}" if idx > 0 else ""
+            mesh.name = f"{link_name}{SUFFIX_COLLISION}{suffix}"
+
+            mesh.parent = link_obj
+            mesh.matrix_parent_inverse = link_obj.matrix_world.inverted()
+            mesh.rotation_mode = "XYZ"
+
+            mesh.display_type = "WIRE"
+            mesh.show_in_front = True
+            mesh.hide_render = True
+
+            geom_props = getattr(mesh, PROP_GEOM, None)
+            if geom_props:
+                geom_props.geometry_type = detected
+                geom_props.geom_role = "COLLISION"
+                geom_props.collision_quality = 100.0
+
+        self.report({"INFO"}, f"Assigned {len(meshes)} collision(s) to '{link_name}'")
+        clear_stats_cache()
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_set_active_geometry(Operator):
+    """Set the active geometry index and select it."""
+
+    bl_idname = "linkforge.set_active_geometry"
+    bl_label = "Set Active Geometry"
+    bl_description = "Set this geometry as active and select it in the viewport"
+    bl_options = {"REGISTER", "UNDO"}
+
+    geometry_type: bpy.props.EnumProperty(  # type: ignore
+        items=[
+            ("VISUAL", "Visual", ""),
+            ("COLLISION", "Collision", ""),
+        ],
+        name="Geometry Type",
+    )
+    index: bpy.props.IntProperty(name="Index", default=0)  # type: ignore
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        return _resolve_active_link(context) is not None
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the operator."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return {"CANCELLED"}
+
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+
+        if self.geometry_type == "VISUAL":
+            lf.active_visual_index = self.index
+            from ..properties.link_props import update_active_visual
+
+            update_active_visual(lf, context)
+        elif self.geometry_type == "COLLISION":
+            lf.active_collision_index = self.index
+            from ..properties.link_props import update_active_collision
+
+            update_active_collision(lf, context)
+
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_remove_visual(Operator):
+    """Remove the active visual mesh from the link."""
+
+    bl_idname = "linkforge.remove_visual"
+    bl_label = "Remove Visual"
+    bl_description = "Remove the active visual mesh from the link"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return False
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+        return hasattr(lf, "active_visual_index") and lf.active_visual_index >= 0
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the operator."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return {"CANCELLED"}
+
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+        visuals = [c for c in link_obj.children if SUFFIX_VISUAL in c.name.lower()]
+        idx = getattr(lf, "active_visual_index", 0)
+
+        if 0 <= idx < len(visuals):
+            obj_to_remove = visuals[idx]
+
+            # Keep world transforms when unparenting
+            original_world_matrix = obj_to_remove.matrix_world.copy()
+            obj_to_remove.parent = None
+            obj_to_remove.matrix_world = original_world_matrix
+
+            # Clean up name
+            link_name = lf.link_name or link_obj.name
+            if obj_to_remove.name.startswith(f"{link_name}{SUFFIX_VISUAL}"):
+                obj_to_remove.name = obj_to_remove.name.replace(SUFFIX_VISUAL, "")
+
+            # Adjust index if necessary
+            if idx >= len(visuals) - 1 and idx > 0:
+                lf.active_visual_index = idx - 1
+
+            self.report({"INFO"}, f"Removed visual '{obj_to_remove.name}'")
+            clear_stats_cache()
+
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_remove_collision(Operator):
+    """Remove the active collision mesh from the link."""
+
+    bl_idname = "linkforge.remove_collision"
+    bl_label = "Remove Collision"
+    bl_description = "Remove the active collision mesh from the link"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return False
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+        return hasattr(lf, "active_collision_index") and lf.active_collision_index >= 0
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the operator."""
+        link_obj = _resolve_active_link(context)
+        if not link_obj:
+            return {"CANCELLED"}
+
+        lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
+        collisions = [c for c in link_obj.children if SUFFIX_COLLISION in c.name.lower()]
+        idx = getattr(lf, "active_collision_index", 0)
+
+        if 0 <= idx < len(collisions):
+            obj_to_remove = collisions[idx]
+            bpy.data.objects.remove(obj_to_remove, do_unlink=True)
+
+            # Adjust index if necessary
+            if idx >= len(collisions) - 1 and idx > 0:
+                lf.active_collision_index = idx - 1
+
+            self.report({"INFO"}, "Removed collision geometry")
+            clear_stats_cache()
 
         return {"FINISHED"}
 
@@ -1404,8 +1722,21 @@ def update_collision_quality_realtime(
 
     # FAST PATH: If we have a Decimate modifier, just update the ratio
     # This provides instant feedback without expensive mesh regeneration
-    lf = typing.cast("LinkPropertyGroup", getattr(obj, PROP_LINK))
-    quality_ratio = lf.collision_quality / 100.0
+
+    geom_props = getattr(collision_obj, PROP_GEOM, None)
+    if not geom_props:
+        return
+
+    # PRIMITIVE INVARIANCE GUARANTEE:
+    # Do not decimate primitive shapes (Box, Sphere, Cylinder). Decimation corrupts their bounding geometry
+    # and distorts their representation in the 3D viewport. If any Decimate modifier exists, cleanly remove it.
+    if geom_props.geometry_type != GEOM_MESH:
+        decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
+        if decimate_mod:
+            collision_obj.modifiers.remove(decimate_mod)
+        return
+
+    quality_ratio = geom_props.collision_quality / 100.0
 
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
     if decimate_mod and isinstance(decimate_mod, bpy.types.DecimateModifier):
@@ -1428,6 +1759,11 @@ def update_collision_quality_realtime(
 classes = [
     LINKFORGE_OT_add_empty_link,
     LINKFORGE_OT_create_link_from_mesh,
+    LINKFORGE_OT_assign_as_visual,
+    LINKFORGE_OT_assign_as_collision,
+    LINKFORGE_OT_set_active_geometry,
+    LINKFORGE_OT_remove_visual,
+    LINKFORGE_OT_remove_collision,
     LINKFORGE_OT_generate_collision,
     LINKFORGE_OT_generate_collision_all,
     LINKFORGE_OT_toggle_collision_visibility,
