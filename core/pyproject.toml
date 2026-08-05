@@ -1,6 +1,6 @@
 [project]
 name = "linkforge-core"
-version = "1.4.4" # x-release-please-version
+version = "1.5.0" # x-release-please-version
 description = "LinkForge Core: Programmable IR and Physical Validation Engine for Robotics"
 readme = "README.md"
 license = "Apache-2.0"

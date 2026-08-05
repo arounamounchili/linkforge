@@ -5,6 +5,19 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0](https://github.com/arounamounchili/linkforge/compare/v1.4.4...v1.5.0) (2026-08-05)
+
+
+### 🚀 Features
+
+* **blender:** support multiple visual and collision geometries ([#281](https://github.com/arounamounchili/linkforge/issues/281)) ([6ccf6a3](https://github.com/arounamounchili/linkforge/commit/6ccf6a36ab21bcd9f52244e9ce8b2876b35a98d2))
+
+
+### 📚 Documentation
+
+* add razcore-rad as a contributor for ideas ([#280](https://github.com/arounamounchili/linkforge/issues/280)) ([1aacad1](https://github.com/arounamounchili/linkforge/commit/1aacad18962ec6b13a4cd10d651480e0953313cc))
+* update v1.5.0 roadmap milestone for multi-geometry management ([77d1d13](https://github.com/arounamounchili/linkforge/commit/77d1d134a61333f5d4587519bb886eeb71fa52b5))
+
 ## [1.4.4](https://github.com/arounamounchili/linkforge/compare/v1.4.3...v1.4.4) (2026-07-13)
 
 
