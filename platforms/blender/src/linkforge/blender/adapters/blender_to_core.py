@@ -12,12 +12,9 @@ from typing import Any, cast
 from ..constants import (
     DEFAULT_PRIMITIVE_CONFIG,
     FORMAT_STL,
-    GEOM_AUTO,
     PRIMITIVE_MAX_FACES,
     PURPOSE_VISUAL,
     SUFFIX_VISUAL,
-    TAG_COLLISION_GEOM,
-    TAG_SOURCE_GEOM,
 )
 from ..core.constants import (
     DEFAULT_MATERIAL_RGBA,
@@ -27,6 +24,7 @@ from ..core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
+from ..properties.geom_props import PROP_GEOM
 
 try:
     import numpy as np  # type: ignore[import-not-found]
@@ -90,6 +88,12 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
     if obj is None or obj.type != "MESH":
         return None
 
+    geom_props = getattr(obj, PROP_GEOM, None)
+    if geom_props:
+        gt = getattr(geom_props, "geometry_type", None)
+        if gt in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
+            return cast(str, gt)
+
     mesh = obj.data
     is_mesh = isinstance(mesh, bpy.types.Mesh)
     if not is_mesh and obj.type == "MESH" and mesh is not None:
@@ -99,16 +103,6 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
         return None
 
     mesh_obj = cast(bpy.types.Mesh, mesh)
-
-    tags = [TAG_SOURCE_GEOM, TAG_COLLISION_GEOM]
-    for tag in tags:
-        tag_val = obj.get(tag)  # type: ignore[func-returns-value]
-        if isinstance(tag_val, str):
-            tag_val_lower = tag_val.lower()
-            if tag_val_lower in (GEOM_SPHERE):
-                return tag_val_lower
-            if tag_val_lower == GEOM_MESH:
-                return None
 
     vert_count = len(mesh_obj.vertices)
     face_count = len(mesh_obj.polygons)
@@ -169,7 +163,6 @@ def detect_primitive_type(obj: bpy.types.Object | None) -> str | None:
 
 def get_object_geometry(
     obj: bpy.types.Object | None,
-    geometry_type: str = GEOM_AUTO,
     link_name: str | None = None,
     geom_purpose: str = PURPOSE_VISUAL,
     meshes_dir: Path | None = None,
@@ -184,10 +177,6 @@ def get_object_geometry(
 
     Args:
         obj: Blender Object
-        geometry_type: Type of geometry to extract
-            - "auto": Auto-detect (primitives for simple shapes, mesh for complex)
-            - "mesh": Force mesh export
-            - "box", "cylinder", "sphere": Force specific primitive
         link_name: Name of the link (for mesh filename)
         geom_purpose: "visual" or "collision" (use PURPOSE_VISUAL, PURPOSE_COLLISION)
         meshes_dir: Directory to export mesh files to
@@ -204,10 +193,8 @@ def get_object_geometry(
     if obj is None:
         return None, Matrix.Identity(4)
 
-    actual_geometry_type = geometry_type
-    if actual_geometry_type == GEOM_AUTO:
-        detected_type = detect_primitive_type(obj)
-        actual_geometry_type = detected_type or GEOM_MESH
+    geom_props = getattr(obj, PROP_GEOM, None)
+    actual_geometry_type = geom_props.geometry_type if geom_props else GEOM_MESH
 
     if actual_geometry_type == GEOM_MESH:
         # Export actual mesh file if meshes_dir is provided
@@ -232,7 +219,7 @@ def get_object_geometry(
                     resource=str(mesh_path), scale=Vector3(1.0, 1.0, 1.0)
                 ), geom_world_matrix
 
-        actual_geometry_type = GEOM_BOX
+        actual_geometry_type = detect_primitive_type(obj) or GEOM_BOX
 
     if actual_geometry_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
         # Calculate local geometric center from bounding box

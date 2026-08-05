@@ -10,21 +10,18 @@ import typing
 import bpy
 from bpy.props import (
     BoolProperty,
-    EnumProperty,
     FloatProperty,
     FloatVectorProperty,
+    IntProperty,
     PointerProperty,
     StringProperty,
 )
 from bpy.types import Context, PropertyGroup
 
 from ..constants import (
-    DEFAULT_COLLISION_QUALITY,
-    GEOM_AUTO,
     PROP_LINK,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
-    TAG_IMPORTED_SOURCE,
 )
 from ..core._utils.string_utils import (
     format_scientific,
@@ -38,10 +35,6 @@ from ..core.constants import (
     DEFAULT_FRICTION_MU2,
     DEFAULT_LINK_MASS,
     DEFAULT_SELF_COLLIDE,
-    GEOM_BOX,
-    GEOM_CYLINDER,
-    GEOM_MESH,
-    GEOM_SPHERE,
     GRAVITY_ENABLED,
 )
 from ..utils.link_utils import should_rename_child
@@ -150,44 +143,6 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     clear_stats_cache()
 
 
-def on_collision_quality_update(self: PropertyGroup, _context: Context) -> None:
-    """Update collision mesh preview when quality changes.
-
-    This provides live feedback to the user as they adjust the quality slider,
-    showing them exactly how the exported collision mesh will look.
-
-    Args:
-        self: The LinkPropertyGroup instance owning the quality property.
-        _context: The current Blender context.
-    """
-    # Use id_data to access the object this property is attached to
-    obj = getattr(self, "id_data", None)
-    if not obj:
-        return
-    lf = getattr(obj, PROP_LINK, None)
-    if not lf or not lf.is_robot_link:
-        return
-
-    # Find collision object
-    collision_obj = next((c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None)
-    if collision_obj is None:
-        return
-
-    # Skip regeneration for imported URDF models to preserve external data
-    try:
-        # Use dictionary access for Blender ID properties
-        if collision_obj[TAG_IMPORTED_SOURCE]:
-            return
-    except (KeyError, TypeError):
-        # Property doesn't exist, proceed with regeneration
-        pass
-
-    # Update ratio in realtime
-    from ..operators.link_ops import update_collision_quality_realtime
-
-    update_collision_quality_realtime(obj, collision_obj)
-
-
 def update_inertia_viz(_self: PropertyGroup, _context: Context) -> None:
     """Trigger visual update for inertia gizmos."""
     clear_stats_cache()
@@ -207,6 +162,34 @@ def update_auto_inertia_toggle(self: PropertyGroup, _context: Context) -> None:
         from ..visualization.inertia_gizmos import ensure_inertia_handler
 
         ensure_inertia_handler()
+
+
+def update_active_visual(self: LinkPropertyGroup, context: Context) -> None:
+    """Sync active visual index with viewport selection."""
+    if not self.id_data:
+        return
+    visuals = [c for c in self.id_data.children if SUFFIX_VISUAL in c.name.lower()]
+    if 0 <= self.active_visual_index < len(visuals):
+        target = visuals[self.active_visual_index]
+        if context.view_layer and context.view_layer.objects.active != target:
+            for obj in context.selected_objects:
+                obj.select_set(False)
+            target.select_set(True)
+            context.view_layer.objects.active = target
+
+
+def update_active_collision(self: LinkPropertyGroup, context: Context) -> None:
+    """Sync active collision index with viewport selection."""
+    if not self.id_data:
+        return
+    collisions = [c for c in self.id_data.children if SUFFIX_COLLISION in c.name.lower()]
+    if 0 <= self.active_collision_index < len(collisions):
+        target = collisions[self.active_collision_index]
+        if context.view_layer and context.view_layer.objects.active != target:
+            for obj in context.selected_objects:
+                obj.select_set(False)
+            target.select_set(True)
+            context.view_layer.objects.active = target
 
 
 class LinkPropertyGroup(PropertyGroup):
@@ -383,31 +366,16 @@ class LinkPropertyGroup(PropertyGroup):
         set=set_kd_scientific,
     )
 
-    collision_type: EnumProperty(  # type: ignore
-        name="Collision Type",
-        description="Type of collision geometry to generate",
-        items=[
-            (GEOM_AUTO, "Auto", "Automatically detect primitive shape or export as mesh"),
-            (GEOM_BOX, "Bounding Box", "Axis-aligned bounding box around the mesh"),
-            (GEOM_SPHERE, "Bounding Sphere", "Spherical bounding volume around the mesh"),
-            (GEOM_CYLINDER, "Bounding Cylinder", "Cylindrical bounding volume around the mesh"),
-            (GEOM_MESH, "Mesh (Simplified)", "Generate simplified mesh from visual geometry"),
-        ],
-        default=GEOM_AUTO,
+    active_visual_index: IntProperty(  # type: ignore
+        name="Active Visual Index",
+        default=0,
+        update=update_active_visual,
     )
 
-    collision_quality: FloatProperty(  # type: ignore
-        name="Collision Quality",
-        description=(
-            "Mesh detail preserved in collision geometry (100% = full detail, 50% = half the faces). "
-            "Lower values = faster physics simulation. Imported collision defaults to 100%"
-        ),
-        default=DEFAULT_COLLISION_QUALITY,
-        min=1.0,  # At least 1% to avoid empty meshes
-        max=100.0,  # 100% = no simplification
-        precision=0,  # Show as integer (no decimals)
-        subtype="PERCENTAGE",  # Display with % symbol
-        update=on_collision_quality_update,  # Live preview callback
+    active_collision_index: IntProperty(  # type: ignore
+        name="Active Collision Index",
+        default=0,
+        update=update_active_collision,
     )
 
     # Material properties
