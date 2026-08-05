@@ -362,6 +362,7 @@ def develop_extension() -> None:
         sys.exit(1)
 
     target_dir = ext_base / "user_default" / "linkforge"
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
 
     if target_dir.exists() or target_dir.is_symlink():
         if target_dir.is_symlink():
