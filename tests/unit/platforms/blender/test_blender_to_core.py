@@ -34,6 +34,12 @@ from linkforge.blender.adapters.translator import (
     SensorTranslator,
     TransmissionTranslator,
 )
+from linkforge.blender.properties.geom_props import (
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
+    PROP_GEOM,
+)
 from linkforge.blender.utils.transform_utils import matrix_to_transform
 from linkforge.core import (
     Box,
@@ -119,7 +125,7 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.5)
     s_obj = bpy.context.active_object
     assert s_obj is not None
-    geom_s, world_matrix = get_object_geometry(s_obj, geometry_type="auto")
+    geom_s, world_matrix = get_object_geometry(s_obj)
     assert isinstance(geom_s, Sphere)
     assert geom_s.radius > 0.0
     assert world_matrix == s_obj.matrix_world
@@ -128,7 +134,7 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.3, depth=1.0)
     c_obj = bpy.context.active_object
     assert c_obj is not None
-    geom_c, world_matrix = get_object_geometry(c_obj, geometry_type="auto")
+    geom_c, world_matrix = get_object_geometry(c_obj)
     assert isinstance(geom_c, Cylinder)
     assert geom_c.radius > 0.0
     assert geom_c.length > 0.0
@@ -166,12 +172,10 @@ def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
 
 
 def test_detect_primitive_type_none_case(scene, blender_context) -> None:
-    """A mesh tagged as MESH geometry type should return None for primitive detection."""
-    from tests.blender_test_utils import create_mesh_object
-
-    obj = create_mesh_object("complex_mesh", scene=scene, with_cube=True)
-    # Tag explicitly as a generic mesh geometry type to bypass topology detection
-    obj["source_geometry_type"] = "MESH"
+    """A complex mesh object should return None for primitive detection."""
+    bpy.ops.mesh.primitive_monkey_add()
+    obj = bpy.context.active_object
+    assert obj is not None
     assert detect_primitive_type(obj) is None
 
 
@@ -385,14 +389,18 @@ def test_get_object_geometry_forced_primitives(scene, blender_context) -> None:
     obj = bpy.context.active_object
     assert obj is not None
 
+    geom_props = getattr(obj, PROP_GEOM)
+
     # Force Sphere (radius should be max dim / 2 = 1.0)
-    geom_s, wm_s = get_object_geometry(obj, geometry_type="sphere")
+    geom_props.geometry_type = GEOM_SPHERE
+    geom_s, wm_s = get_object_geometry(obj)
     assert isinstance(geom_s, Sphere)
     assert wm_s == obj.matrix_world
     assert pytest.approx(geom_s.radius) == 1.0
 
     # Force Cylinder (z depth is 2.0, max x/y is 2.0 -> radius 1.0)
-    geom_c, wm_c = get_object_geometry(obj, geometry_type="cylinder")
+    geom_props.geometry_type = GEOM_CYLINDER
+    geom_c, wm_c = get_object_geometry(obj)
     assert isinstance(geom_c, Cylinder)
     assert wm_c == obj.matrix_world
     assert pytest.approx(geom_c.radius) == 1.0
@@ -405,7 +413,7 @@ def test_get_object_geometry_mesh_simplified(tmp_path, scene, blender_context) -
     obj = bpy.context.active_object
     assert obj is not None
     # MESH currently falls back to BOX if not implemented with real hull
-    geom, wm = get_object_geometry(obj, geometry_type="mesh", meshes_dir=tmp_path, link_name="hull")
+    geom, wm = get_object_geometry(obj, meshes_dir=tmp_path, link_name="hull")
     assert isinstance(geom, (Box, Mesh))
 
 
@@ -709,16 +717,15 @@ def test_get_object_geometry_decimation(tmp_path, scene, blender_context) -> Non
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16)
     obj = bpy.context.active_object
     assert obj is not None
+    geom_props = getattr(obj, PROP_GEOM)
+    geom_props.geometry_type = GEOM_MESH
 
     # Without simplify
-    g1, wm1 = get_object_geometry(
-        obj, geometry_type="mesh", simplify=False, meshes_dir=tmp_path, link_name="l1"
-    )
+    g1, wm1 = get_object_geometry(obj, simplify=False, meshes_dir=tmp_path, link_name="l1")
 
     # With simplify (decimate to 10%)
     g2, wm2 = get_object_geometry(
         obj,
-        geometry_type="mesh",
         simplify=True,
         decimation_ratio=0.1,
         meshes_dir=tmp_path,
@@ -734,10 +741,12 @@ def test_get_object_geometry_dry_run(tmp_path, scene, blender_context) -> None:
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
     assert obj is not None
+    geom_props = getattr(obj, PROP_GEOM)
+    geom_props.geometry_type = GEOM_MESH
 
     # Should not crash and should return geometry even with invalid dir
     geom, wm = get_object_geometry(
-        obj, geometry_type="mesh", dry_run=True, meshes_dir=Path("/invalid/path"), link_name="dry"
+        obj, dry_run=True, meshes_dir=Path("/invalid/path"), link_name="dry"
     )
     assert isinstance(geom, Mesh)
     assert wm == obj.matrix_world
@@ -796,7 +805,7 @@ def test_get_object_geometry_auto_primitive(scene, blender_context) -> None:
     obj = bpy.context.active_object
     assert obj is not None
 
-    geom, wm = get_object_geometry(obj, geometry_type="auto")
+    geom, wm = get_object_geometry(obj)
 
     assert isinstance(geom, Box)
     assert wm == obj.matrix_world
@@ -1421,7 +1430,7 @@ def test_blender_to_core_geometry_edge_cases(clean_scene, scene, blender_context
     # zero-size object
     box = create_test_object("ZeroBox", None, scene)
     box.dimensions = (0, 0, 0)
-    geom, mat = get_object_geometry(box, geometry_type="box")
+    geom, mat = get_object_geometry(box)
     assert geom is None
 
     # extract_mesh_triangles None
@@ -1848,7 +1857,8 @@ def test_detect_primitive_type_tags(scene, blender_context) -> None:
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
     assert obj is not None
-    obj["source_geometry_type"] = "sphere"
+    geom_props = getattr(obj, PROP_GEOM)
+    geom_props.geometry_type = GEOM_SPHERE
     assert detect_primitive_type(obj) == "sphere"
 
 
@@ -2021,13 +2031,13 @@ def test_get_object_geometry_edge_cases(scene, blender_context) -> None:
     # Empty geometry object with dimensions = None
     obj = create_test_object("EmptyObj", None, scene)
     with patch("tests.mock_bpy_env.MockObject.dimensions", new=None):
-        geom_box, _ = get_object_geometry(obj, geometry_type="box")
+        geom_box, _ = get_object_geometry(obj)
         assert geom_box is None
 
-        geom_cyl, _ = get_object_geometry(obj, geometry_type="cylinder")
+        geom_cyl, _ = get_object_geometry(obj)
         assert geom_cyl is None
 
-        geom_sph, _ = get_object_geometry(obj, geometry_type="sphere")
+        geom_sph, _ = get_object_geometry(obj)
         assert geom_sph is None
 
 
@@ -2050,10 +2060,6 @@ def test_detect_primitive_type_edge_cases(scene, blender_context) -> None:
     # By default, since lists are empty, vert_count=0, face_count=0, no primitive matches -> returns None
     assert detect_primitive_type(mesh_obj) is None
 
-    # When TAG_SOURCE_GEOM is set to GEOM_MESH, detect_primitive_type returns None immediately
-    mesh_obj["source_geometry_type"] = "mesh"
-    assert detect_primitive_type(mesh_obj) is None
-
 
 def test_detect_primitive_type_advanced_branches(scene, blender_context) -> None:
     """Cover remaining detect_primitive_type branches and conditions."""
@@ -2065,18 +2071,6 @@ def test_detect_primitive_type_advanced_branches(scene, blender_context) -> None
     mesh_obj.type = "MESH"
     mesh_obj.data = None
     assert detect_primitive_type(mesh_obj) is None
-
-    mesh_obj2 = create_test_object("FakeMeshBoxTag", None, scene)
-    mesh_obj2.type = "MESH"
-
-    class MockedMesh:
-        def __init__(self):
-            self.vertices = []
-            self.polygons = []
-
-    mesh_obj2.data = MockedMesh()
-    mesh_obj2["source_geometry_type"] = "box"
-    assert detect_primitive_type(mesh_obj2) is None
 
     mesh_obj3 = create_test_object("CubeMatchFail", None, scene)
     mesh_obj3.type = "MESH"
@@ -2157,10 +2151,10 @@ def test_get_object_geometry_advanced_branches(scene) -> None:
     mock_dims = MagicMock(x=1.0, y=1.0, z=1.0)
     mock_dims.length = 1.73
     with patch("tests.mock_bpy_env.MockObject.dimensions", new=mock_dims):
-        geom, _ = get_object_geometry(obj, geometry_type="mesh", meshes_dir=None)
+        geom, _ = get_object_geometry(obj, meshes_dir=None)
         assert isinstance(geom, Box)
 
-    geom2, _ = get_object_geometry(obj, geometry_type="invalid_type")
+    geom2, _ = get_object_geometry(obj)
     assert geom2 is None
 
 
@@ -2351,7 +2345,6 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     ):
         geom, _ = get_object_geometry(
             obj,
-            geometry_type="mesh",
             link_name="test_link",
             meshes_dir=Path("/tmp"),
         )

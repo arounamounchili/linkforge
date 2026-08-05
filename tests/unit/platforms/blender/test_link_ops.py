@@ -28,6 +28,13 @@ from linkforge.blender.operators.link_ops import (
     schedule_collision_preview_update,
     update_collision_quality_realtime,
 )
+from linkforge.blender.properties.geom_props import (
+    GEOM_BOX,
+    GEOM_CYLINDER,
+    GEOM_MESH,
+    GEOM_SPHERE,
+    PROP_GEOM,
+)
 
 from tests.blender_test_utils import (
     cleanup_blender_scene,
@@ -158,8 +165,9 @@ class TestCollisionGeneration:
         op.collision_type = "box"
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
+
         col_box = next(c for c in link_obj_box.children if "collision" in c.name)
-        assert col_box["collision_geometry_type"] == "box"
+        assert getattr(col_box, PROP_GEOM).geometry_type == "box"
 
         link_obj_sphere = create_robot_link(
             "test_link_sphere", scene, with_visual=True, with_collision=False
@@ -172,7 +180,7 @@ class TestCollisionGeneration:
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
         col_sphere = next(c for c in link_obj_sphere.children if "collision" in c.name)
-        assert col_sphere["collision_geometry_type"] == "sphere"
+        assert getattr(col_sphere, PROP_GEOM).geometry_type == "sphere"
 
         link_obj_cyl = create_robot_link(
             "test_link_cyl", scene, with_visual=True, with_collision=False
@@ -185,7 +193,7 @@ class TestCollisionGeneration:
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
         col_cylinder = next(c for c in link_obj_cyl.children if "collision" in c.name)
-        assert col_cylinder["collision_geometry_type"] == "cylinder"
+        assert getattr(col_cylinder, PROP_GEOM).geometry_type == "cylinder"
 
         link_obj_auto = create_robot_link(
             "test_link_auto", scene, with_visual=True, with_collision=False
@@ -524,13 +532,40 @@ class TestRealtimePreviewsAndDebounce:
 
         # Scenario 2: Decimate modifier is missing but object is MESH (adds it)
         col_obj.modifiers.remove(decimate_mod)
-        lf.collision_quality = 30.0
+
+        getattr(col_obj, PROP_GEOM).collision_quality = 30.0
 
         update_collision_quality_realtime(link_obj, col_obj)
         new_mod = next(m for m in col_obj.modifiers if m.type == "DECIMATE")
         new_mod.type = "DECIMATE"
         new_mod.__class__ = MockDecimateModifier
         assert new_mod.ratio == 0.3
+
+    def test_realtime_preview_primitive_invariance_and_cleanup(
+        self, scene, blender_context
+    ) -> None:
+        """Verify primitive types are exempt from decimation and modifiers are cleaned up."""
+        link_obj = create_robot_link(
+            "prim_invariance_link", scene, with_visual=True, with_collision=True
+        )
+        col_obj = next(c for c in link_obj.children if "collision" in c.name)
+        geom = getattr(col_obj, PROP_GEOM)
+
+        # Attach a Decimate modifier while in MESH mode
+        geom.geometry_type = GEOM_MESH
+        geom.collision_quality = 50.0
+        col_obj.modifiers._items.clear()
+        decimate_mod = col_obj.modifiers.new(name="Decimate", type="DECIMATE")
+        decimate_mod.type = "DECIMATE"
+
+        # Switch to primitive shapes and verify modifier removal and decimation abortion
+        for prim_type in (GEOM_BOX, GEOM_CYLINDER, GEOM_SPHERE):
+            geom.geometry_type = prim_type
+            if not any(m.type == "DECIMATE" for m in col_obj.modifiers):
+                mod = col_obj.modifiers.new(name="Decimate", type="DECIMATE")
+                mod.type = "DECIMATE"
+            update_collision_quality_realtime(link_obj, col_obj)
+            assert not any(m.type == "DECIMATE" for m in col_obj.modifiers)
 
     def test_debounce_timer_lifecycle(self, scene, blender_context) -> None:
         """Verify schedule_collision_preview_update schedules and debounces correctly."""

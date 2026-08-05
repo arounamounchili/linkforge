@@ -228,7 +228,7 @@ class RobotPropertyGroup(PropertyGroup):
     show_collisions: BoolProperty(  # type: ignore
         name="Show Collisions",
         description="Show/Hide all collision meshes in the viewport",
-        default=False,
+        default=True,
         update=update_collision_visibility,
     )
 

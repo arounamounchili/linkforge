@@ -35,6 +35,7 @@ from linkforge.blender.properties.control_props import (
     Ros2ControlJointProperty,
     Ros2ControlParameterProperty,
 )
+from linkforge.blender.properties.geom_props import GEOM_MESH, PROP_GEOM
 from linkforge.blender.utils.property_helpers import get_link_props
 
 from tests.blender_test_utils import (
@@ -1048,19 +1049,19 @@ class TestPanelsExtra:
         props = safe_get_linkforge(link_obj)
         props.collision_type = "auto"
 
-        stats = MagicMock()
-        collision_mesh_obj = MagicMock()
-        collision_mesh_obj.get.return_value = False
-        stats.geometry_stats = {"base_link": (collision_mesh_obj, "mesh", False)}
+        link_obj = create_robot_link("base_link", scene, with_visual=True, with_collision=True)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = link_obj
+        link_obj.select_set(True)
+
+        col_obj = next(c for c in link_obj.children if "_collision" in c.name)
+        geom_props = getattr(col_obj, PROP_GEOM)
+        geom_props.geometry_type = GEOM_MESH
 
         panel = LINKFORGE_PT_links()
         panel.layout = mock_layout
-
-        with patch("linkforge.blender.panels.link_panel.get_robot_statistics", return_value=stats):
-            panel.draw(bpy.context)
-            mock_layout.prop.assert_any_call(
-                props, "collision_quality", text="Collision Quality", slider=True
-            )
+        panel.draw(bpy.context)
+        mock_layout.prop.assert_any_call(geom_props, "collision_quality", text="")
 
     def test_link_panel_material_node_tree(self, scene, mock_layout) -> None:
         """Verify link panel material slot template and BSDF node checks."""

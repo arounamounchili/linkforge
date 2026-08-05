@@ -3,22 +3,19 @@
 from __future__ import annotations
 
 import contextlib
-import typing
 
 import bpy
 from bpy.types import Context, Panel
 
 from ..constants import (
-    GEOM_AUTO,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
-    TAG_IMPORTED_SOURCE,
 )
 from ..core.constants import (
     GEOM_MESH,
 )
+from ..properties.geom_props import PROP_GEOM
 from ..utils.property_helpers import get_link_props
-from ..utils.scene_utils import get_robot_statistics
 
 
 class LINKFORGE_PT_links(Panel):
@@ -72,6 +69,29 @@ class LINKFORGE_PT_links(Panel):
             obj = obj.parent
             props = get_link_props(obj)
 
+        # If still not a link (e.g. a loose mesh is active), check if there is a link selected
+        if (not props or not props.is_robot_link) and context.selected_objects:
+            for sel_obj in context.selected_objects:
+                sel_props = get_link_props(sel_obj)
+                if sel_props and sel_props.is_robot_link:
+                    obj = sel_obj
+                    props = sel_props
+                    break
+
+                # Also check if the selected object is a visual/collision child of a link
+                if (
+                    sel_obj.parent
+                    and (lp_p := get_link_props(sel_obj.parent))
+                    and lp_p.is_robot_link
+                    and (
+                        SUFFIX_VISUAL in sel_obj.name.lower()
+                        or SUFFIX_COLLISION in sel_obj.name.lower()
+                    )
+                ):
+                    obj = sel_obj.parent
+                    props = lp_p
+                    break
+
         # Only show Create button when NOT editing a link
         if not props or not props.is_robot_link:
             box = layout.box()
@@ -94,7 +114,7 @@ class LINKFORGE_PT_links(Panel):
 
         title = f"Link: {props.link_name}"
         icon = "EMPTY_DATA" if is_virtual else "LINKED"
-        box.label(text=title, icon=typing.cast(typing.Any, icon))
+        box.label(text=title, icon=icon)  # type: ignore
 
         # Display Blender object name if it differs from persistent robot model name
         if obj.name != props.link_name:
@@ -109,87 +129,93 @@ class LINKFORGE_PT_links(Panel):
         # Link name
         box.prop(props, "link_name")
 
-        # Geometry section
+        # Geometry section — Visuals
         box.separator()
-        box.label(text="Geometry", icon="MESH_CUBE")
+        box.label(text="Visuals", icon="SHADING_RENDERED")
 
-        # Visual/Collision status row with counts
-        row = box.row(align=True)
-        row.label(text=f"Visual: {visual_count}", icon="SHADING_RENDERED")
-        row.label(text=f"Collision: {collision_count}", icon="MOD_PHYSICS")
+        visual_children = [c for c in obj.children if SUFFIX_VISUAL in c.name.lower()]
 
-        # Collision Configuration
         row = box.row()
-        row.enabled = not is_virtual
-        row.prop(props, "collision_type", text="Collision Type")
+        col_list = row.column()
+        list_box = col_list.box()
 
-        # Geometry Detection Info (Uses centralized statistics for performance)
-        stats = get_robot_statistics(context.scene)
-        geo_info = stats.geometry_stats.get(props.link_name)
-
-        collision_obj = None
-        detected_type = GEOM_MESH
-        is_primitive = False
-
-        if geo_info:
-            collision_obj, detected_type, is_primitive = geo_info
-
-        # Display detected type - ONLY if collision exists
-        if collision_obj:
-            row = box.row()
-            icon_name = "MESH_ICOSPHERE" if is_primitive else "OUTLINER_DATA_MESH"
-            row.label(
-                text=f"Detected Collision: {detected_type}", icon=typing.cast(typing.Any, icon_name)
-            )
-
-            is_imported = typing.cast(bool, collision_obj.get(TAG_IMPORTED_SOURCE))
-
-            # Show quality slider for mesh-based collisions.
-            # If the user explicitly selects MESH mode, we show the slider even if
-            # the current detection is a primitive to allow for mode switching.
-            if props.collision_type == GEOM_MESH or (
-                props.collision_type == GEOM_AUTO and detected_type == GEOM_MESH
-            ):
-                box.separator()
-                row = box.row()
-                # Disable slider if imported from source (cannot be simplified via slider)
-                row.enabled = not is_imported
-                row.prop(props, "collision_quality", text="Collision Quality", slider=True)
-
-            if is_imported:
-                box.label(text="Imported collision: Geometry preserved", icon="LOCKED")
-
-        # Collision actions (after quality setting for logical workflow)
-        col = box.column(align=True)
-
-        if collision_count == 0:
-            # No collision - offer to generate
-            row = col.row()
-            row.enabled = visual_count > 0
-            row.operator(
-                "linkforge.generate_collision", icon="MOD_PHYSICS", text="Generate Collision"
-            )
+        if not visual_children:
+            list_box.label(text="No visual geometry", icon="INFO")
         else:
-            # Has collision - offer regenerate AND visibility toggle
-            row = col.row()
-            row.enabled = visual_count > 0
-            row.operator(
-                "linkforge.generate_collision", icon="FILE_REFRESH", text="Regenerate Collision"
-            )
+            for idx, vis in enumerate(visual_children):
+                item_row = list_box.row(align=True)
+                is_active = getattr(props, "active_visual_index", 0) == idx
 
-            # Visibility toggle
-            collision_obj = next(
-                (c for c in obj.children if SUFFIX_COLLISION in c.name.lower()), None
-            )
-            if collision_obj:
-                is_hidden = collision_obj.hide_viewport
-                icon_name = "HIDE_OFF" if is_hidden else "HIDE_ON"
-                text = "Show Collision" if is_hidden else "Hide Collision"
-                col.operator(
-                    "linkforge.toggle_collision_visibility",
-                    icon=typing.cast(typing.Any, icon_name),
-                    text=text,
+                op_row = item_row.row(align=True)
+                op_row.alignment = "LEFT"
+
+                icon = "RIGHTARROW_THIN" if is_active else "BLANK1"
+                op_row.label(text="", icon=icon)  # type: ignore
+
+                op = op_row.operator(
+                    "linkforge.set_active_geometry",
+                    text=vis.name,
+                    icon="SHADING_RENDERED",
+                    emboss=False,
                 )
+                op.geometry_type = "VISUAL"
+                op.index = idx
+
+                geom_props = getattr(vis, PROP_GEOM, None)
+                if geom_props:
+                    item_row.prop(geom_props, "geometry_type", text="")
+
+        # Visual Actions
+        col_btns = row.column(align=True)
+        col_btns.operator("linkforge.assign_as_visual", text="", icon="ADD")
+        col_btns.operator("linkforge.remove_visual", text="", icon="REMOVE")
+
+        # Geometry section — Collisions
+        box.separator()
+        box.label(text="Collisions", icon="MOD_PHYSICS")
+
+        collision_children = [c for c in obj.children if SUFFIX_COLLISION in c.name.lower()]
+
+        row = box.row()
+        col_list = row.column()
+        list_box = col_list.box()
+
+        if not collision_children:
+            list_box.label(text="No collision geometry", icon="INFO")
+        else:
+            for idx, col_obj in enumerate(collision_children):
+                item_row = list_box.row(align=True)
+                is_active = getattr(props, "active_collision_index", 0) == idx
+
+                op_row = item_row.row(align=True)
+                op_row.alignment = "LEFT"
+
+                icon = "RIGHTARROW_THIN" if is_active else "BLANK1"
+                op_row.label(text="", icon=icon)  # type: ignore
+
+                op = op_row.operator(
+                    "linkforge.set_active_geometry",
+                    text=col_obj.name,
+                    icon="MOD_PHYSICS",
+                    emboss=False,
+                )
+                op.geometry_type = "COLLISION"
+                op.index = idx
+
+                geom_props = getattr(col_obj, PROP_GEOM, None)
+                if geom_props:
+                    item_row.prop(geom_props, "geometry_type", text="")
+                    if geom_props.geometry_type == GEOM_MESH:
+                        item_row.prop(geom_props, "collision_quality", text="")
+
+        # Collision Actions
+        col_btns = row.column(align=True)
+        col_btns.operator("linkforge.assign_as_collision", text="", icon="ADD")
+        col_btns.operator("linkforge.remove_collision", text="", icon="REMOVE")
+
+        # Auto-generate is unique to collisions, place it under the list
+        row = box.row()
+        row.operator("linkforge.generate_collision", text="Auto-Generate", icon="FILE_REFRESH")
 
         # Physics properties
         box.separator()
@@ -246,17 +272,12 @@ class LINKFORGE_PT_links(Panel):
         row.prop(props, "use_material", text="Export Material")
 
         if props.use_material:
-            # Find first visual child
-            visual_children = [
-                child
-                for child in obj.children
-                if SUFFIX_VISUAL in child.name.lower() and child.type == "MESH"
-            ]
-
+            # Material selector
             if visual_children:
-                visual_obj = visual_children[0]
+                visual_obj = visual_children[getattr(props, "active_visual_index", 0)]
+                if not visual_obj or visual_obj.type != "MESH":
+                    visual_obj = visual_children[0]
 
-                # Material selector
                 if visual_obj.material_slots:
                     box.template_ID(visual_obj.material_slots[0], "material", new="material.new")
 
@@ -272,7 +293,6 @@ class LINKFORGE_PT_links(Panel):
                                     break
                 else:
                     # UX Improvement: Show Add button when no slot exists
-                    # This respects "Separation of Concerns" - separate intent (checkbox) from action (add data)
                     warn_box = box.box()
                     warn_box.alert = True
                     warn_box.label(text="No material slot found", icon="INFO")

@@ -33,14 +33,16 @@ This document provides a technical specification of how LinkForge maps Blender o
 | **Mesh** | `filename, scale` | Supports `.stl`, `.obj`, and `.dae`. |
 
 
-## Naming Conventions
+## Geometry Roles and Types
 
-LinkForge uses specific suffixes to identify the role of mesh objects within a link.
+LinkForge uses custom properties to explicitly track the role and primitive type of meshes within a link, allowing for multiple visuals and collisions per link.
 
-| Suffix | Role | Export Behavior |
+| Role | Property | Export Behavior |
 | :--- | :--- | :--- |
-| `_visual` | **Visual Geometry** | Exported to the `<visual>` tag. |
-| `_collision` | **Collision Geometry** | Exported to the `<collision>` tag. |
+| **Visual Geometry** | `geom_role = "VISUAL"` | Exported to the `<visual>` tag. Can be any number of meshes. |
+| **Collision Geometry** | `geom_role = "COLLISION"` | Exported to the `<collision>` tag. Displayed as wireframe, in-front, and hidden from renders. |
+
+The specific geometry type (`mesh`, `box`, `cylinder`, `sphere`) is explicitly declared in the UI and stored in the `geometry_type` property, ensuring exact mapping to URDF tags.
 
 ### Sanitization Rules
 During export, all object names are sanitized to remain compliant with the URDF specification:
@@ -102,6 +104,7 @@ LinkForge stores all metadata as **Custom Properties** on the Blender objects. T
 | Component | Property Location |
 | :--- | :--- |
 | **Link** | `Object.linkforge.*` |
+| **Geometry** | `Object.linkforge_geom.*` |
 | **Joint** | `Object.linkforge_joint.*` |
 | **Sensor** | `Object.linkforge_sensor.*` |
 | **Robot** | `Scene.linkforge.*` |

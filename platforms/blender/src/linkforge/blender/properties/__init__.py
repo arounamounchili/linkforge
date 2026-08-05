@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from . import (
     control_props,
+    geom_props,
     joint_props,
     link_props,
     robot_props,
@@ -20,6 +21,7 @@ from . import (
 
 # Module list for registration
 modules = [
+    geom_props,
     link_props,
     joint_props,
     sensor_props,
@@ -48,9 +50,10 @@ def unregister() -> None:
         PROP_SENSOR,
         PROP_TRANSMISSION,
     )
+    from .geom_props import PROP_GEOM
 
     # 1. Unpatch global types first to break references
-    obj_props = [PROP_LINK, PROP_JOINT, PROP_SENSOR, PROP_TRANSMISSION]
+    obj_props = [PROP_GEOM, PROP_LINK, PROP_JOINT, PROP_SENSOR, PROP_TRANSMISSION]
     scene_props = [PROP_LINK]
 
     for p in obj_props:
