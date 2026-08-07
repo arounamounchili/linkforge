@@ -554,7 +554,6 @@ class TestRobot:
             assert any("Link 'l3' has 2 parent joints" in e.message for e in result.errors)
 
     def test_mimic_chain_valid_break(self) -> None:
-
         robot = Robot(name="test")
         l1 = Link(name="l1", inertial=Inertial(mass=1.0))
         l2 = Link(name="l2", inertial=Inertial(mass=1.0))

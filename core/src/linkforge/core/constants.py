@@ -24,6 +24,11 @@ XACRO_URIS: Final[set[str]] = {
     "http://www.ros.org/wiki/xacro",
     "http://wiki.ros.org/xacro",
     "http://ros.org/xacro",
+    "http://ros.org/wiki/xacro",
+    "https://www.ros.org/wiki/xacro",
+    "https://wiki.ros.org/xacro",
+    "https://ros.org/xacro",
+    "https://ros.org/wiki/xacro",
 }
 
 # Standard prefix for internal structural processing
