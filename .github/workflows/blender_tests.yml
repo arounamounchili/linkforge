@@ -24,9 +24,9 @@ jobs:
         include:
           - blender-version: '4.2.0'
             python-version: '3.11'
-          - blender-version: '4.5.8'
+          - blender-version: '4.5.12'
             python-version: '3.11'
-          - blender-version: '5.1.0'
+          - blender-version: '5.2.0'
             python-version: '3.13'
 
     steps:
