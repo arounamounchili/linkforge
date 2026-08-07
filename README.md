@@ -200,7 +200,7 @@ Programmatic tutorials in the documentation:
 - [x] **v1.0-v1.2**: Core URDF/XACRO export, Sensors, `ros2_control`, and Hexagonal Architecture.
 - [x] **v1.3.0**: Performance & Control (Depsgraph, ROS 2 Control enhancements).
 - [x] **v1.4.0**: Headless core decoupling, Composer API, Namespaced Merging, and MoveIt 2 SRDF generation.
-- [ ] **v1.5.0**: Multi-Geometry Management (Multiple Visuals/Collisions per link, UILists, Primitive Controls & Realtime Viewport Sync).
+- [x] **v1.5.0**: Multi-Geometry Management (Multiple Visuals/Collisions per link, UILists, Primitive Controls & Realtime Viewport Sync).
 - [ ] **v1.6.0**: SRDF Configuration Panel (Expose existing MoveIt planning logic to Blender UI).
 - [ ] **v1.7.0**: LinkForge CLI & GitHub Actions (Headless generation in CI pipelines).
 
