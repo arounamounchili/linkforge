@@ -917,3 +917,28 @@ class TestXacroInfrastructure:
         assert len(links) == 2
         assert links[0].get("name") == "robot_42"
         assert links[1].get("name") == "20"
+
+    def test_fstring_format_specifier_and_dunder_attr(self, resolver) -> None:
+        """Test evaluation of f-string format specifiers and security block on dunder attributes."""
+        xml = """
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:property name="val" value="3.14159"/>
+          <xacro:property name="formatted" value="${f'{val:.2f}'}"/>
+          <link name="${formatted}"/>
+        </robot>
+        """
+        resolved_xml = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved_xml)
+        link = root.find("link")
+        assert link is not None
+        assert link.get("name") == "3.14"
+
+        # Test security exception when trying to access dunder attribute
+        dunder_xml = """
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:property name="val" value="test"/>
+          <link name="${val.__class__}"/>
+        </robot>
+        """
+        with pytest.raises(RobotXacroExpressionError, match="Forbidden dunder attributes"):
+            resolver.resolve_string(dunder_xml)
