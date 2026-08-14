@@ -89,6 +89,15 @@
         "test",
         "ideas"
       ]
+    },
+    {
+      "login": "ebgenius",
+      "name": "Eugenio Bernardi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19688353?v=4",
+      "profile": "https://github.com/ebgenius",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
