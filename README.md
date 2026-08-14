@@ -267,6 +267,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://linktr.ee/razcore.rad"><img src="https://avatars.githubusercontent.com/u/1177508?v=4?s=64" width="64px;" alt="Răzvan C. Rădulescu"/><br /><sub><b>Răzvan C. Rădulescu</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/issues?q=author%3Arazcore-rad" title="Bug reports">🐛</a> <a href="https://github.com/arounamounchili/linkforge/commits?author=razcore-rad" title="Tests">⚠️</a> <a href="#ideas-razcore-rad" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ebgenius"><img src="https://avatars.githubusercontent.com/u/19688353?v=4?s=64" width="64px;" alt="Eugenio Bernardi"/><br /><sub><b>Eugenio Bernardi</b></sub></a><br /><a href="https://github.com/arounamounchili/linkforge/issues?q=author%3Aebgenius" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>
