@@ -5,6 +5,19 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1](https://github.com/arounamounchili/linkforge/compare/v1.5.0...v1.5.1) (2026-08-14)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** create parent dir before linking dev extension ([21ad2b5](https://github.com/arounamounchili/linkforge/commit/21ad2b5b854517b1dc43b960f6ffe9e70a36ba7f))
+* **xacro:** expand namespace URIs and support AST ternary expressions ([f53ceaa](https://github.com/arounamounchili/linkforge/commit/f53ceaa7037581a5fdc87c6f2a10fd00483bfeea))
+
+
+### 📚 Documentation
+
+* add ebgenius as a contributor for bug ([#291](https://github.com/arounamounchili/linkforge/issues/291)) ([e3ad70c](https://github.com/arounamounchili/linkforge/commit/e3ad70c4b208a7c389f62323c29e8598e53a8232))
+
 ## [1.5.0](https://github.com/arounamounchili/linkforge/compare/v1.4.4...v1.5.0) (2026-08-05)
 
 
