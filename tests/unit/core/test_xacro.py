@@ -863,3 +863,82 @@ class TestXacroInfrastructure:
 
         importlib.reload(xacro_parser)
         assert xacro_parser.yaml is not None
+
+    def test_ternary_expression_if_exp(self, resolver) -> None:
+        """Test evaluation of Python ternary expressions (ast.IfExp)."""
+        xml = """
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:property name="prefix" value="arm"/>
+          <xacro:property name="p1" value="${prefix + '_' if prefix else ''}"/>
+          <xacro:property name="empty_prefix" value=""/>
+          <xacro:property name="p2" value="${empty_prefix + '_' if empty_prefix else 'default_'}"/>
+          <link name="${p1}link1"/>
+          <link name="${p2}link2"/>
+        </robot>
+        """
+        resolved_xml = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved_xml)
+        links = root.findall("link")
+        assert len(links) == 2
+        assert links[0].get("name") == "arm_link1"
+        assert links[1].get("name") == "default_link2"
+
+    def test_alternate_xacro_namespace_uri(self, resolver) -> None:
+        """Test parsing files using http://ros.org/wiki/xacro (without www)."""
+        xml = """
+        <robot xmlns:xacro="http://ros.org/wiki/xacro">
+          <xacro:arg name="use_fake" default="true"/>
+          <xacro:property name="use_fake" value="$(arg use_fake)"/>
+          <link name="l_${use_fake}"/>
+        </robot>
+        """
+        resolved_xml = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved_xml)
+        link = root.find("link")
+        assert link is not None
+        assert link.get("name") in ("l_True", "l_true")
+
+    def test_fstring_and_slicing_expressions(self, resolver) -> None:
+        """Test evaluation of Python f-strings and slicing expressions."""
+        xml = """
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:property name="name" value="robot"/>
+          <xacro:property name="id" value="42"/>
+          <xacro:property name="fmt" value="${f'{name}_{id}'}"/>
+          <xacro:property name="items" value="${[10, 20, 30, 40]}"/>
+          <xacro:property name="sliced" value="${items[1:3]}"/>
+          <link name="${fmt}"/>
+          <link name="${sliced[0]}"/>
+        </robot>
+        """
+        resolved_xml = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved_xml)
+        links = root.findall("link")
+        assert len(links) == 2
+        assert links[0].get("name") == "robot_42"
+        assert links[1].get("name") == "20"
+
+    def test_fstring_format_specifier_and_dunder_attr(self, resolver) -> None:
+        """Test evaluation of f-string format specifiers and security block on dunder attributes."""
+        xml = """
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:property name="val" value="3.14159"/>
+          <xacro:property name="formatted" value="${f'{val:.2f}'}"/>
+          <link name="${formatted}"/>
+        </robot>
+        """
+        resolved_xml = resolver.resolve_string(xml)
+        root = ET.fromstring(resolved_xml)
+        link = root.find("link")
+        assert link is not None
+        assert link.get("name") == "3.14"
+
+        # Test security exception when trying to access dunder attribute
+        dunder_xml = """
+        <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+          <xacro:property name="val" value="test"/>
+          <link name="${val.__class__}"/>
+        </robot>
+        """
+        with pytest.raises(RobotXacroExpressionError, match="Forbidden dunder attributes"):
+            resolver.resolve_string(dunder_xml)

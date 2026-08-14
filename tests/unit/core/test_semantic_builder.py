@@ -9,7 +9,7 @@ from linkforge.core.models.srdf import Chain, SrdfSphere
 def test_semantic_builder_all_methods() -> None:
     builder = RobotBuilder("test_robot")
 
-    # A. standard group with links, joints, chains, subgroups
+    assert builder.semantic.done() is builder
     builder.semantic.group(
         name="arm",
         links=["link1", "link2"],

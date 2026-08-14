@@ -930,7 +930,6 @@ class TestGlobalPanels:
 class TestPanelsExtra:
     @pytest.fixture(autouse=True)
     def setup_cleanup(self, scene):
-
         cleanup_blender_scene(scene)
         yield
         cleanup_blender_scene(scene)

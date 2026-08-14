@@ -175,11 +175,24 @@ def _safe_eval(expr: str, context: dict[str, Any]) -> Any:
             }
         elif isinstance(node, ast.Tuple):
             return tuple(_eval_node(elt) for elt in node.elts)
+        elif isinstance(node, ast.IfExp):
+            return _eval_node(node.body) if _eval_node(node.test) else _eval_node(node.orelse)
+        elif isinstance(node, ast.JoinedStr):
+            return "".join(str(_eval_node(val)) for val in node.values)
+        elif isinstance(node, ast.FormattedValue):
+            val = _eval_node(node.value)
+            if node.format_spec:
+                fmt_spec = _eval_node(node.format_spec)
+                return format(val, fmt_spec)
+            return val
+        elif isinstance(node, ast.Slice):
+            lower = _eval_node(node.lower) if node.lower else None
+            upper = _eval_node(node.upper) if node.upper else None
+            step = _eval_node(node.step) if node.step else None
+            return slice(lower, upper, step)
         else:
             raise TypeError(f"Unsupported AST node {type(node)}")  # noqa: TRY003
 
-    # We no longer catch SyntaxError and wrap it, allowing it to bubble up
-    # just like eval() did, so the existing try/except blocks work as before.
     tree = ast.parse(expr, mode="eval")
     return _eval_node(tree)
 
