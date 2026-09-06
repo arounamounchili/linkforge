@@ -61,6 +61,11 @@ def on_depsgraph_update_post(_scene: typing.Any, _depsgraph: typing.Any) -> None
     for update in _depsgraph.updates:
         obj = update.id
 
+        # Fast filter: skip non-Object datablocks (e.g. Meshes, Materials, NodeTrees)
+        # to eliminate depsgraph evaluation overhead for unrelated scene changes.
+        if not getattr(obj, "type", None):
+            continue
+
         # 1. Sync Link identities
         if (lf := get_link_props(obj)) and lf.is_robot_link:
             sanitized = sanitize_name(obj.name)
