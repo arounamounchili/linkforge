@@ -36,3 +36,46 @@ def test_normalize_vector() -> None:
     # Zero vector
     assert normalize_vector(0, 0, 0) == (0.0, 0.0, 0.0)
     assert normalize_vector(1e-11, 0, 0) == (0.0, 0.0, 0.0)
+
+
+def test_symmetric_matrix_eigenvalues_3x3() -> None:
+    """Test analytical 3x3 symmetric matrix eigenvalue calculation."""
+    from linkforge.core._utils.math_utils import symmetric_matrix_eigenvalues_3x3
+
+    # Identity matrix
+    e1, e2, e3 = symmetric_matrix_eigenvalues_3x3(1.0, 1.0, 1.0, 0.0, 0.0, 0.0)
+    assert (abs(e1 - 1.0), abs(e2 - 1.0), abs(e3 - 1.0)) < (1e-9, 1e-9, 1e-9)
+
+    # Distinct diagonal matrix
+    e1, e2, e3 = symmetric_matrix_eigenvalues_3x3(5.0, 2.0, 9.0, 0.0, 0.0, 0.0)
+    assert (abs(e1 - 9.0), abs(e2 - 5.0), abs(e3 - 2.0)) < (1e-9, 1e-9, 1e-9)
+
+    # Known matrix with off-diagonals: [[2, 1, 0], [1, 2, 0], [0, 0, 3]] -> eigenvalues 3, 3, 1
+    e1, e2, e3 = symmetric_matrix_eigenvalues_3x3(2.0, 2.0, 3.0, 1.0, 0.0, 0.0)
+    assert abs(e1 - 3.0) < 1e-6
+    assert abs(e2 - 3.0) < 1e-6
+    assert abs(e3 - 1.0) < 1e-6
+
+    # Unphysical matrix with negative eigenvalue: [[2, 3, 0], [3, 2, 0], [0, 0, 2]] -> eigenvalues 5, 2, -1
+    e1, e2, e3 = symmetric_matrix_eigenvalues_3x3(2.0, 2.0, 2.0, 3.0, 0.0, 0.0)
+    assert abs(e1 - 5.0) < 1e-6
+    assert abs(e2 - 2.0) < 1e-6
+    assert abs(e3 - (-1.0)) < 1e-6
+
+
+def test_sylvester_minors_and_psd() -> None:
+    """Test Sylvester's principal minors and positive semi-definiteness checks."""
+    from linkforge.core._utils.math_utils import is_positive_semi_definite_3x3, sylvester_minors_3x3
+
+    # Positive definite matrix: [[2, 0.5, 0.3], [0.5, 2, 0.4], [0.3, 0.4, 2]]
+    d1, d2, d3 = sylvester_minors_3x3(2.0, 2.0, 2.0, 0.5, 0.3, 0.4)
+    assert d1 > 0
+    assert d2 > 0
+    assert d3 > 0
+    assert is_positive_semi_definite_3x3(2.0, 2.0, 2.0, 0.5, 0.3, 0.4)
+
+    # Non-positive definite matrix: [[2, 3, 0], [3, 2, 0], [0, 0, 2]] -> D2 = 4 - 9 = -5
+    d1, d2, d3 = sylvester_minors_3x3(2.0, 2.0, 2.0, 3.0, 0.0, 0.0)
+    assert d1 == 2.0
+    assert d2 == -5.0
+    assert not is_positive_semi_definite_3x3(2.0, 2.0, 2.0, 3.0, 0.0, 0.0)

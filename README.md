@@ -112,8 +112,8 @@ Design robots visually in Blender - all physics validation and export pipelines 
 | **Sensors** | ✅ Full | Camera, LiDAR, IMU, GPS, **Contact**, **Force/Torque** |
 | **Control** | ✅ Full | `ros2_control` Dashboard & Gazebo Plugin Integration |
 | **Validation** | ✅ Pro | Kinematic linter catches topology errors, disconnected links, non-physical inertias |
-| **Fidelity** | ✅ Pro | **Round-Trip Precision** for lossless Import → Edit → Export |
-| **Formats** | ✅ Full | URDF 1.0, XACRO (Macros, Properties, Multi-file), **SRDF (MoveIt 2)** |
+| **Fidelity** | ✅ Pro | **Round-Trip Precision** for concrete URDF & SRDF (preserves geometry, limits, and vendor tags) |
+| **Formats** | ✅ Full | URDF 1.0 (lossless round-trip), XACRO (evaluated & compiled), **SRDF (MoveIt 2)** |
 | **Headless** | ✅ Full | Zero-dependency `linkforge-core` runs in CI/CD, HPC clusters, RL training loops |
 | **Composition** | ✅ Full | Modular assembly via `attach()` with automatic prefix-based namespace resolution |
 | **Physics** | ✅ Full | Scientifically accurate inertia tensor calculation for primitives and arbitrary meshes |

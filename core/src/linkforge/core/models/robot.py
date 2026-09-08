@@ -72,6 +72,7 @@ class Robot:
     ros2_controls: Sequence[Ros2Control] = field(default_factory=tuple)
     gazebo_elements: Sequence[GazeboElement] = field(default_factory=tuple)
     semantic: SemanticRobotDescription = field(default_factory=SemanticRobotDescription)
+    extra_elements: Sequence[str] = field(default_factory=tuple)
 
     # Fast lookup indices (name -> object)
     _link_index: dict[str, Link] = field(
@@ -239,6 +240,7 @@ class Robot:
         self.transmissions = (*self.transmissions, *sub_robot.transmissions)
         self.ros2_controls = (*self.ros2_controls, *sub_robot.ros2_controls)
         self.gazebo_elements = (*self.gazebo_elements, *sub_robot.gazebo_elements)
+        self.extra_elements = (*self.extra_elements, *sub_robot.extra_elements)
 
         # Re-index to include merged elements
         self._reindex()

@@ -1004,6 +1004,7 @@ class URDFParser(RobotXMLParser[Robot]):
         delayed_ros2_controls: list[Ros2Control] = []
         delayed_sensors: list[Sensor] = []
         delayed_gazebo_elements: list[tuple[GazeboElement, dict[str, Any]]] = []
+        delayed_extra_elements: list[str] = []
 
         # Determine base directory for resolving relative mesh paths.
         source_directory = (
@@ -1087,6 +1088,15 @@ class URDFParser(RobotXMLParser[Robot]):
                                 f"Skipping invalid gazebo element '{elem.get('name') or elem.get('reference')}': {e}"
                             )
 
+                    else:
+                        # Capture unrecognized root-level tags (e.g. <mujoco>, <bullet>, <unity>, custom vendor tags)
+                        try:
+                            xml_str = ET.tostring(elem, encoding="unicode").strip()
+                            if xml_str:
+                                delayed_extra_elements.append(xml_str)
+                        except Exception as e:
+                            logger.warning(f"Could not serialize unrecognized element '{tag}': {e}")
+
                     elem.clear()
 
                 depth -= 1
@@ -1141,6 +1151,9 @@ class URDFParser(RobotXMLParser[Robot]):
                     robot.add_gazebo_element(gazebo_elem)
             except (RobotModelError, ValueError) as e:
                 logger.warning(f"Skipping invalid gazebo element '{gazebo_elem.reference}': {e}")
+
+        if delayed_extra_elements:
+            robot.extra_elements = tuple(delayed_extra_elements)
 
         return robot
 

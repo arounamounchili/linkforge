@@ -1594,11 +1594,20 @@ def test_parse_with_xacro_suffix_raises_immediately(tmp_path) -> None:
         parser._detect_xacro_file(ET.Element("robot"), filepath=filepath)
 
 
-def test_urdf_parser_unknown_root_tag_ignored() -> None:
-    """Verify that an unknown tag in the root of URDF is safely ignored."""
+def test_urdf_parser_unknown_root_tag_preserved() -> None:
+    """Verify that an unknown tag in the root of URDF is captured into extra_elements."""
     xml = """<robot name="r">
-        <unknown_tag attribute="val"/>
+        <unknown_tag attribute="val">
+            <child_tag data="123"/>
+        </unknown_tag>
+        <mujoco>
+            <option gravity="0 0 -9.81"/>
+        </mujoco>
     </robot>"""
     parser = URDFParser()
     robot = parser.parse_string(xml)
     assert robot is not None
+    assert len(robot.extra_elements) == 2
+    assert "unknown_tag" in robot.extra_elements[0]
+    assert "child_tag" in robot.extra_elements[0]
+    assert "mujoco" in robot.extra_elements[1]
