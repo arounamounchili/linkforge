@@ -114,7 +114,10 @@ def test_on_depsgraph_update_post_all_branches(scene):
         def __init__(self, updates):
             self.updates = updates
 
+    non_object_datablock = object()  # Simulates Material, NodeTree, Mesh ID without .type
+
     updates = [
+        MockUpdate(non_object_datablock),
         MockUpdate(link_true),
         MockUpdate(link_false),
         MockUpdate(joint_true),

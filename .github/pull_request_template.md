@@ -28,8 +28,9 @@
 ## 🛠️ Type of change
 - [ ] 🚀 New feature (feat)
 - [ ] 🐞 Bug fix (fix)
-- [ ] 🧪 Tests (test)
+- [ ] ⚡ Performance (perf)
 - [ ] 🧹 Refactor (refactor)
+- [ ] 🧪 Tests (test)
 - [ ] 📚 Documentation (docs)
 - [ ] 🎨 Style/Linting (style)
 - [ ] ⚙️ Maintenance (chore)
