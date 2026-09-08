@@ -7,7 +7,7 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 ### Robot "folds," "explodes," or jitters in simulation
 **Cause**: Numerical instability, usually caused by inconsistent mass data, misaligned origins, or "Double-Offsets" from world-baked meshes.
 **Solutions**:
-- **Check Inertial Values**: Tiny or zero values (`ixx`, `iyy`, `izz`) cause solvers to fail. Ensure **Auto-Calculate Inertia** is enabled in the **Links** panel.
+- **Check Inertial Values**: Tiny or zero values (`ixx`, `iyy`, `izz`) or non-positive-definite matrices (violating Sylvester's criterion) cause physics solvers to diverge or fail. Run LinkForge's validator or enable **Auto-Calculate Inertia** in the **Links** panel to ensure mathematically sound, positive semi-definite tensors.
 - **Mesh Centering**: LinkForge automatically localizes your meshes during export (Geometric Centering). This ensures the STL folder contains 0,0,0-centered meshes, while the URDF handles the offset. This prevents "double-transformation" explosions.
 - **Apply Scale and Rotation**: Before marking a mesh as a link, ensure its scale is `1.0`. While LinkForge fixes scaling during collision generation, keeping your visual objects at `1.0` scale in Blender prevents mathematical edge cases. `Ctrl+A > All Transforms` is the best practice.
 - **Simplify Collision**: High-poly collision meshes cause physics "jitter." Use the **Collision Quality** slider in the **Links** panel to decimate your meshes.

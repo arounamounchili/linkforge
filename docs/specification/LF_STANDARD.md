@@ -8,7 +8,7 @@
 The `.lf` (LinkForge) format is the "Source Code" for robotics. It is a high-fidelity, metadata-rich Intermediate Representation (IR) designed to bridge the gap between CAD tools and simulation engines without data loss.
 
 ### Design Principles
-1.  **Physics is Truth**: Every inertial property must be physically plausible (validated via the triangle inequality).
+1.  **Physics is Truth**: Every inertial property must be physically plausible (positive semi-definite via Sylvester's criterion and satisfying principal moments triangle inequalities).
 2.  **Lossless Round-Trips**: All data required for simulation must be syncable back to the visual modeling environment.
 3.  **Modular Assembly**: Support for referencing external components via `lf://` URIs.
 
