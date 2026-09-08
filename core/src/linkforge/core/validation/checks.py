@@ -38,7 +38,7 @@ class ValidationCheck(ABC):
     """Abstract base class for a single, focused validation rule.
 
     All concrete checks must implement :meth:`run`. Checks are stateless
-    by design — all output is written into the provided ``ValidationResult``.
+    by design: all output is written into the provided ``ValidationResult``.
     """
 
     @abstractmethod

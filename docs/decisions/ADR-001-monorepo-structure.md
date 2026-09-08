@@ -16,7 +16,7 @@ This ADR documents the decision made and the reasoning behind it, so that future
 
 ## Decision
 
-**All components of the LinkForge ecosystem — `linkforge.core` and all platform adapters — will be maintained in a single monorepo, with one exception: platform adapters that have a fundamentally separate installer ecosystem may be extracted to a standalone repository.**
+**All components of the LinkForge ecosystem (both `linkforge.core` and all platform adapters) will be maintained in a single monorepo, with one exception: platform adapters that have a fundamentally separate installer ecosystem may be extracted to a standalone repository.**
 
 The extraction rule is:
 
@@ -27,10 +27,10 @@ The extraction rule is:
 
 | Package | Installer | Location |
 |---|---|---|
-| `linkforge.core` | `pip` | `core/` — always in this repo |
-| `linkforge-blender` | Blender Extension Manager | `platforms/blender/` — stays in this repo |
-| `linkforge-ros` | `pip` + `apt` (ROS Index) | `platforms/ros/` — may be extracted after v1.4.0 stabilizes |
-| Future adapters (FreeCAD, Web, etc.) | `pip` | `platforms/<name>/` — stays in this repo |
+| `linkforge.core` | `pip` | `core/` (always in this repo) |
+| `linkforge-blender` | Blender Extension Manager | `platforms/blender/` (stays in this repo) |
+| `linkforge-ros` | `pip` + `apt` (ROS Index) | `platforms/ros/` (may be extracted after v1.4.0 stabilizes) |
+| Future adapters (FreeCAD, Web, etc.) | `pip` | `platforms/<name>/` (stays in this repo) |
 
 ---
 
@@ -68,6 +68,6 @@ This ADR should be reconsidered when:
 ---
 
 ## References
-- [Monorepos in Open Source — Babel, React, SQLAlchemy](https://monorepo.tools/)
-- [python-poetry/poetry — Monorepo with multiple packages](https://github.com/python-poetry/poetry)
-- [SQLAlchemy — single-repo multi-package example](https://github.com/sqlalchemy/sqlalchemy)
+- [Monorepos in Open Source: Babel, React, SQLAlchemy](https://monorepo.tools/)
+- [python-poetry/poetry: Monorepo with multiple packages](https://github.com/python-poetry/poetry)
+- [SQLAlchemy: single-repo multi-package example](https://github.com/sqlalchemy/sqlalchemy)

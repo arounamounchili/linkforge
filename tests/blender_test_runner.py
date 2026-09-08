@@ -1,4 +1,4 @@
-"""Blender test runner — executed inside Blender's embedded Python.
+"""Blender test runner: executed inside Blender's embedded Python.
 
 Invoked automatically by blender_launcher.py. Do not run directly.
 """

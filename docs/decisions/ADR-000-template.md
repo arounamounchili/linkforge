@@ -20,7 +20,7 @@ Write this so a new contributor can understand the context without asking for ba
 
 <!--
 State the decision clearly and directly in one or two sentences.
-Then provide the details: tables, rules, code snippets — whatever makes the decision concrete and unambiguous.
+Then provide the details: tables, rules, code snippets - whatever makes the decision concrete and unambiguous.
 -->
 
 ---
@@ -41,7 +41,7 @@ Then provide the details: tables, rules, code snippets — whatever makes the de
 
 <!--
 For each alternative you rejected, briefly explain what it was and why you did not choose it.
-This is crucial — it prevents future contributors from re-proposing the same alternatives.
+This is crucial: it prevents future contributors from re-proposing the same alternatives.
 -->
 
 ### Alternative: [Name]

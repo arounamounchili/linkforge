@@ -586,7 +586,7 @@ def test_ros2_control_sensor_type_no_cmd_ifs(scene, blender_context):
 
     translator = Ros2ControlTranslator()
 
-    # Case A: sensor type with NO command interfaces AND existing state_ifs — should NOT add default
+    # Case A: sensor type with NO command interfaces AND existing state_ifs (should NOT add default)
     class MockJointSensorStateOnly:
         name = "joint_s"
         cmd_position = False

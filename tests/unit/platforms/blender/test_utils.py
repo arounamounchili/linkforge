@@ -35,7 +35,7 @@ class TestNameSynchronization:
         # Initial state: names should match
         assert lf.link_name == "sync_link"
 
-        # Simulate Blender renaming — the handler should propagate the new name
+        # Simulate Blender renaming: the handler should propagate the new name
         obj.name = "sync_link_renamed"
         safe_update(scene)
 
@@ -56,7 +56,7 @@ class TestNameSynchronization:
         # Initial state: names should match
         assert jf.joint_name == "sync_joint"
 
-        # Simulate Blender renaming — the handler should propagate the new name
+        # Simulate Blender renaming: the handler should propagate the new name
         obj.name = "sync_joint_renamed"
         safe_update(scene)
 
