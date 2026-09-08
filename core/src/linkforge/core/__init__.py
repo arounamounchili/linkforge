@@ -30,7 +30,6 @@ from . import (
 from .base import (
     FileSystemResolver,
     IResourceResolver,
-    NetworkResolver,
     RobotGenerator,
     RobotParser,
 )
@@ -259,7 +258,6 @@ __all__ = [
     "RobotGenerator",
     "IResourceResolver",
     "FileSystemResolver",
-    "NetworkResolver",
     # Composer API
     "RobotBuilder",
     "LinkBuilder",

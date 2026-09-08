@@ -35,7 +35,7 @@ from ..core.constants import (
     JOINT_REVOLUTE,
     PI,
 )
-from ..utils.property_helpers import find_property_owner, get_link_props
+from ..utils.property_helpers import find_property_owner, get_link_props, safe_set_id_name
 from ..utils.scene_utils import clear_stats_cache
 
 
@@ -71,36 +71,8 @@ def set_joint_name(self: JointPropertyGroup, value: str) -> None:
     # Sanitize joint name for robot model
     sanitized_name = sanitize_name(value)
 
-    # Store the persistent identity
     self.source_name_stored = sanitized_name
-
-    # Update object name to match joint name
-    # Blender will handle collisions by appending suffixes, but our stored name persists
-    if self.id_data.name != sanitized_name:
-        try:
-            self.id_data.name = sanitized_name
-        except AttributeError:
-            # We are likely in a depsgraph update where names are read-only.
-            import bpy
-
-            if not bpy.app.background and hasattr(bpy.app, "timers"):
-                # GUI mode: Use a standard timer
-                def deferred_rename() -> None:
-                    import contextlib
-
-                    if self.id_data:
-                        with contextlib.suppress(Exception):
-                            self.id_data.name = sanitized_name
-                    return None
-
-                bpy.app.timers.register(deferred_rename, first_interval=0.01)
-            else:
-                # Background mode: Use our internal queue
-                from ..handlers.name_sync_handler import PENDING_RENAMES
-
-                PENDING_RENAMES.append((self.id_data, sanitized_name))
-
-    # Clear statistics cache when name changes
+    safe_set_id_name(self.id_data, sanitized_name)
     clear_stats_cache()
 
 

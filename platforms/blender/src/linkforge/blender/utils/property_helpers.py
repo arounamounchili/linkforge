@@ -118,3 +118,62 @@ def get_robot_props(scene: bpy.types.Scene | None) -> RobotPropertyGroup | None:
     if scene is None:
         return None
     return cast("RobotPropertyGroup | None", getattr(scene, PROP_ROBOT, None))
+
+
+# Global queue for deferred datablock renames (used when RNA is locked or in background mode)
+PENDING_RENAMES: list[tuple[Any, str]] = []
+
+
+def flush_deferred_renames() -> None:
+    """Execute all pending datablock renames in the queue.
+
+    Used primarily in background mode or during tests to ensure synchronization
+    is complete after depsgraph evaluation.
+    """
+    global PENDING_RENAMES
+    remaining = []
+    while PENDING_RENAMES:
+        obj, new_name = PENDING_RENAMES.pop(0)
+        try:
+            if obj and hasattr(obj, "name"):
+                obj.name = new_name
+        except Exception:
+            # If it fails (likely read-only / RNA still locked), keep it for next flush
+            remaining.append((obj, new_name))
+
+    PENDING_RENAMES.extend(remaining)
+
+
+def safe_set_id_name(id_data: Any, sanitized_name: str) -> None:
+    """Safely update a Blender datablock's name, deferring if RNA is locked.
+
+    During property updates or depsgraph evaluation, writing directly to
+    ID datablocks can raise RuntimeError or AttributeError.
+    In GUI mode, updates are deferred via bpy.app.timers.
+    In background mode (or headless environments where timers do not run),
+    updates are queued into PENDING_RENAMES and flushed on depsgraph updates.
+
+    Note:
+        Blender automatically handles duplicate object name collisions by
+        appending numeric suffixes (e.g. '.001', '.002'). The LinkForge
+        model identity is preserved in `source_name_stored`.
+    """
+    if not id_data or not hasattr(id_data, "name") or id_data.name == sanitized_name:
+        return
+
+    try:
+        id_data.name = sanitized_name
+    except (AttributeError, RuntimeError):
+        if not getattr(bpy.app, "background", False) and hasattr(bpy.app, "timers"):
+
+            def deferred_rename() -> None:
+                import contextlib
+
+                if id_data and hasattr(id_data, "name"):
+                    with contextlib.suppress(Exception):
+                        id_data.name = sanitized_name
+                return None
+
+            bpy.app.timers.register(deferred_rename, first_interval=0.01)
+        else:
+            PENDING_RENAMES.append((id_data, sanitized_name))

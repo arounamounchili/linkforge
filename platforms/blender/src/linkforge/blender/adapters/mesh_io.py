@@ -5,6 +5,7 @@ Export Blender mesh objects to STL, OBJ, and GLB files for URDF.
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -68,8 +69,6 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
         )
     except (RuntimeError, OSError) as e:
         logger.warning(f"STL export failed: {e}")
-        # Restore visibility if failed
-        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during STL export: {e}", exc_info=True)
@@ -126,7 +125,6 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
         )
     except (RuntimeError, OSError) as e:
         logger.warning(f"OBJ export failed: {e}")
-        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during OBJ export: {e}", exc_info=True)
@@ -174,12 +172,32 @@ def create_simplified_mesh(obj: Any, decimation_ratio: float) -> Any | None:
     decimate_mod.ratio = decimation_ratio
     decimate_mod.decimate_type = "COLLAPSE"
 
-    # Apply the modifier
-    bpy.ops.object.select_all(action="DESELECT")
-    simplified_obj.select_set(True)
-    if bpy.context.view_layer is not None:
-        bpy.context.view_layer.objects.active = simplified_obj
-    bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
+    # Apply the modifier while preserving selection context
+    prev_selected = (
+        list(bpy.context.selected_objects) if hasattr(bpy.context, "selected_objects") else []
+    )
+    prev_active = (
+        bpy.context.view_layer.objects.active if bpy.context.view_layer is not None else None
+    )
+
+    try:
+        bpy.ops.object.select_all(action="DESELECT")
+        simplified_obj.select_set(True)
+        if bpy.context.view_layer is not None:
+            bpy.context.view_layer.objects.active = simplified_obj
+        bpy.ops.object.modifier_apply(modifier=decimate_mod.name)
+    finally:
+        with contextlib.suppress(Exception):
+            bpy.ops.object.select_all(action="DESELECT")
+            for sel_obj in prev_selected:
+                if sel_obj and sel_obj.name in bpy.data.objects:
+                    sel_obj.select_set(True)
+            if (
+                bpy.context.view_layer is not None
+                and prev_active is not None
+                and prev_active.name in bpy.data.objects
+            ):
+                bpy.context.view_layer.objects.active = prev_active
 
     return simplified_obj
 
@@ -246,7 +264,6 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
         )
     except (RuntimeError, OSError) as e:
         logger.warning(f"GLB export failed: {e}")
-        obj.hide_viewport = was_hidden
         return False
     except (TypeError, AttributeError, KeyError) as e:
         logger.error(f"Unexpected error during GLB export: {e}", exc_info=True)

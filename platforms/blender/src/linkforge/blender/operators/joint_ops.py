@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import contextlib
-import typing
 
 import bpy
+from bpy.types import Context, Operator
 
 from ..core.constants import (
     JOINT_REVOLUTE,
@@ -15,14 +15,6 @@ from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.property_helpers import get_joint_props, get_link_props, get_robot_props
 from ..utils.scene_utils import clear_stats_cache
-
-if typing.TYPE_CHECKING:
-    from bpy.types import Context, Operator
-
-else:
-    # Runtime fallback for mock environments where bpy.types might be partially loaded.
-    Context = typing.Any
-    Operator = getattr(getattr(bpy, "types", object), "Operator", object)
 
 
 class LINKFORGE_OT_create_joint(Operator):

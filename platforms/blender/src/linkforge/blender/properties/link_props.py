@@ -38,6 +38,7 @@ from ..core.constants import (
     GRAVITY_ENABLED,
 )
 from ..utils.link_utils import should_rename_child
+from ..utils.property_helpers import safe_set_id_name
 from ..utils.scene_utils import clear_stats_cache
 from ..visualization.inertia_gizmos import tag_redraw
 
@@ -96,34 +97,8 @@ def set_link_name(self: LinkPropertyGroup, value: str) -> None:
     # Store the old name before updating for child renaming logic
     old_source_name = getattr(self, "source_name_stored", "") or sanitize_name(self.id_data.name)
 
-    # Store the persistent identity
     self.source_name_stored = sanitized_name
-
-    # Update object name to match link name
-    # Blender will handle collisions by appending suffixes, but our stored name persists
-    if self.id_data.name != sanitized_name:
-        try:
-            self.id_data.name = sanitized_name
-        except AttributeError:
-            # We are likely in a depsgraph update where names are read-only.
-            import bpy
-
-            if not bpy.app.background and hasattr(bpy.app, "timers"):
-                # GUI mode: Use a standard timer
-                def deferred_rename() -> None:
-                    import contextlib
-
-                    if self.id_data:
-                        with contextlib.suppress(Exception):
-                            self.id_data.name = sanitized_name
-                    return None
-
-                bpy.app.timers.register(deferred_rename, first_interval=0.01)
-            else:
-                # Background mode: Use our internal queue
-                from ..handlers.name_sync_handler import PENDING_RENAMES
-
-                PENDING_RENAMES.append((self.id_data, sanitized_name))
+    safe_set_id_name(self.id_data, sanitized_name)
 
     # Update visual and collision children names IF they followed the standard naming pattern
     for child in self.id_data.children:

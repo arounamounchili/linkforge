@@ -129,3 +129,25 @@ def test_validate_robot(mocker):
     validate_robot(robot)
 
     mock_val.return_value.validate.assert_called_once_with(robot)
+
+
+def test_read_urdf_file_not_found(tmp_path):
+    """Verify read_urdf raises FileNotFoundError when a path does not exist."""
+    import pytest
+
+    missing = tmp_path / "non_existent.urdf"
+    with pytest.raises(FileNotFoundError):
+        read_urdf(missing)
+    with pytest.raises(FileNotFoundError):
+        read_urdf(str(missing))
+
+
+def test_read_srdf_file_not_found(tmp_path):
+    """Verify read_srdf raises FileNotFoundError when a path does not exist."""
+    import pytest
+
+    missing = tmp_path / "non_existent.srdf"
+    with pytest.raises(FileNotFoundError):
+        read_srdf(missing)
+    with pytest.raises(FileNotFoundError):
+        read_srdf(str(missing))

@@ -96,21 +96,6 @@ class ITranslator(Protocol):
         ...
 
 
-class TranslationRegistry:
-    """Registry for managing specialized translators for different component types."""
-
-    def __init__(self) -> None:
-        self._translators: dict[str, ITranslator] = {}
-
-    def register(self, component_type: str, translator: ITranslator) -> None:
-        """Register a translator for a specific component type."""
-        self._translators[component_type] = translator
-
-    def get(self, component_type: str) -> ITranslator | None:
-        """Retrieve a translator for a component type."""
-        return self._translators.get(component_type)
-
-
 class LinkTranslator(ITranslator):
     """Translates Blender objects marked as robot links."""
 

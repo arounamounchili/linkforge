@@ -6,6 +6,7 @@ import contextlib
 import typing
 
 import bpy
+from bpy.types import Context, Operator
 from mathutils import Vector
 
 from ..preferences import get_addon_prefs
@@ -13,14 +14,6 @@ from ..properties.link_props import sanitize_name
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.property_helpers import get_joint_props, get_transmission_props
 from ..utils.scene_utils import clear_stats_cache
-
-if typing.TYPE_CHECKING:
-    from bpy.types import Context, Operator
-
-else:
-    # Runtime fallback for mock environments where bpy.types might be partially loaded.
-    Context = typing.Any
-    Operator = getattr(getattr(bpy, "types", object), "Operator", object)
 
 
 class LINKFORGE_OT_create_transmission(Operator):

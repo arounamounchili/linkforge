@@ -14,12 +14,13 @@ Core Components:
 
 from __future__ import annotations
 
+import math
 from typing import Final
 
 # 1. XML and XACRO Infrastructure
 # ----------------------------
 
-# Official XACRO namespace URIs
+# Official XACRO namespace URIs (http and https variants, with and without www)
 XACRO_URIS: Final[set[str]] = {
     "http://www.ros.org/wiki/xacro",
     "http://wiki.ros.org/xacro",
@@ -42,8 +43,8 @@ XACRO_PREFIX: Final[str] = "xacro:"
 EPSILON: Final[float] = 1e-9
 
 # Mathematical Constants (Architectural precision)
-PI: Final[float] = 3.14159265358979323846
-HALF_PI: Final[float] = 1.57079632679489661923
+PI: Final[float] = math.pi
+HALF_PI: Final[float] = math.pi / 2.0
 
 # Stability epsilon for Sylvester's criterion and inertia checks
 SYLVESTER_TOLERANCE_EPSILON: Final[float] = 1e-9

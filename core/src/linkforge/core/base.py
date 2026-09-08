@@ -36,7 +36,6 @@ __all__ = [
     "RobotParser",
     "IResourceResolver",
     "FileSystemResolver",
-    "NetworkResolver",
     "LinkForgeError",
     "RobotGeneratorError",
     "RobotModelError",
@@ -199,20 +198,3 @@ class FileSystemResolver:
             return path.absolute()
 
         raise FileNotFoundError(uri)
-
-
-class NetworkResolver:
-    """Mock network resolver for URL-based meshes.
-
-    This is a placeholder for future cloud integrations (e.g. AWS S3, HTTP).
-    Currently raises a NotImplementedError if a network URI is detected.
-    """
-
-    def resolve(self, uri: str, relative_to: Path | None = None) -> Path:
-        """Simulate network resolution."""
-        if any(uri.startswith(p) for p in ("http://", "https://", "s3://")):
-            # In a real implementation, this would download to a /tmp cache
-            raise NotImplementedError(uri)
-
-        # Fallback to standard filesystem if it's a local path
-        return FileSystemResolver().resolve(uri, relative_to=relative_to)

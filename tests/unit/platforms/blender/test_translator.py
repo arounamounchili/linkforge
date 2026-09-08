@@ -10,7 +10,6 @@ from linkforge.blender.adapters.translator import (
     LinkTranslator,
     Ros2ControlTranslator,
     SensorTranslator,
-    TranslationRegistry,
     TransmissionTranslator,
 )
 from linkforge.core import (
@@ -30,33 +29,6 @@ from tests.blender_test_utils import (
     safe_get_sensor,
     safe_get_transmission,
 )
-
-
-class MockTranslator:
-    """A minimal mock translator for testing the registry."""
-
-    def translate(self, *args, **kwargs):
-        return "translated"
-
-
-def test_translation_registry_lifecycle():
-    """Verify that translators can be registered and retrieved correctly."""
-    registry = TranslationRegistry()
-    mock_trans = MockTranslator()
-
-    assert registry.get("link") is None
-
-    registry.register("link", mock_trans)
-    assert registry.get("link") == mock_trans
-
-    mock_joint = MockTranslator()
-    registry.register("joint", mock_joint)
-    assert registry.get("joint") == mock_joint
-    assert registry.get("link") == mock_trans
-
-    new_mock = MockTranslator()
-    registry.register("link", new_mock)
-    assert registry.get("link") == new_mock
 
 
 def test_translator_protocol_compliance():
@@ -714,8 +686,8 @@ def test_link_translator_comprehensive(scene, blender_context):
     # Configure manual inertia & mass
     lp.use_auto_inertia = False
     lp.mass = 12.5
-    lp.inertia_ixx = 1.0
-    lp.inertia_iyy = 2.0
+    lp.inertia_ixx = 2.0
+    lp.inertia_iyy = 3.0
     lp.inertia_izz = 3.0
     lp.inertia_ixy = 0.1
     lp.inertia_ixz = 0.2
@@ -765,7 +737,7 @@ def test_link_translator_comprehensive(scene, blender_context):
     assert robot_link is not None
     assert robot_link.inertial is not None
     assert robot_link.inertial.mass == 12.5
-    assert robot_link.inertial.inertia.ixx == 1.0
+    assert robot_link.inertial.inertia.ixx == 2.0
     assert len(robot_link.visuals) > 0
     assert len(robot_link.collisions) > 0
     assert robot_link.physics is not None
