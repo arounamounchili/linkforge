@@ -6,7 +6,7 @@
 
 **Today**: LinkForge provides a programmable Intermediate Representation (IR) for robotics. It acts as a rigorous Python engine to build, validate, and compile robot descriptions without writing XML by hand. It runs headlessly in CI pipelines and ML training clusters, and visually through a native Blender integration.
 
-**Tomorrow**: We are designing the `.lf` Intermediate Representation (IR). This lossless JSON/YAML format preserves design intent across the full development lifecycle: from any parametric CAD model to multi-physics simulation and physical hardware deployment.
+**Tomorrow**: We are standardizing the `.lf` Intermediate Representation (IR). Rather than attempting to replace existing runtime standards (such as URDF, MJCF, or USD), `.lf` serves as an upstream authoring and interchange format that preserves physical design intent and compiles directly into the exact runtime descriptions required by ROS 2, MuJoCo, Isaac Sim, and hardware drivers.
 
 ## The Core Problem: Executables vs. Source Code
 
@@ -26,21 +26,22 @@ This is manageable with a single robot and one developer. It breaks down under:
 | Multi-person team | No single source of truth; XML files drift between engineers |
 | Sim-to-Real deployment | A physics error that passes the simulator crashes on the physical actuator |
 
-### The LinkForge Answer
+### The LinkForge Answer: A Unified Compilation Layer
 
-LinkForge introduces a layer between design intent and format compilation. Instead of editing XML directly, you write Python that builds a validated **Intermediate Representation (IR)**, which is then compiled to whichever format your pipeline requires.
+LinkForge introduces a unified compilation layer between design intent and simulator runtimes. Just as modern software engineers write typed, modular languages that compile to machine runtimes, robotics engineers can author in LinkForge's validated **Intermediate Representation (IR)** and compile headlessly to whichever runtime target their stack requires.
 
 ```
-Design (Python API / Blender)
-         ↓
-  LinkForge IR + Linter
-         ↓
-URDF / SRDF / MJCF / SDF
-         ↓
-ROS 2 / MuJoCo / Gazebo / Hardware
+Design (CAD / Blender / Python API)
+                 ↓
+      LinkForge IR + Linter (.lf)
+                 ↓  (Compilation)
+   ┌─────────────┼─────────────┐
+   ↓             ↓             ↓
+  URDF/SRDF     MJCF          USD
+ (ROS 2/MoveIt) (MuJoCo)   (Isaac Sim)
 ```
 
-The IR is the "source code." URDF is the compiled output.
+The IR is the typed "source code." URDF, MJCF, and USD are the target executables.
 
 ## Who Uses LinkForge
 
@@ -57,7 +58,7 @@ LinkForge serves distinct audiences with different primary needs. We design feat
 
 LinkForge is built around one conviction:
 
-> **Physics is Truth.** If a robot model is physically impossible, the linter should fail in your editor — not after deployment on hardware.
+> **Physics is Truth.** If a robot model is physically impossible, the linter should fail in your editor, not after deployment on hardware.
 
 This shapes every design decision:
 
@@ -102,17 +103,18 @@ LinkForge uses a **Ports & Adapters (Hexagonal) Architecture** to keep the physi
 ## Future Horizons
 
 ### The `.lf` Intermediate Representation (Phase 2 Roadmap)
-The `.lf` file format is the next major milestone. It will serve as a universal, lossless **Intermediate Representation (IR)** for robotics. It is designed to be diffed in Git, reviewed in pull requests, and used as the definitive source of truth in CI/CD pipelines.
+The `.lf` file format serves as an open, lossless **Intermediate Representation (IR)** and interchange hub. It does not compete with downstream runtime formats; instead, it provides a clean, Git-diffable source of truth that compiles deterministically into all of them.
 
-The `.lf` format acts as the bridge between CAD and simulation:
-1. Export `.lf` from any supported CAD tool (Blender, SolidWorks, Fusion360).
-2. Commit the `.lf` JSON/YAML to Git for clean code review.
-3. `linkforge-core` compiles the `.lf` file headlessly into URDF, SRDF, MJCF, and SDF in GitHub Actions.
+The `.lf` format acts as the upstream bridge between CAD and multi-simulator deployment:
+1. Author or export `.lf` from CAD tools (Blender, SolidWorks, Fusion 360, Onshape).
+2. Track and review `.lf` (JSON/YAML) in Git pull requests with human-readable diffs.
+3. `linkforge-core` compiles `.lf` headlessly into strictly validated URDF, SRDF, MJCF, and USD in CI/CD pipelines.
 
-Key properties being designed:
-- **Lossless round-trips**: Every export is perfectly invertible; no design intent is destroyed.
-- **Metadata-rich**: Physical properties, design intent, and validation history are embedded.
-- **Human-readable**: JSON/YAML-based so it is auditable and diffable without special tooling.
+Key architectural pillars:
+- **Zero-Friction Adoption**: Keep your existing ROS 2, MuJoCo, or Isaac Sim pipelines unchanged; LinkForge emits native, validated files for each.
+- **Single Source of Truth**: Eliminate manual synchronization across multiple fragmented XML description files.
+- **Physical Guarantees**: Built-in mathematical validation (Sylvester's criterion, Mirtich mass properties) prevents unphysical models from ever reaching downstream simulators or physical actuators.
+- **Human-Readable & Machine-Verifiable**: Based on strict JSON Schema standards with full Git-friendly diffability.
 
 ## Vision 2030: The Universal Connector
 
