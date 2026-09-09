@@ -928,7 +928,7 @@ class TestGlobalPropertiesAndCallbacks:
         update_sensor_hierarchy(sp, bpy.context)
         assert sensor_obj.parent is None
 
-        # update_sensor_hierarchy reparenting when attached link is present (line 130-137)
+        # update_sensor_hierarchy reparenting when attached link is present
         link_obj = create_robot_link("attached_link_obj", scene)
         with (
             patch(
@@ -941,7 +941,7 @@ class TestGlobalPropertiesAndCallbacks:
             assert mock_set_parent.called
             assert mock_sync_coll.called
 
-        # update_sensor_hierarchy when already parented to link_obj (branch 130->135)
+        # update_sensor_hierarchy when already parented to link_obj
         sensor_obj.parent = link_obj
         with (
             patch(

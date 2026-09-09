@@ -672,7 +672,7 @@ class TestControlPanel:
         props.ros2_control_active_joint_index = 5
         panel.draw(bpy.context)
 
-        # Reset active index and add parameters to cover 139-157
+        # Reset active index and add parameters to test joint parameters display
         props.ros2_control_active_joint_index = 0
         active_joint = props.ros2_control_joints[0]
         active_joint.parameters.prop_type = Ros2ControlParameterProperty
@@ -682,7 +682,7 @@ class TestControlPanel:
         active_joint.show_parameters = True
         panel.draw(bpy.context)
 
-        # Clear global parameters to cover 192->215 False
+        # Clear global parameters to test drawing when parameter list is empty
         props.ros2_control_parameters.clear()
         panel.draw(bpy.context)
 
@@ -705,7 +705,7 @@ class TestControlPanel:
             0,
         )
 
-        # UIList draw_item with DEFAULT layout and empty interfaces to cover (67->exit True)
+        # UIList draw_item with DEFAULT layout and empty interfaces
         ul.layout_type = "DEFAULT"
         ul.draw_item(
             bpy.context,
@@ -719,7 +719,7 @@ class TestControlPanel:
             0,
         )
 
-        # UIList draw_item with UNKNOWN layout type to cover (70->exit True)
+        # UIList draw_item with UNKNOWN layout type
         ul.layout_type = "UNKNOWN"
         ul.draw_item(
             bpy.context,

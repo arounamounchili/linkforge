@@ -1604,7 +1604,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     safe_get_transmission(trans).is_robot_transmission = True
     safe_get_transmission(trans).joint_name = joint
 
-    # Sensor with Gazebo Plugin (Custom mount - Hits 1071-1075)
+    # Sensor with Gazebo Plugin (Custom mount)
     lidar = create_test_object("Lidar", None, scene)
     safe_get_sensor(lidar).is_robot_sensor = True
     safe_get_sensor(lidar).sensor_type = "lidar"
@@ -1613,7 +1613,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     safe_get_sensor(lidar).use_gazebo_plugin = True
     safe_get_sensor(lidar).plugin_filename = "liblidar.so"
 
-    # ROS2 Control (Hits 1106-1126)
+    # ROS2 Control
     scene_props = safe_get_linkforge_scene(scene)
     scene_props.use_ros2_control = True
     scene_props.ros2_control_name = "TestSystem"

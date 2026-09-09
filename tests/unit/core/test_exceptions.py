@@ -116,7 +116,7 @@ def test_robot_security_error():
 
 
 def test_robot_math_error():
-    """Verify RobotMathError message formatting branches (Lines 178->180, 180->183)."""
+    """Verify RobotMathError message formatting with optional target and value."""
     err_none = RobotMathError(ValidationErrorCode.OUT_OF_RANGE, "divide by zero")
     assert str(err_none) == "[MATH_OUT_OF_RANGE] divide by zero"
 
@@ -153,7 +153,7 @@ def test_robot_xacro_error():
 
 
 def test_robot_xacro_recursion_error():
-    """Verify RobotXacroRecursionError formatting and branches (Line 200)."""
+    """Verify RobotXacroRecursionError formatting with and without optional reason."""
     err_no_reason = RobotXacroRecursionError(100)
     assert "Recursion depth exceeded: 100" in str(err_no_reason)
     assert "(" not in str(err_no_reason)

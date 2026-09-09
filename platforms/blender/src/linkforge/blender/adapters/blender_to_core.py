@@ -560,7 +560,7 @@ class SceneToRobotTranslator:
         self.builder = RobotBuilder(self.robot_name)
         self.validation_result = ValidationResult(robot_name=self.robot_name)
 
-    def translate(self) -> tuple[Robot, ValidationResult]:
+    def translate(self, raise_on_error: bool = True) -> tuple[Robot, ValidationResult]:
         """Perform the translation and return the built Robot model."""
         # 1. Categorize scene objects
         link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root = (
@@ -606,7 +606,7 @@ class SceneToRobotTranslator:
             )
             robot = Robot(name=self.robot_name)
 
-        if self.validation_result.errors:
+        if raise_on_error and self.validation_result.errors:
             first_err = self.validation_result.errors[0]
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
@@ -796,6 +796,7 @@ def scene_to_robot(
     context: IBlenderContext | bpy.types.Context,
     meshes_dir: Path | None = None,
     dry_run: bool = False,
+    raise_on_error: bool = True,
 ) -> tuple[Robot, ValidationResult]:
     """Convert entire Blender scene to Core Robot using the Translator orchestrator."""
     from .context import BlenderContext
@@ -807,4 +808,4 @@ def scene_to_robot(
         context = BlenderContext(bpy)
 
     translator = SceneToRobotTranslator(context, meshes_dir, dry_run)
-    return translator.translate()
+    return translator.translate(raise_on_error=raise_on_error)

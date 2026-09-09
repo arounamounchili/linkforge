@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import os
+import runpy
 from unittest.mock import MagicMock, patch
 
 import bpy
+from linkforge.blender import operators as operators_pkg
 from linkforge.blender.constants import PROP_ROBOT, PROP_VALIDATION
+from linkforge.blender.operators import export_ops
 from linkforge.blender.operators.export_ops import (
     LINKFORGE_OT_export_robot_model,
     LINKFORGE_OT_validate_robot,
@@ -18,7 +21,12 @@ from linkforge.blender.operators.export_ops import (
 from linkforge.blender.operators.export_ops import (
     unregister as export_unregister,
 )
-from linkforge.core import ValidationResult
+from linkforge.core import (
+    LinkForgeError,
+    RobotValidationError,
+    ValidationErrorCode,
+    ValidationResult,
+)
 
 from tests.blender_test_utils import safe_get_linkforge_scene
 
@@ -246,6 +254,33 @@ class TestValidateRobotOperator:
         assert mock_val_prop.error_count == 1
 
     @patch("linkforge.blender.adapters.blender_to_core.scene_to_robot")
+    def test_validate_robot_validation_error(
+        self, mock_scene_to_robot, scene, blender_context
+    ) -> None:
+        """Test validate operator handles RobotValidationError cleanly without build crash."""
+        op = LINKFORGE_OT_validate_robot()
+        op.report = MagicMock()
+
+        wm = bpy.context.window_manager
+        assert wm is not None
+        mock_val_prop = MagicMock()
+        mock_error = MagicMock()
+        mock_val_prop.errors.add.return_value = mock_error
+        setattr(wm, PROP_VALIDATION, mock_val_prop)
+
+        mock_scene_to_robot.side_effect = RobotValidationError(
+            ValidationErrorCode.NOT_FOUND, "Joint not found"
+        )
+
+        res = op.execute(bpy.context)
+        assert res == {"CANCELLED"}
+        op.report.assert_any_call({"WARNING"}, "Validation failed: [NOT_FOUND] Joint not found")
+        assert mock_val_prop.is_valid is False
+        assert mock_val_prop.error_count == 1
+        assert mock_error.title == "Validation Error"
+        assert mock_error.error_code == "NOT_FOUND"
+
+    @patch("linkforge.blender.adapters.blender_to_core.scene_to_robot")
     def test_validate_robot_success_clean(
         self, mock_scene_to_robot, scene, blender_context
     ) -> None:
@@ -328,9 +363,6 @@ class TestValidateRobotOperator:
 
     def test_registration(self, mocker) -> None:
         """Test register and unregister functions for export operator and package-level operators."""
-        import linkforge.blender.operators.export_ops as export_ops
-        from linkforge.blender import operators as operators_pkg
-
         with (
             patch("bpy.utils.register_class") as mock_reg,
             patch("bpy.utils.unregister_class") as mock_unreg,
@@ -352,8 +384,6 @@ class TestValidateRobotOperator:
         export_ops.register()
         assert mock_reg_err.call_count > 0
         assert mock_unreg_err.call_count > 0
-
-        import runpy
 
         with patch.object(export_ops, "__name__", "__main__"):
             runpy.run_module("linkforge.blender.operators.export_ops")
@@ -523,8 +553,6 @@ class TestRobotExport:
         mock_self = MagicMock()
         mock_self.filepath = "/tmp/robot.urdf"
         mock_self.report = MagicMock()
-
-        from linkforge.core import LinkForgeError
 
         mocker.patch(
             "linkforge.blender.adapters.blender_to_core.scene_to_robot",

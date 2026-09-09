@@ -609,15 +609,15 @@ class TestXacroInfrastructure:
         # BoolOps
         assert _safe_eval("a == 1 and b == 2", ctx) is True
         assert _safe_eval("a == 2 or b == 2", ctx) is True
-        assert _safe_eval("False or False", ctx) is False  # Hits line 137
+        assert _safe_eval("False or False", ctx) is False
 
         # Subscript, List, Dict, Tuple
         assert _safe_eval("[a, b][1]", ctx) == 2
-        assert _safe_eval("[]", ctx) == []  # Hits line 163
+        assert _safe_eval("[]", ctx) == []
         assert _safe_eval("{'a': 1, 'b': b}['b']", ctx) == 2
         assert _safe_eval("(a, b)[0]", ctx) == 1
         assert _safe_eval("d['k']", ctx) == "v"
-        assert _safe_eval("d.k", ctx) == "v"  # Hits line 158
+        assert _safe_eval("d.k", ctx) == "v"
 
         # Unsupported operations
         with pytest.raises(TypeError, match="Unsupported AST node"):

@@ -1562,7 +1562,7 @@ class TestURDFGenerator:
         xml = gen.generate(robot, validate=False)
         assert "libgz_ros2_control-system.so" in xml
 
-        # Case 2: Gazebo elements with NO plugins (covers 1005->1009 skip)
+        # Case 2: Gazebo elements with NO plugins
         robot.add_gazebo_element(GazeboElement(reference="base"))
         xml = gen.generate(robot, validate=False)
         assert "libgz_ros2_control-system.so" in xml
@@ -1660,10 +1660,10 @@ class TestURDFGenerator:
         robot.add_transmission(trans)
 
         gen = URDFGenerator(pretty_print=False)
-        # Call generate with unused kwargs to cover line 125
+        # Call generate with unused kwargs to ensure backwards compatibility
         xml = gen.generate(robot, validate=False, unused_opt=True)
 
-        # Direct call to _fill_gazebo_element to cover lines 796, 802, 817-818
+        # Direct call to _fill_gazebo_element with material and properties
         root_temp = ET.Element("gazebo", reference="base")
         gz_full = GazeboElement(
             reference="base", material="Gazebo/Blue", properties={"custom_prop": "custom_val"}

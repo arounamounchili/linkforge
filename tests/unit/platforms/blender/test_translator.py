@@ -1,5 +1,6 @@
 import contextlib
-from unittest.mock import MagicMock, patch
+import types
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import bpy
 import pytest
@@ -13,12 +14,17 @@ from linkforge.blender.adapters.translator import (
     TransmissionTranslator,
 )
 from linkforge.core import (
+    Box,
+    Joint,
+    JointType,
     RobotBuilder,
     RobotValidationError,
     SensorType,
     ValidationErrorCode,
     ValidationResult,
+    Vector3,
 )
+from mathutils import Matrix
 
 from tests.blender_test_utils import (
     cleanup_blender_scene,
@@ -26,6 +32,7 @@ from tests.blender_test_utils import (
     create_test_object,
     safe_get_joint,
     safe_get_linkforge,
+    safe_get_linkforge_scene,
     safe_get_sensor,
     safe_get_transmission,
 )
@@ -296,55 +303,45 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
 
     assert translator._blender_ros2_control_to_core(None) is None
 
-    class FakeProps:
-        use_ros2_control = False
+    props = safe_get_linkforge_scene(scene)
+    props.use_ros2_control = False
+    assert translator._blender_ros2_control_to_core(props) is None
 
-    assert translator._blender_ros2_control_to_core(FakeProps()) is None
-
-    class BrokenProps:
-        use_ros2_control = True
-
-        @property
-        def ros2_control_type(self):
-            raise RuntimeError("Broken ros2 control")
+    broken_props = MagicMock(use_ros2_control=True)
+    type(broken_props).ros2_control_type = PropertyMock(
+        side_effect=RuntimeError("Broken ros2 control")
+    )
 
     val_result = ValidationResult(robot_name="test_robot")
-    translator.translate(BrokenProps(), builder, blender_context, validation_result=val_result)
+    translator.translate(broken_props, builder, blender_context, validation_result=val_result)
     assert len(val_result.errors) == 1
     assert "ROS2 Control translation failed" in val_result.errors[0].title
 
-    # 2b. Translate exception caught with validation_result=None (swallowed/ignored)
-    translator.translate(BrokenProps(), builder, blender_context, validation_result=None)
+    # Translate exception caught with validation_result=None (swallowed/ignored)
+    translator.translate(broken_props, builder, blender_context, validation_result=None)
 
-    # 2c. Translate valid system hardware type with state_ifs but no cmd_ifs to cover fallbacks
-    class MockControlJointSystem:
-        def __init__(self, name, state_only=True):
-            self.name = name
-            self.cmd_position = not state_only
-            self.cmd_velocity = False
-            self.cmd_effort = False
-            self.state_position = bool(state_only)
-            self.state_velocity = False
-            self.state_effort = False
-            self.parameters = []
-            self.joint_obj = None
+    # Translate valid system hardware type with state interfaces but no command interfaces fallback
+    props.use_ros2_control = True
+    props.ros2_control_name = ""  # Cover empty ros2_control_name fallback to "RobotControl"
+    props.ros2_control_type = "system"
+    props.hardware_plugin = "mock_plugin"
+    props.ros2_control_joints.clear()
 
-    class MockControlPropsSystem:
-        use_ros2_control = True
-        ros2_control_name = ""  # Cover empty ros2_control_name fallback to "RobotControl"
-        ros2_control_type = "system"
-        hardware_plugin = "mock_plugin"
-        ros2_control_joints = [
-            MockControlJointSystem("joint_sys1", state_only=True),
-            MockControlJointSystem("joint_sys2", state_only=False),
-        ]
+    item_sys1 = props.ros2_control_joints.add()
+    item_sys1.name = "joint_sys1"
+    item_sys1.cmd_position = False
+    item_sys1.state_position = True
 
-    # 2c. Translate valid system hardware type with state_ifs but no cmd_ifs to cover fallbacks
+    item_sys2 = props.ros2_control_joints.add()
+    item_sys2.name = "joint_sys2"
+    item_sys2.cmd_position = True
+    item_sys2.state_position = False
+
     builder.link("link_p1").commit()
     builder.link("link_c1", parent="link_p1", joint_name="joint_sys1").commit()
     builder.link("link_c2", parent="link_p1", joint_name="joint_sys2").commit()
 
-    translator.translate(MockControlPropsSystem(), builder, blender_context)
+    translator.translate(props, builder, blender_context)
     assert builder.robot.get_ros2_control("RobotControl") is not None
     assert list(builder.robot.get_ros2_control("RobotControl").joints[0].command_interfaces) == [
         "position"
@@ -353,110 +350,78 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
         "position"
     ]
 
-    # 2d. ROS2 Control: joint_obj present, joint_props.joint_name is non-string → fallback to item.name
-    #     When item.name is also None → final fallback becomes "joint"
-    class MockJointPropsNonStr:
-        joint_name = 123  # non-string
-
-    class MockControlJointWithObj:
-        def __init__(self, name, joint_obj):
-            self.name = name
-            self.cmd_position = True
-            self.state_position = True
-            self.cmd_velocity = False
-            self.cmd_effort = False
-            self.state_velocity = False
-            self.state_effort = False
-            self.parameters = []
-            self.joint_obj = joint_obj
-
+    # ROS2 Control: joint_obj present, joint_props.joint_name is non-string → fallback to item.name
+    # When item.name is also None → final fallback becomes "joint"
     joint_obj_non_str = create_test_object("joint_sys_non_str_obj2", None, scene=scene)
 
-    # item.name = None → not isinstance(None, str) → fallback to "joint"
-    class MockControlPropsWithObj:
-        use_ros2_control = True
-        ros2_control_name = "obj_control"
-        ros2_control_type = "system"
-        hardware_plugin = "mock_plugin"
-        ros2_control_joints = [MockControlJointWithObj(None, joint_obj_non_str)]
+    mock_joint_item = MagicMock()
+    mock_joint_item.name = None
+    mock_joint_item.joint_obj = joint_obj_non_str
+    mock_joint_item.cmd_position = True
+    mock_joint_item.state_position = True
+    mock_joint_item.cmd_velocity = False
+    mock_joint_item.cmd_effort = False
+    mock_joint_item.state_velocity = False
+    mock_joint_item.state_effort = False
+    mock_joint_item.parameters = []
+
+    mock_props = MagicMock()
+    mock_props.use_ros2_control = True
+    mock_props.ros2_control_name = "obj_control"
+    mock_props.ros2_control_type = "system"
+    mock_props.hardware_plugin = "mock_plugin"
+    mock_props.ros2_control_joints = [mock_joint_item]
 
     with patch(
         "linkforge.blender.adapters.translator.get_joint_props",
-        return_value=MockJointPropsNonStr(),
+        return_value=types.SimpleNamespace(joint_name=123),
     ):
-        control_obj = translator._blender_ros2_control_to_core(MockControlPropsWithObj())
+        control_obj = translator._blender_ros2_control_to_core(mock_props)
     assert control_obj is not None
     assert control_obj.joints[0].name == "joint"
 
-    class MockControlJoint:
-        def __init__(self, name):
-            self.name = name
-            self.cmd_position = True
-            self.state_position = False
-            self.cmd_velocity = False
-            self.cmd_effort = False
-            self.state_velocity = False
-            self.state_effort = False
-            self.parameters = []
-            self.joint_obj = None
+    props.ros2_control_name = "sensor_control"
+    props.ros2_control_type = "sensor"
+    props.hardware_plugin = "mock_plugin"
+    props.ros2_control_joints.clear()
+    item_sensor = props.ros2_control_joints.add()
+    item_sensor.name = "joint_1"
+    item_sensor.cmd_position = True
+    item_sensor.state_position = False
 
-    class MockControlProps:
-        use_ros2_control = True
-        ros2_control_name = "sensor_control"
-        ros2_control_type = "sensor"
-        hardware_plugin = "mock_plugin"
-        ros2_control_joints = [MockControlJoint("joint_1")]
-
-    control = translator._blender_ros2_control_to_core(MockControlProps())
+    control = translator._blender_ros2_control_to_core(props)
     assert control is not None
     assert len(control.joints[0].command_interfaces) == 0
     assert "position" in control.joints[0].state_interfaces
 
-    class MockControlJointEmpty:
-        def __init__(self, name):
-            self.name = name
-            self.cmd_position = False
-            self.cmd_velocity = False
-            self.cmd_effort = False
-            self.state_position = False
-            self.state_velocity = False
-            self.state_effort = False
-            self.parameters = []
-            self.joint_obj = None
+    props.ros2_control_name = "empty_control"
+    props.ros2_control_type = "system"
+    props.ros2_control_joints.clear()
+    item_empty = props.ros2_control_joints.add()
+    item_empty.name = "joint_empty"
+    item_empty.cmd_position = False
+    item_empty.cmd_velocity = False
+    item_empty.cmd_effort = False
+    item_empty.state_position = False
+    item_empty.state_velocity = False
+    item_empty.state_effort = False
 
-    class MockControlPropsEmpty:
-        use_ros2_control = True
-        ros2_control_name = "empty_control"
-        ros2_control_type = "system"
-        hardware_plugin = "mock_plugin"
-        ros2_control_joints = [MockControlJointEmpty("joint_empty")]
-
-    control_empty = translator._blender_ros2_control_to_core(MockControlPropsEmpty())
+    control_empty = translator._blender_ros2_control_to_core(props)
     assert control_empty is None
 
-    class MockControlJointActuator:
-        def __init__(self, name):
-            self.name = name
-            self.cmd_position = True
-            self.state_position = True
-            self.cmd_velocity = False
-            self.cmd_effort = False
-            self.state_velocity = False
-            self.state_effort = False
-            self.parameters = []
-            self.joint_obj = None
+    props.ros2_control_name = "actuator_control"
+    props.ros2_control_type = "actuator"
+    props.ros2_control_joints.clear()
+    item_act1 = props.ros2_control_joints.add()
+    item_act1.name = "joint_1"
+    item_act1.cmd_position = True
+    item_act1.state_position = True
+    item_act2 = props.ros2_control_joints.add()
+    item_act2.name = "joint_2"
+    item_act2.cmd_position = True
+    item_act2.state_position = True
 
-    class MockControlPropsActuator:
-        use_ros2_control = True
-        ros2_control_name = "actuator_control"
-        ros2_control_type = "actuator"
-        hardware_plugin = "mock_plugin"
-        ros2_control_joints = [
-            MockControlJointActuator("joint_1"),
-            MockControlJointActuator("joint_2"),
-        ]
-
-    control_actuator = translator._blender_ros2_control_to_core(MockControlPropsActuator())
+    control_actuator = translator._blender_ros2_control_to_core(props)
     assert control_actuator is not None
     assert len(control_actuator.joints) == 1
     assert control_actuator.joints[0].name == "joint_1"
@@ -471,10 +436,9 @@ def test_transmission_translator_uncovered_branches(scene, blender_context):
 
     assert translator._blender_transmission_to_core(None) is None
 
-    class FakeTransProps:
-        is_robot_transmission = False
-
-    assert translator._blender_transmission_to_core(FakeTransProps()) is None
+    trans_obj_disabled = create_test_object("trans_disabled", None, scene=scene)
+    safe_get_transmission(trans_obj_disabled, scene).is_robot_transmission = False
+    assert translator._blender_transmission_to_core(trans_obj_disabled) is None
 
     trans_obj = create_test_object("test_trans", None, scene=scene)
     tp = safe_get_transmission(trans_obj, scene)
@@ -502,41 +466,34 @@ def test_transmission_translator_uncovered_branches(scene, blender_context):
     assert trans_model.joints[0].name == "joint_without_custom_name"
     assert trans_model.actuators[0].name == "joint_without_custom_name_motor"
 
-    # 3b. Simple transmission when joint_props is None (via mocking property helper)
+    # Simple transmission when joint_props is None (via mocking property helper)
     with patch("linkforge.blender.adapters.translator.get_joint_props", return_value=None):
         trans_model_fallback = translator._blender_transmission_to_core(simple_trans_obj)
         assert trans_model_fallback is not None
         assert trans_model_fallback.joints[0].name == "joint_without_custom_name"
 
-    # 3c. Simple transmission when joint_props.joint_name is a non-string object
+    # Simple transmission when joint_props.joint_name is a non-string object
     jp.joint_name = 123  # type: ignore
     trans_model_non_str = translator._blender_transmission_to_core(simple_trans_obj)
     assert trans_model_non_str is not None
     assert trans_model_non_str.joints[0].name == "joint_without_custom_name"
 
-    class BrokenTransProps:
-        @property
-        def linkforge_transmission(self):
-            class BrokenProps:
-                is_robot_transmission = True
-
-                @property
-                def transmission_type(self):
-                    raise RuntimeError("Broken transmission type")
-
-            return BrokenProps()
-
-        @property
-        def name(self):
-            return "broken_trans"
+    broken_trans_obj = MagicMock()
+    broken_trans_obj.name = "broken_trans"
+    type(broken_trans_obj.linkforge_transmission).is_robot_transmission = PropertyMock(
+        return_value=True
+    )
+    type(broken_trans_obj.linkforge_transmission).transmission_type = PropertyMock(
+        side_effect=RuntimeError("Broken transmission type")
+    )
 
     val_result = ValidationResult(robot_name="test_robot")
-    translator.translate(BrokenTransProps(), builder, blender_context, validation_result=val_result)
+    translator.translate(broken_trans_obj, builder, blender_context, validation_result=val_result)
     assert len(val_result.errors) == 1
     assert "Transmission translation failed: broken_trans" in val_result.errors[0].title
 
-    # 4b. Translate exception with validation_result=None (swallowed/ignored)
-    translator.translate(BrokenTransProps(), builder, blender_context, validation_result=None)
+    # Translate exception with validation_result=None (swallowed/ignored)
+    translator.translate(broken_trans_obj, builder, blender_context, validation_result=None)
 
     j1_obj = create_test_object("joint1_obj", None, scene=scene)
     j1_p = safe_get_joint(j1_obj, scene)
@@ -581,39 +538,35 @@ def test_transmission_translator_uncovered_branches(scene, blender_context):
 
 
 def test_ros2_control_sensor_type_no_cmd_ifs(scene, blender_context):
-    """Cover sensor hardware type branch when cmd_ifs is empty (670->676) and state_ifs already set (676->685)."""
+    """Cover sensor hardware type branch when cmd_ifs is empty and state_ifs already set."""
     cleanup_blender_scene(scene)
 
     translator = Ros2ControlTranslator()
 
-    # Case A: sensor type with NO command interfaces AND existing state_ifs (should NOT add default)
-    class MockJointSensorStateOnly:
-        name = "joint_s"
-        cmd_position = False
-        cmd_velocity = False
-        cmd_effort = False
-        state_position = True  # state already set
-        state_velocity = False
-        state_effort = False
-        parameters = []
-        joint_obj = None
+    props = safe_get_linkforge_scene(scene)
+    props.use_ros2_control = True
+    props.ros2_control_name = "sensor_state_only"
+    props.ros2_control_type = "sensor"
+    props.hardware_plugin = "mock_plugin"
+    props.ros2_control_joints.clear()
 
-    class MockPropsSensorStateOnly:
-        use_ros2_control = True
-        ros2_control_name = "sensor_state_only"
-        ros2_control_type = "sensor"
-        hardware_plugin = "mock_plugin"
-        ros2_control_joints = [MockJointSensorStateOnly()]
+    item = props.ros2_control_joints.add()
+    item.name = "joint_s"
+    item.cmd_position = False
+    item.cmd_velocity = False
+    item.cmd_effort = False
+    item.state_position = True
+    item.state_velocity = False
+    item.state_effort = False
 
-    result = translator._blender_ros2_control_to_core(MockPropsSensorStateOnly())
+    result = translator._blender_ros2_control_to_core(props)
     assert result is not None
-    # state_ifs already had "position", should not double-add
     assert list(result.joints[0].state_interfaces) == ["position"]
     assert list(result.joints[0].command_interfaces) == []
 
 
 def test_joint_translator_planar_type_axis(scene, blender_context):
-    """Cover JointType.PLANAR joint branch (404->408 false path is the default after PLANAR executes)."""
+    """Verify translating a JointType.PLANAR joint."""
     cleanup_blender_scene(scene)
 
     translator = JointTranslator()
@@ -642,8 +595,7 @@ def test_joint_translator_planar_type_axis(scene, blender_context):
 def test_transmission_custom_type(scene, blender_context):
     """Cover CUSTOM transmission type (raw_type in TRANS_CUSTOM path, not DIFFERENTIAL).
 
-    This also covers branch 815->849 (elif DIFFERENTIAL is False) and branch 794->797
-    (joint_props.joint_name IS a valid string, so no fallback needed).
+    Also verifies joint_props.joint_name when it is a valid string (no fallback needed).
     """
     cleanup_blender_scene(scene)
 
@@ -671,9 +623,6 @@ def test_transmission_custom_type(scene, blender_context):
 def test_link_translator_comprehensive(scene, blender_context):
     """Cover visual/collision successful translation pathways, manual inertia, and simulation props."""
     cleanup_blender_scene(scene)
-
-    from linkforge.core import Box, Vector3
-    from mathutils import Matrix
 
     translator = LinkTranslator()
     builder = RobotBuilder("test_robot")
@@ -748,9 +697,6 @@ def test_link_translator_comprehensive(scene, blender_context):
 def test_joint_translator_comprehensive(scene, blender_context):
     """Cover all remaining JointTranslator branches (early exits, validation, axes, dynamics, safety, calibration)."""
     cleanup_blender_scene(scene)
-
-    from linkforge.core import RobotValidationError
-    from mathutils import Matrix
 
     translator = JointTranslator()
     builder = RobotBuilder("test_joint_robot")
@@ -955,32 +901,31 @@ def test_joint_translator_comprehensive(scene, blender_context):
     jp6.joint_type = "PLANAR"
     jp6.axis = "Z"
 
-    class FakeJointProps:
-        is_robot_joint = True
-        parent_link = parent_obj
-        child_link = unrecognized_child_obj
-        joint_name = "unrecognized_joint"
-        joint_type = "fake_joint_type"
-        axis = "Z"
-        limit_lower = 0.0
-        limit_upper = 0.0
-        limit_effort = 0.0
-        limit_velocity = 0.0
-        mimic_joint = None
-        safety_k_position = 0.0
-        safety_k_velocity = 0.0
-        safety_soft_lower = 0.0
-        safety_soft_upper = 0.0
-        calibration_rising = 0.0
-        calibration_falling = 0.0
-        dynamics_damping = 0.0
-        dynamics_friction = 0.0
-
-    from unittest.mock import patch
+    fake_joint_props = types.SimpleNamespace(
+        is_robot_joint=True,
+        parent_link=parent_obj,
+        child_link=unrecognized_child_obj,
+        joint_name="unrecognized_joint",
+        joint_type="fake_joint_type",
+        axis="Z",
+        limit_lower=0.0,
+        limit_upper=0.0,
+        limit_effort=0.0,
+        limit_velocity=0.0,
+        mimic_joint=None,
+        safety_k_position=0.0,
+        safety_k_velocity=0.0,
+        safety_soft_lower=0.0,
+        safety_soft_upper=0.0,
+        calibration_rising=0.0,
+        calibration_falling=0.0,
+        dynamics_damping=0.0,
+        dynamics_friction=0.0,
+    )
 
     with (
         patch(
-            "linkforge.blender.adapters.translator.get_joint_props", return_value=FakeJointProps()
+            "linkforge.blender.adapters.translator.get_joint_props", return_value=fake_joint_props
         ),
         patch("linkforge.blender.adapters.translator.JointType", return_value="fake_joint_type"),
         contextlib.suppress(Exception),
@@ -991,9 +936,6 @@ def test_joint_translator_comprehensive(scene, blender_context):
 def test_sensor_translator_comprehensive(scene, blender_context):
     """Cover all remaining SensorTranslator branches (early exits, matrix correction, all sensor types, noise, plugins)."""
     cleanup_blender_scene(scene)
-
-    from linkforge.core.models.sensor import SensorType
-    from mathutils import Matrix
 
     translator = SensorTranslator()
     builder = RobotBuilder("test_sensor_robot")
@@ -1114,7 +1056,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     assert builder.robot.sensors[0].contact_info is not None
     assert builder.robot.sensors[0].contact_info.collision == "parent_link_name_collision"
 
-    # 7b. Test CONTACT sensor type with custom collision name
+    # Test CONTACT sensor type with custom collision name
     cleanup_blender_scene(scene)
     builder = RobotBuilder("test_sensor_robot_5_custom")
     builder.link("parent_link_name").commit()
@@ -1157,7 +1099,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     assert len(val_res.errors) == 1
     assert "Sensor translation failed" in val_res.errors[0].title
 
-    # 9b. Cover early exit 452->exit
+    # Cover early exit when object is None
     translator.translate(None, builder, blender_context)
 
     cleanup_blender_scene(scene)
@@ -1171,22 +1113,24 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_fake.sensor_type = "CAMERA"
     sp_fake.attached_link = link_obj
 
-    class FakeProps:
-        is_robot_sensor = True
-        sensor_name = "fake_sensor"
-        sensor_type = "fake_type"
-        attached_link = link_obj
-        use_noise = False
-        use_gazebo_plugin = False
-        topic_name = ""
-        update_rate = 10.0
-        always_on = True
-        visualize = False
-
-    from unittest.mock import patch
+    fake_sensor_props = types.SimpleNamespace(
+        is_robot_sensor=True,
+        sensor_name="fake_sensor",
+        sensor_type="fake_type",
+        attached_link=link_obj,
+        use_noise=False,
+        use_gazebo_plugin=False,
+        topic_name="",
+        update_rate=10.0,
+        always_on=True,
+        visualize=False,
+    )
 
     with (
-        patch("linkforge.blender.adapters.translator.get_sensor_props", return_value=FakeProps()),
+        patch(
+            "linkforge.blender.adapters.translator.get_sensor_props",
+            return_value=fake_sensor_props,
+        ),
         patch("linkforge.blender.adapters.translator.SensorType", return_value="fake_type"),
     ):
         translator.translate(sp_fake_obj, builder, blender_context)
@@ -1202,15 +1146,12 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     assert translator._blender_ros2_control_to_core(None) is None
     translator.translate(None, builder, blender_context)
 
-    from unittest.mock import MagicMock
-
-    props = MagicMock()
+    props = safe_get_linkforge_scene(scene)
     props.use_ros2_control = True
     props.ros2_control_type = "system"
     props.ros2_control_name = "TestSystemControl"
     props.hardware_plugin = "mock_plugin"
-
-    from linkforge.core.models.joint import Joint, JointType
+    props.ros2_control_joints.clear()
 
     builder.robot._joint_index["joint_one_name"] = Joint(
         name="joint_one_name",
@@ -1230,7 +1171,7 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     j1_p.is_robot_joint = True
     j1_p.joint_name = "joint_one_name"
 
-    item1 = MagicMock()
+    item1 = props.ros2_control_joints.add()
     item1.cmd_position = True
     item1.cmd_velocity = True
     item1.cmd_effort = True
@@ -1238,10 +1179,9 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     item1.state_velocity = True
     item1.state_effort = True
     item1.joint_obj = j1_obj
-    item1.parameters = []
 
     # Joint 2 with fallback joint name
-    item2 = MagicMock()
+    item2 = props.ros2_control_joints.add()
     item2.cmd_position = True
     item2.cmd_velocity = False
     item2.cmd_effort = False
@@ -1250,9 +1190,6 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     item2.state_effort = False
     item2.joint_obj = None
     item2.name = "joint_two_fallback"
-    item2.parameters = []
-
-    props.ros2_control_joints = [item1, item2]
 
     # Translate
     translator.translate(props, builder, blender_context)
@@ -1274,8 +1211,6 @@ def test_transmission_translator_comprehensive(scene, blender_context):
     builder = RobotBuilder("test_trans_robot")
 
     assert translator._blender_transmission_to_core(None) is None
-
-    from linkforge.core.models.joint import Joint, JointType
 
     builder.robot._joint_index["joint_to_transmit"] = Joint(
         name="joint_to_transmit",
@@ -1309,7 +1244,7 @@ def test_transmission_translator_comprehensive(scene, blender_context):
     assert trans.joints[0].name == "joint_to_transmit"
     assert trans.actuators[0].name == "my_custom_actuator"
 
-    # 2b. Simple/Custom transmission where potential_name is not a string (covers 794->797)
+    # Simple/Custom transmission where potential_name is not a string
     builder.robot._joint_index["trans_joint_non_str"] = Joint(
         name="trans_joint_non_str",
         type=JointType.FIXED,
@@ -1325,13 +1260,9 @@ def test_transmission_translator_comprehensive(scene, blender_context):
     tp_non_str.transmission_type = "SIMPLE"
     tp_non_str.joint_name = joint_obj_non_str
 
-    class FakeJointPropsNonStr:
-        joint_name = 123
-
-    from unittest.mock import patch
-
     with patch(
-        "linkforge.blender.adapters.translator.get_joint_props", return_value=FakeJointPropsNonStr()
+        "linkforge.blender.adapters.translator.get_joint_props",
+        return_value=types.SimpleNamespace(joint_name=123),
     ):
         translator.translate(trans_obj_non_str, builder, blender_context)
 
@@ -1356,3 +1287,30 @@ def test_transmission_translator_comprehensive(scene, blender_context):
     tp_invalid.transmission_type = "INVALID_TYPE"
 
     assert translator._blender_transmission_to_core(trans_obj_invalid) is None
+
+
+def test_ros2_control_translator_missing_joint(scene, blender_context) -> None:
+    """Verify that orphaned joints in ROS 2 Control produce a validation error and are not added to the robot."""
+    cleanup_blender_scene(scene)
+
+    props = safe_get_linkforge_scene(scene)
+    props.use_ros2_control = True
+    props.ros2_control_name = "MissingJointControl"
+    props.ros2_control_joints.clear()
+
+    item = props.ros2_control_joints.add()
+    item.name = "nonexistent_joint"
+    item.cmd_position = True
+    item.state_position = True
+
+    builder = RobotBuilder("test_robot")
+    builder.link("base_link").commit()
+
+    translator = Ros2ControlTranslator()
+    val_result = ValidationResult(robot_name="test_robot")
+    translator.translate(props, builder, blender_context, validation_result=val_result)
+
+    assert len(val_result.errors) == 1
+    assert val_result.errors[0].code == ValidationErrorCode.NOT_FOUND
+    assert "ROS2 Control Missing Joint" in val_result.errors[0].title
+    assert builder.robot.get_ros2_control("MissingJointControl") is None

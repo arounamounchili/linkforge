@@ -15,6 +15,7 @@ from linkforge.blender.adapters.mesh_io import (
     get_mesh_filename,
 )
 from linkforge.core._utils.path_utils import resolve_package_path
+from mathutils import Vector
 
 from tests.blender_test_utils import create_mesh_object, create_test_object
 
@@ -408,7 +409,7 @@ class TestMeshExhaustiveCoverage:
         assert offset.is_identity
 
     def test_export_mesh_glb_generic_exception(self, mocker, scene, tmp_path) -> None:
-        """Verify GLB export generic unexpected Exception is caught and propagated (covers line 253-255)."""
+        """Verify GLB export generic unexpected Exception is caught and propagated."""
         obj = create_mesh_object("glb_generic_err_mesh", scene=scene, with_cube=True)
         filepath = tmp_path / "test.glb"
 
@@ -420,9 +421,7 @@ class TestMeshExhaustiveCoverage:
             export_mesh_glb(obj, filepath)
 
     def test_export_link_mesh_simplification_returns_none(self, mocker, scene, tmp_path) -> None:
-        """Verify export_link_mesh handles create_simplified_mesh returning None (covers 370->374 false branch)."""
-        from mathutils import Vector
-
+        """Verify export_link_mesh handles create_simplified_mesh returning None."""
         obj = create_mesh_object("simplify_none_mesh", scene=scene, with_cube=True)
         obj.bound_box = [Vector((1.0, 1.0, 1.0))] * 8
 
@@ -441,7 +440,7 @@ class TestMeshExhaustiveCoverage:
         assert filepath is not None
 
     def test_export_link_mesh_finally_cleanup_no_data(self, mocker, scene, tmp_path) -> None:
-        """Verify finally cleanup block when simplified_obj.data and temp_export_obj.data are None (covers 403->405 and 409->411 false branches)."""
+        """Verify finally cleanup block when simplified_obj.data and temp_export_obj.data are None."""
         obj = create_mesh_object("no_data_mesh", scene=scene, with_cube=True)
 
         mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply")

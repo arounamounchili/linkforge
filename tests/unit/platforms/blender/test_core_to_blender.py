@@ -1583,7 +1583,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         assert _get_geometry_type_str(None) == "mesh"
 
     def test_create_material_no_default_value(self, scene, blender_context, mocker) -> None:
-        """Verify create_material_from_color when node_principled input has no default_value attribute (covers 114->118 false branch)."""
+        """Verify create_material_from_color when node_principled input has no default_value attribute."""
         mat = bpy.data.materials.new(name="no_def_val")
 
         mock_node = mocker.MagicMock()
@@ -1597,7 +1597,7 @@ class TestCoreToBlenderExhaustiveCoverage:
             assert res == mat
 
     def test_setup_scene_for_robot_uncovered_branches(self, scene, blender_context, mocker) -> None:
-        """Verify setup_scene_for_robot covered completely (996->1002 False, 1052->1054 False)."""
+        """Verify setup_scene_for_robot handles empty robot and missing properties gracefully."""
         from linkforge.blender.adapters.core_to_blender import setup_scene_for_robot
 
         mock_scene_no_prop = mocker.MagicMock(spec=[])
@@ -1666,8 +1666,8 @@ class TestCoreToBlenderExhaustiveCoverage:
         stl_path = tmp_path / "test_import.stl"
         stl_path.touch()
 
-        # 3a. res_obj.name is ALREADY in current_col.objects (covers 291 False branch)
-        # 3b. res_obj.name is NOT in new_col.objects (covers 297 False branch)
+        # 3a. res_obj.name is ALREADY in current_col.objects
+        # 3b. res_obj.name is NOT in new_col.objects
         def mock_stl_import_ok(**kwargs):
             col = bpy.data.collections.new("New_STL_Collection")
             bpy.context.scene.collection.children.link(col)
@@ -1683,7 +1683,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         assert res is not None
         mocker.stopall()
 
-        # 3c. normalize_and_consolidate returns None (covers 307)
+        # 3c. normalize_and_consolidate returns None
         mocker.patch(
             "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
             return_value={"FINISHED"},
@@ -1695,7 +1695,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         assert import_mesh_file(blender_context, stl_path, "none_imported") is None
         mocker.stopall()
 
-        # 3d. normalize_and_consolidate raises generic Exception (covers 312-314)
+        # 3d. normalize_and_consolidate raises generic Exception
         mocker.patch(
             "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
             return_value={"FINISHED"},
@@ -1708,7 +1708,7 @@ class TestCoreToBlenderExhaustiveCoverage:
             import_mesh_file(blender_context, stl_path, "raises_err")
         mocker.stopall()
 
-        # 3e. res_obj.name is NOT in current_col.objects (covers 292 statement)
+        # 3e. res_obj.name is NOT in current_col.objects
         def mock_stl_import_not_linked(**kwargs):
             col = bpy.data.collections.new("New_STL_Collection_Not_Linked")
             bpy.context.scene.collection.children.link(col)
@@ -1746,11 +1746,11 @@ class TestCoreToBlenderExhaustiveCoverage:
             pass
 
         # Link with:
-        # - Visual whose created object data has no materials (evaluates 511 False -> jumps to 448)
-        # - Collision whose created object data has no materials (evaluates 581 False -> jumps to 586)
-        # - Collision with unrecognized geometry (evaluates 599 False -> loops to 518)
-        # - Inertial without inertia (covers 606 False branch)
-        # - Inertial without origin (covers 617 False branch)
+        # - Visual whose created object data has no materials
+        # - Collision whose created object data has no materials
+        # - Collision with unrecognized geometry
+        # - Inertial without inertia
+        # - Inertial without origin
         vis = Visual(
             geometry=Box(size=Vector3(1, 1, 1)),
             material=Material(name="missing_mat", color=Color(1, 1, 1, 1)),
@@ -1807,7 +1807,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         coll_sph_obj = next(c for c in obj_sph_l.children if "_collision" in c.name)
         assert getattr(coll_sph_obj, PROP_GEOM).geometry_type == GEOM_SPHERE
 
-        # Collision unrecognized type (covers 660->666 False branch)
+        # Collision unrecognized type
         mocker.patch(
             "linkforge.blender.adapters.core_to_blender._get_geometry_type_str",
             return_value="UNKNOWN",
@@ -1873,8 +1873,8 @@ class TestCoreToBlenderExhaustiveCoverage:
         obj_lid = create_sensor_object(blender_context, lidar_none, link_objects)
         assert obj_lid is not None
 
-        # 6c. Setup scene for robot with ROS2 Control parameters (covers 1013-1015 and 1032-1034)
-        # and Gazebo element with plugin containing "ros2_control" and parameters (covers 1052->1054)
+        # 6c. Setup scene for robot with ROS2 Control parameters
+        # and Gazebo element with plugin containing "ros2_control" and parameters
         rc_joint = Ros2ControlJoint(
             name="j1",
             command_interfaces=["position"],

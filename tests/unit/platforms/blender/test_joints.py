@@ -402,7 +402,7 @@ class TestJointOperations:
         assert not LINKFORGE_OT_auto_detect_parent_child.poll(bpy.context)
 
     def test_create_joint_mesh_no_parent_link(self, scene, blender_context) -> None:
-        """Test create joint when active object is not a link and has no parent link (69->72)."""
+        """Test create joint when active object is not a link and has no parent link."""
         mesh_obj = create_test_object("non_link_mesh", None, scene)
         assert bpy.context.view_layer is not None
         bpy.context.view_layer.objects.active = mesh_obj
