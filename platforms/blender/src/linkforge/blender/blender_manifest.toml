@@ -13,7 +13,7 @@ version = "1.5.1" # x-release-please-version
 name = "LinkForge"
 
 # Short description (tagline) - max 64 characters
-tagline = "Visual Designer to build and export URDF/XACRO robot models"
+tagline = "Visual Robotics IDE for ROS & Simulation"
 
 # Extension type
 type = "add-on"
@@ -32,11 +32,11 @@ license = [
 
 # Copyright notice
 copyright = [
-    "2025 Arouna Patouossa Mounchili",
+    "2025-2026 Arouna Patouossa Mounchili",
 ]
 
 # Project website and documentation
-website = "https://github.com/arounamounchili/linkforge"
+website = "https://linkforge.readthedocs.io"
 
 # Tags for categorization on extensions.blender.org
 tags = [

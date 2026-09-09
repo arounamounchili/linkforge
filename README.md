@@ -162,7 +162,7 @@ just develop  # Links workspace into Blender for live development
 2. **Connect with Joints**: Select child link → **Forge** panel → **Create Joint**. Set type, limits, axis, and dynamics.
 3. **Add Sensors** *(Optional)*: Select a link → **Perceive** panel → **Add Sensor**.
 4. **Configure Control** *(Optional)*: Go to **Control** panel → Enable **Use ROS2 Control** → configure command/state interfaces.
-5. **Validate & Export**: **Validate & Export** panel → click **Validate Robot** → choose URDF/XACRO/SRDF → click **Export**.
+5. **Validate & Export**: **Validate & Export** panel → click **Validate Robot** → choose URDF or XACRO → click **Export**.
 
 ### Importing Existing URDF
 
@@ -205,9 +205,9 @@ Programmatic tutorials in the documentation:
 - [ ] **v1.7.0**: LinkForge CLI & GitHub Actions (Headless generation in CI pipelines).
 
 ### Phase 2: Multi-Physics Interoperability (Upcoming)
-- [ ] **v2.0.0**: The **`.lf` Intermediate Representation (IR)**. A lossless JSON or YAML format exported from any supported CAD plugin that `linkforge-core` can use to build robots completely headless.
-- [ ] **v2.1.0**: Native MuJoCo / MJCF exporter (Translating `.lf` to MJCF).
-- [ ] **v2.2.0**: Native Gazebo / SDF exporter (Translating `.lf` to SDF).
+- [ ] **v2.0.0**: The **`.lf` Intermediate Representation (IR)**. An open, typed source of truth exported from CAD plugins or authored in Python that compiles deterministically to downstream runtimes.
+- [ ] **v2.1.0**: Native MuJoCo / MJCF compilation target.
+- [ ] **v2.2.0**: Native NVIDIA Isaac Sim / OpenUSD compilation target.
 
 ## Development
 
