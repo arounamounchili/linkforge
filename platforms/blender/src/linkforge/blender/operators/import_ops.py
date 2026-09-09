@@ -11,18 +11,12 @@ from contextlib import suppress
 from pathlib import Path
 
 import bpy
+from bpy.types import Context, Operator
 from bpy_extras.io_utils import ImportHelper
 
 from ..core import get_logger
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
-
-if typing.TYPE_CHECKING:
-    from bpy.types import Context, Operator
-else:
-    # Runtime fallback for mock environments where bpy.types might be partially loaded.
-    Context = typing.Any
-    Operator = getattr(getattr(bpy, "types", object), "Operator", object)
 
 logger = get_logger(__name__)
 

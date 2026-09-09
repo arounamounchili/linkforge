@@ -12,8 +12,11 @@ from ..constants import (
     PROP_ROBOT,
     PROP_VALIDATION,
 )
-from ..core._utils.dict_utils import filter_items_by_name
-from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
+from ..utils.scene_utils import (
+    build_tree_from_stats,
+    filter_items_by_name,
+    get_robot_statistics,
+)
 
 
 class LINKFORGE_PT_export_panel(Panel):

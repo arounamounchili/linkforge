@@ -33,7 +33,7 @@ def test_flush_deferred_renames_all_paths(scene):
 
     obj_bad = BadObject()
 
-    name_sync_handler.PENDING_RENAMES = [
+    name_sync_handler.PENDING_RENAMES[:] = [
         (obj_ok, "new_ok"),
         (obj_no_name, "ignored"),
         (obj_bad, "new_bad"),

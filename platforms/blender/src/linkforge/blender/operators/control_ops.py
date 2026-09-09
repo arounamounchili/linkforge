@@ -7,21 +7,12 @@ default command and state interfaces.
 
 from __future__ import annotations
 
-import typing
-
 import bpy
 from bpy.props import IntProperty, StringProperty
+from bpy.types import Context, Operator
 
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.property_helpers import get_joint_props, get_robot_props
-
-if typing.TYPE_CHECKING:
-    from bpy.types import Context, Operator
-
-else:
-    # Runtime fallback for mock environments where bpy.types might be partially loaded.
-    Context = typing.Any
-    Operator = getattr(getattr(bpy, "types", object), "Operator", object)
 
 
 class LINKFORGE_OT_add_ros2_control_joint(Operator):

@@ -129,7 +129,7 @@ class LINKFORGE_PT_links(Panel):
         # Link name
         box.prop(props, "link_name")
 
-        # Geometry section — Visuals
+        # Geometry section: Visuals
         box.separator()
         box.label(text="Visuals", icon="SHADING_RENDERED")
 
@@ -170,7 +170,7 @@ class LINKFORGE_PT_links(Panel):
         col_btns.operator("linkforge.assign_as_visual", text="", icon="ADD")
         col_btns.operator("linkforge.remove_visual", text="", icon="REMOVE")
 
-        # Geometry section — Collisions
+        # Geometry section: Collisions
         box.separator()
         box.label(text="Collisions", icon="MOD_PHYSICS")
 

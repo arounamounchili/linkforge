@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from linkforge.core import FileSystemResolver, Mesh, NetworkResolver, Robot
+from linkforge.core import FileSystemResolver, Mesh, Robot
 
 
 def test_file_system_resolver_absolute_path(tmp_path: Path) -> None:
@@ -23,28 +23,6 @@ def test_file_system_resolver_non_existent() -> None:
     resolver = FileSystemResolver()
     with pytest.raises(FileNotFoundError):
         resolver.resolve("/non/existent/path/mesh.stl")
-
-
-def test_network_resolver_local_fallback(tmp_path: Path) -> None:
-    """Test that NetworkResolver falls back to FileSystemResolver for local paths."""
-    test_file = tmp_path / "localmesh.obj"
-    test_file.write_text("data")
-
-    resolver = NetworkResolver()
-    resolved = resolver.resolve(str(test_file))
-
-    assert resolved == test_file.absolute()
-
-
-def test_network_resolver_unimplemented_uri() -> None:
-    """Test that NetworkResolver raises NotImplementedError for external URIs."""
-    resolver = NetworkResolver()
-
-    with pytest.raises(NotImplementedError):
-        resolver.resolve("https://example.com/robot.stl")
-
-    with pytest.raises(NotImplementedError):
-        resolver.resolve("s3://bucket/mesh.dae")
 
 
 def test_robot_resource_resolution(tmp_path: Path) -> None:

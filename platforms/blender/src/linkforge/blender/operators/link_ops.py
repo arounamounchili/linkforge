@@ -6,6 +6,11 @@ import contextlib
 import time
 import typing
 
+import bmesh
+import bpy
+import mathutils
+from bpy.types import Context, Operator
+
 from ..constants import (
     DEFAULT_LINK_GIZMO_SIZE,
     GEOM_AUTO,
@@ -28,21 +33,7 @@ from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
 
 if typing.TYPE_CHECKING:
-    from bpy.types import Context, Operator
-
-    bpy: typing.Any
-    bmesh: typing.Any
-    mathutils: typing.Any
-
     from ..properties.link_props import LinkPropertyGroup
-else:
-    import bmesh
-    import bpy
-    import mathutils
-
-    # Runtime fallback for mock environments where bpy.types might be partially loaded.
-    Context = typing.Any
-    Operator = getattr(getattr(bpy, "types", object), "Operator", object)
 
 logger = get_logger(__name__)
 
@@ -454,16 +445,17 @@ def _create_mesh_collision_compound(
     # Apply mesh simplification to the merged mesh
     # ensures that BMesh processing is robust regardless of viewport mode.
     # We use high-performance BMesh API to avoid Object/Edit mode flickering.
+    merged_mesh = typing.cast(bpy.types.Mesh, merged_obj.data)
     bm = bmesh.new()
-    bm.from_mesh(typing.cast(bpy.types.Mesh, merged_obj.data))
+    bm.from_mesh(merged_mesh)
 
     # Convex Hull operation (native BMesh API)
-    bmesh.ops.convex_hull(bm, input=bm.verts)
+    bmesh.ops.convex_hull(bm, input=list(bm.verts))
 
     # Clear original data and load new hull back to mesh data
-    bm.to_mesh(typing.cast(bpy.types.Mesh, merged_obj.data))
+    bm.to_mesh(merged_mesh)
     bm.free()
-    merged_obj.data.update()
+    merged_mesh.update()
 
     # Add decimation modifier for live quality adjustment
     # Default to 50% for newly generated simplified meshes

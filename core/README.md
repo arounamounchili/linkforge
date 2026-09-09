@@ -159,7 +159,7 @@ builder.link("camera_link", parent="base_link") \
 `linkforge-core` has zero GUI dependencies, making it ideal for headless environments:
 
 ```python
-# ci_validate.py — run in any CI/CD pipeline or HPC cluster
+# ci_validate.py: run in any CI/CD pipeline or HPC cluster
 from linkforge.core import read_urdf, validate_robot
 import sys
 

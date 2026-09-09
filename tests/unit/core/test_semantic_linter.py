@@ -69,7 +69,7 @@ def _make_arm_robot() -> Robot:
 
 
 # ===========================================================================
-# Rule 1 — GroupState joint values within kinematic joint limits
+# Rule 1: GroupState joint values within kinematic joint limits
 # ===========================================================================
 
 
@@ -151,7 +151,7 @@ class TestGroupStateJointRange:
 
 
 # ===========================================================================
-# Rule 2 — Chain reachability
+# Rule 2: Chain reachability
 # ===========================================================================
 
 
@@ -202,7 +202,7 @@ class TestChainReachability:
 
 
 # ===========================================================================
-# Rule 3 — EndEffector parent link in group
+# Rule 3: EndEffector parent link in group
 # ===========================================================================
 
 
@@ -256,7 +256,7 @@ class TestEndEffectorParentInGroup:
 
 
 # ===========================================================================
-# Rule 4 — Passive joint vs. command_interface contradiction
+# Rule 4: Passive joint vs. command_interface contradiction
 # ===========================================================================
 
 
@@ -314,7 +314,7 @@ class TestPassiveCommandContradiction:
 
 
 # ===========================================================================
-# Rule 5 — Collision pair link existence
+# Rule 5: Collision pair link existence
 # ===========================================================================
 
 
@@ -354,7 +354,7 @@ class TestCollisionPairLinkExistence:
 
 
 # ===========================================================================
-# Integration — A fully valid model produces no cross-layer errors
+# Integration: A fully valid model produces no cross-layer errors
 # ===========================================================================
 
 

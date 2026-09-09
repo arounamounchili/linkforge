@@ -1,4 +1,4 @@
-# SRDF — Semantic Robot Description
+# SRDF: Semantic Robot Description
 
 The SRDF (Semantic Robot Description Format) layer provides data structures,
 a parser, and a generator for MoveIt-compatible semantic information such as

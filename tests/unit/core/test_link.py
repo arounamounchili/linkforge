@@ -127,6 +127,30 @@ class TestInertiaTensor:
         assert tensor.ixz == 0.3
         assert tensor.iyz == 0.4
 
+    def test_unphysical_sylvester_minor_rejected(self) -> None:
+        """Test that non-positive-definite tensor (Sylvester minor < 0) raises RobotModelError."""
+        # Ixx=2, Iyy=2, Izz=2, Ixy=3 -> Delta2 = 4 - 9 = -5 < 0 (eigenvalues [5, 2, -1])
+        with pytest.raises(RobotModelError):
+            InertiaTensor(
+                ixx=2.0,
+                iyy=2.0,
+                izz=2.0,
+                ixy=3.0,
+            )
+
+    def test_principal_moments_triangle_inequality_with_off_diagonals(self) -> None:
+        """Test that rotated unphysical tensor violating principal triangle inequality is rejected."""
+        # Rotated diag(10, 1, 1) by 45 degrees: Ixx=5.5, Iyy=5.5, Izz=1, Ixy=4.5
+        # Coordinate diagonals pass (5.5 + 5.5 >= 1), minors are positive (D3=10),
+        # but principal moments are [10, 1, 1] where 1 + 1 < 10.
+        with pytest.raises(RobotModelError):
+            InertiaTensor(
+                ixx=5.5,
+                iyy=5.5,
+                izz=1.0,
+                ixy=4.5,
+            )
+
 
 class TestInertial:
     """Tests for Inertial class."""

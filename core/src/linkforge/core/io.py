@@ -12,7 +12,6 @@ Core Components:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -30,13 +29,26 @@ def read_urdf(path_or_xml: str | Path) -> Robot:
 
     Returns:
         A populated Robot model.
+
+    Raises:
+        FileNotFoundError: If a file path is provided but does not exist.
     """
     from .parsers import URDFParser
 
     parser = URDFParser()
-    if os.path.exists(path_or_xml):
-        return parser.parse(Path(path_or_xml))
-    return parser.parse_string(str(path_or_xml))
+    if isinstance(path_or_xml, Path):
+        if not path_or_xml.exists():
+            raise FileNotFoundError(str(path_or_xml))
+        return parser.parse(path_or_xml)
+
+    str_val = str(path_or_xml).strip()
+    if str_val.startswith("<"):
+        return parser.parse_string(str_val)
+
+    path = Path(path_or_xml)
+    if path.exists():
+        return parser.parse(path)
+    raise FileNotFoundError(str(path_or_xml))
 
 
 def write_urdf(robot: Robot, path: str | Path) -> None:
@@ -88,13 +100,26 @@ def read_srdf(path_or_xml: str | Path, robot: Robot | None = None) -> SemanticRo
 
     Returns:
         A SemanticRobotDescription model.
+
+    Raises:
+        FileNotFoundError: If a file path is provided but does not exist.
     """
     from .parsers import SRDFParser
 
     parser = SRDFParser()
-    if os.path.exists(path_or_xml):
-        return parser.parse(Path(path_or_xml), robot=robot)
-    return parser.parse_string(str(path_or_xml), robot=robot)
+    if isinstance(path_or_xml, Path):
+        if not path_or_xml.exists():
+            raise FileNotFoundError(str(path_or_xml))
+        return parser.parse(path_or_xml, robot=robot)
+
+    str_val = str(path_or_xml).strip()
+    if str_val.startswith("<"):
+        return parser.parse_string(str_val, robot=robot)
+
+    path = Path(path_or_xml)
+    if path.exists():
+        return parser.parse(path, robot=robot)
+    raise FileNotFoundError(str(path_or_xml))
 
 
 def write_srdf(robot_or_srdf: Robot | SemanticRobotDescription, path: str | Path) -> None:

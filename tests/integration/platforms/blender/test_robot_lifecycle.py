@@ -45,7 +45,7 @@ class TestPhysicsIntegration:
         link_lf.is_robot_link = True
         link_lf.mass = 2.0
 
-        # Visual cube offset by 10m on X — use a proper cube mesh
+        # Visual cube offset by 10m on X: use a proper cube mesh
         vis = create_mesh_object("offset_visual", scene=scene, with_cube=True)
         vis.location = (10, 0, 0)
         vis.parent = link_obj

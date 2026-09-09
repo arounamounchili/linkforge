@@ -54,7 +54,7 @@ independently or composed into a full validation pipeline.
 
 ### Run the full validator
 
-The standard workflow — runs all registered checks in order:
+The standard workflow runs all registered checks in order:
 
 ```python
 from linkforge.core.validation import RobotValidator

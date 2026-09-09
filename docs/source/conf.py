@@ -72,7 +72,7 @@ html_context = {
     "conf_py_path": "/docs/source/",
     "metatags": """
         <meta property="og:title" content="LinkForge - The Programmable Robot Description Engine" />
-        <meta property="og:description" content="LinkForge is a programmable Intermediate Representation (IR) and physical validation engine for robotics — build, validate, and compile robot models without writing XML by hand." />
+        <meta property="og:description" content="LinkForge is a programmable Intermediate Representation (IR) and physical validation engine for robotics: build, validate, and compile robot models without writing XML by hand." />
         <meta property="og:image" content="https://linkforge.readthedocs.io/en/latest/_static/social_preview.png" />
         <meta name="twitter:card" content="summary_large_image" />
     """,

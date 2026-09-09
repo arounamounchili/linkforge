@@ -26,7 +26,7 @@ LinkForge is organized into two main layers:
 
 Platform-independent robot modeling and URDF/XACRO processing.
 
-- **Composer**: `RobotBuilder` and `LinkBuilder` — the programmatic robot building API
+- **Composer**: `RobotBuilder` and `LinkBuilder`: the programmatic robot building API
 - **Models**: Data structures (`Robot`, `Link`, `Joint`, `Sensor`, `SemanticRobotDescription`, etc.)
 - **Parsers**: URDF/XACRO/SRDF → Python objects
 - **Generators**: Python objects → URDF/XACRO/SRDF

@@ -177,6 +177,15 @@ class URDFGenerator(RobotXMLGenerator):
         # Add sensors (Gazebo format) - these also create <gazebo> tags
         self.add_sensors(root, robot)
 
+        # Add extra / vendor elements (e.g. <mujoco>, <bullet>, <unity>)
+        if robot.extra_elements:
+            for extra_xml in robot.extra_elements:
+                try:
+                    elem = ET.fromstring(extra_xml)
+                    root.append(elem)
+                except Exception as e:
+                    logger.warning(f"Could not parse extra XML element: {e}")
+
         return root
 
     def add_links_section(self, parent: ET.Element, robot: Robot) -> None:

@@ -162,6 +162,29 @@ def test_mass_properties_check(empty_robot, result):
     assert any(warn.title == "Missing inertia" for warn in result.warnings)
 
 
+def test_mass_properties_check_unphysical_inertia(empty_robot, result):
+    """Test that MassPropertiesCheck catches non-positive-definite or triangle-violating inertia tensors."""
+    from linkforge.core.models.link import InertiaTensor
+
+    # Bypass constructor using object.__new__ to simulate externally loaded / corrupted tensor
+    unphysical_tensor = object.__new__(InertiaTensor)
+    object.__setattr__(unphysical_tensor, "ixx", 2.0)
+    object.__setattr__(unphysical_tensor, "iyy", 2.0)
+    object.__setattr__(unphysical_tensor, "izz", 2.0)
+    object.__setattr__(unphysical_tensor, "ixy", 3.0)
+    object.__setattr__(unphysical_tensor, "ixz", 0.0)
+    object.__setattr__(unphysical_tensor, "iyz", 0.0)
+
+    link = Link(name="unphysical_link", inertial=Inertial(mass=1.0, inertia=unphysical_tensor))
+    empty_robot.add_link(link)
+
+    check = MassPropertiesCheck()
+    check.run(empty_robot, result)
+    assert any(err.title == "Non-positive-definite inertia" for err in result.errors)
+    assert any(err.title == "Negative principal inertia" for err in result.errors)
+    assert any(err.title == "Inertia triangle inequality violated" for err in result.errors)
+
+
 def test_geometry_check_warnings(empty_robot, result):
     empty_robot.add_link(Link(name="ghost"))
 

@@ -43,7 +43,7 @@ When exported to glTF, this attribute name becomes the JSON metadata key.
 
 ---
 
-## `linkforge` — Link Properties
+## `linkforge`: Link Properties
 
 Stored on **Link Empty** objects (the parent empty of visual and collision meshes).
 
@@ -60,9 +60,9 @@ Stored on **Link Empty** objects (the parent empty of visual and collision meshe
 |---|---|---|---|
 | `mass` | `float` | `1.0` | Link mass in kilograms |
 | `use_auto_inertia` | `bool` | `true` | When `true`, inertia is computed from geometry automatically |
-| `inertia_ixx` | `float` | `1.0` | Moment of inertia — X axis (kg·m²) |
-| `inertia_iyy` | `float` | `1.0` | Moment of inertia — Y axis (kg·m²) |
-| `inertia_izz` | `float` | `1.0` | Moment of inertia — Z axis (kg·m²) |
+| `inertia_ixx` | `float` | `1.0` | Moment of inertia (X axis, kg·m²) |
+| `inertia_iyy` | `float` | `1.0` | Moment of inertia (Y axis, kg·m²) |
+| `inertia_izz` | `float` | `1.0` | Moment of inertia (Z axis, kg·m²) |
 | `inertia_ixy` | `float` | `0.0` | Cross product of inertia XY (kg·m²) |
 | `inertia_ixz` | `float` | `0.0` | Cross product of inertia XZ (kg·m²) |
 | `inertia_iyz` | `float` | `0.0` | Cross product of inertia YZ (kg·m²) |
@@ -100,7 +100,7 @@ Only exported when `use_simulation_props` is `true`.
 
 ---
 
-## `linkforge_joint` — Joint Properties
+## `linkforge_joint`: Joint Properties
 
 Stored on **Joint Empty** objects (ARROWS empties with colored axes).
 
@@ -130,8 +130,8 @@ Stored on **Joint Empty** objects (ARROWS empties with colored axes).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `use_limits` | `bool` | `false` | Enable joint position limits |
-| `limit_lower` | `float` | `-3.14159` | Lower position limit — radians for revolute/continuous, meters for prismatic |
-| `limit_upper` | `float` | `+3.14159` | Upper position limit — radians for revolute/continuous, meters for prismatic |
+| `limit_lower` | `float` | `-3.14159` | Lower position limit (radians for revolute/continuous, meters for prismatic) |
+| `limit_upper` | `float` | `+3.14159` | Upper position limit (radians for revolute/continuous, meters for prismatic) |
 | `limit_effort` | `float` | `10.0` | Maximum force or torque the actuator can apply (N or N·m) |
 | `limit_velocity` | `float` | `1.0` | Maximum joint velocity (rad/s or m/s) |
 
@@ -140,8 +140,8 @@ Stored on **Joint Empty** objects (ARROWS empties with colored axes).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `use_dynamics` | `bool` | `false` | Include dynamics in the exported URDF |
-| `dynamics_damping` | `float` | `0.0` | Viscous damping — resistance to motion |
-| `dynamics_friction` | `float` | `0.0` | Static friction — resistance to starting motion |
+| `dynamics_damping` | `float` | `0.0` | Viscous damping (resistance to motion) |
+| `dynamics_friction` | `float` | `0.0` | Static friction (resistance to starting motion) |
 
 ### Mimic
 
@@ -174,7 +174,7 @@ Stored on **Joint Empty** objects (ARROWS empties with colored axes).
 
 ---
 
-## `linkforge_sensor` — Sensor Properties
+## `linkforge_sensor`: Sensor Properties
 
 Stored on **Sensor Empty** objects.
 
@@ -240,7 +240,7 @@ Stored on **Sensor Empty** objects.
 
 ---
 
-## `linkforge_transmission` — Transmission Properties
+## `linkforge_transmission`: Transmission Properties
 
 Stored on **Transmission Empty** objects. Used for ROS 2 `<transmission>` tags.
 

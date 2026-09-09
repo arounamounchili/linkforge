@@ -1698,3 +1698,20 @@ class TestURDFGenerator:
         hw_iface = trans_elem.find("joint/hardwareInterface")
         assert hw_iface is not None
         assert hw_iface.text == "position"
+
+    def test_generate_extra_elements(self) -> None:
+        """Verify generator re-emits extra / vendor elements such as <mujoco>."""
+        robot = Robot(
+            name="vendor_bot",
+            links=[Link(name="base")],
+            extra_elements=(
+                '<mujoco><option gravity="0 0 -9.81" timestep="0.002"/></mujoco>',
+                "<bullet><friction>0.8</friction></bullet>",
+            ),
+        )
+        gen = URDFGenerator()
+        xml = gen.generate(robot, validate=False)
+        assert "<mujoco>" in xml
+        assert 'gravity="0 0 -9.81"' in xml
+        assert "<bullet>" in xml
+        assert "<friction>0.8</friction>" in xml

@@ -1042,7 +1042,7 @@ class TestURDFParser:
         parser = URDFParser()
         # When source_directory is set and path escapes it, logs warning and returns None geometry
         robot = parser.parse_string(xml, source_directory=tmp_path)
-        # Mesh should be skipped — link exists but no visual geometry
+        # Mesh should be skipped (link exists but no visual geometry)
         assert len(robot.links) == 1
 
     def test_link_with_inertial_but_no_inertia_element(self) -> None:
@@ -1097,7 +1097,7 @@ class TestURDFParser:
             </transmission>
         </robot>"""
         parser = URDFParser()
-        # Should not raise — just skip the transmission
+        # Should not raise: just skip the transmission
         robot = parser.parse_string(xml)
         assert isinstance(
             robot, __import__("linkforge.core.models.robot", fromlist=["Robot"]).Robot
@@ -1239,7 +1239,7 @@ class TestURDFParser:
         urdf_file = tmp_path / "big.urdf"
         urdf_file.write_text("<robot name='r'><link name='l1'/></robot>")
         parser = URDFParser()
-        parser.max_file_size = 1  # 1 byte — will trip on any content
+        parser.max_file_size = 1  # 1 byte: will trip on any content
         with pytest.raises(RobotParserError, match="File too large"):
             parser.parse(urdf_file)
 
@@ -1248,7 +1248,7 @@ class TestURDFParser:
 
         content = "<robot name='r'>" + "<link name='l1'/>" * 10 + "</robot>"
         parser = URDFParser()
-        parser.max_file_size = 1  # 1 byte — will trip immediately
+        parser.max_file_size = 1  # 1 byte: will trip immediately
         with pytest.raises(RobotParserError, match="Content too large"):
             parser.parse_string(content)
 
@@ -1594,11 +1594,20 @@ def test_parse_with_xacro_suffix_raises_immediately(tmp_path) -> None:
         parser._detect_xacro_file(ET.Element("robot"), filepath=filepath)
 
 
-def test_urdf_parser_unknown_root_tag_ignored() -> None:
-    """Verify that an unknown tag in the root of URDF is safely ignored."""
+def test_urdf_parser_unknown_root_tag_preserved() -> None:
+    """Verify that an unknown tag in the root of URDF is captured into extra_elements."""
     xml = """<robot name="r">
-        <unknown_tag attribute="val"/>
+        <unknown_tag attribute="val">
+            <child_tag data="123"/>
+        </unknown_tag>
+        <mujoco>
+            <option gravity="0 0 -9.81"/>
+        </mujoco>
     </robot>"""
     parser = URDFParser()
     robot = parser.parse_string(xml)
     assert robot is not None
+    assert len(robot.extra_elements) == 2
+    assert "unknown_tag" in robot.extra_elements[0]
+    assert "child_tag" in robot.extra_elements[0]
+    assert "mujoco" in robot.extra_elements[1]

@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import os
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar, overload
 
 import bpy
 
@@ -30,6 +30,10 @@ from ..utils.property_helpers import (
     get_sensor_props,
     get_transmission_props,
 )
+
+K = TypeVar("K")
+V = TypeVar("V")
+T = TypeVar("T")
 
 
 def is_robot_link(obj: Any) -> bool:
@@ -408,3 +412,35 @@ def sync_object_collections(
     for col in list(target_obj.users_collection):
         if col not in source_cols:
             col.objects.unlink(target_obj)
+
+
+@overload
+def filter_items_by_name(items: dict[K, V], search_term: str | None) -> dict[K, V]: ...
+
+
+@overload
+def filter_items_by_name(items: list[T], search_term: str | None) -> list[T]: ...
+
+
+def filter_items_by_name(
+    items: dict[Any, Any] | list[Any],
+    search_term: str | None,
+) -> dict[Any, Any] | list[Any]:
+    """Filter items by case-insensitive substring matching for UI display.
+
+    For dictionaries: filters by key names.
+    For lists: filters by object 'name' attribute.
+    """
+    if not search_term or not search_term.strip():
+        return items
+
+    term = search_term.lower().strip()
+    if isinstance(items, dict):
+        return {k: v for k, v in items.items() if term in str(k).lower()}
+    if isinstance(items, list):
+        return [
+            item
+            for item in items
+            if hasattr(item, "name") and term in str(getattr(item, "name", "")).lower()
+        ]
+    return items

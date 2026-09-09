@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
+from .._utils.math_utils import is_positive_semi_definite_3x3, symmetric_matrix_eigenvalues_3x3
 from .._utils.string_utils import is_valid_name
 from ..constants import (
     DEFAULT_CONTACT_KD,
@@ -25,6 +26,7 @@ from ..constants import (
     EPSILON,
     GRAVITY_ENABLED,
     MIN_REASONABLE_INERTIA,
+    SYLVESTER_TOLERANCE_EPSILON,
 )
 from ..exceptions import RobotPhysicsError, RobotValidationError, ValidationErrorCode
 from .geometry import Geometry, Transform
@@ -33,16 +35,22 @@ from .material import Material
 
 @dataclass(frozen=True)
 class InertiaTensor:
-    """3x3 inertia tensor representation.
+    """Rigid body mass moment of inertia tensor.
 
-    Symmetric tensor with 6 unique components:
+    Represents the 3x3 symmetric positive-definite inertia matrix:
+    [ ixx -ixy -ixz ]
+    [-ixy  iyy -iyz ]
+    [-ixz -iyz  izz ]
+
+    or equivalently with positive off-diagonal components:
     [ ixx  ixy  ixz ]
     [ ixy  iyy  iyz ]
     [ ixz  iyz  izz ]
 
     The tensor must be physically plausible. Diagonals must be positive
-    values, and the principal moments must satisfy the triangle
-    inequality for rigid body mass distribution.
+    values, all principal minors must satisfy Sylvester's criterion
+    (positive semi-definiteness), and the principal moments of inertia
+    must satisfy the triangle inequality for rigid body mass distribution.
     """
 
     ixx: float
@@ -63,19 +71,64 @@ class InertiaTensor:
                 value=(self.ixx, self.iyy, self.izz),
             )
 
-        # Principal moments triangle inequality
-        # https://en.wikipedia.org/wiki/Moment_of_inertia#Principal_axes
-        if not (
-            self.ixx + self.iyy >= self.izz - EPSILON
-            and self.iyy + self.izz >= self.ixx - EPSILON
-            and self.izz + self.ixx >= self.iyy - EPSILON
-        ):
-            raise RobotPhysicsError(
-                ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
-                "Inertia tensor violates triangle inequality (unphysical)",
-                target="InertiaTriangleInequality",
-                value=(self.ixx, self.iyy, self.izz),
+        has_off_diagonals = (
+            abs(self.ixy) > EPSILON or abs(self.ixz) > EPSILON or abs(self.iyz) > EPSILON
+        )
+
+        if has_off_diagonals:
+            # 1. Sylvester's criterion for positive semi-definiteness
+            if not is_positive_semi_definite_3x3(
+                self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz
+            ):
+                raise RobotPhysicsError(
+                    ValidationErrorCode.PHYSICS_VIOLATION,
+                    "Inertia tensor is not positive semi-definite (unphysical rigid body)",
+                    target="InertiaTensor",
+                    value=(self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz),
+                )
+
+            # 2. Compute principal moments (eigenvalues)
+            eig1, eig2, eig3 = symmetric_matrix_eigenvalues_3x3(
+                self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz
             )
+            scale = max(abs(self.ixx), abs(self.iyy), abs(self.izz), 1.0)
+            tol = SYLVESTER_TOLERANCE_EPSILON * scale
+
+            # Ensure all principal moments are positive
+            if eig3 < -tol:
+                raise RobotPhysicsError(
+                    ValidationErrorCode.PHYSICS_VIOLATION,
+                    f"Inertia tensor has negative principal moment: {eig3:.6e}",
+                    target="InertiaTensor",
+                    value=(eig1, eig2, eig3),
+                )
+
+            # Principal moments triangle inequality (eig1 >= eig2 >= eig3)
+            if not (
+                eig1 + eig2 >= eig3 - tol
+                and eig2 + eig3 >= eig1 - tol
+                and eig3 + eig1 >= eig2 - tol
+            ):
+                raise RobotPhysicsError(
+                    ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
+                    "Inertia tensor violates triangle inequality on principal moments (unphysical)",
+                    target="InertiaTriangleInequality",
+                    value=(eig1, eig2, eig3),
+                )
+        else:
+            # Principal moments triangle inequality for diagonal tensors
+            # https://en.wikipedia.org/wiki/Moment_of_inertia#Principal_axes
+            if not (
+                self.ixx + self.iyy >= self.izz - EPSILON
+                and self.iyy + self.izz >= self.ixx - EPSILON
+                and self.izz + self.ixx >= self.iyy - EPSILON
+            ):
+                raise RobotPhysicsError(
+                    ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
+                    "Inertia tensor violates triangle inequality (unphysical)",
+                    target="InertiaTriangleInequality",
+                    value=(self.ixx, self.iyy, self.izz),
+                )
 
     @classmethod
     def stability_floor(cls) -> InertiaTensor:

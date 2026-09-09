@@ -71,8 +71,8 @@ def test_add_inertial_element() -> None:
         mass=5.5,
         origin=Transform(xyz=Vector3(0, 0, 1)),
         inertia=InertiaTensor(
-            ixx=1.0,
-            iyy=2.0,
+            ixx=2.0,
+            iyy=3.0,
             izz=3.0,
             ixy=0.1,
             ixz=0.2,
@@ -94,10 +94,10 @@ def test_add_inertial_element() -> None:
 
     inertia_elem = elem.find("inertia")
     assert inertia_elem is not None
-    assert inertia_elem.get("ixx") == "1"
+    assert inertia_elem.get("ixx") == "2"
     assert inertia_elem.get("ixy") == "0.1"
     assert inertia_elem.get("ixz") == "0.2"
-    assert inertia_elem.get("iyy") == "2"
+    assert inertia_elem.get("iyy") == "3"
     assert inertia_elem.get("iyz") == "0.3"
     assert inertia_elem.get("izz") == "3"
 
