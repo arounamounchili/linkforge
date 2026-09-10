@@ -5,6 +5,20 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2](https://github.com/arounamounchili/linkforge/compare/v1.5.1...v1.5.2) (2026-09-10)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** improve validation UI layout, eliminate popup dialogs, and add interactive selection ([020cf63](https://github.com/arounamounchili/linkforge/commit/020cf63f0745dfb482eaf890d08896cbb7b29d27))
+* **blender:** validate joint link definitions and gracefully handle orphaned control joints ([32d034a](https://github.com/arounamounchili/linkforge/commit/32d034af01ac00d9b7f50e4709ed66082f8aca1e))
+* **core:** enforce inertia tensor physicality and preserve vendor XML tags ([bb9ad1d](https://github.com/arounamounchili/linkforge/commit/bb9ad1dd05563fd5761111d6a81422cae9c2265b))
+
+
+### ⚡ Performance Updates
+
+* **blender:** skip non-object datablocks in name sync depsgraph handler ([#295](https://github.com/arounamounchili/linkforge/issues/295)) ([7048b22](https://github.com/arounamounchili/linkforge/commit/7048b2246c25da74b2aebfc1eac0030a3ed9e268))
+
 ## [1.5.1](https://github.com/arounamounchili/linkforge/compare/v1.5.0...v1.5.1) (2026-08-14)
 
 
