@@ -131,7 +131,10 @@ def test_tree_structure_check_disconnected(empty_robot, result):
     check = TreeStructureCheck()
     check.run(empty_robot, result)
     # Reports MULTIPLE_ROOTS because 'island' has no parent
-    assert any(err.code == ValidationErrorCode.MULTIPLE_ROOTS for err in result.errors)
+    err = next(e for e in result.errors if e.code == ValidationErrorCode.MULTIPLE_ROOTS)
+    assert set(err.affected_objects) == {"base", "island"}
+    assert "Multiple root links found (2)" in err.message
+    assert not err.message.startswith("[MULTIPLE_ROOTS]")
 
 
 def test_mass_properties_check(empty_robot, result):

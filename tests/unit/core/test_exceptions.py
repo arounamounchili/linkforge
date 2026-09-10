@@ -89,16 +89,19 @@ def test_robot_validation_error():
     """Verify RobotValidationError formatting combinations."""
     err_none = RobotValidationError(ValidationErrorCode.DUPLICATE_NAME, "duplicate link name")
     assert str(err_none) == "[DUPLICATE_NAME] duplicate link name"
+    assert err_none.message == "duplicate link name"
 
     err_target = RobotValidationError(
         ValidationErrorCode.DUPLICATE_NAME, "duplicate link name", target="link_a"
     )
     assert str(err_target) == "[DUPLICATE_NAME] duplicate link name (target: link_a)"
+    assert err_target.message == "duplicate link name"
 
     err_value = RobotValidationError(
         ValidationErrorCode.DUPLICATE_NAME, "duplicate link name", value="link_val"
     )
     assert str(err_value) == "[DUPLICATE_NAME] duplicate link name (value: link_val)"
+    assert err_value.message == "duplicate link name"
 
     err_both = RobotValidationError(
         ValidationErrorCode.DUPLICATE_NAME, "duplicate link name", target="link_a", value="link_val"
@@ -106,6 +109,7 @@ def test_robot_validation_error():
     assert (
         str(err_both) == "[DUPLICATE_NAME] duplicate link name (target: link_a) (value: link_val)"
     )
+    assert err_both.message == "duplicate link name"
 
 
 def test_robot_security_error():

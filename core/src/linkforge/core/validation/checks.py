@@ -189,16 +189,23 @@ class TreeStructureCheck(ValidationCheck):
                     suggestion="Ensure exactly one link has no parent joint (the base/root link)",
                 )
             elif e.code == ValidationErrorCode.MULTIPLE_ROOTS:
+                roots = robot.graph.get_root_links()
+                if roots:
+                    roots_str = ", ".join(f"'{r}'" for r in roots)
+                    msg = f"Multiple root links found ({len(roots)}): {roots_str}"
+                else:
+                    msg = e.message
                 result.add_error(
                     title="Multiple root links",
-                    message=str(e),
+                    message=msg,
+                    affected_objects=list(roots),
                     code=ValidationErrorCode.MULTIPLE_ROOTS,
                     suggestion="Ensure only one link has no parent joint. Connect other root links to the tree with joints",
                 )
             else:
                 result.add_error(
                     title="Root link error",
-                    message=str(e),
+                    message=e.message,
                     suggestion="Check the joint connections in your robot tree",
                 )
             return None

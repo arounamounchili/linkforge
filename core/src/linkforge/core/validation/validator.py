@@ -95,8 +95,8 @@ class RobotValidator:
         except RobotValidationError as e:
             # Report indexing errors (like duplicates) as validation errors
             result.add_error(
-                title=str(e),
-                message=str(e),
+                title=e.message,
+                message=e.message,
                 code=e.code,
                 affected_objects=[str(e.value)] if e.value is not None else [],
             )

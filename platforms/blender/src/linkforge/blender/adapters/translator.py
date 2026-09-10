@@ -273,7 +273,7 @@ class LinkTranslator(ITranslator):
                     title=issue.title,
                     message=issue.message,
                     code=issue.code,
-                    affected_objects=[link_name, obj.name],
+                    affected_objects=[obj.name],
                     suggestion=issue.suggestion,
                 )
         except Exception as e:

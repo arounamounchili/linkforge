@@ -67,9 +67,16 @@ class ValidationIssueProperty(PropertyGroup):
         return typing.cast(str, self.affected_objects)
 
     @property
+    def affected_object_list(self) -> list[str]:
+        """Get list of individual affected object names."""
+        if not self.affected_objects:
+            return []
+        return [name.strip() for name in str(self.affected_objects).split(",") if name.strip()]
+
+    @property
     def message_lines(self) -> list[str]:
-        """Split message into lines for display (max 60 chars per line)."""
-        max_width = 60
+        """Split message into lines for display (max 55 chars per line)."""
+        max_width = 55
         words = self.message.split()
         lines: list[str] = []
         current_line: list[str] = []
@@ -92,11 +99,11 @@ class ValidationIssueProperty(PropertyGroup):
 
     @property
     def suggestion_lines(self) -> list[str]:
-        """Split suggestion into lines for display (max 58 chars per line)."""
+        """Split suggestion into lines for display (max 55 chars per line)."""
         if not self.suggestion:
             return []
 
-        max_width = 58  # Account for "  " prefix
+        max_width = 55
         words = self.suggestion.split()
         lines: list[str] = []
         current_line: list[str] = []
