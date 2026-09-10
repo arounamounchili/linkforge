@@ -23,6 +23,7 @@ from ..constants import (
 from ..core import (
     LinkForgeError,
     RobotGeneratorError,
+    RobotValidationError,
     RobotValidator,
     URDFGenerator,
     XACROGenerator,
@@ -215,7 +216,17 @@ class LINKFORGE_OT_validate_robot(Operator):
 
         lf_context = BlenderContext(bpy_instance=bpy)
         try:
-            robot, conversion_result = scene_to_robot(lf_context)
+            robot, conversion_result = scene_to_robot(lf_context, raise_on_error=False)
+        except RobotValidationError as e:
+            validation_props.has_results = True
+            validation_props.is_valid = False
+            validation_props.error_count = 1
+            error_prop = validation_props.errors.add()
+            error_prop.title = "Validation Error"
+            error_prop.message = str(e)
+            error_prop.error_code = str(e.code.name)
+            self.report({"WARNING"}, f"Validation failed: {e}")
+            return {"CANCELLED"}
         except Exception as e:
             # Catch unexpected fatal build errors
             validation_props.has_results = True

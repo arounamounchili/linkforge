@@ -1494,9 +1494,7 @@ class TestURDFGenerator:
         assert '<param name="p1">v1</param>' in xml
 
     def test_generate_joint_without_calibration_tags(self) -> None:
-        """Verify the generator skips calibration tags when they are empty."""
-        # This is tricky because JointCalibration fields default to None,
-        # but if we have an empty calibration object, we hit the branch.
+        # Verify empty calibration object (fields default to None) does not emit XML tags
         j = Joint(
             name="j",
             type=JointType.FIXED,
@@ -1544,7 +1542,7 @@ class TestURDFGenerator:
 
     def test_generate_ros2_control_with_empty_plugins_or_gazebo_elements(self) -> None:
         """Verify ROS2 control generation when optional plugins or Gazebo elements are missing."""
-        # Case 1: Empty gazebo_elements
+        # Empty gazebo_elements
         # Need a joint for the transmission to be valid
         j = Joint(
             name="j", type=JointType.CONTINUOUS, parent="base", child="child", axis=Vector3(1, 0, 0)
@@ -1562,7 +1560,7 @@ class TestURDFGenerator:
         xml = gen.generate(robot, validate=False)
         assert "libgz_ros2_control-system.so" in xml
 
-        # Case 2: Gazebo elements with NO plugins (covers 1005->1009 skip)
+        # Gazebo elements with NO plugins
         robot.add_gazebo_element(GazeboElement(reference="base"))
         xml = gen.generate(robot, validate=False)
         assert "libgz_ros2_control-system.so" in xml
@@ -1660,10 +1658,10 @@ class TestURDFGenerator:
         robot.add_transmission(trans)
 
         gen = URDFGenerator(pretty_print=False)
-        # Call generate with unused kwargs to cover line 125
+        # Call generate with unused kwargs to ensure backwards compatibility
         xml = gen.generate(robot, validate=False, unused_opt=True)
 
-        # Direct call to _fill_gazebo_element to cover lines 796, 802, 817-818
+        # Direct call to _fill_gazebo_element with material and properties
         root_temp = ET.Element("gazebo", reference="base")
         gz_full = GazeboElement(
             reference="base", material="Gazebo/Blue", properties={"custom_prop": "custom_val"}

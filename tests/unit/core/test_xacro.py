@@ -527,7 +527,7 @@ class TestXacroInfrastructure:
         file_c = tmp_path / "c.xacro"
         file_c.write_text('<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><link/></robot>')
         parser.resolve(file_c)
-        parser.resolve(file_c)  # Hits TEMPLATE_CACHE
+        parser.resolve(file_c)  # Verify template cache reuse
 
     def test_xacro_namespaced_property(self, tmp_path) -> None:
         """Test defining a property inside a namespace."""
@@ -609,15 +609,15 @@ class TestXacroInfrastructure:
         # BoolOps
         assert _safe_eval("a == 1 and b == 2", ctx) is True
         assert _safe_eval("a == 2 or b == 2", ctx) is True
-        assert _safe_eval("False or False", ctx) is False  # Hits line 137
+        assert _safe_eval("False or False", ctx) is False
 
         # Subscript, List, Dict, Tuple
         assert _safe_eval("[a, b][1]", ctx) == 2
-        assert _safe_eval("[]", ctx) == []  # Hits line 163
+        assert _safe_eval("[]", ctx) == []
         assert _safe_eval("{'a': 1, 'b': b}['b']", ctx) == 2
         assert _safe_eval("(a, b)[0]", ctx) == 1
         assert _safe_eval("d['k']", ctx) == "v"
-        assert _safe_eval("d.k", ctx) == "v"  # Hits line 158
+        assert _safe_eval("d.k", ctx) == "v"
 
         # Unsupported operations
         with pytest.raises(TypeError, match="Unsupported AST node"):
@@ -703,7 +703,7 @@ class TestXacroInfrastructure:
 
         resolver.properties["my_blocks"] = [ET.Element("link"), ET.Element("joint")]
         xml = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:insert_block name="my_blocks"/></robot>'
-        # Manually call _handle_insert_block to hit the branch
+        # Test multiple elements block insertion
         elem = ET.Element("insert_block", name="my_blocks")
         res = resolver._handle_insert_block(elem)
         assert res.tag == "container"

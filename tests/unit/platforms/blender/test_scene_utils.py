@@ -340,7 +340,7 @@ class TestSceneAnalysis:
         assert stats.geometry_stats["link_geom_mesh"][1] == GEOM_MESH
         assert link_obj in stats.manual_inertia_objects
 
-        # Joint props Falsy branches in loop
+        # Evaluate joint without child link assigned
         joint_obj = create_test_object("joint_empty", None, scene)
         joint_obj.type = "EMPTY"
         safe_get_joint(joint_obj).is_robot_joint = True
@@ -573,7 +573,7 @@ class TestCollectionManagement:
         assert col2 in obj.users_collection
         assert col1 not in obj.users_collection
 
-        # Call move_to_collection again when already in col2 to cover "already there" branch
+        # Call move_to_collection again when already present in target collection
         move_to_collection(obj, col2)
 
         # Null check safety

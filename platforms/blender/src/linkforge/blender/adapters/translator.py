@@ -7,6 +7,7 @@ to LinkForge core models using the Composer API.
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -604,7 +605,22 @@ class Ros2ControlTranslator(ITranslator):
         try:
             control = self._blender_ros2_control_to_core(obj)
             if control:
-                builder.robot.add_ros2_control(control)
+                valid_joints: list[Ros2ControlJoint] = []
+                for ctrl_joint in control.joints:
+                    if builder.robot.has_joint(ctrl_joint.name):
+                        valid_joints.append(ctrl_joint)
+                    elif validation_result:
+                        validation_result.add_error(
+                            title="ROS2 Control Missing Joint",
+                            message=(
+                                f"Controlled joint '{ctrl_joint.name}' does not exist in the robot hierarchy."
+                            ),
+                            code=ValidationErrorCode.NOT_FOUND,
+                            affected_objects=[ctrl_joint.name],
+                        )
+                if valid_joints:
+                    updated_control = replace(control, joints=tuple(valid_joints))
+                    builder.robot.add_ros2_control(updated_control)
         except Exception as e:
             if validation_result:
                 validation_result.add_error(

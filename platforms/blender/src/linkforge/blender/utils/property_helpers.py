@@ -46,7 +46,7 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
     Returns:
         The object that owns this property group, or None if not found
     """
-    # Strategy 1: Check id_data (most reliable and fastest)
+    # Check id_data (most reliable and fastest)
     if (
         hasattr(property_group, "id_data")
         and property_group.id_data
@@ -56,7 +56,7 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
     ):
         return property_group.id_data
 
-    # Strategy 2: Check active object (fast fallback)
+    # Check active object (fast fallback)
     if (
         hasattr(context, "object")
         and context.object
@@ -65,13 +65,13 @@ def find_property_owner(context: Context, property_group: Any, property_attr: st
     ):
         return context.object
 
-    # Strategy 3: Check selected objects (faster than full scene search)
+    # Check selected objects (faster than full scene search)
     if hasattr(context, "selected_objects"):
         for obj in context.selected_objects:
             if hasattr(obj, property_attr) and getattr(obj, property_attr) == property_group:
                 return obj
 
-    # Strategy 4: Fall back to full scene search (slowest)
+    # Fall back to full scene search (slowest)
     if hasattr(context, "scene") and context.scene:
         for obj in context.scene.objects:
             if hasattr(obj, property_attr) and getattr(obj, property_attr) == property_group:

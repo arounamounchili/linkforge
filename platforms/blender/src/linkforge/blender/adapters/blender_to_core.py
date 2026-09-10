@@ -441,7 +441,10 @@ def _categorize_scene_objects(
                 else (child_obj.name if child_obj else "")
             )
 
-            if parent_name and child_name:
+            parent_is_link = bool(parent_props and getattr(parent_props, "is_robot_link", False))
+            child_is_link = bool(child_props and getattr(child_props, "is_robot_link", False))
+
+            if parent_name and child_name and parent_is_link and child_is_link:
                 joints_map[child_name] = (parent_name, obj)
 
         # Check for Sensor
@@ -560,17 +563,20 @@ class SceneToRobotTranslator:
         self.builder = RobotBuilder(self.robot_name)
         self.validation_result = ValidationResult(robot_name=self.robot_name)
 
-    def translate(self) -> tuple[Robot, ValidationResult]:
+    def translate(self, raise_on_error: bool = True) -> tuple[Robot, ValidationResult]:
         """Perform the translation and return the built Robot model."""
         # 1. Categorize scene objects
         link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root = (
             _categorize_scene_objects(self.context.scene)
         )
 
-        # 2. Calculate coordinate frames (needed for joint relative origins)
+        # 2. Validate joint definitions (parent/child references, self-loops, duplicates)
+        self._validate_joint_definitions(joint_objects)
+
+        # 3. Calculate coordinate frames (needed for joint relative origins)
         link_frames = _calculate_link_frames(link_objects, joints_map, root)
 
-        # 3. Translate Materials globally (Centralized management)
+        # 4. Translate Materials globally (Centralized management)
         self._translate_global_materials(link_objects)
 
         # 4. Build Kinematic Tree recursively (The "Composer" way)
@@ -606,7 +612,7 @@ class SceneToRobotTranslator:
             )
             robot = Robot(name=self.robot_name)
 
-        if self.validation_result.errors:
+        if raise_on_error and self.validation_result.errors:
             first_err = self.validation_result.errors[0]
             raise RobotValidationError(
                 ValidationErrorCode.INVALID_VALUE,
@@ -614,6 +620,96 @@ class SceneToRobotTranslator:
             )
 
         return robot, self.validation_result
+
+    def _validate_joint_definitions(self, joint_objects: list[Any]) -> None:
+        """Validate that all robot joints in the scene have valid parent and child links."""
+        seen_children: dict[str, str] = {}
+
+        for joint_obj in joint_objects:
+            props = get_joint_props(joint_obj)
+            if not props or not getattr(props, "is_robot_joint", False):
+                continue
+
+            joint_name = props.joint_name if props.joint_name else joint_obj.name
+            parent_obj = props.parent_link
+            child_obj = props.child_link
+
+            # Validate parent link reference
+            if not parent_obj:
+                self.validation_result.add_error(
+                    title="Missing Parent Link",
+                    message=f"Joint '{joint_name}' has no parent link assigned.",
+                    code=ValidationErrorCode.NOT_FOUND,
+                    affected_objects=[joint_name],
+                    suggestion=f"Assign a parent link to joint '{joint_name}' in the Joint panel.",
+                )
+            else:
+                parent_props = get_link_props(parent_obj)
+                parent_is_link = bool(
+                    parent_props and getattr(parent_props, "is_robot_link", False)
+                )
+                if not parent_is_link:
+                    self.validation_result.add_error(
+                        title="Invalid Parent Link",
+                        message=(
+                            f"Joint '{joint_name}' references parent object '{parent_obj.name}', "
+                            "which is not configured as a robot link."
+                        ),
+                        code=ValidationErrorCode.INVALID_VALUE,
+                        affected_objects=[joint_name, parent_obj.name],
+                        suggestion=f"Configure '{parent_obj.name}' as a robot link or select a valid parent link.",
+                    )
+
+            # Validate child link reference
+            if not child_obj:
+                self.validation_result.add_error(
+                    title="Missing Child Link",
+                    message=f"Joint '{joint_name}' has no child link assigned.",
+                    code=ValidationErrorCode.NOT_FOUND,
+                    affected_objects=[joint_name],
+                    suggestion=f"Assign a child link to joint '{joint_name}' in the Joint panel.",
+                )
+            else:
+                child_props = get_link_props(child_obj)
+                child_is_link = bool(child_props and getattr(child_props, "is_robot_link", False))
+                if not child_is_link:
+                    self.validation_result.add_error(
+                        title="Invalid Child Link",
+                        message=(
+                            f"Joint '{joint_name}' references child object '{child_obj.name}', "
+                            "which is not configured as a robot link."
+                        ),
+                        code=ValidationErrorCode.INVALID_VALUE,
+                        affected_objects=[joint_name, child_obj.name],
+                        suggestion=f"Configure '{child_obj.name}' as a robot link or select a valid child link.",
+                    )
+
+            # Validate self-referencing connection
+            if parent_obj and child_obj and parent_obj == child_obj:
+                self.validation_result.add_error(
+                    title="Self-Referencing Joint",
+                    message=f"Joint '{joint_name}' connects link '{parent_obj.name}' to itself.",
+                    code=ValidationErrorCode.HAS_CYCLE,
+                    affected_objects=[joint_name, parent_obj.name],
+                    suggestion=f"Select different links for parent and child on joint '{joint_name}'.",
+                )
+
+            # Validate duplicate child link assignment
+            if child_obj:
+                child_key = child_obj.name
+                if child_key in seen_children:
+                    self.validation_result.add_error(
+                        title="Duplicate Child Link Assignment",
+                        message=(
+                            f"Child link '{child_key}' is assigned to multiple joints: "
+                            f"'{seen_children[child_key]}' and '{joint_name}'."
+                        ),
+                        code=ValidationErrorCode.INVALID_VALUE,
+                        affected_objects=[joint_name, seen_children[child_key], child_key],
+                        suggestion="Ensure each link is the child of at most one joint.",
+                    )
+                else:
+                    seen_children[child_key] = joint_name
 
     def _translate_global_materials(self, link_objects: dict[str, Any]) -> None:
         """Collect and register all unique materials used in the robot."""
@@ -796,6 +892,7 @@ def scene_to_robot(
     context: IBlenderContext | bpy.types.Context,
     meshes_dir: Path | None = None,
     dry_run: bool = False,
+    raise_on_error: bool = True,
 ) -> tuple[Robot, ValidationResult]:
     """Convert entire Blender scene to Core Robot using the Translator orchestrator."""
     from .context import BlenderContext
@@ -807,4 +904,4 @@ def scene_to_robot(
         context = BlenderContext(bpy)
 
     translator = SceneToRobotTranslator(context, meshes_dir, dry_run)
-    return translator.translate()
+    return translator.translate(raise_on_error=raise_on_error)

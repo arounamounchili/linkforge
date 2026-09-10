@@ -809,7 +809,7 @@ class TestXacroGenerator:
             ),
         ]
 
-        # Patch _get_macro_signature to exercise 224->229 (sig exists but not in macro_groups)
+        # Patch _get_macro_signature for when sig exists but not in macro_groups
         original_get_sig = XACROGenerator._get_macro_signature
 
         def mock_get_sig(self, link, joint):

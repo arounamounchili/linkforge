@@ -1589,7 +1589,7 @@ def test_parse_with_xacro_suffix_raises_immediately(tmp_path) -> None:
     with pytest.raises(XacroDetectedError, match="XACRO file detected"):
         parser.parse(filepath)
 
-    # Call _detect_xacro_file directly to hit the 944->951 suffix branch
+    # Call _detect_xacro_file directly to test filepath suffix detection
     with pytest.raises(XacroDetectedError, match="XACRO file detected"):
         parser._detect_xacro_file(ET.Element("robot"), filepath=filepath)
 

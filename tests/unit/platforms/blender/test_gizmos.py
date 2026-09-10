@@ -49,7 +49,7 @@ class TestInertiaGizmos:
         """Test drawing lifecycle with various preference combinations."""
         gpu = inertia_gizmos.gpu
 
-        # Scenario 1: Hidden by preference
+        # Inertia gizmos hidden by preference
         with patch("linkforge.blender.visualization.inertia_gizmos.get_addon_prefs") as mock_prefs:
             prefs = MagicMock()
             prefs.show_inertia_gizmos = False
@@ -58,7 +58,7 @@ class TestInertiaGizmos:
             # Should return early
             assert inertia_gizmos.draw_inertia_gizmos() is None
 
-        # Scenario 2: Enabled preference, but no manual inertia objects
+        # Inertia gizmos enabled, but no manual inertia objects present
         with (
             patch("linkforge.blender.visualization.inertia_gizmos.get_addon_prefs") as mock_prefs,
             patch(
@@ -76,7 +76,7 @@ class TestInertiaGizmos:
 
             assert inertia_gizmos.draw_inertia_gizmos() is None
 
-        # Scenario 3: Enabled with manual inertia objects (full GPU draw branch)
+        # Enabled with manual inertia objects for GPU drawing
         link_obj = create_robot_link("manual_link", scene, with_visual=True, with_collision=False)
         lf = safe_get_linkforge(link_obj)
         lf.is_robot_link = True
@@ -235,7 +235,7 @@ class TestJointGizmos:
         """Verify joint axes overlay rendering logic branches."""
         gpu = joint_gizmos.gpu
 
-        # Scenario 1: Disabled
+        # Joint axes display disabled in preferences
         with patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs:
             prefs = MagicMock()
             prefs.show_joint_axes = False
@@ -243,7 +243,7 @@ class TestJointGizmos:
 
             assert joint_gizmos.draw_joint_axes() is None
 
-        # Scenario 2: Enabled but no joints in statistics
+        # Joint axes enabled but no joints in statistics
         with (
             patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs,
             patch(
@@ -261,7 +261,7 @@ class TestJointGizmos:
 
             assert joint_gizmos.draw_joint_axes() is None
 
-        # Scenario 3: Enabled with active joint objects (full triangles / batch rendering draw)
+        # Joint axes enabled with active joint objects for rendering
         joint_obj = bpy.data.objects.new("rendered_joint", None)
         scene.collection.objects.link(joint_obj)
         joint_obj.type = "EMPTY"
@@ -339,7 +339,7 @@ class TestJointGizmos:
 
     def test_update_viz_handle_lifecycle(self, scene) -> None:
         """Verify SpaceView3D custom drawing handler addition and removal on viz updates."""
-        # Case 1: Toggle ON
+        # Verify toggle ON registers custom drawing handler
         with (
             patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs,
             patch.object(
@@ -356,7 +356,7 @@ class TestJointGizmos:
             assert bpy.app.driver_namespace["linkforge_joint_gizmo_handler"] == "dummy_joint_handle"
             assert mock_add.called
 
-        # Case 2: Toggle OFF
+        # Verify toggle OFF unregisters drawing handler
         with (
             patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs,
             patch.object(bpy.types.SpaceView3D, "draw_handler_remove") as mock_remove,
@@ -599,7 +599,7 @@ class TestGizmosExtra:
         inertia_gizmos._builtin_shader_name = None
 
     def test_inertia_gizmos_draw_no_prefs(self, scene) -> None:
-        """Verify draw_inertia_gizmos handles None preferences gracefully (183->190)."""
+        """Verify draw_inertia_gizmos handles None preferences gracefully."""
         with (
             patch(
                 "linkforge.blender.visualization.inertia_gizmos.get_addon_prefs", return_value=None
@@ -616,7 +616,7 @@ class TestGizmosExtra:
             inertia_gizmos.draw_inertia_gizmos()
 
     def test_inertia_gizmos_draw_empty_visible_objects(self) -> None:
-        """Verify draw_inertia_gizmos exits early when context.visible_objects is empty (196)."""
+        """Verify draw_inertia_gizmos exits early when context.visible_objects is empty."""
         mock_ctx = MagicMock()
         mock_ctx.visible_objects = []
         with (
@@ -630,7 +630,7 @@ class TestGizmosExtra:
             assert inertia_gizmos.draw_inertia_gizmos() is None
 
     def test_inertia_gizmos_draw_empty_lines_branch(self, scene) -> None:
-        """Verify draw_inertia_gizmos handles empty generated lines branch (210->207)."""
+        """Verify draw_inertia_gizmos handles empty generated lines branch."""
         link_obj = create_robot_link("dummy_link", scene)
         with (
             patch("linkforge.blender.visualization.inertia_gizmos.get_addon_prefs") as mock_prefs,
@@ -653,7 +653,7 @@ class TestGizmosExtra:
             inertia_gizmos.draw_inertia_gizmos()
 
     def test_inertia_gizmos_tag_redraw_no_wm(self) -> None:
-        """Verify tag_redraw returns early if window_manager is missing (249)."""
+        """Verify tag_redraw returns early if window_manager is missing."""
 
         class MockContextNoWM:
             window_manager = None
@@ -662,7 +662,7 @@ class TestGizmosExtra:
             assert inertia_gizmos.tag_redraw() is None
 
     def test_inertia_gizmos_tag_redraw_non_view3d(self) -> None:
-        """Verify tag_redraw skips non VIEW_3D areas (256->255)."""
+        """Verify tag_redraw skips non VIEW_3D areas."""
 
         class MockArea:
             type = "PROPERTIES"
@@ -683,7 +683,7 @@ class TestGizmosExtra:
             inertia_gizmos.tag_redraw()
 
     def test_inertia_gizmos_check_manual_inertia_scene_exception(self) -> None:
-        """Verify check_manual_inertia_on_load handles scene exceptions gracefully (279-281)."""
+        """Verify check_manual_inertia_on_load handles scene exceptions gracefully."""
 
         class BadContext:
             @property
@@ -694,7 +694,7 @@ class TestGizmosExtra:
             assert inertia_gizmos.check_manual_inertia_on_load() is None
 
     def test_inertia_gizmos_check_manual_inertia_scene_none(self) -> None:
-        """Verify check_manual_inertia_on_load when scene is None (279)."""
+        """Verify check_manual_inertia_on_load when scene is None."""
 
         class MockCtxNoScene:
             scene = None
@@ -703,7 +703,7 @@ class TestGizmosExtra:
             assert inertia_gizmos.check_manual_inertia_on_load() is None
 
     def test_inertia_gizmos_registration_coverage(self) -> None:
-        """Verify register/unregister double call branches (294->300, 308->312, 312->exit)."""
+        """Verify register/unregister handle repeated calls and missing draw handle gracefully."""
         # Register when already registered
         inertia_gizmos.register()
         inertia_gizmos.register()
@@ -742,7 +742,7 @@ class TestGizmosExtra:
         joint_gizmos._builtin_shader_name = None
 
     def test_joint_gizmos_draw_no_prefs(self) -> None:
-        """Verify draw_joint_axes handles Falsy preferences gracefully (200->204)."""
+        """Verify draw_joint_axes handles Falsy preferences gracefully."""
         mock_ctx = MagicMock()
         mock_ctx.scene = None
         with (
@@ -754,7 +754,7 @@ class TestGizmosExtra:
             joint_gizmos.draw_joint_axes()
 
     def test_joint_gizmos_draw_empty_tris_only(self) -> None:
-        """Verify draw_joint_axes with empty tris branch (259->273)."""
+        """Verify draw_joint_axes when generated geometry contains lines but no triangles."""
         mock_ctx = MagicMock()
         mock_scene = MagicMock()
         mock_ctx.scene = mock_scene
@@ -789,7 +789,7 @@ class TestGizmosExtra:
             joint_gizmos.draw_joint_axes()
 
     def test_joint_gizmos_fix_existing_joints_no_scene_attr(self) -> None:
-        """Verify fix_existing_joints handles scene AttributeError gracefully (288-289)."""
+        """Verify fix_existing_joints handles scene AttributeError gracefully."""
 
         class BadContext:
             @property
@@ -800,7 +800,7 @@ class TestGizmosExtra:
             joint_gizmos.fix_existing_joints()
 
     def test_joint_gizmos_fix_existing_joints_no_addon_prefs(self) -> None:
-        """Verify fix_existing_joints handles None addon preferences branch (294->297)."""
+        """Verify fix_existing_joints handles None addon preferences."""
 
         class MockScene:
             objects = []
@@ -817,7 +817,7 @@ class TestGizmosExtra:
             joint_gizmos.fix_existing_joints()
 
     def test_joint_gizmos_fix_existing_joints_none_scene(self) -> None:
-        """Verify fix_existing_joints exits early if scene is None (298)."""
+        """Verify fix_existing_joints exits early if scene is None."""
 
         class MockCtx:
             scene = None
@@ -832,7 +832,7 @@ class TestGizmosExtra:
             joint_gizmos.fix_existing_joints()
 
     def test_joint_gizmos_update_viz_handle_no_wm(self) -> None:
-        """Verify update_viz_handle exits early when window_manager is None (381->exit)."""
+        """Verify update_viz_handle exits early when window_manager is None."""
 
         class MockContextNoWM:
             window_manager = None
@@ -841,7 +841,7 @@ class TestGizmosExtra:
         joint_gizmos.update_viz_handle(MockContextNoWM())
 
     def test_joint_gizmos_update_viz_handle_redundant(self) -> None:
-        """Verify update_viz_handle branch when show_axes is True and current_handler is not None (370->381)."""
+        """Verify update_viz_handle when show_axes is True and handler is already registered."""
 
         class MockArea:
             type = "VIEW_3D"
@@ -873,7 +873,7 @@ class TestGizmosExtra:
             joint_gizmos.update_viz_handle(MockCtx())
 
     def test_joint_gizmos_update_viz_handle_not_in_namespace(self) -> None:
-        """Verify update_viz_handle branch when handler is removed but not in namespace dictionary (377->381)."""
+        """Verify update_viz_handle when handler is removed but not in namespace dictionary."""
 
         class MockArea:
             type = "VIEW_3D"
@@ -914,7 +914,7 @@ class TestGizmosExtra:
             joint_gizmos.update_viz_handle(MockCtx())
 
     def test_joint_gizmos_update_viz_handle_redraw(self) -> None:
-        """Verify update_viz_handle tags 3D areas for redraw (383-385)."""
+        """Verify update_viz_handle tags 3D areas for redraw."""
 
         class MockArea:
             type = "VIEW_3D"
@@ -949,7 +949,7 @@ class TestGizmosExtra:
             assert mock_area.redraw_called
 
     def test_joint_gizmos_registration_coverage(self) -> None:
-        """Verify register/unregister double call and unregister when handler is None (325->329, 335->339, 340->exit, 347->exit)."""
+        """Verify register/unregister handle repeated calls and unregister when handler is None."""
         # Call register twice to test fix_existing_joints already in load_post
         joint_gizmos.register()
         joint_gizmos.register()
@@ -974,7 +974,7 @@ class TestGizmosExtra:
             joint_gizmos.unregister()
 
     def test_joint_gizmos_update_viz_handle_non_view3d_area(self) -> None:
-        """Verify update_viz_handle when an area is not VIEW_3D (383->382)."""
+        """Verify update_viz_handle when an area is not VIEW_3D."""
 
         class MockArea:
             type = "PROPERTIES"

@@ -1056,6 +1056,20 @@ def import_robot_to_scene(
     all_joints_list = list(robot.joints)
     resolve_mimic_joints(all_joints_list, joint_objects)
 
+    # Bind ros2_control joint pointers to scene objects
+    scene = getattr(context, "scene", None)
+    if scene and hasattr(scene, PROP_ROBOT):
+        lp = getattr(scene, PROP_ROBOT)
+        control_joints = getattr(lp, "ros2_control_joints", None)
+        if control_joints:
+            try:
+                for item in control_joints:
+                    if hasattr(item, "name") and item.name in joint_objects:
+                        with contextlib.suppress(Exception):
+                            item.joint_obj = joint_objects[item.name]
+            except TypeError:
+                pass
+
     sensors_created = 0
     if hasattr(robot, "sensors") and robot.sensors:
         for sensor in robot.sensors:

@@ -55,9 +55,9 @@ def test_on_depsgraph_update_post_all_branches(scene):
     """Verify both True and False branches for all component synchronizations in the depsgraph handler."""
     cleanup_blender_scene(scene)
 
-    # We need:
-    # - Updates that trigger TRUE branch (sanitized != current)
-    # - Updates that trigger FALSE branch (sanitized == current)
+    # Test cases:
+    # - Updates that require sanitization (sanitized != current)
+    # - Updates already sanitized (sanitized == current)
 
     link_true = create_test_object("link_true", None, scene=scene)
     lp_true = safe_get_linkforge(link_true, scene)

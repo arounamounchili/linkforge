@@ -26,6 +26,14 @@ Select a joint in the list to reveal its settings:
 Standard ROS 2 controllers (like `diff_drive_controller`) typically require **Velocity** command interfaces for wheels.
 :::
 
+### Managing and Cleaning Up Joints
+The vertical toolbar on the right side of the joint list provides tools to manage and maintain your control configuration:
+
+- **Remove (-)**: Unregisters the currently selected joint from the control list without deleting the joint object from the Blender scene.
+- **Reorder (▲ / ▼)**: Moves the selected joint up or down in the interface list.
+- **Prune Missing Joints (🗑️)**: If a physical joint object is deleted from the 3D Viewport or Outliner, the list item flags it with an `[ERROR] <name> (Missing)` badge. A red **Trash** icon automatically appears in the toolbar. Clicking it removes all orphaned joints while preserving your remaining configured joints and PID parameters.
+- **Purge Control Data (🔄)**: Clears all `ros2_control` joints and parameters at once when you want to reset the control system and start over from scratch.
+
 ## 3. Global Hardware Settings
 In the **Hardware System** section, you can configure:
 - **Name**: The name of the `ros2_control` system (default: `GazeboSimSystem`).

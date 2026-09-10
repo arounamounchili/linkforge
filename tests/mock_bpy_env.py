@@ -1949,7 +1949,7 @@ def setup_mock_bpy():
 
         # Discover properties in __dict__ or __annotations__
         props: dict[str, dict[str, typing.Any] | MockPropertyDescriptor] = {}
-        # 1. Check annotations (for newer Python/Blender style)
+        # Check annotations (for newer Python/Blender style)
         for k, v in getattr(cls, "__annotations__", {}).items():
             if isinstance(v, str) and "bpy.props." in v:
                 # If it's a string (due to from __future__ import annotations), we might need to "eval" or mock it
@@ -1970,7 +1970,7 @@ def setup_mock_bpy():
             elif isinstance(v, MockPropertyDescriptor):
                 props[k] = v
 
-        # 2. Check __dict__ (standard assignment style)
+        # Check class dictionary (standard assignment style)
         for k, v in cls.__dict__.items():
             if isinstance(v, MockPropertyDescriptor):
                 v._discover_name(None, cls)

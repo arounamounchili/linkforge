@@ -60,8 +60,8 @@ def test_get_topological_joints_complex_tree() -> None:
 
 def test_get_topological_joints_with_islands() -> None:
     """Test topological sort with disconnected robots (islands)."""
-    # Robot 1: r1_base -> r1_link
-    # Robot 2: r2_base -> r2_link
+    # First disconnected chain: r1_base -> r1_link
+    # Second disconnected chain: r2_base -> r2_link
     l1 = Link(name="r1_base")
     l2 = Link(name="r1_link")
     l3 = Link(name="r2_base")

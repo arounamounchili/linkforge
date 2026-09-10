@@ -201,11 +201,11 @@ def test_create_xml_element_no_formatter() -> None:
 def test_parse_vector3_exception_fallback() -> None:
     """Test Vector3 parsing fallback and error handling."""
 
-    # Hit RobotMathError (re-raised)
+    # Verify RobotMathError is raised on non-numeric component
     with pytest.raises(RobotMathError):
         parse_vector3("1.0 2.0 invalid")
 
-    # Hit RobotValidationError via IndexError
+    # Verify RobotValidationError is raised when fewer than 3 components
     with pytest.raises(RobotValidationError) as exc:
         parse_vector3("1.0 2.0")
     assert "Vector3" in str(exc.value)

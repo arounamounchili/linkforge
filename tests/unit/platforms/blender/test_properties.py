@@ -285,7 +285,7 @@ class TestGlobalPropertiesAndCallbacks:
 
         original_id_data = getattr(props, "id_data", None)
         try:
-            # Clear id_data to bypass Strategy 1 and test fallbacks
+            # Clear id_data to test fallback resolution without direct data-block reference
             props.id_data = None
 
             mock_ctx = MagicMock()
@@ -295,7 +295,7 @@ class TestGlobalPropertiesAndCallbacks:
             owner = find_property_owner(mock_ctx, props, PROP_LINK)
             assert owner == obj1
 
-            # Strategy 2: Active Object check
+            # Fallback resolution via active object
             mock_ctx_obj = MagicMock()
             mock_ctx_obj.object = obj1
             owner_obj = find_property_owner(mock_ctx_obj, props, PROP_LINK)
@@ -309,7 +309,7 @@ class TestGlobalPropertiesAndCallbacks:
             owner_scene = find_property_owner(mock_ctx_scene, props, PROP_LINK)
             assert owner_scene == obj1
 
-            # Strategy 4 Fallback to None
+            # Fallback resolution returning None when no matching object exists
             mock_ctx_none = MagicMock()
             mock_ctx_none.object = None
             mock_ctx_none.selected_objects = []
@@ -928,7 +928,7 @@ class TestGlobalPropertiesAndCallbacks:
         update_sensor_hierarchy(sp, bpy.context)
         assert sensor_obj.parent is None
 
-        # update_sensor_hierarchy reparenting when attached link is present (line 130-137)
+        # update_sensor_hierarchy reparenting when attached link is present
         link_obj = create_robot_link("attached_link_obj", scene)
         with (
             patch(
@@ -941,7 +941,7 @@ class TestGlobalPropertiesAndCallbacks:
             assert mock_set_parent.called
             assert mock_sync_coll.called
 
-        # update_sensor_hierarchy when already parented to link_obj (branch 130->135)
+        # update_sensor_hierarchy when already parented to link_obj
         sensor_obj.parent = link_obj
         with (
             patch(

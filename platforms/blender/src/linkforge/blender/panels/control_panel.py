@@ -7,6 +7,7 @@ import typing
 
 import bpy
 
+from ..utils.joint_utils import is_control_joint_missing
 from ..utils.property_helpers import get_joint_props, get_robot_props
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
@@ -50,10 +51,16 @@ class LINKFORGE_UL_ros2_control_joints(bpy.types.UIList):
 
             # Use the joint's custom name if it exists, otherwise fall back to the object name
             display_name = item.name
-            if item.joint_obj and (jp := get_joint_props(item.joint_obj)):
-                display_name = jp.joint_name
+            scene = _context.scene if _context else None
+            is_missing = is_control_joint_missing(item, scene)
 
-            row.label(text=display_name, icon="EMPTY_AXIS")
+            if not is_missing and item.joint_obj and (jp := get_joint_props(item.joint_obj)):
+                display_name = jp.joint_name or display_name
+
+            if is_missing:
+                row.label(text=f"{display_name} (Missing)", icon="ERROR")
+            else:
+                row.label(text=display_name, icon="EMPTY_AXIS")
 
             # Indicators for enabled interfaces
             interfaces = []
@@ -239,6 +246,10 @@ class LINKFORGE_PT_control(bpy.types.Panel):
             "linkforge.move_ros2_control_joint", icon="TRIA_DOWN", text=""
         ).direction = "DOWN"
         col.separator()
+        if any(is_control_joint_missing(j, context.scene) for j in props.ros2_control_joints):
+            sub = col.column(align=True)
+            sub.alert = True
+            sub.operator("linkforge.prune_ros2_control_joints", icon="TRASH", text="")
         col.operator("linkforge.purge_ros2_control_data", icon="FILE_REFRESH", text="")
 
         # Settings for the selected joint

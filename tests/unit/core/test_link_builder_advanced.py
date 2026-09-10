@@ -177,8 +177,7 @@ class TestLinkBuilderAdvanced:
         with builder.link("link1", parent="base") as lb:
             # Inject another name into the stack to push "link1" down
             builder._parent_stack.append("some_other_link")
-            # When this context exits, "link1" is not at the top of the stack
-            # so it hits the `elif self._link_name in self._builder._parent_stack:` branch
+            # When this context exits, "link1" is removed from stack even if not at the top
 
         assert "link1" not in builder._parent_stack
         assert builder._parent_stack[-1] == "some_other_link"

@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+import runpy
+import types
+from unittest.mock import MagicMock, patch
 
 import bpy
+import linkforge.blender.operators.control_ops as control_ops
 from linkforge.blender.operators.control_ops import (
     LINKFORGE_OT_add_ros2_control_joint,
     LINKFORGE_OT_add_ros2_control_parameter,
     LINKFORGE_OT_move_ros2_control_joint,
+    LINKFORGE_OT_prune_ros2_control_joints,
     LINKFORGE_OT_purge_ros2_control_data,
     LINKFORGE_OT_remove_ros2_control_joint,
     LINKFORGE_OT_remove_ros2_control_parameter,
 )
+from linkforge.blender.panels.control_panel import LINKFORGE_UL_ros2_control_joints
 
 from tests.blender_test_utils import (
     create_robot_joint,
@@ -22,6 +27,7 @@ from tests.blender_test_utils import (
     safe_get_linkforge_scene,
     safe_get_sensor,
 )
+from tests.mock_bpy_env import MockCollection, MockPropertyGroup
 
 
 class TestControlOperations:
@@ -133,7 +139,6 @@ class TestControlOperations:
 
         joint = props.ros2_control_joints.add()
         joint.name = "j1"
-        from tests.mock_bpy_env import MockCollection, MockPropertyGroup
 
         joint.parameters = MockCollection(prop_type=MockPropertyGroup)
         props.ros2_control_active_joint_index = 0
@@ -162,7 +167,6 @@ class TestControlOperations:
 
         joint = props.ros2_control_joints.add()
         joint.name = "j1"
-        from tests.mock_bpy_env import MockCollection, MockPropertyGroup
 
         joint.parameters = MockCollection(prop_type=MockPropertyGroup)
         jp1 = joint.parameters.add()
@@ -186,41 +190,93 @@ class TestControlOperations:
         assert len(props.ros2_control_joints) == 0
         assert len(props.ros2_control_parameters) == 0
 
+    def test_prune_ros2_control_joints(self, scene, blender_context) -> None:
+        """Test pruning orphaned joints from ros2_control."""
+        props = safe_get_linkforge_scene(scene)
+        props.ros2_control_joints.clear()
+
+        # Valid joint
+        joint_obj = create_robot_joint("valid_j", None, None, scene)
+        joint_props = safe_get_joint(joint_obj)
+        joint_props.is_robot_joint = True
+        joint_props.joint_name = "valid_j"
+
+        item_valid = props.ros2_control_joints.add()
+        item_valid.name = "valid_j"
+        item_valid.joint_obj = joint_obj
+
+        # Orphaned joint (None pointer)
+        item_orphan = props.ros2_control_joints.add()
+        item_orphan.name = "deleted_j"
+        item_orphan.joint_obj = None
+
+        # Orphaned joint (pointer exists but unlinked from scene.objects, as when deleted in viewport)
+        unlinked_obj = create_robot_joint("unlinked_j", None, None, scene)
+        item_unlinked = props.ros2_control_joints.add()
+        item_unlinked.name = "unlinked_j"
+        item_unlinked.joint_obj = unlinked_obj
+        # Remove from scene.objects
+        scene.objects.remove(unlinked_obj)
+
+        assert len(props.ros2_control_joints) == 3
+
+        # Test UI list draw_item for missing indicator
+        ui_list = LINKFORGE_UL_ros2_control_joints()
+        ui_list.layout_type = "DEFAULT"
+        mock_layout = MagicMock()
+        mock_row = MagicMock()
+        mock_layout.row.return_value = mock_row
+
+        ui_list.draw_item(
+            bpy.context, mock_layout, props, item_orphan, None, props, "ros2_control_joints", 1
+        )
+        mock_row.label.assert_any_call(text="deleted_j (Missing)", icon="ERROR")
+
+        ui_list.draw_item(
+            bpy.context, mock_layout, props, item_unlinked, None, props, "ros2_control_joints", 2
+        )
+        mock_row.label.assert_any_call(text="unlinked_j (Missing)", icon="ERROR")
+
+        # Poll should be True while missing joints exist
+        assert LINKFORGE_OT_prune_ros2_control_joints.poll(bpy.context)
+
+        # Execute prune
+        res = LINKFORGE_OT_prune_ros2_control_joints().execute(bpy.context)
+        assert res == {"FINISHED"}
+        assert len(props.ros2_control_joints) == 1
+        assert props.ros2_control_joints[0].name == "valid_j"
+
+        # Poll should be False once all missing joints are pruned
+        assert not LINKFORGE_OT_prune_ros2_control_joints.poll(bpy.context)
+
+        # Direct execute when no missing joints remain handles gracefully
+        res2 = LINKFORGE_OT_prune_ros2_control_joints().execute(bpy.context)
+        assert res2 == {"FINISHED"}
+
     def test_control_ops_exception_handling(self, scene) -> None:
         """Verify control ops handle invalid context or registration issues."""
         op = LINKFORGE_OT_add_ros2_control_joint()
         op.joint_name = "invalid_joint"
 
-        class MockContextNoScene:
-            scene = None
+        mock_ctx_no_scene = types.SimpleNamespace(scene=None)
 
-        assert op.execute(MockContextNoScene()) == {"CANCELLED"}
+        assert op.execute(mock_ctx_no_scene) == {"CANCELLED"}
 
-        from linkforge.blender.operators.control_ops import (
-            LINKFORGE_OT_add_ros2_control_parameter,
-            LINKFORGE_OT_move_ros2_control_joint,
-            LINKFORGE_OT_purge_ros2_control_data,
-            LINKFORGE_OT_remove_ros2_control_joint,
-            LINKFORGE_OT_remove_ros2_control_parameter,
-        )
+        assert not LINKFORGE_OT_remove_ros2_control_joint.poll(mock_ctx_no_scene)
+        assert not LINKFORGE_OT_move_ros2_control_joint.poll(mock_ctx_no_scene)
+        assert not LINKFORGE_OT_add_ros2_control_parameter.poll(mock_ctx_no_scene)
+        assert not LINKFORGE_OT_remove_ros2_control_parameter.poll(mock_ctx_no_scene)
+        assert not LINKFORGE_OT_purge_ros2_control_data.poll(mock_ctx_no_scene)
+        assert not LINKFORGE_OT_prune_ros2_control_joints.poll(mock_ctx_no_scene)
 
-        assert not LINKFORGE_OT_remove_ros2_control_joint.poll(MockContextNoScene())
-        assert not LINKFORGE_OT_move_ros2_control_joint.poll(MockContextNoScene())
-        assert not LINKFORGE_OT_add_ros2_control_parameter.poll(MockContextNoScene())
-        assert not LINKFORGE_OT_remove_ros2_control_parameter.poll(MockContextNoScene())
-        assert not LINKFORGE_OT_purge_ros2_control_data.poll(MockContextNoScene())
-
-        assert LINKFORGE_OT_remove_ros2_control_joint().execute(MockContextNoScene()) == {
+        assert LINKFORGE_OT_remove_ros2_control_joint().execute(mock_ctx_no_scene) == {"CANCELLED"}
+        assert LINKFORGE_OT_move_ros2_control_joint().execute(mock_ctx_no_scene) == {"CANCELLED"}
+        assert LINKFORGE_OT_add_ros2_control_parameter().execute(mock_ctx_no_scene) == {"CANCELLED"}
+        assert LINKFORGE_OT_remove_ros2_control_parameter().execute(mock_ctx_no_scene) == {
             "CANCELLED"
         }
-        assert LINKFORGE_OT_move_ros2_control_joint().execute(MockContextNoScene()) == {"CANCELLED"}
-        assert LINKFORGE_OT_add_ros2_control_parameter().execute(MockContextNoScene()) == {
-            "CANCELLED"
-        }
-        assert LINKFORGE_OT_remove_ros2_control_parameter().execute(MockContextNoScene()) == {
-            "CANCELLED"
-        }
-        assert LINKFORGE_OT_purge_ros2_control_data().execute(MockContextNoScene()) == {"CANCELLED"}
+        assert LINKFORGE_OT_purge_ros2_control_data().execute(mock_ctx_no_scene) == {"CANCELLED"}
+        assert LINKFORGE_OT_prune_ros2_control_joints().execute(mock_ctx_no_scene) == {"CANCELLED"}
 
     def test_control_ops_parameter_boundaries(self, scene, blender_context) -> None:
         """Test parameter addition and removal boundary cases."""
@@ -240,7 +296,6 @@ class TestControlOperations:
 
         joint = props.ros2_control_joints.add()
         joint.name = "j1"
-        from tests.mock_bpy_env import MockCollection, MockPropertyGroup
 
         joint.parameters = MockCollection(prop_type=MockPropertyGroup)
         props.ros2_control_active_joint_index = 0
@@ -256,20 +311,16 @@ class TestControlOperations:
 
     def test_control_ops_registration_and_main(self, mocker) -> None:
         """Verify registration and unregistration loops including double-registration."""
-        import linkforge.blender.operators.control_ops as control_ops
-
         control_ops.unregister()
 
         mock_reg = mocker.patch(
             "bpy.utils.register_class",
-            side_effect=[ValueError("Already registered"), None, None, None, None, None, None],
+            side_effect=[ValueError("Already registered")] + [None] * 10,
         )
         mock_unreg = mocker.patch("bpy.utils.unregister_class")
         control_ops.register()
         assert mock_reg.call_count > 0
         assert mock_unreg.call_count > 0
-
-        import runpy
 
         with patch.object(control_ops, "__name__", "__main__"):
             runpy.run_module("linkforge.blender.operators.control_ops")

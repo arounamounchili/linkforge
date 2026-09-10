@@ -12,6 +12,7 @@ from bpy.props import IntProperty, StringProperty
 from bpy.types import Context, Operator
 
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.joint_utils import is_control_joint_missing
 from ..utils.property_helpers import get_joint_props, get_robot_props
 
 
@@ -346,6 +347,55 @@ class LINKFORGE_OT_purge_ros2_control_data(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_prune_ros2_control_joints(Operator):
+    """Remove joints from ros2_control that no longer exist in the scene."""
+
+    bl_idname = "linkforge.prune_ros2_control_joints"
+    bl_label = "Prune Missing Joints"
+    bl_description = "Remove joints from the control system that no longer exist in the scene"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        if not (context.scene and (props := get_robot_props(context.scene))):
+            return False
+        return any(
+            is_control_joint_missing(item, context.scene) for item in props.ros2_control_joints
+        )
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute the pruning of orphaned joints."""
+        scene = context.scene
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
+
+        indices_to_remove = [
+            i
+            for i, item in enumerate(props.ros2_control_joints)
+            if is_control_joint_missing(item, scene)
+        ]
+
+        for idx in reversed(indices_to_remove):
+            props.ros2_control_joints.remove(idx)
+
+        # Clamp active joint index
+        total_joints = len(props.ros2_control_joints)
+        if total_joints == 0:
+            props.ros2_control_active_joint_index = 0
+        elif props.ros2_control_active_joint_index >= total_joints:
+            props.ros2_control_active_joint_index = total_joints - 1
+
+        pruned_count = len(indices_to_remove)
+        if pruned_count > 0:
+            self.report({"INFO"}, f"Pruned {pruned_count} missing joint(s) from ROS 2 Control")
+        else:
+            self.report({"INFO"}, "No missing joints found")
+
+        return {"FINISHED"}
+
+
 # Registration
 classes = [
     LINKFORGE_OT_add_ros2_control_joint,
@@ -354,6 +404,7 @@ classes = [
     LINKFORGE_OT_add_ros2_control_parameter,
     LINKFORGE_OT_remove_ros2_control_parameter,
     LINKFORGE_OT_purge_ros2_control_data,
+    LINKFORGE_OT_prune_ros2_control_joints,
 ]
 
 

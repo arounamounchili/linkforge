@@ -1551,7 +1551,7 @@ def test_blender_link_mesh_inertia(clean_scene, scene, blender_context) -> None:
     props = safe_get_linkforge(o)
     props.is_robot_visual = True
     props.is_robot_collision = True
-    props.geometry_type = "MESH"  # Force mesh inertia branch
+    props.geometry_type = "MESH"
 
     core = translate_link_to_model(link_obj, blender_context)
     assert core is not None
@@ -1588,7 +1588,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
 
     # Multi-visuals
     create_mesh_obj("root_link_visual_1", root, "CUBE")
-    create_mesh_obj("root_link_visual_2", root, "sphere")  # Hits Sphere branch
+    create_mesh_obj("root_link_visual_2", root, "sphere")
 
     # Joint (Needed for transmission)
     child = create_test_object("ChildLink", None, scene)
@@ -1604,7 +1604,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     safe_get_transmission(trans).is_robot_transmission = True
     safe_get_transmission(trans).joint_name = joint
 
-    # Sensor with Gazebo Plugin (Custom mount - Hits 1071-1075)
+    # Sensor with Gazebo Plugin (Custom mount)
     lidar = create_test_object("Lidar", None, scene)
     safe_get_sensor(lidar).is_robot_sensor = True
     safe_get_sensor(lidar).sensor_type = "lidar"
@@ -1613,7 +1613,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     safe_get_sensor(lidar).use_gazebo_plugin = True
     safe_get_sensor(lidar).plugin_filename = "liblidar.so"
 
-    # ROS2 Control (Hits 1106-1126)
+    # ROS2 Control
     scene_props = safe_get_linkforge_scene(scene)
     scene_props.use_ros2_control = True
     scene_props.ros2_control_name = "TestSystem"
@@ -2401,8 +2401,9 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     ):
         translator.translate()
 
-    # Restore root link for remaining tests
+    # Restore robot links for remaining tests
     safe_get_linkforge(root_obj).is_robot_link = True
+    safe_get_linkforge(child_obj).is_robot_link = True
 
     safe_get_linkforge(root_obj).use_material = True
 
@@ -2518,7 +2519,7 @@ def test_translate_global_materials_duplicate_and_pre_registered(scene, blender_
     child2.data.materials.append(shared_mat)
 
     translator = SceneToRobotTranslator(blender_context)
-    # Pre-register SharedMat in the robot builder to trigger registered material skip branch
+    # Pre-register SharedMat in the robot builder to verify existing material reuse
     pre_registered_mat = Material(name="SharedMat", color=Color(r=0.5, g=0.5, b=0.5, a=1.0))
     translator.builder.robot.materials["SharedMat"] = pre_registered_mat
 
@@ -2623,3 +2624,124 @@ class TestJointRobustness:
         assert core is not None, "Joint 'Joint' not found in robot model"
         assert core.axis is not None, "Joint axis was not fell back to default"
         assert core.axis.z == 1.0  # Default fallback
+
+
+class TestJointDefinitionValidation:
+    """Verify validation of joint parent/child connections in scene_to_robot."""
+
+    def test_joint_missing_parent_link(self, clean_scene, scene, blender_context) -> None:
+        """Verify that a joint missing its parent link produces a Missing Parent Link error."""
+        child = create_test_object("child_link", None, scene)
+        safe_get_linkforge(child).is_robot_link = True
+
+        joint = create_test_object("orphan_parent_joint", None, scene)
+        safe_get_joint(joint).is_robot_joint = True
+        safe_get_joint(joint).parent_link = None
+        safe_get_joint(joint).child_link = child
+
+        _robot, validation_result = scene_to_robot(blender_context, raise_on_error=False)
+        assert not validation_result.is_valid
+        assert any(
+            err.title == "Missing Parent Link" and "orphan_parent_joint" in err.message
+            for err in validation_result.errors
+        )
+
+    def test_joint_missing_child_link(self, clean_scene, scene, blender_context) -> None:
+        """Verify that a joint missing its child link produces a Missing Child Link error."""
+        parent = create_test_object("parent_link", None, scene)
+        safe_get_linkforge(parent).is_robot_link = True
+
+        joint = create_test_object("orphan_child_joint", None, scene)
+        safe_get_joint(joint).is_robot_joint = True
+        safe_get_joint(joint).parent_link = parent
+        safe_get_joint(joint).child_link = None
+
+        _robot, validation_result = scene_to_robot(blender_context, raise_on_error=False)
+        assert not validation_result.is_valid
+        assert any(
+            err.title == "Missing Child Link" and "orphan_child_joint" in err.message
+            for err in validation_result.errors
+        )
+
+    def test_joint_invalid_parent_link(self, clean_scene, scene, blender_context) -> None:
+        """Verify that a parent object not marked as a robot link triggers an Invalid Parent Link error."""
+        non_link = create_test_object("regular_cube", None, scene)
+        safe_get_linkforge(non_link).is_robot_link = False
+
+        child = create_test_object("valid_child", None, scene)
+        safe_get_linkforge(child).is_robot_link = True
+
+        joint = create_test_object("bad_parent_joint", None, scene)
+        safe_get_joint(joint).is_robot_joint = True
+        safe_get_joint(joint).parent_link = non_link
+        safe_get_joint(joint).child_link = child
+
+        _robot, validation_result = scene_to_robot(blender_context, raise_on_error=False)
+        assert not validation_result.is_valid
+        assert any(
+            err.title == "Invalid Parent Link" and "regular_cube" in err.message
+            for err in validation_result.errors
+        )
+
+    def test_joint_invalid_child_link(self, clean_scene, scene, blender_context) -> None:
+        """Verify that a child object not marked as a robot link triggers an Invalid Child Link error."""
+        parent = create_test_object("valid_parent", None, scene)
+        safe_get_linkforge(parent).is_robot_link = True
+
+        non_link = create_test_object("unmarked_child", None, scene)
+        safe_get_linkforge(non_link).is_robot_link = False
+
+        joint = create_test_object("bad_child_joint", None, scene)
+        safe_get_joint(joint).is_robot_joint = True
+        safe_get_joint(joint).parent_link = parent
+        safe_get_joint(joint).child_link = non_link
+
+        _robot, validation_result = scene_to_robot(blender_context, raise_on_error=False)
+        assert not validation_result.is_valid
+        assert any(
+            err.title == "Invalid Child Link" and "unmarked_child" in err.message
+            for err in validation_result.errors
+        )
+
+    def test_joint_self_referencing(self, clean_scene, scene, blender_context) -> None:
+        """Verify that a joint connecting a link to itself produces a Self-Referencing Joint error."""
+        link = create_test_object("loop_link", None, scene)
+        safe_get_linkforge(link).is_robot_link = True
+
+        joint = create_test_object("loop_joint", None, scene)
+        safe_get_joint(joint).is_robot_joint = True
+        safe_get_joint(joint).parent_link = link
+        safe_get_joint(joint).child_link = link
+
+        _robot, validation_result = scene_to_robot(blender_context, raise_on_error=False)
+        assert not validation_result.is_valid
+        assert any(
+            err.title == "Self-Referencing Joint" and "loop_joint" in err.message
+            for err in validation_result.errors
+        )
+
+    def test_joint_duplicate_child_link(self, clean_scene, scene, blender_context) -> None:
+        """Verify that assigning the same child link to multiple joints produces a duplicate error."""
+        parent1 = create_test_object("parent1", None, scene)
+        safe_get_linkforge(parent1).is_robot_link = True
+        parent2 = create_test_object("parent2", None, scene)
+        safe_get_linkforge(parent2).is_robot_link = True
+        shared_child = create_test_object("shared_child", None, scene)
+        safe_get_linkforge(shared_child).is_robot_link = True
+
+        j1 = create_test_object("joint1", None, scene)
+        safe_get_joint(j1).is_robot_joint = True
+        safe_get_joint(j1).parent_link = parent1
+        safe_get_joint(j1).child_link = shared_child
+
+        j2 = create_test_object("joint2", None, scene)
+        safe_get_joint(j2).is_robot_joint = True
+        safe_get_joint(j2).parent_link = parent2
+        safe_get_joint(j2).child_link = shared_child
+
+        _robot, validation_result = scene_to_robot(blender_context, raise_on_error=False)
+        assert not validation_result.is_valid
+        assert any(
+            err.title == "Duplicate Child Link Assignment" and "shared_child" in err.message
+            for err in validation_result.errors
+        )
