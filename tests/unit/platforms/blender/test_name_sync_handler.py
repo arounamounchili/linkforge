@@ -31,12 +31,19 @@ def test_flush_deferred_renames_all_paths(scene):
         def name(self, val):
             raise RuntimeError("Read-only!")
 
+    class DeletedObject:
+        @property
+        def name(self):
+            raise ReferenceError("StructRNA of type Object has been removed")
+
     obj_bad = BadObject()
+    obj_deleted = DeletedObject()
 
     name_sync_handler.PENDING_RENAMES[:] = [
         (obj_ok, "new_ok"),
         (obj_no_name, "ignored"),
         (obj_bad, "new_bad"),
+        (obj_deleted, "dropped"),
     ]
 
     # Flush
@@ -44,6 +51,7 @@ def test_flush_deferred_renames_all_paths(scene):
 
     assert obj_ok.name == "new_ok"
 
+    # Only obj_bad should remain in queue; obj_deleted must be dropped
     assert len(name_sync_handler.PENDING_RENAMES) == 1
     assert name_sync_handler.PENDING_RENAMES[0] == (obj_bad, "new_bad")
 
@@ -158,3 +166,44 @@ def test_register_unregister():
 
     handlers_pkg.unregister()
     assert name_sync_handler.on_depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post
+
+
+def test_safe_set_id_name_reference_error():
+    """Verify safe_set_id_name and deferred_rename do not crash when StructRNA is removed."""
+    from linkforge.blender.utils.property_helpers import safe_set_id_name
+
+    class MockDeleted:
+        @property
+        def name(self):
+            raise ReferenceError("StructRNA of type Object has been removed")
+
+    # Should not raise
+    safe_set_id_name(MockDeleted(), "test_name")
+
+    # Test deferred timer handling of deleted object
+    class MockDeferredDeleted:
+        def __init__(self):
+            self._removed = False
+
+        @property
+        def name(self):
+            if self._removed:
+                raise ReferenceError("StructRNA of type Object has been removed")
+            return "old_name"
+
+        @name.setter
+        def name(self, val):
+            if self._removed:
+                raise ReferenceError("StructRNA of type Object has been removed")
+            raise RuntimeError("RNA locked")
+
+    deferred_obj = MockDeferredDeleted()
+    # Trigger deferred timer
+    safe_set_id_name(deferred_obj, "new_name")
+
+    # Now simulate the object being removed before the timer fires
+    deferred_obj._removed = True
+
+    # Execute all scheduled timers in mock
+    if hasattr(bpy.app.timers, "run_all"):
+        bpy.app.timers.run_all()

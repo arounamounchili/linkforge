@@ -137,6 +137,9 @@ def flush_deferred_renames() -> None:
         try:
             if obj and hasattr(obj, "name"):
                 obj.name = new_name
+        except ReferenceError:
+            # Datablock was deleted from Blender, drop it
+            continue
         except Exception:
             # If it fails (likely read-only / RNA still locked), keep it for next flush
             remaining.append((obj, new_name))
@@ -158,7 +161,10 @@ def safe_set_id_name(id_data: Any, sanitized_name: str) -> None:
         appending numeric suffixes (e.g. '.001', '.002'). The LinkForge
         model identity is preserved in `source_name_stored`.
     """
-    if not id_data or not hasattr(id_data, "name") or id_data.name == sanitized_name:
+    try:
+        if not id_data or not hasattr(id_data, "name") or id_data.name == sanitized_name:
+            return
+    except (ReferenceError, Exception):
         return
 
     try:
@@ -167,11 +173,11 @@ def safe_set_id_name(id_data: Any, sanitized_name: str) -> None:
         if not getattr(bpy.app, "background", False) and hasattr(bpy.app, "timers"):
 
             def deferred_rename() -> None:
-                import contextlib
-
-                if id_data and hasattr(id_data, "name"):
-                    with contextlib.suppress(Exception):
+                try:
+                    if id_data and hasattr(id_data, "name"):
                         id_data.name = sanitized_name
+                except (ReferenceError, Exception):
+                    pass
                 return None
 
             bpy.app.timers.register(deferred_rename, first_interval=0.01)
