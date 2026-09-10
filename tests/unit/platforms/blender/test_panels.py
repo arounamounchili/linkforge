@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import warnings
 from unittest.mock import MagicMock, patch
 
 import bpy
@@ -231,6 +232,50 @@ class TestExportPanel:
         props.component_browser_search = "nonexistent"
         panel.draw(bpy.context)
         mock_layout.label.assert_any_call(text="No matches", icon="INFO")
+
+    def test_export_panel_validation_issue_cards_and_single_icon_wrapping(
+        self, scene, blender_context, mock_layout
+    ) -> None:
+        """Test drawing validation issue cards with multi-line wrapping and interactive selection."""
+        create_robot_link("existing_link", scene)
+
+        wm = bpy.context.window_manager
+        validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
+        validation.has_results = True
+        validation.is_valid = False
+        validation.error_count = 1
+        validation.show_errors = True
+
+        err = validation.errors.add()
+        err.title = "Missing Child Link"
+        err.error_code = "NOT_FOUND"
+        err.message = "Joint has no child link assigned in the active tree."
+        err.affected_objects = "existing_link, missing_link"
+        err.suggestion = (
+            "Assign a child link to this joint in the Joint panel to ensure "
+            "proper kinematic tree connectivity."
+        )
+
+        panel = LINKFORGE_PT_export_panel()
+        panel.layout = mock_layout
+        panel.draw(bpy.context)
+
+        # Verify header
+        mock_layout.label.assert_any_call(text="Missing Child Link", icon="CANCEL")
+
+        # Verify 1-click select operator is created for existing object
+        mock_layout.operator.assert_any_call(
+            "linkforge.select_tree_object",
+            text="Select 'existing_link'",
+            icon="RESTRICT_SELECT_OFF",
+        )
+
+        # Verify suggestion lines have icon='INFO' on first line and icon='BLANK1' on subsequent lines
+        suggestion_lines = err.suggestion_lines
+        assert len(suggestion_lines) > 1
+        mock_layout.label.assert_any_call(text=f"  → {suggestion_lines[0]}", icon="INFO")
+        mock_layout.label.assert_any_call(text=f"     {suggestion_lines[1]}", icon="BLANK1")
 
 
 class TestForgePanel:
@@ -838,26 +883,30 @@ class TestRobotOperators:
     def test_panels_as_main(self) -> None:
         """Test running each panel module as __main__."""
 
-        for name in [
-            "control_panel",
-            "export_panel",
-            "forge_panel",
-            "joint_panel",
-            "link_panel",
-            "robot_panel",
-            "sensor_panel",
-        ]:
-            module = getattr(panels, name)
-            spec = importlib.util.spec_from_file_location("__main__", module.__file__)
-            if spec and spec.loader:
-                main_mod = importlib.util.module_from_spec(spec)
-                main_mod.__package__ = "linkforge.blender.panels"
-                with (
-                    patch("bpy.utils.register_class") as mock_reg,
-                    patch("bpy.utils.unregister_class"),
-                ):
-                    sys.modules["__main__"] = main_mod
-                    spec.loader.exec_module(main_mod)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=DeprecationWarning, message=".*__package__ != __spec__.parent.*"
+            )
+            for name in [
+                "control_panel",
+                "export_panel",
+                "forge_panel",
+                "joint_panel",
+                "link_panel",
+                "robot_panel",
+                "sensor_panel",
+            ]:
+                module = getattr(panels, name)
+                spec = importlib.util.spec_from_file_location("__main__", module.__file__)
+                if spec and spec.loader:
+                    main_mod = importlib.util.module_from_spec(spec)
+                    main_mod.__package__ = "linkforge.blender.panels"
+                    with (
+                        patch("bpy.utils.register_class") as mock_reg,
+                        patch("bpy.utils.unregister_class"),
+                    ):
+                        sys.modules["__main__"] = main_mod
+                        spec.loader.exec_module(main_mod)
 
 
 class TestGlobalPanels:

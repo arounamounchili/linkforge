@@ -1592,9 +1592,9 @@ class TestCoreToBlenderExhaustiveCoverage:
 
         mocker.patch.object(mat.node_tree.nodes, "new", return_value=mock_node)
 
-        with mocker.patch.object(blender_context.data.materials, "new", return_value=mat):
-            res = create_material_from_color(blender_context, Color(1, 1, 1, 1), "no_def_val_mat")
-            assert res == mat
+        mocker.patch.object(blender_context.data.materials, "new", return_value=mat)
+        res = create_material_from_color(blender_context, Color(1, 1, 1, 1), "no_def_val_mat")
+        assert res == mat
 
     def test_setup_scene_for_robot_uncovered_branches(self, scene, blender_context, mocker) -> None:
         """Verify setup_scene_for_robot handles empty robot and missing properties gracefully."""

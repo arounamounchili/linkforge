@@ -126,27 +126,11 @@ class LINKFORGE_PT_export_panel(Panel):
                         icon="TRIA_DOWN" if validation.show_errors else "TRIA_RIGHT",
                     )
                     if validation.show_errors:
-                        error_box = box.box()
                         for i in range(validation.error_count):
+                            if i > 0:
+                                box.separator()
                             error = validation.get_error(i)
-                            # Issue Title & Code
-                            row = error_box.row()
-                            row.label(text=error.title, icon="CANCEL")
-                            if error.error_code:
-                                row.label(text=f"[{error.error_code}]", icon="NONE")
-
-                            if error.message_lines:
-                                for msg_line in error.message_lines:
-                                    if msg_line.strip():
-                                        error_box.label(text=f"  {msg_line}", icon="BLANK1")
-                            if error.has_objects:
-                                error_box.label(
-                                    text=f"  Affected: {error.objects_str}", icon="OBJECT_DATA"
-                                )
-                            if error.has_suggestion:
-                                for sug_line in error.suggestion_lines:
-                                    if sug_line.strip():
-                                        error_box.label(text=f"  → {sug_line}", icon="INFO")
+                            self._draw_validation_issue(box, error, is_error=True, context=context)
 
                 if validation.warning_count > 0:
                     box.separator()
@@ -158,19 +142,13 @@ class LINKFORGE_PT_export_panel(Panel):
                         icon="TRIA_DOWN" if validation.show_warnings else "TRIA_RIGHT",
                     )
                     if validation.show_warnings:
-                        warn_box = box.box()
                         for i in range(validation.warning_count):
+                            if i > 0:
+                                box.separator()
                             warning = validation.get_warning(i)
-                            # Issue Title & Code
-                            row = warn_box.row()
-                            row.label(text=warning.title, icon="ERROR")
-                            if warning.error_code:
-                                row.label(text=f"[{warning.error_code}]", icon="NONE")
-
-                            if warning.message_lines:
-                                for msg_line in warning.message_lines:
-                                    if msg_line.strip():
-                                        warn_box.label(text=f"  {msg_line}", icon="BLANK1")
+                            self._draw_validation_issue(
+                                box, warning, is_error=False, context=context
+                            )
 
         # === EXPORT CONFIGURATION ===
         if layout:
@@ -348,6 +326,68 @@ class LINKFORGE_PT_export_panel(Panel):
             empty_row = select_box.row()
             if empty_row:
                 empty_row.label(text="No matches", icon="INFO")
+
+    @staticmethod
+    def _draw_validation_issue(
+        layout: UILayout,
+        issue: typing.Any,
+        is_error: bool,
+        context: Context,
+    ) -> None:
+        """Draw an individual validation issue as a distinct, actionable card."""
+        card = layout.box()
+
+        # Header row: Title and status icon
+        header = card.row(align=True)
+        if is_error:
+            header.label(text=issue.title, icon="CANCEL")
+        else:
+            header.label(text=issue.title, icon="ERROR")
+
+        # Message details
+        if issue.message_lines:
+            for msg_line in issue.message_lines:
+                if msg_line.strip():
+                    card.label(text=f"  {msg_line}", icon="BLANK1")
+
+        # Affected objects and 1-click select operator
+        if issue.has_objects:
+            scene = context.scene
+            scene_objects = scene.objects if scene else None
+            affected_list = getattr(issue, "affected_object_list", [])
+
+            # Single affected object with scene match -> render inline on same row
+            if scene_objects and len(affected_list) == 1 and affected_list[0] in scene_objects:
+                obj_name = affected_list[0]
+                row = card.row(align=True)
+                row.label(text=f"  Affected: {obj_name}", icon="OBJECT_DATA")
+                op = row.operator(
+                    "linkforge.select_tree_object",
+                    text="Select",
+                    icon="RESTRICT_SELECT_OFF",
+                )
+                op.object_name = obj_name
+            else:
+                card.label(text=f"  Affected: {issue.objects_str}", icon="OBJECT_DATA")
+                if scene_objects:
+                    for obj_name in affected_list:
+                        if obj_name in scene_objects:
+                            btn_row = card.row(align=True)
+                            op = btn_row.operator(
+                                "linkforge.select_tree_object",
+                                text=f"Select '{obj_name}'",
+                                icon="RESTRICT_SELECT_OFF",
+                            )
+                            op.object_name = obj_name
+
+        # Actionable suggestion with single icon (avoid repeating icon on wrapped lines)
+        if issue.has_suggestion:
+            for idx, sug_line in enumerate(issue.suggestion_lines):
+                if sug_line.strip():
+                    if idx == 0:
+                        card.label(text=f"  → {sug_line}", icon="INFO")
+                    else:
+                        card.label(text=f"     {sug_line}", icon="BLANK1")
 
 
 # Registration

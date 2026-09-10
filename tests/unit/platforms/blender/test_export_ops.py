@@ -274,7 +274,7 @@ class TestValidateRobotOperator:
 
         res = op.execute(bpy.context)
         assert res == {"CANCELLED"}
-        op.report.assert_any_call({"WARNING"}, "Validation failed: [NOT_FOUND] Joint not found")
+        op.report.assert_any_call({"WARNING"}, "Validation failed: Joint not found")
         assert mock_val_prop.is_valid is False
         assert mock_val_prop.error_count == 1
         assert mock_error.title == "Validation Error"
@@ -358,7 +358,8 @@ class TestValidateRobotOperator:
             res = op.execute(bpy.context)
             assert res == {"CANCELLED"}
             op.report.assert_any_call(
-                {"ERROR"}, "Validation failed. Found 1 error(s). Please check the Validation Panel."
+                {"WARNING"},
+                "Validation failed. Found 1 error(s). Please check the Validation Panel.",
             )
 
     def test_registration(self, mocker) -> None:

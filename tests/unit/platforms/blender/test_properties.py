@@ -110,6 +110,7 @@ class TestValidationProperties:
         assert err.has_suggestion is True
         assert err.has_objects is True
         assert err.objects_str == "obj1,obj2"
+        assert err.affected_object_list == ["obj1", "obj2"]
         assert len(err.suggestion_lines) >= 1
 
         warn = res.warnings.add()
@@ -121,6 +122,7 @@ class TestValidationProperties:
         assert warn.has_suggestion is False
         assert warn.has_objects is False
         assert warn.objects_str == ""
+        assert warn.affected_object_list == []
         assert warn.suggestion_lines == []
 
         res.error_count = 1

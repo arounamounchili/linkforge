@@ -223,9 +223,9 @@ class LINKFORGE_OT_validate_robot(Operator):
             validation_props.error_count = 1
             error_prop = validation_props.errors.add()
             error_prop.title = "Validation Error"
-            error_prop.message = str(e)
+            error_prop.message = e.message
             error_prop.error_code = str(e.code.name)
-            self.report({"WARNING"}, f"Validation failed: {e}")
+            self.report({"WARNING"}, f"Validation failed: {e.message}")
             return {"CANCELLED"}
         except Exception as e:
             # Catch unexpected fatal build errors
@@ -291,7 +291,7 @@ class LINKFORGE_OT_validate_robot(Operator):
             return {"FINISHED"}
         else:
             self.report(
-                {"ERROR"},
+                {"WARNING"},
                 f"Validation failed. Found {result.error_count} error(s). Please check the Validation Panel.",
             )
             return {"CANCELLED"}

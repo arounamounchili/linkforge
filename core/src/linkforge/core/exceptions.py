@@ -111,6 +111,7 @@ class RobotPhysicsError(RobotModelError):
         self.code = code
         self.target = target
         self.value = value
+        self.message = message
 
         full_msg = f"[PHYSICS_{code.name}] {message}"
         if target:
@@ -137,6 +138,7 @@ class RobotValidationError(RobotModelError):
         self.code = code
         self.target = target
         self.value = value
+        self.message = message
 
         full_msg = f"[{code.name}] {message}"
         if target:
@@ -167,6 +169,7 @@ class RobotMathError(RobotModelError):
         self.code = code
         self.target = target
         self.value = value
+        self.message = message
 
         full_msg = f"[MATH_{code.name}] {message}"
         if target:
