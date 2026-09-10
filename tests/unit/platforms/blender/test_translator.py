@@ -1180,7 +1180,7 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     item1.state_effort = True
     item1.joint_obj = j1_obj
 
-    # Joint 2 with fallback joint name
+    # Second joint configured with fallback joint name without joint object
     item2 = props.ros2_control_joints.add()
     item2.cmd_position = True
     item2.cmd_velocity = False

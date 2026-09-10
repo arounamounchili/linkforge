@@ -113,11 +113,11 @@ def test_graph_diamond_dag() -> None:
     ]
     graph = KinematicGraph(links, joints)
 
-    # This hits the 'do nothing' branch in has_cycle when child is visited but not in rec_stack
+    # Child visited from multiple paths in a DAG without cycle
     assert not graph.has_cycle()
     assert graph.get_root_links() == ["A"]
 
-    # This hits the in_degree[child] != 0 branch in get_topological_link_names
+    # Topological link ordering for diamond graph
     order = graph.get_topological_link_names()
     assert order == ["A", "B", "C", "D"]
 

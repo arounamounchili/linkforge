@@ -527,7 +527,7 @@ class TestXacroInfrastructure:
         file_c = tmp_path / "c.xacro"
         file_c.write_text('<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><link/></robot>')
         parser.resolve(file_c)
-        parser.resolve(file_c)  # Hits TEMPLATE_CACHE
+        parser.resolve(file_c)  # Verify template cache reuse
 
     def test_xacro_namespaced_property(self, tmp_path) -> None:
         """Test defining a property inside a namespace."""
@@ -703,7 +703,7 @@ class TestXacroInfrastructure:
 
         resolver.properties["my_blocks"] = [ET.Element("link"), ET.Element("joint")]
         xml = '<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:insert_block name="my_blocks"/></robot>'
-        # Manually call _handle_insert_block to hit the branch
+        # Test multiple elements block insertion
         elem = ET.Element("insert_block", name="my_blocks")
         res = resolver._handle_insert_block(elem)
         assert res.tag == "container"

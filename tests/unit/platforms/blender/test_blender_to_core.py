@@ -1551,7 +1551,7 @@ def test_blender_link_mesh_inertia(clean_scene, scene, blender_context) -> None:
     props = safe_get_linkforge(o)
     props.is_robot_visual = True
     props.is_robot_collision = True
-    props.geometry_type = "MESH"  # Force mesh inertia branch
+    props.geometry_type = "MESH"
 
     core = translate_link_to_model(link_obj, blender_context)
     assert core is not None
@@ -1588,7 +1588,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
 
     # Multi-visuals
     create_mesh_obj("root_link_visual_1", root, "CUBE")
-    create_mesh_obj("root_link_visual_2", root, "sphere")  # Hits Sphere branch
+    create_mesh_obj("root_link_visual_2", root, "sphere")
 
     # Joint (Needed for transmission)
     child = create_test_object("ChildLink", None, scene)
@@ -2518,7 +2518,7 @@ def test_translate_global_materials_duplicate_and_pre_registered(scene, blender_
     child2.data.materials.append(shared_mat)
 
     translator = SceneToRobotTranslator(blender_context)
-    # Pre-register SharedMat in the robot builder to trigger registered material skip branch
+    # Pre-register SharedMat in the robot builder to verify existing material reuse
     pre_registered_mat = Material(name="SharedMat", color=Color(r=0.5, g=0.5, b=0.5, a=1.0))
     translator.builder.robot.materials["SharedMat"] = pre_registered_mat
 

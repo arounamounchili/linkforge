@@ -97,13 +97,13 @@ def test_conditional_model_generation(tmp_path: Path, xacro_to_robot) -> None:
     xacro_file = tmp_path / "cond.xacro"
     xacro_file.write_text(xacro_content)
 
-    # Case 1: Default (gripper=true, gpu=false)
+    # Default configuration (gripper=true, gpu=false)
     robot = xacro_to_robot(xacro_file)
     assert any(link.name == "gripper" for link in robot.links)
     assert any(link.name == "cpu_sensor" for link in robot.links)
     assert not any(link.name == "gpu_sensor" for link in robot.links)
 
-    # Case 2: Custom (gripper=false, gpu=true)
+    # Custom configuration (gripper=false, gpu=true)
     robot = xacro_to_robot(xacro_file, with_gripper=False, use_gpu=True)
     assert not any(link.name == "gripper" for link in robot.links)
     assert not any(link.name == "cpu_sensor" for link in robot.links)

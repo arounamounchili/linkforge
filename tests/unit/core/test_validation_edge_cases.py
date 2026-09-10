@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import pytest
 from linkforge.core.base import RobotGenerator, RobotParser
 from linkforge.core.exceptions import RobotModelError
 from linkforge.core.models.link import Inertial, Link
@@ -96,14 +95,7 @@ def test_semantic_check_no_semantic():
     """Cover early return in SemanticCheck if no semantic model."""
     check = SemanticCheck()
     robot = Robot(name="test_robot")
-    # Force semantic to None to hit the branch if applicable,
-    # but wait, SemanticCheck checks 'if not robot.semantic:'
-    # In Robot, semantic is field(default_factory=SemanticRobotDescription)
-    # SemanticRobotDescription is always truthy unless we mock it.
-
-    mocker_semantic = pytest.importorskip("linkforge.core.models.srdf").SemanticRobotDescription
-    # Actually if it's a dataclass it might be truthy.
-
+    # Verify SemanticCheck behavior when robot semantic description is None
     robot.semantic = None  # type: ignore
     result = ValidationResult()
     check.run(robot, result)

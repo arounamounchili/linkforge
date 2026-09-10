@@ -43,17 +43,17 @@ class TestExportOperators:
         """Test check method returns True only if scene has PROP_ROBOT."""
         op = LINKFORGE_OT_export_robot_model()
 
-        # Scenario 1: scene is None
+        # Context without scene
         mock_context = MagicMock()
         mock_context.scene = None
         assert op.check(mock_context) is False
 
-        # Scenario 2: scene is not None, but does not have PROP_ROBOT
+        # Scene missing robot properties
         mock_scene = MagicMock(spec=[])
         mock_context.scene = mock_scene
         assert op.check(mock_context) is False
 
-        # Scenario 3: scene is not None, has PROP_ROBOT
+        # Scene with robot properties present
         mock_scene = MagicMock()
         setattr(mock_scene, PROP_ROBOT, MagicMock())
         mock_context.scene = mock_scene

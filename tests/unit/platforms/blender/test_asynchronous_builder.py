@@ -40,16 +40,16 @@ def test_builder_execution_flow(scene, blender_context) -> None:
             robot, Path("/tmp/robot.urdf"), blender_context, chunk_size=1
         )
 
-        # Manually run chunks
-        # Chunk 1: setup_scene
+        # Manually run tasks step-by-step
+        # Process scene setup task
         builder.process_next_chunk()
         assert builder.completed_tasks == 1
 
-        # Chunk 2: create_collection
+        # Process collection creation task
         builder.process_next_chunk()
         assert builder.completed_tasks == 2
 
-        # Chunk 3: create_link
+        # Process link creation task
         builder.process_next_chunk()
         assert builder.completed_tasks == 3
         assert scene.linkforge.import_status != ""
@@ -280,7 +280,7 @@ def test_builder_finalize_ros2_control_joint_mapping() -> None:
             self.joint_obj = None
 
     rc_joint = DummyJointItem("joint1")
-    rc_joint2 = DummyJointItem("joint2")  # Unmatched name to cover target_obj is None loop branch
+    rc_joint2 = DummyJointItem("joint2")  # Unmatched joint name to verify missing target handling
 
     mock_context = MagicMock()
     mock_scene = MagicMock(spec=["linkforge_robot"])

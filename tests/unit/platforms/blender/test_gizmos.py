@@ -49,7 +49,7 @@ class TestInertiaGizmos:
         """Test drawing lifecycle with various preference combinations."""
         gpu = inertia_gizmos.gpu
 
-        # Scenario 1: Hidden by preference
+        # Inertia gizmos hidden by preference
         with patch("linkforge.blender.visualization.inertia_gizmos.get_addon_prefs") as mock_prefs:
             prefs = MagicMock()
             prefs.show_inertia_gizmos = False
@@ -58,7 +58,7 @@ class TestInertiaGizmos:
             # Should return early
             assert inertia_gizmos.draw_inertia_gizmos() is None
 
-        # Scenario 2: Enabled preference, but no manual inertia objects
+        # Inertia gizmos enabled, but no manual inertia objects present
         with (
             patch("linkforge.blender.visualization.inertia_gizmos.get_addon_prefs") as mock_prefs,
             patch(
@@ -76,7 +76,7 @@ class TestInertiaGizmos:
 
             assert inertia_gizmos.draw_inertia_gizmos() is None
 
-        # Scenario 3: Enabled with manual inertia objects (full GPU draw branch)
+        # Enabled with manual inertia objects for GPU drawing
         link_obj = create_robot_link("manual_link", scene, with_visual=True, with_collision=False)
         lf = safe_get_linkforge(link_obj)
         lf.is_robot_link = True
@@ -235,7 +235,7 @@ class TestJointGizmos:
         """Verify joint axes overlay rendering logic branches."""
         gpu = joint_gizmos.gpu
 
-        # Scenario 1: Disabled
+        # Joint axes display disabled in preferences
         with patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs:
             prefs = MagicMock()
             prefs.show_joint_axes = False
@@ -243,7 +243,7 @@ class TestJointGizmos:
 
             assert joint_gizmos.draw_joint_axes() is None
 
-        # Scenario 2: Enabled but no joints in statistics
+        # Joint axes enabled but no joints in statistics
         with (
             patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs,
             patch(
@@ -261,7 +261,7 @@ class TestJointGizmos:
 
             assert joint_gizmos.draw_joint_axes() is None
 
-        # Scenario 3: Enabled with active joint objects (full triangles / batch rendering draw)
+        # Joint axes enabled with active joint objects for rendering
         joint_obj = bpy.data.objects.new("rendered_joint", None)
         scene.collection.objects.link(joint_obj)
         joint_obj.type = "EMPTY"
@@ -339,7 +339,7 @@ class TestJointGizmos:
 
     def test_update_viz_handle_lifecycle(self, scene) -> None:
         """Verify SpaceView3D custom drawing handler addition and removal on viz updates."""
-        # Case 1: Toggle ON
+        # Verify toggle ON registers custom drawing handler
         with (
             patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs,
             patch.object(
@@ -356,7 +356,7 @@ class TestJointGizmos:
             assert bpy.app.driver_namespace["linkforge_joint_gizmo_handler"] == "dummy_joint_handle"
             assert mock_add.called
 
-        # Case 2: Toggle OFF
+        # Verify toggle OFF unregisters drawing handler
         with (
             patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs,
             patch.object(bpy.types.SpaceView3D, "draw_handler_remove") as mock_remove,

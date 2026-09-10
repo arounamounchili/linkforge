@@ -276,23 +276,23 @@ class TestForgePanel:
         mock_ctx.scene = None
         assert panel.draw(mock_ctx) is None
 
-        # box is None branch check
+        # Verify fallback when layout box is None
         props = safe_get_linkforge_scene(scene)
         props.is_importing = True
         mock_layout.box.return_value = None
         panel.draw(bpy.context)
 
-        # row is None branch check inside importing (first row is None)
+        # Verify fallback when first row is None while importing
         mock_layout.box.return_value = mock_layout
         mock_layout.row.side_effect = None
         mock_layout.row.return_value = None
         panel.draw(bpy.context)
 
-        # row is None branch check inside importing (second row is None)
+        # Verify fallback when second row is None while importing
         mock_layout.row.side_effect = [mock_layout, None]
         panel.draw(bpy.context)
 
-        # row is None branch check inside non-importing
+        # Verify fallback when row is None while not importing
         props.is_importing = False
         mock_layout.row.side_effect = None
         mock_layout.row.return_value = None
@@ -748,7 +748,7 @@ class TestControlPanel:
             0,
         )
 
-        # Menu draw edge cases and already-added branch
+        # Menu draw edge cases and existing joint handling
         menu = LINKFORGE_MT_add_control_joint()
 
         # Context layout and scene None checks

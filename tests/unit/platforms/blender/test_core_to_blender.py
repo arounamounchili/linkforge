@@ -1471,7 +1471,7 @@ class TestCoreToBlenderExhaustiveCoverage:
             assert import_mesh_file(blender_context, obj_path, "test_obj") is None
 
         dup_obj = create_test_object("mesh_dup", None, scene=scene)
-        # Call normalize_and_consolidate_imported_objects twice with same object to hit recursive seen check
+        # Verify duplicate object cycle handling in consolidation
         normalize_and_consolidate_imported_objects(
             blender_context, [dup_obj, dup_obj], "consolidated"
         )
@@ -1666,8 +1666,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         stl_path = tmp_path / "test_import.stl"
         stl_path.touch()
 
-        # 3a. res_obj.name is ALREADY in current_col.objects
-        # 3b. res_obj.name is NOT in new_col.objects
+        # Handle object already linked in current collection
         def mock_stl_import_ok(**kwargs):
             col = bpy.data.collections.new("New_STL_Collection")
             bpy.context.scene.collection.children.link(col)
@@ -1683,7 +1682,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         assert res is not None
         mocker.stopall()
 
-        # 3c. normalize_and_consolidate returns None
+        # Handle consolidation returning None
         mocker.patch(
             "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
             return_value={"FINISHED"},
@@ -1695,7 +1694,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         assert import_mesh_file(blender_context, stl_path, "none_imported") is None
         mocker.stopall()
 
-        # 3d. normalize_and_consolidate raises generic Exception
+        # Handle consolidation raising an exception
         mocker.patch(
             "linkforge.blender.adapters.core_to_blender.bpy.ops.wm.stl_import",
             return_value={"FINISHED"},
@@ -1708,7 +1707,7 @@ class TestCoreToBlenderExhaustiveCoverage:
             import_mesh_file(blender_context, stl_path, "raises_err")
         mocker.stopall()
 
-        # 3e. res_obj.name is NOT in current_col.objects
+        # Handle object not in current collection
         def mock_stl_import_not_linked(**kwargs):
             col = bpy.data.collections.new("New_STL_Collection_Not_Linked")
             bpy.context.scene.collection.children.link(col)
@@ -1835,7 +1834,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         obj_j = create_joint_object(blender_context, joint_no_origin, link_objects)
         assert obj_j is not None
 
-        # 6a. Sensor values are None
+        # Verify handling of optional sensor fields when None
         sensor_none = Sensor(
             name="sensor_none",
             type=SensorType.CAMERA,
@@ -1859,7 +1858,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         obj_s = create_sensor_object(blender_context, sensor_none, link_objects)
         assert obj_s is not None
 
-        # 6b. Lidar vertical_samples is None
+        # Verify handling when lidar vertical_samples is None
         lidar_none = Sensor(
             name="lidar_none",
             type=SensorType.LIDAR,
@@ -1873,7 +1872,7 @@ class TestCoreToBlenderExhaustiveCoverage:
         obj_lid = create_sensor_object(blender_context, lidar_none, link_objects)
         assert obj_lid is not None
 
-        # 6c. Setup scene for robot with ROS2 Control parameters
+        # Setup scene for robot with ROS2 Control parameters
         # and Gazebo element with plugin containing "ros2_control" and parameters
         rc_joint = Ros2ControlJoint(
             name="j1",

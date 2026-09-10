@@ -520,7 +520,7 @@ class TestRealtimePreviewsAndDebounce:
         lf = safe_get_linkforge(link_obj)
         lf.collision_quality = 50.0
 
-        # Scenario 1: Decimate modifier exists
+        # Existing Decimate modifier update
         col_obj.modifiers._items.clear()
         decimate_mod = col_obj.modifiers.new(name="Decimate", type="DECIMATE")
         decimate_mod.type = "DECIMATE"
@@ -530,7 +530,7 @@ class TestRealtimePreviewsAndDebounce:
         update_collision_quality_realtime(link_obj, col_obj)
         assert decimate_mod.ratio == 0.5
 
-        # Scenario 2: Decimate modifier is missing but object is MESH (adds it)
+        # Missing Decimate modifier creation on mesh object
         col_obj.modifiers.remove(decimate_mod)
 
         getattr(col_obj, PROP_GEOM).collision_quality = 30.0
@@ -784,7 +784,7 @@ class TestLinkRobustness:
             link_ops._preview_last_request_time = 0
             assert execute_collision_preview_update() is None
 
-        # TAG_IMPORTED_SOURCE branch
+        # Verify handling with imported source tag present
         with patch(
             "linkforge.blender.adapters.blender_to_core.detect_primitive_type"
         ) as mock_detect:
@@ -814,7 +814,7 @@ class TestLinkRobustness:
         link_obj = create_robot_link("NoVisLink", scene, with_visual=False, with_collision=False)
         assert create_collision_for_link(link_obj, "box", bpy.context) is None
 
-        # Compound logic branches
+        # Verify collision creation for link with multiple visual meshes
         link_obj = create_robot_link("CompLink", scene)
         vis1 = create_mesh_object("CompLink_visual_1", scene)
         vis1.parent = link_obj

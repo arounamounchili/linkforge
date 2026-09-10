@@ -387,7 +387,7 @@ def test_tree_structure_check_exceptions(empty_robot, result, mocker):
     check.run(empty_robot, result)
     assert any("Kinematic graph error" in err.title for err in result.errors)
 
-    # 2b. robot.has_cycle raises RobotModelError and has_ref_errors is True
+    # Verify has_cycle error is skipped when reference errors are already present
     result.issues = []
     result.add_error(
         title="Missing parent link", message="some msg", code=ValidationErrorCode.NOT_FOUND
