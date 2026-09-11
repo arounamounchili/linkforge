@@ -11,7 +11,6 @@ Core Components:
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
@@ -34,6 +33,7 @@ from ..constants import (
     HW_IF_EFFORT,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
+from ..logging_config import get_logger
 from ..models.gazebo import GazeboElement
 from ..models.geometry import Geometry, Transform, Vector3
 from ..models.joint import (
@@ -65,7 +65,7 @@ from ..physics.inertia import calculate_inertia
 if TYPE_CHECKING:
     from .interfaces import IComposer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

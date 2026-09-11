@@ -638,6 +638,16 @@ class TestXacroInfrastructure:
         with pytest.raises(AttributeError, match="Object has no attribute"):
             _safe_eval("a.missing", ctx)
 
+        import ast
+        import unittest.mock as mock
+
+        with mock.patch("ast.parse") as mock_parse:
+            mock_parse.return_value = ast.Expression(
+                body=ast.BoolOp(op=ast.AST(), values=[ast.Constant(value=True)])
+            )
+            with pytest.raises(TypeError, match="Unsupported boolean operator"):
+                _safe_eval("dummy", ctx)
+
     def test_xacro_package_and_find_resolution(self, resolver, tmp_path) -> None:
         resolver.start_dir = tmp_path
 

@@ -824,11 +824,13 @@ class MockCollection(Generic[T]):
             item = MockObject(name=name, data=data)
         elif self.prop_type:
             item = self.prop_type(name=name)
+        elif self.name == "modifiers" and type == "DECIMATE":
+            item = MockDecimateModifier(name=name)
         else:
             item = MockPropertyGroup(name=name)
 
-        if type and hasattr(item, "type"):
-            typing.cast(Any, item).type = type
+        if type is not None:
+            item.type = type
 
         casted_item = typing.cast(T, item)
         self.append(casted_item)
@@ -937,6 +939,15 @@ class MockTimers:
         """Register a timer function."""
         self._timers.append(func)
 
+    def is_registered(self, func):
+        """Check if a timer function is registered."""
+        return func in self._timers
+
+    def unregister(self, func):
+        """Unregister a timer function."""
+        if func in self._timers:
+            self._timers.remove(func)
+
     def run_all(self):
         """Execute all pending timers. Handles re-scheduling if a timer returns an interval."""
         current_timers = list(self._timers)
@@ -951,6 +962,16 @@ class MockTimers:
                     self._timers.append(func)
             except Exception:
                 pass
+
+
+class MockDecimateModifier(MockPropertyGroup):
+    """Mock for bpy.types.DecimateModifier."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.type = "DECIMATE"
+        self.ratio = kwargs.get("ratio", 1.0)
+        self.decimate_type = kwargs.get("decimate_type", "COLLAPSE")
 
 
 class MockMaterialSlot(MockPropertyGroup):
@@ -1913,6 +1934,7 @@ def setup_mock_bpy():
     mock_bpy.types.Operator = MockOperator
     mock_bpy.types.MaterialSlot = MockMaterialSlot
     mock_bpy.types.WindowManager = MockPropertyGroup
+    mock_bpy.types.DecimateModifier = MockDecimateModifier
     # Boilerplate for UI classes
     mock_bpy.types.Panel = object
     mock_bpy.types.Menu = object

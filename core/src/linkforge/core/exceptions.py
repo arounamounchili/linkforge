@@ -68,6 +68,15 @@ class RobotGeneratorError(LinkForgeError):
     pass
 
 
+class RobotGeneratorUnsupportedTypeError(RobotGeneratorError):
+    """Exception raised when an unsupported content type is provided to a generator."""
+
+    def __init__(self, content_type: object, generator_name: str) -> None:
+        super().__init__(
+            f"Unsupported content type '{content_type}' for generator '{generator_name}'"
+        )
+
+
 class RobotParserError(LinkForgeError):
     """Exception raised during robot parsing or import."""
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 from unittest import mock
 
+import bmesh
 import bpy
 import pytest
 from linkforge.blender.adapters.context import BlenderContext
@@ -904,14 +905,8 @@ def test_import_robot_topological_sort(scene, blender_context) -> None:
 
 def test_normalize_and_consolidate_imported_objects(scene, blender_context) -> None:
     """Test the robust mesh normalization and consolidation logic."""
-    from linkforge.blender.adapters.core_to_blender import (
-        normalize_and_consolidate_imported_objects,
-    )
-
     root = create_test_object("root_empty", None, scene)
     root.location = (1.0, 1.0, 1.0)
-
-    import bmesh
 
     m1_mesh = bpy.data.meshes.new("mesh1")
     bm = bmesh.new()
@@ -954,8 +949,6 @@ def test_normalize_and_consolidate_imported_objects(scene, blender_context) -> N
 
 def test_create_joint_object_mimic_logic(scene, blender_context) -> None:
     """Test that mimics are correctly resolved even if created out of order."""
-    from linkforge.blender.adapters.core_to_blender import create_joint_object
-
     # Parent/Child link shells
     p = create_test_object("p", None, scene)
     c = create_test_object("c", None, scene)

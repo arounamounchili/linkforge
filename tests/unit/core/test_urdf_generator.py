@@ -1,6 +1,7 @@
 """Unit tests for URDF generator."""
 
 import xml.etree.ElementTree as ET
+from unittest.mock import patch
 
 import pytest
 from linkforge.core import (
@@ -1601,8 +1602,6 @@ class TestURDFGenerator:
 
     def test_generate_sensor_without_info_block(self) -> None:
         """Verify sensor generation correctly skips info blocks when none are provided."""
-        from unittest.mock import patch
-
         with patch.object(Sensor, "__post_init__", return_value=None):
             sensor = Sensor(name="s", type=SensorType.FORCE_TORQUE, link_name="base")
             object.__setattr__(sensor, "force_torque_info", None)
@@ -1713,3 +1712,20 @@ class TestURDFGenerator:
         assert 'gravity="0 0 -9.81"' in xml
         assert "<bullet>" in xml
         assert "<friction>0.8</friction>" in xml
+
+    def test_extra_elements_malformed_xml_warning(self, caplog) -> None:
+        """Test that malformed extra XML elements are skipped with a warning."""
+        robot = Robot(name="test_robot")
+        robot.add_link(Link(name="base"))
+        robot.extra_elements = ("<valid_tag/>", "<<<not valid xml>>>")
+
+        gen = URDFGenerator()
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            xml = gen.generate(robot, validate=False)
+
+        # The valid tag should appear, the invalid one should be skipped
+        assert "<valid_tag" in xml
+        assert "not valid xml" not in xml
+        assert any("Could not parse extra XML" in r.message for r in caplog.records)

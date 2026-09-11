@@ -1299,8 +1299,6 @@ class TestURDFParser:
         p = tmp_path / "test.urdf"
         p.write_text("<robot></robot>")
 
-        from unittest.mock import patch
-
         with patch("xml.etree.ElementTree.iterparse") as mock_iter:
             mock_iter.side_effect = RuntimeError("Mocked crash")
             with pytest.raises(RobotParserError, match="Unexpected URDF parse"):
@@ -1314,11 +1312,7 @@ class TestURDFParser:
 
     def test_urdf_parser_remaining_coverage(self, parser, tmp_path) -> None:
         """Cover remaining edge cases in urdf_parser.py for 100% coverage."""
-        import xml.etree.ElementTree as ET
-        from unittest.mock import patch
-
-        from linkforge.core import FileSystemResolver, JointType
-        from linkforge.core.exceptions import XacroDetectedError
+        from linkforge.core import FileSystemResolver
         from linkforge.core.models.robot import Robot
 
         visual_elem = ET.fromstring("<visual></visual>")
@@ -1540,10 +1534,6 @@ def test_parse_sensor_gpu_lidar() -> None:
 
 def test_detect_xacro_file_read_text_error(tmp_path) -> None:
     """Verify that detect_xacro handles OSError during read_text gracefully."""
-    import xml.etree.ElementTree as ET
-    from pathlib import Path
-    from unittest.mock import patch
-
     filepath = tmp_path / "broken.urdf"
     filepath.write_text("<robot/>")
     parser = URDFParser()
@@ -1566,8 +1556,6 @@ def test_ros2_control_invalid_returns_none() -> None:
 
 def test_gazebo_element_exception_handling() -> None:
     """Verify that exception during Gazebo element parsing is caught and logged."""
-    from unittest.mock import patch
-
     xml = """<robot name="r">
         <gazebo reference="base">
             <sensor name="s" type="contact"></sensor>
@@ -1611,3 +1599,24 @@ def test_urdf_parser_unknown_root_tag_preserved() -> None:
     assert "unknown_tag" in robot.extra_elements[0]
     assert "child_tag" in robot.extra_elements[0]
     assert "mujoco" in robot.extra_elements[1]
+
+
+def test_urdf_parser_unknown_tag_serialization_failure(monkeypatch) -> None:
+    """Verify serialization error on unrecognized element is logged gracefully."""
+    import xml.etree.ElementTree as ET
+
+    orig_tostring = ET.tostring
+
+    def mock_tostring(elem, *args, **kwargs):
+        if elem.tag == "broken_tag":
+            raise RuntimeError("Serialization error")
+        return orig_tostring(elem, *args, **kwargs)
+
+    monkeypatch.setattr(ET, "tostring", mock_tostring)
+    xml = """<robot name="r">
+        <broken_tag attr="val"/>
+    </robot>"""
+    parser = URDFParser()
+    robot = parser.parse_string(xml)
+    assert robot is not None
+    assert len(robot.extra_elements) == 0

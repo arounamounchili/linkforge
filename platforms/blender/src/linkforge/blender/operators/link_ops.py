@@ -9,6 +9,10 @@ import typing
 import bpy
 from bpy.types import Context, Operator
 
+from ..adapters.geometry_extractor import (
+    detect_primitive_type,
+    extract_mesh_triangles,
+)
 from ..constants import (
     DEFAULT_LINK_GIZMO_SIZE,
     GEOM_AUTO,
@@ -24,19 +28,8 @@ from ..core.constants import (
     GEOM_SPHERE,
 )
 from ..logic.collision_builder import (
-    _create_mesh_collision_compound as _create_mesh_collision_compound,
-)
-from ..logic.collision_builder import (
-    _create_primitive_collision as _create_primitive_collision,
-)
-from ..logic.collision_builder import (
-    _merge_visual_meshes as _merge_visual_meshes,
-)
-from ..logic.collision_builder import (
-    create_collision_for_link as create_collision_for_link,
-)
-from ..logic.collision_builder import (
-    regenerate_collision_mesh as regenerate_collision_mesh,
+    create_collision_for_link,
+    regenerate_collision_mesh,
 )
 from ..properties.geom_props import PROP_GEOM
 from ..properties.link_props import LinkPropertyGroup, sanitize_name
@@ -89,8 +82,6 @@ def execute_collision_preview_update() -> float | None:
         return None
 
     try:
-        from ..adapters.geometry_extractor import detect_primitive_type
-
         collision_type = detect_primitive_type(obj)
         regenerate_collision_mesh(obj, str(collision_type), bpy.context)
     except Exception as e:
@@ -117,8 +108,6 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
 
     lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
 
-    # Import here to avoid circular dependency
-    from ..adapters.blender_to_core import extract_mesh_triangles
     from ..core import Box, Cylinder, Sphere, calculate_inertia, validate_mesh_topology
     from ..core.physics import calculate_mesh_inertia_from_triangles
 
@@ -164,8 +153,6 @@ def calculate_inertia_for_link(link_obj: bpy.types.Object) -> bool:
         ):
             prim_type = geom_props.geometry_type
         else:
-            from ..adapters.blender_to_core import detect_primitive_type
-
             prim_type = detect_primitive_type(target_obj)
 
         tensor = None
@@ -416,8 +403,6 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             link_props.use_auto_inertia = True
 
             # Detect and store geometry properties on the mesh
-            from ..adapters.blender_to_core import detect_primitive_type
-
             detected = detect_primitive_type(mesh_obj) or GEOM_MESH
             geom_props = getattr(mesh_obj, PROP_GEOM, None)
             if geom_props:
@@ -872,8 +857,6 @@ class LINKFORGE_OT_assign_as_visual(Operator):
         lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
         link_name = lf.link_name or link_obj.name
 
-        from ..adapters.blender_to_core import detect_primitive_type
-
         for mesh in meshes:
             detected = detect_primitive_type(mesh) or GEOM_MESH
 
@@ -930,8 +913,6 @@ class LINKFORGE_OT_assign_as_collision(Operator):
 
         lf = typing.cast("LinkPropertyGroup", getattr(link_obj, PROP_LINK))
         link_name = lf.link_name or link_obj.name
-
-        from ..adapters.blender_to_core import detect_primitive_type
 
         for mesh in meshes:
             detected = detect_primitive_type(mesh) or GEOM_MESH
@@ -1307,15 +1288,17 @@ def update_collision_quality_realtime(
     # Do not decimate primitive shapes (Box, Sphere, Cylinder). Decimation corrupts their bounding geometry
     # and distorts their representation in the 3D viewport. If any Decimate modifier exists, cleanly remove it.
     if geom_props.geometry_type != GEOM_MESH:
-        decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
-        if decimate_mod:
-            collision_obj.modifiers.remove(decimate_mod)
+        decimate_mods = [m for m in collision_obj.modifiers if m.type == "DECIMATE"]
+        for mod in decimate_mods:
+            collision_obj.modifiers.remove(mod)
         return
 
     quality_ratio = geom_props.collision_quality / 100.0
 
     decimate_mod = next((m for m in collision_obj.modifiers if m.type == "DECIMATE"), None)
-    if decimate_mod and isinstance(decimate_mod, bpy.types.DecimateModifier):
+    if decimate_mod and (
+        isinstance(decimate_mod, bpy.types.DecimateModifier) or hasattr(decimate_mod, "ratio")
+    ):
         decimate_mod.ratio = quality_ratio
     elif collision_obj.type == "MESH":
         # FALLBACK IMPROVEMENT: If modifier is missing but object exists, try adding it first

@@ -272,6 +272,25 @@ class TestImportRobotModelOperator:
 
         assert op.execute(MockContextNoScene()) == {"CANCELLED"}
 
+    def test_import_ops_robot_parser_error(self, tmp_path) -> None:
+        """Verify import operator handles RobotParserError gracefully."""
+        from linkforge.core.exceptions import RobotParserError
+
+        filepath = tmp_path / "broken.xacro"
+        filepath.write_text("<robot/>")
+
+        op = LINKFORGE_OT_import_robot_model()
+        op.filepath = str(filepath)
+        op.report = MagicMock()
+
+        with patch(
+            "linkforge.core.XacroResolver.resolve_file",
+            side_effect=RobotParserError("Malformed XACRO"),
+        ):
+            res = op.execute(bpy.context)
+            assert res == {"CANCELLED"}
+            op.report.assert_called_with({"ERROR"}, "Import failed: Malformed XACRO")
+
     def test_registration(self, mocker) -> None:
         """Test register and unregister functions for import operator."""
         import linkforge.blender.operators.import_ops as import_ops

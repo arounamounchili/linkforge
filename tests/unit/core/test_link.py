@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 from linkforge.core import (
     Box,
@@ -13,6 +15,7 @@ from linkforge.core import (
     LinkPhysics,
     Material,
     RobotModelError,
+    RobotPhysicsError,
     Transform,
     Vector3,
     Visual,
@@ -150,6 +153,21 @@ class TestInertiaTensor:
                 izz=1.0,
                 ixy=4.5,
             )
+
+    def test_negative_principal_moment(self) -> None:
+        """Test that InertiaTensor rejects tensors with negative principal moments."""
+        with (
+            patch(
+                "linkforge.core.models.link.symmetric_matrix_eigenvalues_3x3",
+                return_value=(5.0, 1.0, -2.0),
+            ),
+            patch(
+                "linkforge.core.models.link.is_positive_semi_definite_3x3",
+                return_value=True,
+            ),
+            pytest.raises(RobotPhysicsError, match="negative principal moment"),
+        ):
+            InertiaTensor(ixx=3.0, ixy=1.0, ixz=0.5, iyy=3.0, iyz=0.5, izz=3.0)
 
 
 class TestInertial:

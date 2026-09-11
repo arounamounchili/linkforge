@@ -20,6 +20,7 @@ from ._utils.path_utils import normalize_uri_to_path, resolve_package_path
 from .exceptions import (
     LinkForgeError,
     RobotGeneratorError,
+    RobotGeneratorUnsupportedTypeError,
 )
 
 if TYPE_CHECKING:
@@ -90,7 +91,7 @@ class RobotGenerator(ABC, Generic[T]):
         elif isinstance(content, bytes):
             filepath.write_bytes(content)
         else:
-            raise RobotGeneratorError(self.__class__.__name__, type(content))
+            raise RobotGeneratorUnsupportedTypeError(type(content), self.__class__.__name__)
 
 
 class RobotParser(ABC, Generic[T]):

@@ -1,4 +1,4 @@
-"""UI Panel for managing centralized robot control and transmissions."""
+"""UI Panel for managing centralized ROS 2 robot control."""
 
 from __future__ import annotations
 

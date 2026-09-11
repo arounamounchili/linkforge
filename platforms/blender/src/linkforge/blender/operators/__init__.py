@@ -2,7 +2,7 @@
 
 This package provide commands for:
 - Link & Joint Management: Marking objects and resetting properties.
-- Component Setup: Adding sensors, transmissions, and hardware interfaces.
+- Component Setup: Adding sensors and hardware interfaces.
 - Data Processing: Importing and exporting URDF, XACRO, and meshes.
 """
 

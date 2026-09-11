@@ -12,7 +12,6 @@ import bpy
 from ..constants import (
     SUFFIX_COLLISION,
 )
-from ..core._utils.dict_utils import filter_items_by_name as filter_items_by_name
 from ..core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
@@ -129,7 +128,7 @@ JOINT_DOF_MAP = {
 def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneStatistics:
     """Analyze scene and setup robot statistics/properties.
 
-    Categorizes all robot components (links, joints, sensors, transmissions)
+    Categorizes all robot components (links, joints, sensors)
     and calculates total link mass and DOFs from all joints found.
     Uses frame-level caching to ensure the scene is scanned only once per frame.
 

@@ -9,7 +9,7 @@ import typing
 from unittest.mock import MagicMock
 
 import bpy
-from linkforge.blender.adapters.blender_to_core import (
+from linkforge.blender.adapters.geometry_extractor import (
     detect_primitive_type,
 )
 from linkforge.blender.utils.transform_utils import matrix_to_transform

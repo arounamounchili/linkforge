@@ -1,5 +1,6 @@
 """Path and resource resolution utilities for LinkForge."""
 
+import contextlib
 import os
 import re
 from pathlib import Path
@@ -140,28 +141,13 @@ def get_export_path(resource: str, relative_to: Path | None = None) -> str:
         The string to be used in the 'filename' attribute.
     """
     # Preserve package:// URIs (never make relative)
-    if resource.startswith("package://") or resource.startswith("package:/"):
+    if resource.startswith(("package://", "package:/")):
         return resource
 
-    # Handle file:// URIs
-    if resource.startswith("file://"):
-        path = normalize_uri_to_path(resource)
-        if relative_to and path.is_absolute():
-            try:
-                # Use .absolute() on relative_to just in case it's not
-                rel = path.relative_to(relative_to.absolute())
-                return str(rel)
-            except ValueError:
-                pass
-        return resource
-
-    # Handle standard paths
-    path = Path(resource)
+    # Convert file:// URI or filesystem path to Path and relativize if possible
+    path = normalize_uri_to_path(resource)
     if relative_to and path.is_absolute():
-        try:
-            rel = path.relative_to(relative_to.absolute())
-            return str(rel)
-        except ValueError:
-            pass
+        with contextlib.suppress(ValueError):
+            return str(path.relative_to(relative_to.absolute()))
 
     return resource

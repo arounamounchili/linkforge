@@ -23,7 +23,6 @@ from ..core import (
     ValidationResult,
     get_logger,
 )
-from ..core._utils.string_utils import sanitize_name as sanitize_name
 from ..core.constants import DEFAULT_MATERIAL_RGBA
 from ..utils.property_helpers import (
     get_joint_props,
@@ -32,22 +31,12 @@ from ..utils.property_helpers import (
 )
 from . import translator
 from .context import IBlenderContext
-from .geometry_extractor import (
-    detect_primitive_type,
-    extract_mesh_triangles,
-    get_object_geometry,
-    get_object_material,
-)
+from .geometry_extractor import get_object_material
 
 logger = get_logger(__name__)
 
 __all__ = [
     "SceneToRobotTranslator",
-    "detect_primitive_type",
-    "extract_mesh_triangles",
-    "get_object_geometry",
-    "get_object_material",
-    "sanitize_name",
     "scene_to_robot",
 ]
 
@@ -173,8 +162,18 @@ class SceneToRobotTranslator:
         self.builder = RobotBuilder(self.robot_name)
         self.validation_result = ValidationResult(robot_name=self.robot_name)
 
+        # Translators (instantiated per translation run)
+        self.link_translator: translator.LinkTranslator = translator.LinkTranslator()
+        self.joint_translator: translator.JointTranslator = translator.JointTranslator()
+        self.sensor_translator: translator.SensorTranslator = translator.SensorTranslator()
+        self.ros2_translator: translator.Ros2ControlTranslator = translator.Ros2ControlTranslator()
+
     def translate(self, raise_on_error: bool = True) -> tuple[Robot, ValidationResult]:
         """Perform the translation and return the built Robot model."""
+        self.link_translator = translator.LinkTranslator()
+        self.joint_translator = translator.JointTranslator()
+        self.sensor_translator = translator.SensorTranslator()
+        self.ros2_translator = translator.Ros2ControlTranslator()
         # Categorize scene objects
         link_objects, joint_objects, sensor_objects, joints_map, root = _categorize_scene_objects(
             self.context.scene
@@ -370,16 +369,14 @@ class SceneToRobotTranslator:
                 lb = parent_lb.child(link_name, joint_name=joint_name)
 
                 # Configure Joint
-                joint_translator = translator.JointTranslator()
-                joint_translator.translate(
+                self.joint_translator.translate(
                     obj=joint_obj,
                     lb=lb,
                     link_frames=link_frames,
                 )
 
             # Configure Link
-            link_translator = translator.LinkTranslator()
-            link_translator.translate(
+            self.link_translator.translate(
                 obj=obj,
                 builder=self.builder,
                 context=self.context,
@@ -412,10 +409,8 @@ class SceneToRobotTranslator:
 
     def _translate_sensors(self, sensor_objects: list[Any], link_frames: dict[str, Any]) -> None:
         """Translate sensors using specialized SensorTranslator."""
-
-        sensor_translator = translator.SensorTranslator()
         for obj in sensor_objects:
-            sensor_translator.translate(
+            self.sensor_translator.translate(
                 obj=obj,
                 builder=self.builder,
                 validation_result=self.validation_result,
@@ -425,8 +420,7 @@ class SceneToRobotTranslator:
     def _translate_ros2_control(self) -> None:
         """Translate ROS2 Control settings from robot properties."""
         if self.robot_props and getattr(self.robot_props, "use_ros2_control", False):
-            ros2_translator = translator.Ros2ControlTranslator()
-            ros2_translator.translate(
+            self.ros2_translator.translate(
                 obj=self.robot_props,
                 builder=self.builder,
                 validation_result=self.validation_result,

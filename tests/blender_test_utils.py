@@ -18,6 +18,7 @@ def ensure_linkforge_registered():
         "linkforge",
         "linkforge_joint",
         "linkforge_sensor",
+        "linkforge_geom",
     ]
 
     # Quick check: are they all there?

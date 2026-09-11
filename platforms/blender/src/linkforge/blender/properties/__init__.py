@@ -3,7 +3,7 @@
 Property groups store data on Blender objects and scenes:
 - Robot & Validation: Global settings and diagnostic results.
 - Link & Joint: Core kinematic and physical properties.
-- Sensor, Transmission, & Control: Component-specific hardware settings.
+- Sensor & Control: Component-specific hardware settings.
 """
 
 from __future__ import annotations

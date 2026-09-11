@@ -151,3 +151,28 @@ def test_read_srdf_file_not_found(tmp_path):
         read_srdf(missing)
     with pytest.raises(FileNotFoundError):
         read_srdf(str(missing))
+
+
+def test_read_urdf_from_string_path(mocker, tmp_path):
+    """Verify read_urdf parses when called with a str path to an existing file."""
+    mock_parser = mocker.patch("linkforge.core.parsers.URDFParser")
+    urdf_file = tmp_path / "robot.urdf"
+    urdf_file.write_text("<robot name='test'/>")
+
+    # Pass as string, not Path — exercises the str->Path->parse branch (io.py line 50)
+    read_urdf(str(urdf_file))
+
+    mock_parser.return_value.parse.assert_called_once()
+
+
+def test_read_srdf_from_string_path(mocker, tmp_path):
+    """Verify read_srdf parses when called with a str path to an existing file."""
+    mock_parser = mocker.patch("linkforge.core.parsers.SRDFParser")
+    srdf_file = tmp_path / "robot.srdf"
+    srdf_file.write_text("<robot name='test'/>")
+    robot = Robot(name="test")
+
+    # Pass as string, not Path — exercises the str->Path->parse branch (io.py line 121)
+    read_srdf(str(srdf_file), robot=robot)
+
+    mock_parser.return_value.parse.assert_called_once()

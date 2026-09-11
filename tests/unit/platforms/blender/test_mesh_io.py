@@ -266,6 +266,20 @@ class TestMeshExhaustiveCoverage:
         empty_obj = create_test_object("empty_obj", None, scene)
         assert create_simplified_mesh(empty_obj, 0.5) is None
 
+    def test_create_simplified_mesh_restores_selection(self, mocker, scene) -> None:
+        """Verify create_simplified_mesh preserves and restores previously selected objects."""
+        mocker.patch("linkforge.blender.adapters.mesh_io.bpy.ops.object.modifier_apply")
+        obj = create_mesh_object("sel_mesh", scene=scene, with_cube=True)
+        other_obj = create_mesh_object("other_sel_mesh", scene=scene, with_cube=True)
+
+        bpy.context.selected_objects = [other_obj]
+        bpy.context.view_layer.objects.active = other_obj
+
+        simplified = create_simplified_mesh(obj, 0.5)
+        assert simplified is not None
+        if simplified:
+            bpy.data.objects.remove(simplified, do_unlink=True)
+
     def test_export_link_mesh_non_mesh_fails(self, tmp_path) -> None:
         """Verify export_link_mesh returns None and Identity matrix for non-MESH objects or None input."""
         path, offset = export_link_mesh(None, "link", "visual", "STL", tmp_path)

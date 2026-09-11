@@ -1,6 +1,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
 from linkforge.core import Joint, JointType, Link, Robot, RobotModelError
 
@@ -301,8 +302,6 @@ def test_builder_finalize_ros2_control_joint_mapping() -> None:
 
 def test_builder_task_exception_handling() -> None:
     """Verify that when a task raises an exception, the builder logs it and propagates the exception."""
-    import pytest
-
     mock_context = MagicMock()
     builder = AsynchronousRobotBuilder(Robot(name="robot"), Path("/tmp/robot.urdf"), mock_context)
     with (

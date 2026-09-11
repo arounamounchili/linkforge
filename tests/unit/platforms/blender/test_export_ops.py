@@ -489,6 +489,26 @@ class TestRobotValidation:
         # Should return CANCELLED if there are validation errors
         assert result == {"CANCELLED"}
 
+    def test_validate_robot_with_warnings(self, mocker, scene, blender_context) -> None:
+        """Test validate_robot operator when valid but warnings exist."""
+        mock_self = MagicMock()
+
+        val_res = MagicMock()
+        val_res.is_ok = False
+        val_res.is_valid = True
+        val_res.warning_count = 2
+        val_res.warnings = [MagicMock(message="Warn 1"), MagicMock(message="Warn 2")]
+        val_res.errors = []
+        mocker.patch("linkforge.core.validation.RobotValidator.validate", return_value=val_res)
+
+        mocker.patch(
+            "linkforge.blender.adapters.blender_to_core.scene_to_robot",
+            return_value=(MagicMock(), ValidationResult()),
+        )
+
+        result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
+        assert result == {"FINISHED"}
+
 
 class TestRobotExport:
     def test_export_urdf_extension_correction(self, mocker, scene, blender_context) -> None:

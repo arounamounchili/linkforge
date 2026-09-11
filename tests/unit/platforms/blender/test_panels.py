@@ -880,6 +880,26 @@ class TestRobotOperators:
         assert res == {"FINISHED"}
         assert props.component_browser_search == ""
 
+    def test_selection_ops_register_unregister(self, monkeypatch) -> None:
+        """Test selection_ops register with retry and unregister."""
+        from linkforge.blender.operators import selection_ops
+
+        selection_ops.register()
+        selection_ops.unregister()
+
+        first_call = True
+        orig_register = bpy.utils.register_class
+
+        def mock_register(cls):
+            nonlocal first_call
+            if first_call:
+                first_call = False
+                raise ValueError("Already registered")
+            orig_register(cls)
+
+        monkeypatch.setattr(bpy.utils, "register_class", mock_register)
+        selection_ops.register()
+
     def test_panels_as_main(self) -> None:
         """Test running each panel module as __main__."""
 

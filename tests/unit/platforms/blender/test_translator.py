@@ -148,7 +148,7 @@ def test_link_translator_uncovered_branches(scene, blender_context):
     collision_child.parent = link_obj
 
     with patch(
-        "linkforge.blender.adapters.blender_to_core.get_object_geometry", return_value=(None, None)
+        "linkforge.blender.adapters.translator.get_object_geometry", return_value=(None, None)
     ):
         lb = translator.translate(link_obj, builder, blender_context)
         assert lb is not None
@@ -166,16 +166,14 @@ def test_link_translator_uncovered_branches(scene, blender_context):
     val_result = ValidationResult(robot_name="test_robot")
 
     with patch(
-        "linkforge.blender.adapters.blender_to_core.extract_mesh_triangles",
+        "linkforge.blender.adapters.translator.extract_mesh_triangles",
         side_effect=ValueError("Mesh error"),
     ):
         translator._validate_mesh(mesh_obj, "test_link", "collision", val_result)
         # Should gracefully catch the exception, no crash
         assert len(val_result.errors) == 0
 
-    with patch(
-        "linkforge.blender.adapters.blender_to_core.extract_mesh_triangles", return_value=None
-    ):
+    with patch("linkforge.blender.adapters.translator.extract_mesh_triangles", return_value=None):
         translator._validate_mesh(mesh_obj, "test_link", "collision", val_result)
         assert len(val_result.errors) == 0
 
@@ -532,7 +530,7 @@ def test_link_translator_comprehensive(scene, blender_context):
 
     mock_geom = Box(size=Vector3(1.0, 1.0, 1.0))
     with patch(
-        "linkforge.blender.adapters.blender_to_core.get_object_geometry",
+        "linkforge.blender.adapters.translator.get_object_geometry",
         return_value=(mock_geom, Matrix.Identity(4)),
     ):
         lb = translator.translate(link_obj, builder, blender_context)

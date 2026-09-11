@@ -1,8 +1,13 @@
+import math
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest import mock
+from unittest.mock import MagicMock, patch
 
+import bmesh
 import bpy
+import mathutils
 import pytest
+from mathutils import Euler, Matrix
 
 from tests.blender_test_utils import (
     create_test_object,
@@ -19,17 +24,21 @@ try:
 except ImportError:
     HAS_PYBULLET = False
 from linkforge.blender.adapters.blender_to_core import (
+    SceneToRobotTranslator,
     _calculate_link_frames,
+    _categorize_scene_objects,
+    scene_to_robot,
+)
+from linkforge.blender.adapters.geometry_extractor import (
     detect_primitive_type,
     extract_mesh_triangles,
     get_object_geometry,
     get_object_material,
-    sanitize_name,
-    scene_to_robot,
 )
 from linkforge.blender.adapters.translator import (
     JointTranslator,
     LinkTranslator,
+    Ros2ControlTranslator,
     SensorTranslator,
 )
 from linkforge.blender.properties.geom_props import (
@@ -41,11 +50,13 @@ from linkforge.blender.properties.geom_props import (
 from linkforge.blender.utils.transform_utils import matrix_to_transform
 from linkforge.core import (
     Box,
+    Color,
     Cylinder,
     GeometryType,
     Joint,
     JointType,
     Link,
+    Material,
     Mesh,
     RobotBuilder,
     RobotValidationError,
@@ -53,7 +64,7 @@ from linkforge.core import (
     Sphere,
     ValidationErrorCode,
 )
-from mathutils import Euler, Matrix
+from linkforge.core._utils.string_utils import sanitize_name
 
 
 def translate_link_to_model(obj, context):
@@ -280,7 +291,6 @@ def test_categorize_scene_objects_logic(scene, blender_context) -> None:
     safe_get_joint(j_obj).is_robot_joint = True
 
     # Call internal categorizer
-    from linkforge.blender.adapters.blender_to_core import _categorize_scene_objects
 
     links, joints, sensors, joints_map, root = _categorize_scene_objects(scene)
 
@@ -475,7 +485,6 @@ def test_categorize_scene_objects_complex_hierarchy(scene, blender_context) -> N
     safe_get_sensor(sensor).attached_link = child
 
     # Manually run the protected function (we are testing unit logic)
-    from linkforge.blender.adapters.blender_to_core import _categorize_scene_objects
 
     links, joints, sensors, joints_map, root_link = _categorize_scene_objects(scene)
 
@@ -634,7 +643,6 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
 
 def test_detect_primitive_type_logic(scene, blender_context) -> None:
     """Verify primitive detection heuristics."""
-    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
     # Cube
     bpy.ops.mesh.primitive_cube_add()
@@ -668,10 +676,6 @@ def test_detect_primitive_type_logic(scene, blender_context) -> None:
 
 def test_matrix_to_transform_conversion(scene, blender_context) -> None:
     """Verify 4x4 matrix to Transform conversion."""
-    import math
-
-    import mathutils
-    from linkforge.blender.utils.transform_utils import matrix_to_transform
 
     # Identity
     mat = mathutils.Matrix.Identity(4)
@@ -1099,8 +1103,6 @@ def test_blender_ros2_control_defaults(clean_scene, scene, blender_context) -> N
     joint.cmd_velocity = False
     joint.cmd_effort = False
 
-    from linkforge.blender.adapters.translator import Ros2ControlTranslator
-
     control = Ros2ControlTranslator()._blender_ros2_control_to_core(props)
 
     assert control is not None
@@ -1124,8 +1126,6 @@ def test_blender_ros2_control_joint_obj_name_sync(clean_scene, scene, blender_co
     joint.joint_obj = joint_obj
     joint.cmd_position = True
     joint.state_position = True
-
-    from linkforge.blender.adapters.translator import Ros2ControlTranslator
 
     builder = RobotBuilder("Robot")
 
@@ -1236,10 +1236,6 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_conte
     link_obj = create_test_object("L", None, scene)
     safe_get_linkforge(link_obj).is_robot_link = True
 
-    from unittest import mock
-
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
-
     with (
         mock.patch(
             "linkforge.blender.adapters.translator.LinkTranslator.translate",
@@ -1346,11 +1342,6 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
 
 def test_blender_to_core_geometry_edge_cases(clean_scene, scene, blender_context) -> None:
     """Test geometry conversion edge cases (None, zero-size, fallbacks)."""
-    from linkforge.blender.adapters.blender_to_core import (
-        detect_primitive_type,
-        extract_mesh_triangles,
-        get_object_geometry,
-    )
 
     # detect_primitive_type None/non-mesh
     assert detect_primitive_type(None) is None
@@ -1447,7 +1438,6 @@ def test_blender_link_mesh_inertia(clean_scene, scene, blender_context) -> None:
     safe_get_linkforge(link_obj).use_mesh_inertia = True
 
     mesh = bpy.data.meshes.new("CubeMesh")
-    import bmesh
 
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
@@ -1471,10 +1461,6 @@ def test_blender_link_mesh_inertia(clean_scene, scene, blender_context) -> None:
 
 def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) -> None:
     """Exhaustive test for scene_to_robot with sensors, plugins, and multi-visuals."""
-    from pathlib import Path
-
-    import bmesh
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     # Root Link
     root = create_test_object("RootLink", None, scene)
@@ -1550,11 +1536,6 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
 
 def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None:
     """Hit absolute remaining gaps (name sanitization, empty loops, unknown types)."""
-    from linkforge.blender.adapters.blender_to_core import (
-        _calculate_link_frames,
-        get_object_geometry,
-        sanitize_name,
-    )
 
     # sanitize_name empty/None (string_utils.py returns "" for empty)
     assert sanitize_name("") == ""
@@ -1568,7 +1549,6 @@ def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None
     o = create_test_object("Unknown", l_data)
     geom, mat = get_object_geometry(o)
     assert geom is None
-    from mathutils import Matrix
 
     assert mat == Matrix.Identity(4)
 
@@ -1576,8 +1556,6 @@ def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None
     p = create_test_object("MultiLink", None, scene)
     safe_get_linkforge(p).is_robot_link = True
     safe_get_linkforge(p).use_auto_inertia = False
-
-    import bmesh
 
     def add_vis(name):
         m = bpy.data.meshes.new(name)
@@ -1599,13 +1577,6 @@ def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None
 
 def test_blender_to_core_small_gaps(clean_scene, scene, blender_context) -> None:
     """Hit remaining tiny gaps like material fallback and no-geometry link."""
-    from pathlib import Path
-
-    import bmesh
-    from linkforge.blender.adapters.blender_to_core import (
-        get_object_material,
-        scene_to_robot,
-    )
 
     # Material name fallback
     m = bpy.data.meshes.new("MatMesh")
@@ -1665,11 +1636,6 @@ def test_blender_to_core_small_gaps(clean_scene, scene, blender_context) -> None
 
 def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> None:
     """Hit missing child link, simplify, and None returns."""
-
-    import bmesh
-    from linkforge.blender.adapters.blender_to_core import (
-        get_object_geometry,
-    )
 
     # blender_link_to_core_with_origin None
     assert translate_link_to_model(None, blender_context) is None
@@ -1752,7 +1718,6 @@ def test_detect_primitive_type_tags(scene, blender_context) -> None:
 
 def test_matrix_to_transform_nulls_and_fallbacks() -> None:
     """Test matrix_to_transform with Matrix or matrix None/missing."""
-    from unittest.mock import patch
 
     # matrix is None
     res = matrix_to_transform(None)
@@ -1766,9 +1731,6 @@ def test_matrix_to_transform_nulls_and_fallbacks() -> None:
 
 def test_extract_mesh_triangles_nulls_and_fallbacks(scene, blender_context) -> None:
     """Test extract_mesh_triangles failure bounds."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
 
     # eval_obj.to_mesh() returns None
     bpy.ops.mesh.primitive_cube_add()
@@ -1791,9 +1753,6 @@ def test_extract_mesh_triangles_nulls_and_fallbacks(scene, blender_context) -> N
 
 def test_extract_mesh_triangles_numpy_vs_pure_python(scene, blender_context) -> None:
     """Test pure python fallback and numpy scaling paths."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
 
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -1845,7 +1804,6 @@ def test_extract_mesh_triangles_numpy_vs_pure_python(scene, blender_context) -> 
 
 def test_get_object_material_principled_bsdf_failures(scene, blender_context) -> None:
     """Test material BSDF node misses and diffuse viewport fallbacks."""
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     # Material has node tree but lacks Principled BSDF node
     mesh1 = bpy.data.meshes.new("MatMesh1")
@@ -1895,9 +1853,6 @@ def test_get_object_material_principled_bsdf_failures(scene, blender_context) ->
 
 def test_scene_to_robot_build_exception(scene, blender_context) -> None:
     """Verify scene_to_robot when builder throws exception during build."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     root = create_test_object("Root", None, scene)
     safe_get_linkforge(root).is_robot_link = True
@@ -1912,9 +1867,6 @@ def test_scene_to_robot_build_exception(scene, blender_context) -> None:
 
 def test_get_object_geometry_edge_cases(scene, blender_context) -> None:
     """Verify geometry extraction with dimensions None fallbacks."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import get_object_geometry
 
     # Empty geometry object with dimensions = None
     obj = create_test_object("EmptyObj", None, scene)
@@ -1931,7 +1883,6 @@ def test_get_object_geometry_edge_cases(scene, blender_context) -> None:
 
 def test_detect_primitive_type_edge_cases(scene, blender_context) -> None:
     """Verify is_mesh has attributes fallback and GEOM_MESH tag return None."""
-    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
     # Object is of type MESH but not isinstance(mesh, bpy.types.Mesh)
     # E.g. mocked mesh with attributes but not the actual bpy type
@@ -1951,9 +1902,6 @@ def test_detect_primitive_type_edge_cases(scene, blender_context) -> None:
 
 def test_detect_primitive_type_advanced_branches(scene, blender_context) -> None:
     """Cover remaining detect_primitive_type branches and conditions."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
     mesh_obj = create_test_object("FakeMeshNullData", None, scene)
     mesh_obj.type = "MESH"
@@ -2031,7 +1979,6 @@ def test_detect_primitive_type_advanced_branches(scene, blender_context) -> None
 
 def test_get_object_geometry_advanced_branches(scene) -> None:
     """Cover remaining get_object_geometry branches."""
-    from unittest.mock import MagicMock, patch
 
     obj = create_test_object("GeomObj", None, scene)
     obj.type = "MESH"
@@ -2048,9 +1995,6 @@ def test_get_object_geometry_advanced_branches(scene) -> None:
 
 def test_extract_mesh_triangles_advanced_branches(scene) -> None:
     """Cover remaining extract_mesh_triangles branches."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
 
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -2096,9 +2040,6 @@ def test_extract_mesh_triangles_advanced_branches(scene) -> None:
 
 def test_get_object_material_advanced_branches(scene) -> None:
     """Cover remaining get_object_material branches."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     mesh = bpy.data.meshes.new("SlotMesh")
     obj = create_test_object("slot_obj", mesh, scene)
@@ -2132,15 +2073,6 @@ def test_get_object_material_advanced_branches(scene) -> None:
 
 def test_scene_to_robot_orchestration_advanced(scene, blender_context) -> None:
     """Cover remaining scene_to_robot orchestration layers."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import (
-        SceneToRobotTranslator,
-        _calculate_link_frames,
-        _categorize_scene_objects,
-        scene_to_robot,
-    )
-    from linkforge.core import RobotValidationError
 
     empty_scene = MagicMock()
     empty_scene.objects = []
@@ -2209,15 +2141,6 @@ def test_scene_to_robot_orchestration_advanced(scene, blender_context) -> None:
 
 def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     """Cover the final remaining branches in blender_to_core.py."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import (
-        SceneToRobotTranslator,
-        _categorize_scene_objects,
-        get_object_geometry,
-        scene_to_robot,
-    )
-    from linkforge.core import RobotValidationError
 
     obj = create_test_object("MeshObjFallback", None, scene)
     obj.type = "MESH"
@@ -2238,8 +2161,6 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
         )
         # Falls back to Box because export returned None
         assert isinstance(geom, Box)
-
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     mat = bpy.data.materials.new("NonBSDFMat")
     mat.use_nodes = True
@@ -2354,7 +2275,6 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
 
 def test_get_object_material_node_traversal_continuation(scene) -> None:
     """Verify that material parsing successfully continues past non-principled nodes to find the BSDF principled node."""
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     mat = bpy.data.materials.new("NonBSDFAndBSDFMat")
     mat.use_nodes = True
@@ -2383,8 +2303,6 @@ def test_get_object_material_node_traversal_continuation(scene) -> None:
 
 def test_translate_global_materials_duplicate_and_pre_registered(scene, blender_context) -> None:
     """Verify global material translation correctly handles duplicate child materials and skips pre-registered builder materials."""
-    from linkforge.blender.adapters.blender_to_core import SceneToRobotTranslator
-    from linkforge.core import Color, Material
 
     root_obj = create_test_object("root_link_obj", None, scene)
     safe_get_linkforge(root_obj).is_robot_link = True
@@ -2423,7 +2341,6 @@ def test_translate_global_materials_duplicate_and_pre_registered(scene, blender_
 
 def test_scene_to_robot_active_context_passthrough(scene, blender_context) -> None:
     """Verify scene_to_robot handles direct IBlenderContext instance inputs without redundant wrapping."""
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     root_obj = create_test_object("root_link_obj_pt", None, scene)
     safe_get_linkforge(root_obj).is_robot_link = True
@@ -2439,8 +2356,6 @@ class TestConverterRobustness:
         scene.linkforge.strict_mode = True
         root = create_test_object("Root", None, scene)
         safe_get_linkforge(root).is_robot_link = True
-
-        from unittest import mock
 
         with (
             mock.patch(
@@ -2464,7 +2379,6 @@ class TestConverterRobustness:
 class TestJointRobustness:
     def test_joint_custom_axis_fallback(self, scene, blender_context) -> None:
         """Test custom axis fallbacks when values are zero."""
-        from unittest.mock import MagicMock
 
         p = create_test_object("Parent", None, scene)
         c = create_test_object("Child", None, scene)

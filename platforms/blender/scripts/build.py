@@ -12,6 +12,7 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -167,10 +168,10 @@ def build_extension() -> Path:
 
     print(f"📦 Staging LinkForge Extension v{version} for build...")
 
-    # 1. Copy manifest
+    # Copy manifest
     shutil.copy(MANIFEST_PATH, staging_dir)
 
-    # 2. Copy source code (Extension)
+    # Copy extension source tree
     # Copy contents of platforms/blender/linkforge/ so __init__.py is at root
     for item in SOURCE_DIR.iterdir():
         if item.name.startswith((".", "__pycache__")) or item.name in {"linkforge.core", "core"}:
@@ -181,7 +182,7 @@ def build_extension() -> Path:
         else:
             shutil.copy2(item, dest)
 
-    # 3. Copy Core Library (linkforge.core)
+    # Bundle Core Library (linkforge.core)
     # Bundle it inside the linkforge package for policy compliance and reliable imports
     if not CORE_DIR.exists():
         print(f"❌ Error: Core directory {CORE_DIR} not found.")
@@ -194,12 +195,12 @@ def build_extension() -> Path:
         shutil.copy2(REPO_ROOT / "core" / "LICENSE", target_core_dir)
     print(f"  Bundled linkforge.core -> {target_core_dir}")
 
-    # 3. Copy dependencies (if any)
+    # Bundle wheel dependencies if present
     if WHEELS_DIR.exists() and any(WHEELS_DIR.iterdir()):
         shutil.copytree(WHEELS_DIR, staging_dir / "wheels")
         print(f"  Bundled dependencies -> {staging_dir / 'wheels'}")
 
-    # 4. Copy license/readme
+    # Copy license and readme
     for f in ["LICENSE", "README.md"]:
         if (REPO_ROOT / f).exists():
             shutil.copy2(REPO_ROOT / f, staging_dir)
@@ -207,8 +208,6 @@ def build_extension() -> Path:
     print("🚀 Building split-platform packages...")
 
     # Find Blender CLI
-    import os
-
     blender_path = os.environ.get("BLENDER_PATH", "blender")
 
     if not shutil.which(blender_path):
@@ -243,7 +242,7 @@ def build_extension() -> Path:
     # Clean up staging on success
     shutil.rmtree(staging_dir)
 
-    # 5. Rename packages for platform clarity (LinkForge Multi-Platform Vision)
+    # Rename packages for platform clarity (LinkForge Multi-Platform Vision)
     # This distinguishes 'linkforge-blender' from future 'linkforge-freecad', etc.
     print("✨ Renaming packages for platform clarity...")
     extension_id = read_manifest_value("id")
@@ -259,9 +258,7 @@ def build_extension() -> Path:
 
 def develop_extension() -> None:
     """Setup the extension for development by symlinking into Blender's user extensions."""
-    import os
-
-    # 1. Try official Blender CLI first (for newer versions)
+    # Try official Blender CLI first (for newer versions)
     blender_path = os.environ.get("BLENDER_PATH", "blender")
     if not shutil.which(blender_path):
         mac_fallback = "/Applications/Blender.app/Contents/MacOS/Blender"
@@ -291,7 +288,7 @@ def develop_extension() -> None:
         except Exception:
             pass
 
-    # 2. Manual Symlink Fallback
+    # Manual Symlink Fallback
     print("🛠️  Setting up manual development symlink...")
 
     # Determine extensions path
@@ -329,10 +326,10 @@ def develop_extension() -> None:
             shutil.rmtree(target_dir)
 
     try:
-        # 1. Link the Blender source folder to Blender's extensions directory
+        # Link the Blender source folder to Blender's extensions directory
         os.symlink(SOURCE_DIR, target_dir, target_is_directory=True)
 
-        # 2. Link the Core library INTO the source folder so imports work in dev mode
+        # Link the Core library into the source folder so imports work in dev mode
         # This mirrors the production build structure: core/
         core_link_target = SOURCE_DIR / "core"
 

@@ -122,3 +122,63 @@ class TestSensorOperators:
             scene = None
 
         assert op.execute(MockContextNoScene()) == {"CANCELLED"}
+
+    def test_create_sensor_no_link_resolved(self, scene, blender_context) -> None:
+        """Execute cancels if the active object has no link props and no parent link."""
+        from tests.blender_test_utils import create_mesh_object
+
+        loose = create_mesh_object("unrelated", scene)
+        bpy.context.view_layer.objects.active = loose
+        loose.select_set(True)
+
+        op = LINKFORGE_OT_create_sensor()
+        res = op.execute(bpy.context)
+        assert res == {"CANCELLED"}
+
+    def test_delete_sensor_no_active_object(self, blender_context) -> None:
+        """Delete sensor returns CANCELLED with no active object."""
+        bpy.context.view_layer.objects.active = None
+
+        op = LINKFORGE_OT_delete_sensor()
+        res = op.execute(bpy.context)
+        assert res == {"CANCELLED"}
+
+    def test_delete_sensor_poll_none_active(self, blender_context) -> None:
+        """Poll returns False with no active object."""
+        bpy.context.view_layer.objects.active = None
+        assert not LINKFORGE_OT_delete_sensor.poll(bpy.context)
+
+    def test_create_sensor_parent_not_robot_link(self, scene, blender_context) -> None:
+        """Create sensor cancels if child has link props but neither child nor parent is robot link."""
+        from tests.blender_test_utils import create_mesh_object
+
+        parent_mesh = create_mesh_object("p_mesh", scene)
+        child_mesh = create_mesh_object("c_mesh", scene)
+        child_mesh.parent = parent_mesh
+        # child has linkforge property but is_robot_link is False
+        bpy.context.view_layer.objects.active = child_mesh
+
+        op = LINKFORGE_OT_create_sensor()
+        res = op.execute(bpy.context)
+        assert res == {"CANCELLED"}
+
+    def test_sensor_ops_register_unregister(self, monkeypatch) -> None:
+        """Test register with ValueError retry and unregister."""
+        from linkforge.blender.operators import sensor_ops
+
+        sensor_ops.register()
+        sensor_ops.unregister()
+
+        # Simulate ValueError during register to exercise the except branch
+        first_call = True
+        orig_register = bpy.utils.register_class
+
+        def mock_register(cls):
+            nonlocal first_call
+            if first_call:
+                first_call = False
+                raise ValueError("Already registered")
+            orig_register(cls)
+
+        monkeypatch.setattr(bpy.utils, "register_class", mock_register)
+        sensor_ops.register()
