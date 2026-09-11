@@ -81,7 +81,7 @@ def create_material_from_color(
 
     """
     if name in context.data.materials:
-        return context.data.materials[name]
+        return typing.cast(bpy.types.Material, context.data.materials[name])
 
     mat = context.data.materials.new(name=name)
     mat.use_nodes = True
@@ -100,7 +100,7 @@ def create_material_from_color(
 
         links.new(node_principled.outputs[0], node_output.inputs[0])
 
-    return mat
+    return typing.cast(bpy.types.Material, mat)
 
 
 def create_primitive_mesh(
@@ -637,7 +637,7 @@ def create_link_object(
         props.use_material = True
         # Material name will come from Blender material assigned to visual child
 
-    return link_obj
+    return typing.cast(bpy.types.Object, link_obj)
 
 
 def create_joint_object(
@@ -792,7 +792,7 @@ def create_joint_object(
     # Empties are always visible in viewport, hide from render only
     empty.hide_render = True
 
-    return empty
+    return typing.cast(bpy.types.Object, empty)
 
 
 def create_sensor_object(
@@ -927,7 +927,7 @@ def create_sensor_object(
 
     empty.hide_render = True
 
-    return empty
+    return typing.cast(bpy.types.Object, empty)
 
 
 def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:

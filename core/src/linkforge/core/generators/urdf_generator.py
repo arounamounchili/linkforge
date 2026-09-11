@@ -50,7 +50,7 @@ from typing import Any
 from .. import __version__
 from .._utils.math_utils import format_float, format_vector
 from .._utils.xml_utils import create_xml_element, serialize_xml, xml_add_text
-from ..base import RobotGeneratorError
+from ..exceptions import RobotGeneratorError
 from ..logging_config import get_logger
 from ..models.gazebo import GazeboElement, GazeboPlugin
 from ..models.geometry import Transform
