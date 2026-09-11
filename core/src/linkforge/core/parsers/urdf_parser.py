@@ -1063,12 +1063,12 @@ class URDFParser(RobotXMLParser[Robot]):
 
                     elif tag == "gazebo":
                         try:
-                            # 1. Try to extract a sensor if present
+                            # Extract a sensor if present
                             sensor = self._parse_sensor_from_gazebo(elem)
                             if sensor:
                                 delayed_sensors.append(sensor)
 
-                            # 2. Extract physics fields (regardless of sensor presence)
+                            # Extract physics fields (regardless of sensor presence)
                             physics_data = {
                                 "mu": parse_optional_float(elem, "mu1", default=None),
                                 "mu2": parse_optional_float(elem, "mu2", default=None),
@@ -1080,7 +1080,7 @@ class URDFParser(RobotXMLParser[Robot]):
                             # Filter out None values
                             physics_data = {k: v for k, v in physics_data.items() if v is not None}
 
-                            # 3. Extract other Gazebo metadata (plugins, material, properties)
+                            # Extract other Gazebo metadata (plugins, material, properties)
                             gazebo_elem = self._parse_gazebo_element(elem)
                             delayed_gazebo_elements.append((gazebo_elem, physics_data))
                         except (RobotModelError, ValueError) as e:
@@ -1128,7 +1128,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         for gazebo_elem, physics_data in delayed_gazebo_elements:
             try:
-                # 1. Apply physics data to link if reference is a link
+                # Apply physics data to link if reference is a link
                 if gazebo_elem.reference and robot.has_link(gazebo_elem.reference):
                     link = robot.link(gazebo_elem.reference)
                     # Create updated physics object (cast for replace compatibility)
@@ -1136,7 +1136,7 @@ class URDFParser(RobotXMLParser[Robot]):
                     # Replace link with updated physics
                     robot.add_link(replace(link, physics=new_physics), overwrite=True)
 
-                # 2. Add gazebo element if it has unique data (plugins, material, etc.)
+                # Add gazebo element if it has unique data (plugins, material, etc.)
                 # We skip "empty" gazebo elements that only contained physics
                 if (
                     gazebo_elem.plugins

@@ -798,7 +798,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             empty.rotation_mode = "XYZ"
 
             # Parent mesh to Empty with STRICT properties for model compatibility:
-            # 1. Clear existing parent relationships (e.g. from previous imports) to prevent dependency cycles
+            # Clear existing parent relationships (e.g. from previous imports) to prevent dependency cycles
             mesh_obj.parent_type = "OBJECT"
             mesh_obj.parent_bone = ""
 
@@ -807,9 +807,9 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
                 if mod.type == "ARMATURE":
                     mesh_obj.modifiers.remove(mod)
 
-            # 2. Parent Inverse = Identity (No hidden transforms)
-            # 3. Local Location/Rotation = 0 (Visual matches Link frame)
-            # 4. Local Scale = Original Mesh Scale (Preserves visual size)
+            # Parent Inverse = Identity (No hidden transforms)
+            # Local Location/Rotation = 0 (Visual matches Link frame)
+            # Local Scale = Original Mesh Scale (Preserves visual size)
 
             mesh_obj.parent = empty
             mesh_obj.matrix_parent_inverse.identity()

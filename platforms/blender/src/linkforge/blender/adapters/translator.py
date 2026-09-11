@@ -106,7 +106,7 @@ class LinkTranslator:
         # Use provided LinkBuilder or create a new one
         active_lb = lb if lb else builder.link(link_name)
 
-        # 1. Translate visuals
+        # Translate visuals
         for child in obj.children:
             if SUFFIX_VISUAL in child.name:
                 mat = get_object_material(child, props)
@@ -141,7 +141,7 @@ class LinkTranslator:
                         child, link_name, PURPOSE_VISUAL, validation_result, depsgraph=depsgraph
                     )
 
-        # 2. Translate collisions
+        # Translate collisions
         for child in obj.children:
             if SUFFIX_COLLISION in child.name:
                 suffix = self._get_geom_suffix(child, obj, SUFFIX_COLLISION, sanitize_name)
@@ -176,7 +176,7 @@ class LinkTranslator:
                         child, link_name, PURPOSE_COLLISION, validation_result, depsgraph=depsgraph
                     )
 
-        # 3. Translate Physics (Inertia & Mass)
+        # Translate Physics (Inertia & Mass)
         if (lp := get_link_props(obj)) and lp.use_auto_inertia:
             active_lb.mass(lp.mass)
         else:
@@ -195,7 +195,7 @@ class LinkTranslator:
                 inertia=inertia,
             )
 
-        # 4. Translate Gazebo Physics
+        # Translate Gazebo Physics
         if props.use_simulation_props:
             active_lb.physics(
                 self_collide=props.self_collide,

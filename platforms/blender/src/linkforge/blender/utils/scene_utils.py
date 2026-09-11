@@ -186,22 +186,22 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             # Defensive check: if an operator deleted an object in the same frame,
             # accessing it will raise a ReferenceError. We catch this and invalidate the cache.
             try:
-                # 1. Validate link objects
+                # Validate link objects
                 for link_obj in cached_stats.link_objects.values():
                     _ = link_obj.name
-                # 2. Validate joint objects
+                # Validate joint objects
                 for joint_obj in cached_stats.joint_objects:
                     _ = joint_obj.name
-                # 3. Validate sensor objects
+                # Validate sensor objects
                 for sensor_obj in cached_stats.sensor_objects:
                     _ = sensor_obj.name
-                # 4. Validate transmission objects
+                # Validate transmission objects
                 for trans_obj in cached_stats.transmission_objects:
                     _ = trans_obj.name
-                # 5. Validate geometry objects
+                # Validate geometry objects
                 for geo_info in cached_stats.geometry_stats.values():
                     _ = geo_info[0].name
-                # 6. Validate manual inertia objects
+                # Validate manual inertia objects
                 for manual_obj in cached_stats.manual_inertia_objects:
                     _ = manual_obj.name
 
@@ -406,7 +406,7 @@ def sync_object_collections(
     if not target_obj or not source_obj:
         return
 
-    # 1. Link to all collections where source_obj resides
+    # Link to all collections where source_obj resides
     source_cols = list(source_obj.users_collection)
     if not source_cols:
         return
@@ -415,7 +415,7 @@ def sync_object_collections(
         if target_obj.name not in col.objects:
             col.objects.link(target_obj)
 
-    # 2. Unlink from any collections that source_obj is NOT in
+    # Unlink from any collections that source_obj is NOT in
     # This cleans up the default Scene Collection link if it was created there
     for col in list(target_obj.users_collection):
         if col not in source_cols:

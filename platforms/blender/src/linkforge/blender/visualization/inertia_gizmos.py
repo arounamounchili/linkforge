@@ -80,9 +80,8 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
     com_world_pos = link_matrix @ com_local_pos
 
     # Calculate COM World Rotation
-    # We combine the Link's rotation with the Manual Inertia Rotation
-    # 1. Start with Link Rotation
-    # 2. Apply Manual RPY Rotation (XYZ Euler)
+    # Combine the Link's rotation with the Manual Inertia Rotation
+    # Start with Link Rotation, then apply Manual RPY Rotation (XYZ Euler)
     manual_rot_matrix = (
         Matrix.Rotation(com_local_rot.x, 4, "X")
         @ Matrix.Rotation(com_local_rot.y, 4, "Y")
@@ -110,13 +109,13 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
     line_positions = []
     line_colors = []
 
-    # 1. Draw connecting line from Link Origin to COM (Dashed style simulation)
+    # Draw connecting line from Link Origin to COM (Dashed style simulation)
     # We simulate dashed line by drawing small segments or just a thinner line with lower alpha
     link_origin = link_matrix.translation
     line_positions.extend([link_origin[:], com_world_pos[:]])
     line_colors.extend([(1.0, 1.0, 1.0, 0.5), (1.0, 1.0, 1.0, 0.5)])  # Semi-transparent white
 
-    # 2. Draw Principal Axes at COM
+    # Draw Principal Axes at COM
     for axis_name, local_dir in axes.items():
         # Rotate axis to world space
         world_dir = inertia_rotation_world @ local_dir
@@ -127,7 +126,7 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
         line_positions.extend([com_world_pos[:], end_pos[:]])
         line_colors.extend([colors[axis_name], colors[axis_name]])
 
-    # 3. Draw Center of Mass Sphere (Standard Robotics Style)
+    # Draw Center of Mass Sphere (Standard Robotics Style)
     # We draw 3 orthogonal rings to form a wireframe sphere
 
     sphere_radius = axis_length * 0.2

@@ -504,21 +504,21 @@ class SceneToRobotTranslator:
 
     def translate(self, raise_on_error: bool = True) -> tuple[Robot, ValidationResult]:
         """Perform the translation and return the built Robot model."""
-        # 1. Categorize scene objects
+        # Categorize scene objects
         link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root = (
             _categorize_scene_objects(self.context.scene)
         )
 
-        # 2. Validate joint definitions (parent/child references, self-loops, duplicates)
+        # Validate joint definitions (parent/child references, self-loops, duplicates)
         self._validate_joint_definitions(joint_objects)
 
-        # 3. Calculate coordinate frames (needed for joint relative origins)
+        # Calculate coordinate frames (needed for joint relative origins)
         link_frames = _calculate_link_frames(link_objects, joints_map, root)
 
-        # 4. Translate Materials globally (Centralized management)
+        # Translate Materials globally (Centralized management)
         self._translate_global_materials(link_objects)
 
-        # 5. Build Kinematic Tree recursively (The "Composer" way)
+        # Build Kinematic Tree recursively (The "Composer" way)
         if root:
             root_name, _ = root
             self._build_link_recursive(root_name, None, link_objects, joints_map, link_frames)
@@ -536,13 +536,13 @@ class SceneToRobotTranslator:
                 code=ValidationErrorCode.NO_ROOT,
             )
 
-        # 6. Translate orphaned components (Sensors, Transmissions)
+        # Translate orphaned components (Sensors, Transmissions)
         self._translate_sensors(sensor_objects, link_frames)
         self._translate_transmissions(transmission_objects)
         self._translate_ros2_control()
         self._translate_scene_gazebo_plugins()
 
-        # 7. Finalize and return
+        # Finalize and return
         try:
             robot = self.builder.build(validate=False)
         except Exception as e:
@@ -687,7 +687,7 @@ class SceneToRobotTranslator:
         obj = link_objects[link_name]
 
         try:
-            # 1. Start link in composer
+            # Start link in composer
             from .translator import JointTranslator, LinkTranslator
 
             if parent_lb is None:
@@ -709,7 +709,7 @@ class SceneToRobotTranslator:
                     link_frames=link_frames,
                 )
 
-            # 2. Configure Link
+            # Configure Link
             link_translator = LinkTranslator()
             link_translator.translate(
                 obj=obj,
@@ -722,14 +722,14 @@ class SceneToRobotTranslator:
                 lb=lb,
             )
 
-            # 3. Recurse to children
+            # Recurse to children
             for child_name, (p_name, _j_obj) in joints_map.items():
                 if p_name == link_name:
                     self._build_link_recursive(
                         child_name, lb, link_objects, joints_map, link_frames
                     )
 
-            # 4. Commit link
+            # Commit link
             lb.commit()
 
         except Exception as e:

@@ -291,8 +291,8 @@ def export_link_mesh(
         col.objects.link(temp_export_obj)
 
     # CRITICAL FIX: Local Fidelity Centering
-    # 1. Bake SCALE into the mesh data (ensures 1.0 scale in URDF)
-    # 2. DO NOT bake rotation (keeps mesh orientations relative to links)
+    # Bake SCALE into the mesh data (ensures 1.0 scale in URDF)
+    # DO NOT bake rotation (keeps mesh orientations relative to links)
     scale_matrix = Matrix.Diagonal((*obj.scale, 1.0))
     temp_export_obj.data.transform(scale_matrix)
     temp_export_obj.scale = (1, 1, 1)

@@ -56,25 +56,25 @@ def on_depsgraph_update_post(_scene: typing.Any, _depsgraph: typing.Any) -> None
         if not getattr(obj, "type", None):
             continue
 
-        # 1. Sync Link identities
+        # Sync Link identities
         if (lf := get_link_props(obj)) and lf.is_robot_link:
             sanitized = sanitize_name(obj.name)
             if sanitized != lf.link_name or obj.name != sanitized:
                 lf.link_name = sanitized
 
-        # 2. Sync Joint identities
+        # Sync Joint identities
         if (jf := get_joint_props(obj)) and jf.is_robot_joint:
             sanitized = sanitize_name(obj.name)
             if sanitized != jf.joint_name or obj.name != sanitized:
                 jf.joint_name = sanitized
 
-        # 3. Sync Sensor identities
+        # Sync Sensor identities
         if (sf := get_sensor_props(obj)) and sf.is_robot_sensor:
             sanitized = sanitize_name(obj.name)
             if sanitized != sf.sensor_name:
                 sf.sensor_name = sanitized
 
-        # 4. Sync Transmission identities
+        # Sync Transmission identities
         if (tf := get_transmission_props(obj)) and tf.is_robot_transmission:
             sanitized = sanitize_name(obj.name)
             if sanitized != tf.transmission_name:

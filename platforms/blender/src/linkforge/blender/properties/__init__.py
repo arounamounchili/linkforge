@@ -52,7 +52,7 @@ def unregister() -> None:
     )
     from .geom_props import PROP_GEOM
 
-    # 1. Unpatch global types first to break references
+    # Unpatch global types first to break references
     obj_props = [PROP_GEOM, PROP_LINK, PROP_JOINT, PROP_SENSOR, PROP_TRANSMISSION]
     scene_props = [PROP_LINK]
 
@@ -63,7 +63,7 @@ def unregister() -> None:
         with contextlib.suppress(AttributeError):
             delattr(bpy.types.Scene, p)
 
-    # 2. Unregister classes in reverse order
+    # Unregister classes in reverse order
     for module in reversed(modules):
         with contextlib.suppress(Exception):
             module.unregister()

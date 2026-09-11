@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from typing import Final
 
-# 1. XML and XACRO Infrastructure
+# XML and XACRO Infrastructure
 # ----------------------------
 
 # Official XACRO namespace URIs (http and https variants, with and without www)
@@ -36,7 +36,7 @@ XACRO_URIS: Final[set[str]] = {
 XACRO_PREFIX: Final[str] = "xacro:"
 
 
-# 2. Numerical Stability (Foundation)
+# Numerical Stability (Foundation)
 # ----------------------------
 
 # General small value for floating point comparisons
@@ -63,7 +63,7 @@ MIN_MASS_STABILITY_THRESHOLD: Final[float] = 0.01  # kg
 MIN_INERTIA_STABILITY_VALUE: Final[float] = 1e-6  # kg·m²
 
 
-# 3. Validation Limits (Guardrails)
+# Validation Limits (Guardrails)
 # ----------------------------
 
 # Maximum absolute value allowed for floats in robot models
@@ -83,7 +83,7 @@ MAX_XML_DEPTH: Final[int] = 2000
 DEGENERATE_VOL_THRESHOLD: Final[float] = 1e-12  # m³
 
 
-# 4. Global Physics Defaults
+# Global Physics Defaults
 # ----------------------------
 
 # Default static/dynamic friction coefficient (Coulomb)
@@ -100,7 +100,7 @@ GRAVITY_ENABLED: Final[bool] = True
 DEFAULT_SELF_COLLIDE: Final[bool] = False
 
 
-# 5. Component Defaults
+# Component Defaults
 # ----------------------------
 
 # --- Link Defaults ---
@@ -159,7 +159,7 @@ DEFAULT_LIDAR_VERTICAL_MIN_ANGLE: Final[float] = 0.0  # rad
 DEFAULT_LIDAR_VERTICAL_MAX_ANGLE: Final[float] = 0.0  # rad
 
 
-# 6. Categorical Standards (URDF & LinkForge Types)
+# Categorical Standards (URDF & LinkForge Types)
 # ----------------------------
 
 # LinkForge IR Version
@@ -225,7 +225,7 @@ DEFAULT_UPDATE_RATE_CONTACT: Final[float] = 50.0  # Hz
 DEFAULT_UPDATE_RATE_FORCE_TORQUE: Final[float] = 100.0  # Hz
 
 
-# 7. Internal Engine Configuration
+# Internal Engine Configuration
 # ----------------------------
 # --- Sensor Config ---
 NOISE_GAUSSIAN: Final[str] = "gaussian"
@@ -242,7 +242,7 @@ FT_DIR_PARENT_TO_CHILD: Final[str] = "parent_to_child"
 DEFAULT_INERTIA_CACHE_SIZE: Final[int] = 512
 
 
-# 8. Platform-Specific Tokens (Gazebo, ROS2, XACRO)
+# Platform-Specific Tokens (Gazebo, ROS2, XACRO)
 # ----------------------------
 
 # Gazebo Sim / Ignition Sensor Type Names
@@ -267,7 +267,7 @@ ROS2_CONTROL_DEFAULT_PLUGIN: Final[str] = "gz_ros2_control/GazeboSimSystem"
 ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN: Final[str] = "gz_ros2_control::GazeboSimROS2ControlPlugin"
 
 
-# 9. XML Formatting Constants
+# XML Formatting Constants
 # ----------------------------
 COMMENT_MATERIALS: Final[str] = " Materials "
 COMMENT_LINKS: Final[str] = " Links "

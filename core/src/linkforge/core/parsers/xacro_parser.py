@@ -914,23 +914,23 @@ class XacroResolver:
         if not text:
             return ""
 
-        # 1. Handle escaping ($$ -> literal $)
+        # Handle escaping ($$ -> literal $)
         sentinel = "\x00LFDOLLAR\x00"
         text = text.replace("$$", sentinel)
 
-        # 2. Resolve $(arg ...)
+        # Resolve $(arg ...)
         text = self._substitute_args(text)
 
-        # 3. Resolve $(env ...) and $(optenv ...)
+        # Resolve $(env ...) and $(optenv ...)
         text = self._substitute_env(text)
 
-        # 4. Resolve $(find ...)
+        # Resolve $(find ...)
         text = self._substitute_find(text)
 
-        # 5. Resolve $(eval ...) and ${...}
+        # Resolve $(eval ...) and ${...}
         result = self._substitute_math(text, sentinel)
 
-        # 6. Restore escaped dollar signs if result is a string
+        # Restore escaped dollar signs if result is a string
         if isinstance(result, str):
             result = result.replace(sentinel, "$")
 
@@ -1114,7 +1114,7 @@ class XacroResolver:
         """
 
         def cleanup(elem: ET.Element) -> None:
-            # 1. Strip attributes: remove all xacro-specific and internal metadata
+            # Strip attributes: remove all xacro-specific and internal metadata
             for attr in list(elem.attrib.keys()):
                 attr_ns = get_xml_namespace(attr)
                 attr_name = strip_xml_namespace(attr)
@@ -1122,11 +1122,11 @@ class XacroResolver:
                 if attr_ns in XACRO_URIS or attr_name.startswith(_PREFIX_XACRO):
                     del elem.attrib[attr]
 
-            # 2. Strip namespace from the tag itself to produce clean output
+            # Strip namespace from the tag itself to produce clean output
             if isinstance(elem.tag, str) and elem.tag.startswith("{"):
                 elem.tag = strip_xml_namespace(elem.tag)
 
-            # 3. Process children: filter out xacro tags and recurse
+            # Process children: filter out xacro tags and recurse
             for child in list(elem):
                 tag = child.tag
                 if not isinstance(tag, str):
