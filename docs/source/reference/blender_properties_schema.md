@@ -36,6 +36,7 @@ When exported to glTF, this attribute name becomes the JSON metadata key.
 | `linkforge` | Link Empty | Link identification, physics, inertia |
 | `linkforge_joint` | Joint Empty (ARROWS) | Joint type, axis, limits, mimic |
 | `linkforge_sensor` | Sensor Empty | Camera, LIDAR, IMU, GPS, Contact, FT |
+| `linkforge_geom` | Mesh Object | Visual/collision geometry role and quality |
 
 > **Note:** `linkforge_control` and `linkforge_robot` are stored on the **Scene**, not on
 > individual objects. They are not exported to glTF Custom Properties.
@@ -74,8 +75,7 @@ Stored on **Link Empty** objects (the parent empty of visual and collision meshe
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `collision_type` | `str` | `"auto"` | Collision shape. One of: `"auto"`, `"box"`, `"sphere"`, `"cylinder"`, `"mesh"` |
-| `collision_quality` | `float` | `50.0` | Mesh simplification level (1–100%). Only used when `collision_type` is `"mesh"` |
+| `active_collision_index` | `int` | `0` | Index of the active collision geometry item in the UI |
 
 ### Material
 
@@ -238,6 +238,16 @@ Stored on **Sensor Empty** objects.
 | `plugin_filename` | `str` | `""` | Plugin `.so` filename (e.g. `libgazebo_ros_camera.so`) |
 
 ---
+
+## `linkforge_geom`: Geometry Properties
+
+Stored directly on child **Mesh** objects (both visual and collision geometry).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `geom_role` | `str` | `"AUTO"` | Geometry role: `"AUTO"` (determined by `_visual`/`_collision` suffix), `"VISUAL"`, or `"COLLISION"` |
+| `geometry_type` | `str` | `"mesh"` | Shape representation: `"box"`, `"cylinder"`, `"sphere"`, or `"mesh"` |
+| `collision_quality` | `float` | `50.0` | Mesh simplification percentage (1–100%). Only used when `geometry_type` is `"mesh"` |
 
 ---
 

@@ -1,5 +1,6 @@
 """Unit tests for URDF generator."""
 
+import logging
 import xml.etree.ElementTree as ET
 from unittest.mock import patch
 
@@ -1720,8 +1721,6 @@ class TestURDFGenerator:
         robot.extra_elements = ("<valid_tag/>", "<<<not valid xml>>>")
 
         gen = URDFGenerator()
-        import logging
-
         with caplog.at_level(logging.WARNING):
             xml = gen.generate(robot, validate=False)
 

@@ -144,44 +144,6 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     assert world_matrix == c_obj.matrix_world
 
 
-def test_detect_primitive_type_box(scene, blender_context) -> None:
-    """Verify that a basic cube mesh is detected as BOX."""
-
-    # Use Blender's real primitive cube (8 verts, 6 quad faces)
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) == "box"
-
-
-def test_detect_primitive_type_sphere(scene, blender_context) -> None:
-    """Verify that a UV sphere is detected as SPHERE."""
-
-    # Use Blender's real UV sphere (default 32 segs x 16 rings = 482 verts, 480 faces)
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0)
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) == "sphere"
-
-
-def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
-    """Verify that a cylinder is detected as CYLINDER."""
-
-    # Use Blender's real cylinder (32 vertices matches the cylinder topology detection range)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.0, depth=3.0)
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) == "cylinder"
-
-
-def test_detect_primitive_type_none_case(scene, blender_context) -> None:
-    """A complex mesh object should return None for primitive detection."""
-    bpy.ops.mesh.primitive_monkey_add()
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) is None
-
-
 def test_blender_joint_to_core_conversion(scene, blender_context) -> None:
     """Verify that a Blender Empty marked as a joint converts correctly to Core Joint."""
     p_obj = create_test_object("parent_l", None, scene)

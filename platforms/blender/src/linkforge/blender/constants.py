@@ -15,29 +15,40 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-# Addon metadata
+# ----------------------------------------------------------------------------
+# Addon Metadata
+# ----------------------------------------------------------------------------
+
 ADDON_ID_DEFAULT: Final[str] = "linkforge"
 
-# Object Suffixes for Robot Components
-# ----------------------------
+
+# ----------------------------------------------------------------------------
+# Object Suffixes & Geometry Purposes
+# ----------------------------------------------------------------------------
+
 # Used for naming child objects representing visual and collision geometry
 SUFFIX_VISUAL: Final[str] = "_visual"
 SUFFIX_COLLISION: Final[str] = "_collision"
 SUFFIX_SENSOR: Final[str] = "_sensor"
 
-# Geometry Purposes
 PURPOSE_VISUAL: Final[str] = "visual"
 PURPOSE_COLLISION: Final[str] = "collision"
 
+
+# ----------------------------------------------------------------------------
 # Metadata Tags (Blender ID Properties)
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 # These keys are used in object['key'] storage for persistence
 TAG_SOURCE_NAME: Final[str] = "source_name"
 TAG_IMPORTED_SOURCE: Final[str] = "imported_from_source"
 TAG_SENSOR_TYPE: Final[str] = "sensor_type"
 
+
+# ----------------------------------------------------------------------------
 # Blender Property Group Identifiers
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 # Used for registration and access via bpy.types.Object.linkforge_...
 PROP_LINK: Final[str] = "linkforge"
 PROP_JOINT: Final[str] = "linkforge_joint"
@@ -45,27 +56,39 @@ PROP_SENSOR: Final[str] = "linkforge_sensor"
 PROP_ROBOT: Final[str] = "linkforge_robot"
 PROP_VALIDATION: Final[str] = "linkforge_validation"
 
+
+# ----------------------------------------------------------------------------
 # File Formats and Extensions
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 FORMAT_STL: Final[str] = "STL"
 FORMAT_OBJ: Final[str] = "OBJ"
 FORMAT_GLB: Final[str] = "GLB"
 
-# UI and Visualization Defaults
-# ----------------------------
+
+# ----------------------------------------------------------------------------
+# UI and Viewport Visualization Defaults
+# ----------------------------------------------------------------------------
+
 # Gizmo sizes for viewport display
 DEFAULT_LINK_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_JOINT_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_SENSOR_GIZMO_SIZE: Final[float] = 0.1
 DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.1
 
+
+# ----------------------------------------------------------------------------
 # Heuristic Thresholds (Primitive Detection)
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 # Maximum allowed face count for a mesh to be considered for primitive detection
 PRIMITIVE_MAX_FACES: Final[int] = 1000
 
+
+# ----------------------------------------------------------------------------
 # Automation and Logic Defaults
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 GEOM_AUTO: Final[str] = "auto"
 
 

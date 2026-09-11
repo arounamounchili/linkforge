@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock
 
 import bpy
+from linkforge.blender import handlers as handlers_pkg
 from linkforge.blender.handlers import name_sync_handler
+from linkforge.blender.utils.property_helpers import safe_set_id_name
 
 from tests.blender_test_utils import (
     cleanup_blender_scene,
@@ -9,6 +11,7 @@ from tests.blender_test_utils import (
     safe_get_joint,
     safe_get_linkforge,
     safe_get_sensor,
+    safe_update,
 )
 
 
@@ -132,8 +135,6 @@ def test_on_depsgraph_update_post_all_branches(scene):
 
 def test_register_unregister():
     """Test register and unregister functions of name_sync_handler and package-level handlers."""
-    from linkforge.blender import handlers as handlers_pkg
-
     # Ensure it's not present initially
     if name_sync_handler.on_depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(name_sync_handler.on_depsgraph_update_post)
@@ -154,7 +155,6 @@ def test_register_unregister():
 
 def test_safe_set_id_name_reference_error():
     """Verify safe_set_id_name and deferred_rename do not crash when StructRNA is removed."""
-    from linkforge.blender.utils.property_helpers import safe_set_id_name
 
     class MockDeleted:
         @property
@@ -191,3 +191,47 @@ def test_safe_set_id_name_reference_error():
     # Execute all scheduled timers in mock
     if hasattr(bpy.app.timers, "run_all"):
         bpy.app.timers.run_all()
+
+
+class TestNameSynchronization:
+    def test_link_name_tracks_object_rename(self, scene, blender_context) -> None:
+        """Test that link_name auto-syncs when Blender renames the object.
+
+        The name_sync_handler deliberately propagates obj.name → link_name
+        so that robot identities stay consistent after Outliner renames.
+        """
+        obj = create_test_object("sync_link", None, scene)
+        lf = safe_get_linkforge(obj)
+        lf.is_robot_link = True
+        lf.link_name = "sync_link"
+
+        # Initial state: names should match
+        assert lf.link_name == "sync_link"
+
+        # Simulate Blender renaming: the handler should propagate the new name
+        obj.name = "sync_link_renamed"
+        safe_update(scene)
+
+        # The handler should have updated link_name to match the new obj.name
+        assert safe_get_linkforge(obj).link_name == "sync_link_renamed"
+
+    def test_joint_name_tracks_object_rename(self, scene, blender_context) -> None:
+        """Test that joint_name auto-syncs when Blender renames the object.
+
+        The name_sync_handler deliberately propagates obj.name → joint_name
+        so that joint identities stay consistent after Outliner renames.
+        """
+        obj = create_test_object("sync_joint", None, scene)
+        jf = safe_get_joint(obj)
+        jf.is_robot_joint = True
+        jf.joint_name = "sync_joint"
+
+        # Initial state: names should match
+        assert jf.joint_name == "sync_joint"
+
+        # Simulate Blender renaming: the handler should propagate the new name
+        obj.name = "sync_joint_renamed"
+        safe_update(scene)
+
+        # The handler should have updated joint_name to match the new obj.name
+        assert safe_get_joint(obj).joint_name == "sync_joint_renamed"

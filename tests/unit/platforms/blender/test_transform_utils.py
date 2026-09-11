@@ -9,7 +9,7 @@ from linkforge.blender.utils.transform_utils import (
     set_parent_keep_transform,
 )
 
-from tests.blender_test_utils import create_test_object
+from tests.blender_test_utils import create_robot_link, create_test_object
 
 # Transform Utilities
 
@@ -88,8 +88,6 @@ class TestTransformUtilities:
 class TestRotationNormalization:
     def test_rotation_mode_normalization(self, scene, blender_context) -> None:
         """Verify that adding a new link frame forces XYZ rotation mode."""
-        from tests.blender_test_utils import create_robot_link
-
         obj = create_robot_link("test_rotation_link", scene)
         assert obj is not None
         assert obj.rotation_mode == "XYZ"

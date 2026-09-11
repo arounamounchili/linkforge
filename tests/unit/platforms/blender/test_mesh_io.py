@@ -376,8 +376,6 @@ class TestMeshExhaustiveCoverage:
         self, mocker, scene, tmp_path
     ) -> None:
         """Verify export_link_mesh performs centering (local_center > EPSILON) and simplification."""
-        from mathutils import Vector
-
         obj = create_mesh_object("complex_mesh", scene=scene, with_cube=True)
         # Shift the bound_box center to (2.0, 2.0, 2.0)
         obj.bound_box = [Vector((2.0, 2.0, 2.0))] * 8
@@ -472,3 +470,19 @@ class TestMeshExhaustiveCoverage:
             obj, "no_data_link", "collision", "STL", tmp_path, simplify=True, decimation_ratio=0.5
         )
         assert filepath is not None
+
+    def test_filename_sanitization(self, tmp_path, scene, blender_context) -> None:
+        """Verify that filename sanitization ensures compatibility."""
+        obj = create_mesh_object("cube_sanitization", scene)
+
+        p, _ = export_link_mesh(
+            obj=obj,
+            link_name="my link.001",
+            geometry_type="visual",
+            mesh_format="STL",
+            meshes_dir=tmp_path,
+            dry_run=True,
+        )
+        assert p is not None
+        assert "my_link_001" in p.name
+        assert " " not in p.name

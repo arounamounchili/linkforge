@@ -18,6 +18,7 @@ from linkforge.blender.properties.geom_props import (
     PROP_GEOM,
 )
 from linkforge.core import Box, Cylinder, Mesh, Sphere
+from mathutils import Matrix
 
 from tests.blender_test_utils import (
     create_mesh_object,
@@ -72,8 +73,6 @@ class TestDetectPrimitiveType:
 class TestGetObjectGeometry:
     def test_get_object_geometry_none_and_empty(self, scene) -> None:
         """Verify None object returns (None, Identity) and non-mesh returns (None, matrix_world)."""
-        from mathutils import Matrix
-
         assert get_object_geometry(None) == (None, Matrix.Identity(4))
         empty = create_test_object("empty_geom", None, scene)
         assert get_object_geometry(empty) == (None, empty.matrix_world)

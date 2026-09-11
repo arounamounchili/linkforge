@@ -21,12 +21,17 @@ from linkforge.blender.operators.link_ops import (
     COLLISION_PREVIEW_DEBOUNCE_DELAY,
     LINKFORGE_OT_add_empty_link,
     LINKFORGE_OT_add_material_slot,
+    LINKFORGE_OT_assign_as_collision,
+    LINKFORGE_OT_assign_as_visual,
     LINKFORGE_OT_calculate_inertia,
     LINKFORGE_OT_calculate_inertia_all,
     LINKFORGE_OT_create_link_from_mesh,
     LINKFORGE_OT_generate_collision,
     LINKFORGE_OT_generate_collision_all,
+    LINKFORGE_OT_remove_collision,
     LINKFORGE_OT_remove_link,
+    LINKFORGE_OT_remove_visual,
+    LINKFORGE_OT_set_active_geometry,
     LINKFORGE_OT_toggle_collision_visibility,
     calculate_inertia_for_link,
     execute_collision_preview_update,
@@ -703,7 +708,7 @@ class TestLinkProperties:
 
 
 class TestLinkRobustness:
-    def test_execute_collision_preview_update_branches(self, scene, blender_context) -> None:
+    def test_execute_collision_preview_missing_context(self, scene, blender_context) -> None:
         """Test edge cases in collision preview update."""
         link_obj = create_robot_link("Link", scene)
 
@@ -930,8 +935,6 @@ class TestAssignAsVisual:
 
     def test_assign_visual_execute(self, scene, blender_context) -> None:
         """Assigning a loose mesh as visual child of a link."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_assign_as_visual
-
         link_obj = create_robot_link("target_link", scene, with_visual=False, with_collision=False)
         loose_mesh = create_mesh_object("my_mesh", scene, with_cube=True)
 
@@ -948,8 +951,6 @@ class TestAssignAsVisual:
 
     def test_assign_visual_poll_fails_no_loose_mesh(self, scene, blender_context) -> None:
         """Poll should fail when no loose mesh is selected."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_assign_as_visual
-
         link_obj = create_robot_link("solo_link", scene, with_visual=False, with_collision=False)
         bpy.context.view_layer.objects.active = link_obj
         link_obj.select_set(True)
@@ -958,8 +959,6 @@ class TestAssignAsVisual:
 
     def test_assign_visual_no_link_resolved(self, scene, blender_context) -> None:
         """Execute cancels if no link is resolved."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_assign_as_visual
-
         loose = create_mesh_object("orphan", scene)
         bpy.context.view_layer.objects.active = loose
         loose.select_set(True)
@@ -980,8 +979,6 @@ class TestAssignAsCollision:
 
     def test_assign_collision_execute(self, scene, blender_context) -> None:
         """Assigning a loose mesh as collision child of a link."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_assign_as_collision
-
         link_obj = create_robot_link("col_link", scene, with_visual=False, with_collision=False)
         loose_mesh = create_mesh_object("col_mesh", scene, with_cube=True)
 
@@ -1011,8 +1008,6 @@ class TestSetActiveGeometry:
 
     def test_set_active_visual(self, scene, blender_context) -> None:
         """Set active visual geometry index."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_set_active_geometry
-
         link_obj = create_robot_link("geo_link", scene, with_visual=True, with_collision=True)
         bpy.context.view_layer.objects.active = link_obj
         link_obj.select_set(True)
@@ -1025,8 +1020,6 @@ class TestSetActiveGeometry:
 
     def test_set_active_collision(self, scene, blender_context) -> None:
         """Set active collision geometry index."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_set_active_geometry
-
         link_obj = create_robot_link("geo_link2", scene, with_visual=True, with_collision=True)
         bpy.context.view_layer.objects.active = link_obj
         link_obj.select_set(True)
@@ -1039,8 +1032,6 @@ class TestSetActiveGeometry:
 
     def test_set_active_no_link(self, scene, blender_context) -> None:
         """Returns cancelled when no link is resolved."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_set_active_geometry
-
         bpy.context.view_layer.objects.active = None
         op = LINKFORGE_OT_set_active_geometry()
         op.geometry_type = "VISUAL"
@@ -1060,8 +1051,6 @@ class TestRemoveVisual:
 
     def test_remove_visual_execute(self, scene, blender_context) -> None:
         """Remove a visual child from a link."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_visual
-
         link_obj = create_robot_link("rv_link", scene, with_visual=True, with_collision=False)
         visual_child = link_obj.children[0]
         visual_name = visual_child.name
@@ -1081,8 +1070,6 @@ class TestRemoveVisual:
 
     def test_remove_visual_poll_no_index(self, scene, blender_context) -> None:
         """Poll fails if active_visual_index is negative."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_visual
-
         link_obj = create_robot_link("rv_link2", scene, with_visual=True, with_collision=False)
         lf = safe_get_linkforge(link_obj)
         lf.active_visual_index = -1
@@ -1093,13 +1080,12 @@ class TestRemoveVisual:
         assert not LINKFORGE_OT_remove_visual.poll(bpy.context)
 
     def test_remove_visual_no_link(self, scene, blender_context) -> None:
-        """Execute cancels when no link is resolved."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_visual
-
+        """Execute cancels and poll fails when no link is resolved."""
         bpy.context.view_layer.objects.active = None
+        bpy.context.selected_objects = []
         op = LINKFORGE_OT_remove_visual()
-        res = op.execute(bpy.context)
-        assert res == {"CANCELLED"}
+        assert op.execute(bpy.context) == {"CANCELLED"}
+        assert not LINKFORGE_OT_remove_visual.poll(bpy.context)
 
 
 class TestRemoveCollision:
@@ -1113,8 +1099,6 @@ class TestRemoveCollision:
 
     def test_remove_collision_execute(self, scene, blender_context) -> None:
         """Remove a collision child from a link."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_collision
-
         link_obj = create_robot_link("rc_link", scene, with_visual=False, with_collision=True)
         collision_child = [c for c in link_obj.children if "_collision" in c.name.lower()][0]
 
@@ -1132,13 +1116,12 @@ class TestRemoveCollision:
         assert collision_child.name not in bpy.data.objects
 
     def test_remove_collision_no_link(self, scene, blender_context) -> None:
-        """Execute cancels when no link is resolved."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_collision
-
+        """Execute cancels and poll fails when no link is resolved."""
         bpy.context.view_layer.objects.active = None
+        bpy.context.selected_objects = []
         op = LINKFORGE_OT_remove_collision()
-        res = op.execute(bpy.context)
-        assert res == {"CANCELLED"}
+        assert op.execute(bpy.context) == {"CANCELLED"}
+        assert not LINKFORGE_OT_remove_collision.poll(bpy.context)
 
 
 class TestRemoveLinkWithVisuals:
@@ -1199,16 +1182,12 @@ class TestCalculateInertiaAllBranches:
 
     def test_calculate_inertia_all_no_links(self, scene, blender_context) -> None:
         """Calculate inertia all with no links should report 'no links found'."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_calculate_inertia_all
-
         op = LINKFORGE_OT_calculate_inertia_all()
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
 
     def test_calculate_inertia_all_success(self, scene, blender_context) -> None:
         """Calculate inertia all with valid links should succeed."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_calculate_inertia_all
-
         link1 = create_robot_link("ia_link1", scene, with_visual=True, with_collision=False)
         link2 = create_robot_link("ia_link2", scene, with_visual=True, with_collision=False)
 
@@ -1218,8 +1197,6 @@ class TestCalculateInertiaAllBranches:
 
     def test_calculate_inertia_all_mixed_results(self, scene, blender_context) -> None:
         """Calculate inertia all with some failures."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_calculate_inertia_all
-
         # Create link with visual that has cube (should succeed)
         create_robot_link("ia_ok", scene, with_visual=True, with_collision=False)
         # Create link with empty visual (no geometry — should exercise the failure path)
@@ -1233,7 +1210,6 @@ class TestCalculateInertiaAllBranches:
 
     def test_calculate_inertia_all_no_scene(self) -> None:
         """Calculate inertia all when context has no scene."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_calculate_inertia_all
 
         class MockContextNoScene:
             scene = None
@@ -1243,8 +1219,6 @@ class TestCalculateInertiaAllBranches:
 
     def test_calculate_inertia_all_all_failed(self, scene, monkeypatch) -> None:
         """Calculate inertia all when all links fail."""
-        from linkforge.blender.operators import link_ops
-
         create_robot_link("ia_fail", scene, with_visual=True, with_collision=False)
         monkeypatch.setattr(link_ops, "calculate_inertia_for_link", lambda obj: False)
         op = link_ops.LINKFORGE_OT_calculate_inertia_all()
@@ -1262,8 +1236,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_calculate_inertia_single_fail(self, scene, monkeypatch) -> None:
         """Single link calculate inertia reports warning on failure."""
-        from linkforge.blender.operators import link_ops
-
         link_obj = create_robot_link("single_fail", scene, with_visual=True)
         bpy.context.view_layer.objects.active = link_obj
         bpy.context.selected_objects = [link_obj]
@@ -1273,23 +1245,17 @@ class TestLinkOpsUncoveredBranches:
 
     def test_calculate_inertia_no_active(self, scene) -> None:
         """Calculate inertia returns CANCELLED when no active object."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_calculate_inertia
-
         bpy.context.view_layer.objects.active = None
         op = LINKFORGE_OT_calculate_inertia()
         assert op.execute(bpy.context) == {"CANCELLED"}
 
     def test_generate_collision_no_links(self, scene) -> None:
         """Generate collision returns CANCELLED if no robot links."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_generate_collision
-
         op = LINKFORGE_OT_generate_collision()
         assert op.execute(bpy.context) == {"CANCELLED"}
 
     def test_generate_collision_no_active(self, scene) -> None:
         """Generate collision returns CANCELLED if active object is None."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_generate_collision
-
         create_robot_link("gen_link", scene, with_visual=True)
         bpy.context.view_layer.objects.active = None
         op = LINKFORGE_OT_generate_collision()
@@ -1297,8 +1263,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_generate_collision_no_visuals(self, scene) -> None:
         """Generate collision fails with error if link has no visual mesh."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_generate_collision
-
         link_obj = create_robot_link("virtual_link", scene, with_visual=False, with_collision=False)
         bpy.context.view_layer.objects.active = link_obj
         bpy.context.selected_objects = [link_obj]
@@ -1307,8 +1271,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_generate_collision_creation_failure(self, scene, monkeypatch) -> None:
         """Generate collision fails if collision generator returns None."""
-        from linkforge.blender.operators import link_ops
-
         link_obj = create_robot_link("fail_col_link", scene, with_visual=True, with_collision=False)
         bpy.context.view_layer.objects.active = link_obj
         bpy.context.selected_objects = [link_obj]
@@ -1318,8 +1280,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_assign_as_visual_no_meshes_selected(self, scene) -> None:
         """Assign as visual cancels if only the link itself is selected."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_assign_as_visual
-
         link_obj = create_robot_link("vis_only", scene, with_visual=False)
         bpy.context.view_layer.objects.active = link_obj
         bpy.context.selected_objects = [link_obj]
@@ -1328,8 +1288,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_assign_as_collision_no_meshes_selected(self, scene) -> None:
         """Assign as collision cancels if only the link itself is selected."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_assign_as_collision
-
         link_obj = create_robot_link("col_only", scene, with_visual=False)
         bpy.context.view_layer.objects.active = link_obj
         bpy.context.selected_objects = [link_obj]
@@ -1338,8 +1296,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_assign_as_collision_no_link_resolved(self, scene) -> None:
         """Assign as collision cancels if active is loose with no link."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_assign_as_collision
-
         loose = create_mesh_object("orphan_col", scene)
         bpy.context.view_layer.objects.active = loose
         bpy.context.selected_objects = [loose]
@@ -1349,8 +1305,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_remove_visual_multi_adjust_index(self, scene) -> None:
         """Removing last visual of multiple adjusts active_visual_index."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_visual
-
         link_obj = create_robot_link("mv_link", scene, with_visual=True, with_collision=False)
         mesh2 = create_mesh_object("mv_link_visual_1", scene=scene, with_cube=True)
         mesh2.parent = link_obj
@@ -1362,20 +1316,8 @@ class TestLinkOpsUncoveredBranches:
         assert res == {"FINISHED"}
         assert link_obj.linkforge.active_visual_index == 0
 
-    def test_remove_visual_no_link(self, scene) -> None:
-        """Remove visual returns CANCELLED if no link resolved."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_visual
-
-        bpy.context.view_layer.objects.active = None
-        bpy.context.selected_objects = []
-        op = LINKFORGE_OT_remove_visual()
-        assert op.execute(bpy.context) == {"CANCELLED"}
-        assert not LINKFORGE_OT_remove_visual.poll(bpy.context)
-
     def test_remove_collision_multi_adjust_index(self, scene) -> None:
         """Removing last collision of multiple adjusts active_collision_index."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_collision
-
         link_obj = create_robot_link("mc_link", scene, with_visual=False, with_collision=True)
         col2 = create_mesh_object("mc_link_collision_1", scene=scene, with_cube=True)
         col2.parent = link_obj
@@ -1387,20 +1329,8 @@ class TestLinkOpsUncoveredBranches:
         assert res == {"FINISHED"}
         assert link_obj.linkforge.active_collision_index == 0
 
-    def test_remove_collision_no_link(self, scene) -> None:
-        """Remove collision returns CANCELLED if no link resolved."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_remove_collision
-
-        bpy.context.view_layer.objects.active = None
-        bpy.context.selected_objects = []
-        op = LINKFORGE_OT_remove_collision()
-        assert op.execute(bpy.context) == {"CANCELLED"}
-        assert not LINKFORGE_OT_remove_collision.poll(bpy.context)
-
     def test_add_material_slot_link_no_visuals(self, scene) -> None:
         """Add material slot fails when link has no visual mesh."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_add_material_slot
-
         link_obj = create_robot_link("novis_mat", scene, with_visual=False, with_collision=False)
         bpy.context.view_layer.objects.active = link_obj
         op = LINKFORGE_OT_add_material_slot()
@@ -1408,8 +1338,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_add_material_slot_mesh_no_parent(self, scene) -> None:
         """Add material slot cancels when active mesh has no parent."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_add_material_slot
-
         orphan_mesh = create_mesh_object("orphan_mesh", scene)
         bpy.context.view_layer.objects.active = orphan_mesh
         op = LINKFORGE_OT_add_material_slot()
@@ -1417,8 +1345,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_add_material_slot_existing_material(self, scene) -> None:
         """Add material slot reuses material if name already exists."""
-        from linkforge.blender.operators.link_ops import LINKFORGE_OT_add_material_slot
-
         link_obj = create_robot_link("reuse_mat_link", scene, with_visual=True)
         bpy.data.materials.new("reuse_mat_link_material")
         bpy.context.view_layer.objects.active = link_obj
@@ -1427,8 +1353,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_update_collision_quality_realtime_paths(self, scene) -> None:
         """Test realtime collision quality update branches."""
-        from linkforge.blender.operators import link_ops
-
         # None inputs
         link_ops.update_collision_quality_realtime(None, None)
 
@@ -1447,12 +1371,8 @@ class TestLinkOpsUncoveredBranches:
         link_ops.update_collision_quality_realtime(link_obj, col_child)
         assert any(m.type == "DECIMATE" for m in col_child.modifiers)
 
-    def test_execute_collision_preview_update_branches(self, scene) -> None:
+    def test_execute_collision_preview_debounce_timer(self, scene) -> None:
         """Test debounce timer callback branches."""
-        import time
-
-        from linkforge.blender.operators import link_ops
-
         # No pending object
         link_ops._preview_pending_object = None
         assert link_ops.execute_collision_preview_update() is None
@@ -1471,8 +1391,6 @@ class TestLinkOpsUncoveredBranches:
 
     def test_link_ops_register_unregister(self) -> None:
         """Register and unregister link operators."""
-        from linkforge.blender.operators import link_ops
-
         link_ops.register()
         link_ops.unregister()
         link_ops.register()

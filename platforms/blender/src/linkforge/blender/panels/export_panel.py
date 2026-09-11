@@ -53,7 +53,7 @@ class LINKFORGE_PT_export_panel(Panel):
                 box.label(text="Create links in Forge panel to start", icon="FORWARD")
             return
 
-        tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
+        _, root_link, _, links_dict = build_tree_from_stats(stats)
 
         # Get total mass and DOF from pre-calc stats
         total_mass = stats.total_mass

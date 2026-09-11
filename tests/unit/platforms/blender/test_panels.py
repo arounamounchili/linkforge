@@ -11,6 +11,7 @@ import bpy
 import pytest
 from linkforge.blender import panels
 from linkforge.blender.constants import PROP_ROBOT, PROP_VALIDATION
+from linkforge.blender.operators import selection_ops
 from linkforge.blender.operators.selection_ops import (
     LINKFORGE_OT_clear_component_search,
     LINKFORGE_OT_select_root_link,
@@ -882,8 +883,6 @@ class TestRobotOperators:
 
     def test_selection_ops_register_unregister(self, monkeypatch) -> None:
         """Test selection_ops register with retry and unregister."""
-        from linkforge.blender.operators import selection_ops
-
         selection_ops.register()
         selection_ops.unregister()
 

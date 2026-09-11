@@ -45,13 +45,14 @@ def unregister() -> None:
     from ..constants import (
         PROP_JOINT,
         PROP_LINK,
+        PROP_ROBOT,
         PROP_SENSOR,
     )
     from .geom_props import PROP_GEOM
 
     # Unpatch global types first to break references
     obj_props = [PROP_GEOM, PROP_LINK, PROP_JOINT, PROP_SENSOR]
-    scene_props = [PROP_LINK]
+    scene_props = [PROP_ROBOT]
 
     for p in obj_props:
         with contextlib.suppress(AttributeError):

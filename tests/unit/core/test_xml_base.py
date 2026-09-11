@@ -201,8 +201,6 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
 
 def test_xml_base_format_value_bool() -> None:
     """Verify boolean formatting logic in RobotXMLGenerator."""
-    import xml.etree.ElementTree as ET
-    from typing import Any
 
     class MockGen(RobotXMLGenerator):
         def generate(self, robot: Robot, **kwargs: Any) -> str:

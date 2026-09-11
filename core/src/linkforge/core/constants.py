@@ -17,8 +17,9 @@ from __future__ import annotations
 import math
 from typing import Final
 
+# ----------------------------------------------------------------------------
 # XML and XACRO Infrastructure
-# ----------------------------
+# ----------------------------------------------------------------------------
 
 # Official XACRO namespace URIs (http/https, with/without www, and wiki subdomains)
 XACRO_URIS: Final[set[str]] = {
@@ -38,8 +39,9 @@ XACRO_URIS: Final[set[str]] = {
 XACRO_PREFIX: Final[str] = "xacro:"
 
 
+# ----------------------------------------------------------------------------
 # Numerical Stability (Foundation)
-# ----------------------------
+# ----------------------------------------------------------------------------
 
 # General small value for floating point comparisons
 EPSILON: Final[float] = 1e-9
@@ -65,8 +67,9 @@ MIN_MASS_STABILITY_THRESHOLD: Final[float] = 0.01  # kg
 MIN_INERTIA_STABILITY_VALUE: Final[float] = 1e-6  # kg·m²
 
 
+# ----------------------------------------------------------------------------
 # Validation Limits (Guardrails)
-# ----------------------------
+# ----------------------------------------------------------------------------
 
 # Maximum absolute value allowed for floats in robot models
 # 1e18 is safe for stiffness (kp) while preventing simulation-breaking overflows
@@ -85,8 +88,9 @@ MAX_XML_DEPTH: Final[int] = 2000
 DEGENERATE_VOL_THRESHOLD: Final[float] = 1e-12  # m³
 
 
+# ----------------------------------------------------------------------------
 # Global Physics Defaults
-# ----------------------------
+# ----------------------------------------------------------------------------
 
 # Default static/dynamic friction coefficient (Coulomb)
 DEFAULT_FRICTION_MU: Final[float] = 1.0
@@ -102,10 +106,11 @@ GRAVITY_ENABLED: Final[bool] = True
 DEFAULT_SELF_COLLIDE: Final[bool] = False
 
 
+# ----------------------------------------------------------------------------
 # Component Defaults
-# ----------------------------
+# ----------------------------------------------------------------------------
 
-# --- Link Defaults ---
+# Link Defaults
 DEFAULT_LINK_MASS: Final[float] = 1.0  # kg
 DEFAULT_MATERIAL_RGBA: Final[tuple[float, float, float, float]] = (0.7, 0.7, 0.7, 1.0)
 DEFAULT_MATERIAL_RGBA_STR: Final[str] = "0.7 0.7 0.7 1.0"
@@ -123,14 +128,13 @@ DEFAULT_JOINT_FRICTION: Final[float] = 0.0  # N·m
 DEFAULT_JOINT_EFFORT: Final[float] = 10.0  # N or N·m
 DEFAULT_JOINT_VELOCITY: Final[float] = 1.0  # m/s or rad/s
 
-# --- Sensor Defaults ---
-# Common
+# Sensor Defaults (Common)
 DEFAULT_UPDATE_RATE: Final[float] = 30.0  # Hz
 DEFAULT_SENSOR_TYPE: Final[str] = "camera"
 DEFAULT_SENSOR_ALWAYS_ON: Final[bool] = True
 DEFAULT_SENSOR_VISUALIZE: Final[bool] = False
 
-# Camera
+# Camera Defaults
 DEFAULT_CAMERA_FOV: Final[float] = 1.047  # rad (~60 deg)
 DEFAULT_CAMERA_WIDTH: Final[int] = 640  # px
 DEFAULT_CAMERA_HEIGHT: Final[int] = 480  # px
@@ -161,8 +165,9 @@ DEFAULT_LIDAR_VERTICAL_MIN_ANGLE: Final[float] = 0.0  # rad
 DEFAULT_LIDAR_VERTICAL_MAX_ANGLE: Final[float] = 0.0  # rad
 
 
+# ----------------------------------------------------------------------------
 # Categorical Standards (URDF & LinkForge Types)
-# ----------------------------
+# ----------------------------------------------------------------------------
 
 # LinkForge IR Version
 IR_VERSION: Final[str] = "1.1"
@@ -193,12 +198,6 @@ SENSOR_GPS: Final[str] = "gps"
 SENSOR_CONTACT: Final[str] = "contact"
 SENSOR_FORCE_TORQUE: Final[str] = "force_torque"
 
-# Transmission Types
-TRANS_SIMPLE: Final[str] = "simple"
-TRANS_DIFFERENTIAL: Final[str] = "differential"
-TRANS_FOUR_BAR: Final[str] = "four_bar_linkage"
-TRANS_CUSTOM: Final[str] = "custom"
-
 # Hardware Interfaces
 HW_IF_POSITION: Final[str] = "position"
 HW_IF_VELOCITY: Final[str] = "velocity"
@@ -216,20 +215,22 @@ SRDF_VJOIN_FLOATING: Final[str] = "floating"
 
 SRDF_REASON_ADJACENT: Final[str] = "Adjacent"
 
-# Standard fallback names
+# Standard Fallback Names
 UNNAMED_LINK: Final[str] = "unnamed_link"
 UNNAMED_JOINT: Final[str] = "unnamed_joint"
 
-# Sensor Update Rates (Industry standard defaults)
+# Sensor Update Rates (Industry Standard Defaults)
 DEFAULT_UPDATE_RATE_IMU: Final[float] = 100.0  # Hz
 DEFAULT_UPDATE_RATE_GPS: Final[float] = 5.0  # Hz
 DEFAULT_UPDATE_RATE_CONTACT: Final[float] = 50.0  # Hz
 DEFAULT_UPDATE_RATE_FORCE_TORQUE: Final[float] = 100.0  # Hz
 
 
+# ----------------------------------------------------------------------------
 # Internal Engine Configuration
-# ----------------------------
-# --- Sensor Config ---
+# ----------------------------------------------------------------------------
+
+# Sensor Noise & Force-Torque Frames
 NOISE_GAUSSIAN: Final[str] = "gaussian"
 NOISE_GAUSSIAN_QUANTIZED: Final[str] = "gaussian_quantized"
 
@@ -240,12 +241,13 @@ FT_FRAME_SENSOR: Final[str] = "sensor"
 FT_DIR_CHILD_TO_PARENT: Final[str] = "child_to_parent"
 FT_DIR_PARENT_TO_CHILD: Final[str] = "parent_to_child"
 
-# Cache size for inertia calculations
+# Cache Settings
 DEFAULT_INERTIA_CACHE_SIZE: Final[int] = 512
 
 
-# Platform-Specific Tokens (Gazebo, ROS2, XACRO)
-# ----------------------------
+# ----------------------------------------------------------------------------
+# Platform-Specific Tokens (Gazebo, ROS 2, XACRO)
+# ----------------------------------------------------------------------------
 
 # Gazebo Sim / Ignition Sensor Type Names
 GZ_SENSOR_LIDAR: Final[str] = "lidar"
@@ -269,8 +271,10 @@ ROS2_CONTROL_DEFAULT_PLUGIN: Final[str] = "gz_ros2_control/GazeboSimSystem"
 ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN: Final[str] = "gz_ros2_control::GazeboSimROS2ControlPlugin"
 
 
+# ----------------------------------------------------------------------------
 # XML Formatting Constants
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 COMMENT_MATERIALS: Final[str] = " Materials "
 COMMENT_LINKS: Final[str] = " Links "
 COMMENT_JOINTS: Final[str] = " Joints "

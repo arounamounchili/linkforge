@@ -5,7 +5,8 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 import pytest
-from linkforge.core import Ros2Control, Ros2ControlJoint
+from linkforge.core import Ros2Control, Ros2ControlJoint, Ros2ControlSensor
+from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
 
 
 class TestRos2ControlModels:
@@ -29,8 +30,6 @@ class TestRos2ControlModels:
 
     def test_ros2_control_joint_validation_errors(self) -> None:
         """Test validation error branches in Ros2ControlJoint."""
-        from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
-
         # Empty name
         with pytest.raises(RobotValidationError) as exc:
             Ros2ControlJoint(name="")
@@ -57,9 +56,6 @@ class TestRos2ControlModels:
 
     def test_ros2_control_sensor_model(self) -> None:
         """Test Ros2ControlSensor prefix, validation and normalization."""
-        from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
-        from linkforge.core.models.ros2_control import Ros2ControlSensor
-
         # Empty name validation
         with pytest.raises(RobotValidationError) as exc:
             Ros2ControlSensor(name="")
@@ -76,9 +72,6 @@ class TestRos2ControlModels:
 
     def test_ros2_control_validation_errors(self) -> None:
         """Test all validation error boundaries in Ros2Control."""
-        from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
-        from linkforge.core.models.ros2_control import Ros2ControlSensor
-
         with pytest.raises(RobotValidationError) as exc:
             Ros2Control(name="", hardware_plugin="fake")
         assert exc.value.code == ValidationErrorCode.NAME_EMPTY

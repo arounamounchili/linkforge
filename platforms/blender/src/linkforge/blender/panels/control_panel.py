@@ -9,7 +9,6 @@ import bpy
 
 from ..utils.joint_utils import is_control_joint_missing
 from ..utils.property_helpers import get_joint_props, get_robot_props
-from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
 class LINKFORGE_UL_ros2_control_joints(bpy.types.UIList):
@@ -283,10 +282,6 @@ class LINKFORGE_MT_add_control_joint(bpy.types.Menu):
 
         if not (props := get_robot_props(scene)):
             return
-
-        # Get all joints from tree using centralized statistics
-        stats = get_robot_statistics(scene)
-        tree, root_link, joints_dict, links_dict = build_tree_from_stats(stats)
 
         # Get already added joint names and object references
         added_names = {item.name for item in props.ros2_control_joints}

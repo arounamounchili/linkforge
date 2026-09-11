@@ -5,12 +5,14 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import bpy
+from linkforge.blender.operators import sensor_ops
 from linkforge.blender.operators.sensor_ops import (
     LINKFORGE_OT_create_sensor,
     LINKFORGE_OT_delete_sensor,
 )
 
 from tests.blender_test_utils import (
+    create_mesh_object,
     create_robot_link,
     create_test_object,
     safe_get_sensor,
@@ -125,8 +127,6 @@ class TestSensorOperators:
 
     def test_create_sensor_no_link_resolved(self, scene, blender_context) -> None:
         """Execute cancels if the active object has no link props and no parent link."""
-        from tests.blender_test_utils import create_mesh_object
-
         loose = create_mesh_object("unrelated", scene)
         bpy.context.view_layer.objects.active = loose
         loose.select_set(True)
@@ -150,8 +150,6 @@ class TestSensorOperators:
 
     def test_create_sensor_parent_not_robot_link(self, scene, blender_context) -> None:
         """Create sensor cancels if child has link props but neither child nor parent is robot link."""
-        from tests.blender_test_utils import create_mesh_object
-
         parent_mesh = create_mesh_object("p_mesh", scene)
         child_mesh = create_mesh_object("c_mesh", scene)
         child_mesh.parent = parent_mesh
@@ -164,8 +162,6 @@ class TestSensorOperators:
 
     def test_sensor_ops_register_unregister(self, monkeypatch) -> None:
         """Test register with ValueError retry and unregister."""
-        from linkforge.blender.operators import sensor_ops
-
         sensor_ops.register()
         sensor_ops.unregister()
 
