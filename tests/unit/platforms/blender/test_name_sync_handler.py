@@ -9,7 +9,6 @@ from tests.blender_test_utils import (
     safe_get_joint,
     safe_get_linkforge,
     safe_get_sensor,
-    safe_get_transmission,
 )
 
 
@@ -101,18 +100,6 @@ def test_on_depsgraph_update_post_all_branches(scene):
     sensor_false.name = "new_sensor_false"
     sp_false.sensor_name = "new_sensor_false"
 
-    trans_true = create_test_object("trans_true", None, scene=scene)
-    tp_true = safe_get_transmission(trans_true, scene)
-    tp_true.is_robot_transmission = True
-    trans_true.name = "new_trans_true"
-    tp_true._values["source_name_stored"] = "different_name"
-
-    trans_false = create_test_object("trans_false", None, scene=scene)
-    tp_false = safe_get_transmission(trans_false, scene)
-    tp_false.is_robot_transmission = True
-    trans_false.name = "new_trans_false"
-    tp_false.transmission_name = "new_trans_false"
-
     # Define mock update objects
     class MockUpdate:
         def __init__(self, id_obj):
@@ -132,8 +119,6 @@ def test_on_depsgraph_update_post_all_branches(scene):
         MockUpdate(joint_false),
         MockUpdate(sensor_true),
         MockUpdate(sensor_false),
-        MockUpdate(trans_true),
-        MockUpdate(trans_false),
     ]
     depsgraph = MockDepsGraph(updates)
 
@@ -143,7 +128,6 @@ def test_on_depsgraph_update_post_all_branches(scene):
     assert lp_true.link_name == "new_link_true"
     assert jp_true.joint_name == "new_joint_true"
     assert sp_true.sensor_name == "new_sensor_true"
-    assert tp_true.transmission_name == "new_trans_true"
 
 
 def test_register_unregister():

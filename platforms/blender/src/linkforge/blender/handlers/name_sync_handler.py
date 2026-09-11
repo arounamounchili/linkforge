@@ -17,7 +17,6 @@ from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
     get_sensor_props,
-    get_transmission_props,
 )
 
 __all__ = [
@@ -73,12 +72,6 @@ def on_depsgraph_update_post(_scene: typing.Any, _depsgraph: typing.Any) -> None
             sanitized = sanitize_name(obj.name)
             if sanitized != sf.sensor_name:
                 sf.sensor_name = sanitized
-
-        # Sync Transmission identities
-        if (tf := get_transmission_props(obj)) and tf.is_robot_transmission:
-            sanitized = sanitize_name(obj.name)
-            if sanitized != tf.transmission_name:
-                tf.transmission_name = sanitized
 
 
 def register() -> None:

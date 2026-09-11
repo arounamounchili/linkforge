@@ -42,8 +42,6 @@ TAG_SENSOR_TYPE: Final[str] = "sensor_type"
 PROP_LINK: Final[str] = "linkforge"
 PROP_JOINT: Final[str] = "linkforge_joint"
 PROP_SENSOR: Final[str] = "linkforge_sensor"
-PROP_TRANSMISSION: Final[str] = "linkforge_transmission"
-PROP_CONTROL: Final[str] = "linkforge_control"
 PROP_ROBOT: Final[str] = "linkforge_robot"
 PROP_VALIDATION: Final[str] = "linkforge_validation"
 
@@ -52,13 +50,6 @@ PROP_VALIDATION: Final[str] = "linkforge_validation"
 FORMAT_STL: Final[str] = "STL"
 FORMAT_OBJ: Final[str] = "OBJ"
 FORMAT_GLB: Final[str] = "GLB"
-
-# Default Names
-# ----------------------------
-DEFAULT_LINK_NAME: Final[str] = "base_link"
-DEFAULT_JOINT_NAME: Final[str] = "joint"
-DEFAULT_SENSOR_NAME: Final[str] = "sensor"
-DEFAULT_ROBOT_NAME: Final[str] = "robot"
 
 # UI and Visualization Defaults
 # ----------------------------
@@ -72,9 +63,6 @@ DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.1
 # ----------------------------
 # Maximum allowed face count for a mesh to be considered for primitive detection
 PRIMITIVE_MAX_FACES: Final[int] = 1000
-
-# Tolerance for geometric comparisons (e.g. vertex alignment)
-GEOM_TOLERANCE: Final[float] = 1e-4
 
 # Automation and Logic Defaults
 # ----------------------------

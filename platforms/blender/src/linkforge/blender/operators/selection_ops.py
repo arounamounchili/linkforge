@@ -1,4 +1,4 @@
-"""UI Panel for robot-level properties and validation."""
+"""Operators for viewport selection and component search."""
 
 from __future__ import annotations
 
@@ -41,7 +41,6 @@ class LINKFORGE_OT_select_tree_object(Operator):
         Returns:
             Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
         """
-        # Find the object
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
@@ -53,7 +52,6 @@ class LINKFORGE_OT_select_tree_object(Operator):
         # Deselect all
         bpy.ops.object.select_all(action="DESELECT")
 
-        # Select and activate the object
         # Select and activate the object
         obj.select_set(True)
         vl = context.view_layer
@@ -151,7 +149,7 @@ classes = [
 
 
 def register() -> None:
-    """Register panel."""
+    """Register operators."""
     for cls in classes:
         try:
             bpy.utils.register_class(cls)
@@ -161,7 +159,7 @@ def register() -> None:
 
 
 def unregister() -> None:
-    """Unregister panel."""
+    """Unregister operators."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):
             bpy.utils.unregister_class(cls)

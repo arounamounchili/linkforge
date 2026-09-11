@@ -522,7 +522,6 @@ RESERVED_RNA_PROPS = {
     "linkforge",
     "linkforge_joint",
     "linkforge_sensor",
-    "linkforge_transmission",
     "linkforge_validation",
     "linkforge_scene",
 }
@@ -534,7 +533,6 @@ DEFAULT_PROPERTY_VALUES = {
     "is_robot_visual": False,
     "is_robot_collision": False,
     "is_robot_sensor": False,
-    "is_robot_transmission": False,
     "is_robot_part": False,
     "mass": 0.0,
     "inertia_ixx": 0.0,
@@ -582,7 +580,6 @@ DEFAULT_PROPERTY_VALUES = {
     "joint_name": "",
     "link_name": "",
     "sensor_name": "",
-    "transmission_name": "",
     "use_material": True,
 }
 
@@ -1095,7 +1092,6 @@ class MockObject(MockPropertyGroup):
     linkforge: MockPropertyGroup
     linkforge_joint: MockPropertyGroup
     linkforge_sensor: MockPropertyGroup
-    linkforge_transmission: MockPropertyGroup
     linkforge_validation: MockPropertyGroup
     linkforge_robot: MockPropertyGroup
 
@@ -1150,10 +1146,6 @@ class MockObject(MockPropertyGroup):
         if not any("linkforge_sensor" in c.__dict__ for c in type(self).__mro__):
             self.linkforge_sensor = MockPropertyGroup(name="linkforge_sensor")
             self.linkforge_sensor.is_robot_sensor = False
-
-        if not any("linkforge_transmission" in c.__dict__ for c in type(self).__mro__):
-            self.linkforge_transmission = MockPropertyGroup(name="linkforge_transmission")
-            self.linkforge_transmission.is_robot_transmission = False
 
         if not any("linkforge_validation" in c.__dict__ for c in type(self).__mro__):
             self.linkforge_validation = MockPropertyGroup(name="linkforge_validation")

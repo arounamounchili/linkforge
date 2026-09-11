@@ -59,6 +59,24 @@ class RobotBuilder:
         self._active_link_builders: list[LinkBuilder] = []
         self._parent_stack: list[str] = []
 
+    def register_link_builder(self, builder: LinkBuilder) -> None:
+        """Register an active LinkBuilder with this composer."""
+        self._active_link_builders.append(builder)
+
+    def push_parent(self, name: str) -> None:
+        """Push a parent link name onto the hierarchy context stack."""
+        self._parent_stack.append(name)
+
+    def pop_parent(self, name: str | None = None) -> None:
+        """Pop a parent link name from the hierarchy context stack."""
+        if name is not None:
+            if self._parent_stack and self._parent_stack[-1] == name:
+                self._parent_stack.pop()
+            elif name in self._parent_stack:
+                self._parent_stack.remove(name)
+        elif self._parent_stack:
+            self._parent_stack.pop()
+
     def link(
         self, name: str, parent: str | None = None, joint_name: str | None = None
     ) -> LinkBuilder:

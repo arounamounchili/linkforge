@@ -38,11 +38,6 @@ User actions and commands.
    :members:
    :undoc-members:
    :show-inheritance:
-
-.. automodule:: linkforge.blender.operators.transmission_ops
-   :members:
-   :undoc-members:
-   :show-inheritance:
 ```
 
 ## Panels
@@ -112,11 +107,6 @@ Blender scene properties for storing robot data.
    :show-inheritance:
 
 .. automodule:: linkforge.blender.properties.control_props
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: linkforge.blender.properties.transmission_props
    :members:
    :undoc-members:
    :show-inheritance:

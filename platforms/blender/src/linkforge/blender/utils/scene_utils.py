@@ -5,13 +5,14 @@ from __future__ import annotations
 import contextlib
 import os
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, overload
+from typing import Any
 
 import bpy
 
 from ..constants import (
     SUFFIX_COLLISION,
 )
+from ..core._utils.dict_utils import filter_items_by_name as filter_items_by_name
 from ..core.constants import (
     GEOM_BOX,
     GEOM_CYLINDER,
@@ -28,12 +29,7 @@ from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
     get_sensor_props,
-    get_transmission_props,
 )
-
-K = TypeVar("K")
-V = TypeVar("V")
-T = TypeVar("T")
 
 
 def is_robot_link(obj: Any) -> bool:
@@ -81,22 +77,6 @@ def is_robot_sensor(obj: Any) -> bool:
     )
 
 
-def is_robot_transmission(obj: Any) -> bool:
-    """Check if blender obj is a robot_transmission.
-
-    Args:
-        obj: Blender object to check
-
-    Returns:
-        True if object has linkforge_transmission properties marked as robot_transmission
-    """
-    return (
-        getattr(obj, "type", None) == "EMPTY"
-        and (props := get_transmission_props(obj)) is not None
-        and props.is_robot_transmission
-    )
-
-
 @dataclass(frozen=True)
 class RobotSceneStatistics:
     """Statistics/Properties about robot components within a scene.
@@ -108,7 +88,6 @@ class RobotSceneStatistics:
         link_objects: Mapping of robot_link names to their corresponding blender objects
         joint_objects: List of all robot_joint objects in scene
         sensor_objects: List of all robot_sensor objects in scene
-        transmission_objects: List of all robot_transmission objects in scene
         root_link: Tuple of (link_name, object) for root link, or None if not found
     """
 
@@ -118,7 +97,6 @@ class RobotSceneStatistics:
     link_objects: dict[str, Any]
     joint_objects: list[Any]
     sensor_objects: list[Any]
-    transmission_objects: list[Any]
     root_link: tuple[str, Any] | None
     # Map from child link name -> (parent link name, joint object)
     joints_map: dict[str, tuple[str, Any]] = field(default_factory=dict)
@@ -165,7 +143,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
     link_objects: dict[str, Any] = {}
     joint_objects: list[Any] = []
     sensor_objects: list[Any] = []
-    transmission_objects: list[Any] = []
     obj_count = 0
 
     if scene:
@@ -195,9 +172,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
                 # Validate sensor objects
                 for sensor_obj in cached_stats.sensor_objects:
                     _ = sensor_obj.name
-                # Validate transmission objects
-                for trans_obj in cached_stats.transmission_objects:
-                    _ = trans_obj.name
                 # Validate geometry objects
                 for geo_info in cached_stats.geometry_stats.values():
                     _ = geo_info[0].name
@@ -224,7 +198,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             link_objects={},
             joint_objects=[],
             sensor_objects=[],
-            transmission_objects=[],
             root_link=None,
             joints_map={},
             geometry_stats={},
@@ -294,9 +267,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
         if is_robot_sensor(obj):
             sensor_objects.append(obj)
 
-        if is_robot_transmission(obj):
-            transmission_objects.append(obj)
-
     # get root link (link that is not a child in any joint)
     for link_name, obj in link_objects.items():
         if link_name not in joints_map:
@@ -310,7 +280,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
         link_objects=link_objects,
         joint_objects=joint_objects,
         sensor_objects=sensor_objects,
-        transmission_objects=transmission_objects,
         root_link=root_link,
         joints_map=joints_map,
         geometry_stats=geometry_stats,
@@ -420,35 +389,3 @@ def sync_object_collections(
     for col in list(target_obj.users_collection):
         if col not in source_cols:
             col.objects.unlink(target_obj)
-
-
-@overload
-def filter_items_by_name(items: dict[K, V], search_term: str | None) -> dict[K, V]: ...
-
-
-@overload
-def filter_items_by_name(items: list[T], search_term: str | None) -> list[T]: ...
-
-
-def filter_items_by_name(
-    items: dict[Any, Any] | list[Any],
-    search_term: str | None,
-) -> dict[Any, Any] | list[Any]:
-    """Filter items by case-insensitive substring matching for UI display.
-
-    For dictionaries: filters by key names.
-    For lists: filters by object 'name' attribute.
-    """
-    if not search_term or not search_term.strip():
-        return items
-
-    term = search_term.lower().strip()
-    if isinstance(items, dict):
-        return {k: v for k, v in items.items() if term in str(k).lower()}
-    if isinstance(items, list):
-        return [
-            item
-            for item in items
-            if hasattr(item, "name") and term in str(getattr(item, "name", "")).lower()
-        ]
-    return items

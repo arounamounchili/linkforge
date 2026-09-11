@@ -17,8 +17,6 @@ class IComposer(Protocol):
     """Interface for a builder that can contain and manage links."""
 
     robot: Robot
-    _active_link_builders: list[LinkBuilder]
-    _parent_stack: list[str]
 
     def link(
         self, name: str, parent: str | None = None, joint_name: str | None = None
@@ -34,4 +32,16 @@ class IComposer(Protocol):
 
     def build(self, validate: bool = True) -> Robot:
         """Finalize the assembly and return the completed Robot model."""
+        ...
+
+    def register_link_builder(self, builder: LinkBuilder) -> None:
+        """Register an active LinkBuilder with this composer."""
+        ...
+
+    def push_parent(self, name: str) -> None:
+        """Push a parent link name onto the hierarchy context stack."""
+        ...
+
+    def pop_parent(self, name: str | None = None) -> None:
+        """Pop a parent link name from the hierarchy context stack."""
         ...

@@ -15,7 +15,8 @@ from ..constants import (
     PROP_LINK,
     PROP_ROBOT,
     PROP_SENSOR,
-    PROP_TRANSMISSION,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
 )
 
 if TYPE_CHECKING:
@@ -23,9 +24,6 @@ if TYPE_CHECKING:
     from ..properties.link_props import LinkPropertyGroup
     from ..properties.robot_props import RobotPropertyGroup
     from ..properties.sensor_props import SensorPropertyGroup
-    from ..properties.transmission_props import (
-        TransmissionPropertyGroup,
-    )
 
 
 def find_property_owner(context: Context, property_group: Any, property_attr: str) -> Any | None:
@@ -101,18 +99,6 @@ def get_sensor_props(obj: bpy.types.Object | None) -> SensorPropertyGroup | None
     return cast("SensorPropertyGroup | None", getattr(obj, PROP_SENSOR, None))
 
 
-def get_transmission_props(
-    obj: bpy.types.Object | None,
-) -> TransmissionPropertyGroup | None:
-    """Type-safe access to LinkForge transmission properties on a Blender object."""
-    if obj is None:
-        return None
-    return cast(
-        "TransmissionPropertyGroup | None",
-        getattr(obj, PROP_TRANSMISSION, None),
-    )
-
-
 def get_robot_props(scene: bpy.types.Scene | None) -> RobotPropertyGroup | None:
     """Type-safe access to LinkForge robot properties on a Blender scene."""
     if scene is None:
@@ -183,3 +169,29 @@ def safe_set_id_name(id_data: Any, sanitized_name: str) -> None:
             bpy.app.timers.register(deferred_rename, first_interval=0.01)
         else:
             PENDING_RENAMES.append((id_data, sanitized_name))
+
+
+def should_rename_child(child_name: str, parent_old_name: str) -> bool:
+    """Check if a child object was auto-named by LinkForge and should be synced.
+
+    Only renames if the child follows the exact [parent_old_name]_visual or
+    [parent_old_name]_collision convention. Custom names are preserved.
+
+    Args:
+        child_name: Current name of the child object.
+        parent_old_name: The previous name of the parent link before the current rename.
+
+    Returns:
+        True if the child is a standard LinkForge visual/collision object that should be renamed.
+    """
+    prefix_v = f"{parent_old_name}{SUFFIX_VISUAL}"
+    prefix_c = f"{parent_old_name}{SUFFIX_COLLISION}"
+
+    is_visual = child_name.startswith(prefix_v) and (
+        len(child_name) == len(prefix_v) or child_name[len(prefix_v)] in "._"
+    )
+    is_collision = child_name.startswith(prefix_c) and (
+        len(child_name) == len(prefix_c) or child_name[len(prefix_c)] in "._"
+    )
+
+    return is_visual or is_collision

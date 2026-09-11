@@ -91,13 +91,11 @@ def resolve_package_path(
 
 
 def _extract_package_name(xml_path: Path) -> str | None:
-    """Extract <name> from package.xml using regex for performance."""
+    """Extract <name> from package.xml."""
     try:
-        # Lightweight scan of the beginning of the file
-        with open(xml_path, encoding="utf-8") as f:
-            content = f.read(1024)
-            match = re.search(r"<name>(.*?)</name>", content)
-            return match.group(1).strip() if match else None
+        content = xml_path.read_text(encoding="utf-8")
+        match = re.search(r"<name>(.*?)</name>", content)
+        return match.group(1).strip() if match else None
     except Exception:
         return None
 

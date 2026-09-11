@@ -11,8 +11,8 @@ from ..core.constants import (
     JOINT_REVOLUTE,
 )
 from ..properties.link_props import sanitize_name
-from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.mode_guard import context_and_mode_guard
 from ..utils.property_helpers import get_joint_props, get_link_props, get_robot_props
 from ..utils.scene_utils import clear_stats_cache
 

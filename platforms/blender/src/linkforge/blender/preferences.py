@@ -6,6 +6,7 @@ User preferences for controlling visualization and behavior.
 from __future__ import annotations
 
 import contextlib
+from typing import Any
 
 import bpy
 from bpy.props import BoolProperty, FloatProperty, StringProperty
@@ -28,66 +29,51 @@ def update_joint_axes_visibility(_self: LinkForgePreferences, _context: Context)
     joint_gizmos.update_viz_handle(_context)
 
 
-def update_joint_empty_size(self: LinkForgePreferences, context: Context) -> None:
-    """Callback when joint_empty_size changes - update all joint empties and viewport."""
-    # From here, we also need to trigger the draw handler update check
-    # so the GPU overlay picks up the new size immediately
-    from .visualization import joint_gizmos
-
-    joint_gizmos.update_viz_handle(context)
-
-    # Update all existing joint empties in the scene
-    if context.scene:
-        for obj in context.scene.objects:
-            if obj.type == "EMPTY" and (props := get_joint_props(obj)) and props.is_robot_joint:
-                obj.empty_display_size = self.joint_empty_size
-
-    # Force viewport redraw
+def _tag_all_3d_viewports_redraw(context: Context) -> None:
+    """Force redraw of all 3D Viewport areas across all windows."""
     if context.window_manager:
         for window in context.window_manager.windows:
             for area in window.screen.areas:
                 if area.type == "VIEW_3D":
                     area.tag_redraw()
+
+
+def _update_empties_display_size(
+    context: Context,
+    new_size: float,
+    prop_getter: Any,
+    flag_attr: str,
+) -> None:
+    """Update empty_display_size for matching empty objects in the scene."""
+    if context.scene:
+        for obj in context.scene.objects:
+            if (
+                obj.type == "EMPTY"
+                and (props := prop_getter(obj))
+                and getattr(props, flag_attr, False)
+            ):
+                obj.empty_display_size = new_size
+    _tag_all_3d_viewports_redraw(context)
+
+
+def update_joint_empty_size(self: LinkForgePreferences, context: Context) -> None:
+    """Callback when joint_empty_size changes - update all joint empties and viewport."""
+    from .visualization import joint_gizmos
+
+    joint_gizmos.update_viz_handle(context)
+    _update_empties_display_size(context, self.joint_empty_size, get_joint_props, "is_robot_joint")
 
 
 def update_sensor_empty_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when sensor_empty_size changes - update all sensor empties."""
-
-    # Get new size
-    new_size = self.sensor_empty_size
-
-    # Update all existing sensor empties in the scene
-    if context.scene:
-        for obj in context.scene.objects:
-            if obj.type == "EMPTY" and (props := get_sensor_props(obj)) and props.is_robot_sensor:
-                obj.empty_display_size = new_size
-
-    # Force viewport redraw
-    if context.window_manager:
-        for window in context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.type == "VIEW_3D":
-                    area.tag_redraw()
+    _update_empties_display_size(
+        context, self.sensor_empty_size, get_sensor_props, "is_robot_sensor"
+    )
 
 
 def update_link_empty_size(self: LinkForgePreferences, context: Context) -> None:
     """Callback when link_empty_size changes - update all link empties."""
-
-    # Get new size
-    new_size = self.link_empty_size
-
-    # Update all existing link empties in the scene
-    if context.scene:
-        for obj in context.scene.objects:
-            if obj.type == "EMPTY" and (props := get_link_props(obj)) and props.is_robot_link:
-                obj.empty_display_size = new_size
-
-    # Force viewport redraw
-    if context.window_manager:
-        for window in context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.type == "VIEW_3D":
-                    area.tag_redraw()
+    _update_empties_display_size(context, self.link_empty_size, get_link_props, "is_robot_link")
 
 
 def update_inertia_visibility(_self: LinkForgePreferences, _context: Context) -> None:

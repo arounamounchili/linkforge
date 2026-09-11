@@ -11,6 +11,11 @@ import bpy
 import pytest
 from linkforge.blender import panels
 from linkforge.blender.constants import PROP_ROBOT, PROP_VALIDATION
+from linkforge.blender.operators.selection_ops import (
+    LINKFORGE_OT_clear_component_search,
+    LINKFORGE_OT_select_root_link,
+    LINKFORGE_OT_select_tree_object,
+)
 from linkforge.blender.panels import (
     register as panels_register,
 )
@@ -26,11 +31,6 @@ from linkforge.blender.panels.export_panel import LINKFORGE_PT_export_panel
 from linkforge.blender.panels.forge_panel import LINKFORGE_PT_forge
 from linkforge.blender.panels.joint_panel import LINKFORGE_PT_joints
 from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
-from linkforge.blender.panels.robot_panel import (
-    LINKFORGE_OT_clear_component_search,
-    LINKFORGE_OT_select_root_link,
-    LINKFORGE_OT_select_tree_object,
-)
 from linkforge.blender.panels.sensor_panel import LINKFORGE_PT_perceive
 from linkforge.blender.properties.control_props import (
     Ros2ControlJointProperty,
@@ -860,7 +860,7 @@ class TestRobotOperators:
         mock_ctx.view_layer = None
         assert op.execute(mock_ctx) == {"FINISHED"}
 
-        with patch("linkforge.blender.panels.robot_panel.build_tree_from_stats") as mock_build:
+        with patch("linkforge.blender.operators.selection_ops.build_tree_from_stats") as mock_build:
             mock_build.return_value = (None, "nonexistent_root", {}, {})
             assert op.execute(bpy.context) == {"FINISHED"}
 
@@ -893,7 +893,6 @@ class TestRobotOperators:
                 "forge_panel",
                 "joint_panel",
                 "link_panel",
-                "robot_panel",
                 "sensor_panel",
             ]:
                 module = getattr(panels, name)
@@ -942,7 +941,6 @@ class TestGlobalPanels:
             "forge_panel",
             "joint_panel",
             "link_panel",
-            "robot_panel",
             "sensor_panel",
         ]:
             module = getattr(panels, name)

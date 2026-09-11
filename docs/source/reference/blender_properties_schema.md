@@ -36,7 +36,6 @@ When exported to glTF, this attribute name becomes the JSON metadata key.
 | `linkforge` | Link Empty | Link identification, physics, inertia |
 | `linkforge_joint` | Joint Empty (ARROWS) | Joint type, axis, limits, mimic |
 | `linkforge_sensor` | Sensor Empty | Camera, LIDAR, IMU, GPS, Contact, FT |
-| `linkforge_transmission` | Transmission Empty | ROS 2 transmission / gear ratios |
 
 > **Note:** `linkforge_control` and `linkforge_robot` are stored on the **Scene**, not on
 > individual objects. They are not exported to glTF Custom Properties.
@@ -239,34 +238,6 @@ Stored on **Sensor Empty** objects.
 | `plugin_filename` | `str` | `""` | Plugin `.so` filename (e.g. `libgazebo_ros_camera.so`) |
 
 ---
-
-## `linkforge_transmission`: Transmission Properties
-
-Stored on **Transmission Empty** objects. Used for ROS 2 `<transmission>` tags.
-
-### Identification
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `is_robot_transmission` | `bool` | `false` | `true` if this object is a robot transmission |
-| `source_name_stored` | `str` | `""` | Stable robot-model name |
-| `transmission_type` | `str` | `"simple"` | One of: `"simple"`, `"differential"`, `"four_bar_linkage"`, `"custom"` |
-| `custom_type` | `str` | `""` | Custom type identifier (only used when `transmission_type` is `"custom"`) |
-
-### Joints & Actuators
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `joint_name` | `Object pointer` | `None` | Controlled joint (for `"simple"` transmissions) |
-| `joint1_name` | `Object pointer` | `None` | First joint (for `"differential"` transmissions) |
-| `joint2_name` | `Object pointer` | `None` | Second joint (for `"differential"` transmissions) |
-| `hardware_interface` | `str` | `"position"` | ROS 2 Control interface. One of: `"position"`, `"velocity"`, `"effort"` |
-| `mechanical_reduction` | `float` | `1.0` | Gear reduction ratio (actuator / joint) |
-| `offset` | `float` | `0.0` | Joint position offset (radians or meters) |
-| `use_custom_actuator_name` | `bool` | `false` | Use a manually specified actuator name |
-| `actuator_name` | `str` | `""` | Actuator name (when `use_custom_actuator_name` is `true`) |
-| `actuator1_name` | `str` | `""` | First actuator name (for `"differential"` transmissions) |
-| `actuator2_name` | `str` | `""` | Second actuator name (for `"differential"` transmissions) |
 
 ---
 

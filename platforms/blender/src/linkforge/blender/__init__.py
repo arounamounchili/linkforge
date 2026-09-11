@@ -40,17 +40,22 @@ if not _pkg.startswith("bl_ext."):
         pass
 
 
-from . import handlers, operators, panels, preferences, properties  # noqa: E402
-from .visualization import inertia_gizmos, joint_gizmos  # noqa: E402
+from . import (  # noqa: E402
+    handlers,
+    operators,
+    panels,
+    preferences,
+    properties,
+    visualization,
+)
 
-# Registration order matters: properties first, then operators, then panels, then gizmos
+# Registration order matters: properties first, then operators, then panels, then visualization, then handlers
 modules = [
     properties,
     preferences,
     operators,
     panels,
-    joint_gizmos,
-    inertia_gizmos,
+    visualization,
     handlers,
 ]
 

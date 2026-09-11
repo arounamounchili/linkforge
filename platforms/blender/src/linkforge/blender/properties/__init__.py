@@ -15,7 +15,6 @@ from . import (
     link_props,
     robot_props,
     sensor_props,
-    transmission_props,
     validation_props,
 )
 
@@ -25,7 +24,6 @@ modules = [
     link_props,
     joint_props,
     sensor_props,
-    transmission_props,
     control_props,
     robot_props,
     validation_props,
@@ -48,12 +46,11 @@ def unregister() -> None:
         PROP_JOINT,
         PROP_LINK,
         PROP_SENSOR,
-        PROP_TRANSMISSION,
     )
     from .geom_props import PROP_GEOM
 
     # Unpatch global types first to break references
-    obj_props = [PROP_GEOM, PROP_LINK, PROP_JOINT, PROP_SENSOR, PROP_TRANSMISSION]
+    obj_props = [PROP_GEOM, PROP_LINK, PROP_JOINT, PROP_SENSOR]
     scene_props = [PROP_LINK]
 
     for p in obj_props:

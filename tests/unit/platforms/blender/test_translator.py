@@ -10,7 +10,6 @@ from linkforge.blender.adapters.translator import (
     LinkTranslator,
     Ros2ControlTranslator,
     SensorTranslator,
-    TransmissionTranslator,
 )
 from linkforge.core import (
     Box,
@@ -33,7 +32,6 @@ from tests.blender_test_utils import (
     safe_get_linkforge,
     safe_get_linkforge_scene,
     safe_get_sensor,
-    safe_get_transmission,
 )
 
 
@@ -43,7 +41,6 @@ def test_translator_compliance():
         LinkTranslator(),
         JointTranslator(),
         SensorTranslator(),
-        TransmissionTranslator(),
         Ros2ControlTranslator(),
     ]
 
@@ -425,116 +422,6 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     assert control_actuator.joints[0].name == "joint_1"
 
 
-def test_transmission_translator_uncovered_branches(scene, blender_context):
-    """Verify TransmissionTranslator properties check, differential missing joints skip, joint name fallbacks, and translation errors."""
-    cleanup_blender_scene(scene)
-
-    translator = TransmissionTranslator()
-    builder = RobotBuilder("test_robot")
-
-    assert translator._blender_transmission_to_core(None) is None
-
-    trans_obj_disabled = create_test_object("trans_disabled", None, scene=scene)
-    safe_get_transmission(trans_obj_disabled, scene).is_robot_transmission = False
-    assert translator._blender_transmission_to_core(trans_obj_disabled) is None
-
-    trans_obj = create_test_object("test_trans", None, scene=scene)
-    tp = safe_get_transmission(trans_obj, scene)
-    tp.is_robot_transmission = True
-    tp.transmission_type = "DIFFERENTIAL"
-    tp.joint1_name = None
-    tp.joint2_name = None
-
-    assert translator._blender_transmission_to_core(trans_obj) is None
-
-    joint_obj_no_name = create_test_object("joint_without_custom_name", None, scene=scene)
-    jp = safe_get_joint(joint_obj_no_name, scene)
-    jp.is_robot_joint = True
-    jp.joint_name = ""
-
-    simple_trans_obj = create_test_object("simple_trans", None, scene=scene)
-    stp = safe_get_transmission(simple_trans_obj, scene)
-    stp.is_robot_transmission = True
-    stp.transmission_type = "SIMPLE"
-    stp.joint_name = joint_obj_no_name
-    stp.use_custom_actuator_name = False
-
-    trans_model = translator._blender_transmission_to_core(simple_trans_obj)
-    assert trans_model is not None
-    assert trans_model.joints[0].name == "joint_without_custom_name"
-    assert trans_model.actuators[0].name == "joint_without_custom_name_motor"
-
-    # Simple transmission when joint_props is None (via mocking property helper)
-    with patch("linkforge.blender.adapters.translator.get_joint_props", return_value=None):
-        trans_model_fallback = translator._blender_transmission_to_core(simple_trans_obj)
-        assert trans_model_fallback is not None
-        assert trans_model_fallback.joints[0].name == "joint_without_custom_name"
-
-    # Simple transmission when joint_props.joint_name is a non-string object
-    jp.joint_name = 123  # type: ignore
-    trans_model_non_str = translator._blender_transmission_to_core(simple_trans_obj)
-    assert trans_model_non_str is not None
-    assert trans_model_non_str.joints[0].name == "joint_without_custom_name"
-
-    broken_trans_obj = MagicMock()
-    broken_trans_obj.name = "broken_trans"
-    type(broken_trans_obj.linkforge_transmission).is_robot_transmission = PropertyMock(
-        return_value=True
-    )
-    type(broken_trans_obj.linkforge_transmission).transmission_type = PropertyMock(
-        side_effect=RuntimeError("Broken transmission type")
-    )
-
-    val_result = ValidationResult(robot_name="test_robot")
-    translator.translate(broken_trans_obj, builder, validation_result=val_result)
-    assert len(val_result.errors) == 1
-    assert "Transmission translation failed: broken_trans" in val_result.errors[0].title
-
-    # Translate exception with validation_result=None (swallowed/ignored)
-    translator.translate(broken_trans_obj, builder, validation_result=None)
-
-    j1_obj = create_test_object("joint1_obj", None, scene=scene)
-    j1_p = safe_get_joint(j1_obj, scene)
-    j1_p.is_robot_joint = True
-    j1_p.joint_name = "joint_one"
-
-    j2_obj = create_test_object("joint2_obj", None, scene=scene)
-    j2_p = safe_get_joint(j2_obj, scene)
-    j2_p.is_robot_joint = True
-    j2_p.joint_name = "joint_two"
-
-    diff_trans_obj = create_test_object("diff_trans", None, scene=scene)
-    dtp = safe_get_transmission(diff_trans_obj, scene)
-    dtp.is_robot_transmission = True
-    dtp.transmission_type = "DIFFERENTIAL"
-    dtp.joint1_name = j1_obj
-    dtp.joint2_name = j2_obj
-
-    diff_model = translator._blender_transmission_to_core(diff_trans_obj)
-    assert diff_model is not None
-    assert len(diff_model.joints) == 2
-    assert diff_model.joints[0].name == "joint_one"
-    assert diff_model.joints[1].name == "joint_two"
-
-    joint_named_obj = create_test_object("joint_named_obj", None, scene=scene)
-    jp_named = safe_get_joint(joint_named_obj, scene)
-    jp_named.is_robot_joint = True
-    jp_named.joint_name = "my_named_joint"
-
-    named_trans_obj = create_test_object("named_trans_obj", None, scene=scene)
-    ntp = safe_get_transmission(named_trans_obj, scene)
-    ntp.is_robot_transmission = True
-    ntp.transmission_type = "SIMPLE"
-    ntp.joint_name = joint_named_obj
-    ntp.use_custom_actuator_name = True
-    ntp.actuator_name = "my_custom_actuator"
-
-    named_model = translator._blender_transmission_to_core(named_trans_obj)
-    assert named_model is not None
-    assert named_model.joints[0].name == "my_named_joint"
-    assert named_model.actuators[0].name == "my_custom_actuator"
-
-
 def test_ros2_control_sensor_type_no_cmd_ifs(scene, blender_context):
     """Cover sensor hardware type branch when cmd_ifs is empty and state_ifs already set."""
     cleanup_blender_scene(scene)
@@ -588,34 +475,6 @@ def test_joint_translator_planar_type_axis(scene, blender_context):
     joint = builder.robot.get_joint("planar_joint")
     assert joint is not None
     assert joint.type.value == "planar"
-
-
-def test_transmission_custom_type(scene, blender_context):
-    """Cover CUSTOM transmission type (raw_type in TRANS_CUSTOM path, not DIFFERENTIAL).
-
-    Also verifies joint_props.joint_name when it is a valid string (no fallback needed).
-    """
-    cleanup_blender_scene(scene)
-
-    translator = TransmissionTranslator()
-
-    # CUSTOM type with a properly named joint
-    joint_obj = create_test_object("custom_joint_obj", None, scene=scene)
-    jp = safe_get_joint(joint_obj, scene)
-    jp.is_robot_joint = True
-    jp.joint_name = "custom_joint_obj"
-
-    custom_trans_obj = create_test_object("custom_trans_obj", None, scene=scene)
-    ctp = safe_get_transmission(custom_trans_obj, scene)
-    ctp.is_robot_transmission = True
-    # TRANS_CUSTOM = "custom"; .lower() must match
-    ctp.transmission_type = "CUSTOM"
-    ctp.joint_name = joint_obj
-    ctp.use_custom_actuator_name = False
-
-    model = translator._blender_transmission_to_core(custom_trans_obj)
-    assert model is not None
-    assert len(model.joints) == 1
 
 
 def test_link_translator_comprehensive(scene, blender_context):
@@ -1199,92 +1058,6 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     assert "effort" in control.joints[0].command_interfaces
     assert control.joints[0].name == "joint_one_name"
     assert control.joints[1].name == "joint_two_fallback"
-
-
-def test_transmission_translator_comprehensive(scene, blender_context):
-    """Cover all remaining TransmissionTranslator branches (early exits, custom type, custom actuator names, diff transmission)."""
-    cleanup_blender_scene(scene)
-
-    translator = TransmissionTranslator()
-    builder = RobotBuilder("test_trans_robot")
-
-    assert translator._blender_transmission_to_core(None) is None
-
-    builder.robot._joint_index["joint_to_transmit"] = Joint(
-        name="joint_to_transmit",
-        type=JointType.FIXED,
-        parent="link1",
-        child="link2",
-    )
-
-    joint_obj = create_test_object("trans_joint", None, scene=scene)
-    jp = safe_get_joint(joint_obj, scene)
-    jp.is_robot_joint = True
-    jp.joint_name = "joint_to_transmit"
-
-    trans_obj = create_test_object("trans_obj", None, scene=scene)
-    tp = safe_get_transmission(trans_obj, scene)
-    tp.is_robot_transmission = True
-    tp.transmission_name = "custom_trans"
-    tp.transmission_type = "CUSTOM"
-    tp.custom_type = "transmission_interface/CustomTransmission"
-    tp.hardware_interface = "hardware_interface/PositionJointInterface"
-    tp.joint_name = joint_obj
-    tp.use_custom_actuator_name = True
-    tp.actuator_name = "my_custom_actuator"
-    tp.mechanical_reduction = 50.0
-    tp.offset = 0.5
-
-    translator.translate(trans_obj, builder)
-    trans = builder.robot.transmissions[0]
-    assert trans.name == "custom_trans"
-    assert trans.type == "transmission_interface/CustomTransmission"
-    assert trans.joints[0].name == "joint_to_transmit"
-    assert trans.actuators[0].name == "my_custom_actuator"
-
-    # Simple/Custom transmission where potential_name is not a string
-    builder.robot._joint_index["trans_joint_non_str"] = Joint(
-        name="trans_joint_non_str",
-        type=JointType.FIXED,
-        parent="link1",
-        child="link2",
-    )
-    joint_obj_non_str = create_test_object("trans_joint_non_str", None, scene=scene)
-
-    trans_obj_non_str = create_test_object("trans_obj_non_str", None, scene=scene)
-    tp_non_str = safe_get_transmission(trans_obj_non_str, scene)
-    tp_non_str.is_robot_transmission = True
-    tp_non_str.transmission_name = "custom_trans_non_str"
-    tp_non_str.transmission_type = "SIMPLE"
-    tp_non_str.joint_name = joint_obj_non_str
-
-    with patch(
-        "linkforge.blender.adapters.translator.get_joint_props",
-        return_value=types.SimpleNamespace(joint_name=123),
-    ):
-        translator.translate(trans_obj_non_str, builder)
-
-    translator.translate(None, builder)
-
-    cleanup_blender_scene(scene)
-    builder = RobotBuilder("test_trans_robot_simple_no_joint")
-    trans_obj_no_joint = create_test_object("trans_obj_no_joint", None, scene=scene)
-    tp_no_joint = safe_get_transmission(trans_obj_no_joint, scene)
-    tp_no_joint.is_robot_transmission = True
-    tp_no_joint.transmission_name = "trans_no_joint"
-    tp_no_joint.transmission_type = "SIMPLE"
-    tp_no_joint.joint_name = None
-
-    assert translator._blender_transmission_to_core(trans_obj_no_joint) is None
-
-    cleanup_blender_scene(scene)
-    trans_obj_invalid = create_test_object("trans_obj_invalid", None, scene=scene)
-    tp_invalid = safe_get_transmission(trans_obj_invalid, scene)
-    tp_invalid.is_robot_transmission = True
-    tp_invalid.transmission_name = "trans_invalid"
-    tp_invalid.transmission_type = "INVALID_TYPE"
-
-    assert translator._blender_transmission_to_core(trans_obj_invalid) is None
 
 
 def test_ros2_control_translator_missing_joint(scene, blender_context) -> None:

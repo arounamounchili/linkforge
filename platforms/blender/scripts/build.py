@@ -16,14 +16,9 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 import typing
 from pathlib import Path
-
-# Use tomllib (Py3.11+) or fall back to string parsing for manifest metadata
-try:
-    import tomllib
-except ImportError:
-    tomllib = None  # type: ignore[assignment]
 
 # --- Configuration ---
 REPO_ROOT = Path(__file__).resolve().parents[3]  # platforms/blender/scripts/build.py -> root
@@ -55,11 +50,13 @@ def read_manifest_value(key: str) -> str:
     if not MANIFEST_PATH.exists():
         return "0.0.0"
 
-    content = MANIFEST_PATH.read_text()
-    match = re.search(f'^{key}\\s*=\\s*"([^"]+)"', content, re.MULTILINE)
-    if match:
-        return match.group(1)
-    return "0.0.0"
+    try:
+        data = tomllib.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        return str(data.get(key, "0.0.0"))
+    except Exception:
+        content = MANIFEST_PATH.read_text(encoding="utf-8")
+        match = re.search(f'^{key}\\s*=\\s*"([^"]+)"', content, re.MULTILINE)
+        return match.group(1) if match else "0.0.0"
 
 
 def sync_dependencies() -> None:
@@ -207,11 +204,6 @@ def build_extension() -> Path:
         if (REPO_ROOT / f).exists():
             shutil.copy2(REPO_ROOT / f, staging_dir)
 
-    # 5. Transform Absolute Imports to Relative Imports in staging
-    # This ensures absolute 'from linkforge.core' works in dev mode
-    # but becomes relative 'from . import core' or 'from .. import core' in extension mode.
-    transform_to_relative_imports(staging_dir)
-
     print("🚀 Building split-platform packages...")
 
     # Find Blender CLI
@@ -263,40 +255,6 @@ def build_extension() -> Path:
 
     print(f"\n✅ Created split-platform packages in {DIST_DIR}/")
     return DIST_DIR
-
-
-def transform_to_relative_imports(staging_dir: Path) -> None:
-    """Transform absolute imports of linkforge.core to relative imports."""
-    print(f"✨ Transforming absolute imports in {staging_dir}...")
-    count = 0
-    for py_file in staging_dir.rglob("*.py"):
-        rel_path = py_file.relative_to(staging_dir)
-        content = py_file.read_text()
-        new_content = content
-
-        if py_file.name == "__init__.py" and py_file.parent == staging_dir:
-            # Special case for root __init__.py: linkforge.core -> .core
-            new_content = re.sub(r"import linkforge\.core", "from . import core", new_content)
-            new_content = re.sub(r"from linkforge\.core", "from .core", new_content)
-        else:
-            # For all other files, linkforge.core is at the root of the extension
-            depth = len(rel_path.parts) - 1
-            prefix = "." * (depth + 1)
-
-            # Transform 'from linkforge.core import X' -> 'from ..core import X'
-            new_content = re.sub(r"from linkforge\.core", f"from {prefix}core", new_content)
-            # Transform 'import linkforge.core' -> 'from .. import core'
-            new_content = re.sub(
-                r"import linkforge\.core", f"from {prefix} import core", new_content
-            )
-            # Transform 'from linkforge.blender' (which is now the extension root)
-            new_content = re.sub(r"from linkforge\.blender\.", f"from {prefix}", new_content)
-
-        if content != new_content:
-            print(f"  Modified: {rel_path}")
-            py_file.write_text(new_content)
-            count += 1
-    print(f"✅ Transformed {count} files.")
 
 
 def develop_extension() -> None:

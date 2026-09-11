@@ -20,12 +20,14 @@ from typing import Final
 # XML and XACRO Infrastructure
 # ----------------------------
 
-# Official XACRO namespace URIs (http and https variants, with and without www)
+# Official XACRO namespace URIs (http/https, with/without www, and wiki subdomains)
 XACRO_URIS: Final[set[str]] = {
+    # HTTP variants
     "http://www.ros.org/wiki/xacro",
     "http://wiki.ros.org/xacro",
     "http://ros.org/xacro",
     "http://ros.org/wiki/xacro",
+    # HTTPS variants
     "https://www.ros.org/wiki/xacro",
     "https://wiki.ros.org/xacro",
     "https://ros.org/xacro",

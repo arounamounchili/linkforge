@@ -37,8 +37,7 @@ from ..core.constants import (
     DEFAULT_SELF_COLLIDE,
     GRAVITY_ENABLED,
 )
-from ..utils.link_utils import should_rename_child
-from ..utils.property_helpers import safe_set_id_name
+from ..utils.property_helpers import safe_set_id_name, should_rename_child
 from ..utils.scene_utils import clear_stats_cache
 from ..visualization.inertia_gizmos import tag_redraw
 

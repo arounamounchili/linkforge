@@ -16,8 +16,8 @@ from ..core.constants import (
     DEFAULT_SENSOR_TYPE,
 )
 from ..properties.link_props import sanitize_name
-from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.mode_guard import context_and_mode_guard
 from ..utils.property_helpers import get_link_props, get_sensor_props
 from ..utils.scene_utils import clear_stats_cache
 

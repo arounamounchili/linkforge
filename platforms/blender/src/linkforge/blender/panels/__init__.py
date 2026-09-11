@@ -15,7 +15,6 @@ from . import (
     forge_panel,
     joint_panel,
     link_panel,
-    robot_panel,
     sensor_panel,
 )
 
@@ -26,7 +25,6 @@ modules = [
     joint_panel,
     sensor_panel,
     control_panel,
-    robot_panel,
     export_panel,
 ]
 
