@@ -567,13 +567,17 @@ class TestVisualizationExtra:
         joint_gizmos.fix_existing_joints(mock_context)
 
     def test_joint_gizmos_main_entrypoint(self) -> None:
-        """Test running joint_gizmos.py as __main__."""
         import runpy
+        import warnings
 
         with (
             patch("bpy.app.handlers.load_post", []),
             patch("bpy.utils.register_class") as mock_reg,
+            warnings.catch_warnings(),
         ):
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
             runpy.run_module("linkforge.blender.visualization.joint_gizmos", run_name="__main__")
 
 

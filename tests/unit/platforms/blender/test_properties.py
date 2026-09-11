@@ -359,6 +359,7 @@ class TestGlobalPropertiesAndCallbacks:
     def test_duplicate_registrations(self) -> None:
         """Test duplicate registration handling and main blocks in property groups."""
         import runpy
+        import warnings
 
         from linkforge.blender.properties import (
             control_props,
@@ -399,15 +400,19 @@ class TestGlobalPropertiesAndCallbacks:
             finally:
                 bpy.utils.register_class = orig_register_class
 
-        for mod_name in [
-            "linkforge.blender.properties.control_props",
-            "linkforge.blender.properties.validation_props",
-            "linkforge.blender.properties.link_props",
-            "linkforge.blender.properties.joint_props",
-            "linkforge.blender.properties.sensor_props",
-            "linkforge.blender.properties.robot_props",
-        ]:
-            runpy.run_module(mod_name, run_name="__main__")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
+            for mod_name in [
+                "linkforge.blender.properties.control_props",
+                "linkforge.blender.properties.validation_props",
+                "linkforge.blender.properties.link_props",
+                "linkforge.blender.properties.joint_props",
+                "linkforge.blender.properties.sensor_props",
+                "linkforge.blender.properties.robot_props",
+            ]:
+                runpy.run_module(mod_name, run_name="__main__")
 
     def test_joint_properties_and_callbacks(self, scene, blender_context) -> None:
         """Test getters, setters, polls and hierarchy updates in JointPropertyGroup."""
@@ -1171,11 +1176,16 @@ class TestPreferencesExtra:
     def test_preferences_main_entrypoint(self) -> None:
         """Test running preferences.py as __main__."""
         import runpy
+        import warnings
 
         with (
             patch("bpy.utils.register_class") as mock_reg,
             patch("bpy.utils.unregister_class") as mock_unreg,
+            warnings.catch_warnings(),
         ):
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
             runpy.run_module("linkforge.blender.preferences", run_name="__main__")
             assert mock_reg.called
 

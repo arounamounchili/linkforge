@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import runpy
+import warnings
 from unittest.mock import MagicMock, patch
 
 import bpy
@@ -386,7 +387,13 @@ class TestValidateRobotOperator:
         assert mock_reg_err.call_count > 0
         assert mock_unreg_err.call_count > 0
 
-        with patch.object(export_ops, "__name__", "__main__"):
+        with (
+            patch.object(export_ops, "__name__", "__main__"),
+            warnings.catch_warnings(),
+        ):
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
             runpy.run_module("linkforge.blender.operators.export_ops")
 
     @patch("linkforge.blender.adapters.blender_to_core.scene_to_robot")

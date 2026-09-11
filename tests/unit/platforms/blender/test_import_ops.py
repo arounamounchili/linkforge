@@ -295,8 +295,15 @@ class TestImportRobotModelOperator:
         assert mock_unreg_err.call_count > 0
 
         import runpy
+        import warnings
 
-        with patch.object(import_ops, "__name__", "__main__"):
+        with (
+            patch.object(import_ops, "__name__", "__main__"),
+            warnings.catch_warnings(),
+        ):
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
             runpy.run_module("linkforge.blender.operators.import_ops")
 
     @patch("linkforge.core.URDFParser")
