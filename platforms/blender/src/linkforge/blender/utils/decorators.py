@@ -22,10 +22,10 @@ def safe_execute(func: Callable[..., OperatorReturn]) -> Callable[..., OperatorR
     This ensures that unhandled exceptions are caught, logged with full tracebacks,
     and reported to the user as clean error messages instead of crashing Blender.
 
-    Usage:
-        @safe_execute
-        def execute(self, context):
-            ...
+    Example:
+        >>> @safe_execute
+        >>> def execute(self, context):
+        >>>     ...
     """
 
     @functools.wraps(func)

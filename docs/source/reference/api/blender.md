@@ -169,12 +169,27 @@ Internal domain logic for asynchronous model building and collision synthesis.
 Blender-specific helpers.
 
 ```{eval-rst}
+.. automodule:: linkforge.blender.utils.decorators
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.utils.joint_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: linkforge.blender.utils.mode_guard
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. automodule:: linkforge.blender.utils.property_helpers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.utils.scene_utils
    :members:
    :undoc-members:
    :show-inheritance:
