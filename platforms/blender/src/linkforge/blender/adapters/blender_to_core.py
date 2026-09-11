@@ -57,8 +57,6 @@ from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
     get_robot_props,
-    get_sensor_props,
-    get_transmission_props,
 )
 from ..utils.transform_utils import get_local_bounding_box_center
 from .context import IBlenderContext
@@ -391,85 +389,26 @@ def _categorize_scene_objects(
     dict[str, tuple[str, Any]],
     tuple[str, Any] | None,
 ]:
-    """Extract and categorize objects from Blender scene.
+    """Extract and categorize objects from Blender scene using scene_utils.
 
     Args:
         scene: Blender scene object
 
     Returns:
         Tuple of (link_objects, joint_objects, sensor_objects,
-                 joints_map, root_link)
+                 transmission_objects, joints_map, root_link)
     """
-    link_objects = {}  # link_name -> link Empty object
-    joint_objects = []
-    sensor_objects = []
-    transmission_objects = []
-    joints_map = {}  # child_link_name -> (parent_link_name, joint_empty_obj)
-    root_link = None
+    from ..utils.scene_utils import get_robot_statistics
 
-    import bpy
-
-    logger.debug(
-        f"_categorize_scene_objects: scene.objects count={len(scene.objects)}, "
-        f"data.objects count={len(bpy.data.objects)}"
+    stats = get_robot_statistics(scene, force_refresh=True)
+    return (
+        stats.link_objects,
+        stats.joint_objects,
+        stats.sensor_objects,
+        stats.transmission_objects,
+        stats.joints_map,
+        stats.root_link,
     )
-    for obj in scene.objects:
-        # Check for Link
-        lf = get_link_props(obj)
-        if lf and getattr(lf, "is_robot_link", False):
-            link_name = lf.link_name if lf.link_name else obj.name
-            link_objects[link_name] = obj
-
-        # Check for Joint
-        j_lf = get_joint_props(obj)
-        if j_lf and getattr(j_lf, "is_robot_joint", False):
-            joint_objects.append(obj)
-            props = j_lf
-            parent_obj = props.parent_link
-            child_obj = props.child_link
-
-            parent_props = get_link_props(parent_obj)
-            parent_name = (
-                parent_props.link_name
-                if parent_props and parent_props.link_name
-                else (parent_obj.name if parent_obj else "")
-            )
-            child_props = get_link_props(child_obj)
-            child_name = (
-                child_props.link_name
-                if child_props and child_props.link_name
-                else (child_obj.name if child_obj else "")
-            )
-
-            parent_is_link = bool(parent_props and getattr(parent_props, "is_robot_link", False))
-            child_is_link = bool(child_props and getattr(child_props, "is_robot_link", False))
-
-            if parent_name and child_name and parent_is_link and child_is_link:
-                joints_map[child_name] = (parent_name, obj)
-
-        # Check for Sensor
-        s_lf = get_sensor_props(obj)
-        if s_lf and getattr(s_lf, "is_robot_sensor", False):
-            sensor_objects.append(obj)
-
-        # Check for Transmission
-        t_lf = get_transmission_props(obj)
-        if t_lf and getattr(t_lf, "is_robot_transmission", False):
-            transmission_objects.append(obj)
-
-    # Find root link (link with no parent joint)
-    for link_name, obj in link_objects.items():
-        if link_name not in joints_map:
-            root_link = (link_name, obj)
-            break
-
-    logger.debug(
-        f"_categorize_scene_objects: links={list(link_objects.keys())}, "
-        f"joints={len(joint_objects)}, sensors={len(sensor_objects)}, "
-        f"root={root_link[0] if root_link else 'None'}"
-    )
-
-    return link_objects, joint_objects, sensor_objects, transmission_objects, joints_map, root_link
 
 
 def _calculate_link_frames(
@@ -579,7 +518,7 @@ class SceneToRobotTranslator:
         # 4. Translate Materials globally (Centralized management)
         self._translate_global_materials(link_objects)
 
-        # 4. Build Kinematic Tree recursively (The "Composer" way)
+        # 5. Build Kinematic Tree recursively (The "Composer" way)
         if root:
             root_name, _ = root
             self._build_link_recursive(root_name, None, link_objects, joints_map, link_frames)
@@ -597,13 +536,13 @@ class SceneToRobotTranslator:
                 code=ValidationErrorCode.NO_ROOT,
             )
 
-        # 5. Translate orphaned components (Sensors, Transmissions)
-        self._translate_sensors(sensor_objects, link_frames, link_objects)
+        # 6. Translate orphaned components (Sensors, Transmissions)
+        self._translate_sensors(sensor_objects, link_frames)
         self._translate_transmissions(transmission_objects)
         self._translate_ros2_control()
         self._translate_scene_gazebo_plugins()
 
-        # 6. Finalize and return
+        # 7. Finalize and return
         try:
             robot = self.builder.build(validate=False)
         except Exception as e:
@@ -766,9 +705,6 @@ class SceneToRobotTranslator:
                 joint_translator = JointTranslator()
                 joint_translator.translate(
                     obj=joint_obj,
-                    builder=self.builder,
-                    context=self.context,
-                    validation_result=self.validation_result,
                     lb=lb,
                     link_frames=link_frames,
                 )
@@ -806,9 +742,7 @@ class SceneToRobotTranslator:
                 affected_objects=[link_name],
             )
 
-    def _translate_sensors(
-        self, sensor_objects: list[Any], link_frames: dict[str, Any], _link_objects: dict[str, Any]
-    ) -> None:
+    def _translate_sensors(self, sensor_objects: list[Any], link_frames: dict[str, Any]) -> None:
         """Translate sensors using specialized SensorTranslator."""
 
         sensor_translator = SensorTranslator()
@@ -816,7 +750,6 @@ class SceneToRobotTranslator:
             sensor_translator.translate(
                 obj=obj,
                 builder=self.builder,
-                context=self.context,
                 validation_result=self.validation_result,
                 link_frames=link_frames,
             )
@@ -829,7 +762,6 @@ class SceneToRobotTranslator:
             transmission_translator.translate(
                 obj=obj,
                 builder=self.builder,
-                context=self.context,
                 validation_result=self.validation_result,
             )
 
@@ -840,7 +772,6 @@ class SceneToRobotTranslator:
             translator.translate(
                 obj=self.robot_props,
                 builder=self.builder,
-                context=self.context,
                 validation_result=self.validation_result,
             )
 

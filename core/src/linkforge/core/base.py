@@ -20,9 +20,6 @@ from ._utils.path_utils import normalize_uri_to_path, resolve_package_path
 from .exceptions import (
     LinkForgeError,
     RobotGeneratorError,
-    RobotModelError,
-    RobotParserError,
-    XacroDetectedError,
 )
 
 if TYPE_CHECKING:
@@ -32,15 +29,10 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 __all__ = [
+    "FileSystemResolver",
+    "IResourceResolver",
     "RobotGenerator",
     "RobotParser",
-    "IResourceResolver",
-    "FileSystemResolver",
-    "LinkForgeError",
-    "RobotGeneratorError",
-    "RobotModelError",
-    "RobotParserError",
-    "XacroDetectedError",
 ]
 
 

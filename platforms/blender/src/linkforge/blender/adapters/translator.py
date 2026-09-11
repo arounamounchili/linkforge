@@ -6,10 +6,9 @@ to LinkForge core models using the Composer API.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any
 
 from ..constants import (
     FORMAT_STL,
@@ -76,28 +75,10 @@ from ..utils.property_helpers import (
 )
 from ..utils.transform_utils import matrix_to_transform
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
-@runtime_checkable
-class ITranslator(Protocol):
-    """Base protocol for translating Blender objects to Core models."""
-
-    def translate(
-        self,
-        obj: Any,
-        builder: RobotBuilder,
-        context: IBlenderContext,
-        meshes_dir: Path | None = None,
-        dry_run: bool = False,
-        depsgraph: Any | None = None,
-        validation_result: ValidationResult | None = None,
-    ) -> Any:
-        """Translate a Blender object using the provided builder."""
-        ...
-
-
-class LinkTranslator(ITranslator):
+class LinkTranslator:
     """Translates Blender objects marked as robot links."""
 
     def translate(
@@ -110,7 +91,6 @@ class LinkTranslator(ITranslator):
         depsgraph: Any | None = None,
         validation_result: ValidationResult | None = None,
         lb: LinkBuilder | None = None,
-        **_kwargs: Any,
     ) -> LinkBuilder | None:
         """Translate a Blender link to a Core Link using RobotBuilder."""
         from .blender_to_core import get_object_geometry, get_object_material
@@ -280,21 +260,14 @@ class LinkTranslator(ITranslator):
             logger.debug(f"Mesh validation failed for {obj.name}: {e}")
 
 
-class JointTranslator(ITranslator):
+class JointTranslator:
     """Translates Blender objects marked as robot joints."""
 
     def translate(
         self,
         obj: Any,
-        builder: RobotBuilder,  # noqa: ARG002
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
-        validation_result: ValidationResult | None = None,  # noqa: ARG002
         lb: LinkBuilder | None = None,
         link_frames: dict[str, Any] | None = None,
-        **_kwargs: Any,
     ) -> None:
         """Translate a Blender joint to a Core Joint using the LinkBuilder."""
         props = get_joint_props(obj)
@@ -412,23 +385,17 @@ class JointTranslator(ITranslator):
             )
 
 
-class SensorTranslator(ITranslator):
+class SensorTranslator:
     """Translates Blender objects marked as robot sensors."""
 
     def translate(
         self,
         obj: Any,
         builder: RobotBuilder,
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
         validation_result: ValidationResult | None = None,
         link_frames: dict[str, Any] | None = None,
     ) -> None:
         """Translate a Blender sensor to a Core Sensor and add it to the robot."""
-        from dataclasses import replace
-
         try:
             sensor = self._blender_sensor_to_core(obj)
             if sensor:
@@ -587,19 +554,14 @@ class SensorTranslator(ITranslator):
         )
 
 
-class Ros2ControlTranslator(ITranslator):
+class Ros2ControlTranslator:
     """Translates centralized Blender ros2_control properties."""
 
     def translate(
         self,
         obj: Any,
         builder: RobotBuilder,
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
         validation_result: ValidationResult | None = None,
-        **_kwargs: Any,
     ) -> None:
         """Translate centralized ros2_control properties and add to robot."""
         try:
@@ -631,8 +593,6 @@ class Ros2ControlTranslator(ITranslator):
 
     def _blender_ros2_control_to_core(self, props: Any) -> Ros2Control | None:
         """Convert centralized Blender ros2_control properties to Core model."""
-        logger = get_logger(__name__)
-
         if props is None or not getattr(props, "use_ros2_control", False):
             return None
 
@@ -718,17 +678,13 @@ class Ros2ControlTranslator(ITranslator):
         )
 
 
-class TransmissionTranslator(ITranslator):
+class TransmissionTranslator:
     """Translates Blender objects marked as robot transmissions."""
 
     def translate(
         self,
         obj: Any,
         builder: RobotBuilder,
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
         validation_result: ValidationResult | None = None,
     ) -> None:
         """Translate a Blender transmission to a Core Transmission and add it to the robot."""

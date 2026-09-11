@@ -95,7 +95,7 @@ def translate_joint_to_model(obj, context, parent=None, child=None):
         lb_c = builder.link(c_name, parent=p_name)
         LinkTranslator().translate(child, builder, context, lb=lb_c)
 
-    JointTranslator().translate(obj, builder, context, lb=lb_c)
+    JointTranslator().translate(obj, lb=lb_c)
     if lb_c:
         lb_c.commit()
 
@@ -230,7 +230,7 @@ def test_blender_sensor_to_core_lidar(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -601,7 +601,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("sensor_link"))
-    SensorTranslator().translate(imu_obj, builder, blender_context)
+    SensorTranslator().translate(imu_obj, builder)
     sensor = builder.robot.sensors[-1]
     assert sensor is not None
     assert sensor.type == SensorType.IMU
@@ -619,7 +619,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     props.camera_width = 800
     props.camera_height = 600
 
-    SensorTranslator().translate(cam_obj, builder, blender_context)
+    SensorTranslator().translate(cam_obj, builder)
     sensor = builder.robot.sensors[-1]
     assert sensor is not None
     assert sensor.type == SensorType.CAMERA
@@ -636,7 +636,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     props.lidar_range_max = 50.0
     props.lidar_range_min = 0.5
 
-    SensorTranslator().translate(lidar_obj, builder, blender_context)
+    SensorTranslator().translate(lidar_obj, builder)
     sensor = builder.robot.sensors[-1]
     assert sensor is not None
     assert sensor.type == SensorType.LIDAR
@@ -942,7 +942,7 @@ def test_blender_sensor_contact(scene, blender_context) -> None:
 
     builder.robot.add_link(Link("base_link"))
     builder.robot.add_link(Link("collision_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -966,7 +966,7 @@ def test_blender_sensor_force_torque(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -992,7 +992,7 @@ def test_blender_sensor_with_noise(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -1020,7 +1020,7 @@ def test_blender_sensor_with_plugin(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -1037,7 +1037,7 @@ def test_blender_sensor_not_robot_sensor(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is None
@@ -1143,7 +1143,7 @@ def test_blender_ros2_control_joint_obj_name_sync(clean_scene, scene, blender_co
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
     builder.robot.add_joint(Joint("MyRealJoint", parent="p", child="c", type=JointType.FIXED))
-    Ros2ControlTranslator().translate(props, builder, blender_context)
+    Ros2ControlTranslator().translate(props, builder)
     control = builder.robot.ros2_controls[0]
 
     assert control is not None
@@ -1167,7 +1167,7 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(gps_obj, builder, blender_context)
+    SensorTranslator().translate(gps_obj, builder)
     core_gps = builder.robot.sensors[0] if builder.robot.sensors else None
     assert (
         core_gps
@@ -1190,7 +1190,7 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(lidar_obj, builder, blender_context)
+    SensorTranslator().translate(lidar_obj, builder)
     core_lidar = builder.robot.sensors[0] if builder.robot.sensors else None
     assert core_lidar and core_lidar.lidar_info
     assert core_lidar.lidar_info.horizontal_samples == 720
@@ -1259,7 +1259,7 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
     builder.robot.add_link(Link("c"))
     builder.robot.add_joint(Joint("Joint1", parent="p", child="c", type=JointType.FIXED))
     builder.robot.add_joint(Joint("Joint2", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t_simple, builder, blender_context)
+    TransmissionTranslator().translate(t_simple, builder)
     core_simple = builder.robot.transmissions[0] if builder.robot.transmissions else None
     assert core_simple is not None
     assert core_simple.name == "TransSimple"
@@ -1283,7 +1283,7 @@ def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
     builder.robot.add_link(Link("c"))
     builder.robot.add_joint(Joint("Joint1", parent="p", child="c", type=JointType.FIXED))
     builder.robot.add_joint(Joint("Joint2", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t_diff, builder, blender_context)
+    TransmissionTranslator().translate(t_diff, builder)
     core_diff = builder.robot.transmissions[0] if builder.robot.transmissions else None
     assert core_diff is not None
     assert len(core_diff.joints) == 2
@@ -1365,7 +1365,7 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(cam, builder, blender_context)
+    SensorTranslator().translate(cam, builder)
     core_cam = builder.robot.sensors[0] if builder.robot.sensors else None
     assert (
         core_cam
@@ -1385,7 +1385,7 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(gps, builder, blender_context)
+    SensorTranslator().translate(gps, builder)
     core_gps = builder.robot.sensors[0] if builder.robot.sensors else None
     assert core_gps and core_gps.gps_info is not None
     assert (
@@ -1403,7 +1403,7 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(con, builder, blender_context)
+    SensorTranslator().translate(con, builder)
     core_con = builder.robot.sensors[0] if builder.robot.sensors else None
     assert (
         core_con and core_con.contact_info and core_con.contact_info.collision == "some_link_geom"
@@ -1521,7 +1521,7 @@ def test_blender_transmission_advanced(clean_scene, scene, blender_context) -> N
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
     builder.robot.add_joint(Joint("J1", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t, builder, blender_context)
+    TransmissionTranslator().translate(t, builder)
     core = builder.robot.transmissions[0] if builder.robot.transmissions else None
     assert core is not None
     assert core.type == "my_custom_trans"
@@ -1777,14 +1777,14 @@ def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> 
 
     # Translator should handle None/non-robot gracefully
     builder = RobotBuilder("Robot")
-    SensorTranslator().translate(None, builder, blender_context)
+    SensorTranslator().translate(None, builder)
     assert len(builder.robot.sensors) == 0
-    SensorTranslator().translate(empty, builder, blender_context)
+    SensorTranslator().translate(empty, builder)
     assert len(builder.robot.sensors) == 0
 
-    TransmissionTranslator().translate(None, builder, blender_context)
+    TransmissionTranslator().translate(None, builder)
     assert len(builder.robot.transmissions) == 0
-    TransmissionTranslator().translate(empty, builder, blender_context)
+    TransmissionTranslator().translate(empty, builder)
     assert len(builder.robot.transmissions) == 0
 
     # blender_link_to_core_with_origin simplify
@@ -1838,7 +1838,7 @@ def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> 
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
     builder.robot.add_joint(Joint("Joint", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t, builder, blender_context)
+    TransmissionTranslator().translate(t, builder)
     assert len(builder.robot.transmissions) == 0
 
     # Joint mimic fallback
@@ -2616,7 +2616,7 @@ class TestJointRobustness:
 
         lb_c = builder.link("Child", parent="Parent")
         LinkTranslator().translate(c, builder, blender_context, lb=lb_c)
-        JointTranslator().translate(j, builder, blender_context, lb=lb_c)
+        JointTranslator().translate(j, lb=lb_c)
         if lb_c:
             lb_c.commit()
 

@@ -272,10 +272,18 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
                 child = jp.child_link
                 parent = jp.parent_link
 
-                if child and (props_child := get_link_props(child)):
+                if (
+                    child
+                    and (props_child := get_link_props(child))
+                    and getattr(props_child, "is_robot_link", False)
+                ):
                     child_name = props_child.link_name if props_child.link_name else child.name
                     parent_name = ""
-                    if parent and (props_parent := get_link_props(parent)):
+                    if (
+                        parent
+                        and (props_parent := get_link_props(parent))
+                        and getattr(props_parent, "is_robot_link", False)
+                    ):
                         parent_name = (
                             props_parent.link_name if props_parent.link_name else parent.name
                         )
