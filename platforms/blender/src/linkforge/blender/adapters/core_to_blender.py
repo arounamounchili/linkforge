@@ -6,6 +6,20 @@ import contextlib
 import typing
 from pathlib import Path
 
+import bpy
+from mathutils import Matrix
+
+from ..constants import (
+    DEFAULT_JOINT_GIZMO_SIZE,
+    DEFAULT_LINK_GIZMO_SIZE,
+    PROP_LINK,
+    PROP_ROBOT,
+    PROP_SENSOR,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
+    TAG_SOURCE_NAME,
+)
 from ..core import (
     Box,
     Color,
@@ -41,26 +55,6 @@ from ..core.constants import (
     SENSOR_GPU_LIDAR,
     SENSOR_IMU,
     SENSOR_LIDAR,
-)
-
-if typing.TYPE_CHECKING:
-    bpy: typing.Any
-    Matrix: typing.Any
-
-if not typing.TYPE_CHECKING:
-    import bpy
-    from mathutils import Matrix
-
-from ..constants import (
-    DEFAULT_JOINT_GIZMO_SIZE,
-    DEFAULT_LINK_GIZMO_SIZE,
-    PROP_LINK,
-    PROP_ROBOT,
-    PROP_SENSOR,
-    SUFFIX_COLLISION,
-    SUFFIX_VISUAL,
-    TAG_IMPORTED_SOURCE,
-    TAG_SOURCE_NAME,
 )
 from ..preferences import get_addon_prefs
 from ..properties.geom_props import PROP_GEOM
