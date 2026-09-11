@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "LinkForge: The LLVM for Robotics"
+title: "LinkForge: The Programmable Robot Description Engine"
 message: "If you use this software, please cite it as below."
 type: software
 authors:
@@ -13,16 +13,17 @@ repository-code: "https://github.com/arounamounchili/linkforge"
 license: GPL-3.0-or-later
 keywords:
   - robotics
-  - blender
+  - robot-modeling
+  - intermediate-representation
   - urdf
   - xacro
   - srdf
-  - ros
   - ros2
+  - ros2-control
   - gazebo
-  - importer
-  - exporter
-  - robot-modeling
+  - blender
+  - physical-validation
 abstract: >
-  LinkForge is the LLVM for Robotics: a universal Intermediate Representation (IR)
-  and Blender-based Digital Twin platform for high-fidelity robotics engineering.
+  LinkForge is the programmable robot description engine and universal Intermediate
+  Representation (IR) for robotics: build, physically validate, and compile robot
+  descriptions headlessly via Python or visually through Blender.
