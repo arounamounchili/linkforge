@@ -27,13 +27,10 @@ from ..core.constants import (
     GEOM_SPHERE,
 )
 from ..properties.geom_props import PROP_GEOM
-from ..properties.link_props import sanitize_name
+from ..properties.link_props import LinkPropertyGroup, sanitize_name
 from ..utils.context import context_and_mode_guard
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
-
-if typing.TYPE_CHECKING:
-    from ..properties.link_props import LinkPropertyGroup
 
 logger = get_logger(__name__)
 
@@ -821,7 +818,7 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             # mesh_obj.scale is already correct (it was S, parent is 1, so S stays S)
 
             # Mark Empty as robot link
-            link_props = typing.cast("LinkPropertyGroup", getattr(empty, PROP_LINK))
+            link_props = typing.cast(LinkPropertyGroup, getattr(empty, PROP_LINK))
             link_props.is_robot_link = True
             link_props.link_name = link_name
 

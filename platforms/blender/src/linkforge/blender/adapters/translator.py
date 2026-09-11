@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ..constants import (
     FORMAT_STL,
@@ -62,10 +62,6 @@ from ..core.constants import (
     TRANS_SIMPLE,
 )
 from ..properties.geom_props import PROP_GEOM
-
-if TYPE_CHECKING:
-    from .context import IBlenderContext
-
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -74,6 +70,7 @@ from ..utils.property_helpers import (
     get_transmission_props,
 )
 from ..utils.transform_utils import matrix_to_transform
+from .context import IBlenderContext
 
 logger = get_logger(__name__)
 
