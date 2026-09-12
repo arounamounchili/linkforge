@@ -29,8 +29,8 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 - [ ] **Expected**:
   - LinkForge installs without errors or Python tracebacks in the System Console.
   - Bundled binary wheels (e.g. `PyYAML`) load properly for the host Python architecture.
-  - LinkForge tabs appear in the 3D Viewport sidebar (`N-Panel`).
-  - Add-on Preferences display version `1.5.2` and configuration settings (e.g. "Show Inertia Frames", "Show Joint Gizmos").
+  - LinkForge tab appears in the 3D Viewport sidebar (`N-Panel`).
+  - Add-on Preferences display version `1.5.2` and configuration settings (e.g. "Show Inertia Frames", "Enhanced Visualization (RViz-style)", "Joint Size").
 
 ### `TC-INST-02`: Base Link Creation
 * Verify initial link entity bootstrapping from viewport geometry.
@@ -133,7 +133,10 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 
 ### `TC-PHYS-03`: Real-Time Viewport Gizmos
 * Verify 3D inspection overlays for inertial centers and axes.
-- [ ] **Action**: In LinkForge Preferences, verify `Show Inertia Frames` and `Show Joint Gizmos` are enabled. Adjust Center of Mass sliders (`origin_xyz`).
+- [ ] **Action**:
+  1. In LinkForge Preferences (`Edit -> Preferences -> Add-ons / Extensions -> LinkForge`), verify `Show Inertia Frames` and `Enhanced Visualization (RViz-style)` are enabled.
+  2. In the `Links` panel, uncheck `Auto-Calculate Inertia` on a link.
+  3. Under `Center of Mass`, adjust the `Position` XYZ sliders (`inertia_origin_xyz`).
 - [ ] **Expected**:
   - Inertia equivalent ellipsoid and Center of Mass origin gizmo translate smoothly in the 3D Viewport.
 
@@ -148,27 +151,30 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
      - `Camera`: Resolution (1920x1080), FoV, clipping range.
      - `LiDAR`: Ray samples (360), min/max range (0.1m - 30m), scan rate.
      - `IMU` / `Force-Torque`: Noise standard deviations.
-  2. In the Outliner, rename the sensor's parent link.
+  2. In the Outliner, rename the sensor's attached link.
 - [ ] **Expected**:
   - Sensor Empties spawn with directional visual cones/indicators in the 3D Viewport.
   - Sensor properties map to standard ROS/URDF sensor specifications.
-  - The sensor's `Parent Link` attachment field in the Perceive panel immediately updates to the new link name.
+  - The sensor's `Link` attachment field under the `Attachment` section immediately updates to the new link name.
 
 ### `TC-CTRL-01`: ROS 2 Control Dashboard
 * Verify configuration of transmissions, command interfaces, and state interfaces.
 - [ ] **Action**:
-  1. Open the `Control` panel. Check `Use ROS 2 Control`. Add configured joints to the controller list.
-  2. Select and enable interfaces (`Position`, `Velocity`, `Effort`) and set PID values.
-  3. In the Outliner, rename an active joint.
+  1. Open the `Control` panel. Check `Use ROS2 Control`.
+  2. Under `Hardware System`, configure System Name (e.g., `GazeboSimSystem`), System Type (`System`, `Actuator`, or `Sensor`), and Hardware Plugin.
+  3. In the `Joint Interfaces` section, click the **`+`** button (menu `Add Joint`) to add active joints from the kinematic tree.
+  4. With a joint selected in the list, toggle desired Command Interfaces (`Position`, `Velocity`, `Effort`) and State Interfaces (`Position`, `Velocity`, `Effort`).
+  5. (Optional) In the `Joint Parameters` sub-box, click **`+`** to add custom key-value parameters (e.g. `p`, `d`, or limits).
+  6. In the Blender Outliner, rename an active joint.
 - [ ] **Expected**:
-  - Joints register with selectable interfaces: `Position`, `Velocity`, `Effort`.
-  - The UI list displays active interface badges (e.g. `[P/V/E]`).
-  - PID parameters (`p`, `i`, `d`) accept valid floating-point values.
-  - The control dashboard list item name updates immediately to reflect the renamed joint.
+  - Joints register in the UI list with active interface badges (e.g. `[P]`, `[P/V]`, `[P/V/E]`).
+  - Command interfaces are automatically disabled if System Type is set to `Sensor`.
+  - Added key-value parameters persist cleanly.
+  - When an active joint is renamed in the Outliner, the control dashboard list item name updates immediately.
 
 ### `TC-CTRL-02`: Dashboard Maintenance Utilities
 * Verify cleanup and pruning of deleted hardware.
-- [ ] **Action**: Delete an active joint object directly from the 3D Viewport. Notice the `[Missing]` badge with error icon in the dashboard. Click `Prune Missing Joints (🗑️)`.
+- [ ] **Action**: Delete an active joint object directly from the 3D Viewport or Outliner. Notice the item displays `[Joint Name] (Missing)` with an error icon in the `Joint Interfaces` list. Click the prune button with trash icon (`TRASH`).
 - [ ] **Expected**:
   - Orphaned joint entry is cleanly removed from the control list.
   - Remaining joint parameters and controller assignments remain intact.
@@ -205,14 +211,20 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 ## Phase 7: Full Round-Trip Export/Import & Metadata Integrity
 
 ### `TC-EXP-01`: Multi-Format Compilation
-* Verify simultaneous generation of standard robotics assets.
-- [ ] **Action**: In the **Validate & Export** panel, select target format (`URDF` / `XACRO`), choose mesh format (`STL` / `OBJ` / `GLB`), enable `Split Files`, and click `Export Robot Model`.
+* Verify generation of standard robotics description assets and 3D meshes.
+- [ ] **Action**:
+  1. In the **Validate & Export** panel, choose target format: `URDF` or `XACRO`.
+  2. If `XACRO` is selected, expand `Show Advanced XACRO Settings` to configure macro generation and optionally enable `Split Files`.
+  3. Ensure `Export Meshes` is checked, select desired `Mesh Format` (`OBJ`, `STL`, or `glTF Binary (.glb)`), and set the mesh folder name (default: `meshes`).
+  4. Ensure `Validate Before Export` is checked.
+  5. Click **`Export Robot Model`** and select the destination directory and filename in Blender's file browser.
 - [ ] **Expected**:
-  - Clean export directory is produced:
-    - `urdf/`: Synthesized robot XML and XACRO macros.
-    - `srdf/`: MoveIt 2 semantic descriptions (planning groups, end-effectors) if configured.
-    - `meshes/`: Exported visual and collision geometries.
-  - XML is well-formed and passes standard ROS `check_urdf` validation.
+  - Pre-flight validation executes automatically; export proceeds if valid or displays clear diagnostic cards if errors are found.
+  - The destination directory contains:
+    - The compiled robot description file (`[robot_name].urdf` or `[robot_name].xacro`).
+    - If `Split Files` was enabled under XACRO: modular macro and include files (e.g. `[robot_name]_macro.xacro`, `materials.xacro`) alongside the top-level description.
+    - A dedicated `meshes/` directory containing visual geometries (in the chosen format: `.obj`, `.stl`, or `.glb`) and collision geometries (`.stl`).
+  - The generated XML is syntactically well-formed and passes ROS standard tools (e.g., `check_urdf [robot_name].urdf`).
 
 ### `TC-GLTF-01`: glTF 2.0 Custom Properties Preservation
 * Verify embeddable metadata for downstream web and game engines.
