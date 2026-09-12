@@ -6,14 +6,12 @@ import contextlib
 import typing
 
 import bpy
-from bpy.types import Context, Panel, Scene, UILayout
+from bpy.types import Context, Panel, UILayout
 
 from ..constants import (
     PROP_ROBOT,
     PROP_VALIDATION,
 )
-from ..core._utils.dict_utils import filter_items_by_name
-from ..utils.property_helpers import get_joint_props
 from ..utils.scene_utils import (
     build_tree_from_stats,
     get_robot_statistics,
@@ -54,7 +52,7 @@ class LINKFORGE_PT_export_panel(Panel):
                 box.label(text="Create links in Forge panel to start", icon="FORWARD")
             return
 
-        _, root_link, _, links_dict = build_tree_from_stats(stats)
+        _, root_link, _, _ = build_tree_from_stats(stats)
 
         # Get total mass and DOF from pre-calc stats
         total_mass = stats.total_mass
@@ -191,8 +189,7 @@ class LINKFORGE_PT_export_panel(Panel):
             export_box.separator()
             export_box.prop(props, "validate_before_export")
 
-        # === EXPORT BUTTON ===
-        if layout:
+            # === EXPORT BUTTON ===
             layout.separator()
             export_row = layout.row()
             if export_row:
@@ -200,179 +197,6 @@ class LINKFORGE_PT_export_panel(Panel):
                 export_row.operator(
                     "linkforge.export_robot_model", text="Export Robot Model", icon="EXPORT"
                 )
-
-            # === COMPONENT BROWSER (Quick select all components) ===
-            layout.separator()
-            layout.prop(
-                props,
-                "show_kinematic_tree",
-                toggle=True,
-                text="Component Browser",
-                icon="VIEWZOOM",
-                emboss=True,
-            )
-
-            if props.show_kinematic_tree:
-                self.draw_component_browser(
-                    layout,
-                    scene,
-                    links_dict,
-                    num_links,
-                    _num_dof=total_dof,
-                    stats=stats,
-                    context=context,
-                )
-
-    @staticmethod
-    def draw_component_browser(
-        layout: UILayout,
-        scene: Scene,
-        links_dict: dict[str, typing.Any],
-        num_links: int,
-        _num_dof: int,
-        stats: typing.Any,
-        context: Context | None = None,
-    ) -> None:
-        """Draw the component browser section with search filtering, collapsible categories, and active highlighting."""
-        select_box = layout.box()
-        if not select_box:
-            return
-
-        props = getattr(scene, PROP_ROBOT)
-
-        # Search bar with quick clear button
-        search_row = select_box.row(align=True)
-        if search_row:
-            search_row.prop(props, "component_browser_search", text="", icon="VIEWZOOM")
-            if props.component_browser_search:
-                search_row.operator("linkforge.clear_component_search", text="", icon="X")
-
-        search_term = props.component_browser_search
-        filtered_links_dict = filter_items_by_name(links_dict, search_term)
-        joints = stats.joint_objects
-        filtered_joints = filter_items_by_name(joints, search_term)
-        sensors = stats.sensor_objects
-        filtered_sensors = filter_items_by_name(sensors, search_term)
-
-        active_obj = getattr(context, "active_object", None) if context else None
-
-        # Links category
-        if links_dict:
-            select_box.separator()
-            is_open = getattr(props, "browser_show_links", True) or bool(search_term)
-            count_text = (
-                f"Links ({len(filtered_links_dict)}/{len(links_dict)}):"
-                if search_term
-                else f"Links ({num_links}):"
-            )
-            link_header = select_box.row(align=True)
-            if link_header:
-                link_header.label(text=count_text, icon="MESH_CUBE")
-                link_header.prop(
-                    props,
-                    "browser_show_links",
-                    icon="TRIA_DOWN" if is_open else "TRIA_RIGHT",
-                    text="",
-                    emboss=False,
-                )
-
-            if is_open and filtered_links_dict:
-                col = select_box.column(align=True)
-                for link_name in sorted(filtered_links_dict.keys()):
-                    link_obj = filtered_links_dict[link_name]
-                    is_active = bool(
-                        active_obj
-                        and (
-                            active_obj == link_obj
-                            or getattr(active_obj, "parent", None) == link_obj
-                        )
-                    )
-                    op = col.operator(
-                        "linkforge.select_tree_object",
-                        text=link_name,
-                        icon="MESH_CUBE",
-                        depress=is_active,
-                    )
-                    op.object_name = link_obj.name
-                    op.object_type = "link"
-
-        # Joints category
-        if joints:
-            select_box.separator()
-            is_open = getattr(props, "browser_show_joints", True) or bool(search_term)
-            count_text = (
-                f"Joints ({len(filtered_joints)}/{len(joints)}):"
-                if search_term
-                else f"Joints ({len(joints)}):"
-            )
-            joint_header = select_box.row(align=True)
-            if joint_header:
-                joint_header.label(text=count_text, icon="EMPTY_AXIS")
-                joint_header.prop(
-                    props,
-                    "browser_show_joints",
-                    icon="TRIA_DOWN" if is_open else "TRIA_RIGHT",
-                    text="",
-                    emboss=False,
-                )
-
-            if is_open and filtered_joints:
-                col = select_box.column(align=True)
-                for joint_obj in sorted(filtered_joints, key=lambda x: x.name):
-                    cj_props = get_joint_props(joint_obj)
-                    joint_name = (
-                        cj_props.joint_name
-                        if cj_props and cj_props.joint_name
-                        else getattr(joint_obj, "name", "Joint")
-                    )
-                    is_active = bool(active_obj and active_obj == joint_obj)
-                    op = col.operator(
-                        "linkforge.select_tree_object",
-                        text=joint_name,
-                        icon="EMPTY_AXIS",
-                        depress=is_active,
-                    )
-                    op.object_name = joint_obj.name
-                    op.object_type = "joint"
-
-        # Sensors category
-        if sensors:
-            select_box.separator()
-            is_open = getattr(props, "browser_show_sensors", True) or bool(search_term)
-            count_text = (
-                f"Sensors ({len(filtered_sensors)}/{len(sensors)}):"
-                if search_term
-                else f"Sensors ({len(sensors)}):"
-            )
-            sensor_header = select_box.row(align=True)
-            if sensor_header:
-                sensor_header.label(text=count_text, icon="TRACKER")
-                sensor_header.prop(
-                    props,
-                    "browser_show_sensors",
-                    icon="TRIA_DOWN" if is_open else "TRIA_RIGHT",
-                    text="",
-                    emboss=False,
-                )
-
-            if is_open and filtered_sensors:
-                col = select_box.column(align=True)
-                for sensor_obj in sorted(filtered_sensors, key=lambda x: x.name):
-                    is_active = bool(active_obj and active_obj == sensor_obj)
-                    op = col.operator(
-                        "linkforge.select_tree_object",
-                        text=sensor_obj.name,
-                        icon="TRACKER",
-                        depress=is_active,
-                    )
-                    op.object_name = sensor_obj.name
-                    op.object_type = "sensor"
-
-        if search_term and not filtered_links_dict and not filtered_joints and not filtered_sensors:
-            select_box.separator()
-            empty_row = select_box.row()
-            if empty_row:
-                empty_row.label(text="No matches", icon="INFO")
 
     @staticmethod
     def _draw_validation_issue(
@@ -436,8 +260,6 @@ class LINKFORGE_PT_export_panel(Panel):
                     else:
                         card.label(text=f"     {sug_line}", icon="BLANK1")
 
-
-draw_component_browser = LINKFORGE_PT_export_panel.draw_component_browser
 
 # Registration
 classes = [

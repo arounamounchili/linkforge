@@ -576,7 +576,6 @@ DEFAULT_PROPERTY_VALUES = {
     "xacro_generate_macros": False,
     "xacro_split_files": False,
     "show_collisions": False,
-    "show_kinematic_tree": False,
     "joint_name": "",
     "link_name": "",
     "sensor_name": "",
