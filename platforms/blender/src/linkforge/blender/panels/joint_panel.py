@@ -85,8 +85,21 @@ class LINKFORGE_PT_joints(Panel):
         row.label(text="Connection:", icon="LINKED")
         row.operator("linkforge.auto_detect_parent_child", icon="AUTO", text="Detect")
 
-        box.prop(props, "parent_link", icon="OUTLINER_OB_EMPTY")
-        box.prop(props, "child_link", icon="OUTLINER_OB_EMPTY")
+        # Parent Link with 1-click select
+        p_row = box.row(align=True)
+        p_row.prop(props, "parent_link", icon="OUTLINER_OB_EMPTY")
+        if props.parent_link:
+            op = p_row.operator("linkforge.select_tree_object", text="", icon="RESTRICT_SELECT_OFF")
+            op.object_name = props.parent_link.name
+            op.object_type = "link"
+
+        # Child Link with 1-click select
+        c_row = box.row(align=True)
+        c_row.prop(props, "child_link", icon="OUTLINER_OB_EMPTY")
+        if props.child_link:
+            op = c_row.operator("linkforge.select_tree_object", text="", icon="RESTRICT_SELECT_OFF")
+            op.object_name = props.child_link.name
+            op.object_type = "link"
 
         # Joint axis (only for revolute, continuous, prismatic)
         if props.joint_type in {JOINT_REVOLUTE, JOINT_CONTINUOUS, JOINT_PRISMATIC}:

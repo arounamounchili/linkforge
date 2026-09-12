@@ -30,7 +30,8 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   - LinkForge installs without errors or Python tracebacks in the System Console.
   - Bundled binary wheels (e.g. `PyYAML`) load properly for the host Python architecture.
   - LinkForge tab appears in the 3D Viewport sidebar (`N-Panel`).
-  - Add-on Preferences display the correct release version and configuration settings (e.g. "Show Inertia Frames", "Enhanced Visualization (RViz-style)", "Joint Size").
+  - Add-on Preferences display the correct release version and configuration settings (e.g. "Show Inertia Frames" defaulting to False, "Enhanced Visualization (RViz-style)", "Joint Display Size" defaulting to 0.05m, "Inertia Display Mode" defaulting to "Selected Link Only").
+  - Forge panel displays the "Viewport Overlays" toolbar with Collisions (default hidden), Joints, Inertia toggles, and "Fit Gizmos to Robot" button.
 
 ### `TC-INST-02`: Base Link Creation
 * Verify initial link entity bootstrapping from viewport geometry.
@@ -139,6 +140,20 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   3. Under `Center of Mass`, adjust the `Position` XYZ sliders (`inertia_origin_xyz`).
 - [ ] **Expected**:
   - Inertia equivalent ellipsoid and Center of Mass origin gizmo translate smoothly in the 3D Viewport.
+
+### `TC-VIEW-01`: Viewport Overlays, Auto-Fit & Progressive Disclosure
+* Verify viewport hygiene controls, automatic bounding-box scaling, and occlusion filtering.
+- [ ] **Action**:
+  1. In the **Forge** tab (Step 1), locate the **Viewport Overlays** box.
+  2. Toggle the **Collisions** icon button: verify collision meshes switch between visible and hidden for all robot links.
+  3. Toggle the **Joints** and **Inertia** buttons: verify corresponding empties and visual overlays toggle on/off.
+  4. Manually change the **Size** slider to an arbitrary value (e.g. `0.2m`), then click **Fit Gizmos to Robot**. Verify gizmo sizes proportionally rescale to the robot's physical dimensions.
+  5. In Preferences (`Edit -> Preferences -> Add-ons -> LinkForge`), set **Joint Axes Display Mode** to `Selected Only`. In the 3D Viewport, deselect all objects, then select an individual link: verify coordinate frame arrows only render for the active selection.
+  6. In Preferences, set **Joint Axes Depth Mode** to `Occluded by Meshes`: verify axes located inside opaque robot bodies are properly occluded by geometry.
+- [ ] **Expected**:
+  - Viewport Overlays toolbar operates reactively with zero lag.
+  - Auto-fit executes in $<1\text{ms}$ with zero viewport freezing.
+  - Progressive disclosure and depth occlusion eliminate visual clutter across multi-link assemblies.
 
 ---
 

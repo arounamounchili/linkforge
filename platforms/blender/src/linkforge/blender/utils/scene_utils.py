@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import bpy
+from mathutils import Vector
 
 from ..constants import (
     SUFFIX_COLLISION,
@@ -388,3 +389,145 @@ def sync_object_collections(
     for col in list(target_obj.users_collection):
         if col not in source_cols:
             col.objects.unlink(target_obj)
+
+
+def calculate_robot_bounds(scene: Any) -> tuple[Vector, Vector, float] | None:
+    """Calculate the 3D bounding box and diagonal size of all robot components in the scene.
+
+    Iterates through all detected robot links and their visual/collision mesh children
+    to find the world-space bounding box extents.
+
+    Args:
+        scene: Blender Scene containing robot components.
+
+    Returns:
+        Tuple of (min_corner, max_corner, diagonal_length) or None if no components found.
+    """
+    if not scene:
+        return None
+
+    stats = get_robot_statistics(scene)
+    if not stats.link_objects:
+        return None
+
+    points: list[Vector] = []
+
+    for link_obj in stats.link_objects.values():
+        if not link_obj:
+            continue
+
+        # Add link origin translation
+        if hasattr(link_obj, "matrix_world"):
+            points.append(link_obj.matrix_world.translation.copy())
+
+        # Collect mesh bounds from children
+        children = getattr(link_obj, "children", [])
+        for child in children:
+            if hasattr(child, "bound_box") and hasattr(child, "matrix_world") and child.bound_box:
+                mat = child.matrix_world
+                for corner in child.bound_box:
+                    points.append(mat @ Vector(corner))
+            elif hasattr(child, "matrix_world"):
+                points.append(child.matrix_world.translation.copy())
+
+    if not points:
+        return None
+
+    min_x = min(p.x for p in points)
+    min_y = min(p.y for p in points)
+    min_z = min(p.z for p in points)
+    max_x = max(p.x for p in points)
+    max_y = max(p.y for p in points)
+    max_z = max(p.z for p in points)
+
+    min_corner = Vector((min_x, min_y, min_z))
+    max_corner = Vector((max_x, max_y, max_z))
+    diagonal = float((max_corner - min_corner).length)
+
+    return (min_corner, max_corner, diagonal)
+
+
+def auto_fit_robot_gizmos(scene: Any, context: Any = None) -> tuple[float, float] | None:
+    """Auto-scale gizmos and display sizes according to robot bounding box dimensions.
+
+    Args:
+        scene: The active Blender scene.
+        context: Optional Blender context (uses bpy.context if omitted).
+
+    Returns:
+        Tuple of (recommended_size, diagonal) or None if no robot components found.
+    """
+    from ..constants import (
+        DEFAULT_JOINT_GIZMO_SIZE,
+        GIZMO_SCALE_FACTOR,
+        GIZMO_SIZE_MAX,
+        GIZMO_SIZE_MIN,
+    )
+    from ..preferences import (
+        get_addon_prefs,
+        update_inertia_size,
+        update_joint_empty_size,
+        update_link_empty_size,
+        update_sensor_empty_size,
+    )
+
+    if context is None or not hasattr(context, "preferences"):
+        context = bpy.context
+
+    bounds = calculate_robot_bounds(scene)
+    if not bounds:
+        return None
+
+    _, _, diagonal = bounds
+    if diagonal <= 0.001:
+        recommended_size = DEFAULT_JOINT_GIZMO_SIZE
+    else:
+        raw_size = diagonal * GIZMO_SCALE_FACTOR
+        recommended_size = max(GIZMO_SIZE_MIN, min(GIZMO_SIZE_MAX, raw_size))
+
+    prefs = get_addon_prefs(context)
+    if prefs:
+        prefs.joint_empty_size = recommended_size
+        prefs.link_empty_size = recommended_size * 0.8
+        prefs.sensor_empty_size = recommended_size * 0.6
+        prefs.inertia_gizmo_size = recommended_size * 0.6
+
+        # Update scene empties and redraw viewports
+        update_joint_empty_size(prefs, context)
+        update_link_empty_size(prefs, context)
+        update_sensor_empty_size(prefs, context)
+        update_inertia_size(prefs, context)
+
+    return (recommended_size, diagonal)
+
+
+def compute_anchor_size(gizmo_size: float, show_gpu_axes: bool = True) -> float:
+    """Compute the native Blender empty display size.
+
+    When custom GPU visualization is enabled, keep the native empty wireframe
+    compact (1-2 cm anchor) so it remains selectable without projecting large
+    black crosshair lines across robot meshes.
+
+    Args:
+        gizmo_size: The user's preferred gizmo/axis display size in meters.
+        show_gpu_axes: Whether custom GPU RViz axes are currently active.
+
+    Returns:
+        Compact anchor size in meters.
+    """
+    from ..constants import (
+        ANCHOR_DISPLAY_MAX,
+        ANCHOR_DISPLAY_MIN,
+        ANCHOR_DISPLAY_RATIO,
+        DEFAULT_JOINT_GIZMO_SIZE,
+    )
+
+    try:
+        size = float(gizmo_size)
+    except (TypeError, ValueError):
+        size = DEFAULT_JOINT_GIZMO_SIZE
+
+    if show_gpu_axes is False:
+        return size
+
+    return max(ANCHOR_DISPLAY_MIN, min(ANCHOR_DISPLAY_MAX, size * ANCHOR_DISPLAY_RATIO))

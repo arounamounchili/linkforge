@@ -422,7 +422,11 @@ def create_link_object(
     link_obj.location = (0, 0, 0)
 
     prefs = get_addon_prefs()
-    link_obj.empty_display_size = prefs.link_empty_size if prefs else DEFAULT_LINK_GIZMO_SIZE
+    raw_size = prefs.link_empty_size if prefs else DEFAULT_LINK_GIZMO_SIZE
+    show_gpu = prefs.show_joint_axes if prefs else True
+    from ..utils.scene_utils import compute_anchor_size
+
+    link_obj.empty_display_size = compute_anchor_size(raw_size, show_gpu)
 
     if collection:
         move_to_collection(link_obj, collection)
@@ -573,6 +577,8 @@ def create_link_object(
                 True  # X-ray mode for consistency with generated collisions
             )
             collision_obj.hide_render = True
+            scene_props = getattr(context.scene, PROP_ROBOT, None) if context.scene else None
+            collision_obj.hide_viewport = not getattr(scene_props, "show_collisions", False)
 
             geom_props = getattr(collision_obj, PROP_GEOM, None)
             if geom_props:
@@ -659,14 +665,18 @@ def create_joint_object(
 
     """
     prefs = get_addon_prefs()
-    empty_size = (
+    raw_size = (
         getattr(prefs, "joint_empty_size", DEFAULT_JOINT_GIZMO_SIZE)
         if prefs
         else DEFAULT_JOINT_GIZMO_SIZE
     )
+    show_gpu = getattr(prefs, "show_joint_axes", True) if prefs else True
+    from ..utils.scene_utils import compute_anchor_size
+
+    empty_size = compute_anchor_size(raw_size, show_gpu)
 
     empty = context.data.objects.new(joint.name, None)
-    empty.empty_display_type = "ARROWS"
+    empty.empty_display_type = "PLAIN_AXES"
     empty.empty_display_size = empty_size
     empty.rotation_mode = "XYZ"
     empty.location = (0, 0, 0)

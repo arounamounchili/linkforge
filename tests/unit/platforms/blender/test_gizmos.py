@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import bpy
+import gpu
 import linkforge.blender.visualization.inertia_gizmos as inertia_gizmos
 import linkforge.blender.visualization.joint_gizmos as joint_gizmos
 import pytest
@@ -130,6 +131,57 @@ class TestInertiaGizmos:
 
             # Should not raise exception
             inertia_gizmos.draw_inertia_gizmos()
+
+    def test_draw_inertia_gizmos_selected_only(self, scene) -> None:
+        """Verify inertia frames respect SELECTED_ONLY display mode."""
+        link_obj = create_robot_link(
+            "inertia_target", scene, with_visual=True, with_collision=False
+        )
+        lf = safe_get_linkforge(link_obj)
+        lf.is_robot_link = True
+        lf.inertia_origin_xyz = (0.0, 0.0, 0.0)
+        safe_update(scene)
+
+        gpu.state.depth_test_set.reset_mock()
+
+        with (
+            patch("linkforge.blender.visualization.inertia_gizmos.get_addon_prefs") as mock_prefs,
+            patch(
+                "linkforge.blender.visualization.inertia_gizmos.get_robot_statistics"
+            ) as mock_stats,
+        ):
+            prefs = MagicMock()
+            prefs.show_inertia_gizmos = True
+            prefs.inertia_display_mode = "SELECTED_ONLY"
+            prefs.inertia_gizmo_size = 0.05
+            mock_prefs.return_value = prefs
+
+            stats = MagicMock()
+            stats.manual_inertia_objects = [link_obj]
+            mock_stats.return_value = stats
+
+            # When unselected, should not draw
+            bpy.context.view_layer.objects.active = None
+            for o in scene.objects:
+                o.select_set(False)
+            inertia_gizmos.draw_inertia_gizmos()
+            assert not gpu.state.depth_test_set.called
+
+            # When selected, draws
+            link_obj.select_set(True)
+            bpy.context.view_layer.objects.active = link_obj
+            inertia_gizmos.draw_inertia_gizmos()
+            assert gpu.state.depth_test_set.called
+
+            # When active object is child of link (e.g. visual mesh), also draws
+            child_mesh = bpy.data.objects.new("child_visual", None)
+            child_mesh.parent = link_obj
+            scene.collection.objects.link(child_mesh)
+            child_mesh.select_set(True)
+            bpy.context.view_layer.objects.active = child_mesh
+            gpu.state.depth_test_set.reset_mock()
+            inertia_gizmos.draw_inertia_gizmos()
+            assert gpu.state.depth_test_set.called
 
     def test_ensure_inertia_handler(self) -> None:
         """Verify SpaceView3D draw handler registration/tag_redraw."""
@@ -292,6 +344,80 @@ class TestJointGizmos:
             assert gpu.state.blend_set.called
             assert gpu.state.line_width_set.called
 
+    def test_draw_joint_axes_selected_only_and_depth_occluded(self, scene) -> None:
+        """Verify joint axes respect SELECTED_ONLY display mode and OCCLUDED depth mode."""
+        joint_obj = bpy.data.objects.new("joint_target", None)
+        scene.collection.objects.link(joint_obj)
+        joint_obj.type = "EMPTY"
+        safe_update(scene)
+
+        gpu.state.depth_test_set.reset_mock()
+
+        with (
+            patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs") as mock_prefs,
+            patch(
+                "linkforge.blender.visualization.joint_gizmos.get_robot_statistics"
+            ) as mock_stats,
+        ):
+            prefs = MagicMock()
+            prefs.show_joint_axes = True
+            prefs.joint_axes_display_mode = "SELECTED_ONLY"
+            prefs.joint_axes_depth_mode = "OCCLUDED"
+            mock_prefs.return_value = prefs
+
+            stats = MagicMock()
+            stats.joint_objects = [joint_obj]
+            mock_stats.return_value = stats
+
+            # When unselected, should not draw
+            bpy.context.view_layer.objects.active = None
+            for o in scene.objects:
+                o.select_set(False)
+            joint_gizmos.draw_joint_axes()
+            assert not gpu.state.depth_test_set.called
+
+            # When selected, draws with LESS_EQUAL depth test
+            joint_obj.select_set(True)
+            bpy.context.view_layer.objects.active = joint_obj
+            joint_gizmos.draw_joint_axes()
+            assert gpu.state.depth_test_set.called
+            assert any(
+                call[0][0] == "LESS_EQUAL" for call in gpu.state.depth_test_set.call_args_list
+            )
+
+            # When child link of joint is selected, also draws
+            child_link = bpy.data.objects.new("child_link", None)
+            child_link.parent = joint_obj
+            scene.collection.objects.link(child_link)
+            joint_obj.select_set(False)
+            child_link.select_set(True)
+            bpy.context.view_layer.objects.active = child_link
+            gpu.state.depth_test_set.reset_mock()
+            joint_gizmos.draw_joint_axes()
+            assert gpu.state.depth_test_set.called
+
+            # When child mesh of link is selected, also draws
+            child_mesh = bpy.data.objects.new("child_mesh", None)
+            child_mesh.parent = child_link
+            scene.collection.objects.link(child_mesh)
+            child_link.select_set(False)
+            child_mesh.select_set(True)
+            bpy.context.view_layer.objects.active = child_mesh
+            gpu.state.depth_test_set.reset_mock()
+            joint_gizmos.draw_joint_axes()
+            assert gpu.state.depth_test_set.called
+
+            # When parent link of joint is selected, also draws
+            parent_link = bpy.data.objects.new("parent_link", None)
+            joint_obj.parent = parent_link
+            scene.collection.objects.link(parent_link)
+            child_mesh.select_set(False)
+            parent_link.select_set(True)
+            bpy.context.view_layer.objects.active = parent_link
+            gpu.state.depth_test_set.reset_mock()
+            joint_gizmos.draw_joint_axes()
+            assert gpu.state.depth_test_set.called
+
     def test_draw_joint_axes_handles_deleted_object_reference_error(self, scene) -> None:
         """Verify draw loop handles ReferenceError gracefully."""
         with (
@@ -335,7 +461,7 @@ class TestJointGizmos:
             joint_gizmos.fix_existing_joints()
 
             assert joint_obj.empty_display_type == "PLAIN_AXES"
-            assert joint_obj.empty_display_size == 0.5
+            assert joint_obj.empty_display_size == 0.02
 
     def test_update_viz_handle_lifecycle(self, scene) -> None:
         """Verify SpaceView3D custom drawing handler addition and removal on viz updates."""

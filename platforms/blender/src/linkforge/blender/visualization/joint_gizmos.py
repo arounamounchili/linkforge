@@ -21,6 +21,8 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 
 from ..constants import (
+    DEFAULT_JOINT_GIZMO_SIZE,
+    DEFAULT_LINK_GIZMO_SIZE,
     PROP_JOINT,
 )
 from ..core.constants import (
@@ -193,13 +195,17 @@ def _draw_internal() -> None:
 
     # Get preferences
     show_axes = True
-    axis_length = 0.2
+    axis_length = DEFAULT_JOINT_GIZMO_SIZE
+    display_mode = "ALL"
+    depth_mode = "ALWAYS"
 
     addon_prefs = get_addon_prefs(context)
 
     if addon_prefs:
         show_axes = getattr(addon_prefs, "show_joint_axes", show_axes)
         axis_length = getattr(addon_prefs, "joint_empty_size", axis_length)
+        display_mode = getattr(addon_prefs, "joint_axes_display_mode", display_mode)
+        depth_mode = getattr(addon_prefs, "joint_axes_depth_mode", depth_mode)
 
     if not show_axes:
         return
@@ -218,8 +224,32 @@ def _draw_internal() -> None:
 
     # Use centralized scene statistics to avoid redundant scene traversing
     stats = get_robot_statistics(scene)
+    target_joints = stats.joint_objects
 
-    for obj in stats.joint_objects:
+    # Progressive disclosure: filter to active/selected joint only if requested
+    if display_mode == "SELECTED_ONLY":
+        raw_selected = set(context.selected_objects or [])
+        if context.active_object and getattr(context.active_object, "select_get", lambda: False)():
+            raw_selected.add(context.active_object)
+
+        # Build selection closure (includes parents and children so selecting a mesh or link also shows its joints)
+        selected_set = set(raw_selected)
+        for s_obj in raw_selected:
+            # Traverse upwards (child mesh -> link empty -> joint empty -> parent link)
+            curr = getattr(s_obj, "parent", None)
+            while curr:
+                selected_set.add(curr)
+                curr = getattr(curr, "parent", None)
+            # Traverse direct children (parent link -> joint empty)
+            for child in getattr(s_obj, "children", []):
+                selected_set.add(child)
+
+        target_joints = [obj for obj in target_joints if obj in selected_set]
+
+    if not target_joints:
+        return
+
+    for obj in target_joints:
         try:
             # Generate axis geometry for this joint
             axis_data = generate_axis_geometry(obj, axis_length)
@@ -234,8 +264,9 @@ def _draw_internal() -> None:
     if not all_line_positions:
         return
 
-    # Set up GPU state - ALWAYS draw over meshes for RViz style
-    gpu.state.depth_test_set("ALWAYS")
+    # Set up GPU state - depth test according to preference
+    depth_func = "LESS_EQUAL" if depth_mode == "OCCLUDED" else "ALWAYS"
+    gpu.state.depth_test_set(depth_func)
     gpu.state.blend_set("ALPHA")
 
     # Draw lines (shafts)
@@ -249,7 +280,7 @@ def _draw_internal() -> None:
     )
     matrix = gpu.matrix.get_projection_matrix() @ gpu.matrix.get_model_view_matrix()
 
-    gpu.state.line_width_set(4.0)
+    gpu.state.line_width_set(2.5)
     shader.bind()
     shader.uniform_float("ModelViewProjectionMatrix", matrix)
     batch.draw(shader)
@@ -288,23 +319,37 @@ def fix_existing_joints(_dummy: typing.Any = None) -> None:
         return
 
     # Get preferred empty size from addon preferences
-    empty_size = 0.2  # Default fallback
+    empty_size = DEFAULT_JOINT_GIZMO_SIZE
+    link_size = DEFAULT_LINK_GIZMO_SIZE
     addon_prefs = get_addon_prefs()
     if addon_prefs:
         empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
+        link_size = getattr(addon_prefs, "link_empty_size", link_size)
 
     if not scene:
         return
 
+    show_gpu = getattr(addon_prefs, "show_joint_axes", True) if addon_prefs else True
+    from ..utils.scene_utils import compute_anchor_size
+
+    joint_anchor = compute_anchor_size(empty_size, show_gpu)
+    link_anchor = compute_anchor_size(link_size, show_gpu)
+
     for obj in scene.objects:
+        if obj.type != "EMPTY":
+            continue
         joint_props = getattr(obj, PROP_JOINT, None)
-        if obj.type == "EMPTY" and joint_props and getattr(joint_props, "is_robot_joint", False):
-            # Ensure PLAIN_AXES type (simple crosshair)
-            # We draw our own custom RViz-style arrows on top of this
+        if joint_props and getattr(joint_props, "is_robot_joint", False):
+            # Use subtle PLAIN_AXES crosshairs so the custom RViz-style RGB arrows take center stage
             if obj.empty_display_type != "PLAIN_AXES":
                 obj.empty_display_type = "PLAIN_AXES"
-            # Set display size from preferences
-            obj.empty_display_size = empty_size
+            # Set display size to compact anchor
+            obj.empty_display_size = joint_anchor
+        elif (lp := getattr(obj, "linkforge", None)) and getattr(lp, "is_robot_link", False):
+            # Keep link empties minimal with PLAIN_AXES compact anchor
+            if obj.empty_display_type != "PLAIN_AXES":
+                obj.empty_display_type = "PLAIN_AXES"
+            obj.empty_display_size = link_anchor
 
 
 def fix_current_scene() -> float | None:

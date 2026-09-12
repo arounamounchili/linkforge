@@ -12,7 +12,10 @@ from linkforge.blender.operators.joint_ops import (
     LINKFORGE_OT_create_joint,
     LINKFORGE_OT_delete_joint,
 )
-from linkforge.blender.utils.joint_utils import resolve_mimic_joints
+from linkforge.blender.utils.joint_utils import (
+    get_connected_joints_for_link,
+    resolve_mimic_joints,
+)
 from linkforge.blender.utils.scene_utils import is_robot_joint
 from linkforge.blender.visualization.joint_gizmos import (
     fix_existing_joints,
@@ -608,3 +611,53 @@ class TestJointUtils:
             ),
         ]
         resolve_mimic_joints(joints_no_mimic, joint_objects)
+
+
+def test_get_connected_joints_for_link(scene: bpy.types.Scene) -> None:
+    """Test finding incoming parent and outgoing child joints for a link."""
+    base = create_robot_link("base_link", scene)
+    arm = create_robot_link("arm_link", scene)
+    gripper = create_robot_link("gripper_link", scene)
+
+    joint1 = create_robot_joint("joint1", base, arm, scene)
+    joint2 = create_robot_joint("joint2", arm, gripper, scene)
+
+    # Base link (root): no parent joint, joint1 as child joint
+    p, children = get_connected_joints_for_link(base, scene)
+    assert p is None
+    assert children == [joint1]
+
+    # Arm link: joint1 as parent, joint2 as child joint
+    p, children = get_connected_joints_for_link(arm, scene)
+    assert p == joint1
+    assert children == [joint2]
+
+    # Gripper link (leaf): joint2 as parent, no child joints
+    p, children = get_connected_joints_for_link(gripper, scene)
+    assert p == joint2
+    assert children == []
+
+    # None input
+    p, children = get_connected_joints_for_link(None, scene)
+    assert p is None
+    assert children == []
+
+    # None scene fallback
+    with patch.object(bpy.context, "scene", None):
+        p, children = get_connected_joints_for_link(base, None)
+        assert p is None
+        assert children == []
+
+    # Scene with non-joint object and ReferenceError object
+    create_test_object("non_joint_obj", None, scene)
+
+    class DeadObject:
+        pass
+
+    with patch(
+        "linkforge.blender.utils.scene_utils.get_robot_statistics",
+        return_value=type("Stats", (), {"joint_objects": [joint1, DeadObject(), "invalid"]})(),
+    ):
+        p, children = get_connected_joints_for_link(base, scene)
+        assert p is None
+        assert children == [joint1]

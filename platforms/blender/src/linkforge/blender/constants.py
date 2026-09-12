@@ -70,11 +70,21 @@ FORMAT_GLB: Final[str] = "GLB"
 # UI and Viewport Visualization Defaults
 # ----------------------------------------------------------------------------
 
-# Gizmo sizes for viewport display
-DEFAULT_LINK_GIZMO_SIZE: Final[float] = 0.1
-DEFAULT_JOINT_GIZMO_SIZE: Final[float] = 0.1
-DEFAULT_SENSOR_GIZMO_SIZE: Final[float] = 0.1
-DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.1
+# Gizmo sizes for viewport display (in meters)
+DEFAULT_LINK_GIZMO_SIZE: Final[float] = 0.04
+DEFAULT_JOINT_GIZMO_SIZE: Final[float] = 0.05
+DEFAULT_SENSOR_GIZMO_SIZE: Final[float] = 0.03
+DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.03
+
+# Auto-fit bounds heuristic settings
+GIZMO_SIZE_MIN: Final[float] = 0.005
+GIZMO_SIZE_MAX: Final[float] = 0.5
+GIZMO_SCALE_FACTOR: Final[float] = 0.05
+
+# Empty anchor scale when RViz GPU visualization is active (keeps native wireframes subtle)
+ANCHOR_DISPLAY_RATIO: Final[float] = 0.2
+ANCHOR_DISPLAY_MAX: Final[float] = 0.02
+ANCHOR_DISPLAY_MIN: Final[float] = 0.002
 
 
 # ----------------------------------------------------------------------------

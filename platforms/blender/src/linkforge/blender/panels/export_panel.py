@@ -202,13 +202,6 @@ class LINKFORGE_PT_export_panel(Panel):
 
             # === COMPONENT BROWSER (Quick select all components) ===
             layout.separator()
-
-            # Collision Visibility Toggle
-            row = layout.row()
-            if row:
-                row.prop(props, "show_collisions", toggle=True, icon="SHADING_WIRE")
-
-            layout.separator()
             layout.prop(
                 props,
                 "show_kinematic_tree",

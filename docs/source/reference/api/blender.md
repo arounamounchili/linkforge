@@ -43,6 +43,11 @@ User actions and commands.
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: linkforge.blender.operators.display_ops
+   :members:
+   :undoc-members:
+   :show-inheritance:
 ```
 
 ## Panels

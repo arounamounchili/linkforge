@@ -232,13 +232,18 @@ class LINKFORGE_OT_add_empty_link(Operator):
         if not scene:
             return {"CANCELLED"}
 
-        # Initialize default size and prefix
-        empty_size = DEFAULT_LINK_GIZMO_SIZE
+        addon_prefs = get_addon_prefs(context)
         link_name = "base_link"
 
-        addon_prefs = get_addon_prefs(context)
-        if addon_prefs:
-            empty_size = getattr(addon_prefs, "link_empty_size", empty_size)
+        raw_size = (
+            getattr(addon_prefs, "link_empty_size", DEFAULT_LINK_GIZMO_SIZE)
+            if addon_prefs
+            else DEFAULT_LINK_GIZMO_SIZE
+        )
+        show_gpu = getattr(addon_prefs, "show_joint_axes", True) if addon_prefs else True
+        from ..utils.scene_utils import compute_anchor_size
+
+        empty_size = compute_anchor_size(raw_size, show_gpu)
 
         # Create Empty object as link frame
         data = getattr(context, "data", None) or bpy.data
@@ -341,12 +346,16 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
 
         from ..preferences import get_addon_prefs
 
-        # Initialize default size
-        empty_size = DEFAULT_LINK_GIZMO_SIZE
-
         addon_prefs = get_addon_prefs(context)
-        if addon_prefs:
-            empty_size = getattr(addon_prefs, "link_empty_size", empty_size)
+        raw_size = (
+            getattr(addon_prefs, "link_empty_size", DEFAULT_LINK_GIZMO_SIZE)
+            if addon_prefs
+            else DEFAULT_LINK_GIZMO_SIZE
+        )
+        show_gpu = getattr(addon_prefs, "show_joint_axes", True) if addon_prefs else True
+        from ..utils.scene_utils import compute_anchor_size
+
+        empty_size = compute_anchor_size(raw_size, show_gpu)
 
         # Rename mesh FIRST to free up the name for the Empty
         # This prevents Blender from auto-renaming the Empty to "name.001"

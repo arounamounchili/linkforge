@@ -7,6 +7,7 @@ the robot structure in chunks, allowing for a responsive UI and progress updates
 
 from __future__ import annotations
 
+import contextlib
 import typing
 from pathlib import Path
 
@@ -242,4 +243,9 @@ class AsynchronousRobotBuilder:
             # Report error if cancelled or failed
             logger.info(f"Asynchronous import ended: {self.error}")
         else:
+            if scene:
+                with contextlib.suppress(Exception):
+                    from ..utils.scene_utils import auto_fit_robot_gizmos
+
+                    auto_fit_robot_gizmos(scene, self.context)
             logger.info(f"Asynchronous import complete - '{self.robot.name}' is ready.")

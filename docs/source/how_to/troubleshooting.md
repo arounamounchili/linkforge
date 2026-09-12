@@ -64,10 +64,13 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 
 ## ️ UI & Viewport
 
-### Viewport is cluttered with giant icons
+### Viewport is cluttered with giant icons or too small to see
 **Solutions**:
-- **Global Scale**: Adjust the **Empty Display > Size** slider in **Blender Preferences > Add-ons > LinkForge**.
-- **Hide Helpers**: Toggle the **Show Collisions** checkbox in the **Validate & Export** panel or use the standard Blender **Hide Extras** viewport overlay to see only the robot geometry.
+- **Auto-Fit to Robot**: In the **Forge** tab (Step 1), click **Fit Gizmos to Robot** in the **Viewport Overlays** box. LinkForge measures your robot's bounding box and automatically scales all joint empties, coordinate frames, and sensor markers to match its scale (from 5mm micro-mechanisms to 50cm mobile bases).
+- **Quick Overlays Toolbar**: Toggle **Collisions**, **Joints**, or **Inertia** with a single click in the **Forge > Viewport Overlays** toolbar.
+- **Progressive Disclosure**: In **Blender Preferences > Add-ons > LinkForge**, set **Joint Axes Display Mode** to `Selected Only`. Axes will only appear for the link currently active in the 3D Viewport or Outliner.
+- **Occlusion Mode**: In Preferences, set **Joint Axes Depth Mode** to `Occluded by Meshes` so internal joint frames do not draw through external surfaces.
+- **Manual Scale**: Adjust the **Size** slider in the **Forge > Viewport Overlays** box or in Blender Preferences.
 
 ## ️ Context & Mode Reliability
 

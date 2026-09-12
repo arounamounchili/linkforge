@@ -262,3 +262,36 @@ using `object["key"] = value`. They are visible in glTF exports as metadata.
 | `imported_from_source` | `bool` | `true` if this object was created by importing a URDF |
 | `source_geometry_type` | `str` | Original geometry type from the imported URDF |
 | `source_name` | `str` | Original object name from the imported URDF |
+
+---
+
+## `linkforge_robot`: Scene Properties
+
+Stored on `bpy.context.scene.linkforge_robot` to configure robot-level metadata and viewport overlay toggles.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `robot_name` | `str` | `"my_robot"` | Top-level robot model identifier |
+| `root_link` | `PointerProperty` | `None` | Reference to the kinematic root link object |
+| `show_collisions` | `bool` | `false` | Global visibility toggle for all collision meshes |
+| `joint_gizmo_size` | `float` | `0.05` | Active scale multiplier for joint coordinate frames |
+| `enable_joint_axes_gizmo` | `bool` | `true` | Enable RViz-style 3D joint coordinate arrows |
+| `enable_joint_limits_gizmo` | `bool` | `true` | Enable angular/prismatic kinematic limit arc overlay |
+
+---
+
+## Add-on Preferences
+
+Global configuration stored in Blender Preferences under the LinkForge add-on settings.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `joint_axes_display_mode` | `enum` | `"ALL"` | Display mode for joint axes: `"ALL"` or `"SELECTED_ONLY"` |
+| `joint_axes_depth_mode` | `enum` | `"ALWAYS"` | Depth testing: `"ALWAYS"` (X-ray pass-through) or `"OCCLUDED"` (hidden by meshes) |
+| `show_joint_gizmos` | `bool` | `true` | Master switch for joint coordinate frame rendering |
+| `joint_gizmo_size` | `float` | `0.05` | Default joint coordinate frame size (meters) |
+| `link_gizmo_size` | `float` | `0.04` | Default link empty size (meters) |
+| `sensor_gizmo_size` | `float` | `0.03` | Default sensor empty size (meters) |
+| `show_inertia_gizmos` | `bool` | `false` | Master switch for Center of Mass & inertia box overlays |
+| `inertia_display_mode` | `enum` | `"SELECTED_ONLY"` | Inertia filtering: `"SELECTED_ONLY"` or `"ALL"` |
+| `inertia_gizmo_size` | `float` | `0.03` | Default inertia gizmo scale (meters) |

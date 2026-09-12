@@ -70,20 +70,25 @@ class LINKFORGE_OT_create_joint(Operator):
 
         addon_prefs = get_addon_prefs(context)
 
-        # Initialize default size
-        empty_size = 0.2
+        from ..constants import DEFAULT_JOINT_GIZMO_SIZE
+        from ..utils.scene_utils import compute_anchor_size
 
-        if addon_prefs:
-            empty_size = getattr(addon_prefs, "joint_empty_size", empty_size)
+        raw_size = (
+            getattr(addon_prefs, "joint_empty_size", DEFAULT_JOINT_GIZMO_SIZE)
+            if addon_prefs
+            else DEFAULT_JOINT_GIZMO_SIZE
+        )
+        show_gpu = getattr(addon_prefs, "show_joint_axes", True) if addon_prefs else True
+        empty_size = compute_anchor_size(raw_size, show_gpu)
 
         # Get link object's world location and rotation (Standard XYZ for URDF)
         location = link_obj.matrix_world.translation.copy()
         rotation = link_obj.matrix_world.to_euler("XYZ")
 
-        # Create Empty at link's location (ARROWS shows RGB colored axes)
+        # Create Empty at link's location (PLAIN_AXES crosshair anchor; RViz shader renders RGB axes)
         with context_and_mode_guard(context):
             ops = getattr(context, "ops", bpy.ops)
-            ops.object.empty_add(type="ARROWS", location=location)
+            ops.object.empty_add(type="PLAIN_AXES", location=location)
             joint_empty = getattr(context, "active_object", bpy.context.active_object)
             if not joint_empty:
                 return {"CANCELLED"}

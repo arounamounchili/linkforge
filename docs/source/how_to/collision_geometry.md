@@ -37,8 +37,9 @@ If a Link has multiple visual meshes (e.g., a chassis made of several separate p
 This approach ensures maximum simulation stability, as a single unified collision mesh is far less prone to "snagging" or numerical jitter than a collection of separate overlapping meshes.
 
 ## 4. Live Preview & Quality
+- **Hidden by Default**: In LinkForge 1.5.3+, collision meshes are hidden upon robot import and generation by default. This prevents the viewport from becoming cluttered with overlapping meshes.
+- **Toggling Visibility**: Click the **Collisions** button in the **Forge > Viewport Overlays** toolbar to toggle all collision meshes across the entire robot simultaneously. You can also toggle visibility for individual links using the **Show/Hide Collision** button in the **Links** panel or the checkbox in **Validate & Export**.
 - **Collision Quality**: Use the slider to decimate the collision mesh. Higher values (1.0) preserve more detail, while lower values simplify the geometry for faster simulation.
-- **Toggling Visibility**: Click the **Show/Hide Collision** button in the **Links** panel to inspect the generated geometry. You can also use the wireframe icon in the **Validate & Export** panel to see all robot collisions at once.
 
 ## 5. Manual Collisions
 If you want to provide your own hand-optimized collision mesh:

@@ -409,6 +409,53 @@ class TestLinkPanel:
         # Should fall back to parent and render its title
         mock_layout.label.assert_any_call(text="Link: non_virtual_link", icon="LINKED")
 
+    def test_link_panel_draw_connected_joints(self, scene, blender_context, mock_layout) -> None:
+        """Test drawing connected joints section in link panel."""
+        base = create_robot_link("base_link", scene)
+        arm = create_robot_link("arm_link", scene)
+        create_robot_joint("joint1", base, arm, scene)
+
+        # Base link evaluation (root)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = base
+        base.select_set(True)
+
+        panel = LINKFORGE_PT_links()
+        panel.layout = mock_layout
+        panel.draw(bpy.context)
+
+        mock_layout.label.assert_any_call(text="Connected Joints", icon="EMPTY_ARROWS")
+        mock_layout.label.assert_any_call(text="Root Link (Robot Base)", icon="WORLD")
+        mock_layout.operator.assert_any_call(
+            "linkforge.select_tree_object", text="joint1", icon="EMPTY_AXIS"
+        )
+
+        # Arm link evaluation (child)
+        mock_layout.reset_mock()
+        base.select_set(False)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = arm
+        arm.select_set(True)
+
+        panel.draw(bpy.context)
+        mock_layout.label.assert_any_call(text="Connected Joints", icon="EMPTY_ARROWS")
+        mock_layout.label.assert_any_call(text="Parent Joint:", icon="CON_LOCLIKE")
+        mock_layout.operator.assert_any_call(
+            "linkforge.select_tree_object", text="joint1", icon="RESTRICT_SELECT_OFF"
+        )
+
+        # Standalone link evaluation (no connected joints)
+        mock_layout.reset_mock()
+        arm.select_set(False)
+        standalone = create_robot_link("standalone", scene)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = standalone
+        standalone.select_set(True)
+
+        panel.draw(bpy.context)
+        mock_layout.label.assert_any_call(text="Connected Joints", icon="EMPTY_ARROWS")
+        mock_layout.label.assert_any_call(text="Standalone Link (No joints connected)", icon="INFO")
+
 
 class TestJointPanel:
     def test_joint_panel_draw(self, scene, blender_context, mock_layout) -> None:
@@ -417,6 +464,8 @@ class TestJointPanel:
         panel.layout = mock_layout
 
         panel.draw(bpy.context)
+
+        # Nothing selected - should show "Create Joint" button
         mock_layout.operator.assert_any_call(
             "linkforge.create_joint", icon="ADD", text="Create Joint"
         )
@@ -438,6 +487,9 @@ class TestJointPanel:
 
         mock_layout.label.assert_any_call(text="Joint: test_joint", icon="EMPTY_ARROWS")
         mock_layout.prop.assert_any_call(safe_get_joint(joint_obj), "joint_name")
+        mock_layout.operator.assert_any_call(
+            "linkforge.select_tree_object", text="", icon="RESTRICT_SELECT_OFF"
+        )
 
     def test_joint_panel_draw_joint_types_and_toggles(
         self, scene, blender_context, mock_layout

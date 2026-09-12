@@ -15,7 +15,8 @@ from ..core.constants import (
     GEOM_MESH,
 )
 from ..properties.geom_props import PROP_GEOM
-from ..utils.property_helpers import get_link_props
+from ..utils.joint_utils import get_connected_joints_for_link
+from ..utils.property_helpers import get_joint_props, get_link_props
 
 
 class LINKFORGE_PT_links(Panel):
@@ -128,6 +129,50 @@ class LINKFORGE_PT_links(Panel):
 
         # Link name
         box.prop(props, "link_name")
+
+        # Connected Joints section
+        box.separator()
+        parent_joint, child_joints = get_connected_joints_for_link(obj, context.scene)
+
+        joint_box = box.box()
+        joint_box.label(text="Connected Joints", icon="EMPTY_ARROWS")
+
+        if parent_joint:
+            pj_row = joint_box.row(align=True)
+            pj_props = get_joint_props(parent_joint)
+            pj_name = (
+                pj_props.joint_name
+                if pj_props and pj_props.joint_name
+                else getattr(parent_joint, "name", "Joint")
+            )
+            pj_row.label(text="Parent Joint:", icon="CON_LOCLIKE")
+            op = pj_row.operator(
+                "linkforge.select_tree_object", text=pj_name, icon="RESTRICT_SELECT_OFF"
+            )
+            op.object_name = parent_joint.name
+            op.object_type = "joint"
+        elif child_joints:
+            pj_row = joint_box.row()
+            pj_row.active = False
+            pj_row.label(text="Root Link (Robot Base)", icon="WORLD")
+        else:
+            pj_row = joint_box.row()
+            pj_row.active = False
+            pj_row.label(text="Standalone Link (No joints connected)", icon="INFO")
+
+        if child_joints:
+            col = joint_box.column(align=True)
+            col.label(text=f"Child Joints ({len(child_joints)}):", icon="FORWARD")
+            for c_joint in child_joints:
+                cj_props = get_joint_props(c_joint)
+                cj_name = (
+                    cj_props.joint_name
+                    if cj_props and cj_props.joint_name
+                    else getattr(c_joint, "name", "Joint")
+                )
+                op = col.operator("linkforge.select_tree_object", text=cj_name, icon="EMPTY_AXIS")
+                op.object_name = c_joint.name
+                op.object_type = "joint"
 
         # Geometry section: Visuals
         box.separator()

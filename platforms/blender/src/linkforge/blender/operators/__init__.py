@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from . import (
     control_ops,
+    display_ops,
     export_ops,
     import_ops,
     joint_ops,
@@ -25,6 +26,7 @@ modules = [
     sensor_ops,
     control_ops,
     selection_ops,
+    display_ops,
     import_ops,
     export_ops,
 ]

@@ -30,12 +30,13 @@ Sometimes, the geometric center is not the physical center of mass (e.g., a batt
    - **Pos**: XYZ offset from the link origin.
    - **Rot**: RPY rotation of the inertia frame (radians, **XYZ order**).
 
-###  Visualizing the Center of Mass
-When you modify the Inertial Origin:
-- A **Yellow Wireframe Sphere** (Center of Mass) with **Orange/White Axes** will be **permanently visible** in the viewport.
-- This represents the **Principal Axes of Inertia** and the exact physical center of the object.
-- Moving the **Pos** values will shift this visualization relative to the link origin.
-- Use **Global Preferences > Inertia Visualization** to resize or hide these markers.
+### Visualizing the Center of Mass
+When inspecting or configuring mass distributions:
+- **Hidden by Default**: In LinkForge 1.5.3+, inertia gizmos are hidden by default to keep your 3D viewport clean.
+- **Quick Toggle**: Click the **Inertia** button in the **Forge > Viewport Overlays** toolbar (or enable **Show Inertia Gizmos** in Preferences) to display the Center of Mass and principal inertia boxes.
+- **Progressive Disclosure**: By default, inertia visualizations are filtered to the **Selected Link Only**, preventing dozens of inertia boxes from overlapping in large assemblies. You can switch to **All Links** in **Preferences > Inertia Visualization > Display Mode**.
+- **Visual Appearance**: A **Yellow Wireframe Box/Sphere** (Center of Mass) with **Orange/White Axes** represents the **Principal Axes of Inertia** and the exact physical center of the object.
+- Moving the **Pos** values will shift this visualization relative to the link origin in real time.
 
 ### Example: Lowering the COM
 To make a mobile robot more stable, you often want the center of mass to be low.

@@ -23,6 +23,7 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Matrix, Vector
 
 from ..constants import (
+    DEFAULT_INERTIA_GIZMO_SIZE,
     PROP_LINK,
 )
 from ..core.constants import (
@@ -174,14 +175,16 @@ def draw_inertia_gizmos() -> None:
         context = bpy.context
 
         # Check global visibility preference
-        show_gizmos = True
-        gizmo_size = 0.1
+        show_gizmos = False
+        gizmo_size = DEFAULT_INERTIA_GIZMO_SIZE
+        display_mode = "SELECTED_ONLY"
 
         try:
             prefs = get_addon_prefs(context)
             if prefs:
                 show_gizmos = prefs.show_inertia_gizmos
                 gizmo_size = prefs.inertia_gizmo_size
+                display_mode = getattr(prefs, "inertia_display_mode", display_mode)
         except Exception:
             # Fallback if preferences access fails (safe default)
             pass
@@ -202,8 +205,35 @@ def draw_inertia_gizmos() -> None:
 
         # Use centralized scene statistics to avoid redundant scene traversing
         stats = get_robot_statistics(context.scene)
+        target_objects = stats.manual_inertia_objects
 
-        for obj in stats.manual_inertia_objects:
+        # Progressive disclosure: filter to active/selected link only if requested
+        if display_mode == "SELECTED_ONLY":
+            raw_selected = set(context.selected_objects or [])
+            if (
+                context.active_object
+                and getattr(context.active_object, "select_get", lambda: False)()
+            ):
+                raw_selected.add(context.active_object)
+
+            # Build selection closure (includes parents and children so selecting a mesh or joint also shows its inertia)
+            selected_set = set(raw_selected)
+            for s_obj in raw_selected:
+                # Traverse upwards (child mesh -> link empty)
+                curr = getattr(s_obj, "parent", None)
+                while curr:
+                    selected_set.add(curr)
+                    curr = getattr(curr, "parent", None)
+                # Traverse direct children (joint empty -> child link)
+                for child in getattr(s_obj, "children", []):
+                    selected_set.add(child)
+
+            target_objects = [obj for obj in target_objects if obj in selected_set]
+
+        if not target_objects:
+            return
+
+        for obj in target_objects:
             try:
                 axis_data = generate_inertia_axes_geometry(obj, axis_length=gizmo_size)
                 if axis_data["lines"]:

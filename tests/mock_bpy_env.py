@@ -575,7 +575,7 @@ DEFAULT_PROPERTY_VALUES = {
     "xacro_extract_dimensions": True,
     "xacro_generate_macros": False,
     "xacro_split_files": False,
-    "show_collisions": True,
+    "show_collisions": False,
     "show_kinematic_tree": False,
     "joint_name": "",
     "link_name": "",

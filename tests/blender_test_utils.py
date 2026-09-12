@@ -257,6 +257,7 @@ def create_robot_joint(
     Handles object creation, parenting, and RNA property assignment.
     """
     joint_obj = create_test_object(name, None, scene=scene)
+    joint_obj.empty_display_type = "PLAIN_AXES"
 
     joint_props = safe_get_joint(joint_obj, scene)
     joint_props.is_robot_joint = True
