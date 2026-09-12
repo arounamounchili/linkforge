@@ -6,6 +6,7 @@ Export Blender mesh objects to STL, OBJ, and GLB files for URDF.
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,44 @@ from ..utils.transform_utils import get_local_bounding_box_center
 logger = get_logger(__name__)
 
 
+def _export_with_blender_op(
+    obj: Any,
+    filepath: Path,
+    format_name: str,
+    export_fn: Callable[[], Any],
+) -> bool:
+    """Execute a Blender export operator with standard object selection, directory creation, and error handling."""
+    if obj is None:
+        return False
+
+    was_hidden = obj.hide_viewport
+    try:
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        obj.hide_viewport = False
+
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        if bpy.context.view_layer is not None:
+            bpy.context.view_layer.objects.active = obj
+
+        export_fn()
+    except (RuntimeError, OSError) as e:
+        logger.warning(f"{format_name} export failed: {e}")
+        return False
+    except (TypeError, AttributeError, KeyError) as e:
+        logger.error(f"Unexpected error during {format_name} export: {e}", exc_info=True)
+        raise
+    except Exception as e:
+        logger.critical(
+            f"Critical unexpected error during {format_name} export: {e}", exc_info=True
+        )
+        raise
+    finally:
+        obj.hide_viewport = was_hidden
+
+    return True
+
+
 def export_mesh_stl(obj: Any, filepath: Path) -> bool:
     """Export a Blender object to an STL file.
 
@@ -41,46 +80,18 @@ def export_mesh_stl(obj: Any, filepath: Path) -> bool:
     Returns:
         True if the export completed successfully, False otherwise.
     """
-    if obj is None:
-        return False
-
-    # Ensure object is visible before selection for reliable Blender context.
-    was_hidden = obj.hide_viewport
-
-    # Ensure parent directory exists
-    try:
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # Deselect all and select only target object
-        obj.hide_viewport = False
-
-        bpy.ops.object.select_all(action="DESELECT")
-        obj.select_set(True)
-        if bpy.context.view_layer is not None:
-            bpy.context.view_layer.objects.active = obj
-
-        # Export to STL
-        bpy.ops.wm.stl_export(
+    return _export_with_blender_op(
+        obj,
+        filepath,
+        "STL",
+        lambda: bpy.ops.wm.stl_export(
             filepath=str(filepath),
             export_selected_objects=True,
             apply_modifiers=True,
             forward_axis="Y",
             up_axis="Z",
-        )
-    except (RuntimeError, OSError) as e:
-        logger.warning(f"STL export failed: {e}")
-        return False
-    except (TypeError, AttributeError, KeyError) as e:
-        logger.error(f"Unexpected error during STL export: {e}", exc_info=True)
-        raise
-    except Exception as e:
-        logger.critical(f"Critical unexpected error during STL export: {e}", exc_info=True)
-        raise
-    finally:
-        # Restore visibility state
-        obj.hide_viewport = was_hidden
-
-    return True
+        ),
+    )
 
 
 def export_mesh_obj(obj: Any, filepath: Path) -> bool:
@@ -96,47 +107,19 @@ def export_mesh_obj(obj: Any, filepath: Path) -> bool:
     Returns:
         True if the export completed successfully, False otherwise.
     """
-    if obj is None:
-        return False
-
-    # Store visibility state before modifying
-    was_hidden = obj.hide_viewport
-    # Ensure parent directory exists
-    try:
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # Deselect all and select only target object
-        # Selection requires object visibility
-        obj.hide_viewport = False
-
-        bpy.ops.object.select_all(action="DESELECT")
-        obj.select_set(True)
-        if bpy.context.view_layer is not None:
-            bpy.context.view_layer.objects.active = obj
-
-        # Export to OBJ
-        bpy.ops.wm.obj_export(
+    return _export_with_blender_op(
+        obj,
+        filepath,
+        "OBJ",
+        lambda: bpy.ops.wm.obj_export(
             filepath=str(filepath),
             export_selected_objects=True,
             apply_modifiers=True,
             export_materials=True,
             forward_axis="Y",
             up_axis="Z",
-        )
-    except (RuntimeError, OSError) as e:
-        logger.warning(f"OBJ export failed: {e}")
-        return False
-    except (TypeError, AttributeError, KeyError) as e:
-        logger.error(f"Unexpected error during OBJ export: {e}", exc_info=True)
-        raise
-    except Exception as e:
-        logger.critical(f"Critical unexpected error during OBJ export: {e}", exc_info=True)
-        raise
-    finally:
-        # Restore visibility state
-        obj.hide_viewport = was_hidden
-
-    return True
+        ),
+    )
 
 
 def create_simplified_mesh(obj: Any, decimation_ratio: float) -> Any | None:
@@ -233,49 +216,18 @@ def export_mesh_glb(obj: Any, filepath: Path) -> bool:
 
     Returns:
         True if export succeeded, False otherwise
-
     """
-    if obj is None:
-        return False
-
-    # Store visibility state before modifying
-    was_hidden = obj.hide_viewport
-    # Ensure parent directory exists
-    try:
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # Deselect all and select only target object
-        # Selection requires object visibility
-        obj.hide_viewport = False
-
-        bpy.ops.object.select_all(action="DESELECT")
-        obj.select_set(True)
-        if bpy.context.view_layer is not None:
-            bpy.context.view_layer.objects.active = obj
-
-        # Export to GLB
-        bpy.ops.export_scene.gltf(
+    return _export_with_blender_op(
+        obj,
+        filepath,
+        "GLB",
+        lambda: bpy.ops.export_scene.gltf(
             filepath=str(filepath),
             export_format="GLB",
             use_selection=True,
             export_apply=True,
-            # We want Y-up for standard conventions, usually handled by glTF exporter automatically
-            # but Blender Z-up to glTF Y-up conversion is standard.
-        )
-    except (RuntimeError, OSError) as e:
-        logger.warning(f"GLB export failed: {e}")
-        return False
-    except (TypeError, AttributeError, KeyError) as e:
-        logger.error(f"Unexpected error during GLB export: {e}", exc_info=True)
-        raise
-    except Exception as e:
-        logger.critical(f"Critical unexpected error during GLB export: {e}", exc_info=True)
-        raise
-    finally:
-        # Restore visibility state
-        obj.hide_viewport = was_hidden
-
-    return True
+        ),
+    )
 
 
 def export_link_mesh(
@@ -339,8 +291,8 @@ def export_link_mesh(
         col.objects.link(temp_export_obj)
 
     # CRITICAL FIX: Local Fidelity Centering
-    # 1. Bake SCALE into the mesh data (ensures 1.0 scale in URDF)
-    # 2. DO NOT bake rotation (keeps mesh orientations relative to links)
+    # Bake SCALE into the mesh data (ensures 1.0 scale in URDF)
+    # DO NOT bake rotation (keeps mesh orientations relative to links)
     scale_matrix = Matrix.Diagonal((*obj.scale, 1.0))
     temp_export_obj.data.transform(scale_matrix)
     temp_export_obj.scale = (1, 1, 1)

@@ -12,18 +12,14 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tomllib
 import typing
 from pathlib import Path
-
-# Use tomllib (Py3.11+) or fall back to string parsing for manifest metadata
-try:
-    import tomllib
-except ImportError:
-    tomllib = None  # type: ignore[assignment]
 
 # --- Configuration ---
 REPO_ROOT = Path(__file__).resolve().parents[3]  # platforms/blender/scripts/build.py -> root
@@ -55,11 +51,13 @@ def read_manifest_value(key: str) -> str:
     if not MANIFEST_PATH.exists():
         return "0.0.0"
 
-    content = MANIFEST_PATH.read_text()
-    match = re.search(f'^{key}\\s*=\\s*"([^"]+)"', content, re.MULTILINE)
-    if match:
-        return match.group(1)
-    return "0.0.0"
+    try:
+        data = tomllib.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        return str(data.get(key, "0.0.0"))
+    except Exception:
+        content = MANIFEST_PATH.read_text(encoding="utf-8")
+        match = re.search(f'^{key}\\s*=\\s*"([^"]+)"', content, re.MULTILINE)
+        return match.group(1) if match else "0.0.0"
 
 
 def sync_dependencies() -> None:
@@ -170,10 +168,10 @@ def build_extension() -> Path:
 
     print(f"📦 Staging LinkForge Extension v{version} for build...")
 
-    # 1. Copy manifest
+    # Copy manifest
     shutil.copy(MANIFEST_PATH, staging_dir)
 
-    # 2. Copy source code (Extension)
+    # Copy extension source tree
     # Copy contents of platforms/blender/linkforge/ so __init__.py is at root
     for item in SOURCE_DIR.iterdir():
         if item.name.startswith((".", "__pycache__")) or item.name in {"linkforge.core", "core"}:
@@ -184,7 +182,7 @@ def build_extension() -> Path:
         else:
             shutil.copy2(item, dest)
 
-    # 3. Copy Core Library (linkforge.core)
+    # Bundle Core Library (linkforge.core)
     # Bundle it inside the linkforge package for policy compliance and reliable imports
     if not CORE_DIR.exists():
         print(f"❌ Error: Core directory {CORE_DIR} not found.")
@@ -197,26 +195,19 @@ def build_extension() -> Path:
         shutil.copy2(REPO_ROOT / "core" / "LICENSE", target_core_dir)
     print(f"  Bundled linkforge.core -> {target_core_dir}")
 
-    # 3. Copy dependencies (if any)
+    # Bundle wheel dependencies if present
     if WHEELS_DIR.exists() and any(WHEELS_DIR.iterdir()):
         shutil.copytree(WHEELS_DIR, staging_dir / "wheels")
         print(f"  Bundled dependencies -> {staging_dir / 'wheels'}")
 
-    # 4. Copy license/readme
+    # Copy license and readme
     for f in ["LICENSE", "README.md"]:
         if (REPO_ROOT / f).exists():
             shutil.copy2(REPO_ROOT / f, staging_dir)
 
-    # 5. Transform Absolute Imports to Relative Imports in staging
-    # This ensures absolute 'from linkforge.core' works in dev mode
-    # but becomes relative 'from . import core' or 'from .. import core' in extension mode.
-    transform_to_relative_imports(staging_dir)
-
     print("🚀 Building split-platform packages...")
 
     # Find Blender CLI
-    import os
-
     blender_path = os.environ.get("BLENDER_PATH", "blender")
 
     if not shutil.which(blender_path):
@@ -251,7 +242,7 @@ def build_extension() -> Path:
     # Clean up staging on success
     shutil.rmtree(staging_dir)
 
-    # 5. Rename packages for platform clarity (LinkForge Multi-Platform Vision)
+    # Rename packages for platform clarity (LinkForge Multi-Platform Vision)
     # This distinguishes 'linkforge-blender' from future 'linkforge-freecad', etc.
     print("✨ Renaming packages for platform clarity...")
     extension_id = read_manifest_value("id")
@@ -265,45 +256,9 @@ def build_extension() -> Path:
     return DIST_DIR
 
 
-def transform_to_relative_imports(staging_dir: Path) -> None:
-    """Transform absolute imports of linkforge.core to relative imports."""
-    print(f"✨ Transforming absolute imports in {staging_dir}...")
-    count = 0
-    for py_file in staging_dir.rglob("*.py"):
-        rel_path = py_file.relative_to(staging_dir)
-        content = py_file.read_text()
-        new_content = content
-
-        if py_file.name == "__init__.py" and py_file.parent == staging_dir:
-            # Special case for root __init__.py: linkforge.core -> .core
-            new_content = re.sub(r"import linkforge\.core", "from . import core", new_content)
-            new_content = re.sub(r"from linkforge\.core", "from .core", new_content)
-        else:
-            # For all other files, linkforge.core is at the root of the extension
-            depth = len(rel_path.parts) - 1
-            prefix = "." * (depth + 1)
-
-            # Transform 'from linkforge.core import X' -> 'from ..core import X'
-            new_content = re.sub(r"from linkforge\.core", f"from {prefix}core", new_content)
-            # Transform 'import linkforge.core' -> 'from .. import core'
-            new_content = re.sub(
-                r"import linkforge\.core", f"from {prefix} import core", new_content
-            )
-            # Transform 'from linkforge.blender' (which is now the extension root)
-            new_content = re.sub(r"from linkforge\.blender\.", f"from {prefix}", new_content)
-
-        if content != new_content:
-            print(f"  Modified: {rel_path}")
-            py_file.write_text(new_content)
-            count += 1
-    print(f"✅ Transformed {count} files.")
-
-
 def develop_extension() -> None:
     """Setup the extension for development by symlinking into Blender's user extensions."""
-    import os
-
-    # 1. Try official Blender CLI first (for newer versions)
+    # Try official Blender CLI first (for newer versions)
     blender_path = os.environ.get("BLENDER_PATH", "blender")
     if not shutil.which(blender_path):
         mac_fallback = "/Applications/Blender.app/Contents/MacOS/Blender"
@@ -333,7 +288,7 @@ def develop_extension() -> None:
         except Exception:
             pass
 
-    # 2. Manual Symlink Fallback
+    # Manual Symlink Fallback
     print("🛠️  Setting up manual development symlink...")
 
     # Determine extensions path
@@ -371,10 +326,10 @@ def develop_extension() -> None:
             shutil.rmtree(target_dir)
 
     try:
-        # 1. Link the Blender source folder to Blender's extensions directory
+        # Link the Blender source folder to Blender's extensions directory
         os.symlink(SOURCE_DIR, target_dir, target_is_directory=True)
 
-        # 2. Link the Core library INTO the source folder so imports work in dev mode
+        # Link the Core library into the source folder so imports work in dev mode
         # This mirrors the production build structure: core/
         core_link_target = SOURCE_DIR / "core"
 

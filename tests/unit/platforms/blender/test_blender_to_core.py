@@ -1,8 +1,13 @@
+import math
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest import mock
+from unittest.mock import MagicMock, patch
 
+import bmesh
 import bpy
+import mathutils
 import pytest
+from mathutils import Euler, Matrix
 
 from tests.blender_test_utils import (
     create_test_object,
@@ -10,7 +15,6 @@ from tests.blender_test_utils import (
     safe_get_linkforge,
     safe_get_linkforge_scene,
     safe_get_sensor,
-    safe_get_transmission,
 )
 
 try:
@@ -20,19 +24,22 @@ try:
 except ImportError:
     HAS_PYBULLET = False
 from linkforge.blender.adapters.blender_to_core import (
+    SceneToRobotTranslator,
     _calculate_link_frames,
+    _categorize_scene_objects,
+    scene_to_robot,
+)
+from linkforge.blender.adapters.geometry_extractor import (
     detect_primitive_type,
     extract_mesh_triangles,
     get_object_geometry,
     get_object_material,
-    sanitize_name,
-    scene_to_robot,
 )
 from linkforge.blender.adapters.translator import (
     JointTranslator,
     LinkTranslator,
+    Ros2ControlTranslator,
     SensorTranslator,
-    TransmissionTranslator,
 )
 from linkforge.blender.properties.geom_props import (
     GEOM_CYLINDER,
@@ -43,11 +50,13 @@ from linkforge.blender.properties.geom_props import (
 from linkforge.blender.utils.transform_utils import matrix_to_transform
 from linkforge.core import (
     Box,
+    Color,
     Cylinder,
     GeometryType,
     Joint,
     JointType,
     Link,
+    Material,
     Mesh,
     RobotBuilder,
     RobotValidationError,
@@ -55,13 +64,7 @@ from linkforge.core import (
     Sphere,
     ValidationErrorCode,
 )
-from linkforge.core.constants import (
-    HW_IF_VELOCITY,
-    TRANS_CUSTOM,
-    TRANS_DIFFERENTIAL,
-    TRANS_SIMPLE,
-)
-from mathutils import Euler, Matrix
+from linkforge.core._utils.string_utils import sanitize_name
 
 
 def translate_link_to_model(obj, context):
@@ -95,7 +98,7 @@ def translate_joint_to_model(obj, context, parent=None, child=None):
         lb_c = builder.link(c_name, parent=p_name)
         LinkTranslator().translate(child, builder, context, lb=lb_c)
 
-    JointTranslator().translate(obj, builder, context, lb=lb_c)
+    JointTranslator().translate(obj, lb=lb_c)
     if lb_c:
         lb_c.commit()
 
@@ -139,44 +142,6 @@ def test_get_object_geometry_sphere_cylinder(scene, blender_context) -> None:
     assert geom_c.radius > 0.0
     assert geom_c.length > 0.0
     assert world_matrix == c_obj.matrix_world
-
-
-def test_detect_primitive_type_box(scene, blender_context) -> None:
-    """Verify that a basic cube mesh is detected as BOX."""
-
-    # Use Blender's real primitive cube (8 verts, 6 quad faces)
-    bpy.ops.mesh.primitive_cube_add()
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) == "box"
-
-
-def test_detect_primitive_type_sphere(scene, blender_context) -> None:
-    """Verify that a UV sphere is detected as SPHERE."""
-
-    # Use Blender's real UV sphere (default 32 segs x 16 rings = 482 verts, 480 faces)
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0)
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) == "sphere"
-
-
-def test_detect_primitive_type_cylinder(scene, blender_context) -> None:
-    """Verify that a cylinder is detected as CYLINDER."""
-
-    # Use Blender's real cylinder (32 vertices matches the cylinder topology detection range)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.0, depth=3.0)
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) == "cylinder"
-
-
-def test_detect_primitive_type_none_case(scene, blender_context) -> None:
-    """A complex mesh object should return None for primitive detection."""
-    bpy.ops.mesh.primitive_monkey_add()
-    obj = bpy.context.active_object
-    assert obj is not None
-    assert detect_primitive_type(obj) is None
 
 
 def test_blender_joint_to_core_conversion(scene, blender_context) -> None:
@@ -230,7 +195,7 @@ def test_blender_sensor_to_core_lidar(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -287,13 +252,9 @@ def test_categorize_scene_objects_logic(scene, blender_context) -> None:
     j_obj = create_test_object("j_joint", None, scene)
     safe_get_joint(j_obj).is_robot_joint = True
 
-    t_obj = create_test_object("t_trans", None, scene)
-    safe_get_transmission(t_obj).is_robot_transmission = True
-
     # Call internal categorizer
-    from linkforge.blender.adapters.blender_to_core import _categorize_scene_objects
 
-    links, joints, sensors, transmissions, joints_map, root = _categorize_scene_objects(scene)
+    links, joints, sensors, joints_map, root = _categorize_scene_objects(scene)
 
     assert "l_link" in links
     assert j_obj in joints
@@ -486,9 +447,8 @@ def test_categorize_scene_objects_complex_hierarchy(scene, blender_context) -> N
     safe_get_sensor(sensor).attached_link = child
 
     # Manually run the protected function (we are testing unit logic)
-    from linkforge.blender.adapters.blender_to_core import _categorize_scene_objects
 
-    links, joints, sensors, transmissions, joints_map, root_link = _categorize_scene_objects(scene)
+    links, joints, sensors, joints_map, root_link = _categorize_scene_objects(scene)
 
     assert "base_link" in links
     assert "child_link" in links
@@ -601,7 +561,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("sensor_link"))
-    SensorTranslator().translate(imu_obj, builder, blender_context)
+    SensorTranslator().translate(imu_obj, builder)
     sensor = builder.robot.sensors[-1]
     assert sensor is not None
     assert sensor.type == SensorType.IMU
@@ -619,7 +579,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     props.camera_width = 800
     props.camera_height = 600
 
-    SensorTranslator().translate(cam_obj, builder, blender_context)
+    SensorTranslator().translate(cam_obj, builder)
     sensor = builder.robot.sensors[-1]
     assert sensor is not None
     assert sensor.type == SensorType.CAMERA
@@ -636,7 +596,7 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
     props.lidar_range_max = 50.0
     props.lidar_range_min = 0.5
 
-    SensorTranslator().translate(lidar_obj, builder, blender_context)
+    SensorTranslator().translate(lidar_obj, builder)
     sensor = builder.robot.sensors[-1]
     assert sensor is not None
     assert sensor.type == SensorType.LIDAR
@@ -645,7 +605,6 @@ def test_blender_sensor_to_core_all_types(scene, blender_context) -> None:
 
 def test_detect_primitive_type_logic(scene, blender_context) -> None:
     """Verify primitive detection heuristics."""
-    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
     # Cube
     bpy.ops.mesh.primitive_cube_add()
@@ -679,10 +638,6 @@ def test_detect_primitive_type_logic(scene, blender_context) -> None:
 
 def test_matrix_to_transform_conversion(scene, blender_context) -> None:
     """Verify 4x4 matrix to Transform conversion."""
-    import math
-
-    import mathutils
-    from linkforge.blender.utils.transform_utils import matrix_to_transform
 
     # Identity
     mat = mathutils.Matrix.Identity(4)
@@ -942,7 +897,7 @@ def test_blender_sensor_contact(scene, blender_context) -> None:
 
     builder.robot.add_link(Link("base_link"))
     builder.robot.add_link(Link("collision_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -966,7 +921,7 @@ def test_blender_sensor_force_torque(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -992,7 +947,7 @@ def test_blender_sensor_with_noise(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -1020,7 +975,7 @@ def test_blender_sensor_with_plugin(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))  # Register required link
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is not None
@@ -1037,7 +992,7 @@ def test_blender_sensor_not_robot_sensor(scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("base_link"))
-    SensorTranslator().translate(sensor_obj, builder, blender_context)
+    SensorTranslator().translate(sensor_obj, builder)
     sensor = builder.robot.sensors[0] if builder.robot.sensors else None
 
     assert sensor is None
@@ -1110,8 +1065,6 @@ def test_blender_ros2_control_defaults(clean_scene, scene, blender_context) -> N
     joint.cmd_velocity = False
     joint.cmd_effort = False
 
-    from linkforge.blender.adapters.translator import Ros2ControlTranslator
-
     control = Ros2ControlTranslator()._blender_ros2_control_to_core(props)
 
     assert control is not None
@@ -1136,14 +1089,12 @@ def test_blender_ros2_control_joint_obj_name_sync(clean_scene, scene, blender_co
     joint.cmd_position = True
     joint.state_position = True
 
-    from linkforge.blender.adapters.translator import Ros2ControlTranslator
-
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("p"))
     builder.robot.add_link(Link("c"))
     builder.robot.add_joint(Joint("MyRealJoint", parent="p", child="c", type=JointType.FIXED))
-    Ros2ControlTranslator().translate(props, builder, blender_context)
+    Ros2ControlTranslator().translate(props, builder)
     control = builder.robot.ros2_controls[0]
 
     assert control is not None
@@ -1167,7 +1118,7 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(gps_obj, builder, blender_context)
+    SensorTranslator().translate(gps_obj, builder)
     core_gps = builder.robot.sensors[0] if builder.robot.sensors else None
     assert (
         core_gps
@@ -1190,7 +1141,7 @@ def test_blender_sensor_gps_and_lidar_full(clean_scene, scene, blender_context) 
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(lidar_obj, builder, blender_context)
+    SensorTranslator().translate(lidar_obj, builder)
     core_lidar = builder.robot.sensors[0] if builder.robot.sensors else None
     assert core_lidar and core_lidar.lidar_info
     assert core_lidar.lidar_info.horizontal_samples == 720
@@ -1236,61 +1187,6 @@ def test_blender_link_inertial_origin(clean_scene, scene, blender_context) -> No
     assert pytest.approx(link.inertial.origin.rpy.z) == 0.5
 
 
-def test_blender_transmission_full(clean_scene, scene, blender_context) -> None:
-    """Exhaustive test for Simple and Differential transmissions."""
-    j1 = create_test_object("J1", None, scene)
-    j2 = create_test_object("J2", None, scene)
-    safe_get_joint(j1).is_robot_joint = True
-    safe_get_joint(j1).joint_name = "Joint1"
-    safe_get_joint(j2).is_robot_joint = True
-    safe_get_joint(j2).joint_name = "Joint2"
-
-    # Simple Transmission
-    t_simple = create_test_object("TransSimple", None, scene)
-    safe_get_transmission(t_simple).is_robot_transmission = True
-    safe_get_transmission(t_simple).transmission_type = TRANS_SIMPLE
-    safe_get_transmission(t_simple).joint_name = j1
-    safe_get_transmission(t_simple).mechanical_reduction = 50.0
-    safe_get_transmission(t_simple).hardware_interface = HW_IF_VELOCITY
-
-    builder = RobotBuilder("Robot")
-
-    builder.robot.add_link(Link("p"))
-    builder.robot.add_link(Link("c"))
-    builder.robot.add_joint(Joint("Joint1", parent="p", child="c", type=JointType.FIXED))
-    builder.robot.add_joint(Joint("Joint2", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t_simple, builder, blender_context)
-    core_simple = builder.robot.transmissions[0] if builder.robot.transmissions else None
-    assert core_simple is not None
-    assert core_simple.name == "TransSimple"
-    assert len(core_simple.joints) > 0 and core_simple.joints[0].name == "Joint1"
-    assert core_simple.joints[0].mechanical_reduction == 50.0
-    assert core_simple.joints[0].hardware_interfaces == ("velocity",)
-    assert len(core_simple.actuators) > 0 and core_simple.actuators[0].name == "Joint1_motor"
-
-    # Differential Transmission
-    t_diff = create_test_object("TransDiff", None, scene)
-    safe_get_transmission(t_diff).is_robot_transmission = True
-    safe_get_transmission(t_diff).transmission_type = TRANS_DIFFERENTIAL
-    safe_get_transmission(t_diff).joint1_name = j1
-    safe_get_transmission(t_diff).joint2_name = j2
-    safe_get_transmission(t_diff).actuator1_name = "act1"
-    safe_get_transmission(t_diff).actuator2_name = "act2"
-
-    builder = RobotBuilder("Robot")
-
-    builder.robot.add_link(Link("p"))
-    builder.robot.add_link(Link("c"))
-    builder.robot.add_joint(Joint("Joint1", parent="p", child="c", type=JointType.FIXED))
-    builder.robot.add_joint(Joint("Joint2", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t_diff, builder, blender_context)
-    core_diff = builder.robot.transmissions[0] if builder.robot.transmissions else None
-    assert core_diff is not None
-    assert len(core_diff.joints) == 2
-    assert core_diff.actuators[0].name == "act1"
-    assert core_diff.actuators[1].name == "act2"
-
-
 def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_context) -> None:
     """Test scene_to_robot with Gazebo plugins and error collection."""
     props = safe_get_linkforge_scene(scene)
@@ -1301,10 +1197,6 @@ def test_scene_to_robot_with_gazebo_and_errors(clean_scene, scene, blender_conte
 
     link_obj = create_test_object("L", None, scene)
     safe_get_linkforge(link_obj).is_robot_link = True
-
-    from unittest import mock
-
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     with (
         mock.patch(
@@ -1365,7 +1257,7 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(cam, builder, blender_context)
+    SensorTranslator().translate(cam, builder)
     core_cam = builder.robot.sensors[0] if builder.robot.sensors else None
     assert (
         core_cam
@@ -1385,7 +1277,7 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(gps, builder, blender_context)
+    SensorTranslator().translate(gps, builder)
     core_gps = builder.robot.sensors[0] if builder.robot.sensors else None
     assert core_gps and core_gps.gps_info is not None
     assert (
@@ -1403,7 +1295,7 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
     builder = RobotBuilder("Robot")
 
     builder.robot.add_link(Link("L"))  # Register required link
-    SensorTranslator().translate(con, builder, blender_context)
+    SensorTranslator().translate(con, builder)
     core_con = builder.robot.sensors[0] if builder.robot.sensors else None
     assert (
         core_con and core_con.contact_info and core_con.contact_info.collision == "some_link_geom"
@@ -1412,11 +1304,6 @@ def test_blender_sensor_exhaustive(clean_scene, scene, blender_context) -> None:
 
 def test_blender_to_core_geometry_edge_cases(clean_scene, scene, blender_context) -> None:
     """Test geometry conversion edge cases (None, zero-size, fallbacks)."""
-    from linkforge.blender.adapters.blender_to_core import (
-        detect_primitive_type,
-        extract_mesh_triangles,
-        get_object_geometry,
-    )
 
     # detect_primitive_type None/non-mesh
     assert detect_primitive_type(None) is None
@@ -1503,31 +1390,6 @@ def test_blender_joint_advanced_cases(clean_scene, scene, blender_context) -> No
         translate_joint_to_model(j, blender_context, parent=None, child=c)
 
 
-def test_blender_transmission_advanced(clean_scene, scene, blender_context) -> None:
-    """Test custom transmission types and actuator names."""
-    j1 = create_test_object("J1", None, scene)
-    safe_get_joint(j1).is_robot_joint = True
-
-    t = create_test_object("TransCustom", None, scene)
-    safe_get_transmission(t).is_robot_transmission = True
-    safe_get_transmission(t).transmission_type = TRANS_CUSTOM
-    safe_get_transmission(t).custom_type = "my_custom_trans"
-    safe_get_transmission(t).joint_name = j1
-    safe_get_transmission(t).use_custom_actuator_name = True
-    safe_get_transmission(t).actuator_name = "custom_motor"
-
-    builder = RobotBuilder("Robot")
-
-    builder.robot.add_link(Link("p"))
-    builder.robot.add_link(Link("c"))
-    builder.robot.add_joint(Joint("J1", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t, builder, blender_context)
-    core = builder.robot.transmissions[0] if builder.robot.transmissions else None
-    assert core is not None
-    assert core.type == "my_custom_trans"
-    assert core.actuators[0].name == "custom_motor"
-
-
 def test_blender_link_mesh_inertia(clean_scene, scene, blender_context) -> None:
     """Test inertia calculation from real mesh data.
     Must force MESH geometry type to hit the mesh inertia branch.
@@ -1538,7 +1400,6 @@ def test_blender_link_mesh_inertia(clean_scene, scene, blender_context) -> None:
     safe_get_linkforge(link_obj).use_mesh_inertia = True
 
     mesh = bpy.data.meshes.new("CubeMesh")
-    import bmesh
 
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
@@ -1562,10 +1423,6 @@ def test_blender_link_mesh_inertia(clean_scene, scene, blender_context) -> None:
 
 def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) -> None:
     """Exhaustive test for scene_to_robot with sensors, plugins, and multi-visuals."""
-    from pathlib import Path
-
-    import bmesh
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     # Root Link
     root = create_test_object("RootLink", None, scene)
@@ -1590,7 +1447,7 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     create_mesh_obj("root_link_visual_1", root, "CUBE")
     create_mesh_obj("root_link_visual_2", root, "sphere")
 
-    # Joint (Needed for transmission)
+    # Joint
     child = create_test_object("ChildLink", None, scene)
     safe_get_linkforge(child).is_robot_link = True
     safe_get_linkforge(child).use_auto_inertia = False
@@ -1599,10 +1456,6 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     safe_get_joint(joint).is_robot_joint = True
     safe_get_joint(joint).parent_link = root
     safe_get_joint(joint).child_link = child
-
-    trans = create_test_object("Trans", None, scene)
-    safe_get_transmission(trans).is_robot_transmission = True
-    safe_get_transmission(trans).joint_name = joint
 
     # Sensor with Gazebo Plugin (Custom mount)
     lidar = create_test_object("Lidar", None, scene)
@@ -1639,18 +1492,12 @@ def test_scene_to_robot_full_integration(clean_scene, scene, blender_context) ->
     assert len(robot.links) == 2
     assert len(robot.joints) == 1
     assert len(robot.sensors) == 1
-    assert len(robot.transmissions) == 1
     assert len(robot.ros2_controls) == 1
     assert len(robot.gazebo_elements) > 0
 
 
 def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None:
     """Hit absolute remaining gaps (name sanitization, empty loops, unknown types)."""
-    from linkforge.blender.adapters.blender_to_core import (
-        _calculate_link_frames,
-        get_object_geometry,
-        sanitize_name,
-    )
 
     # sanitize_name empty/None (string_utils.py returns "" for empty)
     assert sanitize_name("") == ""
@@ -1664,7 +1511,6 @@ def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None
     o = create_test_object("Unknown", l_data)
     geom, mat = get_object_geometry(o)
     assert geom is None
-    from mathutils import Matrix
 
     assert mat == Matrix.Identity(4)
 
@@ -1672,8 +1518,6 @@ def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None
     p = create_test_object("MultiLink", None, scene)
     safe_get_linkforge(p).is_robot_link = True
     safe_get_linkforge(p).use_auto_inertia = False
-
-    import bmesh
 
     def add_vis(name):
         m = bpy.data.meshes.new(name)
@@ -1695,13 +1539,6 @@ def test_blender_to_core_edge_cases(clean_scene, scene, blender_context) -> None
 
 def test_blender_to_core_small_gaps(clean_scene, scene, blender_context) -> None:
     """Hit remaining tiny gaps like material fallback and no-geometry link."""
-    from pathlib import Path
-
-    import bmesh
-    from linkforge.blender.adapters.blender_to_core import (
-        get_object_material,
-        scene_to_robot,
-    )
 
     # Material name fallback
     m = bpy.data.meshes.new("MatMesh")
@@ -1760,12 +1597,7 @@ def test_blender_to_core_small_gaps(clean_scene, scene, blender_context) -> None
 
 
 def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> None:
-    """Hit missing child link, empty transmission, simplify, and None returns."""
-
-    import bmesh
-    from linkforge.blender.adapters.blender_to_core import (
-        get_object_geometry,
-    )
+    """Hit missing child link, simplify, and None returns."""
 
     # blender_link_to_core_with_origin None
     assert translate_link_to_model(None, blender_context) is None
@@ -1777,15 +1609,10 @@ def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> 
 
     # Translator should handle None/non-robot gracefully
     builder = RobotBuilder("Robot")
-    SensorTranslator().translate(None, builder, blender_context)
+    SensorTranslator().translate(None, builder)
     assert len(builder.robot.sensors) == 0
-    SensorTranslator().translate(empty, builder, blender_context)
+    SensorTranslator().translate(empty, builder)
     assert len(builder.robot.sensors) == 0
-
-    TransmissionTranslator().translate(None, builder, blender_context)
-    assert len(builder.robot.transmissions) == 0
-    TransmissionTranslator().translate(empty, builder, blender_context)
-    assert len(builder.robot.transmissions) == 0
 
     # blender_link_to_core_with_origin simplify
     m = bpy.data.meshes.new("CMesh")
@@ -1830,17 +1657,6 @@ def test_blender_to_core_missing_errors(clean_scene, scene, blender_context) -> 
     with pytest.raises(RobotValidationError, match=r"\[NOT_FOUND\] Joint has no child link"):
         translate_joint_to_model(j, blender_context, parent=p_link, child=None)
 
-    # Empty transmission
-    t = create_test_object("T", None, scene)
-    safe_get_transmission(t).is_robot_transmission = True
-    builder = RobotBuilder("Robot")
-
-    builder.robot.add_link(Link("p"))
-    builder.robot.add_link(Link("c"))
-    builder.robot.add_joint(Joint("Joint", parent="p", child="c", type=JointType.FIXED))
-    TransmissionTranslator().translate(t, builder, blender_context)
-    assert len(builder.robot.transmissions) == 0
-
     # Joint mimic fallback
     mimic_target = create_test_object("MimicTarget", None, scene)
     safe_get_joint(j).child_link = c_link
@@ -1864,7 +1680,6 @@ def test_detect_primitive_type_tags(scene, blender_context) -> None:
 
 def test_matrix_to_transform_nulls_and_fallbacks() -> None:
     """Test matrix_to_transform with Matrix or matrix None/missing."""
-    from unittest.mock import patch
 
     # matrix is None
     res = matrix_to_transform(None)
@@ -1878,9 +1693,6 @@ def test_matrix_to_transform_nulls_and_fallbacks() -> None:
 
 def test_extract_mesh_triangles_nulls_and_fallbacks(scene, blender_context) -> None:
     """Test extract_mesh_triangles failure bounds."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
 
     # eval_obj.to_mesh() returns None
     bpy.ops.mesh.primitive_cube_add()
@@ -1903,9 +1715,6 @@ def test_extract_mesh_triangles_nulls_and_fallbacks(scene, blender_context) -> N
 
 def test_extract_mesh_triangles_numpy_vs_pure_python(scene, blender_context) -> None:
     """Test pure python fallback and numpy scaling paths."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
 
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -1939,7 +1748,7 @@ def test_extract_mesh_triangles_numpy_vs_pure_python(scene, blender_context) -> 
     mock_np = MagicMock()
     mock_np.zeros = lambda size, dtype=None: MockArray([1.0] * size)
 
-    with patch("linkforge.blender.adapters.blender_to_core.np", mock_np):
+    with patch("linkforge.blender.adapters.geometry_extractor.np", mock_np):
         res_np = extract_mesh_triangles(obj, as_numpy=True)
         assert res_np is not None
         verts, tris = res_np
@@ -1947,7 +1756,7 @@ def test_extract_mesh_triangles_numpy_vs_pure_python(scene, blender_context) -> 
         assert hasattr(tris, "tolist")
 
     # numpy is mocked as None (pure Python fallback)
-    with patch("linkforge.blender.adapters.blender_to_core.np", None):
+    with patch("linkforge.blender.adapters.geometry_extractor.np", None):
         res_py = extract_mesh_triangles(obj)
         assert res_py is not None
         verts_py, tris_py = res_py
@@ -1957,7 +1766,6 @@ def test_extract_mesh_triangles_numpy_vs_pure_python(scene, blender_context) -> 
 
 def test_get_object_material_principled_bsdf_failures(scene, blender_context) -> None:
     """Test material BSDF node misses and diffuse viewport fallbacks."""
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     # Material has node tree but lacks Principled BSDF node
     mesh1 = bpy.data.meshes.new("MatMesh1")
@@ -2007,9 +1815,6 @@ def test_get_object_material_principled_bsdf_failures(scene, blender_context) ->
 
 def test_scene_to_robot_build_exception(scene, blender_context) -> None:
     """Verify scene_to_robot when builder throws exception during build."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     root = create_test_object("Root", None, scene)
     safe_get_linkforge(root).is_robot_link = True
@@ -2024,9 +1829,6 @@ def test_scene_to_robot_build_exception(scene, blender_context) -> None:
 
 def test_get_object_geometry_edge_cases(scene, blender_context) -> None:
     """Verify geometry extraction with dimensions None fallbacks."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import get_object_geometry
 
     # Empty geometry object with dimensions = None
     obj = create_test_object("EmptyObj", None, scene)
@@ -2043,7 +1845,6 @@ def test_get_object_geometry_edge_cases(scene, blender_context) -> None:
 
 def test_detect_primitive_type_edge_cases(scene, blender_context) -> None:
     """Verify is_mesh has attributes fallback and GEOM_MESH tag return None."""
-    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
     # Object is of type MESH but not isinstance(mesh, bpy.types.Mesh)
     # E.g. mocked mesh with attributes but not the actual bpy type
@@ -2063,9 +1864,6 @@ def test_detect_primitive_type_edge_cases(scene, blender_context) -> None:
 
 def test_detect_primitive_type_advanced_branches(scene, blender_context) -> None:
     """Cover remaining detect_primitive_type branches and conditions."""
-    from unittest.mock import patch
-
-    from linkforge.blender.adapters.blender_to_core import detect_primitive_type
 
     mesh_obj = create_test_object("FakeMeshNullData", None, scene)
     mesh_obj.type = "MESH"
@@ -2143,7 +1941,6 @@ def test_detect_primitive_type_advanced_branches(scene, blender_context) -> None
 
 def test_get_object_geometry_advanced_branches(scene) -> None:
     """Cover remaining get_object_geometry branches."""
-    from unittest.mock import MagicMock, patch
 
     obj = create_test_object("GeomObj", None, scene)
     obj.type = "MESH"
@@ -2160,9 +1957,6 @@ def test_get_object_geometry_advanced_branches(scene) -> None:
 
 def test_extract_mesh_triangles_advanced_branches(scene) -> None:
     """Cover remaining extract_mesh_triangles branches."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import extract_mesh_triangles
 
     bpy.ops.mesh.primitive_cube_add()
     obj = bpy.context.active_object
@@ -2201,16 +1995,13 @@ def test_extract_mesh_triangles_advanced_branches(scene) -> None:
     mock_np = MagicMock()
     mock_np.zeros = lambda size, dtype=None: MockArray([1.0] * size)
 
-    with patch("linkforge.blender.adapters.blender_to_core.np", mock_np):
+    with patch("linkforge.blender.adapters.geometry_extractor.np", mock_np):
         res = extract_mesh_triangles(obj, as_numpy=False)
         assert res == ([1, 2, 3], [1, 2, 3])
 
 
 def test_get_object_material_advanced_branches(scene) -> None:
     """Cover remaining get_object_material branches."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     mesh = bpy.data.meshes.new("SlotMesh")
     obj = create_test_object("slot_obj", mesh, scene)
@@ -2244,15 +2035,6 @@ def test_get_object_material_advanced_branches(scene) -> None:
 
 def test_scene_to_robot_orchestration_advanced(scene, blender_context) -> None:
     """Cover remaining scene_to_robot orchestration layers."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import (
-        SceneToRobotTranslator,
-        _calculate_link_frames,
-        _categorize_scene_objects,
-        scene_to_robot,
-    )
-    from linkforge.core import RobotValidationError
 
     empty_scene = MagicMock()
     empty_scene.objects = []
@@ -2321,15 +2103,6 @@ def test_scene_to_robot_orchestration_advanced(scene, blender_context) -> None:
 
 def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     """Cover the final remaining branches in blender_to_core.py."""
-    from unittest.mock import MagicMock, patch
-
-    from linkforge.blender.adapters.blender_to_core import (
-        SceneToRobotTranslator,
-        _categorize_scene_objects,
-        get_object_geometry,
-        scene_to_robot,
-    )
-    from linkforge.core import RobotValidationError
 
     obj = create_test_object("MeshObjFallback", None, scene)
     obj.type = "MESH"
@@ -2350,8 +2123,6 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
         )
         # Falls back to Box because export returned None
         assert isinstance(geom, Box)
-
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     mat = bpy.data.materials.new("NonBSDFMat")
     mat.use_nodes = True
@@ -2382,7 +2153,7 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     j_props.child_link = child_obj
 
     # _categorize_scene_objects will evaluate child_link first because of alphabetical ordering
-    links, joints, _, _, joints_map, root = _categorize_scene_objects(scene)
+    links, joints, _, joints_map, root = _categorize_scene_objects(scene)
     assert root is not None
     assert root[0] == "root_link"
 
@@ -2395,7 +2166,7 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
     with (
         patch(
             "linkforge.blender.adapters.blender_to_core._categorize_scene_objects",
-            return_value=({}, [], [], [], {}, None),
+            return_value=({}, [], [], {}, None),
         ),
         pytest.raises(RobotValidationError, match="No root link"),
     ):
@@ -2466,7 +2237,6 @@ def test_blender_to_core_ultra_edge_cases(scene, blender_context) -> None:
 
 def test_get_object_material_node_traversal_continuation(scene) -> None:
     """Verify that material parsing successfully continues past non-principled nodes to find the BSDF principled node."""
-    from linkforge.blender.adapters.blender_to_core import get_object_material
 
     mat = bpy.data.materials.new("NonBSDFAndBSDFMat")
     mat.use_nodes = True
@@ -2495,8 +2265,6 @@ def test_get_object_material_node_traversal_continuation(scene) -> None:
 
 def test_translate_global_materials_duplicate_and_pre_registered(scene, blender_context) -> None:
     """Verify global material translation correctly handles duplicate child materials and skips pre-registered builder materials."""
-    from linkforge.blender.adapters.blender_to_core import SceneToRobotTranslator
-    from linkforge.core import Color, Material
 
     root_obj = create_test_object("root_link_obj", None, scene)
     safe_get_linkforge(root_obj).is_robot_link = True
@@ -2535,7 +2303,6 @@ def test_translate_global_materials_duplicate_and_pre_registered(scene, blender_
 
 def test_scene_to_robot_active_context_passthrough(scene, blender_context) -> None:
     """Verify scene_to_robot handles direct IBlenderContext instance inputs without redundant wrapping."""
-    from linkforge.blender.adapters.blender_to_core import scene_to_robot
 
     root_obj = create_test_object("root_link_obj_pt", None, scene)
     safe_get_linkforge(root_obj).is_robot_link = True
@@ -2551,8 +2318,6 @@ class TestConverterRobustness:
         scene.linkforge.strict_mode = True
         root = create_test_object("Root", None, scene)
         safe_get_linkforge(root).is_robot_link = True
-
-        from unittest import mock
 
         with (
             mock.patch(
@@ -2576,7 +2341,6 @@ class TestConverterRobustness:
 class TestJointRobustness:
     def test_joint_custom_axis_fallback(self, scene, blender_context) -> None:
         """Test custom axis fallbacks when values are zero."""
-        from unittest.mock import MagicMock
 
         p = create_test_object("Parent", None, scene)
         c = create_test_object("Child", None, scene)
@@ -2616,7 +2380,7 @@ class TestJointRobustness:
 
         lb_c = builder.link("Child", parent="Parent")
         LinkTranslator().translate(c, builder, blender_context, lb=lb_c)
-        JointTranslator().translate(j, builder, blender_context, lb=lb_c)
+        JointTranslator().translate(j, lb=lb_c)
         if lb_c:
             lb_c.commit()
 

@@ -6,10 +6,9 @@ to LinkForge core models using the Composer API.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import Any
 
 from ..constants import (
     FORMAT_STL,
@@ -38,10 +37,6 @@ from ..core import (
     Sensor,
     SensorNoise,
     SensorType,
-    Transmission,
-    TransmissionActuator,
-    TransmissionJoint,
-    TransmissionType,
     ValidationErrorCode,
     ValidationResult,
     get_logger,
@@ -57,47 +52,26 @@ from ..core.constants import (
     HW_IF_POSITION,
     HW_IF_VELOCITY,
     SYLVESTER_TOLERANCE_EPSILON,
-    TRANS_CUSTOM,
-    TRANS_DIFFERENTIAL,
-    TRANS_FOUR_BAR,
-    TRANS_SIMPLE,
 )
 from ..properties.geom_props import PROP_GEOM
-
-if TYPE_CHECKING:
-    from .context import IBlenderContext
-
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
     get_robot_props,
     get_sensor_props,
-    get_transmission_props,
 )
 from ..utils.transform_utils import matrix_to_transform
+from .context import IBlenderContext
+from .geometry_extractor import (
+    extract_mesh_triangles,
+    get_object_geometry,
+    get_object_material,
+)
 
-logger = logging.getLogger(__name__)
-
-
-@runtime_checkable
-class ITranslator(Protocol):
-    """Base protocol for translating Blender objects to Core models."""
-
-    def translate(
-        self,
-        obj: Any,
-        builder: RobotBuilder,
-        context: IBlenderContext,
-        meshes_dir: Path | None = None,
-        dry_run: bool = False,
-        depsgraph: Any | None = None,
-        validation_result: ValidationResult | None = None,
-    ) -> Any:
-        """Translate a Blender object using the provided builder."""
-        ...
+logger = get_logger(__name__)
 
 
-class LinkTranslator(ITranslator):
+class LinkTranslator:
     """Translates Blender objects marked as robot links."""
 
     def translate(
@@ -110,11 +84,8 @@ class LinkTranslator(ITranslator):
         depsgraph: Any | None = None,
         validation_result: ValidationResult | None = None,
         lb: LinkBuilder | None = None,
-        **_kwargs: Any,
     ) -> LinkBuilder | None:
         """Translate a Blender link to a Core Link using RobotBuilder."""
-        from .blender_to_core import get_object_geometry, get_object_material
-
         props = get_link_props(obj)
         if not props:
             return None
@@ -126,7 +97,7 @@ class LinkTranslator(ITranslator):
         # Use provided LinkBuilder or create a new one
         active_lb = lb if lb else builder.link(link_name)
 
-        # 1. Translate visuals
+        # Translate visuals
         for child in obj.children:
             if SUFFIX_VISUAL in child.name:
                 mat = get_object_material(child, props)
@@ -161,7 +132,7 @@ class LinkTranslator(ITranslator):
                         child, link_name, PURPOSE_VISUAL, validation_result, depsgraph=depsgraph
                     )
 
-        # 2. Translate collisions
+        # Translate collisions
         for child in obj.children:
             if SUFFIX_COLLISION in child.name:
                 suffix = self._get_geom_suffix(child, obj, SUFFIX_COLLISION, sanitize_name)
@@ -196,7 +167,7 @@ class LinkTranslator(ITranslator):
                         child, link_name, PURPOSE_COLLISION, validation_result, depsgraph=depsgraph
                     )
 
-        # 3. Translate Physics (Inertia & Mass)
+        # Translate Physics (Inertia & Mass)
         if (lp := get_link_props(obj)) and lp.use_auto_inertia:
             active_lb.mass(lp.mass)
         else:
@@ -215,7 +186,7 @@ class LinkTranslator(ITranslator):
                 inertia=inertia,
             )
 
-        # 4. Translate Gazebo Physics
+        # Translate Gazebo Physics
         if props.use_simulation_props:
             active_lb.physics(
                 self_collide=props.self_collide,
@@ -251,10 +222,8 @@ class LinkTranslator(ITranslator):
         if not result or obj.type != "MESH":
             return
 
-        from .blender_to_core import extract_mesh_triangles
-
         try:
-            # Use the robust triangle extraction from blender_to_core
+            # Use the robust triangle extraction from geometry_extractor
             # This handles triangulation and applies modifiers via depsgraph
             mesh_data = extract_mesh_triangles(obj, depsgraph=depsgraph)
             if not mesh_data:
@@ -280,21 +249,14 @@ class LinkTranslator(ITranslator):
             logger.debug(f"Mesh validation failed for {obj.name}: {e}")
 
 
-class JointTranslator(ITranslator):
+class JointTranslator:
     """Translates Blender objects marked as robot joints."""
 
     def translate(
         self,
         obj: Any,
-        builder: RobotBuilder,  # noqa: ARG002
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
-        validation_result: ValidationResult | None = None,  # noqa: ARG002
         lb: LinkBuilder | None = None,
         link_frames: dict[str, Any] | None = None,
-        **_kwargs: Any,
     ) -> None:
         """Translate a Blender joint to a Core Joint using the LinkBuilder."""
         props = get_joint_props(obj)
@@ -412,23 +374,17 @@ class JointTranslator(ITranslator):
             )
 
 
-class SensorTranslator(ITranslator):
+class SensorTranslator:
     """Translates Blender objects marked as robot sensors."""
 
     def translate(
         self,
         obj: Any,
         builder: RobotBuilder,
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
         validation_result: ValidationResult | None = None,
         link_frames: dict[str, Any] | None = None,
     ) -> None:
         """Translate a Blender sensor to a Core Sensor and add it to the robot."""
-        from dataclasses import replace
-
         try:
             sensor = self._blender_sensor_to_core(obj)
             if sensor:
@@ -587,19 +543,14 @@ class SensorTranslator(ITranslator):
         )
 
 
-class Ros2ControlTranslator(ITranslator):
+class Ros2ControlTranslator:
     """Translates centralized Blender ros2_control properties."""
 
     def translate(
         self,
         obj: Any,
         builder: RobotBuilder,
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
         validation_result: ValidationResult | None = None,
-        **_kwargs: Any,
     ) -> None:
         """Translate centralized ros2_control properties and add to robot."""
         try:
@@ -631,8 +582,6 @@ class Ros2ControlTranslator(ITranslator):
 
     def _blender_ros2_control_to_core(self, props: Any) -> Ros2Control | None:
         """Convert centralized Blender ros2_control properties to Core model."""
-        logger = get_logger(__name__)
-
         if props is None or not getattr(props, "use_ros2_control", False):
             return None
 
@@ -716,127 +665,3 @@ class Ros2ControlTranslator(ITranslator):
             hardware_plugin=props.hardware_plugin,
             joints=joints,
         )
-
-
-class TransmissionTranslator(ITranslator):
-    """Translates Blender objects marked as robot transmissions."""
-
-    def translate(
-        self,
-        obj: Any,
-        builder: RobotBuilder,
-        context: IBlenderContext,  # noqa: ARG002
-        meshes_dir: Path | None = None,  # noqa: ARG002
-        dry_run: bool = False,  # noqa: ARG002
-        depsgraph: Any | None = None,  # noqa: ARG002
-        validation_result: ValidationResult | None = None,
-    ) -> None:
-        """Translate a Blender transmission to a Core Transmission and add it to the robot."""
-        try:
-            transmission = self._blender_transmission_to_core(obj)
-            if transmission:
-                builder.robot.add_transmission(transmission)
-        except Exception as e:
-            if validation_result:
-                validation_result.add_error(
-                    title=f"Transmission translation failed: {obj.name}",
-                    message=str(e),
-                    code=ValidationErrorCode.INVALID_VALUE,
-                    affected_objects=[obj.name],
-                )
-
-    def _blender_transmission_to_core(self, obj: Any) -> Transmission | None:
-        """Convert Blender Empty with TransmissionPropertyGroup to Core Transmission."""
-        if obj is None:
-            return None
-
-        props = get_transmission_props(obj)
-        if not props or not props.is_robot_transmission:
-            return None
-
-        trans_name = props.transmission_name if props.transmission_name else obj.name
-
-        # Transmission type normalization (handle both 'simple' and 'SIMPLE')
-        raw_type = str(props.transmission_type).lower()
-
-        # Transmission type mapping to URDF plugin names
-        trans_type_map = {
-            TRANS_SIMPLE: TransmissionType.SIMPLE.value,
-            TRANS_DIFFERENTIAL: TransmissionType.DIFFERENTIAL.value,
-            TRANS_FOUR_BAR: TransmissionType.FOUR_BAR_LINKAGE.value,
-            TRANS_CUSTOM: props.custom_type if props.custom_type else TransmissionType.CUSTOM.value,
-        }
-        trans_type = trans_type_map.get(raw_type, TransmissionType.SIMPLE.value)
-
-        # Hardware interface mapping
-        hw_if = props.hardware_interface
-
-        joints = []
-        actuators = []
-
-        if raw_type in (TRANS_SIMPLE, TRANS_CUSTOM, TRANS_FOUR_BAR):
-            joint_obj = props.joint_name
-            if joint_obj:
-                joint_props = get_joint_props(joint_obj)
-                joint_name = ""
-                if joint_props:
-                    potential_name = joint_props.joint_name
-                    if isinstance(potential_name, str):
-                        joint_name = potential_name
-
-                if not joint_name:
-                    joint_name = joint_obj.name
-
-                joints.append(
-                    TransmissionJoint(
-                        name=joint_name,
-                        hardware_interfaces=[hw_if],
-                        mechanical_reduction=props.mechanical_reduction,
-                        offset=props.offset,
-                    )
-                )
-
-                act_name = (
-                    props.actuator_name
-                    if props.use_custom_actuator_name and props.actuator_name
-                    else f"{joint_name}_motor"
-                )
-                actuators.append(TransmissionActuator(name=act_name, hardware_interfaces=[hw_if]))
-        elif raw_type == TRANS_DIFFERENTIAL:
-            j1_obj = props.joint1_name
-            j2_obj = props.joint2_name
-            if j1_obj and j2_obj:
-                j1_props = get_joint_props(j1_obj)
-                j1_name = (
-                    j1_props.joint_name if j1_props and j1_props.joint_name else ""
-                ) or j1_obj.name
-                j2_props = get_joint_props(j2_obj)
-                j2_name = (
-                    j2_props.joint_name if j2_props and j2_props.joint_name else ""
-                ) or j2_obj.name
-
-                joints.append(
-                    TransmissionJoint(
-                        name=j1_name,
-                        hardware_interfaces=[hw_if],
-                        mechanical_reduction=props.mechanical_reduction,
-                    )
-                )
-                joints.append(
-                    TransmissionJoint(
-                        name=j2_name,
-                        hardware_interfaces=[hw_if],
-                        mechanical_reduction=props.mechanical_reduction,
-                    )
-                )
-
-                a1_name = props.actuator1_name if props.actuator1_name else f"{j1_name}_motor"
-                a2_name = props.actuator2_name if props.actuator2_name else f"{j2_name}_motor"
-
-                actuators.append(TransmissionActuator(name=a1_name, hardware_interfaces=[hw_if]))
-                actuators.append(TransmissionActuator(name=a2_name, hardware_interfaces=[hw_if]))
-
-        if not joints:
-            return None
-
-        return Transmission(name=trans_name, type=trans_type, joints=joints, actuators=actuators)

@@ -732,3 +732,38 @@ class TestRobotBuilder:
         assert cloned_robot.has_link("base_link")
         assert "steel" in original_robot.materials
         assert "steel" in cloned_robot.materials
+
+    def test_pop_parent_middle_of_stack(self) -> None:
+        """Test pop_parent removes a specific name from the middle of the stack."""
+        builder = RobotBuilder("test_robot")
+        builder.push_parent("base_link")
+        builder.push_parent("mid_link")
+        builder.push_parent("top_link")
+
+        # Pop the middle entry by name — exercises the `remove` branch
+        builder.pop_parent("mid_link")
+        assert "mid_link" not in builder._parent_stack
+        assert builder._parent_stack == ["base_link", "top_link"]
+
+    def test_pop_parent_nonexistent_name(self) -> None:
+        """Test pop_parent with a name not in the stack is a no-op."""
+        builder = RobotBuilder("test_robot")
+        builder.push_parent("base_link")
+
+        # Pop a name that doesn't exist — should not raise
+        builder.pop_parent("nonexistent")
+        assert builder._parent_stack == ["base_link"]
+
+    def test_pop_parent_no_args(self) -> None:
+        """Test pop_parent without arguments pops the top parent."""
+        builder = RobotBuilder("test_robot")
+        builder.push_parent("base_link")
+        builder.push_parent("top_link")
+        builder.pop_parent()
+        assert builder._parent_stack == ["base_link"]
+
+    def test_pop_parent_empty_stack(self) -> None:
+        """Test pop_parent on empty stack is a safe no-op."""
+        builder = RobotBuilder("test_robot")
+        builder.pop_parent()
+        assert builder._parent_stack == []

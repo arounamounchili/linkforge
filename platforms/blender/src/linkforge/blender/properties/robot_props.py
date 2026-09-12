@@ -211,24 +211,11 @@ class RobotPropertyGroup(PropertyGroup):
         default=False,
     )
 
-    # Visual helpers (kinematic tree display)
-    show_kinematic_tree: BoolProperty(  # type: ignore
-        name="Show Component Browser",
-        description="Show list of all robot components in panel",
-        default=False,
-    )
-    component_browser_search: StringProperty(  # type: ignore
-        name="Component Browser Search",
-        description="Filter components by name",
-        default="",
-        options={"TEXTEDIT_UPDATE"},
-    )
-
     # Collision Visibility
     show_collisions: BoolProperty(  # type: ignore
         name="Show Collisions",
         description="Show/Hide all collision meshes in the viewport",
-        default=True,
+        default=False,
         update=update_collision_visibility,
     )
 

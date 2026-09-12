@@ -137,6 +137,26 @@ def test_tree_structure_check_disconnected(empty_robot, result):
     assert not err.message.startswith("[MULTIPLE_ROOTS]")
 
 
+def test_tree_structure_check_multiple_roots_empty_roots(empty_robot, result, monkeypatch):
+    """Test TreeStructureCheck when MULTIPLE_ROOTS error is raised and roots list is empty."""
+    from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
+
+    empty_robot.add_link(Link(name="base"))
+
+    def mock_root_link(self):
+        raise RobotValidationError(
+            ValidationErrorCode.MULTIPLE_ROOTS, "Custom multiple roots message"
+        )
+
+    monkeypatch.setattr(type(empty_robot), "root_link", property(mock_root_link))
+    monkeypatch.setattr(empty_robot.graph, "get_root_links", lambda: [])
+
+    check = TreeStructureCheck()
+    check.run(empty_robot, result)
+    err = next(e for e in result.errors if e.code == ValidationErrorCode.MULTIPLE_ROOTS)
+    assert err.message == "Custom multiple roots message"
+
+
 def test_mass_properties_check(empty_robot, result):
     # Link with near-zero mass (PHYSICS_VIOLATION error)
     link = Link(name="light", inertial=Inertial(mass=1e-12))
@@ -513,3 +533,31 @@ def test_semantic_consistency_check_coverage(empty_robot, result):
 
     assert any("GroupState joint value out of range" in err.title for err in result.errors)
     assert any("Passive joint has command interface" in err.title for err in result.errors)
+
+
+def test_mass_properties_diagonal_triangle_inequality(empty_robot, result):
+    """Test that MassPropertiesCheck catches diagonal tensor triangle inequality violations.
+
+    Covers checks.py line 371 — the `else` branch for tensors with zero off-diagonals.
+    """
+    # Create a tensor that has zero off-diagonals but violates triangle inequality.
+    # Use object.__new__ to bypass the InertiaTensor constructor validation.
+    from linkforge.core.models.link import InertiaTensor
+
+    bad_tensor = object.__new__(InertiaTensor)
+    object.__setattr__(bad_tensor, "ixx", 10.0)
+    object.__setattr__(bad_tensor, "iyy", 1.0)
+    object.__setattr__(bad_tensor, "izz", 1.0)
+    object.__setattr__(bad_tensor, "ixy", 0.0)
+    object.__setattr__(bad_tensor, "ixz", 0.0)
+    object.__setattr__(bad_tensor, "iyz", 0.0)
+
+    link = Link(name="bad_diag_link", inertial=Inertial(mass=1.0, inertia=bad_tensor))
+    empty_robot.add_link(link)
+
+    check = MassPropertiesCheck()
+    check.run(empty_robot, result)
+    assert any(err.code == ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY for err in result.errors)
+    assert any(
+        "diagonal inertia violates triangle inequality" in err.message for err in result.errors
+    )

@@ -522,7 +522,6 @@ RESERVED_RNA_PROPS = {
     "linkforge",
     "linkforge_joint",
     "linkforge_sensor",
-    "linkforge_transmission",
     "linkforge_validation",
     "linkforge_scene",
 }
@@ -534,7 +533,6 @@ DEFAULT_PROPERTY_VALUES = {
     "is_robot_visual": False,
     "is_robot_collision": False,
     "is_robot_sensor": False,
-    "is_robot_transmission": False,
     "is_robot_part": False,
     "mass": 0.0,
     "inertia_ixx": 0.0,
@@ -577,12 +575,10 @@ DEFAULT_PROPERTY_VALUES = {
     "xacro_extract_dimensions": True,
     "xacro_generate_macros": False,
     "xacro_split_files": False,
-    "show_collisions": True,
-    "show_kinematic_tree": False,
+    "show_collisions": False,
     "joint_name": "",
     "link_name": "",
     "sensor_name": "",
-    "transmission_name": "",
     "use_material": True,
 }
 
@@ -827,11 +823,13 @@ class MockCollection(Generic[T]):
             item = MockObject(name=name, data=data)
         elif self.prop_type:
             item = self.prop_type(name=name)
+        elif self.name == "modifiers" and type == "DECIMATE":
+            item = MockDecimateModifier(name=name)
         else:
             item = MockPropertyGroup(name=name)
 
-        if type and hasattr(item, "type"):
-            typing.cast(Any, item).type = type
+        if type is not None:
+            item.type = type
 
         casted_item = typing.cast(T, item)
         self.append(casted_item)
@@ -940,6 +938,15 @@ class MockTimers:
         """Register a timer function."""
         self._timers.append(func)
 
+    def is_registered(self, func):
+        """Check if a timer function is registered."""
+        return func in self._timers
+
+    def unregister(self, func):
+        """Unregister a timer function."""
+        if func in self._timers:
+            self._timers.remove(func)
+
     def run_all(self):
         """Execute all pending timers. Handles re-scheduling if a timer returns an interval."""
         current_timers = list(self._timers)
@@ -954,6 +961,16 @@ class MockTimers:
                     self._timers.append(func)
             except Exception:
                 pass
+
+
+class MockDecimateModifier(MockPropertyGroup):
+    """Mock for bpy.types.DecimateModifier."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.type = "DECIMATE"
+        self.ratio = kwargs.get("ratio", 1.0)
+        self.decimate_type = kwargs.get("decimate_type", "COLLAPSE")
 
 
 class MockMaterialSlot(MockPropertyGroup):
@@ -1095,7 +1112,6 @@ class MockObject(MockPropertyGroup):
     linkforge: MockPropertyGroup
     linkforge_joint: MockPropertyGroup
     linkforge_sensor: MockPropertyGroup
-    linkforge_transmission: MockPropertyGroup
     linkforge_validation: MockPropertyGroup
     linkforge_robot: MockPropertyGroup
 
@@ -1130,6 +1146,7 @@ class MockObject(MockPropertyGroup):
         self.bound_box = [(0.0, 0.0, 0.0)] * 8
         self.empty_display_type = "PLAIN_AXES"
         self.empty_display_size = 0.5
+        self.original = self
         self.hide_viewport = False
         self.hide_render = False
 
@@ -1150,10 +1167,6 @@ class MockObject(MockPropertyGroup):
         if not any("linkforge_sensor" in c.__dict__ for c in type(self).__mro__):
             self.linkforge_sensor = MockPropertyGroup(name="linkforge_sensor")
             self.linkforge_sensor.is_robot_sensor = False
-
-        if not any("linkforge_transmission" in c.__dict__ for c in type(self).__mro__):
-            self.linkforge_transmission = MockPropertyGroup(name="linkforge_transmission")
-            self.linkforge_transmission.is_robot_transmission = False
 
         if not any("linkforge_validation" in c.__dict__ for c in type(self).__mro__):
             self.linkforge_validation = MockPropertyGroup(name="linkforge_validation")
@@ -1432,6 +1445,18 @@ class MockScene(MockPropertyGroup):
 
 class MockOperator:
     """Mock for bpy.types.Operator."""
+
+    def __init__(self, **kwargs):
+        for k, v in getattr(self.__class__, "__annotations__", {}).items():
+            if not hasattr(self, k):
+                default_val: typing.Any = ""
+                if isinstance(v, str):
+                    default_match = re.search(r"default\s*=\s*['\"]([^'\"]*)['\"]", v)
+                    if default_match:
+                        default_val = default_match.group(1)
+                setattr(self, k, default_val)
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @classmethod
     def poll(cls, context):
@@ -1921,6 +1946,7 @@ def setup_mock_bpy():
     mock_bpy.types.Operator = MockOperator
     mock_bpy.types.MaterialSlot = MockMaterialSlot
     mock_bpy.types.WindowManager = MockPropertyGroup
+    mock_bpy.types.DecimateModifier = MockDecimateModifier
     # Boilerplate for UI classes
     mock_bpy.types.Panel = object
     mock_bpy.types.Menu = object

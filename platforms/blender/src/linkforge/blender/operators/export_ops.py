@@ -10,7 +10,7 @@ import os
 import typing
 from contextlib import contextmanager, suppress
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import bpy
 from bpy.types import Context, Event, Operator
@@ -29,11 +29,9 @@ from ..core import (
     XACROGenerator,
     get_logger,
 )
+from ..properties.robot_props import RobotPropertyGroup
+from ..properties.validation_props import ValidationResultProperty
 from ..utils.decorators import OperatorReturn, safe_execute
-
-if TYPE_CHECKING:
-    from ..properties.robot_props import RobotPropertyGroup
-    from ..properties.validation_props import ValidationResultProperty
 
 logger = get_logger(__name__)
 
@@ -98,7 +96,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         # Wrap the raw Blender context in our adapter
         lf_context = BlenderContext(bpy_instance=bpy)
         scene = context.scene
-        robot_props = typing.cast("RobotPropertyGroup", getattr(scene, PROP_ROBOT))
+        robot_props = typing.cast(RobotPropertyGroup, getattr(scene, PROP_ROBOT))
 
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)
@@ -207,7 +205,7 @@ class LINKFORGE_OT_validate_robot(Operator):
             return {"CANCELLED"}
 
         validation_props = typing.cast(
-            "ValidationResultProperty", getattr(context.window_manager, PROP_VALIDATION)
+            ValidationResultProperty, getattr(context.window_manager, PROP_VALIDATION)
         )
         validation_props.clear()
 

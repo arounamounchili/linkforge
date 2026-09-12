@@ -18,7 +18,7 @@ def ensure_linkforge_registered():
         "linkforge",
         "linkforge_joint",
         "linkforge_sensor",
-        "linkforge_transmission",
+        "linkforge_geom",
     ]
 
     # Quick check: are they all there?
@@ -83,21 +83,6 @@ def safe_get_linkforge_scene(scene: typing.Any) -> typing.Any:
         return prop
 
     raise AttributeError(f"Scene '{scene.name}' missing 'linkforge_robot' property group.")
-
-
-def safe_get_transmission(obj: typing.Any, scene: typing.Any = None) -> typing.Any:
-    """Safe accessor for the 'linkforge_transmission' property group on a Blender object."""
-    prop = getattr(obj, "linkforge_transmission", None)
-    if prop is not None and hasattr(prop, "bl_rna"):
-        return prop
-
-    # If missing, try a quick refresh
-    _refresh_blender_environment(scene)
-    prop = getattr(obj, "linkforge_transmission", None)
-    if prop is not None and hasattr(prop, "bl_rna"):
-        return prop
-
-    raise AttributeError(f"Object '{obj.name}' missing 'linkforge_transmission' property group.")
 
 
 def safe_get_validation(wm: typing.Any) -> typing.Any:
@@ -272,6 +257,7 @@ def create_robot_joint(
     Handles object creation, parenting, and RNA property assignment.
     """
     joint_obj = create_test_object(name, None, scene=scene)
+    joint_obj.empty_display_type = "PLAIN_AXES"
 
     joint_props = safe_get_joint(joint_obj, scene)
     joint_props.is_robot_joint = True

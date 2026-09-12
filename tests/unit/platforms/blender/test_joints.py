@@ -2,20 +2,28 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import bpy
 import pytest
+from linkforge.blender.operators import joint_ops
 from linkforge.blender.operators.joint_ops import (
     LINKFORGE_OT_auto_detect_parent_child,
     LINKFORGE_OT_create_joint,
     LINKFORGE_OT_delete_joint,
 )
+from linkforge.blender.utils.joint_utils import (
+    get_connected_joints_for_link,
+    resolve_mimic_joints,
+)
+from linkforge.blender.utils.scene_utils import is_robot_joint
 from linkforge.blender.visualization.joint_gizmos import (
     fix_existing_joints,
     generate_axis_geometry,
     update_viz_handle,
 )
+from linkforge.core import Joint, JointMimic, JointType
+from mathutils import Euler, Vector
 
 from tests.blender_test_utils import (
     create_robot_joint,
@@ -45,8 +53,6 @@ class TestJointOperations:
 
     def test_create_joint_operator_poll(self, mocker, scene, blender_context) -> None:
         """Test create joint operator poll method."""
-        from unittest.mock import PropertyMock
-
         op = LINKFORGE_OT_create_joint
 
         # Active object is None
@@ -89,8 +95,6 @@ class TestJointOperations:
 
     def test_create_joint_preserves_child_rotation(self, scene, blender_context) -> None:
         """Test that creating a joint preserves the link's world rotation."""
-        from mathutils import Euler
-
         link = create_robot_link("rotated_link", scene)
         # Apply some initial rotation to the link
         link.rotation_euler = Euler((0.1, 0.2, 0.3), "XYZ")
@@ -285,8 +289,6 @@ class TestJointOperations:
         link.select_set(True)
 
         op = LINKFORGE_OT_create_joint()
-        from unittest.mock import PropertyMock
-
         original_execute = op.execute
 
         def mock_execute(context):
@@ -413,8 +415,6 @@ class TestJointOperations:
 
     def test_joint_ops_registration_and_main(self, mocker) -> None:
         """Verify registration and unregistration loops including double-registration."""
-        import linkforge.blender.operators.joint_ops as joint_ops
-
         joint_ops.unregister()
 
         mock_reg = mocker.patch(
@@ -463,16 +463,12 @@ class TestJointUtilities:
 
     def test_joint_origin_calculation(self, scene, blender_context) -> None:
         """Test joint origin persistence in properties."""
-        from mathutils import Vector
-
         obj = create_test_object("test_origin", None, scene)
         obj.location = Vector((1.0, 2.0, 3.0))
         assert obj.location.x == 1.0
 
     def test_is_robot_joint(self, scene, blender_context) -> None:
         """Test joint identification utility."""
-        from linkforge.blender.utils.scene_utils import is_robot_joint
-
         obj = create_test_object("test_is_joint", None, scene)
         assert not is_robot_joint(obj)
 
@@ -483,8 +479,6 @@ class TestJointUtilities:
 class TestJointVisualization:
     def test_generate_axis_geometry(self, scene, blender_context) -> None:
         """Test generating geometry for joint axis visualization."""
-        from mathutils import Vector
-
         obj = create_test_object("test_gizmo", None, scene)
         obj.location = Vector((1.0, 2.0, 3.0))
         if blender_context.view_layer:
@@ -535,9 +529,6 @@ class TestJointVisualization:
 class TestJointUtils:
     def test_resolve_mimic_joints(self, scene, blender_context) -> None:
         """Test resolve_mimic_joints logic and branches in joint_utils.py."""
-        from linkforge.blender.utils.joint_utils import resolve_mimic_joints
-        from linkforge.core import Joint, JointMimic, JointType
-
         joint1_obj = create_robot_joint("joint1", None, None, scene)
         joint2_obj = create_robot_joint("joint2", None, None, scene)
 
@@ -620,3 +611,53 @@ class TestJointUtils:
             ),
         ]
         resolve_mimic_joints(joints_no_mimic, joint_objects)
+
+
+def test_get_connected_joints_for_link(scene: bpy.types.Scene) -> None:
+    """Test finding incoming parent and outgoing child joints for a link."""
+    base = create_robot_link("base_link", scene)
+    arm = create_robot_link("arm_link", scene)
+    gripper = create_robot_link("gripper_link", scene)
+
+    joint1 = create_robot_joint("joint1", base, arm, scene)
+    joint2 = create_robot_joint("joint2", arm, gripper, scene)
+
+    # Base link (root): no parent joint, joint1 as child joint
+    p, children = get_connected_joints_for_link(base, scene)
+    assert p is None
+    assert children == [joint1]
+
+    # Arm link: joint1 as parent, joint2 as child joint
+    p, children = get_connected_joints_for_link(arm, scene)
+    assert p == joint1
+    assert children == [joint2]
+
+    # Gripper link (leaf): joint2 as parent, no child joints
+    p, children = get_connected_joints_for_link(gripper, scene)
+    assert p == joint2
+    assert children == []
+
+    # None input
+    p, children = get_connected_joints_for_link(None, scene)
+    assert p is None
+    assert children == []
+
+    # None scene fallback
+    with patch.object(bpy.context, "scene", None):
+        p, children = get_connected_joints_for_link(base, None)
+        assert p is None
+        assert children == []
+
+    # Scene with non-joint object and ReferenceError object
+    create_test_object("non_joint_obj", None, scene)
+
+    class DeadObject:
+        pass
+
+    with patch(
+        "linkforge.blender.utils.scene_utils.get_robot_statistics",
+        return_value=type("Stats", (), {"joint_objects": [joint1, DeadObject(), "invalid"]})(),
+    ):
+        p, children = get_connected_joints_for_link(base, scene)
+        assert p is None
+        assert children == [joint1]

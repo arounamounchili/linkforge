@@ -1,4 +1,4 @@
-"""UI Panel for robot-level properties and validation."""
+"""Operators for viewport selection and tree navigation."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from bpy.props import StringProperty
 from bpy.types import Context, Operator
 
 from ..utils.decorators import OperatorReturn, safe_execute
-from ..utils.property_helpers import get_robot_props
 from ..utils.scene_utils import build_tree_from_stats, get_robot_statistics
 
 
@@ -21,15 +20,12 @@ class LINKFORGE_OT_select_tree_object(Operator):
     bl_description = "Select this object in the 3D viewport"
     bl_options = {"REGISTER", "UNDO"}
 
-    object_name: bpy.props.StringProperty(  # type: ignore
+    object_name: StringProperty(  # type: ignore
         name="Object Name", description="Name of the object to select"
     )
-    object_type: bpy.props.StringProperty(  # type: ignore
-        name="Object Type", description="Type of object (link/joint)", default="link"
+    object_type: StringProperty(  # type: ignore
+        name="Object Type", description="Type of object (link, joint, sensor)", default=""
     )
-    joint_name = StringProperty(name="Joint Name")  # type: ignore[func-returns-value]
-    parent_link = StringProperty(name="Parent Link")  # type: ignore[func-returns-value]
-    child_link = StringProperty(name="Child Name")  # type: ignore[func-returns-value]
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -41,7 +37,6 @@ class LINKFORGE_OT_select_tree_object(Operator):
         Returns:
             Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
         """
-        # Find the object
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
@@ -53,7 +48,6 @@ class LINKFORGE_OT_select_tree_object(Operator):
         # Deselect all
         bpy.ops.object.select_all(action="DESELECT")
 
-        # Select and activate the object
         # Select and activate the object
         obj.select_set(True)
         vl = context.view_layer
@@ -104,54 +98,15 @@ class LINKFORGE_OT_select_root_link(Operator):
             return {"CANCELLED"}
 
 
-class LINKFORGE_OT_clear_component_search(Operator):
-    """Clear component browser search filter."""
-
-    bl_idname = "linkforge.clear_component_search"
-    bl_label = "Clear Search"
-    bl_description = "Clear component browser search filter"
-    bl_options = {"REGISTER", "UNDO"}
-
-    @classmethod
-    def poll(cls, context: Context) -> bool:
-        """Only enable operator when search text exists.
-
-        Args:
-            context: The execution context.
-
-        Returns:
-            True if the operator can be executed, False otherwise.
-        """
-        props = get_robot_props(context.scene)
-        return bool(props and props.component_browser_search)
-
-    @safe_execute
-    def execute(self, context: Context) -> OperatorReturn:
-        """Clear the component browser search field.
-
-        Args:
-            context: The execution context.
-
-        Returns:
-            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
-        """
-        scene = context.scene
-        if not scene or not (props := get_robot_props(scene)):
-            return {"CANCELLED"}
-        props.component_browser_search = ""
-        return {"FINISHED"}
-
-
 # Registration
 classes = [
     LINKFORGE_OT_select_tree_object,
     LINKFORGE_OT_select_root_link,
-    LINKFORGE_OT_clear_component_search,
 ]
 
 
 def register() -> None:
-    """Register panel."""
+    """Register operators."""
     for cls in classes:
         try:
             bpy.utils.register_class(cls)
@@ -161,7 +116,7 @@ def register() -> None:
 
 
 def unregister() -> None:
-    """Unregister panel."""
+    """Unregister operators."""
     for cls in reversed(classes):
         with contextlib.suppress(RuntimeError):
             bpy.utils.unregister_class(cls)

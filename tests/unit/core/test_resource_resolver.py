@@ -1,5 +1,6 @@
 """Unit tests for the Abstract Resource Resolver system."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -68,8 +69,6 @@ def test_filesystem_resolver_errors_and_fallbacks(tmp_path) -> None:
     abs_file.write_text("<robot/>")
 
     # package:// success
-    import os
-
     old_rpp = os.environ.get("ROS_PACKAGE_PATH")
     os.environ["ROS_PACKAGE_PATH"] = str(tmp_path)
     try:

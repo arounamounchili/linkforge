@@ -2,35 +2,44 @@
 
 ## Supported Versions
 
-We currently provide security updates for the following versions:
+We provide security updates and patches for the following versions:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| Latest (1.5.0) | :white_check_mark: |
-| 1.5.x   | :white_check_mark: |
-| 1.4.x   | :white_check_mark: |
-| 1.3.x   | :white_check_mark: |
-| < 1.3.0 | :x:                |
+| Version | Supported |
+| :--- | :--- |
+| **1.5.x (Latest: 1.5.2)** | :white_check_mark: Full Support |
+| **1.4.x** | :white_check_mark: Critical Fixes |
+| **1.3.x** | :white_check_mark: Critical Fixes |
+| **< 1.3.0** | :x: Unsupported |
+
+---
+
+## Security Scope & Threat Model
+
+LinkForge processes external, third-party robot descriptions and meshes. Our security architecture enforces:
+
+* **Resource Sandboxing**: Resource paths (`package://` and relative file paths) are strictly jailed to declared package roots, preventing path traversal attacks.
+* **Safe Expression Evaluation**: XACRO mathematical expressions are evaluated within a restricted scope without access to arbitrary Python built-ins or system commands.
+* **Hardened XML Ingestion**: Defense against XML entity expansion (e.g. Billion Laughs attacks) and quadratic blowout.
+
+---
 
 ## Reporting a Vulnerability
 
-We take the security of LinkForge seriously. If you believe you have found a security vulnerability, please do NOT report it via a public GitHub issue.
+If you discover a security vulnerability within LinkForge, please **do NOT report it via public GitHub issues or discussions**.
 
-Instead, please report it privately by following these steps:
+Instead, please report it privately through one of the following channels:
 
-1.  **Email**: Contact the lead maintainer at [patouossa.mounchili@gmail.com](mailto:patouossa.mounchili@gmail.com).
-2.  **Details**: Include as much information as possible, including steps to reproduce the issue and the potential impact.
-3.  **Response**: You will receive an acknowledgment of your report within 48 hours.
-4.  **Fix**: We will work to resolve the issue as quickly as possible and will keep you updated on our progress.
+1. **GitHub Private Vulnerability Advisory (Preferred)**:
+   Submit a confidential advisory directly via [GitHub Security Advisories](https://github.com/arounamounchili/linkforge/security/advisories/new).
+2. **Direct Email**:
+   Email the lead maintainer directly at [patouossa.mounchili@gmail.com](mailto:patouossa.mounchili@gmail.com) with the subject line `[SECURITY] LinkForge Vulnerability Report`.
 
-## Disclosure Policy
+### What to Include
+* A description of the vulnerability and its potential impact.
+* Minimal reproduction steps or proof-of-concept files (e.g. a sample URDF/XACRO).
+* The affected component (`linkforge-core` or `linkforge-blender`) and version.
 
-When a vulnerability is reported, we follow a responsible disclosure process:
-
-1.  We maintain a private communication channel with the reporter.
-2.  We verify the vulnerability and determine its severity.
-3.  We develop and test a fix.
-4.  We release a new version containing the fix.
-5.  We publicly announce the vulnerability and credit the reporter (unless you prefer to remain anonymous).
-
-Thank you for helping keep LinkForge secure!
+### Response Timeline
+* **Initial Acknowledgment**: Within 48 hours.
+* **Triage & Severity Assessment**: Within 5 business days.
+* **Coordinated Disclosure**: Fixes will be prepared in a private fork and published alongside an official release and CVE attribution (unless you prefer anonymity).

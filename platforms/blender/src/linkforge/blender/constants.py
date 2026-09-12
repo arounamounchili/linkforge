@@ -15,69 +15,90 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-# Addon metadata
+# ----------------------------------------------------------------------------
+# Addon Metadata
+# ----------------------------------------------------------------------------
+
 ADDON_ID_DEFAULT: Final[str] = "linkforge"
 
-# Object Suffixes for Robot Components
-# ----------------------------
+
+# ----------------------------------------------------------------------------
+# Object Suffixes & Geometry Purposes
+# ----------------------------------------------------------------------------
+
 # Used for naming child objects representing visual and collision geometry
 SUFFIX_VISUAL: Final[str] = "_visual"
 SUFFIX_COLLISION: Final[str] = "_collision"
 SUFFIX_SENSOR: Final[str] = "_sensor"
 
-# Geometry Purposes
 PURPOSE_VISUAL: Final[str] = "visual"
 PURPOSE_COLLISION: Final[str] = "collision"
 
+
+# ----------------------------------------------------------------------------
 # Metadata Tags (Blender ID Properties)
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 # These keys are used in object['key'] storage for persistence
 TAG_SOURCE_NAME: Final[str] = "source_name"
 TAG_IMPORTED_SOURCE: Final[str] = "imported_from_source"
 TAG_SENSOR_TYPE: Final[str] = "sensor_type"
 
+
+# ----------------------------------------------------------------------------
 # Blender Property Group Identifiers
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 # Used for registration and access via bpy.types.Object.linkforge_...
 PROP_LINK: Final[str] = "linkforge"
 PROP_JOINT: Final[str] = "linkforge_joint"
 PROP_SENSOR: Final[str] = "linkforge_sensor"
-PROP_TRANSMISSION: Final[str] = "linkforge_transmission"
-PROP_CONTROL: Final[str] = "linkforge_control"
 PROP_ROBOT: Final[str] = "linkforge_robot"
 PROP_VALIDATION: Final[str] = "linkforge_validation"
 
+
+# ----------------------------------------------------------------------------
 # File Formats and Extensions
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 FORMAT_STL: Final[str] = "STL"
 FORMAT_OBJ: Final[str] = "OBJ"
 FORMAT_GLB: Final[str] = "GLB"
 
-# Default Names
-# ----------------------------
-DEFAULT_LINK_NAME: Final[str] = "base_link"
-DEFAULT_JOINT_NAME: Final[str] = "joint"
-DEFAULT_SENSOR_NAME: Final[str] = "sensor"
-DEFAULT_ROBOT_NAME: Final[str] = "robot"
 
-# UI and Visualization Defaults
-# ----------------------------
-# Gizmo sizes for viewport display
-DEFAULT_LINK_GIZMO_SIZE: Final[float] = 0.1
-DEFAULT_JOINT_GIZMO_SIZE: Final[float] = 0.1
-DEFAULT_SENSOR_GIZMO_SIZE: Final[float] = 0.1
-DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.1
+# ----------------------------------------------------------------------------
+# UI and Viewport Visualization Defaults
+# ----------------------------------------------------------------------------
 
+# Gizmo sizes for viewport display (in meters)
+DEFAULT_LINK_GIZMO_SIZE: Final[float] = 0.04
+DEFAULT_JOINT_GIZMO_SIZE: Final[float] = 0.05
+DEFAULT_SENSOR_GIZMO_SIZE: Final[float] = 0.03
+DEFAULT_INERTIA_GIZMO_SIZE: Final[float] = 0.03
+
+# Auto-fit bounds heuristic settings
+GIZMO_SIZE_MIN: Final[float] = 0.005
+GIZMO_SIZE_MAX: Final[float] = 0.5
+GIZMO_SCALE_FACTOR: Final[float] = 0.05
+
+# Empty anchor scale when RViz GPU visualization is active (keeps native wireframes subtle)
+ANCHOR_DISPLAY_RATIO: Final[float] = 0.2
+ANCHOR_DISPLAY_MAX: Final[float] = 0.02
+ANCHOR_DISPLAY_MIN: Final[float] = 0.002
+
+
+# ----------------------------------------------------------------------------
 # Heuristic Thresholds (Primitive Detection)
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 # Maximum allowed face count for a mesh to be considered for primitive detection
 PRIMITIVE_MAX_FACES: Final[int] = 1000
 
-# Tolerance for geometric comparisons (e.g. vertex alignment)
-GEOM_TOLERANCE: Final[float] = 1e-4
 
+# ----------------------------------------------------------------------------
 # Automation and Logic Defaults
-# ----------------------------
+# ----------------------------------------------------------------------------
+
 GEOM_AUTO: Final[str] = "auto"
 
 

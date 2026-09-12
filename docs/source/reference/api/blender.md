@@ -39,7 +39,12 @@ User actions and commands.
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: linkforge.blender.operators.transmission_ops
+.. automodule:: linkforge.blender.operators.selection_ops
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.operators.display_ops
    :members:
    :undoc-members:
    :show-inheritance:
@@ -51,11 +56,6 @@ UI Panels for managing robot data.
 
 ```{eval-rst}
 .. automodule:: linkforge.blender.panels.forge_panel
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: linkforge.blender.panels.robot_panel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -91,6 +91,11 @@ UI Panels for managing robot data.
 Blender scene properties for storing robot data.
 
 ```{eval-rst}
+.. automodule:: linkforge.blender.properties.geom_props
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: linkforge.blender.properties.robot_props
    :members:
    :undoc-members:
@@ -116,11 +121,6 @@ Blender scene properties for storing robot data.
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: linkforge.blender.properties.transmission_props
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: linkforge.blender.properties.validation_props
    :members:
    :undoc-members:
@@ -142,7 +142,28 @@ Conversion between Blender and core models.
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: linkforge.blender.adapters.geometry_extractor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: linkforge.blender.adapters.mesh_io
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+## Logic
+
+Internal domain logic for asynchronous model building and collision synthesis.
+
+```{eval-rst}
+.. automodule:: linkforge.blender.logic.asynchronous_builder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.logic.collision_builder
    :members:
    :undoc-members:
    :show-inheritance:
@@ -153,12 +174,59 @@ Conversion between Blender and core models.
 Blender-specific helpers.
 
 ```{eval-rst}
+.. automodule:: linkforge.blender.utils.decorators
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.utils.joint_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.utils.mode_guard
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: linkforge.blender.utils.property_helpers
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: linkforge.blender.utils.scene_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: linkforge.blender.utils.transform_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+## Handlers
+
+Scene lifecycle and name synchronization handlers.
+
+```{eval-rst}
+.. automodule:: linkforge.blender.handlers.name_sync_handler
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+## Visualization
+
+3D Viewport gizmos for inertia tensors and joint kinematics.
+
+```{eval-rst}
+.. automodule:: linkforge.blender.visualization.inertia_gizmos
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.visualization.joint_gizmos
    :members:
    :undoc-members:
    :show-inheritance:

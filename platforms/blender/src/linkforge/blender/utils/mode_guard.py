@@ -14,6 +14,7 @@ def context_and_mode_guard(context: Context) -> typing.Iterator[dict[str, typing
     """Context manager to ensure safe execution of Blender operators.
 
     This handles two critical mission-critical scenarios:
+
     1. Mode Switching: If the user is in Edit Mode, it switches to Object Mode
        and restores Edit Mode afterwards.
     2. Context Overriding: If operators are called from non-UI contexts (timers,

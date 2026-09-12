@@ -152,7 +152,6 @@ def parse_float(
     text: str | None,
     attribute_name: str = "value",
     default: float | None = None,
-    check_name: str | None = None,
 ) -> float:
     """Parse float value from XML with comprehensive validation.
 
@@ -160,7 +159,6 @@ def parse_float(
         text: String to parse
         attribute_name: Context for error messages
         default: Default value if text is None
-        check_name: Alias for attribute_name used in some parsers
 
     Returns:
         Parsed float
@@ -169,9 +167,6 @@ def parse_float(
         RobotMathError: If input is invalid
         RobotValidationError: If attribute is missing
     """
-    # Alias check_name if provided
-    report_name = check_name or attribute_name
-
     if text is not None and not text.strip():
         text = None
 
@@ -180,8 +175,8 @@ def parse_float(
             return default
         raise RobotValidationError(
             ValidationErrorCode.VALUE_EMPTY,
-            f"Missing required attribute: {report_name}",
-            target=report_name,
+            f"Missing required attribute: {attribute_name}",
+            target=attribute_name,
         )
 
     try:
@@ -189,8 +184,8 @@ def parse_float(
         if math.isnan(value) or math.isinf(value):
             raise RobotMathError(
                 ValidationErrorCode.INVALID_VALUE,
-                f"Non-finite float value '{value}' in {report_name}",
-                target=report_name,
+                f"Non-finite float value '{value}' in {attribute_name}",
+                target=attribute_name,
                 value=value,
             )
 
@@ -199,8 +194,8 @@ def parse_float(
         if not (-MAX_REASONABLE_FLOAT < value < MAX_REASONABLE_FLOAT):
             raise RobotMathError(
                 ValidationErrorCode.OUT_OF_RANGE,
-                f"Float value '{value}' in {report_name} is outside reasonable range",
-                target=report_name,
+                f"Float value '{value}' in {attribute_name} is outside reasonable range",
+                target=attribute_name,
                 value=value,
             )
 
@@ -208,8 +203,8 @@ def parse_float(
     except ValueError:
         raise RobotMathError(
             ValidationErrorCode.INVALID_VALUE,
-            f"Invalid float format '{text}' in {report_name}",
-            target=report_name,
+            f"Invalid float format '{text}' in {attribute_name}",
+            target=attribute_name,
             value=text,
         ) from None
 
@@ -218,7 +213,6 @@ def parse_int(
     text: str | None,
     attribute_name: str = "value",
     default: int | None = None,
-    check_name: str | None = None,
 ) -> int:
     """Parse integer value from XML with comprehensive validation.
 
@@ -226,7 +220,6 @@ def parse_int(
         text: String to parse
         attribute_name: Context for error messages
         default: Default value if text is None
-        check_name: Alias for attribute_name for consistent reporting
 
     Returns:
         Parsed integer
@@ -235,8 +228,6 @@ def parse_int(
         RobotMathError: If input format is invalid or value is out of range
         RobotValidationError: If attribute is missing and no default is provided
     """
-    report_name = check_name or attribute_name
-
     if text is not None and not text.strip():
         text = None
 
@@ -245,8 +236,8 @@ def parse_int(
             return default
         raise RobotValidationError(
             ValidationErrorCode.VALUE_EMPTY,
-            f"Missing required attribute: {report_name}",
-            target=report_name,
+            f"Missing required attribute: {attribute_name}",
+            target=attribute_name,
         )
 
     try:
@@ -255,16 +246,16 @@ def parse_int(
         if not (-MAX_REASONABLE_INT < value < MAX_REASONABLE_INT):
             raise RobotMathError(
                 ValidationErrorCode.OUT_OF_RANGE,
-                f"Integer value '{value}' in {report_name} is outside reasonable range",
-                target=report_name,
+                f"Integer value '{value}' in {attribute_name} is outside reasonable range",
+                target=attribute_name,
                 value=value,
             )
         return value
     except ValueError:
         raise RobotMathError(
             ValidationErrorCode.INVALID_VALUE,
-            f"Invalid integer format '{text}' in {report_name}",
-            target=report_name,
+            f"Invalid integer format '{text}' in {attribute_name}",
+            target=attribute_name,
             value=text,
         ) from None
 

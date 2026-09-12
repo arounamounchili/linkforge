@@ -66,3 +66,57 @@ def is_control_joint_missing(item: bpy.types.PropertyGroup, scene: bpy.types.Sce
         return False
 
     return True
+
+
+def get_connected_joints_for_link(
+    link_obj: bpy.types.Object | None,
+    scene: bpy.types.Scene | None = None,
+) -> tuple[bpy.types.Object | None, list[bpy.types.Object]]:
+    """Return incoming parent joint and outgoing child joints for a given link object.
+
+    Args:
+        link_obj: The link object in Blender.
+        scene: Optional active scene. If not provided, uses bpy.context.scene.
+
+    Returns:
+        tuple[bpy.types.Object | None, list[bpy.types.Object]]:
+            (parent_joint, list_of_child_joints)
+    """
+    if link_obj is None:
+        return None, []
+
+    if scene is None:
+        scene = getattr(bpy.context, "scene", None)
+    if scene is None:
+        return None, []
+
+    parent_joint: bpy.types.Object | None = None
+    child_joints: list[bpy.types.Object] = []
+
+    from .scene_utils import get_robot_statistics
+
+    stats = get_robot_statistics(scene)
+    all_joints = getattr(stats, "joint_objects", []) or [
+        o
+        for o in getattr(scene, "objects", [])
+        if (jp := get_joint_props(o)) and getattr(jp, "is_robot_joint", False)
+    ]
+
+    for j_obj in all_joints:
+        try:
+            jp = get_joint_props(j_obj)
+            if not jp or not getattr(jp, "is_robot_joint", False):
+                continue
+
+            # Incoming joint (where this link is the child)
+            if getattr(jp, "child_link", None) == link_obj:
+                parent_joint = j_obj
+
+            # Outgoing joint (where this link is the parent)
+            if getattr(jp, "parent_link", None) == link_obj:
+                child_joints.append(j_obj)
+        except (ReferenceError, AttributeError):
+            continue
+
+    child_joints.sort(key=lambda x: getattr(x, "name", ""))
+    return parent_joint, child_joints

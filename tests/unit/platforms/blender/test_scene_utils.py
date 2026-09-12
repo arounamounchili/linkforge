@@ -16,7 +16,6 @@ from linkforge.blender.utils.scene_utils import (
     is_robot_joint,
     is_robot_link,
     is_robot_sensor,
-    is_robot_transmission,
     move_to_collection,
     sync_object_collections,
 )
@@ -27,7 +26,6 @@ from tests.blender_test_utils import (
     safe_get_joint,
     safe_get_linkforge,
     safe_get_sensor,
-    safe_get_transmission,
 )
 
 
@@ -67,18 +65,6 @@ class TestSceneHelperChecks:
 
         obj.type = "EMPTY"
         assert is_robot_sensor(obj)
-
-    def test_is_robot_transmission(self, scene, blender_context) -> None:
-        """Verify is_robot_transmission check detects transmissions only on empty objects."""
-        assert not is_robot_transmission(None)
-
-        obj = create_test_object("trans_mesh", None, scene)
-        obj.type = "MESH"
-        safe_get_transmission(obj).is_robot_transmission = True
-        assert not is_robot_transmission(obj)
-
-        obj.type = "EMPTY"
-        assert is_robot_transmission(obj)
 
 
 # Robot Statistics Analysis
@@ -224,7 +210,6 @@ class TestSceneAnalysis:
                 link_objects={},
                 joint_objects=[bad_joint],
                 sensor_objects=[],
-                transmission_objects=[],
                 root_link=None,
             )
             _stats_cache[cache_key] = stats
@@ -241,23 +226,6 @@ class TestSceneAnalysis:
                 link_objects={},
                 joint_objects=[],
                 sensor_objects=[bad_sensor],
-                transmission_objects=[],
-                root_link=None,
-            )
-            _stats_cache[cache_key] = stats
-            get_robot_statistics(scene)
-            assert cache_key not in _stats_cache or _stats_cache[cache_key] != stats
-
-            bad_trans = MagicMock()
-            type(bad_trans).name = PropertyMock(side_effect=ReferenceError("deleted"))
-            stats = RobotSceneStatistics(
-                num_links=0,
-                total_mass=0.0,
-                total_dof=0,
-                link_objects={},
-                joint_objects=[],
-                sensor_objects=[],
-                transmission_objects=[bad_trans],
                 root_link=None,
             )
             _stats_cache[cache_key] = stats
@@ -273,7 +241,6 @@ class TestSceneAnalysis:
                 link_objects={},
                 joint_objects=[],
                 sensor_objects=[],
-                transmission_objects=[],
                 root_link=None,
                 geometry_stats={"some_link": (bad_geo, "box", True)},
             )
@@ -290,7 +257,6 @@ class TestSceneAnalysis:
                 link_objects={},
                 joint_objects=[],
                 sensor_objects=[],
-                transmission_objects=[],
                 root_link=None,
                 manual_inertia_objects=[bad_inertia],
             )
@@ -359,16 +325,12 @@ class TestSceneAnalysis:
         stats = get_robot_statistics(scene, force_refresh=True)
         assert "child_link_real" in stats.link_objects
 
-        # Sensors and Transmissions detection
+        # Sensors detection
         sensor_obj = create_test_object("sensor_test", None, scene)
         sensor_obj.type = "EMPTY"
         safe_get_sensor(sensor_obj).is_robot_sensor = True
-        trans_obj = create_test_object("trans_test", None, scene)
-        trans_obj.type = "EMPTY"
-        safe_get_transmission(trans_obj).is_robot_transmission = True
         stats = get_robot_statistics(scene, force_refresh=True)
         assert sensor_obj in stats.sensor_objects
-        assert trans_obj in stats.transmission_objects
 
         # build_tree_from_stats Falsy jp or parent_name not in tree
         from linkforge.blender.utils.scene_utils import RobotSceneStatistics
@@ -387,7 +349,6 @@ class TestSceneAnalysis:
                 link_objects={"link_a": None, "link_b": None},
                 joint_objects=[],
                 sensor_objects=[],
-                transmission_objects=[],
                 root_link=None,
                 joints_map={"link_b": ("link_a", bad_joint_obj)},
             )
@@ -401,7 +362,6 @@ class TestSceneAnalysis:
             obj.linkforge = MagicMock(is_robot_link=False, mass=0.0, use_auto_inertia=True)
             obj.linkforge_joint = MagicMock(is_robot_joint=False)
             obj.linkforge_sensor = MagicMock(is_robot_sensor=False)
-            obj.linkforge_transmission = MagicMock(is_robot_transmission=False)
             return obj
 
         # Cover jp := get_joint_props(obj) evaluates to False
@@ -509,7 +469,6 @@ class TestTreeBuilding:
             link_objects={"child": MagicMock()},
             joint_objects=[joint_obj1],
             sensor_objects=[],
-            transmission_objects=[],
             root_link=None,
             joints_map={"child": ("unknown_parent", joint_obj1)},
         )
@@ -526,7 +485,6 @@ class TestTreeBuilding:
                 link_objects={"parent": MagicMock(), "child": MagicMock()},
                 joint_objects=[joint_obj2],
                 sensor_objects=[],
-                transmission_objects=[],
                 root_link=None,
                 joints_map={"child": ("parent", joint_obj2)},
             )
@@ -545,7 +503,6 @@ class TestTreeBuilding:
                 link_objects={"parent": MagicMock(), "child": MagicMock()},
                 joint_objects=[joint_obj3],
                 sensor_objects=[],
-                transmission_objects=[],
                 root_link=None,
                 joints_map={"child": ("parent", joint_obj3)},
             )

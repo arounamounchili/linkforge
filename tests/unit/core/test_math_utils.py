@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from linkforge.core._utils.math_utils import clean_float, format_float, normalize_vector
+from linkforge.core._utils.math_utils import (
+    clean_float,
+    format_float,
+    is_positive_semi_definite_3x3,
+    normalize_vector,
+    sylvester_minors_3x3,
+    symmetric_matrix_eigenvalues_3x3,
+)
 
 
 def test_clean_float() -> None:
@@ -40,8 +47,6 @@ def test_normalize_vector() -> None:
 
 def test_symmetric_matrix_eigenvalues_3x3() -> None:
     """Test analytical 3x3 symmetric matrix eigenvalue calculation."""
-    from linkforge.core._utils.math_utils import symmetric_matrix_eigenvalues_3x3
-
     # Identity matrix
     e1, e2, e3 = symmetric_matrix_eigenvalues_3x3(1.0, 1.0, 1.0, 0.0, 0.0, 0.0)
     assert (abs(e1 - 1.0), abs(e2 - 1.0), abs(e3 - 1.0)) < (1e-9, 1e-9, 1e-9)
@@ -65,8 +70,6 @@ def test_symmetric_matrix_eigenvalues_3x3() -> None:
 
 def test_sylvester_minors_and_psd() -> None:
     """Test Sylvester's principal minors and positive semi-definiteness checks."""
-    from linkforge.core._utils.math_utils import is_positive_semi_definite_3x3, sylvester_minors_3x3
-
     # Positive definite matrix: [[2, 0.5, 0.3], [0.5, 2, 0.4], [0.3, 0.4, 2]]
     d1, d2, d3 = sylvester_minors_3x3(2.0, 2.0, 2.0, 0.5, 0.3, 0.4)
     assert d1 > 0

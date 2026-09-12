@@ -68,6 +68,15 @@ class RobotGeneratorError(LinkForgeError):
     pass
 
 
+class RobotGeneratorUnsupportedTypeError(RobotGeneratorError):
+    """Exception raised when an unsupported content type is provided to a generator."""
+
+    def __init__(self, content_type: object, generator_name: str) -> None:
+        super().__init__(
+            f"Unsupported content type '{content_type}' for generator '{generator_name}'"
+        )
+
+
 class RobotParserError(LinkForgeError):
     """Exception raised during robot parsing or import."""
 
@@ -98,55 +107,46 @@ class RobotParserUnexpectedError(RobotParserError):
         super().__init__(msg)
 
 
-class RobotPhysicsError(RobotModelError):
+class _StructuredRobotModelError(RobotModelError):
+    """Base exception for structured model errors with standardized formatting."""
+
+    _prefix: str = ""
+
+    def __init__(
+        self,
+        code: ValidationErrorCode,
+        message: str,
+        target: str | None = None,
+        value: Any = None,
+    ):
+        self.code = code
+        self.target = target
+        self.value = value
+        self.message = message
+
+        prefix = f"{self._prefix}_" if self._prefix else ""
+        full_msg = f"[{prefix}{code.name}] {message}"
+        if target:
+            full_msg += f" (target: {target})"
+        if value is not None:
+            full_msg += f" (value: {value})"
+
+        super().__init__(full_msg)
+
+
+class RobotPhysicsError(_StructuredRobotModelError):
     """Exception raised for unphysical properties (e.g. negative mass or volume)."""
 
-    def __init__(
-        self,
-        code: ValidationErrorCode,
-        message: str,
-        target: str | None = None,
-        value: Any = None,
-    ):
-        self.code = code
-        self.target = target
-        self.value = value
-        self.message = message
-
-        full_msg = f"[PHYSICS_{code.name}] {message}"
-        if target:
-            full_msg += f" (target: {target})"
-        if value is not None:
-            full_msg += f" (value: {value})"
-
-        super().__init__(full_msg)
+    _prefix = "PHYSICS"
 
 
-class RobotValidationError(RobotModelError):
+class RobotValidationError(_StructuredRobotModelError):
     """Exception raised for structural or logic validation failures.
 
-    Now structured using ValidationErrorCode for robust error handling.
+    Structured using ValidationErrorCode for robust error handling.
     """
 
-    def __init__(
-        self,
-        code: ValidationErrorCode,
-        message: str,
-        target: str | None = None,
-        value: Any = None,
-    ):
-        self.code = code
-        self.target = target
-        self.value = value
-        self.message = message
-
-        full_msg = f"[{code.name}] {message}"
-        if target:
-            full_msg += f" (target: {target})"
-        if value is not None:
-            full_msg += f" (value: {value})"
-
-        super().__init__(full_msg)
+    _prefix = ""
 
 
 class RobotSecurityError(RobotModelError):
@@ -156,28 +156,10 @@ class RobotSecurityError(RobotModelError):
         super().__init__(f"Security Violation: {reason} (path: {path})")
 
 
-class RobotMathError(RobotModelError):
+class RobotMathError(_StructuredRobotModelError):
     """Exception raised for invalid numerical values (NaN, Inf, or Out of Range)."""
 
-    def __init__(
-        self,
-        code: ValidationErrorCode,
-        message: str,
-        target: str | None = None,
-        value: Any = None,
-    ):
-        self.code = code
-        self.target = target
-        self.value = value
-        self.message = message
-
-        full_msg = f"[MATH_{code.name}] {message}"
-        if target:
-            full_msg += f" (target: {target})"
-        if value is not None:
-            full_msg += f" (value: {value})"
-
-        super().__init__(full_msg)
+    _prefix = "MATH"
 
 
 class RobotXacroError(RobotParserError):

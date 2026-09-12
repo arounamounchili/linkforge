@@ -14,6 +14,7 @@ from bpy.types import Context, Panel
 from ..constants import (
     PROP_ROBOT,
 )
+from ..preferences import get_addon_prefs
 
 
 class LINKFORGE_PT_forge(Panel):
@@ -37,9 +38,10 @@ class LINKFORGE_PT_forge(Panel):
         if not layout:
             return
 
-        if not context.scene:
+        scene = context.scene
+        if not scene:
             return
-        scene_props = getattr(context.scene, PROP_ROBOT)
+        scene_props = getattr(scene, PROP_ROBOT)
 
         if scene_props.is_importing:
             # Active Import Status
@@ -72,6 +74,49 @@ class LINKFORGE_PT_forge(Panel):
                 row.operator(
                     "linkforge.import_robot_model", text="Import Robot Model", icon="IMPORT"
                 )
+
+            # Viewport Overlays Quick Toolbar
+            prefs = get_addon_prefs(context)
+            box = layout.box()
+            if box:
+                box.label(text="Viewport Overlays", icon="OVERLAY")
+
+                # Row 1: Visibility Toggles
+                r1 = box.row(align=True)
+                if r1:
+                    r1.prop(
+                        scene_props,
+                        "show_collisions",
+                        text="Collisions",
+                        toggle=True,
+                        icon="MOD_PHYSICS",
+                    )
+                    if prefs:
+                        r1.prop(
+                            prefs,
+                            "show_joint_axes",
+                            text="Joints",
+                            toggle=True,
+                            icon="EMPTY_ARROWS",
+                        )
+                        r1.prop(
+                            prefs,
+                            "show_inertia_gizmos",
+                            text="Inertia",
+                            toggle=True,
+                            icon="PHYSICS",
+                        )
+
+                # Row 2: Sizing & Fitting
+                r2 = box.row(align=True)
+                if r2:
+                    r2.operator(
+                        "linkforge.auto_fit_gizmo_sizes",
+                        text="Fit Gizmos to Robot",
+                        icon="ARROW_LEFTRIGHT",
+                    )
+                    if prefs:
+                        r2.prop(prefs, "joint_empty_size", text="Size")
 
         layout.separator()
         layout.label(text="Create robot structure:", icon="TOOL_SETTINGS")

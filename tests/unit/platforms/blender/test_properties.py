@@ -275,11 +275,10 @@ class TestGlobalPropertiesAndCallbacks:
             assert mock_unreg.called
 
     def test_property_helpers_strategies(self, scene, blender_context) -> None:
-        """Test find_property_owner strategy fallbacks and get_transmission_props."""
+        """Test find_property_owner strategy fallbacks."""
         from linkforge.blender.constants import PROP_LINK
         from linkforge.blender.utils.property_helpers import (
             find_property_owner,
-            get_transmission_props,
         )
 
         obj1 = create_test_object("test_strat_3", None, scene)
@@ -322,9 +321,6 @@ class TestGlobalPropertiesAndCallbacks:
         finally:
             props.id_data = original_id_data
 
-        assert get_transmission_props(None) is None
-        assert get_transmission_props(obj1) is not None
-
         assert get_robot_props(scene) is not None
 
         # Clear id_data for fallback testing
@@ -363,6 +359,7 @@ class TestGlobalPropertiesAndCallbacks:
     def test_duplicate_registrations(self) -> None:
         """Test duplicate registration handling and main blocks in property groups."""
         import runpy
+        import warnings
 
         from linkforge.blender.properties import (
             control_props,
@@ -370,7 +367,6 @@ class TestGlobalPropertiesAndCallbacks:
             link_props,
             robot_props,
             sensor_props,
-            transmission_props,
             validation_props,
         )
 
@@ -380,7 +376,6 @@ class TestGlobalPropertiesAndCallbacks:
             link_props,
             joint_props,
             sensor_props,
-            transmission_props,
             robot_props,
         ]
 
@@ -405,16 +400,19 @@ class TestGlobalPropertiesAndCallbacks:
             finally:
                 bpy.utils.register_class = orig_register_class
 
-        for mod_name in [
-            "linkforge.blender.properties.control_props",
-            "linkforge.blender.properties.validation_props",
-            "linkforge.blender.properties.link_props",
-            "linkforge.blender.properties.joint_props",
-            "linkforge.blender.properties.sensor_props",
-            "linkforge.blender.properties.transmission_props",
-            "linkforge.blender.properties.robot_props",
-        ]:
-            runpy.run_module(mod_name, run_name="__main__")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
+            for mod_name in [
+                "linkforge.blender.properties.control_props",
+                "linkforge.blender.properties.validation_props",
+                "linkforge.blender.properties.link_props",
+                "linkforge.blender.properties.joint_props",
+                "linkforge.blender.properties.sensor_props",
+                "linkforge.blender.properties.robot_props",
+            ]:
+                runpy.run_module(mod_name, run_name="__main__")
 
     def test_joint_properties_and_callbacks(self, scene, blender_context) -> None:
         """Test getters, setters, polls and hierarchy updates in JointPropertyGroup."""
@@ -469,57 +467,6 @@ class TestGlobalPropertiesAndCallbacks:
         jp.child_link = None
         update_joint_hierarchy(jp, bpy.context)
         assert joint_obj.parent is None
-
-    def test_transmission_properties_and_callbacks(self, scene, blender_context) -> None:
-        """Test getters, setters, polls and hierarchy updates in TransmissionPropertyGroup."""
-        from linkforge.blender.constants import PROP_TRANSMISSION
-        from linkforge.blender.properties.transmission_props import (
-            get_transmission_name,
-            poll_robot_joint,
-            set_transmission_name,
-            update_transmission_hierarchy,
-        )
-        from linkforge.blender.properties.transmission_props import (
-            register as trans_register,
-        )
-        from linkforge.blender.properties.transmission_props import (
-            unregister as trans_unregister,
-        )
-        from linkforge.core.constants import TRANS_DIFFERENTIAL
-
-        base = create_robot_link("base_link", scene)
-        child = create_robot_link("child_link", scene)
-        joint_obj = create_robot_joint("test_joint", base, child, scene)
-
-        trans_obj = create_test_object("test_trans", None, scene)
-        tp = getattr(trans_obj, PROP_TRANSMISSION)
-        tp.is_robot_transmission = True
-
-        assert get_transmission_name(tp) == "test_trans"
-        set_transmission_name(tp, "renamed_trans")
-        assert tp.source_name_stored == "renamed_trans"
-
-        assert poll_robot_joint(tp, joint_obj) is True
-        assert poll_robot_joint(tp, base) is False
-
-        tp.joint_name = joint_obj
-        update_transmission_hierarchy(tp, bpy.context)
-        assert trans_obj.parent == joint_obj
-
-        tp.transmission_type = TRANS_DIFFERENTIAL
-        tp.joint1_name = joint_obj
-        update_transmission_hierarchy(tp, bpy.context)
-        assert trans_obj.parent == joint_obj
-
-        with (
-            patch("bpy.utils.register_class") as mock_reg,
-            patch("bpy.utils.unregister_class") as mock_unreg,
-        ):
-            trans_register()
-            assert mock_reg.called
-
-            trans_unregister()
-            assert mock_unreg.called
 
     def test_validation_props_extra_coverage(self, scene) -> None:
         """Test validation_props properties and methods for 100% coverage."""
@@ -958,56 +905,6 @@ class TestGlobalPropertiesAndCallbacks:
         assert poll_robot_link(sp, None) is False
         assert poll_robot_link(sp, link_obj) is True
 
-    def test_transmission_props_extra_coverage(self, scene) -> None:
-        """Test transmission_props edge cases for 100% coverage."""
-        from linkforge.blender.properties.transmission_props import (
-            get_transmission_name,
-            set_transmission_name,
-            update_transmission_hierarchy,
-        )
-
-        class MockTransProps:
-            id_data = None
-            source_name_stored = ""
-            is_robot_transmission = True
-            joint_name = None
-            joint1_name = None
-            transmission_type = "SIMPLE"
-
-        mtp = MockTransProps()
-        assert get_transmission_name(mtp) == ""
-
-        mtp.source_name_stored = "my_stored_trans"
-        assert get_transmission_name(mtp) == "my_stored_trans"
-
-        set_transmission_name(mtp, "")
-
-        class FakeTransObj:
-            def __init__(self) -> None:
-                self.name = "my_trans_obj"
-
-        fto = FakeTransObj()
-        mtp.id_data = fto
-        set_transmission_name(mtp, "my_trans_obj")
-
-        # update_transmission_hierarchy with missing transmission_obj or not robot transmission
-        assert update_transmission_hierarchy(mtp, MagicMock()) is None
-
-        # update_transmission_hierarchy clearing joint name but has parent
-        trans_obj = create_test_object("test_trans", None, scene)
-        parent_obj = create_test_object("some_parent", None, scene)
-        trans_obj.parent = parent_obj
-
-        from linkforge.blender.constants import PROP_TRANSMISSION
-
-        tp = getattr(trans_obj, PROP_TRANSMISSION)
-        tp.id_data = trans_obj
-        tp.is_robot_transmission = True
-        tp.joint_name = None
-
-        update_transmission_hierarchy(tp, bpy.context)
-        assert trans_obj.parent is None
-
     def test_link_props_active_geometry_callbacks(self, scene) -> None:
         """Test update_active_visual and update_active_collision syncs selection."""
         link_obj = create_test_object("test_link", None, scene)
@@ -1279,11 +1176,16 @@ class TestPreferencesExtra:
     def test_preferences_main_entrypoint(self) -> None:
         """Test running preferences.py as __main__."""
         import runpy
+        import warnings
 
         with (
             patch("bpy.utils.register_class") as mock_reg,
             patch("bpy.utils.unregister_class") as mock_unreg,
+            warnings.catch_warnings(),
         ):
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
             runpy.run_module("linkforge.blender.preferences", run_name="__main__")
             assert mock_reg.called
 

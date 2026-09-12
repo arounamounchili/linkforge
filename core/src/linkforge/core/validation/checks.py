@@ -62,7 +62,7 @@ class HasLinksCheck(ValidationCheck):
                 title="No links",
                 message="Robot must have at least one link",
                 code=ValidationErrorCode.VALUE_EMPTY,
-                suggestion="Add a link by marking an object as a robot link in the Link panel",
+                suggestion="Add at least one link using Robot.add_link() or RobotBuilder.link()",
             )
 
 

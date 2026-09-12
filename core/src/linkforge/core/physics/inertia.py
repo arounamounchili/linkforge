@@ -16,6 +16,7 @@ from functools import lru_cache
 from math import isfinite
 from typing import Final
 
+from .._utils.math_utils import is_positive_semi_definite_3x3, sylvester_minors_3x3
 from ..constants import (
     DEFAULT_INERTIA_CACHE_SIZE,
     DEGENERATE_VOL_THRESHOLD,
@@ -296,17 +297,10 @@ def calculate_mesh_inertia_from_triangles(
 
     # Physicality check
     # Check positive semi-definiteness using Sylvester's criterion (principal minors)
-    delta1 = i_xx
-    delta2 = i_xx * i_yy - i_xy**2
-    delta3 = (
-        i_xx * (i_yy * i_zz - i_yz**2)
-        - i_xy * (i_xy * i_zz - i_xz * i_yz)
-        + i_xz * (i_xy * i_yz - i_yy * i_xz)
-    )
-
-    scale = max(abs(i_xx), abs(i_yy), abs(i_zz), abs(i_xy), abs(i_xz), abs(i_yz), 1.0)
-    eps = SYLVESTER_TOLERANCE_EPSILON * scale
-    if delta1 < -eps or delta2 < -eps or delta3 < -eps:
+    if not is_positive_semi_definite_3x3(
+        i_xx, i_yy, i_zz, i_xy, i_xz, i_yz, eps=SYLVESTER_TOLERANCE_EPSILON
+    ):
+        delta1, delta2, delta3 = sylvester_minors_3x3(i_xx, i_yy, i_zz, i_xy, i_xz, i_yz)
         raise RobotPhysicsError(
             ValidationErrorCode.PHYSICS_VIOLATION,
             f"Inertia tensor is not positive semi-definite (fails Sylvester criterion). "

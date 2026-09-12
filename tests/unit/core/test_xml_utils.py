@@ -1,3 +1,4 @@
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -64,8 +65,6 @@ def test_validate_xml_depth_ok() -> None:
 
 def test_serialize_xml_with_namespaces() -> None:
     """Test XML serialization with custom namespaces."""
-    import xml.etree.ElementTree as ET
-
     root = ET.Element("robot")
     child = ET.SubElement(root, "link")
     child.set("name", "test")
@@ -123,8 +122,6 @@ def test_parse_vector3_errors() -> None:
 
 def test_validate_xml_depth_exceeded() -> None:
     """Test XML depth validation with exceeding depth."""
-    import sys
-
     old_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(max(old_limit, MAX_XML_DEPTH + 100))
     try:

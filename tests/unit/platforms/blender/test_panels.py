@@ -11,6 +11,11 @@ import bpy
 import pytest
 from linkforge.blender import panels
 from linkforge.blender.constants import PROP_ROBOT, PROP_VALIDATION
+from linkforge.blender.operators import selection_ops
+from linkforge.blender.operators.selection_ops import (
+    LINKFORGE_OT_select_root_link,
+    LINKFORGE_OT_select_tree_object,
+)
 from linkforge.blender.panels import (
     register as panels_register,
 )
@@ -26,11 +31,6 @@ from linkforge.blender.panels.export_panel import LINKFORGE_PT_export_panel
 from linkforge.blender.panels.forge_panel import LINKFORGE_PT_forge
 from linkforge.blender.panels.joint_panel import LINKFORGE_PT_joints
 from linkforge.blender.panels.link_panel import LINKFORGE_PT_links
-from linkforge.blender.panels.robot_panel import (
-    LINKFORGE_OT_clear_component_search,
-    LINKFORGE_OT_select_root_link,
-    LINKFORGE_OT_select_tree_object,
-)
 from linkforge.blender.panels.sensor_panel import LINKFORGE_PT_perceive
 from linkforge.blender.properties.control_props import (
     Ros2ControlJointProperty,
@@ -148,32 +148,6 @@ class TestExportPanel:
 
         mock_layout.prop.assert_any_call(props, "xacro_extract_materials")
 
-    def test_export_panel_draw_component_browser_with_search(
-        self, scene, blender_context, mock_layout
-    ) -> None:
-        """Test export panel component browser with dynamic search filtering."""
-        base = create_robot_link("base_link", scene)
-        child = create_robot_link("child_link", scene)
-        joint = create_robot_joint("test_joint", base, child, scene)
-
-        sensor = create_test_object("test_sensor", None, scene)
-        sp = safe_get_sensor(sensor)
-        sp.is_robot_sensor = True
-        sensor.parent = base
-
-        props = getattr(scene, PROP_ROBOT)
-        props.show_kinematic_tree = True
-        props.component_browser_search = "base"
-
-        panel = LINKFORGE_PT_export_panel()
-        panel.layout = mock_layout
-
-        panel.draw(bpy.context)
-
-        mock_layout.prop.assert_any_call(
-            props, "component_browser_search", text="", icon="VIEWZOOM"
-        )
-
     def test_export_panel_draw_detailed_branches(self, scene, blender_context, mock_layout) -> None:
         """Test all missing branches inside export_panel.py."""
         # scene is None path
@@ -225,13 +199,6 @@ class TestExportPanel:
         panel.draw(bpy.context)
 
         mock_layout.label.assert_any_call(text="  Affected: base_link", icon="OBJECT_DATA")
-
-        # Component browser filtering empty matches path
-        props = getattr(scene, PROP_ROBOT)
-        props.show_kinematic_tree = True
-        props.component_browser_search = "nonexistent"
-        panel.draw(bpy.context)
-        mock_layout.label.assert_any_call(text="No matches", icon="INFO")
 
     def test_export_panel_validation_issue_cards_and_single_icon_wrapping(
         self, scene, blender_context, mock_layout
@@ -408,6 +375,53 @@ class TestLinkPanel:
         # Should fall back to parent and render its title
         mock_layout.label.assert_any_call(text="Link: non_virtual_link", icon="LINKED")
 
+    def test_link_panel_draw_connected_joints(self, scene, blender_context, mock_layout) -> None:
+        """Test drawing connected joints section in link panel."""
+        base = create_robot_link("base_link", scene)
+        arm = create_robot_link("arm_link", scene)
+        create_robot_joint("joint1", base, arm, scene)
+
+        # Base link evaluation (root)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = base
+        base.select_set(True)
+
+        panel = LINKFORGE_PT_links()
+        panel.layout = mock_layout
+        panel.draw(bpy.context)
+
+        mock_layout.label.assert_any_call(text="Connected Joints", icon="EMPTY_ARROWS")
+        mock_layout.label.assert_any_call(text="Root Link (Robot Base)", icon="WORLD")
+        mock_layout.operator.assert_any_call(
+            "linkforge.select_tree_object", text="joint1", icon="EMPTY_AXIS"
+        )
+
+        # Arm link evaluation (child)
+        mock_layout.reset_mock()
+        base.select_set(False)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = arm
+        arm.select_set(True)
+
+        panel.draw(bpy.context)
+        mock_layout.label.assert_any_call(text="Connected Joints", icon="EMPTY_ARROWS")
+        mock_layout.label.assert_any_call(text="Parent Joint:", icon="CON_LOCLIKE")
+        mock_layout.operator.assert_any_call(
+            "linkforge.select_tree_object", text="joint1", icon="EMPTY_AXIS"
+        )
+
+        # Standalone link evaluation (no connected joints)
+        mock_layout.reset_mock()
+        arm.select_set(False)
+        standalone = create_robot_link("standalone", scene)
+        if bpy.context.view_layer:
+            bpy.context.view_layer.objects.active = standalone
+        standalone.select_set(True)
+
+        panel.draw(bpy.context)
+        mock_layout.label.assert_any_call(text="Connected Joints", icon="EMPTY_ARROWS")
+        mock_layout.label.assert_any_call(text="Standalone Link (No joints connected)", icon="INFO")
+
 
 class TestJointPanel:
     def test_joint_panel_draw(self, scene, blender_context, mock_layout) -> None:
@@ -416,6 +430,8 @@ class TestJointPanel:
         panel.layout = mock_layout
 
         panel.draw(bpy.context)
+
+        # Nothing selected - should show "Create Joint" button
         mock_layout.operator.assert_any_call(
             "linkforge.create_joint", icon="ADD", text="Create Joint"
         )
@@ -437,6 +453,9 @@ class TestJointPanel:
 
         mock_layout.label.assert_any_call(text="Joint: test_joint", icon="EMPTY_ARROWS")
         mock_layout.prop.assert_any_call(safe_get_joint(joint_obj), "joint_name")
+        mock_layout.operator.assert_any_call(
+            "linkforge.select_tree_object", text="", icon="RESTRICT_SELECT_OFF"
+        )
 
     def test_joint_panel_draw_joint_types_and_toggles(
         self, scene, blender_context, mock_layout
@@ -828,11 +847,25 @@ class TestRobotOperators:
         link_obj = create_robot_link("test_link", scene)
 
         op = LINKFORGE_OT_select_tree_object()
+        assert op.object_type == ""
         op.object_name = "test_link"
         op.object_type = "link"
 
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
+
+        # Test with joint and sensor objects
+        joint_obj = create_robot_joint("test_joint", link_obj, None, scene)
+        op_joint = LINKFORGE_OT_select_tree_object()
+        op_joint.object_name = "test_joint"
+        op_joint.object_type = "joint"
+        assert op_joint.execute(bpy.context) == {"FINISHED"}
+
+        sensor_obj = create_test_object("test_sensor", None, scene)
+        op_sensor = LINKFORGE_OT_select_tree_object()
+        op_sensor.object_name = "test_sensor"
+        op_sensor.object_type = "sensor"
+        assert op_sensor.execute(bpy.context) == {"FINISHED"}
 
         mock_ctx = MagicMock()
         mock_ctx.scene = scene
@@ -860,25 +893,27 @@ class TestRobotOperators:
         mock_ctx.view_layer = None
         assert op.execute(mock_ctx) == {"FINISHED"}
 
-        with patch("linkforge.blender.panels.robot_panel.build_tree_from_stats") as mock_build:
+        with patch("linkforge.blender.operators.selection_ops.build_tree_from_stats") as mock_build:
             mock_build.return_value = (None, "nonexistent_root", {}, {})
             assert op.execute(bpy.context) == {"FINISHED"}
 
-    def test_clear_component_search_operator(self, scene, blender_context) -> None:
-        """Test clear_component_search operator poll and execute."""
+    def test_selection_ops_register_unregister(self, monkeypatch) -> None:
+        """Test selection_ops register with retry and unregister."""
+        selection_ops.register()
+        selection_ops.unregister()
 
-        op = LINKFORGE_OT_clear_component_search()
-        props = safe_get_linkforge_scene(scene)
+        first_call = True
+        orig_register = bpy.utils.register_class
 
-        props.component_browser_search = ""
-        assert op.poll(bpy.context) is False
+        def mock_register(cls):
+            nonlocal first_call
+            if first_call:
+                first_call = False
+                raise ValueError("Already registered")
+            orig_register(cls)
 
-        props.component_browser_search = "search_val"
-        assert op.poll(bpy.context) is True
-
-        res = op.execute(bpy.context)
-        assert res == {"FINISHED"}
-        assert props.component_browser_search == ""
+        monkeypatch.setattr(bpy.utils, "register_class", mock_register)
+        selection_ops.register()
 
     def test_panels_as_main(self) -> None:
         """Test running each panel module as __main__."""
@@ -893,7 +928,6 @@ class TestRobotOperators:
                 "forge_panel",
                 "joint_panel",
                 "link_panel",
-                "robot_panel",
                 "sensor_panel",
             ]:
                 module = getattr(panels, name)
@@ -942,7 +976,6 @@ class TestGlobalPanels:
             "forge_panel",
             "joint_panel",
             "link_panel",
-            "robot_panel",
             "sensor_panel",
         ]:
             module = getattr(panels, name)
@@ -972,9 +1005,6 @@ class TestGlobalPanels:
         op_root = LINKFORGE_OT_select_root_link()
         assert op_root.execute(MockContextSceneNone()) == {"CANCELLED"}
 
-        op_clear = LINKFORGE_OT_clear_component_search()
-        assert op_clear.execute(MockContextSceneNone()) == {"CANCELLED"}
-
 
 class TestPanelsExtra:
     @pytest.fixture(autouse=True)
@@ -982,39 +1012,6 @@ class TestPanelsExtra:
         cleanup_blender_scene(scene)
         yield
         cleanup_blender_scene(scene)
-
-    def test_export_panel_browser_no_select_box(self, scene, mock_layout) -> None:
-        """Test component browser exits early if box creation fails."""
-
-        create_robot_link("base_link", scene)
-        panel = LINKFORGE_PT_export_panel()
-        mock_layout.box.return_value = None
-        panel.layout = mock_layout
-        assert panel.draw(bpy.context) is None
-
-    def test_export_panel_browser_falsy_search(self, scene, mock_layout) -> None:
-        """Test component browser with blank/falsy search term."""
-
-        base = create_robot_link("base_link", scene)
-        child = create_robot_link("child_link", scene)
-        create_robot_joint("test_joint", base, child, scene)
-
-        sensor = create_test_object("test_sensor", None, scene)
-        sp = safe_get_sensor(sensor)
-        sp.is_robot_sensor = True
-        sensor.parent = base
-
-        props = getattr(scene, PROP_ROBOT)
-        props.show_kinematic_tree = True
-        props.component_browser_search = ""
-
-        panel = LINKFORGE_PT_export_panel()
-        panel.layout = mock_layout
-        panel.draw(bpy.context)
-
-        mock_layout.label.assert_any_call(text="Links (2):", icon="MESH_CUBE")
-        mock_layout.label.assert_any_call(text="Joints (1):", icon="EMPTY_AXIS")
-        mock_layout.label.assert_any_call(text="Sensors (1):", icon="TRACKER")
 
     def test_joint_panel_missing_branches(self, scene, mock_layout) -> None:
         """Test joint panel layout/scene is None and draw callbacks."""

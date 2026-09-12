@@ -3,6 +3,7 @@
 from linkforge.core.exceptions import (
     LinkForgeError,
     RobotGeneratorError,
+    RobotGeneratorUnsupportedTypeError,
     RobotMathError,
     RobotModelError,
     RobotParserError,
@@ -26,6 +27,7 @@ def test_exception_hierarchy():
     assert issubclass(RobotModelError, LinkForgeError)
     assert issubclass(RobotParserError, LinkForgeError)
     assert issubclass(RobotGeneratorError, LinkForgeError)
+    assert issubclass(RobotGeneratorUnsupportedTypeError, RobotGeneratorError)
     assert issubclass(RobotParserIOError, RobotParserError)
     assert issubclass(RobotParserXMLRootError, RobotParserError)
     assert issubclass(RobotParserUnexpectedError, RobotParserError)

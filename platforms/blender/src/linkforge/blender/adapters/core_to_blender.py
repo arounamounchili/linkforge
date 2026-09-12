@@ -6,6 +6,20 @@ import contextlib
 import typing
 from pathlib import Path
 
+import bpy
+from mathutils import Matrix
+
+from ..constants import (
+    DEFAULT_JOINT_GIZMO_SIZE,
+    DEFAULT_LINK_GIZMO_SIZE,
+    PROP_LINK,
+    PROP_ROBOT,
+    PROP_SENSOR,
+    SUFFIX_COLLISION,
+    SUFFIX_VISUAL,
+    TAG_IMPORTED_SOURCE,
+    TAG_SOURCE_NAME,
+)
 from ..core import (
     Box,
     Color,
@@ -42,26 +56,6 @@ from ..core.constants import (
     SENSOR_IMU,
     SENSOR_LIDAR,
 )
-
-if typing.TYPE_CHECKING:
-    bpy: typing.Any
-    Matrix: typing.Any
-
-if not typing.TYPE_CHECKING:
-    import bpy
-    from mathutils import Matrix
-
-from ..constants import (
-    DEFAULT_JOINT_GIZMO_SIZE,
-    DEFAULT_LINK_GIZMO_SIZE,
-    PROP_LINK,
-    PROP_ROBOT,
-    PROP_SENSOR,
-    SUFFIX_COLLISION,
-    SUFFIX_VISUAL,
-    TAG_IMPORTED_SOURCE,
-    TAG_SOURCE_NAME,
-)
 from ..preferences import get_addon_prefs
 from ..properties.geom_props import PROP_GEOM
 from ..utils.joint_utils import resolve_mimic_joints
@@ -87,7 +81,7 @@ def create_material_from_color(
 
     """
     if name in context.data.materials:
-        return context.data.materials[name]
+        return typing.cast(bpy.types.Material, context.data.materials[name])
 
     mat = context.data.materials.new(name=name)
     mat.use_nodes = True
@@ -106,7 +100,7 @@ def create_material_from_color(
 
         links.new(node_principled.outputs[0], node_output.inputs[0])
 
-    return mat
+    return typing.cast(bpy.types.Material, mat)
 
 
 def create_primitive_mesh(
@@ -428,7 +422,11 @@ def create_link_object(
     link_obj.location = (0, 0, 0)
 
     prefs = get_addon_prefs()
-    link_obj.empty_display_size = prefs.link_empty_size if prefs else DEFAULT_LINK_GIZMO_SIZE
+    raw_size = prefs.link_empty_size if prefs else DEFAULT_LINK_GIZMO_SIZE
+    show_gpu = prefs.show_joint_axes if prefs else True
+    from ..utils.scene_utils import compute_anchor_size
+
+    link_obj.empty_display_size = compute_anchor_size(raw_size, show_gpu)
 
     if collection:
         move_to_collection(link_obj, collection)
@@ -579,6 +577,8 @@ def create_link_object(
                 True  # X-ray mode for consistency with generated collisions
             )
             collision_obj.hide_render = True
+            scene_props = getattr(context.scene, PROP_ROBOT, None) if context.scene else None
+            collision_obj.hide_viewport = not getattr(scene_props, "show_collisions", False)
 
             geom_props = getattr(collision_obj, PROP_GEOM, None)
             if geom_props:
@@ -643,7 +643,7 @@ def create_link_object(
         props.use_material = True
         # Material name will come from Blender material assigned to visual child
 
-    return link_obj
+    return typing.cast(bpy.types.Object, link_obj)
 
 
 def create_joint_object(
@@ -665,14 +665,18 @@ def create_joint_object(
 
     """
     prefs = get_addon_prefs()
-    empty_size = (
+    raw_size = (
         getattr(prefs, "joint_empty_size", DEFAULT_JOINT_GIZMO_SIZE)
         if prefs
         else DEFAULT_JOINT_GIZMO_SIZE
     )
+    show_gpu = getattr(prefs, "show_joint_axes", True) if prefs else True
+    from ..utils.scene_utils import compute_anchor_size
+
+    empty_size = compute_anchor_size(raw_size, show_gpu)
 
     empty = context.data.objects.new(joint.name, None)
-    empty.empty_display_type = "ARROWS"
+    empty.empty_display_type = "PLAIN_AXES"
     empty.empty_display_size = empty_size
     empty.rotation_mode = "XYZ"
     empty.location = (0, 0, 0)
@@ -798,7 +802,7 @@ def create_joint_object(
     # Empties are always visible in viewport, hide from render only
     empty.hide_render = True
 
-    return empty
+    return typing.cast(bpy.types.Object, empty)
 
 
 def create_sensor_object(
@@ -933,7 +937,7 @@ def create_sensor_object(
 
     empty.hide_render = True
 
-    return empty
+    return typing.cast(bpy.types.Object, empty)
 
 
 def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:

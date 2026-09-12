@@ -19,7 +19,6 @@ from .._utils.math_utils import format_float, format_vector
 from .._utils.path_utils import get_export_path
 from .._utils.string_utils import sanitize_name
 from .._utils.xml_utils import serialize_xml
-from ..base import RobotGeneratorError
 from ..constants import (
     COMMENT_GAZEBO,
     COMMENT_MACROS,
@@ -35,6 +34,7 @@ from ..constants import (
     XACRO_PARAM_XYZ,
     XACRO_URIS,
 )
+from ..exceptions import RobotGeneratorError
 from ..models.geometry import Box, Cylinder, Mesh, Sphere
 from ..models.joint import Joint
 from ..models.link import Link, Visual

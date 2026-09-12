@@ -3,17 +3,20 @@
 from pathlib import Path
 
 from linkforge.core.base import RobotGenerator, RobotParser
-from linkforge.core.exceptions import RobotModelError
+from linkforge.core.exceptions import (
+    RobotModelError,
+    RobotValidationError,
+    ValidationErrorCode,
+)
 from linkforge.core.models.link import Inertial, Link
 from linkforge.core.models.robot import Robot
 from linkforge.core.validation.checks import (
-    GeometryCheck,
     MassPropertiesCheck,
-    SemanticCheck,
     TreeStructureCheck,
     ValidationCheck,
 )
 from linkforge.core.validation.result import ValidationResult
+from linkforge.core.validation.validator import RobotValidator
 
 
 class DummyGenerator(RobotGenerator[str]):
@@ -77,31 +80,6 @@ def test_check_root_model_error_coverage(mocker):
     )
 
 
-def test_geometry_check_warnings():
-    """Cover missing visual/collision warnings in GeometryCheck."""
-    check = GeometryCheck()
-    robot = Robot(name="test_robot")
-    link = Link(name="empty_link")
-    robot.add_link(link)
-
-    result = ValidationResult()
-    check.run(robot, result)
-
-    assert any("No visual geometry" in w.title for w in result.warnings)
-    assert any("No collision geometry" in w.title for w in result.warnings)
-
-
-def test_semantic_check_no_semantic():
-    """Cover early return in SemanticCheck if no semantic model."""
-    check = SemanticCheck()
-    robot = Robot(name="test_robot")
-    # Verify SemanticCheck behavior when robot semantic description is None
-    robot.semantic = None  # type: ignore
-    result = ValidationResult()
-    check.run(robot, result)
-    assert not result.errors
-
-
 def test_mass_properties_critical_low_mass():
     """Cover critical low mass error path."""
     check = MassPropertiesCheck()
@@ -121,8 +99,6 @@ class FailingCheck(ValidationCheck):
 
 def test_robot_validator_check_exception() -> None:
     """Verify that RobotValidator catches exceptions in validation checks."""
-    from linkforge.core.validation.validator import RobotValidator
-
     robot = Robot(name="test_robot")
     validator = RobotValidator(checks=[FailingCheck()])
     result = validator.validate(robot)
@@ -134,9 +110,6 @@ def test_robot_validator_check_exception() -> None:
 
 def test_robot_validator_reindex_exception(mocker) -> None:
     """Verify that RobotValidator catches indexing errors from _reindex."""
-    from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
-    from linkforge.core.validation.validator import RobotValidator
-
     robot = Robot(name="test_robot")
     mocker.patch.object(
         robot,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unittest.mock as mock
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from linkforge.core.exceptions import (
     RobotParserUnexpectedError,
     RobotParserXMLRootError,
 )
+from linkforge.core.validation import Severity, ValidationIssue, ValidationResult
 
 
 @pytest.fixture
@@ -491,8 +493,6 @@ class TestSRDFParserCoverage:
         """
         parser.parse_string(xml_warnings)
 
-        import unittest.mock as mock
-
         with mock.patch(
             "linkforge.core.parsers.srdf_parser.VirtualJoint", side_effect=Exception("vj error")
         ):
@@ -612,9 +612,6 @@ class TestSRDFGeneratorCoverage:
         # Creating invalid kinematics (link loop or similar issue) to trigger validation failure
         # For simplicity, let's inject an issue that validator fails on.
         # But we can also mock validation result to fail.
-        import unittest.mock as mock
-
-        from linkforge.core.validation import Severity, ValidationIssue, ValidationResult
 
         with mock.patch("linkforge.core.validation.RobotValidator.validate") as mock_val:
             mock_val.return_value = ValidationResult(
@@ -631,9 +628,6 @@ class TestSRDFGeneratorCoverage:
     def test_generate_validation_success(self, generator) -> None:
         """Test generator succeeds on validation check."""
         robot = Robot(name="valid_robot")
-        import unittest.mock as mock
-
-        from linkforge.core.validation import ValidationResult
 
         with mock.patch("linkforge.core.validation.RobotValidator.validate") as mock_val:
             mock_val.return_value = ValidationResult(issues=[])

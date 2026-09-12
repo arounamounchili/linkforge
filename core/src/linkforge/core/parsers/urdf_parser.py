@@ -341,8 +341,10 @@ class URDFParser(RobotXMLParser[Robot]):
         if limits_elem is not None:
             lower_str = limits_elem.get("lower")
             upper_str = limits_elem.get("upper")
-            effort = parse_float(limits_elem.get("effort"), check_name="effort", default=0.0)
-            velocity = parse_float(limits_elem.get("velocity"), check_name="velocity", default=0.0)
+            effort = parse_float(limits_elem.get("effort"), attribute_name="effort", default=0.0)
+            velocity = parse_float(
+                limits_elem.get("velocity"), attribute_name="velocity", default=0.0
+            )
 
             # Validation: effort and velocity must be non-negative
             if effort < 0:
@@ -377,8 +379,8 @@ class URDFParser(RobotXMLParser[Robot]):
         if elem is None:
             return None
         return JointDynamics(
-            damping=parse_float(elem.get("damping"), check_name="damping", default=0.0),
-            friction=parse_float(elem.get("friction"), check_name="friction", default=0.0),
+            damping=parse_float(elem.get("damping"), attribute_name="damping", default=0.0),
+            friction=parse_float(elem.get("friction"), attribute_name="friction", default=0.0),
         )
 
     def _parse_joint_mimic(self, elem: ET.Element | None) -> JointMimic | None:
@@ -395,8 +397,10 @@ class URDFParser(RobotXMLParser[Robot]):
             return None
         return JointMimic(
             joint=elem.get("joint", ""),
-            multiplier=parse_float(elem.get("multiplier"), check_name="multiplier", default=1.0),
-            offset=parse_float(elem.get("offset"), check_name="offset", default=0.0),
+            multiplier=parse_float(
+                elem.get("multiplier"), attribute_name="multiplier", default=1.0
+            ),
+            offset=parse_float(elem.get("offset"), attribute_name="offset", default=0.0),
         )
 
     def _parse_joint_safety(self, elem: ET.Element | None) -> JointSafetyController | None:
@@ -413,13 +417,15 @@ class URDFParser(RobotXMLParser[Robot]):
             return None
         return JointSafetyController(
             soft_lower_limit=parse_float(
-                elem.get("soft_lower_limit"), check_name="soft_lower_limit"
+                elem.get("soft_lower_limit"), attribute_name="soft_lower_limit"
             ),
             soft_upper_limit=parse_float(
-                elem.get("soft_upper_limit"), check_name="soft_upper_limit"
+                elem.get("soft_upper_limit"), attribute_name="soft_upper_limit"
             ),
-            k_position=parse_float(elem.get("k_position"), check_name="k_position"),
-            k_velocity=parse_float(elem.get("k_velocity"), check_name="k_velocity", default=0.0),
+            k_position=parse_float(elem.get("k_position"), attribute_name="k_position"),
+            k_velocity=parse_float(
+                elem.get("k_velocity"), attribute_name="k_velocity", default=0.0
+            ),
         )
 
     def _parse_joint_calibration(self, elem: ET.Element | None) -> JointCalibration | None:
@@ -437,8 +443,10 @@ class URDFParser(RobotXMLParser[Robot]):
         rising_str = elem.get("rising")
         falling_str = elem.get("falling")
         return JointCalibration(
-            rising=parse_float(rising_str, check_name="rising") if rising_str is not None else None,
-            falling=parse_float(falling_str, check_name="falling")
+            rising=parse_float(rising_str, attribute_name="rising")
+            if rising_str is not None
+            else None,
+            falling=parse_float(falling_str, attribute_name="falling")
             if falling_str is not None
             else None,
         )
@@ -575,14 +583,14 @@ class URDFParser(RobotXMLParser[Robot]):
 
         reduction = parse_float(
             elem.findtext("{*}mechanicalReduction") or elem.findtext("{*}mechanical_reduction"),
-            check_name="mechanicalReduction",
+            attribute_name="mechanicalReduction",
             default=1.0,
         )
         if reduction == 0:
             logger.warning(f"Transmission component '{name}' has zero reduction, defaulting to 1.0")
             reduction = 1.0
 
-        offset = parse_float(elem.findtext("{*}offset"), check_name="offset", default=0.0)
+        offset = parse_float(elem.findtext("{*}offset"), attribute_name="offset", default=0.0)
 
         if tag == "joint":
             return TransmissionJoint(
@@ -647,10 +655,10 @@ class URDFParser(RobotXMLParser[Robot]):
         return SensorNoise(
             type=actual_noise_elem.findtext("{*}type", NOISE_GAUSSIAN),
             mean=parse_float(
-                actual_noise_elem.findtext("{*}mean", "0.0"), check_name="mean", default=0.0
+                actual_noise_elem.findtext("{*}mean", "0.0"), attribute_name="mean", default=0.0
             ),
             stddev=parse_float(
-                actual_noise_elem.findtext("{*}stddev", "0.0"), check_name="stddev", default=0.0
+                actual_noise_elem.findtext("{*}stddev", "0.0"), attribute_name="stddev", default=0.0
             ),
         )
 
@@ -690,7 +698,7 @@ class URDFParser(RobotXMLParser[Robot]):
         sensor_type = type_map.get(sensor_type_str.lower(), SensorType.CAMERA)
         update_rate = parse_float(
             sensor_elem.findtext("{*}update_rate", str(DEFAULT_UPDATE_RATE)),
-            check_name="updateRate",
+            attribute_name="updateRate",
             default=DEFAULT_UPDATE_RATE,
         )
 
@@ -720,7 +728,7 @@ class URDFParser(RobotXMLParser[Robot]):
                 camera_info = CameraInfo(
                     horizontal_fov=parse_float(
                         camera_elem.findtext("{*}horizontal_fov"),
-                        check_name="horizontal_fov",
+                        attribute_name="horizontal_fov",
                         default=DEFAULT_CAMERA_FOV,
                     ),
                     width=parse_int(
@@ -732,12 +740,12 @@ class URDFParser(RobotXMLParser[Robot]):
                     format=camera_elem.findtext("{*}image/{*}format", DEFAULT_CAMERA_FORMAT),
                     near_clip=parse_float(
                         camera_elem.findtext("{*}clip/{*}near"),
-                        check_name="near",
+                        attribute_name="near",
                         default=DEFAULT_CAMERA_NEAR,
                     ),
                     far_clip=parse_float(
                         camera_elem.findtext("{*}clip/{*}far"),
-                        check_name="far",
+                        attribute_name="far",
                         default=DEFAULT_CAMERA_FAR,
                     ),
                     noise=self._parse_sensor_noise(camera_elem),
@@ -755,22 +763,22 @@ class URDFParser(RobotXMLParser[Robot]):
                     ),
                     horizontal_min_angle=parse_float(
                         ray_elem.findtext("{*}scan/{*}horizontal/{*}min_angle"),
-                        check_name="min_angle",
+                        attribute_name="min_angle",
                         default=DEFAULT_LIDAR_MIN_ANGLE,
                     ),
                     horizontal_max_angle=parse_float(
                         ray_elem.findtext("{*}scan/{*}horizontal/{*}max_angle"),
-                        check_name="max_angle",
+                        attribute_name="max_angle",
                         default=DEFAULT_LIDAR_MAX_ANGLE,
                     ),
                     range_min=parse_float(
                         ray_elem.findtext("{*}range/{*}min"),
-                        check_name="range_min",
+                        attribute_name="range_min",
                         default=DEFAULT_LIDAR_RANGE_MIN,
                     ),
                     range_max=parse_float(
                         ray_elem.findtext("{*}range/{*}max"),
-                        check_name="range_max",
+                        attribute_name="range_max",
                         default=DEFAULT_LIDAR_RANGE_MAX,
                     ),
                     noise=self._parse_sensor_noise(ray_elem),
@@ -1063,12 +1071,12 @@ class URDFParser(RobotXMLParser[Robot]):
 
                     elif tag == "gazebo":
                         try:
-                            # 1. Try to extract a sensor if present
+                            # Extract a sensor if present
                             sensor = self._parse_sensor_from_gazebo(elem)
                             if sensor:
                                 delayed_sensors.append(sensor)
 
-                            # 2. Extract physics fields (regardless of sensor presence)
+                            # Extract physics fields (regardless of sensor presence)
                             physics_data = {
                                 "mu": parse_optional_float(elem, "mu1", default=None),
                                 "mu2": parse_optional_float(elem, "mu2", default=None),
@@ -1080,7 +1088,7 @@ class URDFParser(RobotXMLParser[Robot]):
                             # Filter out None values
                             physics_data = {k: v for k, v in physics_data.items() if v is not None}
 
-                            # 3. Extract other Gazebo metadata (plugins, material, properties)
+                            # Extract other Gazebo metadata (plugins, material, properties)
                             gazebo_elem = self._parse_gazebo_element(elem)
                             delayed_gazebo_elements.append((gazebo_elem, physics_data))
                         except (RobotModelError, ValueError) as e:
@@ -1128,7 +1136,7 @@ class URDFParser(RobotXMLParser[Robot]):
 
         for gazebo_elem, physics_data in delayed_gazebo_elements:
             try:
-                # 1. Apply physics data to link if reference is a link
+                # Apply physics data to link if reference is a link
                 if gazebo_elem.reference and robot.has_link(gazebo_elem.reference):
                     link = robot.link(gazebo_elem.reference)
                     # Create updated physics object (cast for replace compatibility)
@@ -1136,7 +1144,7 @@ class URDFParser(RobotXMLParser[Robot]):
                     # Replace link with updated physics
                     robot.add_link(replace(link, physics=new_physics), overwrite=True)
 
-                # 2. Add gazebo element if it has unique data (plugins, material, etc.)
+                # Add gazebo element if it has unique data (plugins, material, etc.)
                 # We skip "empty" gazebo elements that only contained physics
                 if (
                     gazebo_elem.plugins

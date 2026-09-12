@@ -6,12 +6,10 @@ import bpy
 import pytest
 from linkforge.blender.adapters.context import BlenderContext
 from linkforge.blender.adapters.translator import (
-    ITranslator,
     JointTranslator,
     LinkTranslator,
     Ros2ControlTranslator,
     SensorTranslator,
-    TransmissionTranslator,
 )
 from linkforge.core import (
     Box,
@@ -34,22 +32,19 @@ from tests.blender_test_utils import (
     safe_get_linkforge,
     safe_get_linkforge_scene,
     safe_get_sensor,
-    safe_get_transmission,
 )
 
 
-def test_translator_protocol_compliance():
-    """Verify that our core translators comply with the ITranslator protocol."""
+def test_translator_compliance():
+    """Verify that our core translators have callable translate methods."""
     translators = [
         LinkTranslator(),
         JointTranslator(),
         SensorTranslator(),
-        TransmissionTranslator(),
         Ros2ControlTranslator(),
     ]
 
     for t in translators:
-        assert isinstance(t, ITranslator)
         assert hasattr(t, "translate")
         assert callable(t.translate)
 
@@ -153,7 +148,7 @@ def test_link_translator_uncovered_branches(scene, blender_context):
     collision_child.parent = link_obj
 
     with patch(
-        "linkforge.blender.adapters.blender_to_core.get_object_geometry", return_value=(None, None)
+        "linkforge.blender.adapters.translator.get_object_geometry", return_value=(None, None)
     ):
         lb = translator.translate(link_obj, builder, blender_context)
         assert lb is not None
@@ -171,16 +166,14 @@ def test_link_translator_uncovered_branches(scene, blender_context):
     val_result = ValidationResult(robot_name="test_robot")
 
     with patch(
-        "linkforge.blender.adapters.blender_to_core.extract_mesh_triangles",
+        "linkforge.blender.adapters.translator.extract_mesh_triangles",
         side_effect=ValueError("Mesh error"),
     ):
         translator._validate_mesh(mesh_obj, "test_link", "collision", val_result)
         # Should gracefully catch the exception, no crash
         assert len(val_result.errors) == 0
 
-    with patch(
-        "linkforge.blender.adapters.blender_to_core.extract_mesh_triangles", return_value=None
-    ):
+    with patch("linkforge.blender.adapters.translator.extract_mesh_triangles", return_value=None):
         translator._validate_mesh(mesh_obj, "test_link", "collision", val_result)
         assert len(val_result.errors) == 0
 
@@ -202,13 +195,13 @@ def test_joint_translator_uncovered_branches(scene, blender_context):
     j_props.parent_link = parent_link
     j_props.child_link = child_link
 
-    assert translator.translate(joint_obj, builder, blender_context, lb=None) is None
+    assert translator.translate(joint_obj, lb=None) is None
 
     lb = builder.link("child_link", parent="parent_link")
     link_frames = {"some_other_link": bpy.types.Matrix()}
 
     j_props.joint_type = "REVOLUTE"
-    translator.translate(joint_obj, builder, blender_context, lb=lb, link_frames=link_frames)
+    translator.translate(joint_obj, lb=lb, link_frames=link_frames)
     lb.commit()
     assert builder.robot.get_joint("test_joint") is not None
 
@@ -221,7 +214,7 @@ def test_joint_translator_uncovered_branches(scene, blender_context):
     ja_props.axis = "INVALID_AXIS_VALUE"
 
     lb2 = builder.link("child_link_axis", parent="parent_link")
-    translator.translate(joint_obj_axis, builder, blender_context, lb=lb2)
+    translator.translate(joint_obj_axis, lb=lb2)
     lb2.commit()
     assert builder.robot.get_joint("joint_invalid_axis") is not None
     axis = builder.robot.get_joint("joint_invalid_axis").axis
@@ -235,7 +228,7 @@ def test_joint_translator_uncovered_branches(scene, blender_context):
         jp.child_link = child_link
         jp.joint_type = jt
         lb_jt = builder.link(f"child_{jt.lower()}", parent="parent_link")
-        translator.translate(j_obj, builder, blender_context, lb=lb_jt)
+        translator.translate(j_obj, lb=lb_jt)
         lb_jt.commit()
         assert builder.robot.get_joint(f"joint_{jt.lower()}") is not None
 
@@ -254,12 +247,12 @@ def test_sensor_translator_uncovered_branches(scene, blender_context):
 
     # Case A: without validation_result (bubbles up)
     with pytest.raises(RobotValidationError) as exc_info:
-        translator.translate(sensor_obj, builder, blender_context, validation_result=None)
+        translator.translate(sensor_obj, builder, validation_result=None)
     assert exc_info.value.code == ValidationErrorCode.NOT_FOUND
 
     # Case B: with validation_result (caught and recorded as error)
     val_result = ValidationResult(robot_name="test_robot")
-    translator.translate(sensor_obj, builder, blender_context, validation_result=val_result)
+    translator.translate(sensor_obj, builder, validation_result=val_result)
     assert len(val_result.errors) == 1
     assert "Sensor is not attached to any link" in val_result.errors[0].message
 
@@ -274,7 +267,7 @@ def test_sensor_translator_uncovered_branches(scene, blender_context):
     ftp.attached_link = link_obj
     ftp.sensor_type = "FORCE_TORQUE"
 
-    translator.translate(ft_sensor, builder, blender_context)
+    translator.translate(ft_sensor, builder)
     assert any(s.name == "ft_sensor" for s in builder.robot.sensors)
     assert builder.robot.get_sensor("ft_sensor") is not None
     assert builder.robot.get_sensor("ft_sensor").type == SensorType.FORCE_TORQUE
@@ -286,7 +279,7 @@ def test_sensor_translator_uncovered_branches(scene, blender_context):
     cp.sensor_type = "CONTACT"
     cp.contact_collision = ""
 
-    translator.translate(contact_sensor, builder, blender_context)
+    translator.translate(contact_sensor, builder)
     assert any(s.name == "contact_sensor" for s in builder.robot.sensors)
     assert (
         builder.robot.get_sensor("contact_sensor").contact_info.collision
@@ -313,12 +306,12 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     )
 
     val_result = ValidationResult(robot_name="test_robot")
-    translator.translate(broken_props, builder, blender_context, validation_result=val_result)
+    translator.translate(broken_props, builder, validation_result=val_result)
     assert len(val_result.errors) == 1
     assert "ROS2 Control translation failed" in val_result.errors[0].title
 
     # Translate exception caught with validation_result=None (swallowed/ignored)
-    translator.translate(broken_props, builder, blender_context, validation_result=None)
+    translator.translate(broken_props, builder, validation_result=None)
 
     # Translate valid system hardware type with state interfaces but no command interfaces fallback
     props.use_ros2_control = True
@@ -341,7 +334,7 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     builder.link("link_c1", parent="link_p1", joint_name="joint_sys1").commit()
     builder.link("link_c2", parent="link_p1", joint_name="joint_sys2").commit()
 
-    translator.translate(props, builder, blender_context)
+    translator.translate(props, builder)
     assert builder.robot.get_ros2_control("RobotControl") is not None
     assert list(builder.robot.get_ros2_control("RobotControl").joints[0].command_interfaces) == [
         "position"
@@ -427,116 +420,6 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     assert control_actuator.joints[0].name == "joint_1"
 
 
-def test_transmission_translator_uncovered_branches(scene, blender_context):
-    """Verify TransmissionTranslator properties check, differential missing joints skip, joint name fallbacks, and translation errors."""
-    cleanup_blender_scene(scene)
-
-    translator = TransmissionTranslator()
-    builder = RobotBuilder("test_robot")
-
-    assert translator._blender_transmission_to_core(None) is None
-
-    trans_obj_disabled = create_test_object("trans_disabled", None, scene=scene)
-    safe_get_transmission(trans_obj_disabled, scene).is_robot_transmission = False
-    assert translator._blender_transmission_to_core(trans_obj_disabled) is None
-
-    trans_obj = create_test_object("test_trans", None, scene=scene)
-    tp = safe_get_transmission(trans_obj, scene)
-    tp.is_robot_transmission = True
-    tp.transmission_type = "DIFFERENTIAL"
-    tp.joint1_name = None
-    tp.joint2_name = None
-
-    assert translator._blender_transmission_to_core(trans_obj) is None
-
-    joint_obj_no_name = create_test_object("joint_without_custom_name", None, scene=scene)
-    jp = safe_get_joint(joint_obj_no_name, scene)
-    jp.is_robot_joint = True
-    jp.joint_name = ""
-
-    simple_trans_obj = create_test_object("simple_trans", None, scene=scene)
-    stp = safe_get_transmission(simple_trans_obj, scene)
-    stp.is_robot_transmission = True
-    stp.transmission_type = "SIMPLE"
-    stp.joint_name = joint_obj_no_name
-    stp.use_custom_actuator_name = False
-
-    trans_model = translator._blender_transmission_to_core(simple_trans_obj)
-    assert trans_model is not None
-    assert trans_model.joints[0].name == "joint_without_custom_name"
-    assert trans_model.actuators[0].name == "joint_without_custom_name_motor"
-
-    # Simple transmission when joint_props is None (via mocking property helper)
-    with patch("linkforge.blender.adapters.translator.get_joint_props", return_value=None):
-        trans_model_fallback = translator._blender_transmission_to_core(simple_trans_obj)
-        assert trans_model_fallback is not None
-        assert trans_model_fallback.joints[0].name == "joint_without_custom_name"
-
-    # Simple transmission when joint_props.joint_name is a non-string object
-    jp.joint_name = 123  # type: ignore
-    trans_model_non_str = translator._blender_transmission_to_core(simple_trans_obj)
-    assert trans_model_non_str is not None
-    assert trans_model_non_str.joints[0].name == "joint_without_custom_name"
-
-    broken_trans_obj = MagicMock()
-    broken_trans_obj.name = "broken_trans"
-    type(broken_trans_obj.linkforge_transmission).is_robot_transmission = PropertyMock(
-        return_value=True
-    )
-    type(broken_trans_obj.linkforge_transmission).transmission_type = PropertyMock(
-        side_effect=RuntimeError("Broken transmission type")
-    )
-
-    val_result = ValidationResult(robot_name="test_robot")
-    translator.translate(broken_trans_obj, builder, blender_context, validation_result=val_result)
-    assert len(val_result.errors) == 1
-    assert "Transmission translation failed: broken_trans" in val_result.errors[0].title
-
-    # Translate exception with validation_result=None (swallowed/ignored)
-    translator.translate(broken_trans_obj, builder, blender_context, validation_result=None)
-
-    j1_obj = create_test_object("joint1_obj", None, scene=scene)
-    j1_p = safe_get_joint(j1_obj, scene)
-    j1_p.is_robot_joint = True
-    j1_p.joint_name = "joint_one"
-
-    j2_obj = create_test_object("joint2_obj", None, scene=scene)
-    j2_p = safe_get_joint(j2_obj, scene)
-    j2_p.is_robot_joint = True
-    j2_p.joint_name = "joint_two"
-
-    diff_trans_obj = create_test_object("diff_trans", None, scene=scene)
-    dtp = safe_get_transmission(diff_trans_obj, scene)
-    dtp.is_robot_transmission = True
-    dtp.transmission_type = "DIFFERENTIAL"
-    dtp.joint1_name = j1_obj
-    dtp.joint2_name = j2_obj
-
-    diff_model = translator._blender_transmission_to_core(diff_trans_obj)
-    assert diff_model is not None
-    assert len(diff_model.joints) == 2
-    assert diff_model.joints[0].name == "joint_one"
-    assert diff_model.joints[1].name == "joint_two"
-
-    joint_named_obj = create_test_object("joint_named_obj", None, scene=scene)
-    jp_named = safe_get_joint(joint_named_obj, scene)
-    jp_named.is_robot_joint = True
-    jp_named.joint_name = "my_named_joint"
-
-    named_trans_obj = create_test_object("named_trans_obj", None, scene=scene)
-    ntp = safe_get_transmission(named_trans_obj, scene)
-    ntp.is_robot_transmission = True
-    ntp.transmission_type = "SIMPLE"
-    ntp.joint_name = joint_named_obj
-    ntp.use_custom_actuator_name = True
-    ntp.actuator_name = "my_custom_actuator"
-
-    named_model = translator._blender_transmission_to_core(named_trans_obj)
-    assert named_model is not None
-    assert named_model.joints[0].name == "my_named_joint"
-    assert named_model.actuators[0].name == "my_custom_actuator"
-
-
 def test_ros2_control_sensor_type_no_cmd_ifs(scene, blender_context):
     """Cover sensor hardware type branch when cmd_ifs is empty and state_ifs already set."""
     cleanup_blender_scene(scene)
@@ -584,40 +467,12 @@ def test_joint_translator_planar_type_axis(scene, blender_context):
     jp.joint_type = "PLANAR"
 
     lb = builder.link("child_planar", parent="base_link")
-    translator.translate(planar_joint_obj, builder, blender_context, lb=lb)
+    translator.translate(planar_joint_obj, lb=lb)
     lb.commit()
 
     joint = builder.robot.get_joint("planar_joint")
     assert joint is not None
     assert joint.type.value == "planar"
-
-
-def test_transmission_custom_type(scene, blender_context):
-    """Cover CUSTOM transmission type (raw_type in TRANS_CUSTOM path, not DIFFERENTIAL).
-
-    Also verifies joint_props.joint_name when it is a valid string (no fallback needed).
-    """
-    cleanup_blender_scene(scene)
-
-    translator = TransmissionTranslator()
-
-    # CUSTOM type with a properly named joint
-    joint_obj = create_test_object("custom_joint_obj", None, scene=scene)
-    jp = safe_get_joint(joint_obj, scene)
-    jp.is_robot_joint = True
-    jp.joint_name = "custom_joint_obj"
-
-    custom_trans_obj = create_test_object("custom_trans_obj", None, scene=scene)
-    ctp = safe_get_transmission(custom_trans_obj, scene)
-    ctp.is_robot_transmission = True
-    # TRANS_CUSTOM = "custom"; .lower() must match
-    ctp.transmission_type = "CUSTOM"
-    ctp.joint_name = joint_obj
-    ctp.use_custom_actuator_name = False
-
-    model = translator._blender_transmission_to_core(custom_trans_obj)
-    assert model is not None
-    assert len(model.joints) == 1
 
 
 def test_link_translator_comprehensive(scene, blender_context):
@@ -675,7 +530,7 @@ def test_link_translator_comprehensive(scene, blender_context):
 
     mock_geom = Box(size=Vector3(1.0, 1.0, 1.0))
     with patch(
-        "linkforge.blender.adapters.blender_to_core.get_object_geometry",
+        "linkforge.blender.adapters.translator.get_object_geometry",
         return_value=(mock_geom, Matrix.Identity(4)),
     ):
         lb = translator.translate(link_obj, builder, blender_context)
@@ -703,14 +558,14 @@ def test_joint_translator_comprehensive(scene, blender_context):
 
     dummy_obj = create_test_object("dummy_obj", None, scene=scene)
     # is_robot_joint defaults to False, so it early exits
-    assert translator.translate(dummy_obj, builder, blender_context) is None
+    assert translator.translate(dummy_obj) is None
 
     # Enable is_robot_joint
     jp = safe_get_joint(dummy_obj, scene)
     jp.is_robot_joint = True
     # Raises Validation Error for missing parent link
     with pytest.raises(RobotValidationError, match="Joint has no parent link"):
-        translator.translate(dummy_obj, builder, blender_context)
+        translator.translate(dummy_obj)
 
     parent_obj = create_test_object("parent_link_obj", None, scene=scene)
     parent_lp = safe_get_linkforge(parent_obj, scene)
@@ -720,7 +575,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
 
     # Raises Validation Error for missing child link
     with pytest.raises(RobotValidationError, match="Joint has no child link"):
-        translator.translate(dummy_obj, builder, blender_context)
+        translator.translate(dummy_obj)
 
     child_obj = create_test_object("child_link_obj", None, scene=scene)
     child_lp = safe_get_linkforge(child_obj, scene)
@@ -729,7 +584,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
     jp.child_link = child_obj
 
     # If lb is None, returns early
-    assert translator.translate(dummy_obj, builder, blender_context, lb=None) is None
+    assert translator.translate(dummy_obj, lb=None) is None
 
     builder.link("parent_link_name").commit()
     lb = builder.link("child_link_name", parent="parent_link_name")
@@ -772,7 +627,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
         "child_link_name": child_matrix,
     }
 
-    translator.translate(dummy_obj, builder, blender_context, lb=lb, link_frames=link_frames)
+    translator.translate(dummy_obj, lb=lb, link_frames=link_frames)
     lb.commit()
 
     joint = builder.robot.get_joint("continuous_joint")
@@ -808,7 +663,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
     jp2.limit_effort = 10.0
     jp2.limit_velocity = 2.0
 
-    translator.translate(jp2_obj, builder, blender_context, lb=lb2)
+    translator.translate(jp2_obj, lb=lb2)
     lb2.commit()
 
     joint2 = builder.robot.get_joint("prismatic_joint")
@@ -833,7 +688,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
     jp3.custom_axis_y = 0.0
     jp3.custom_axis_z = 0.0  # Zero axis fallback triggers
 
-    translator.translate(jp3_obj, builder, blender_context, lb=lb3)
+    translator.translate(jp3_obj, lb=lb3)
     lb3.commit()
 
     joint3 = builder.robot.get_joint("fixed_joint")
@@ -858,7 +713,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
     jp4.custom_axis_y = 2.0
     jp4.custom_axis_z = 3.0
 
-    translator.translate(jp4_obj, builder, blender_context, lb=lb4)
+    translator.translate(jp4_obj, lb=lb4)
     lb4.commit()
 
     joint4 = builder.robot.get_joint("floating_joint")
@@ -880,7 +735,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
     jp5.joint_type = "PLANAR"
     jp5.axis = "Z"
 
-    translator.translate(jp5_obj, builder, blender_context, lb=lb5)
+    translator.translate(jp5_obj, lb=lb5)
     lb5.commit()
 
     joint5 = builder.robot.get_joint("planar_joint")
@@ -930,7 +785,7 @@ def test_joint_translator_comprehensive(scene, blender_context):
         patch("linkforge.blender.adapters.translator.JointType", return_value="fake_joint_type"),
         contextlib.suppress(Exception),
     ):
-        translator.translate(jp6_obj, builder, blender_context, lb=lb6)
+        translator.translate(jp6_obj, lb=lb6)
 
 
 def test_sensor_translator_comprehensive(scene, blender_context):
@@ -978,7 +833,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     # First add parent link to robot model
     builder.link("parent_link_name").commit()
 
-    translator.translate(dummy_obj, builder, blender_context, link_frames=link_frames)
+    translator.translate(dummy_obj, builder, link_frames=link_frames)
     sensor = builder.robot.sensors[0]
     assert sensor.name == "test_sensor"
     assert sensor.type == SensorType.CAMERA
@@ -1008,7 +863,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_lidar.lidar_range_max = 30.0
     sp_lidar.lidar_range_resolution = 0.01
 
-    translator.translate(sp_lidar_obj, builder, blender_context)
+    translator.translate(sp_lidar_obj, builder)
     assert builder.robot.sensors[0].lidar_info is not None
     assert builder.robot.sensors[0].type == SensorType.LIDAR
 
@@ -1023,7 +878,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_imu.sensor_type = "IMU"
     sp_imu.attached_link = link_obj
 
-    translator.translate(sp_imu_obj, builder, blender_context)
+    translator.translate(sp_imu_obj, builder)
     assert builder.robot.sensors[0].imu_info is not None
 
     cleanup_blender_scene(scene)
@@ -1037,7 +892,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_gps.sensor_type = "GPS"
     sp_gps.attached_link = link_obj
 
-    translator.translate(sp_gps_obj, builder, blender_context)
+    translator.translate(sp_gps_obj, builder)
     assert builder.robot.sensors[0].gps_info is not None
 
     cleanup_blender_scene(scene)
@@ -1052,7 +907,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_contact.attached_link = link_obj
     sp_contact.contact_collision = ""  # trigger fallback
 
-    translator.translate(sp_contact_obj, builder, blender_context)
+    translator.translate(sp_contact_obj, builder)
     assert builder.robot.sensors[0].contact_info is not None
     assert builder.robot.sensors[0].contact_info.collision == "parent_link_name_collision"
 
@@ -1069,7 +924,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_contact_custom.attached_link = link_obj
     sp_contact_custom.contact_collision = "my_custom_collision"
 
-    translator.translate(sp_contact_obj_custom, builder, blender_context)
+    translator.translate(sp_contact_obj_custom, builder)
     assert builder.robot.sensors[0].contact_info is not None
     assert builder.robot.sensors[0].contact_info.collision == "my_custom_collision"
 
@@ -1084,7 +939,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_ft.sensor_type = "FORCE_TORQUE"
     sp_ft.attached_link = link_obj
 
-    translator.translate(sp_ft_obj, builder, blender_context)
+    translator.translate(sp_ft_obj, builder)
     assert builder.robot.sensors[0].force_torque_info is not None
 
     cleanup_blender_scene(scene)
@@ -1095,12 +950,12 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp_err.attached_link = None  # trigger missing parent link exception
 
     val_res = ValidationResult(robot_name="test_sensor_robot_7")
-    translator.translate(sp_err_obj, builder, blender_context, validation_result=val_res)
+    translator.translate(sp_err_obj, builder, validation_result=val_res)
     assert len(val_res.errors) == 1
     assert "Sensor translation failed" in val_res.errors[0].title
 
     # Cover early exit when object is None
-    translator.translate(None, builder, blender_context)
+    translator.translate(None, builder)
 
     cleanup_blender_scene(scene)
     builder = RobotBuilder("test_sensor_robot_8")
@@ -1133,7 +988,7 @@ def test_sensor_translator_comprehensive(scene, blender_context):
         ),
         patch("linkforge.blender.adapters.translator.SensorType", return_value="fake_type"),
     ):
-        translator.translate(sp_fake_obj, builder, blender_context)
+        translator.translate(sp_fake_obj, builder)
 
 
 def test_ros2_control_translator_comprehensive(scene, blender_context):
@@ -1144,7 +999,7 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     builder = RobotBuilder("test_control_robot")
 
     assert translator._blender_ros2_control_to_core(None) is None
-    translator.translate(None, builder, blender_context)
+    translator.translate(None, builder)
 
     props = safe_get_linkforge_scene(scene)
     props.use_ros2_control = True
@@ -1192,7 +1047,7 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     item2.name = "joint_two_fallback"
 
     # Translate
-    translator.translate(props, builder, blender_context)
+    translator.translate(props, builder)
     control = builder.robot.ros2_controls[0]
     assert control.name == "TestSystemControl"
     assert len(control.joints) == 2
@@ -1201,92 +1056,6 @@ def test_ros2_control_translator_comprehensive(scene, blender_context):
     assert "effort" in control.joints[0].command_interfaces
     assert control.joints[0].name == "joint_one_name"
     assert control.joints[1].name == "joint_two_fallback"
-
-
-def test_transmission_translator_comprehensive(scene, blender_context):
-    """Cover all remaining TransmissionTranslator branches (early exits, custom type, custom actuator names, diff transmission)."""
-    cleanup_blender_scene(scene)
-
-    translator = TransmissionTranslator()
-    builder = RobotBuilder("test_trans_robot")
-
-    assert translator._blender_transmission_to_core(None) is None
-
-    builder.robot._joint_index["joint_to_transmit"] = Joint(
-        name="joint_to_transmit",
-        type=JointType.FIXED,
-        parent="link1",
-        child="link2",
-    )
-
-    joint_obj = create_test_object("trans_joint", None, scene=scene)
-    jp = safe_get_joint(joint_obj, scene)
-    jp.is_robot_joint = True
-    jp.joint_name = "joint_to_transmit"
-
-    trans_obj = create_test_object("trans_obj", None, scene=scene)
-    tp = safe_get_transmission(trans_obj, scene)
-    tp.is_robot_transmission = True
-    tp.transmission_name = "custom_trans"
-    tp.transmission_type = "CUSTOM"
-    tp.custom_type = "transmission_interface/CustomTransmission"
-    tp.hardware_interface = "hardware_interface/PositionJointInterface"
-    tp.joint_name = joint_obj
-    tp.use_custom_actuator_name = True
-    tp.actuator_name = "my_custom_actuator"
-    tp.mechanical_reduction = 50.0
-    tp.offset = 0.5
-
-    translator.translate(trans_obj, builder, blender_context)
-    trans = builder.robot.transmissions[0]
-    assert trans.name == "custom_trans"
-    assert trans.type == "transmission_interface/CustomTransmission"
-    assert trans.joints[0].name == "joint_to_transmit"
-    assert trans.actuators[0].name == "my_custom_actuator"
-
-    # Simple/Custom transmission where potential_name is not a string
-    builder.robot._joint_index["trans_joint_non_str"] = Joint(
-        name="trans_joint_non_str",
-        type=JointType.FIXED,
-        parent="link1",
-        child="link2",
-    )
-    joint_obj_non_str = create_test_object("trans_joint_non_str", None, scene=scene)
-
-    trans_obj_non_str = create_test_object("trans_obj_non_str", None, scene=scene)
-    tp_non_str = safe_get_transmission(trans_obj_non_str, scene)
-    tp_non_str.is_robot_transmission = True
-    tp_non_str.transmission_name = "custom_trans_non_str"
-    tp_non_str.transmission_type = "SIMPLE"
-    tp_non_str.joint_name = joint_obj_non_str
-
-    with patch(
-        "linkforge.blender.adapters.translator.get_joint_props",
-        return_value=types.SimpleNamespace(joint_name=123),
-    ):
-        translator.translate(trans_obj_non_str, builder, blender_context)
-
-    translator.translate(None, builder, blender_context)
-
-    cleanup_blender_scene(scene)
-    builder = RobotBuilder("test_trans_robot_simple_no_joint")
-    trans_obj_no_joint = create_test_object("trans_obj_no_joint", None, scene=scene)
-    tp_no_joint = safe_get_transmission(trans_obj_no_joint, scene)
-    tp_no_joint.is_robot_transmission = True
-    tp_no_joint.transmission_name = "trans_no_joint"
-    tp_no_joint.transmission_type = "SIMPLE"
-    tp_no_joint.joint_name = None
-
-    assert translator._blender_transmission_to_core(trans_obj_no_joint) is None
-
-    cleanup_blender_scene(scene)
-    trans_obj_invalid = create_test_object("trans_obj_invalid", None, scene=scene)
-    tp_invalid = safe_get_transmission(trans_obj_invalid, scene)
-    tp_invalid.is_robot_transmission = True
-    tp_invalid.transmission_name = "trans_invalid"
-    tp_invalid.transmission_type = "INVALID_TYPE"
-
-    assert translator._blender_transmission_to_core(trans_obj_invalid) is None
 
 
 def test_ros2_control_translator_missing_joint(scene, blender_context) -> None:
@@ -1308,7 +1077,7 @@ def test_ros2_control_translator_missing_joint(scene, blender_context) -> None:
 
     translator = Ros2ControlTranslator()
     val_result = ValidationResult(robot_name="test_robot")
-    translator.translate(props, builder, blender_context, validation_result=val_result)
+    translator.translate(props, builder, validation_result=val_result)
 
     assert len(val_result.errors) == 1
     assert val_result.errors[0].code == ValidationErrorCode.NOT_FOUND

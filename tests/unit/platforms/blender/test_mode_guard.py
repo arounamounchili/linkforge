@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import bpy
-from linkforge.blender.utils.context import context_and_mode_guard
+from linkforge.blender.utils.mode_guard import context_and_mode_guard
 
 
 def test_context_and_mode_guard_object_mode() -> None:

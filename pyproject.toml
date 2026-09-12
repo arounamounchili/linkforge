@@ -50,8 +50,8 @@ mypy_path = ["core/src", "platforms/blender/src"]
 
 [tool.pyright]
 include = ["core/src", "platforms/blender/src", "tests"]
-exclude = ["**/mock_bpy_env.py", "platforms/blender/src/linkforge/blender/linkforge"]
-ignore = ["**/mock_bpy_env.py", "platforms/blender/src/linkforge/blender/linkforge"]
+exclude = ["**/mock_bpy_env.py", "platforms/blender/src/linkforge/blender/core"]
+ignore = ["**/mock_bpy_env.py", "platforms/blender/src/linkforge/blender/core"]
 extraPaths = ["core/src", "platforms/blender/src"]
 typeCheckingMode = "basic"
 pythonVersion = "3.13"

@@ -2,21 +2,31 @@
 
 This package provide commands for:
 - Link & Joint Management: Marking objects and resetting properties.
-- Component Setup: Adding sensors, transmissions, and hardware interfaces.
+- Component Setup: Adding sensors and hardware interfaces.
 - Data Processing: Importing and exporting URDF, XACRO, and meshes.
 """
 
 from __future__ import annotations
 
-from . import control_ops, export_ops, import_ops, joint_ops, link_ops, sensor_ops, transmission_ops
+from . import (
+    control_ops,
+    display_ops,
+    export_ops,
+    import_ops,
+    joint_ops,
+    link_ops,
+    selection_ops,
+    sensor_ops,
+)
 
 # Module list for registration
 modules = [
     link_ops,
     joint_ops,
     sensor_ops,
-    transmission_ops,
     control_ops,
+    selection_ops,
+    display_ops,
     import_ops,
     export_ops,
 ]

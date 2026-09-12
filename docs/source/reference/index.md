@@ -6,35 +6,35 @@ This section provides technical descriptions, specifications, and API documentat
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card}  API Reference
+:::{grid-item-card} API Reference
 :link: api/index
 :link-type: doc
 
 Detailed documentation of classes, functions, and the Blender operator API.
 :::
 
-:::{grid-item-card} 🦴 Robot Structure
+:::{grid-item-card} Robot Structure
 :link: robot_structure
 :link-type: doc
 
 Technical mapping of joints, links, and sensor hierarchies.
 :::
 
-:::{grid-item-card}  Glossary
+:::{grid-item-card} Glossary
 :link: glossary
 :link-type: doc
 
 A quick reference for robotics and Blender terminology used in the project.
 :::
 
-:::{grid-item-card} 🔌 Blender Properties Schema
+:::{grid-item-card} Blender Properties Schema
 :link: blender_properties_schema
 :link-type: doc
 
 Full reference of all LinkForge property keys, types, and defaults. Useful for any external tool consuming LinkForge data via glTF Custom Properties.
 :::
 
-:::{grid-item-card} 🧪 Testing
+:::{grid-item-card} Testing
 :link: testing/automated_testing
 :link-type: doc
 

@@ -11,7 +11,6 @@ Core Components:
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
@@ -34,6 +33,7 @@ from ..constants import (
     HW_IF_EFFORT,
 )
 from ..exceptions import RobotValidationError, ValidationErrorCode
+from ..logging_config import get_logger
 from ..models.gazebo import GazeboElement
 from ..models.geometry import Geometry, Transform, Vector3
 from ..models.joint import (
@@ -65,7 +65,7 @@ from ..physics.inertia import calculate_inertia
 if TYPE_CHECKING:
     from .interfaces import IComposer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -126,7 +126,7 @@ class LinkBuilder:
         self._committed = False
         self._in_context = False
 
-        self._builder._active_link_builders.append(self)
+        self._builder.register_link_builder(self)
 
     def __enter__(self) -> LinkBuilder:
         """Enter the context of this link.
@@ -140,7 +140,7 @@ class LinkBuilder:
         skeletal_link = Link(name=self._link_name)
         self._builder.robot.add_link(skeletal_link, overwrite=True)
 
-        self._builder._parent_stack.append(self._link_name)
+        self._builder.push_parent(self._link_name)
         return self
 
     def __exit__(
@@ -154,10 +154,7 @@ class LinkBuilder:
         Pops this link's name from the parent stack and automatically commits the
         link to flush its configured properties if no exception occurred.
         """
-        if self._builder._parent_stack and self._builder._parent_stack[-1] == self._link_name:
-            self._builder._parent_stack.pop()
-        elif self._link_name in self._builder._parent_stack:
-            self._builder._parent_stack.remove(self._link_name)
+        self._builder.pop_parent(self._link_name)
 
         if exc_type is None:
             self._commit()

@@ -23,13 +23,14 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Matrix, Vector
 
 from ..constants import (
+    DEFAULT_INERTIA_GIZMO_SIZE,
     PROP_LINK,
 )
 from ..core.constants import (
     PI,
 )
 from ..preferences import get_addon_prefs
-from ..utils.scene_utils import get_robot_statistics
+from ..utils.scene_utils import get_robot_statistics, is_robot_joint, is_robot_link
 
 _builtin_shader_name = None
 
@@ -80,9 +81,8 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
     com_world_pos = link_matrix @ com_local_pos
 
     # Calculate COM World Rotation
-    # We combine the Link's rotation with the Manual Inertia Rotation
-    # 1. Start with Link Rotation
-    # 2. Apply Manual RPY Rotation (XYZ Euler)
+    # Combine the Link's rotation with the Manual Inertia Rotation
+    # Start with Link Rotation, then apply Manual RPY Rotation (XYZ Euler)
     manual_rot_matrix = (
         Matrix.Rotation(com_local_rot.x, 4, "X")
         @ Matrix.Rotation(com_local_rot.y, 4, "Y")
@@ -110,13 +110,13 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
     line_positions = []
     line_colors = []
 
-    # 1. Draw connecting line from Link Origin to COM (Dashed style simulation)
+    # Draw connecting line from Link Origin to COM (Dashed style simulation)
     # We simulate dashed line by drawing small segments or just a thinner line with lower alpha
     link_origin = link_matrix.translation
     line_positions.extend([link_origin[:], com_world_pos[:]])
     line_colors.extend([(1.0, 1.0, 1.0, 0.5), (1.0, 1.0, 1.0, 0.5)])  # Semi-transparent white
 
-    # 2. Draw Principal Axes at COM
+    # Draw Principal Axes at COM
     for axis_name, local_dir in axes.items():
         # Rotate axis to world space
         world_dir = inertia_rotation_world @ local_dir
@@ -127,7 +127,7 @@ def generate_inertia_axes_geometry(obj: Any, axis_length: float = 0.1) -> dict[s
         line_positions.extend([com_world_pos[:], end_pos[:]])
         line_colors.extend([colors[axis_name], colors[axis_name]])
 
-    # 3. Draw Center of Mass Sphere (Standard Robotics Style)
+    # Draw Center of Mass Sphere (Standard Robotics Style)
     # We draw 3 orthogonal rings to form a wireframe sphere
 
     sphere_radius = axis_length * 0.2
@@ -175,14 +175,16 @@ def draw_inertia_gizmos() -> None:
         context = bpy.context
 
         # Check global visibility preference
-        show_gizmos = True
-        gizmo_size = 0.1
+        show_gizmos = False
+        gizmo_size = DEFAULT_INERTIA_GIZMO_SIZE
+        display_mode = "SELECTED_ONLY"
 
         try:
             prefs = get_addon_prefs(context)
             if prefs:
                 show_gizmos = prefs.show_inertia_gizmos
                 gizmo_size = prefs.inertia_gizmo_size
+                display_mode = getattr(prefs, "inertia_display_mode", display_mode)
         except Exception:
             # Fallback if preferences access fails (safe default)
             pass
@@ -203,8 +205,43 @@ def draw_inertia_gizmos() -> None:
 
         # Use centralized scene statistics to avoid redundant scene traversing
         stats = get_robot_statistics(context.scene)
+        target_objects = stats.manual_inertia_objects
 
-        for obj in stats.manual_inertia_objects:
+        # Progressive disclosure: filter to active/selected link only if requested
+        if display_mode == "SELECTED_ONLY":
+            raw_selected = set(context.selected_objects or [])
+            if (
+                context.active_object
+                and getattr(context.active_object, "select_get", lambda: False)()
+            ):
+                raw_selected.add(context.active_object)
+
+            # Resolve selected objects to their immediate owning link without traversing the kinematic tree
+            selected_links: set[Any] = set()
+            for s_obj in raw_selected:
+                if is_robot_link(s_obj):
+                    selected_links.add(s_obj)
+                    continue
+
+                if is_robot_joint(s_obj):
+                    continue
+
+                # Traverse upwards from visual/collision child mesh to find immediate owning link
+                curr = getattr(s_obj, "parent", None)
+                while curr:
+                    if is_robot_link(curr):
+                        selected_links.add(curr)
+                        break
+                    if is_robot_joint(curr):
+                        break
+                    curr = getattr(curr, "parent", None)
+
+            target_objects = [obj for obj in target_objects if obj in selected_links]
+
+        if not target_objects:
+            return
+
+        for obj in target_objects:
             try:
                 axis_data = generate_inertia_axes_geometry(obj, axis_length=gizmo_size)
                 if axis_data["lines"]:

@@ -3,6 +3,7 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 from linkforge.core import (
     Box,
@@ -180,7 +181,6 @@ def test_add_geometry_element_unsupported() -> None:
 
 def test_geometry_parsing_unsupported_mesh_warning() -> None:
     """Verify that malformed mesh geometry triggers a warning during base XML parsing."""
-    from unittest.mock import patch
 
     class MockParser(RobotXMLParser[Any]):
         def parse(self, filepath: Path, **kwargs: Any) -> Any:
@@ -201,8 +201,6 @@ def test_geometry_parsing_unsupported_mesh_warning() -> None:
 
 def test_xml_base_format_value_bool() -> None:
     """Verify boolean formatting logic in RobotXMLGenerator."""
-    import xml.etree.ElementTree as ET
-    from typing import Any
 
     class MockGen(RobotXMLGenerator):
         def generate(self, robot: Robot, **kwargs: Any) -> str:

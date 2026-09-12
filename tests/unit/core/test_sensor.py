@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
+
 import pytest
 from linkforge.core import (
     CameraInfo,
@@ -461,8 +463,6 @@ class TestSensor:
 
 def test_sensor_parsing_pose_robustness() -> None:
     """Verify that malformed or incomplete sensor pose elements are handled gracefully."""
-    import xml.etree.ElementTree as ET
-
     parser = URDFParser()
     xml = """
     <gazebo reference="link1">

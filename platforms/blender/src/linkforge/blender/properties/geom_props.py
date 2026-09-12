@@ -13,7 +13,8 @@ from ..core.constants import GEOM_BOX, GEOM_CYLINDER, GEOM_MESH, GEOM_SPHERE
 PROP_GEOM = "linkforge_geom"
 
 
-def on_collision_quality_update(self: GeomPropertyGroup, _context: bpy.types.Context) -> None:
+def _on_collision_geom_update(self: GeomPropertyGroup, _context: bpy.types.Context) -> None:
+    """Trigger real-time collision mesh update when geometry properties change."""
     collision_obj = getattr(self, "id_data", None)
     if not collision_obj:
         return
@@ -32,23 +33,8 @@ def on_collision_quality_update(self: GeomPropertyGroup, _context: bpy.types.Con
     update_collision_quality_realtime(link_obj, collision_obj)
 
 
-def on_geometry_type_update(self: GeomPropertyGroup, _context: bpy.types.Context) -> None:
-    collision_obj = getattr(self, "id_data", None)
-    if not collision_obj:
-        return
-
-    # Only applies to collision objects
-    if self.geom_role != "COLLISION" and "collision" not in collision_obj.name.lower():
-        return
-
-    # The parent object should be the link frame
-    link_obj = collision_obj.parent
-    if not link_obj:
-        return
-
-    from ..operators.link_ops import update_collision_quality_realtime
-
-    update_collision_quality_realtime(link_obj, collision_obj)
+on_collision_quality_update = _on_collision_geom_update
+on_geometry_type_update = _on_collision_geom_update
 
 
 class GeomPropertyGroup(PropertyGroup):

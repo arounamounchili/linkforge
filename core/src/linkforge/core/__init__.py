@@ -54,6 +54,7 @@ from .constants import (
 from .exceptions import (
     LinkForgeError,
     RobotGeneratorError,
+    RobotGeneratorUnsupportedTypeError,
     RobotMathError,
     RobotModelError,
     RobotParserError,
@@ -280,6 +281,7 @@ __all__ = [
     "RobotParserError",
     "RobotParserIOError",
     "RobotGeneratorError",
+    "RobotGeneratorUnsupportedTypeError",
     "RobotValidationError",
     "RobotPhysicsError",
     "RobotMathError",

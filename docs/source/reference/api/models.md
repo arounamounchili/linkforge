@@ -38,12 +38,12 @@ Core data structures for representing robots.
    :members:
    :undoc-members:
    :show-inheritance:
-```
 
-.. autoclass:: linkforge.core.models.link.LinkPhysics
+.. autoclass:: linkforge.core.LinkPhysics
    :members:
    :undoc-members:
    :show-inheritance:
+```
 
 ## Joint
 
@@ -72,12 +72,17 @@ Core data structures for representing robots.
    :members:
    :undoc-members:
    :show-inheritance:
-```
 
-.. autoclass:: linkforge.core.models.joint.JointSafetyController
+.. autoclass:: linkforge.core.JointSafetyController
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. autoclass:: linkforge.core.JointCalibration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
 
 ## Geometry
 
@@ -111,12 +116,12 @@ Core data structures for representing robots.
    :members:
    :undoc-members:
    :show-inheritance:
-```
 
-.. autoclass:: linkforge.core.models.geometry.GeometryType
+.. autoclass:: linkforge.core.GeometryType
    :members:
    :undoc-members:
    :show-inheritance:
+```
 
 ## Sensor
 
@@ -150,22 +155,22 @@ Core data structures for representing robots.
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. autoclass:: linkforge.core.ContactInfo
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.ForceTorqueInfo
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.SensorNoise
+   :members:
+   :undoc-members:
+   :show-inheritance:
 ```
-
-.. autoclass:: linkforge.core.models.sensor.ContactInfo
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: linkforge.core.models.sensor.ForceTorqueInfo
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: linkforge.core.models.sensor.SensorNoise
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 ## Transmission
 
@@ -229,7 +234,9 @@ While `Ros2Control` provides a modern dashboard-based workflow, `Transmission` r
 .. autoclass:: linkforge.core.Ros2ControlJoint
    :members:
    :undoc-members:
-.. autoclass:: linkforge.core.models.ros2_control.Ros2ControlSensor
+   :show-inheritance:
+
+.. autoclass:: linkforge.core.Ros2ControlSensor
    :members:
    :undoc-members:
    :show-inheritance:

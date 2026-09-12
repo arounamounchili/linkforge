@@ -63,4 +63,6 @@ def get_logger(name: str) -> logging.Logger:
         >>> logger = get_logger(__name__)
         >>> logger.info("Starting export process")
     """
-    return logging.getLogger(f"linkforge.{name}")
+    if not name.startswith("linkforge.") and name != "linkforge":
+        name = f"linkforge.{name}"
+    return logging.getLogger(name)

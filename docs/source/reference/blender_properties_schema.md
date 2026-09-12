@@ -36,7 +36,7 @@ When exported to glTF, this attribute name becomes the JSON metadata key.
 | `linkforge` | Link Empty | Link identification, physics, inertia |
 | `linkforge_joint` | Joint Empty (ARROWS) | Joint type, axis, limits, mimic |
 | `linkforge_sensor` | Sensor Empty | Camera, LIDAR, IMU, GPS, Contact, FT |
-| `linkforge_transmission` | Transmission Empty | ROS 2 transmission / gear ratios |
+| `linkforge_geom` | Mesh Object | Visual/collision geometry role and quality |
 
 > **Note:** `linkforge_control` and `linkforge_robot` are stored on the **Scene**, not on
 > individual objects. They are not exported to glTF Custom Properties.
@@ -75,8 +75,7 @@ Stored on **Link Empty** objects (the parent empty of visual and collision meshe
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `collision_type` | `str` | `"auto"` | Collision shape. One of: `"auto"`, `"box"`, `"sphere"`, `"cylinder"`, `"mesh"` |
-| `collision_quality` | `float` | `50.0` | Mesh simplification level (1–100%). Only used when `collision_type` is `"mesh"` |
+| `active_collision_index` | `int` | `0` | Index of the active collision geometry item in the UI |
 
 ### Material
 
@@ -240,33 +239,15 @@ Stored on **Sensor Empty** objects.
 
 ---
 
-## `linkforge_transmission`: Transmission Properties
+## `linkforge_geom`: Geometry Properties
 
-Stored on **Transmission Empty** objects. Used for ROS 2 `<transmission>` tags.
-
-### Identification
+Stored directly on child **Mesh** objects (both visual and collision geometry).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `is_robot_transmission` | `bool` | `false` | `true` if this object is a robot transmission |
-| `source_name_stored` | `str` | `""` | Stable robot-model name |
-| `transmission_type` | `str` | `"simple"` | One of: `"simple"`, `"differential"`, `"four_bar_linkage"`, `"custom"` |
-| `custom_type` | `str` | `""` | Custom type identifier (only used when `transmission_type` is `"custom"`) |
-
-### Joints & Actuators
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `joint_name` | `Object pointer` | `None` | Controlled joint (for `"simple"` transmissions) |
-| `joint1_name` | `Object pointer` | `None` | First joint (for `"differential"` transmissions) |
-| `joint2_name` | `Object pointer` | `None` | Second joint (for `"differential"` transmissions) |
-| `hardware_interface` | `str` | `"position"` | ROS 2 Control interface. One of: `"position"`, `"velocity"`, `"effort"` |
-| `mechanical_reduction` | `float` | `1.0` | Gear reduction ratio (actuator / joint) |
-| `offset` | `float` | `0.0` | Joint position offset (radians or meters) |
-| `use_custom_actuator_name` | `bool` | `false` | Use a manually specified actuator name |
-| `actuator_name` | `str` | `""` | Actuator name (when `use_custom_actuator_name` is `true`) |
-| `actuator1_name` | `str` | `""` | First actuator name (for `"differential"` transmissions) |
-| `actuator2_name` | `str` | `""` | Second actuator name (for `"differential"` transmissions) |
+| `geom_role` | `str` | `"AUTO"` | Geometry role: `"AUTO"` (determined by `_visual`/`_collision` suffix), `"VISUAL"`, or `"COLLISION"` |
+| `geometry_type` | `str` | `"mesh"` | Shape representation: `"box"`, `"cylinder"`, `"sphere"`, or `"mesh"` |
+| `collision_quality` | `float` | `50.0` | Mesh simplification percentage (1–100%). Only used when `geometry_type` is `"mesh"` |
 
 ---
 
@@ -281,3 +262,36 @@ using `object["key"] = value`. They are visible in glTF exports as metadata.
 | `imported_from_source` | `bool` | `true` if this object was created by importing a URDF |
 | `source_geometry_type` | `str` | Original geometry type from the imported URDF |
 | `source_name` | `str` | Original object name from the imported URDF |
+
+---
+
+## `linkforge_robot`: Scene Properties
+
+Stored on `bpy.context.scene.linkforge_robot` to configure robot-level metadata and viewport overlay toggles.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `robot_name` | `str` | `"my_robot"` | Top-level robot model identifier |
+| `root_link` | `PointerProperty` | `None` | Reference to the kinematic root link object |
+| `show_collisions` | `bool` | `false` | Global visibility toggle for all collision meshes |
+| `joint_gizmo_size` | `float` | `0.05` | Active scale multiplier for joint coordinate frames |
+| `enable_joint_axes_gizmo` | `bool` | `true` | Enable RViz-style 3D joint coordinate arrows |
+| `enable_joint_limits_gizmo` | `bool` | `true` | Enable angular/prismatic kinematic limit arc overlay |
+
+---
+
+## Add-on Preferences
+
+Global configuration stored in Blender Preferences under the LinkForge add-on settings.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `joint_axes_display_mode` | `enum` | `"ALL"` | Display mode for joint axes: `"ALL"` or `"SELECTED_ONLY"` |
+| `joint_axes_depth_mode` | `enum` | `"ALWAYS"` | Depth testing: `"ALWAYS"` (X-ray pass-through) or `"OCCLUDED"` (hidden by meshes) |
+| `show_joint_gizmos` | `bool` | `true` | Master switch for joint coordinate frame rendering |
+| `joint_gizmo_size` | `float` | `0.05` | Default joint coordinate frame size (meters) |
+| `link_gizmo_size` | `float` | `0.04` | Default link empty size (meters) |
+| `sensor_gizmo_size` | `float` | `0.03` | Default sensor empty size (meters) |
+| `show_inertia_gizmos` | `bool` | `false` | Master switch for Center of Mass & inertia box overlays |
+| `inertia_display_mode` | `enum` | `"SELECTED_ONLY"` | Inertia filtering: `"SELECTED_ONLY"` or `"ALL"` |
+| `inertia_gizmo_size` | `float` | `0.03` | Default inertia gizmo scale (meters) |

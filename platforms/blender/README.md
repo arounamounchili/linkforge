@@ -7,11 +7,14 @@ This package integrates the LinkForge core logic directly into Blender's UI and 
 
 - `src/linkforge/blender/`: The main integration logic.
   - `adapters/`: Unified translators between Core IR and Blender data models.
-  - `logic/`: Asynchronous builders and scene orchestration.
+  - `handlers/`: Scene-level handlers and real-time name synchronization.
+  - `logic/`: Asynchronous builders and collision generation pipelines.
   - `operators/`: Blender operators for Forge, Perceive, and Control actions.
   - `panels/`: Centralized UI dashboards for robot design.
   - `properties/`: Metadata-rich Blender property groups for round-trip fidelity.
-- `blender_manifest.toml`: Extension metadata for Blender 4.2+.
+  - `utils/`: Mode guards, property helpers, and transform math utilities.
+  - `visualization/`: 3D viewport gizmos for inertia and kinematic limits.
+  - `blender_manifest.toml`: Extension manifest metadata for Blender 4.2+.
 - `scripts/`: Build and development utilities (e.g., `build.py`).
 - `pyproject.toml`: Local development and workspace configuration.
 

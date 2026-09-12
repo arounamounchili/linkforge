@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 from linkforge.core import GazeboElement, GazeboPlugin, RobotModelError
 
@@ -47,8 +49,6 @@ class TestGazeboPlugin:
 
     def test_plugin_deepcopy(self) -> None:
         """Test deepcopy returns self for immutable plugin."""
-        import copy
-
         plugin = GazeboPlugin(name="p1", filename="f1")
         assert copy.deepcopy(plugin) is plugin
 
@@ -136,7 +136,5 @@ class TestGazeboElement:
 
     def test_element_deepcopy(self) -> None:
         """Test deepcopy returns self for immutable element."""
-        import copy
-
         element = GazeboElement(reference="l1")
         assert copy.deepcopy(element) is element

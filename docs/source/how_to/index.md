@@ -6,77 +6,77 @@ These guides provide specific recipes to help you solve a particular problem or 
 ::::{grid} 2
 :gutter: 3
 
-:::{grid-item-card} ️ Best Practices
+:::{grid-item-card} Best Practices
 :link: best_practices
 :link-type: doc
 
 Guidelines for cross-platform compatibility and efficient robot modeling.
 :::
 
-:::{grid-item-card}  Adding Sensors
+:::{grid-item-card} Adding Sensors
 :link: add_sensors
 :link-type: doc
 
 How to attach and configure LiDAR, Cameras, and IMU sensors.
 :::
 
-:::{grid-item-card}  Control Dashboard
+:::{grid-item-card} Control Dashboard
 :link: control_dashboard
 :link-type: doc
 
 Actuate your robot with ros2_control interfaces (Position, Velocity, Effort).
 :::
 
-:::{grid-item-card} 🧱 Collision Geometry
+:::{grid-item-card} Collision Geometry
 :link: collision_geometry
 :link-type: doc
 
 Optimize simulation performance with simplified collision primitives.
 :::
 
-:::{grid-item-card} ️ Joint Visualization
+:::{grid-item-card} Joint Visualization
 :link: joint_viz
 :link-type: doc
 
 Debug your robot topology with visual axis and limit indicators.
 :::
 
-:::{grid-item-card} 🩺 Troubleshooting
+:::{grid-item-card} Troubleshooting
 :link: troubleshooting
 :link-type: doc
 
 Solutions for common import/export issues and validation errors.
 :::
 
-:::{grid-item-card} ️ Physics & Inertia
+:::{grid-item-card} Physics & Inertia
 :link: physics
 :link-type: doc
 
 Configure mass, inertia tensors, and manual Center of Mass offsets.
 :::
 
-:::{grid-item-card} 🤖 Build Robots in Python
+:::{grid-item-card} Build Robots in Python
 :link: ../reference/api/composer
 :link-type: doc
 
 Programmatically assemble robots, attach sub-models, and export URDF and SRDF using the Composer API.
 :::
 
-:::{grid-item-card}  Semantic Data (SRDF)
+:::{grid-item-card} Semantic Data (SRDF)
 :link: srdf
 :link-type: doc
 
 Define planning groups, named poses, and collision filters for MoveIt.
 :::
 
-:::{grid-item-card}  Gazebo Integration
+:::{grid-item-card} Gazebo Integration
 :link: gazebo
 :link-type: doc
 
 Configure Gazebo physics plugins.
 :::
 
-:::{grid-item-card}  Xacro Macros
+:::{grid-item-card} Xacro Macros
 :link: xacro
 :link-type: doc
 

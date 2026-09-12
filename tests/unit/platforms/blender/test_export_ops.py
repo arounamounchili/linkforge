@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import runpy
+import warnings
 from unittest.mock import MagicMock, patch
 
 import bpy
@@ -386,7 +387,13 @@ class TestValidateRobotOperator:
         assert mock_reg_err.call_count > 0
         assert mock_unreg_err.call_count > 0
 
-        with patch.object(export_ops, "__name__", "__main__"):
+        with (
+            patch.object(export_ops, "__name__", "__main__"),
+            warnings.catch_warnings(),
+        ):
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, message=r".*found in sys\.modules.*"
+            )
             runpy.run_module("linkforge.blender.operators.export_ops")
 
     @patch("linkforge.blender.adapters.blender_to_core.scene_to_robot")
@@ -481,6 +488,26 @@ class TestRobotValidation:
         result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
         # Should return CANCELLED if there are validation errors
         assert result == {"CANCELLED"}
+
+    def test_validate_robot_with_warnings(self, mocker, scene, blender_context) -> None:
+        """Test validate_robot operator when valid but warnings exist."""
+        mock_self = MagicMock()
+
+        val_res = MagicMock()
+        val_res.is_ok = False
+        val_res.is_valid = True
+        val_res.warning_count = 2
+        val_res.warnings = [MagicMock(message="Warn 1"), MagicMock(message="Warn 2")]
+        val_res.errors = []
+        mocker.patch("linkforge.core.validation.RobotValidator.validate", return_value=val_res)
+
+        mocker.patch(
+            "linkforge.blender.adapters.blender_to_core.scene_to_robot",
+            return_value=(MagicMock(), ValidationResult()),
+        )
+
+        result = LINKFORGE_OT_validate_robot.execute(mock_self, bpy.context)
+        assert result == {"FINISHED"}
 
 
 class TestRobotExport:

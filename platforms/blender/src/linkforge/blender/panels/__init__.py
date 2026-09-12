@@ -3,7 +3,7 @@
 This package provides the 3D Viewport sidebar panels for:
 - Forge: Project management and robot model import.
 - Link & Joint: Physical and kinematic property configuration.
-- Sensor, Control, & Transmission: Component and hardware settings.
+- Sensor & Control: Component and hardware settings.
 - Robot & Export: Global metadata and unified export commands.
 """
 
@@ -15,7 +15,6 @@ from . import (
     forge_panel,
     joint_panel,
     link_panel,
-    robot_panel,
     sensor_panel,
 )
 
@@ -26,7 +25,6 @@ modules = [
     joint_panel,
     sensor_panel,
     control_panel,
-    robot_panel,
     export_panel,
 ]
 

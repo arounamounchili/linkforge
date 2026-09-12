@@ -76,7 +76,7 @@ class InertiaTensor:
         )
 
         if has_off_diagonals:
-            # 1. Sylvester's criterion for positive semi-definiteness
+            # Sylvester's criterion for positive semi-definiteness
             if not is_positive_semi_definite_3x3(
                 self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz
             ):
@@ -87,7 +87,7 @@ class InertiaTensor:
                     value=(self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz),
                 )
 
-            # 2. Compute principal moments (eigenvalues)
+            # Compute principal moments (eigenvalues)
             eig1, eig2, eig3 = symmetric_matrix_eigenvalues_3x3(
                 self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz
             )

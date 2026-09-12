@@ -115,9 +115,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         logger.info(f"Importing robot from: {source_path}")
         logger.debug(f"Detected sandbox root: {sandbox_root}")
 
-        # Smart Import Logic:
-        # 1. If it looks like URDF, try parsing as URDF.
-        # 2. If parsing fails because of Xacro tags, catch the error and switch to Xacro mode.
+        # Smart Import Logic: Try URDF first, fall back to Xacro if Xacro tags are detected.
         from ..core import FileSystemResolver, RobotParserError, XacroDetectedError
 
         # Read additional package paths from preferences

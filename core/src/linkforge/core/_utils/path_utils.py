@@ -1,5 +1,6 @@
 """Path and resource resolution utilities for LinkForge."""
 
+import contextlib
 import os
 import re
 from pathlib import Path
@@ -91,13 +92,11 @@ def resolve_package_path(
 
 
 def _extract_package_name(xml_path: Path) -> str | None:
-    """Extract <name> from package.xml using regex for performance."""
+    """Extract <name> from package.xml."""
     try:
-        # Lightweight scan of the beginning of the file
-        with open(xml_path, encoding="utf-8") as f:
-            content = f.read(1024)
-            match = re.search(r"<name>(.*?)</name>", content)
-            return match.group(1).strip() if match else None
+        content = xml_path.read_text(encoding="utf-8")
+        match = re.search(r"<name>(.*?)</name>", content)
+        return match.group(1).strip() if match else None
     except Exception:
         return None
 
@@ -142,28 +141,13 @@ def get_export_path(resource: str, relative_to: Path | None = None) -> str:
         The string to be used in the 'filename' attribute.
     """
     # Preserve package:// URIs (never make relative)
-    if resource.startswith("package://") or resource.startswith("package:/"):
+    if resource.startswith(("package://", "package:/")):
         return resource
 
-    # Handle file:// URIs
-    if resource.startswith("file://"):
-        path = normalize_uri_to_path(resource)
-        if relative_to and path.is_absolute():
-            try:
-                # Use .absolute() on relative_to just in case it's not
-                rel = path.relative_to(relative_to.absolute())
-                return str(rel)
-            except ValueError:
-                pass
-        return resource
-
-    # Handle standard paths
-    path = Path(resource)
+    # Convert file:// URI or filesystem path to Path and relativize if possible
+    path = normalize_uri_to_path(resource)
     if relative_to and path.is_absolute():
-        try:
-            rel = path.relative_to(relative_to.absolute())
-            return str(rel)
-        except ValueError:
-            pass
+        with contextlib.suppress(ValueError):
+            return str(path.relative_to(relative_to.absolute()))
 
     return resource

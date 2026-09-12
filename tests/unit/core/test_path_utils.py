@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from linkforge.core._utils.path_utils import _extract_package_name, resolve_package_path
+from linkforge.core._utils.path_utils import (
+    _extract_package_name,
+    get_export_path,
+    normalize_uri_to_path,
+    resolve_package_path,
+)
 
 
 def test_extract_package_name(tmp_path: Path) -> None:
@@ -215,8 +220,6 @@ def test_extract_package_name_exception(tmp_path: Path) -> None:
 
 
 def test_normalize_uri_to_path() -> None:
-    from linkforge.core._utils.path_utils import normalize_uri_to_path
-
     # Windows-style file:// URI
     win_uri = "file:///C:/mesh.stl"
     assert normalize_uri_to_path(win_uri) == Path("C:/mesh.stl")
@@ -231,8 +234,6 @@ def test_normalize_uri_to_path() -> None:
 
 
 def test_get_export_path(tmp_path: Path) -> None:
-    from linkforge.core._utils.path_utils import get_export_path
-
     # Preserve package://
     assert (
         get_export_path("package://franka_description/mesh.stl")

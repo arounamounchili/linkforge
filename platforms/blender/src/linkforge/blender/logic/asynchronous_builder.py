@@ -7,6 +7,7 @@ the robot structure in chunks, allowing for a responsive UI and progress updates
 
 from __future__ import annotations
 
+import contextlib
 import typing
 from pathlib import Path
 
@@ -65,29 +66,29 @@ class AsynchronousRobotBuilder:
                 f"Robot '{self.robot.name}' has no links. The resulting Blender collection will be empty."
             )
 
-        # 1. Setup Scene (ROS 2 Control, Gazebo, etc.)
+        # Setup Scene (ROS 2 Control, Gazebo, etc.)
         self.tasks.append(("setup_scene", None))
 
-        # 2. Create collection
+        # Create collection
         self.tasks.append(("create_collection", None))
 
-        # 3. Create link tasks
+        # Create link tasks
         for link in self.robot.links:
             self.tasks.append(("create_link", link))
 
-        # 4. Create sorted joint tasks
+        # Create sorted joint tasks
         sorted_joints = self.robot.graph.get_topological_joints()
         for joint in sorted_joints:
             self.tasks.append(("create_joint", joint))
 
-        # 5. Mimic joints resolution
+        # Mimic joints resolution
         self.tasks.append(("resolve_mimics", None))
 
-        # 6. Sensors
+        # Sensors
         for sensor in self.robot.sensors:
             self.tasks.append(("create_sensor", sensor))
 
-        # 7. Finalization
+        # Finalization
         self.tasks.append(("finalize", None))
 
     def start(self) -> None:
@@ -242,4 +243,9 @@ class AsynchronousRobotBuilder:
             # Report error if cancelled or failed
             logger.info(f"Asynchronous import ended: {self.error}")
         else:
+            if scene:
+                with contextlib.suppress(Exception):
+                    from ..utils.scene_utils import auto_fit_robot_gizmos
+
+                    auto_fit_robot_gizmos(scene, self.context)
             logger.info(f"Asynchronous import complete - '{self.robot.name}' is ready.")

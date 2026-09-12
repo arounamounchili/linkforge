@@ -5,9 +5,10 @@ from __future__ import annotations
 import contextlib
 import os
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, overload
+from typing import Any
 
 import bpy
+from mathutils import Vector
 
 from ..constants import (
     SUFFIX_COLLISION,
@@ -28,12 +29,7 @@ from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
     get_sensor_props,
-    get_transmission_props,
 )
-
-K = TypeVar("K")
-V = TypeVar("V")
-T = TypeVar("T")
 
 
 def is_robot_link(obj: Any) -> bool:
@@ -81,22 +77,6 @@ def is_robot_sensor(obj: Any) -> bool:
     )
 
 
-def is_robot_transmission(obj: Any) -> bool:
-    """Check if blender obj is a robot_transmission.
-
-    Args:
-        obj: Blender object to check
-
-    Returns:
-        True if object has linkforge_transmission properties marked as robot_transmission
-    """
-    return (
-        getattr(obj, "type", None) == "EMPTY"
-        and (props := get_transmission_props(obj)) is not None
-        and props.is_robot_transmission
-    )
-
-
 @dataclass(frozen=True)
 class RobotSceneStatistics:
     """Statistics/Properties about robot components within a scene.
@@ -108,7 +88,6 @@ class RobotSceneStatistics:
         link_objects: Mapping of robot_link names to their corresponding blender objects
         joint_objects: List of all robot_joint objects in scene
         sensor_objects: List of all robot_sensor objects in scene
-        transmission_objects: List of all robot_transmission objects in scene
         root_link: Tuple of (link_name, object) for root link, or None if not found
     """
 
@@ -118,7 +97,6 @@ class RobotSceneStatistics:
     link_objects: dict[str, Any]
     joint_objects: list[Any]
     sensor_objects: list[Any]
-    transmission_objects: list[Any]
     root_link: tuple[str, Any] | None
     # Map from child link name -> (parent link name, joint object)
     joints_map: dict[str, tuple[str, Any]] = field(default_factory=dict)
@@ -151,7 +129,7 @@ JOINT_DOF_MAP = {
 def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneStatistics:
     """Analyze scene and setup robot statistics/properties.
 
-    Categorizes all robot components (links, joints, sensors, transmissions)
+    Categorizes all robot components (links, joints, sensors)
     and calculates total link mass and DOFs from all joints found.
     Uses frame-level caching to ensure the scene is scanned only once per frame.
 
@@ -165,7 +143,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
     link_objects: dict[str, Any] = {}
     joint_objects: list[Any] = []
     sensor_objects: list[Any] = []
-    transmission_objects: list[Any] = []
     obj_count = 0
 
     if scene:
@@ -186,22 +163,19 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             # Defensive check: if an operator deleted an object in the same frame,
             # accessing it will raise a ReferenceError. We catch this and invalidate the cache.
             try:
-                # 1. Validate link objects
+                # Validate link objects
                 for link_obj in cached_stats.link_objects.values():
                     _ = link_obj.name
-                # 2. Validate joint objects
+                # Validate joint objects
                 for joint_obj in cached_stats.joint_objects:
                     _ = joint_obj.name
-                # 3. Validate sensor objects
+                # Validate sensor objects
                 for sensor_obj in cached_stats.sensor_objects:
                     _ = sensor_obj.name
-                # 4. Validate transmission objects
-                for trans_obj in cached_stats.transmission_objects:
-                    _ = trans_obj.name
-                # 5. Validate geometry objects
+                # Validate geometry objects
                 for geo_info in cached_stats.geometry_stats.values():
                     _ = geo_info[0].name
-                # 6. Validate manual inertia objects
+                # Validate manual inertia objects
                 for manual_obj in cached_stats.manual_inertia_objects:
                     _ = manual_obj.name
 
@@ -224,7 +198,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             link_objects={},
             joint_objects=[],
             sensor_objects=[],
-            transmission_objects=[],
             root_link=None,
             joints_map={},
             geometry_stats={},
@@ -272,10 +245,18 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
                 child = jp.child_link
                 parent = jp.parent_link
 
-                if child and (props_child := get_link_props(child)):
+                if (
+                    child
+                    and (props_child := get_link_props(child))
+                    and getattr(props_child, "is_robot_link", False)
+                ):
                     child_name = props_child.link_name if props_child.link_name else child.name
                     parent_name = ""
-                    if parent and (props_parent := get_link_props(parent)):
+                    if (
+                        parent
+                        and (props_parent := get_link_props(parent))
+                        and getattr(props_parent, "is_robot_link", False)
+                    ):
                         parent_name = (
                             props_parent.link_name if props_parent.link_name else parent.name
                         )
@@ -285,9 +266,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
 
         if is_robot_sensor(obj):
             sensor_objects.append(obj)
-
-        if is_robot_transmission(obj):
-            transmission_objects.append(obj)
 
     # get root link (link that is not a child in any joint)
     for link_name, obj in link_objects.items():
@@ -302,7 +280,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
         link_objects=link_objects,
         joint_objects=joint_objects,
         sensor_objects=sensor_objects,
-        transmission_objects=transmission_objects,
         root_link=root_link,
         joints_map=joints_map,
         geometry_stats=geometry_stats,
@@ -398,7 +375,7 @@ def sync_object_collections(
     if not target_obj or not source_obj:
         return
 
-    # 1. Link to all collections where source_obj resides
+    # Link to all collections where source_obj resides
     source_cols = list(source_obj.users_collection)
     if not source_cols:
         return
@@ -407,40 +384,150 @@ def sync_object_collections(
         if target_obj.name not in col.objects:
             col.objects.link(target_obj)
 
-    # 2. Unlink from any collections that source_obj is NOT in
+    # Unlink from any collections that source_obj is NOT in
     # This cleans up the default Scene Collection link if it was created there
     for col in list(target_obj.users_collection):
         if col not in source_cols:
             col.objects.unlink(target_obj)
 
 
-@overload
-def filter_items_by_name(items: dict[K, V], search_term: str | None) -> dict[K, V]: ...
+def calculate_robot_bounds(scene: Any) -> tuple[Vector, Vector, float] | None:
+    """Calculate the 3D bounding box and diagonal size of all robot components in the scene.
 
+    Iterates through all detected robot links and their visual/collision mesh children
+    to find the world-space bounding box extents.
 
-@overload
-def filter_items_by_name(items: list[T], search_term: str | None) -> list[T]: ...
+    Args:
+        scene: Blender Scene containing robot components.
 
-
-def filter_items_by_name(
-    items: dict[Any, Any] | list[Any],
-    search_term: str | None,
-) -> dict[Any, Any] | list[Any]:
-    """Filter items by case-insensitive substring matching for UI display.
-
-    For dictionaries: filters by key names.
-    For lists: filters by object 'name' attribute.
+    Returns:
+        Tuple of (min_corner, max_corner, diagonal_length) or None if no components found.
     """
-    if not search_term or not search_term.strip():
-        return items
+    if not scene:
+        return None
 
-    term = search_term.lower().strip()
-    if isinstance(items, dict):
-        return {k: v for k, v in items.items() if term in str(k).lower()}
-    if isinstance(items, list):
-        return [
-            item
-            for item in items
-            if hasattr(item, "name") and term in str(getattr(item, "name", "")).lower()
-        ]
-    return items
+    stats = get_robot_statistics(scene)
+    if not stats.link_objects:
+        return None
+
+    points: list[Vector] = []
+
+    for link_obj in stats.link_objects.values():
+        if not link_obj:
+            continue
+
+        # Add link origin translation
+        if hasattr(link_obj, "matrix_world"):
+            points.append(link_obj.matrix_world.translation.copy())
+
+        # Collect mesh bounds from children
+        children = getattr(link_obj, "children", [])
+        for child in children:
+            if hasattr(child, "bound_box") and hasattr(child, "matrix_world") and child.bound_box:
+                mat = child.matrix_world
+                for corner in child.bound_box:
+                    points.append(mat @ Vector(corner))
+            elif hasattr(child, "matrix_world"):
+                points.append(child.matrix_world.translation.copy())
+
+    if not points:
+        return None
+
+    min_x = min(p.x for p in points)
+    min_y = min(p.y for p in points)
+    min_z = min(p.z for p in points)
+    max_x = max(p.x for p in points)
+    max_y = max(p.y for p in points)
+    max_z = max(p.z for p in points)
+
+    min_corner = Vector((min_x, min_y, min_z))
+    max_corner = Vector((max_x, max_y, max_z))
+    diagonal = float((max_corner - min_corner).length)
+
+    return (min_corner, max_corner, diagonal)
+
+
+def auto_fit_robot_gizmos(scene: Any, context: Any = None) -> tuple[float, float] | None:
+    """Auto-scale gizmos and display sizes according to robot bounding box dimensions.
+
+    Args:
+        scene: The active Blender scene.
+        context: Optional Blender context (uses bpy.context if omitted).
+
+    Returns:
+        Tuple of (recommended_size, diagonal) or None if no robot components found.
+    """
+    from ..constants import (
+        DEFAULT_JOINT_GIZMO_SIZE,
+        GIZMO_SCALE_FACTOR,
+        GIZMO_SIZE_MAX,
+        GIZMO_SIZE_MIN,
+    )
+    from ..preferences import (
+        get_addon_prefs,
+        update_inertia_size,
+        update_joint_empty_size,
+        update_link_empty_size,
+        update_sensor_empty_size,
+    )
+
+    if context is None or not hasattr(context, "preferences"):
+        context = bpy.context
+
+    bounds = calculate_robot_bounds(scene)
+    if not bounds:
+        return None
+
+    _, _, diagonal = bounds
+    if diagonal <= 0.001:
+        recommended_size = DEFAULT_JOINT_GIZMO_SIZE
+    else:
+        raw_size = diagonal * GIZMO_SCALE_FACTOR
+        recommended_size = max(GIZMO_SIZE_MIN, min(GIZMO_SIZE_MAX, raw_size))
+
+    prefs = get_addon_prefs(context)
+    if prefs:
+        prefs.joint_empty_size = recommended_size
+        prefs.link_empty_size = recommended_size * 0.8
+        prefs.sensor_empty_size = recommended_size * 0.6
+        prefs.inertia_gizmo_size = recommended_size * 0.6
+
+        # Update scene empties and redraw viewports
+        update_joint_empty_size(prefs, context)
+        update_link_empty_size(prefs, context)
+        update_sensor_empty_size(prefs, context)
+        update_inertia_size(prefs, context)
+
+    return (recommended_size, diagonal)
+
+
+def compute_anchor_size(gizmo_size: float, show_gpu_axes: bool = True) -> float:
+    """Compute the native Blender empty display size.
+
+    When custom GPU visualization is enabled, keep the native empty wireframe
+    compact (1-2 cm anchor) so it remains selectable without projecting large
+    black crosshair lines across robot meshes.
+
+    Args:
+        gizmo_size: The user's preferred gizmo/axis display size in meters.
+        show_gpu_axes: Whether custom GPU RViz axes are currently active.
+
+    Returns:
+        Compact anchor size in meters.
+    """
+    from ..constants import (
+        ANCHOR_DISPLAY_MAX,
+        ANCHOR_DISPLAY_MIN,
+        ANCHOR_DISPLAY_RATIO,
+        DEFAULT_JOINT_GIZMO_SIZE,
+    )
+
+    try:
+        size = float(gizmo_size)
+    except (TypeError, ValueError):
+        size = DEFAULT_JOINT_GIZMO_SIZE
+
+    if show_gpu_axes is False:
+        return size
+
+    return max(ANCHOR_DISPLAY_MIN, min(ANCHOR_DISPLAY_MAX, size * ANCHOR_DISPLAY_RATIO))

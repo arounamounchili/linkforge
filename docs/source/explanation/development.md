@@ -23,7 +23,7 @@ cd linkforge
 just install
 ```
 
-## 🧪 Testing
+## Testing
 
 We use `pytest` for unit and integration testing.
 
