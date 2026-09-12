@@ -19,8 +19,8 @@ The `.lf` (LinkForge) format is an open, typed **Intermediate Representation (IR
 | :--- | :--- | :--- | :--- |
 | **ROS 2 / Gazebo** | URDF / XACRO | **Production (v1.x)** | Kinematics, visual/collision geometry, ros2_control tags |
 | **MoveIt 2** | SRDF | **Production (v1.x)** | Planning groups, named poses, collision disabling matrix |
-| **MuJoCo** | MJCF (XML) | *Planned (v2.1)* | Contact dynamics, tendons, actuator torque limits, sites |
-| **Isaac Sim** | OpenUSD (USDA) | *Planned (v2.2)* | RTX rendering, PhysX articulation schemas, zero-dependency emitter |
+| **MuJoCo** | MJCF (XML) | *Planned (v2.x)* | Contact dynamics, tendons, actuator torque limits, sites |
+| **Isaac Sim** | OpenUSD (USDA) | *Planned (v2.x)* | RTX rendering, PhysX articulation schemas, zero-dependency emitter |
 
 ## 2. File Structure
 The `.lf` standard uses **JSON** or **YAML** as its primary exchange format.

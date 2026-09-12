@@ -204,10 +204,10 @@ Programmatic tutorials in the documentation:
 - [ ] **v1.6.0**: SRDF Configuration Panel (Expose MoveIt 2 planning logic directly in Blender UI).
 - [ ] **v1.7.0**: LinkForge CLI & GitHub Actions (Headless verification and export in CI pipelines).
 
-### Phase 2: Multi-Physics Interoperability (Upcoming)
+### Phase 2: Multi-Physics Interoperability (Upcoming v2.x)
 - [ ] **v2.0.0**: The **`.lf` Intermediate Representation (IR)** (Typed JSON/YAML schema, lossless URDF bidirectional migration, Blender support).
-- [ ] **v2.1.0**: Native MuJoCo / MJCF compilation target (Kinematics, actuators, sites, and contact dynamics).
-- [ ] **v2.2.0**: Native NVIDIA Isaac Sim / OpenUSD target (Zero-dependency ASCII USDA with `UsdPhysics` and `PhysxSchema`).
+- [ ] **v2.x Target**: Native MuJoCo / MJCF compilation (Kinematics, actuators, sites, and contact dynamics).
+- [ ] **v2.x Target**: Native NVIDIA Isaac Sim / OpenUSD target (Zero-dependency ASCII USDA with `UsdPhysics` and `PhysxSchema`).
 
 ## Development
 
