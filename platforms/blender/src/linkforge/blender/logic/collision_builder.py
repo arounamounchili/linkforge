@@ -30,6 +30,7 @@ from ..core.constants import (
 from ..properties.geom_props import PROP_GEOM
 from ..properties.link_props import LinkPropertyGroup
 from ..utils.mode_guard import context_and_mode_guard
+from ..utils.scene_utils import sync_object_collections
 
 logger = get_logger(__name__)
 
@@ -156,8 +157,9 @@ def create_collision_for_link(
             collision_obj.matrix_local.identity()
             collision_obj.scale = (1, 1, 1)  # Scale was already baked into geometry
 
-        # IMPORTANT: Ensure collision is actually a child in the collection hierarchy
-        if context.collection and collision_obj.name not in context.collection.objects:
+        # IMPORTANT: Ensure collision is synchronized with the link's collection hierarchy
+        sync_object_collections(collision_obj, link_obj)
+        if not collision_obj.users_collection and context.collection:
             context.collection.objects.link(collision_obj)
 
         if collision_obj.data and hasattr(collision_obj.data, "materials"):
@@ -404,12 +406,8 @@ def _create_mesh_collision_compound(
         geom_props.geom_role = "COLLISION"
         geom_props.geometry_type = GEOM_MESH
 
-    # Ensure it's in the same collection
-    for collection in merged_obj.users_collection:
-        collection.objects.unlink(merged_obj)
-    for collection in link_obj.users_collection:
-        if merged_obj.name not in collection.objects:
-            collection.objects.link(merged_obj)
+    # Ensure it's in the same collections as the link
+    sync_object_collections(merged_obj, link_obj)
 
     bpy.ops.object.select_all(action="DESELECT")
     link_obj.select_set(True)
