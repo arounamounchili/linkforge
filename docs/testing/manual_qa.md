@@ -70,16 +70,20 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   - In the Links panel, the header title updates to `Link: manipulator_forearm`.
   - Child visual elements remain bound to the renamed link empty without broken dependencies or orphan warnings.
 
-### `TC-KIN-04`: Component Browser & Viewport Selection
-* Verify scene overview navigation and component focusing.
-- [ ] **Action**: In the **Validate & Export** panel, expand the **Component Browser**:
-  1. Click on any listed Link or Joint item.
-  2. In the search box, type a search filter (e.g., `forearm`).
-  3. Clear the search text.
+### `TC-KIN-04`: Bidirectional Kinematic Traversal & Selection
+* Verify contextual hierarchy navigation across links and joints.
+- [ ] **Action**:
+  1. Select a link empty object in the 3D Viewport and open the **Links** panel.
+  2. Locate the **Connected Joints** section:
+     - For base link, verify it displays `Root Link (Robot Base)` with a world icon (`WORLD`).
+     - For child links, verify it displays the `Parent Joint` button; click the button to select the joint in the 3D Viewport.
+     - For links with outgoing connections, verify child joints are listed; click any child joint button to select it.
+  3. With a joint selected, open the **Joints** panel:
+     - In the **Connection:** section, click the select button (eye icon) next to `Parent Link`: verify the parent link empty is selected in the 3D Viewport.
+     - Click the select button next to `Child Link`: verify the child link empty is selected in the 3D Viewport.
 - [ ] **Expected**:
-  - Clicking an item immediately selects and activates that object in the 3D Viewport.
-  - Typing a search query filters the listed counts and items in real-time.
-  - Clearing the search restores the full list.
+  - 1-click kinematic selection navigates seamlessly between links and joints without scrolling long flat lists.
+  - Root link and standalone link statuses accurately reflect kinematic topology.
 
 ### `TC-KIN-05`: Undo / Redo Event Stack Resilience
 * Verify the property and handler engine survives aggressive undo cycles.
@@ -198,7 +202,7 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 
 ## Phase 6: Structural Validation & Security Sandbox
 
-### `TC-VAL-01`: Pre-Flight Component Browser Validation
+### `TC-VAL-01`: Pre-Flight Kinematic & Physics Validation
 * Verify comprehensive model validation before compiling.
 - [ ] **Action**: Intentionally introduce defects: disconnect a link (orphan link), create a closed kinematic loop, and click `Run Validation`.
 - [ ] **Expected**:
@@ -279,4 +283,3 @@ A release is authorized for deployment to PyPI, GitHub Releases, and the Blender
 *The following are documented behaviors by design, not defects:*
 * **Selection Flash**: The 3D Viewport may flash a brief selection outline when real-time name synchronization runs across multiple object collections.
 * **Gizmo Redraw Throttle**: In ultra-high-poly scenes (>5M polygons), redraw latency may reach ~50ms during active inertia matrix rotation.
-* **Search Case Insensitivity**: The Component Browser search filter operates case-insensitively for ergonomic workflow speed.
