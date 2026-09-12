@@ -197,17 +197,31 @@ Programmatic tutorials in the documentation:
 ## Roadmap
 
 ### Phase 1: Professional Foundation (Current)
-- [x] **v1.0-v1.2**: Core URDF/XACRO export, Sensors, `ros2_control`, and Hexagonal Architecture.
-- [x] **v1.3.0**: Performance & Control (Depsgraph, ROS 2 Control enhancements).
+- [x] **v1.0 - v1.2**: Core URDF/XACRO export, Sensors, `ros2_control`, and Hexagonal Architecture.
+- [x] **v1.3.0**: Performance & Control (Depsgraph evaluation, ROS 2 Control enhancements).
 - [x] **v1.4.0**: Headless core decoupling, Composer API, Namespaced Merging, and MoveIt 2 SRDF generation.
-- [x] **v1.5.0**: Multi-Geometry Management (Multiple Visuals/Collisions per link, UILists, Primitive Controls & Realtime Viewport Sync).
-- [ ] **v1.6.0**: SRDF Configuration Panel (Expose existing MoveIt planning logic to Blender UI).
-- [ ] **v1.7.0**: LinkForge CLI & GitHub Actions (Headless generation in CI pipelines).
+- [x] **v1.5.x**: Multi-Geometry Management (Multiple Visuals/Collisions per link, UILists, Primitive Controls & Realtime Viewport Sync).
+- [ ] **v1.6.0**: **SRDF Configuration Panel**: Expose MoveIt 2 planning groups, end-effectors, and collision disable matrix directly in the Blender UI.
+- [ ] **v1.7.0**: **LinkForge CLI & CI Automation**:
+  - Headless terminal tooling (`linkforge lint`, `linkforge compile`, `linkforge inspect`).
+  - Official `setup-linkforge` GitHub Action for automated physical and topological verification in CI pipelines.
 
 ### Phase 2: Multi-Physics Interoperability (Upcoming)
-- [ ] **v2.0.0**: The **`.lf` Intermediate Representation (IR)**. An open, typed source of truth exported from CAD plugins or authored in Python that compiles deterministically to downstream runtimes.
-- [ ] **v2.1.0**: Native MuJoCo / MJCF compilation target.
-- [ ] **v2.2.0**: Native NVIDIA Isaac Sim / OpenUSD compilation target.
+- [ ] **v2.0.0**: **The `.lf` Intermediate Representation (IR)**:
+  - Open, typed JSON/YAML specification with formal JSON Schema validation.
+  - Lossless bidirectional migration: Decompile existing URDF/XACRO $\to$ `.lf`.
+  - Compile `.lf` deterministically to validated URDF and SRDF.
+  - Native `.lf` import/export support in Blender.
+- [ ] **v2.1.0**: **Native MuJoCo (MJCF) Target**:
+  - Direct compiler backend from `.lf` to native MJCF XML (`<worldbody>`, `<geom>`, `<actuator>`, `<site>`, `<tendon>`, `<equality>`).
+  - Headless multi-target compilation: single source of truth for both ROS 2 and MuJoCo.
+- [ ] **v2.2.0**: **Native NVIDIA Isaac Sim (OpenUSD) Target**:
+  - Zero-dependency ASCII USDA compiler implementing `UsdPhysics` and `PhysxSchema` articulations.
+  - Headless asset generation ready for cluster-scale Reinforcement Learning pipelines.
+
+### Phase 3: Ecosystem & Scale (Future Horizon)
+- [ ] **v3.0.0**: Cloud asset resolution (`lf://` registry) and binary protobuf IR (`.lfo`) for instant loading in multi-thousand robot simulations.
+- [ ] **CAD Extensions**: Native `.lf` exporters for Onshape and Fusion 360.
 
 ## Development
 

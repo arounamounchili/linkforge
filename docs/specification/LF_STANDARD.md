@@ -10,7 +10,7 @@ The `.lf` (LinkForge) format is an open, typed **Intermediate Representation (IR
 ### Design Principles
 1.  **Physics is Truth**: Every inertial property must be physically plausible (positive semi-definite via Sylvester's criterion and satisfying principal moments triangle inequalities).
 2.  **Unifying Compiler, Not a Replacement**: `.lf` compiles deterministically into the exact target formats required by runtime environments (URDF/SRDF for ROS 2/MoveIt, MJCF for MuJoCo, USD for Isaac Sim). Downstream stacks remain completely unchanged.
-3.  **Lossless Source of Truth**: Preserves design intent, explicit units, actuator dynamics, and coordinate conventions across editing cycles.
+3.  **Lossless Source of Truth & Bidirectional Migration**: Preserves design intent, explicit units, actuator dynamics, and coordinate conventions across editing cycles, with lossless decompilation support for existing URDF/XACRO models.
 4.  **Modular Assembly**: Support for referencing external components via `lf://` URIs with clean prefix-based namespacing.
 
 ### 1.1 Compilation Targets
@@ -19,8 +19,8 @@ The `.lf` (LinkForge) format is an open, typed **Intermediate Representation (IR
 | :--- | :--- | :--- | :--- |
 | **ROS 2 / Gazebo** | URDF / XACRO | **Production (v1.x)** | Kinematics, visual/collision geometry, ros2_control tags |
 | **MoveIt 2** | SRDF | **Production (v1.x)** | Planning groups, named poses, collision disabling matrix |
-| **MuJoCo** | MJCF (XML) | *Planned (v2.0)* | Contact dynamics, tendons, actuator torque limits |
-| **Isaac Sim** | OpenUSD (USDA/USDC) | *Planned (v2.0)* | RTX rendering, PhysX articulation schemas |
+| **MuJoCo** | MJCF (XML) | *Planned (v2.1)* | Contact dynamics, tendons, actuator torque limits, sites |
+| **Isaac Sim** | OpenUSD (USDA) | *Planned (v2.2)* | RTX rendering, PhysX articulation schemas, zero-dependency emitter |
 
 ## 2. File Structure
 The `.lf` standard uses **JSON** or **YAML** as its primary exchange format.
@@ -88,7 +88,7 @@ To support high-fidelity Reinforcement Learning, `.lf` supports torque/effort cu
 When merging robots (e.g., attaching an arm to a torso), LinkForge uses **Prefix Namespacing** to avoid collisions.
 *   Sub-robot `arm` link `hand` becomes `arm_hand` in the final IR.
 
-## 5. Future: Binary IR
+## 5. Future: Binary IR (Phase 3 Horizon)
 For high-performance loading in large-scale simulation environments (e.g., thousands of robots in Isaac Sim), LinkForge will introduce a **Binary IR** based on **Protocol Buffers (protobuf)**. This will serve as the "Object File" (`.lfo`) to the `.lf` "Source Code."
 
 > [!TIP]
