@@ -29,7 +29,7 @@ from ..core.constants import (
     PI,
 )
 from ..preferences import get_addon_prefs
-from ..utils.scene_utils import get_robot_statistics
+from ..utils.scene_utils import get_robot_statistics, is_robot_joint
 
 _builtin_shader_name = None
 
@@ -232,19 +232,9 @@ def _draw_internal() -> None:
         if context.active_object and getattr(context.active_object, "select_get", lambda: False)():
             raw_selected.add(context.active_object)
 
-        # Build selection closure (includes parents and children so selecting a mesh or link also shows its joints)
-        selected_set = set(raw_selected)
-        for s_obj in raw_selected:
-            # Traverse upwards (child mesh -> link empty -> joint empty -> parent link)
-            curr = getattr(s_obj, "parent", None)
-            while curr:
-                selected_set.add(curr)
-                curr = getattr(curr, "parent", None)
-            # Traverse direct children (parent link -> joint empty)
-            for child in getattr(s_obj, "children", []):
-                selected_set.add(child)
-
-        target_joints = [obj for obj in target_joints if obj in selected_set]
+        # Only draw axes for directly selected robot joints
+        selected_joints = {obj for obj in raw_selected if is_robot_joint(obj)}
+        target_joints = [obj for obj in target_joints if obj in selected_joints]
 
     if not target_joints:
         return

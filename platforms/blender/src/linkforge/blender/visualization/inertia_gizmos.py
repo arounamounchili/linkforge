@@ -30,7 +30,7 @@ from ..core.constants import (
     PI,
 )
 from ..preferences import get_addon_prefs
-from ..utils.scene_utils import get_robot_statistics
+from ..utils.scene_utils import get_robot_statistics, is_robot_joint, is_robot_link
 
 _builtin_shader_name = None
 
@@ -216,19 +216,27 @@ def draw_inertia_gizmos() -> None:
             ):
                 raw_selected.add(context.active_object)
 
-            # Build selection closure (includes parents and children so selecting a mesh or joint also shows its inertia)
-            selected_set = set(raw_selected)
+            # Resolve selected objects to their immediate owning link without traversing the kinematic tree
+            selected_links: set[Any] = set()
             for s_obj in raw_selected:
-                # Traverse upwards (child mesh -> link empty)
+                if is_robot_link(s_obj):
+                    selected_links.add(s_obj)
+                    continue
+
+                if is_robot_joint(s_obj):
+                    continue
+
+                # Traverse upwards from visual/collision child mesh to find immediate owning link
                 curr = getattr(s_obj, "parent", None)
                 while curr:
-                    selected_set.add(curr)
+                    if is_robot_link(curr):
+                        selected_links.add(curr)
+                        break
+                    if is_robot_joint(curr):
+                        break
                     curr = getattr(curr, "parent", None)
-                # Traverse direct children (joint empty -> child link)
-                for child in getattr(s_obj, "children", []):
-                    selected_set.add(child)
 
-            target_objects = [obj for obj in target_objects if obj in selected_set]
+            target_objects = [obj for obj in target_objects if obj in selected_links]
 
         if not target_objects:
             return

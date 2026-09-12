@@ -441,7 +441,7 @@ class TestLinkPanel:
         mock_layout.label.assert_any_call(text="Connected Joints", icon="EMPTY_ARROWS")
         mock_layout.label.assert_any_call(text="Parent Joint:", icon="CON_LOCLIKE")
         mock_layout.operator.assert_any_call(
-            "linkforge.select_tree_object", text="joint1", icon="RESTRICT_SELECT_OFF"
+            "linkforge.select_tree_object", text="joint1", icon="EMPTY_AXIS"
         )
 
         # Standalone link evaluation (no connected joints)

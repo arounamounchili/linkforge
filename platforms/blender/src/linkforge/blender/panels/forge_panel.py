@@ -15,6 +15,7 @@ from ..constants import (
     PROP_ROBOT,
 )
 from ..preferences import get_addon_prefs
+from ..utils.scene_utils import get_robot_statistics
 
 
 class LINKFORGE_PT_forge(Panel):
@@ -38,9 +39,10 @@ class LINKFORGE_PT_forge(Panel):
         if not layout:
             return
 
-        if not context.scene:
+        scene = context.scene
+        if not scene:
             return
-        scene_props = getattr(context.scene, PROP_ROBOT)
+        scene_props = getattr(scene, PROP_ROBOT)
 
         if scene_props.is_importing:
             # Active Import Status
@@ -116,6 +118,31 @@ class LINKFORGE_PT_forge(Panel):
                     )
                     if prefs:
                         r2.prop(prefs, "joint_empty_size", text="Size")
+
+        # Component Browser (Quick Search & Selection)
+        stats = get_robot_statistics(scene)
+        if stats.num_links > 0:
+            layout.separator()
+            layout.prop(
+                scene_props,
+                "show_kinematic_tree",
+                toggle=True,
+                text="Component Browser",
+                icon="VIEWZOOM",
+                emboss=True,
+            )
+            if scene_props.show_kinematic_tree:
+                from .export_panel import draw_component_browser
+
+                draw_component_browser(
+                    layout,
+                    scene,
+                    stats.link_objects,
+                    stats.num_links,
+                    _num_dof=stats.total_dof,
+                    stats=stats,
+                    context=context,
+                )
 
         layout.separator()
         layout.label(text="Create robot structure:", icon="TOOL_SETTINGS")

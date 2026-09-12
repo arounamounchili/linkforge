@@ -173,7 +173,7 @@ class TestInertiaGizmos:
             inertia_gizmos.draw_inertia_gizmos()
             assert gpu.state.depth_test_set.called
 
-            # When active object is child of link (e.g. visual mesh), also draws
+            # When active object is child of link (e.g. visual mesh), draws for that link
             child_mesh = bpy.data.objects.new("child_visual", None)
             child_mesh.parent = link_obj
             scene.collection.objects.link(child_mesh)
@@ -182,6 +182,32 @@ class TestInertiaGizmos:
             gpu.state.depth_test_set.reset_mock()
             inertia_gizmos.draw_inertia_gizmos()
             assert gpu.state.depth_test_set.called
+
+            # When child mesh is selected, ancestor links in hierarchy must not be drawn
+            base_link = create_robot_link(
+                "base_link_ancestor", scene, with_visual=False, with_collision=False
+            )
+            lf_base = safe_get_linkforge(base_link)
+            lf_base.is_robot_link = True
+            stats.manual_inertia_objects = [link_obj, base_link]
+
+            base_link.select_set(False)
+            link_obj.select_set(False)
+            child_mesh.select_set(True)
+            bpy.context.view_layer.objects.active = child_mesh
+
+            with patch(
+                "linkforge.blender.visualization.inertia_gizmos.generate_inertia_axes_geometry",
+                return_value={
+                    "lines": [Vector((0, 0, 0)), Vector((1, 0, 0))],
+                    "line_colors": [[1, 0, 0, 1], [1, 0, 0, 1]],
+                },
+            ) as mock_geom:
+                inertia_gizmos.draw_inertia_gizmos()
+                assert mock_geom.called
+                called_objects = [call[0][0] for call in mock_geom.call_args_list]
+                assert link_obj in called_objects
+                assert base_link not in called_objects
 
     def test_ensure_inertia_handler(self) -> None:
         """Verify SpaceView3D draw handler registration/tag_redraw."""
@@ -349,6 +375,8 @@ class TestJointGizmos:
         joint_obj = bpy.data.objects.new("joint_target", None)
         scene.collection.objects.link(joint_obj)
         joint_obj.type = "EMPTY"
+        jp = safe_get_joint(joint_obj)
+        jp.is_robot_joint = True
         safe_update(scene)
 
         gpu.state.depth_test_set.reset_mock()
@@ -385,38 +413,38 @@ class TestJointGizmos:
                 call[0][0] == "LESS_EQUAL" for call in gpu.state.depth_test_set.call_args_list
             )
 
-            # When child link of joint is selected, also draws
-            child_link = bpy.data.objects.new("child_link", None)
-            child_link.parent = joint_obj
-            scene.collection.objects.link(child_link)
+            # When unselected objects (such as link meshes) are selected, joint axes do not draw
+            unrelated_mesh = bpy.data.objects.new("unrelated_mesh", None)
+            scene.collection.objects.link(unrelated_mesh)
             joint_obj.select_set(False)
-            child_link.select_set(True)
-            bpy.context.view_layer.objects.active = child_link
+            unrelated_mesh.select_set(True)
+            bpy.context.view_layer.objects.active = unrelated_mesh
             gpu.state.depth_test_set.reset_mock()
             joint_gizmos.draw_joint_axes()
-            assert gpu.state.depth_test_set.called
+            assert not gpu.state.depth_test_set.called
 
-            # When child mesh of link is selected, also draws
-            child_mesh = bpy.data.objects.new("child_mesh", None)
-            child_mesh.parent = child_link
-            scene.collection.objects.link(child_mesh)
-            child_link.select_set(False)
-            child_mesh.select_set(True)
-            bpy.context.view_layer.objects.active = child_mesh
-            gpu.state.depth_test_set.reset_mock()
-            joint_gizmos.draw_joint_axes()
-            assert gpu.state.depth_test_set.called
+            # When another unselected joint is in the scene, only the selected joint is drawn
+            other_joint = bpy.data.objects.new("other_joint", None)
+            other_joint.type = "EMPTY"
+            other_jp = safe_get_joint(other_joint)
+            other_jp.is_robot_joint = True
+            scene.collection.objects.link(other_joint)
+            stats.joint_objects = [joint_obj, other_joint]
 
-            # When parent link of joint is selected, also draws
-            parent_link = bpy.data.objects.new("parent_link", None)
-            joint_obj.parent = parent_link
-            scene.collection.objects.link(parent_link)
-            child_mesh.select_set(False)
-            parent_link.select_set(True)
-            bpy.context.view_layer.objects.active = parent_link
-            gpu.state.depth_test_set.reset_mock()
-            joint_gizmos.draw_joint_axes()
-            assert gpu.state.depth_test_set.called
+            joint_obj.select_set(True)
+            unrelated_mesh.select_set(False)
+            other_joint.select_set(False)
+            bpy.context.view_layer.objects.active = joint_obj
+
+            with patch(
+                "linkforge.blender.visualization.joint_gizmos.generate_axis_geometry",
+                return_value={"lines": [], "line_colors": [], "tris": [], "tri_colors": []},
+            ) as mock_axis_geom:
+                joint_gizmos.draw_joint_axes()
+                assert mock_axis_geom.called
+                called_joints = [call[0][0] for call in mock_axis_geom.call_args_list]
+                assert joint_obj in called_joints
+                assert other_joint not in called_joints
 
     def test_draw_joint_axes_handles_deleted_object_reference_error(self, scene) -> None:
         """Verify draw loop handles ReferenceError gracefully."""

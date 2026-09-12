@@ -138,17 +138,15 @@ class LINKFORGE_PT_links(Panel):
         joint_box.label(text="Connected Joints", icon="EMPTY_ARROWS")
 
         if parent_joint:
-            pj_row = joint_box.row(align=True)
+            pj_col = joint_box.column(align=True)
+            pj_col.label(text="Parent Joint:", icon="CON_LOCLIKE")
             pj_props = get_joint_props(parent_joint)
             pj_name = (
                 pj_props.joint_name
                 if pj_props and pj_props.joint_name
                 else getattr(parent_joint, "name", "Joint")
             )
-            pj_row.label(text="Parent Joint:", icon="CON_LOCLIKE")
-            op = pj_row.operator(
-                "linkforge.select_tree_object", text=pj_name, icon="RESTRICT_SELECT_OFF"
-            )
+            op = pj_col.operator("linkforge.select_tree_object", text=pj_name, icon="EMPTY_AXIS")
             op.object_name = parent_joint.name
             op.object_type = "joint"
         elif child_joints:
@@ -161,6 +159,8 @@ class LINKFORGE_PT_links(Panel):
             pj_row.label(text="Standalone Link (No joints connected)", icon="INFO")
 
         if child_joints:
+            if parent_joint:
+                joint_box.separator()
             col = joint_box.column(align=True)
             col.label(text=f"Child Joints ({len(child_joints)}):", icon="FORWARD")
             for c_joint in child_joints:
