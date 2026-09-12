@@ -12,7 +12,7 @@
 
 Writing and maintaining URDF or SRDF by hand is fragile: inertia values are guessed, collision geometries drift, and physics bugs surface only after a simulator crash (or worse, on hardware). LinkForge Core solves this by treating your robot as **source code with physical constraints**, not a static XML document.
 
-It provides a mathematically rigorous, zero-dependency Intermediate Representation (IR) engine with hardened physical validation, scientific inertia solvers (Mirtich / Sylvester), and lossless round-trip translation between **URDF**, **XACRO**, and **SRDF**.
+It provides a mathematically rigorous, lightweight Intermediate Representation (IR) engine with hardened physical validation, scientific inertia solvers (Mirtich / Sylvester), and lossless round-trip translation between **URDF**, **XACRO**, and **SRDF**.
 
 ## Installation
 
@@ -20,14 +20,14 @@ It provides a mathematically rigorous, zero-dependency Intermediate Representati
 pip install linkforge-core
 ```
 
-Zero external dependencies. No Blender, no ROS installation, no C++ compilation required.
+Minimal pure-Python dependencies (only PyYAML). No Blender, no ROS installation, no C++ compilation required.
 
 ## Why LinkForge Core?
 
 - **Physically Guaranteed Sim Stability**: Zero-mass links or unphysical inertia tensors cause simulators like Gazebo or Isaac Sim to crash. LinkForge Core uses the **Mirtich algorithm** (Divergence Theorem) to calculate exact inertia properties from geometries, validated against **Sylvester's Criterion** to ensure physical validity.
 - **Standardized & Namespaced Assembly**: Easily compile complex robots, merge multiple sub-assemblies (e.g. attaching a gripper to an arm), and apply joint prefixing and limits programmatically using the fluent **Composer API**.
 - **Hardened Sandboxed Security**: Safely parse untrusted third-party robot descriptions. LinkForge Core blocks path-traversal attacks and restrains file reading to designated package boundaries.
-- **Light & Portable**: Zero external dependencies. No C++ compilation required, making it highly portable across standard Python environments, CI/CD pipelines, and HPC clusters.
+- **Light & Portable**: Minimal pure-Python footprint with no C++ extensions. Highly portable across standard Python environments, CI/CD pipelines, and HPC clusters.
 
 ## Quickstart
 
@@ -87,6 +87,36 @@ else:
         print(f"  [{issue.code.name}] {issue.message} on {issue.affected_objects}")
 ```
 
+### Modular Assembly & Sub-Assemblies
+
+Compose validated sub-assemblies from reusable robot components with automated naming prefixing and transform offsets:
+
+```python
+from linkforge.core import RobotBuilder, read_urdf
+
+base_builder = RobotBuilder(robot=read_urdf("mobile_base.urdf"))
+arm_builder  = RobotBuilder(robot=read_urdf("manipulator.urdf"))
+
+# Attach arm onto the base, auto-resolving naming conflicts
+base_builder.attach(
+    arm_builder,
+    at_link="top_plate",
+    prefix="left_arm_",
+    xyz=(0, 0, 0.1),
+)
+
+# Add a MoveIt 2 planning group for the combined assembly
+base_builder.semantic.group(
+    "arm_chain",
+    base_link="top_plate",
+    tip_link="left_arm_end_effector",
+)
+
+robot = base_builder.build(validate=True)
+urdf_xml = base_builder.export_urdf()
+srdf_xml = base_builder.export_srdf()
+```
+
 ### MoveIt 2 & SRDF Semantic Composition
 
 Programmatically compose MoveIt 2 planning groups, end-effectors, and self-collision matrices for SRDF without manually editing XML:
@@ -104,7 +134,8 @@ builder.semantic.group(
     tip_link="wrist_link",
 )
 
-# Define an end-effector
+# Define an end-effector group and register the end-effector
+builder.semantic.group("gripper_group", links=["gripper_link"])
 builder.semantic.end_effector(
     name="gripper",
     group="gripper_group",

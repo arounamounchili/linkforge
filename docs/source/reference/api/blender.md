@@ -200,6 +200,33 @@ Blender-specific helpers.
    :show-inheritance:
 ```
 
+## Handlers
+
+Scene lifecycle and name synchronization handlers.
+
+```{eval-rst}
+.. automodule:: linkforge.blender.handlers.name_sync_handler
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+## Visualization
+
+3D Viewport gizmos for inertia tensors and joint kinematics.
+
+```{eval-rst}
+.. automodule:: linkforge.blender.visualization.inertia_gizmos
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.visualization.joint_gizmos
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
 ## Context
 
 ```{eval-rst}
