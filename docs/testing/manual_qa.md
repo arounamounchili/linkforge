@@ -15,8 +15,8 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 | **Test Date** | `YYYY-MM-DD` |
 | **Blender Version** | `Blender 4.2 LTS / 4.3 / 4.5+` |
 | **Operating System** | `macOS (Apple Silicon / Intel) / Ubuntu 22.04+ / Windows 11` |
-| **LinkForge Version** | `v1.5.2` |
-| **Build Artifact** | `dist/linkforge-blender-1.5.2-[platform].zip` |
+| **LinkForge Version** | `v[version]` |
+| **Build Artifact** | `dist/linkforge-blender-[version]-[platform].zip` |
 | **Git Commit / Branch** | `[commit-hash] / [branch-name]` |
 
 ---
@@ -30,7 +30,7 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   - LinkForge installs without errors or Python tracebacks in the System Console.
   - Bundled binary wheels (e.g. `PyYAML`) load properly for the host Python architecture.
   - LinkForge tab appears in the 3D Viewport sidebar (`N-Panel`).
-  - Add-on Preferences display version `1.5.2` and configuration settings (e.g. "Show Inertia Frames", "Enhanced Visualization (RViz-style)", "Joint Size").
+  - Add-on Preferences display the correct release version and configuration settings (e.g. "Show Inertia Frames", "Enhanced Visualization (RViz-style)", "Joint Size").
 
 ### `TC-INST-02`: Base Link Creation
 * Verify initial link entity bootstrapping from viewport geometry.
