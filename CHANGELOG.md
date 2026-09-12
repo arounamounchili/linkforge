@@ -5,6 +5,18 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3](https://github.com/arounamounchili/linkforge/compare/v1.5.2...v1.5.3) (2026-09-12)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** handle deleted StructRNA gracefully in deferred renames ([6c00fb4](https://github.com/arounamounchili/linkforge/commit/6c00fb44f988eb42f8e36af295414bc193198734))
+
+
+### 🛠️ Refactors
+
+* architectural cleanup, modular adapters, and test suite hardening ([0eba91b](https://github.com/arounamounchili/linkforge/commit/0eba91bf2c0345a7f1dc0c10daef5c1725d5b7cb))
+
 ## [1.5.2](https://github.com/arounamounchili/linkforge/compare/v1.5.1...v1.5.2) (2026-09-10)
 
 
