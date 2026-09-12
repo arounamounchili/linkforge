@@ -1147,6 +1147,7 @@ class MockObject(MockPropertyGroup):
         self.bound_box = [(0.0, 0.0, 0.0)] * 8
         self.empty_display_type = "PLAIN_AXES"
         self.empty_display_size = 0.5
+        self.original = self
         self.hide_viewport = False
         self.hide_render = False
 
@@ -1445,6 +1446,18 @@ class MockScene(MockPropertyGroup):
 
 class MockOperator:
     """Mock for bpy.types.Operator."""
+
+    def __init__(self, **kwargs):
+        for k, v in getattr(self.__class__, "__annotations__", {}).items():
+            if not hasattr(self, k):
+                default_val: typing.Any = ""
+                if isinstance(v, str):
+                    default_match = re.search(r"default\s*=\s*['\"]([^'\"]*)['\"]", v)
+                    if default_match:
+                        default_val = default_match.group(1)
+                setattr(self, k, default_val)
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @classmethod
     def poll(cls, context):

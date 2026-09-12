@@ -24,6 +24,9 @@ class LINKFORGE_OT_select_tree_object(Operator):
     object_name: StringProperty(  # type: ignore
         name="Object Name", description="Name of the object to select"
     )
+    object_type: StringProperty(  # type: ignore
+        name="Object Type", description="Type of object (link, joint, sensor)", default=""
+    )
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:

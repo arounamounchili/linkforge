@@ -59,8 +59,10 @@ def _categorize_scene_objects(
         Tuple of (link_objects, joint_objects, sensor_objects,
                  joints_map, root_link)
     """
+    from ..handlers.name_sync_handler import sync_scene_identities
     from ..utils.scene_utils import get_robot_statistics
 
+    sync_scene_identities(scene)
     stats = get_robot_statistics(scene, force_refresh=True)
     return (
         stats.link_objects,

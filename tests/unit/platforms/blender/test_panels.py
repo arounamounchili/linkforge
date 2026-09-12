@@ -829,11 +829,25 @@ class TestRobotOperators:
         link_obj = create_robot_link("test_link", scene)
 
         op = LINKFORGE_OT_select_tree_object()
+        assert op.object_type == ""
         op.object_name = "test_link"
         op.object_type = "link"
 
         res = op.execute(bpy.context)
         assert res == {"FINISHED"}
+
+        # Test with joint and sensor objects
+        joint_obj = create_robot_joint("test_joint", link_obj, None, scene)
+        op_joint = LINKFORGE_OT_select_tree_object()
+        op_joint.object_name = "test_joint"
+        op_joint.object_type = "joint"
+        assert op_joint.execute(bpy.context) == {"FINISHED"}
+
+        sensor_obj = create_test_object("test_sensor", None, scene)
+        op_sensor = LINKFORGE_OT_select_tree_object()
+        op_sensor.object_name = "test_sensor"
+        op_sensor.object_type = "sensor"
+        assert op_sensor.execute(bpy.context) == {"FINISHED"}
 
         mock_ctx = MagicMock()
         mock_ctx.scene = scene

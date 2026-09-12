@@ -235,3 +235,71 @@ class TestNameSynchronization:
 
         # The handler should have updated joint_name to match the new obj.name
         assert safe_get_joint(obj).joint_name == "sync_joint_renamed"
+
+    def test_sync_scene_identities(self, scene) -> None:
+        """Test batch synchronization of scene identities across links, joints, and sensors."""
+        cleanup_blender_scene(scene)
+
+        # Create link, joint, sensor with desynced source names
+        link = create_test_object("arm_link", None, scene)
+        lp = safe_get_linkforge(link, scene)
+        lp.is_robot_link = True
+        lp._values["source_name_stored"] = "old_arm_link"
+
+        joint = create_test_object("arm_joint", None, scene)
+        jp = safe_get_joint(joint, scene)
+        jp.is_robot_joint = True
+        jp._values["source_name_stored"] = "old_arm_joint"
+
+        sensor = create_test_object("camera_sensor", None, scene)
+        sp = safe_get_sensor(sensor, scene)
+        sp.is_robot_sensor = True
+        sp._values["source_name_stored"] = "old_camera_sensor"
+
+        # Trigger batch synchronization
+        name_sync_handler.sync_scene_identities(scene)
+
+        assert lp.link_name == "arm_link"
+        assert jp.joint_name == "arm_joint"
+        assert sp.sensor_name == "camera_sensor"
+
+    def test_sync_object_identity_unwraps_evaluated_original(self, scene) -> None:
+        """Verify sync_object_identity targets the original object when passed an evaluated proxy."""
+        real_obj = create_test_object("manipulator_forearm", None, scene)
+        lp = safe_get_linkforge(real_obj, scene)
+        lp.is_robot_link = True
+        lp._values["source_name_stored"] = "arm_link"
+
+        class MockEvaluatedProxy:
+            def __init__(self, orig):
+                self.original = orig
+                self.type = orig.type
+                self.name = orig.name
+
+        proxy = MockEvaluatedProxy(real_obj)
+        name_sync_handler.sync_object_identity(proxy)
+
+        assert lp.link_name == "manipulator_forearm"
+
+    def test_sync_scene_identities_edge_cases(self) -> None:
+        """Verify sync_scene_identities handles None and scenes without objects attribute gracefully."""
+        # Should not raise any errors
+        name_sync_handler.sync_scene_identities(None)
+        name_sync_handler.sync_scene_identities(object())
+
+    def test_sync_object_identity_non_object_datablocks(self) -> None:
+        """Verify sync_object_identity safely ignores datablocks without a type attribute."""
+        # E.g. Mesh, Material, NodeTree or arbitrary python objects
+        name_sync_handler.sync_object_identity(None)
+        name_sync_handler.sync_object_identity(object())
+
+    def test_sync_object_identity_reference_error(self) -> None:
+        """Verify sync_object_identity gracefully handles deleted datablocks raising ReferenceError."""
+
+        class MockDeletedObject:
+            @property
+            def original(self):
+                raise ReferenceError("StructRNA of type Object has been removed")
+
+        # Should not raise
+        name_sync_handler.sync_object_identity(MockDeletedObject())
