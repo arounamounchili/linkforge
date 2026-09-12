@@ -11,7 +11,7 @@ The `.lf` (LinkForge) format is an open, typed **Intermediate Representation (IR
 1.  **Physics is Truth**: Every inertial property must be physically plausible (positive semi-definite via Sylvester's criterion and satisfying principal moments triangle inequalities).
 2.  **Unifying Compiler, Not a Replacement**: `.lf` compiles deterministically into the exact target formats required by runtime environments (URDF/SRDF for ROS 2/MoveIt, MJCF for MuJoCo, USD for Isaac Sim). Downstream stacks remain completely unchanged.
 3.  **Lossless Source of Truth & Bidirectional Migration**: Preserves design intent, explicit units, actuator dynamics, and coordinate conventions across editing cycles, with lossless decompilation support for existing URDF/XACRO models.
-4.  **Modular Assembly**: Support for referencing external components via `lf://` URIs with clean prefix-based namespacing.
+4.  **Modular Assembly**: Support for composable sub-robot assemblies with clean prefix-based namespacing.
 
 ### 1.1 Compilation Targets
 
@@ -67,10 +67,10 @@ LinkForge enforces scientific inertia tensors.
 }
 ```
 
-### 3.2 Resource Resolution (`lf://`)
-Assets (meshes, materials) should be referenced using cloud-resolvable URIs.
-*   `lf://local/parts/wheel.glb`: Resolve from the local project workspace.
-*   `lf://registry/sensors/lidar_v3.lf`: Resolve from a global or private registry.
+### 3.2 Asset Resolution
+Assets (meshes, materials) are referenced using portable relative paths or workspace-scoped resolvers, ensuring assets resolve consistently across headless CI, Blender, and simulation targets without external server dependencies:
+*   `parts/wheel.glb`: Relative path within the robot package.
+*   `package://my_robot/meshes/arm.dae`: Standard ROS package URI resolved via `linkforge.core.base.FileSystemResolver`.
 
 ### 3.3 Actuator Curves (AI-Ready)
 To support high-fidelity Reinforcement Learning, `.lf` supports torque/effort curves rather than just static limits.
@@ -88,8 +88,8 @@ To support high-fidelity Reinforcement Learning, `.lf` supports torque/effort cu
 When merging robots (e.g., attaching an arm to a torso), LinkForge uses **Prefix Namespacing** to avoid collisions.
 *   Sub-robot `arm` link `hand` becomes `arm_hand` in the final IR.
 
-## 5. Future: Binary IR (Phase 3 Horizon)
-For high-performance loading in large-scale simulation environments (e.g., thousands of robots in Isaac Sim), LinkForge will introduce a **Binary IR** based on **Protocol Buffers (protobuf)**. This will serve as the "Object File" (`.lfo`) to the `.lf` "Source Code."
+## 5. Future Considerations: Binary IR
+For high-performance loading in large-scale simulation environments (e.g., thousands of robots in Isaac Sim), LinkForge may introduce a **Binary IR** based on **Protocol Buffers (protobuf)**. This will serve as the "Object File" (`.lfo`) to the `.lf` "Source Code."
 
 > [!TIP]
 > For implementation details, see the `linkforge.core.models` Python module in the source code.
