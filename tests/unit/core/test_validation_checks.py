@@ -1,18 +1,38 @@
 """Unit tests for modular validation checks."""
 
+import struct
+
 import pytest
 from linkforge.core import (
+    Collision,
     Joint,
+    JointLimits,
     JointMimic,
     JointType,
     Link,
     Robot,
+    RobotModelError,
+    RobotValidationError,
     ValidationErrorCode,
     Vector3,
+    Visual,
 )
-from linkforge.core.io import read_srdf
-from linkforge.core.models.link import Inertial
+from linkforge.core.constants import MIN_REASONABLE_INERTIA
+from linkforge.core.io import read_srdf, validate_robot
+from linkforge.core.models.geometry import Box
+from linkforge.core.models.graph import KinematicGraph
+from linkforge.core.models.link import Inertial, InertiaTensor
 from linkforge.core.models.ros2_control import Ros2Control, Ros2ControlJoint
+from linkforge.core.models.srdf import (
+    Chain,
+    EndEffector,
+    GroupState,
+    PassiveJoint,
+    PlanningGroup,
+)
+from linkforge.core.models.srdf import (
+    SemanticRobotDescription as Semantic,
+)
 from linkforge.core.validation.checks import (
     DuplicateNameCheck,
     GeometryCheck,
@@ -22,6 +42,7 @@ from linkforge.core.validation.checks import (
     MimicChainCheck,
     Ros2ControlCheck,
     SemanticCheck,
+    SemanticConsistencyCheck,
     TreeStructureCheck,
 )
 from linkforge.core.validation.result import ValidationResult
@@ -139,8 +160,6 @@ def test_tree_structure_check_disconnected(empty_robot, result):
 
 def test_tree_structure_check_multiple_roots_empty_roots(empty_robot, result, monkeypatch):
     """Test TreeStructureCheck when MULTIPLE_ROOTS error is raised and roots list is empty."""
-    from linkforge.core.exceptions import RobotValidationError, ValidationErrorCode
-
     empty_robot.add_link(Link(name="base"))
 
     def mock_root_link(self):
@@ -171,8 +190,6 @@ def test_mass_properties_check(empty_robot, result):
     empty_robot.add_link(link3)
 
     # Link with near-zero inertia (Critical low inertia error)
-    from linkforge.core.models.link import InertiaTensor
-
     tiny_tensor = InertiaTensor(ixx=1e-12, ixy=0, ixz=0, iyy=1e-12, iyz=0, izz=1e-12)
     link4 = Link(name="low_inertia", inertial=Inertial(mass=1.0, inertia=tiny_tensor))
     empty_robot.add_link(link4)
@@ -185,10 +202,34 @@ def test_mass_properties_check(empty_robot, result):
     assert any(warn.title == "Missing inertia" for warn in result.warnings)
 
 
+def test_mass_properties_check_virtual_frame(empty_robot, result):
+    """Test that a pure virtual reference frame without inertial data produces no errors."""
+    empty_robot.add_link(Link(name="base_link", inertial=None))
+    check = MassPropertiesCheck()
+    check.run(empty_robot, result)
+    assert not result.errors
+    assert any(warn.title == "Missing inertia" for warn in result.warnings)
+
+
+def test_mass_properties_check_float32_stability_floor(empty_robot, result):
+    """Test that float32 conversion of stability floor does not trigger false-positive Critical low inertia."""
+    f32_stability_floor = struct.unpack("f", struct.pack("f", MIN_REASONABLE_INERTIA))[0]
+
+    tensor = InertiaTensor(
+        ixx=f32_stability_floor,
+        iyy=f32_stability_floor,
+        izz=f32_stability_floor,
+    )
+    link = Link(name="stability_link", inertial=Inertial(mass=1.0, inertia=tensor))
+    empty_robot.add_link(link)
+
+    check = MassPropertiesCheck()
+    check.run(empty_robot, result)
+    assert not any(err.title == "Critical low inertia" for err in result.errors)
+
+
 def test_mass_properties_check_unphysical_inertia(empty_robot, result):
     """Test that MassPropertiesCheck catches non-positive-definite or triangle-violating inertia tensors."""
-    from linkforge.core.models.link import InertiaTensor
-
     # Bypass constructor using object.__new__ to simulate externally loaded / corrupted tensor
     unphysical_tensor = object.__new__(InertiaTensor)
     object.__setattr__(unphysical_tensor, "ixx", 2.0)
@@ -293,9 +334,6 @@ def test_semantic_check_invalid_end_effector(empty_robot, result):
 
 
 def test_geometry_check_with_geom(empty_robot, result):
-    from linkforge.core import Collision, Visual
-    from linkforge.core.models.geometry import Box
-
     geom = Box(size=Vector3(1, 1, 1))
 
     link = Link(
@@ -375,8 +413,6 @@ def test_semantic_check_comprehensive(empty_robot, result) -> None:
 
 
 def test_semantic_check_dfs_not_found(result) -> None:
-    from linkforge.core.models.srdf import PlanningGroup
-
     check = SemanticCheck()
     group = PlanningGroup(name="ghost", links=("link1",))
     # This directly triggers "if not current_group: return False"
@@ -394,9 +430,6 @@ def test_tree_structure_check_connectivity_disconnected(empty_robot, result, moc
 
 
 def test_tree_structure_check_exceptions(empty_robot, result, mocker):
-    from linkforge.core import RobotModelError, RobotValidationError
-    from linkforge.core.models.graph import KinematicGraph
-
     check = TreeStructureCheck()
     check.run(empty_robot, result)
     assert not result.errors  # already reported by HasLinksCheck
@@ -466,8 +499,6 @@ def test_robot_validator_integration(empty_robot):
     # Just ensure it runs without crashing and collects issues
     empty_robot.add_link(Link(name="base", inertial=Inertial(mass=1.0)))
     # Trigger a warning (no visual/collision)
-    from linkforge.core.io import validate_robot
-
     result = validate_robot(empty_robot)
     if not result.is_valid:
         for issue in result.issues:
@@ -477,18 +508,6 @@ def test_robot_validator_integration(empty_robot):
 
 
 def test_semantic_consistency_check_coverage(empty_robot, result):
-    from linkforge.core import JointLimits
-    from linkforge.core.models.ros2_control import Ros2Control, Ros2ControlJoint
-    from linkforge.core.models.srdf import (
-        Chain,
-        EndEffector,
-        GroupState,
-        PassiveJoint,
-        PlanningGroup,
-    )
-    from linkforge.core.models.srdf import SemanticRobotDescription as Semantic
-    from linkforge.core.validation.checks import SemanticConsistencyCheck
-
     empty_robot.add_link(Link(name="base"))
     empty_robot.add_link(Link(name="l1"))
     empty_robot.add_link(Link(name="l2"))
@@ -542,8 +561,6 @@ def test_mass_properties_diagonal_triangle_inequality(empty_robot, result):
     """
     # Create a tensor that has zero off-diagonals but violates triangle inequality.
     # Use object.__new__ to bypass the InertiaTensor constructor validation.
-    from linkforge.core.models.link import InertiaTensor
-
     bad_tensor = object.__new__(InertiaTensor)
     object.__setattr__(bad_tensor, "ixx", 10.0)
     object.__setattr__(bad_tensor, "iyy", 1.0)

@@ -225,6 +225,9 @@ def create_robot_link(
     link_obj = create_test_object(name, None, scene=scene)
 
     safe_get_linkforge(link_obj, scene).is_robot_link = True
+    if not with_visual and not with_collision:
+        safe_get_linkforge(link_obj, scene).mass = 0.0
+        safe_get_linkforge(link_obj, scene).use_auto_inertia = False
 
     if parent:
         link_obj.parent = parent

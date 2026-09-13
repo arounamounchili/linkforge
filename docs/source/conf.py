@@ -138,6 +138,7 @@ nitpick_ignore_regex = [
     # Ignore mocked Blender modules
     (r"py:.*", r"bpy\..*"),
     (r"py:.*", r"bpy_extras\..*"),
+    (r"py:.*", r"bmesh\..*"),
     (r"py:.*", r"mathutils\..*"),
     (r"py:.*", r"gpu\..*"),
     (r"py:.*", r"gpu_extras\..*"),
@@ -167,4 +168,4 @@ myst_heading_anchors = 3
 myst_fence_as_directive = ["mermaid"]
 
 # Mock imports for Blender-specific modules
-autodoc_mock_imports = ["bpy", "bpy_extras", "mathutils", "gpu", "gpu_extras", "numpy"]
+autodoc_mock_imports = ["bpy", "bpy_extras", "bmesh", "mathutils", "gpu", "gpu_extras", "numpy"]

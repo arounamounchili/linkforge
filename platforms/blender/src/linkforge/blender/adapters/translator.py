@@ -168,23 +168,27 @@ class LinkTranslator:
                     )
 
         # Translate Physics (Inertia & Mass)
-        if (lp := get_link_props(obj)) and lp.use_auto_inertia:
-            active_lb.mass(lp.mass)
-        else:
-            inertia = InertiaTensor(
-                ixx=props.inertia_ixx,
-                ixy=props.inertia_ixy,
-                ixz=props.inertia_ixz,
-                iyy=props.inertia_iyy,
-                iyz=props.inertia_iyz,
-                izz=props.inertia_izz,
-            )
-            active_lb.mass(
-                props.mass,
-                origin_xyz=tuple(props.inertia_origin_xyz),
-                origin_rpy=tuple(props.inertia_origin_rpy),
-                inertia=inertia,
-            )
+        lp = get_link_props(obj)
+        is_massless = lp is not None and lp.mass == 0.0
+
+        if not is_massless and lp is not None:
+            if lp.use_auto_inertia:
+                active_lb.mass(lp.mass)
+            else:
+                inertia = InertiaTensor(
+                    ixx=props.inertia_ixx,
+                    ixy=props.inertia_ixy,
+                    ixz=props.inertia_ixz,
+                    iyy=props.inertia_iyy,
+                    iyz=props.inertia_iyz,
+                    izz=props.inertia_izz,
+                )
+                active_lb.mass(
+                    props.mass,
+                    origin_xyz=tuple(props.inertia_origin_xyz),
+                    origin_rpy=tuple(props.inertia_origin_rpy),
+                    inertia=inertia,
+                )
 
         # Translate Gazebo Physics
         if props.use_simulation_props:

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from .._utils.math_utils import is_positive_semi_definite_3x3, symmetric_matrix_eigenvalues_3x3
 from ..constants import (
     EPSILON,
+    FLOAT32_PRECISION_TOLERANCE,
     MIN_MASS_STABILITY_THRESHOLD,
     MIN_REASONABLE_INERTIA,
     MIN_REASONABLE_MASS,
@@ -251,28 +252,7 @@ class MassPropertiesCheck(ValidationCheck):
     def run(self, robot: Robot, result: ValidationResult) -> None:
         """Check for mass property health."""
         for link in robot.links:
-            # Mass Checks
-            if link.mass < MIN_REASONABLE_MASS:
-                result.add_error(
-                    title="Critical low mass",
-                    message=(
-                        f"Link '{link.name}' has near-zero mass ({link.mass:.9f} kg). "
-                        "This will crash most physics solvers."
-                    ),
-                    affected_objects=[link.name],
-                    code=ValidationErrorCode.PHYSICS_VIOLATION,
-                    suggestion=f"Increase mass to at least {MIN_REASONABLE_MASS} kg",
-                )
-            elif link.mass < MIN_MASS_STABILITY_THRESHOLD:
-                result.add_warning(
-                    title="Very low mass",
-                    message=f"Link '{link.name}' has low mass ({link.mass:.6f} kg).",
-                    affected_objects=[link.name],
-                    code=ValidationErrorCode.INVALID_VALUE,
-                    suggestion="Consider providing a more realistic mass for better simulation stability",
-                )
-
-            # Inertia Checks
+            # Inertial Presence Check
             if link.inertial is None:
                 result.add_warning(
                     title="Missing inertia",
@@ -281,102 +261,125 @@ class MassPropertiesCheck(ValidationCheck):
                     code=ValidationErrorCode.NOT_FOUND,
                     suggestion="Add an inertial element or use automatic inertia calculation",
                 )
-            else:
-                tensor = link.inertial.inertia
-                if any(v < MIN_REASONABLE_INERTIA for v in [tensor.ixx, tensor.iyy, tensor.izz]):
+                continue
+
+            # Mass Checks (evaluated when inertial properties are defined)
+            if link.inertial.mass < MIN_REASONABLE_MASS:
+                result.add_error(
+                    title="Critical low mass",
+                    message=(
+                        f"Link '{link.name}' has near-zero mass ({link.inertial.mass:.9f} kg). "
+                        "This will crash most physics solvers."
+                    ),
+                    affected_objects=[link.name],
+                    code=ValidationErrorCode.PHYSICS_VIOLATION,
+                    suggestion=f"Increase mass to at least {MIN_REASONABLE_MASS} kg",
+                )
+            elif link.inertial.mass < MIN_MASS_STABILITY_THRESHOLD:
+                result.add_warning(
+                    title="Very low mass",
+                    message=f"Link '{link.name}' has low mass ({link.inertial.mass:.6f} kg).",
+                    affected_objects=[link.name],
+                    code=ValidationErrorCode.INVALID_VALUE,
+                    suggestion="Consider providing a more realistic mass for better simulation stability",
+                )
+
+            # Inertia Checks
+            tensor = link.inertial.inertia
+            # Allow a small numerical tolerance for single-precision (float32) conversions
+            inertia_floor_threshold = MIN_REASONABLE_INERTIA * (1.0 - FLOAT32_PRECISION_TOLERANCE)
+            if any(v < inertia_floor_threshold for v in [tensor.ixx, tensor.iyy, tensor.izz]):
+                result.add_error(
+                    title="Critical low inertia",
+                    message=(
+                        f"Link '{link.name}' has near-zero inertia diagonals. "
+                        "This will lead to numerical instability."
+                    ),
+                    affected_objects=[link.name],
+                    code=ValidationErrorCode.PHYSICS_VIOLATION,
+                    suggestion=f"Increase inertia diagonals to at least {MIN_REASONABLE_INERTIA}",
+                )
+
+            has_off_diagonals = (
+                abs(tensor.ixy) > EPSILON or abs(tensor.ixz) > EPSILON or abs(tensor.iyz) > EPSILON
+            )
+
+            if has_off_diagonals:
+                # Positive semi-definiteness via Sylvester's criterion
+                if not is_positive_semi_definite_3x3(
+                    tensor.ixx,
+                    tensor.iyy,
+                    tensor.izz,
+                    tensor.ixy,
+                    tensor.ixz,
+                    tensor.iyz,
+                ):
                     result.add_error(
-                        title="Critical low inertia",
+                        title="Non-positive-definite inertia",
                         message=(
-                            f"Link '{link.name}' has near-zero inertia diagonals. "
-                            "This will lead to numerical instability."
+                            f"Link '{link.name}' inertia tensor is not positive semi-definite "
+                            "(fails Sylvester's criterion). This will crash physics solvers."
                         ),
                         affected_objects=[link.name],
                         code=ValidationErrorCode.PHYSICS_VIOLATION,
-                        suggestion=f"Increase inertia diagonals to at least {MIN_REASONABLE_INERTIA}",
+                        suggestion="Check mass distribution and products of inertia (Ixy, Ixz, Iyz)",
                     )
 
-                has_off_diagonals = (
-                    abs(tensor.ixy) > EPSILON
-                    or abs(tensor.ixz) > EPSILON
-                    or abs(tensor.iyz) > EPSILON
+                # Principal moments and triangle inequality
+                eig1, eig2, eig3 = symmetric_matrix_eigenvalues_3x3(
+                    tensor.ixx,
+                    tensor.iyy,
+                    tensor.izz,
+                    tensor.ixy,
+                    tensor.ixz,
+                    tensor.iyz,
                 )
+                scale = max(abs(tensor.ixx), abs(tensor.iyy), abs(tensor.izz), 1.0)
+                tol = SYLVESTER_TOLERANCE_EPSILON * scale
 
-                if has_off_diagonals:
-                    # Positive semi-definiteness via Sylvester's criterion
-                    if not is_positive_semi_definite_3x3(
-                        tensor.ixx,
-                        tensor.iyy,
-                        tensor.izz,
-                        tensor.ixy,
-                        tensor.ixz,
-                        tensor.iyz,
-                    ):
-                        result.add_error(
-                            title="Non-positive-definite inertia",
-                            message=(
-                                f"Link '{link.name}' inertia tensor is not positive semi-definite "
-                                "(fails Sylvester's criterion). This will crash physics solvers."
-                            ),
-                            affected_objects=[link.name],
-                            code=ValidationErrorCode.PHYSICS_VIOLATION,
-                            suggestion="Check mass distribution and products of inertia (Ixy, Ixz, Iyz)",
-                        )
-
-                    # Principal moments and triangle inequality
-                    eig1, eig2, eig3 = symmetric_matrix_eigenvalues_3x3(
-                        tensor.ixx,
-                        tensor.iyy,
-                        tensor.izz,
-                        tensor.ixy,
-                        tensor.ixz,
-                        tensor.iyz,
+                if eig3 < -tol:
+                    result.add_error(
+                        title="Negative principal inertia",
+                        message=(
+                            f"Link '{link.name}' has negative principal moment of inertia "
+                            f"({eig3:.6e}). Rigid bodies must have strictly positive moments."
+                        ),
+                        affected_objects=[link.name],
+                        code=ValidationErrorCode.PHYSICS_VIOLATION,
+                        suggestion="Ensure rigid body mass distribution is physically valid",
                     )
-                    scale = max(abs(tensor.ixx), abs(tensor.iyy), abs(tensor.izz), 1.0)
-                    tol = SYLVESTER_TOLERANCE_EPSILON * scale
 
-                    if eig3 < -tol:
-                        result.add_error(
-                            title="Negative principal inertia",
-                            message=(
-                                f"Link '{link.name}' has negative principal moment of inertia "
-                                f"({eig3:.6e}). Rigid bodies must have strictly positive moments."
-                            ),
-                            affected_objects=[link.name],
-                            code=ValidationErrorCode.PHYSICS_VIOLATION,
-                            suggestion="Ensure rigid body mass distribution is physically valid",
-                        )
-
-                    if not (
-                        eig1 + eig2 >= eig3 - tol
-                        and eig2 + eig3 >= eig1 - tol
-                        and eig3 + eig1 >= eig2 - tol
-                    ):
-                        result.add_error(
-                            title="Inertia triangle inequality violated",
-                            message=(
-                                f"Link '{link.name}' inertia tensor violates triangle inequality "
-                                "on principal moments (unphysical mass distribution)."
-                            ),
-                            affected_objects=[link.name],
-                            code=ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
-                            suggestion="Ensure principal moments of inertia satisfy triangle inequality",
-                        )
-                else:
-                    # Diagonal tensor triangle inequality
-                    if not (
-                        tensor.ixx + tensor.iyy >= tensor.izz - EPSILON
-                        and tensor.iyy + tensor.izz >= tensor.ixx - EPSILON
-                        and tensor.izz + tensor.ixx >= tensor.iyy - EPSILON
-                    ):
-                        result.add_error(
-                            title="Inertia triangle inequality violated",
-                            message=(
-                                f"Link '{link.name}' diagonal inertia violates triangle inequality."
-                            ),
-                            affected_objects=[link.name],
-                            code=ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
-                            suggestion="Ensure Ixx + Iyy >= Izz, Iyy + Izz >= Ixx, and Izz + Ixx >= Iyy",
-                        )
+                if not (
+                    eig1 + eig2 >= eig3 - tol
+                    and eig2 + eig3 >= eig1 - tol
+                    and eig3 + eig1 >= eig2 - tol
+                ):
+                    result.add_error(
+                        title="Inertia triangle inequality violated",
+                        message=(
+                            f"Link '{link.name}' inertia tensor violates triangle inequality "
+                            "on principal moments (unphysical mass distribution)."
+                        ),
+                        affected_objects=[link.name],
+                        code=ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
+                        suggestion="Ensure principal moments of inertia satisfy triangle inequality",
+                    )
+            else:
+                # Diagonal tensor triangle inequality
+                if not (
+                    tensor.ixx + tensor.iyy >= tensor.izz - EPSILON
+                    and tensor.iyy + tensor.izz >= tensor.ixx - EPSILON
+                    and tensor.izz + tensor.ixx >= tensor.iyy - EPSILON
+                ):
+                    result.add_error(
+                        title="Inertia triangle inequality violated",
+                        message=(
+                            f"Link '{link.name}' diagonal inertia violates triangle inequality."
+                        ),
+                        affected_objects=[link.name],
+                        code=ValidationErrorCode.INERTIA_TRIANGLE_INEQUALITY,
+                        suggestion="Ensure Ixx + Iyy >= Izz, Iyy + Izz >= Ixx, and Izz + Ixx >= Iyy",
+                    )
 
 
 class GeometryCheck(ValidationCheck):
