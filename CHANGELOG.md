@@ -5,6 +5,13 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4](https://github.com/arounamounchili/linkforge/compare/v1.5.3...v1.5.4) (2026-09-13)
+
+
+### 🐞 Bug Fixes
+
+* **core,blender:** support virtual reference frames and fix docs build ([bbb3a5d](https://github.com/arounamounchili/linkforge/commit/bbb3a5dd96b6fe12ea3f905504e39c0d57615112))
+
 ## [1.5.3](https://github.com/arounamounchili/linkforge/compare/v1.5.2...v1.5.3) (2026-09-12)
 
 
