@@ -6,11 +6,13 @@ import math
 
 from ..constants import (
     EPSILON,
+    FLOAT_CLEAN_EPSILON,
+    SCIENTIFIC_NOTATION_THRESHOLD,
     SYLVESTER_TOLERANCE_EPSILON,
 )
 
 
-def clean_float(value: float, epsilon: float = EPSILON) -> float:
+def clean_float(value: float, epsilon: float = FLOAT_CLEAN_EPSILON) -> float:
     """Clean up floating point values to avoid -0.0 and very small numbers.
 
     Args:
@@ -37,6 +39,15 @@ def format_float(value: float, precision: int = 6) -> str:
     """
     # Clean up small values and -0.0 first
     cleaned = clean_float(value)
+    if cleaned == 0.0:
+        return "0"
+
+    # Use scientific notation for very small numbers to avoid zeroing them out
+    if abs(cleaned) < SCIENTIFIC_NOTATION_THRESHOLD:
+        formatted = f"{cleaned:.{precision}e}"
+        mantissa, exp = formatted.split("e")
+        mantissa = mantissa.rstrip("0").rstrip(".")
+        return f"{mantissa}e{exp}"
 
     # Format with specified precision
     formatted = f"{cleaned:.{precision}f}"

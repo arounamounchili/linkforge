@@ -10,6 +10,7 @@ from linkforge.core._utils.math_utils import (
     sylvester_minors_3x3,
     symmetric_matrix_eigenvalues_3x3,
 )
+from linkforge.core.constants import MIN_REASONABLE_INERTIA
 
 
 def test_clean_float() -> None:
@@ -27,6 +28,8 @@ def test_format_float() -> None:
     assert format_float(1.100) == "1.1"
     assert format_float(1e-11) == "0"
     assert format_float(-0.0) == "0"
+    assert format_float(MIN_REASONABLE_INERTIA) == "1e-09"
+    assert format_float(-MIN_REASONABLE_INERTIA) == "-1e-09"
 
 
 def test_normalize_vector() -> None:

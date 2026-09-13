@@ -263,9 +263,11 @@ class LINKFORGE_OT_add_empty_link(Operator):
         # Rotation matched to cursor too for convenience
         empty.rotation_euler = scene.cursor.rotation_euler.copy()
 
-        # Mark as robot link
+        # Mark as robot link configured as a massless virtual reference frame
         lf = typing.cast("LinkPropertyGroup", getattr(empty, PROP_LINK))
         lf.is_robot_link = True
+        lf.mass = 0.0
+        lf.use_auto_inertia = False
         logger.debug(f"add_empty_link set {empty.name}.is_robot_link to {lf.is_robot_link}")
 
         # Select the new link

@@ -66,6 +66,15 @@ MIN_REASONABLE_INERTIA: Final[float] = 1e-9  # kg·m²
 MIN_MASS_STABILITY_THRESHOLD: Final[float] = 0.01  # kg
 MIN_INERTIA_STABILITY_VALUE: Final[float] = 1e-6  # kg·m²
 
+# Threshold below which float values are cleaned to 0.0
+FLOAT_CLEAN_EPSILON: Final[float] = 1e-10
+
+# Threshold below which small floats are formatted using scientific notation
+SCIENTIFIC_NOTATION_THRESHOLD: Final[float] = 1e-4
+
+# Single-precision (float32) relative tolerance for numerical stability checks
+FLOAT32_PRECISION_TOLERANCE: Final[float] = 1e-4
+
 
 # ----------------------------------------------------------------------------
 # Validation Limits (Guardrails)
