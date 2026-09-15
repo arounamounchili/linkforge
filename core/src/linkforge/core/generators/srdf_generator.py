@@ -10,7 +10,6 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from .. import __version__
 from .._utils.math_utils import format_float
 from .._utils.xml_utils import create_xml_element, serialize_xml
 from ..exceptions import RobotGeneratorError
@@ -66,7 +65,8 @@ class SRDFGenerator(RobotXMLGenerator):
             logger.warning(f"Robot '{robot.name}' has no semantic description to generate.")
 
         root = self.generate_robot_element(robot)
-        return serialize_xml(root, pretty_print=self.pretty_print, version=__version__, **kwargs)
+        version = kwargs.pop("version", None)
+        return serialize_xml(root, pretty_print=self.pretty_print, version=version, **kwargs)
 
     def generate_robot_element(self, robot: Robot) -> ET.Element:
         """Generate SRDF XML Element tree from robot."""
@@ -134,7 +134,8 @@ class SRDFGenerator(RobotXMLGenerator):
         """Add group state elements to root."""
         for state in states:
             state_elem = ET.SubElement(root, "group_state", name=state.name, group=state.group)
-            for j_name, j_vals in state.joint_values.items():
+            for j_name in sorted(state.joint_values.keys()):
+                j_vals = state.joint_values[j_name]
                 val_str = " ".join(format_float(v) for v in j_vals)
                 ET.SubElement(state_elem, "joint", name=j_name, value=val_str)
 

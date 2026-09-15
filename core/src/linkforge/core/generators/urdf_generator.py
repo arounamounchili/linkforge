@@ -47,7 +47,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from .. import __version__
 from .._utils.math_utils import format_float, format_vector
 from .._utils.xml_utils import create_xml_element, serialize_xml, xml_add_text
 from ..exceptions import RobotGeneratorError
@@ -121,11 +120,13 @@ class URDFGenerator(RobotXMLGenerator):
         Raises:
             RobotGeneratorError: If robot validation fails (checks for cycles, missing links, etc.)
         """
-        if kwargs:
-            logger.debug(f"URDFGenerator: unused generation options: {list(kwargs.keys())}")
+        version = kwargs.get("version")
+        unused_keys = [k for k in kwargs if k != "version"]
+        if unused_keys:
+            logger.debug(f"URDFGenerator: unused generation options: {unused_keys}")
 
         root = self.generate_robot_element(robot, validate=validate)
-        return serialize_xml(root, pretty_print=self.pretty_print, version=__version__)
+        return serialize_xml(root, pretty_print=self.pretty_print, version=version)
 
     def generate_robot_element(self, robot: Robot, validate: bool = True) -> ET.Element:
         """Generate URDF XML Element tree from robot.
@@ -827,14 +828,14 @@ class URDFGenerator(RobotXMLGenerator):
                     plugin_elem.append(child)
             except ET.ParseError:
                 # Fall back to parameters if raw XML is malformed
-                for key, value in plugin.parameters.items():
+                for key in sorted(plugin.parameters.keys()):
                     param_elem = ET.SubElement(plugin_elem, key)
-                    param_elem.text = value
+                    param_elem.text = plugin.parameters[key]
         else:
             # Add all parameters as sub-elements (for manually created plugins)
-            for key, value in plugin.parameters.items():
+            for key in sorted(plugin.parameters.keys()):
                 param_elem = ET.SubElement(plugin_elem, key)
-                param_elem.text = value
+                param_elem.text = plugin.parameters[key]
 
     def add_ros2_control(self, parent: ET.Element, robot: Robot) -> None:
         """Add ros2_control to parent element.
@@ -851,7 +852,7 @@ class URDFGenerator(RobotXMLGenerator):
         if robot.ros2_controls:
             # Use parsed ros2_control data (Preferred)
             parent.append(ET.Comment(COMMENT_ROS2_CONTROL))
-            for rc in robot.ros2_controls:
+            for rc in sorted(robot.ros2_controls, key=lambda rc: rc.name):
                 self._add_parsed_ros2_control_element(parent, rc)
         elif robot.transmissions:
             # Generate ros2_control from transmissions if enabled
@@ -1071,9 +1072,9 @@ class URDFGenerator(RobotXMLGenerator):
                 ET.SubElement(joint_elem, "state_interface", name=state_iface)
 
             # Joint parameters
-            for key, value in joint.parameters.items():
+            for key in sorted(joint.parameters.keys()):
                 param_elem = ET.SubElement(joint_elem, "param", name=key)
-                param_elem.text = value
+                param_elem.text = joint.parameters[key]
 
     def _normalize_interface_name(self, hw_interface: str) -> str:
         """Normalize hardware interface name to ROS2 standard short name.

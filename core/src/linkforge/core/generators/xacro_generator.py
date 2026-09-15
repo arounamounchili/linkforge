@@ -14,7 +14,6 @@ from functools import singledispatchmethod
 from pathlib import Path
 from typing import Any, cast
 
-from .. import __version__
 from .._utils.math_utils import format_float, format_vector
 from .._utils.path_utils import get_export_path
 from .._utils.string_utils import sanitize_name
@@ -97,12 +96,10 @@ class XACROGenerator(URDFGenerator):
 
     def generate(self, robot: Robot, validate: bool = True, **kwargs: Any) -> str:
         """Generate XACRO XML string from robot."""
-
+        version = kwargs.pop("version", None)
         root = self.generate_robot_element(robot, validate=validate, **kwargs)
         ns = {"xacro": XACRO_URI}
-        return serialize_xml(
-            root, pretty_print=self.pretty_print, version=__version__, namespaces=ns
-        )
+        return serialize_xml(root, pretty_print=self.pretty_print, version=version, namespaces=ns)
 
     def generate_robot_element(
         self, robot: Robot, validate: bool = True, **_kwargs: Any
@@ -172,7 +169,8 @@ class XACROGenerator(URDFGenerator):
             root.append(ET.Comment(COMMENT_MATERIALS))
         if self.extract_materials:
             # Add global material definitions with property references
-            for material in self.global_materials.values():
+            for mat_name in sorted(self.global_materials.keys()):
+                material = self.global_materials[mat_name]
                 mat_elem = ET.SubElement(root, "material", name=material.name)
                 if material.name in self.material_properties:
                     prop_name = self.material_properties[material.name]
@@ -181,15 +179,15 @@ class XACROGenerator(URDFGenerator):
                     ET.SubElement(mat_elem, "texture", filename=material.texture)
         else:
             # Standard URDF behavior: add global materials without properties
-            for material in self.global_materials.values():
-                self._add_material_element(root, material)
+            for mat_name in sorted(self.global_materials.keys()):
+                self._add_material_element(root, self.global_materials[mat_name])
 
         # Generate Macro Definitions
         if self.generate_macros and self.macro_groups:
             root.append(ET.Comment(COMMENT_MACROS))
         if self.generate_macros:
-            for signature, group in self.macro_groups.items():
-                self._generate_macro_definition(root, signature, group)
+            for signature in sorted(self.macro_groups.keys()):
+                self._generate_macro_definition(root, signature, self.macro_groups[signature])
 
         # Generate Links and Joints (using unified Template Method)
         self.add_links_section(root, robot)
@@ -255,7 +253,8 @@ class XACROGenerator(URDFGenerator):
             properties: List to append (name, value) tuples to
         """
         materials = self._collect_materials(robot)
-        for mat_name, mat in materials.items():
+        for mat_name in sorted(materials.keys()):
+            mat = materials[mat_name]
             # Skip materials without color (should not happen, but type-safe)
             if mat.color is None:
                 continue
@@ -302,11 +301,13 @@ class XACROGenerator(URDFGenerator):
                     dimensions["sphere_radius"].append((link.name, geom.radius))
 
         # Find repeated dimensions (2+ occurrences with same value)
-        for dim_key, dim_values in dimensions.items():
+        for dim_key in sorted(dimensions.keys()):
+            dim_values = dimensions[dim_key]
             # Group by value (with tolerance for floating-point comparison)
             value_groups = self._group_dimensions_by_value(dim_values)
 
-            for value, link_names in value_groups.items():
+            for value in sorted(value_groups.keys()):
+                link_names = value_groups[value]
                 if len(link_names) >= 2:  # Only extract if repeated
                     # Generate property name
                     prop_name = self._generate_dimension_property_name(dim_key, link_names)
@@ -871,25 +872,25 @@ class XACROGenerator(URDFGenerator):
         if len(properties_root) > 0:
             prop_path = base_dir / f"{robot_name}_properties.xacro"
             prop_path.write_text(
-                serialize_xml(properties_root, self.pretty_print, __version__, ns),
+                serialize_xml(properties_root, self.pretty_print, None, ns),
                 encoding="utf-8",
             )
 
         if len(macros_root) > 0:
             mac_path = base_dir / f"{robot_name}_macros.xacro"
             mac_path.write_text(
-                serialize_xml(macros_root, self.pretty_print, __version__, ns),
+                serialize_xml(macros_root, self.pretty_print, None, ns),
                 encoding="utf-8",
             )
 
         if has_control:
             control_path = base_dir / f"{robot_name}_ros2_control.xacro"
             control_path.write_text(
-                serialize_xml(control_root, self.pretty_print, __version__, ns),
+                serialize_xml(control_root, self.pretty_print, None, ns),
                 encoding="utf-8",
             )
 
         main_filepath.write_text(
-            serialize_xml(main_root, self.pretty_print, __version__, ns),
+            serialize_xml(main_root, self.pretty_print, None, ns),
             encoding="utf-8",
         )
