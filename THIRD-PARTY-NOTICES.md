@@ -22,4 +22,4 @@ All library components listed below are bundled as `.whl` files in the `wheels/`
 
 ## Licensing Notes
 
-LinkForge itself is licensed under **GPL-3.0-or-later**. The third-party library listed above is redistributed under its own permissive license. This redistribution is consistent with both the GPLv3 and the MIT license requirements.
+The LinkForge Blender extension is licensed under **GPL-3.0-or-later** (while `linkforge-core` is licensed under **Apache-2.0**). The third-party library listed above is bundled with the Blender extension and redistributed under its own permissive MIT license, which is fully compatible with GPLv3.
