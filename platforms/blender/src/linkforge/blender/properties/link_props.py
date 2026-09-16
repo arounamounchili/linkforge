@@ -23,7 +23,7 @@ from ..constants import (
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
 )
-from ..core._utils.string_utils import (
+from ..core import (
     format_scientific,
     parse_scientific,
     sanitize_name,

@@ -323,7 +323,7 @@ class LINKFORGE_PT_links(Panel):
                 if not visual_obj or visual_obj.type != "MESH":
                     visual_obj = visual_children[0]
 
-                if visual_obj.material_slots:
+                if visual_obj.material_slots and len(visual_obj.material_slots) > 0:
                     box.template_ID(visual_obj.material_slots[0], "material", new="material.new")
 
                     # Color preview

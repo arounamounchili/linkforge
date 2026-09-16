@@ -25,6 +25,7 @@ from ..core import (
     ForceTorqueInfo,
     GazeboPlugin,
     GPSInfo,
+    IComposer,
     IMUInfo,
     InertiaTensor,
     JointType,
@@ -40,9 +41,9 @@ from ..core import (
     ValidationErrorCode,
     ValidationResult,
     get_logger,
+    sanitize_name,
     validate_mesh_topology,
 )
-from ..core._utils.string_utils import sanitize_name
 from ..core.constants import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
@@ -77,7 +78,7 @@ class LinkTranslator:
     def translate(
         self,
         obj: Any,
-        builder: RobotBuilder,
+        builder: IComposer | RobotBuilder,
         context: IBlenderContext,
         meshes_dir: Path | None = None,
         dry_run: bool = False,
@@ -85,7 +86,7 @@ class LinkTranslator:
         validation_result: ValidationResult | None = None,
         lb: LinkBuilder | None = None,
     ) -> LinkBuilder | None:
-        """Translate a Blender link to a Core Link using RobotBuilder."""
+        """Translate a Blender link to a Core Link using IComposer or RobotBuilder."""
         props = get_link_props(obj)
         if not props:
             return None
@@ -553,7 +554,7 @@ class Ros2ControlTranslator:
     def translate(
         self,
         obj: Any,
-        builder: RobotBuilder,
+        builder: IComposer | RobotBuilder,
         validation_result: ValidationResult | None = None,
     ) -> None:
         """Translate centralized ros2_control properties and add to robot."""

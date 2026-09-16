@@ -6,13 +6,14 @@ communicate without tight coupling.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from ..models.robot import Robot
     from .link_builder import LinkBuilder
 
 
+@runtime_checkable
 class IComposer(Protocol):
     """Interface for a builder that can contain and manage links."""
 

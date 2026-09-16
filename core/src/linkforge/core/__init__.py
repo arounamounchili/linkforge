@@ -26,6 +26,15 @@ from . import (
     validation,
 )
 
+# Domain Utilities
+from ._utils.math_utils import clean_float, format_float
+from ._utils.string_utils import (
+    format_scientific,
+    is_valid_name,
+    parse_scientific,
+    sanitize_name,
+)
+
 # Base Architecture: Interfaces and Resolvers
 from .base import (
     FileSystemResolver,
@@ -36,6 +45,7 @@ from .base import (
 
 # Composer API: The LinkForge way to build robots
 from .composer import (
+    IComposer,
     LinkBuilder,
     RobotBuilder,
     box,
@@ -260,12 +270,20 @@ __all__ = [
     "IResourceResolver",
     "FileSystemResolver",
     # Composer API
+    "IComposer",
     "RobotBuilder",
     "LinkBuilder",
     "box",
     "cylinder",
     "sphere",
     "mesh",
+    # Domain Utilities
+    "clean_float",
+    "format_float",
+    "sanitize_name",
+    "is_valid_name",
+    "format_scientific",
+    "parse_scientific",
     # Validation & Physics
     "RobotValidator",
     "ValidationResult",

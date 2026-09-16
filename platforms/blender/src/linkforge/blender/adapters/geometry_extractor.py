@@ -33,8 +33,8 @@ from ..core import (
     Sphere,
     Vector3,
     get_logger,
+    sanitize_name,
 )
-from ..core._utils.string_utils import sanitize_name
 from ..core.constants import (
     DEFAULT_MATERIAL_RGBA,
     GEOM_BOX,
@@ -320,13 +320,13 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
         return None
 
     mat_name = f"{sanitize_name(obj.name)}_material"
-    if obj.material_slots and obj.material_slots[0].material:
+    if obj.material_slots and len(obj.material_slots) > 0 and obj.material_slots[0].material:
         # Sanitize material name to be valid Python identifier (required for XACRO)
         mat_name = sanitize_name(obj.material_slots[0].material.name)
 
     # Extract color from Blender material (if assigned)
     color = None
-    if obj.material_slots and obj.material_slots[0].material:
+    if obj.material_slots and len(obj.material_slots) > 0 and obj.material_slots[0].material:
         blender_mat = obj.material_slots[0].material
 
         # Try to get color from Principled BSDF node (modern Blender)

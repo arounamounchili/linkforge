@@ -20,7 +20,7 @@ from bpy.types import Context, PropertyGroup
 from ..constants import (
     PROP_JOINT,
 )
-from ..core._utils.string_utils import sanitize_name
+from ..core import sanitize_name
 from ..core.constants import (
     DEFAULT_JOINT_DAMPING,
     DEFAULT_JOINT_EFFORT,

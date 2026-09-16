@@ -344,7 +344,7 @@ def move_to_collection(
         obj: Blender object to move
         collection: Target Blender collection
     """
-    if not obj or not collection:
+    if obj is None or collection is None:
         return
 
     # Unlink from all current collections
@@ -369,10 +369,10 @@ def sync_object_collections(
     preventing "leaks" to the scene root.
 
     Args:
-        target_obj: The object to be moved/linked.
-        source_obj: The reference object whose collections should be matched.
+        target_obj: Child object to move into collection
+        source_obj: Parent reference object whose collections to mirror
     """
-    if not target_obj or not source_obj:
+    if target_obj is None or source_obj is None:
         return
 
     # Link to all collections where source_obj resides

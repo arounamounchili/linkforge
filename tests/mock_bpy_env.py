@@ -839,7 +839,9 @@ class MockCollection(Generic[T]):
         return len(self._items)
 
     def __bool__(self):
-        return True
+        if self.is_real_collection:
+            return True
+        return bool(self._items)
 
     def __iter__(self) -> typing.Iterator[T]:
         return iter(self._items)
