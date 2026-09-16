@@ -1680,7 +1680,7 @@ def setup_mock_bpy():
 
     def _setup_new_object(obj, location=(0, 0, 0)):
         """Helper to place object in world and sync context."""
-        # Use world matrix for placement – explicit index assignment avoids
+        # Use world matrix for placement - explicit index assignment avoids
         # the tuple-unpacking ambiguity with MockMatrix row access.
         mw = MockMatrix.Identity(4)
         mw.data[0][3] = float(location[0])
@@ -1791,7 +1791,7 @@ def setup_mock_bpy():
 
     def mock_monkey_add(**kwargs):
         mesh = MockMesh(name="MonkeyMesh")
-        # Suzanne: 1200 verts / 1100 faces – well outside all primitive thresholds
+        # Suzanne: 1200 verts / 1100 faces - well outside all primitive thresholds
         # (sphere range is 240-1000 verts, so 1200 is clearly complex mesh)
         for _ in range(1200):
             mesh.vertices.add()

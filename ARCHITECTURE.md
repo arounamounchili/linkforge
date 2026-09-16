@@ -55,7 +55,7 @@ graph TB
     IR <--> IO
 ```
 
-*   **Domain Model IR (`models/`)**: Pure-Python dataclasses defining the unified intermediate representation—robot kinematics, geometry, materials, sensors, MoveIt semantics (SRDF), and ROS 2 control.
+*   **Domain Model IR (`models/`)**: Pure-Python dataclasses defining the unified intermediate representation (robot kinematics, geometry, materials, sensors, MoveIt semantics (SRDF), and ROS 2 control).
 *   **Assembly & Authoring (`composer/`)**: Fluent builder API (`RobotBuilder`, `LinkBuilder`, `SemanticBuilder`) for assembling and composing robots programmatically.
 *   **Verification & Physics (`physics/`, `validation/`)**: High-fidelity Mirtich polyhedral mass integration, Sylvester positive semi-definiteness checks, and 10 modular `RobotValidator` verification rules.
 *   **I/O & Serialization (`parsers/`, `generators/`, `io.py`)**: Lossless XML parsing, macro resolution (XACRO), code generation, and high-level functional entry points (`read_urdf`, `write_urdf`, `validate_robot`).
