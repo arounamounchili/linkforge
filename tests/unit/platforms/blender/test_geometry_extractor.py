@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from unittest.mock import MagicMock, patch
 
 import bpy
@@ -25,6 +26,7 @@ from tests.blender_test_utils import (
     create_test_object,
     safe_get_linkforge,
 )
+from tests.mock_bpy_env import MockMesh, MockObject, MockVector
 
 
 class TestDetectPrimitiveType:
@@ -68,6 +70,48 @@ class TestDetectPrimitiveType:
         geom_props = getattr(obj, PROP_GEOM)
         geom_props.geometry_type = GEOM_CYLINDER
         assert detect_primitive_type(obj) == "cylinder"
+
+    def test_detect_primitive_type_box_mocked(self) -> None:
+        """Verify detect_primitive_type logic for a box using mocks."""
+        mock_obj = MockObject(name="Box")
+        mock_obj.type = "MESH"
+
+        mock_mesh = MockMesh(name="BoxMesh")
+        mock_mesh.vertices.clear()
+        mock_mesh.vertices.extend([MagicMock() for _ in range(8)])
+
+        for _ in range(6):
+            mock_poly = MagicMock()
+            mock_poly.vertices = [0, 1, 2, 3]
+            mock_mesh.polygons.append(mock_poly)
+
+        mock_obj.data = mock_mesh
+        result = detect_primitive_type(typing.cast(bpy.types.Object, mock_obj))
+        assert result == "box"
+
+    def test_detect_primitive_type_sphere_mocked(self) -> None:
+        """Verify detect_primitive_type logic for a sphere using mocks."""
+        mock_obj = MockObject(name="Sphere")
+        mock_obj.type = "MESH"
+        if hasattr(mock_obj, "_base_dimensions"):
+            mock_obj._base_dimensions = MockVector(1.0, 1.0, 1.0)
+        mock_obj.dimensions = MockVector(1.0, 1.0, 1.0)
+
+        mock_mesh = MockMesh(name="SphereMesh")
+        mock_mesh.vertices.clear()
+        mock_mesh.vertices.extend([MagicMock() for _ in range(482)])
+        mock_mesh.polygons.clear()
+        mock_mesh.polygons.extend([MagicMock() for _ in range(480)])
+        mock_obj.data = mock_mesh
+
+        result = detect_primitive_type(typing.cast(bpy.types.Object, mock_obj))
+        assert result == "sphere"
+
+    def test_detect_primitive_type_none_mocked(self) -> None:
+        """Verify detect_primitive_type returns None for non-mesh types."""
+        mock_obj = MockObject(name="Empty")
+        mock_obj.type = "EMPTY"
+        assert detect_primitive_type(typing.cast(bpy.types.Object, mock_obj)) is None
 
 
 class TestGetObjectGeometry:

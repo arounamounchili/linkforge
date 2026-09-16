@@ -753,18 +753,20 @@ class MockCollection(Generic[T]):
         self._children = val
 
     def append(self, item: T):
-        if item in self:
+        item_id = id(item)
+        if any(id(x) == item_id for x in self._items):
             return
 
-        # Handle Blender's unique naming behavior
-        if hasattr(item, "name") and getattr(item, "name"):
-            base_name = getattr(item, "name")
+        # Handle Blender's unique naming behavior (only for named datablocks with string names)
+        raw_name = getattr(item, "name", None)
+        if isinstance(raw_name, str) and raw_name:
+            base_name = raw_name
             name = base_name
             counter = 1
-            # Avoid infinite recursion by checking against private items list if needed,
-            # but super() check is enough for basic uniqueness.
             existing_names = {
-                getattr(obj, "name") for obj in self if obj != item and hasattr(obj, "name")
+                obj.name
+                for obj in self._items
+                if obj is not item and isinstance(getattr(obj, "name", None), str)
             }
             while name in existing_names:
                 name = f"{base_name}.{counter:03d}"
@@ -862,7 +864,13 @@ class MockCollection(Generic[T]):
 
     def __contains__(self, key):
         if isinstance(key, str):
-            return any(hasattr(item, "name") and item.name == key for item in self._items)
+            return any(
+                isinstance(getattr(item, "name", None), str) and item.name == key
+                for item in self._items
+            )
+        for item in self._items:
+            if item is key:
+                return True
         return key in self._items
 
     def get(self, key, default=None):
