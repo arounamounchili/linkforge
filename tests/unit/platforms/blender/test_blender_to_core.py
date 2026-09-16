@@ -63,8 +63,8 @@ from linkforge.core import (
     SensorType,
     Sphere,
     ValidationErrorCode,
+    sanitize_name,
 )
-from linkforge.core._utils.string_utils import sanitize_name
 
 
 def translate_link_to_model(obj, context):
