@@ -6,7 +6,7 @@ User preferences for controlling visualization and behavior.
 from __future__ import annotations
 
 import contextlib
-from typing import Any
+from typing import Any, cast
 
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
@@ -134,9 +134,7 @@ def get_addon_prefs(context: Context | None = None) -> LinkForgePreferences | No
     if context.preferences:
         addon = context.preferences.addons.get(addon_id)
         if addon:
-            import typing
-
-            return typing.cast("LinkForgePreferences", addon.preferences)
+            return cast("LinkForgePreferences", addon.preferences)
     return None
 
 

@@ -9,6 +9,7 @@ This module contains all Blender-specific logic and UI integration:
 
 from __future__ import annotations
 
+import contextlib
 import sys
 from pathlib import Path
 
@@ -68,8 +69,6 @@ def register() -> None:
 
 def unregister() -> None:
     """Unregister all Blender components."""
-    import contextlib
-
     for module in reversed(modules):
         with contextlib.suppress(Exception):
             module.unregister()

@@ -6,6 +6,7 @@ robot descriptions into the Blender environment.
 
 from __future__ import annotations
 
+import os
 import typing
 from contextlib import suppress
 from pathlib import Path
@@ -14,7 +15,12 @@ import bpy
 from bpy.types import Context, Operator
 from bpy_extras.io_utils import ImportHelper
 
+from .. import core
+from ..adapters.context import BlenderContext
 from ..core import get_logger
+from ..core.validation import find_sandbox_root
+from ..logic import asynchronous_builder
+from ..preferences import get_addon_prefs
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.scene_utils import clear_stats_cache
 
@@ -63,10 +69,8 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         Returns:
             Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
         """
-        from ..core import URDFParser, clear_xacro_cache
-
         # Clear XACRO cache to ensure changes on disk are picked up
-        clear_xacro_cache()
+        core.clear_xacro_cache()
 
         # Parse URDF/XACRO file
         source_path = Path(self.filepath)
@@ -109,44 +113,36 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         is_xacro = source_path.suffix == ".xacro" or source_path.name.endswith(".urdf.xacro")
 
         # Detect Sandbox Root for security (allows sibling folders like meshes/)
-        from ..core.validation import find_sandbox_root
-
         sandbox_root = find_sandbox_root(source_path)
         logger.info(f"Importing robot from: {source_path}")
         logger.debug(f"Detected sandbox root: {sandbox_root}")
 
         # Smart Import Logic: Try URDF first, fall back to Xacro if Xacro tags are detected.
-        from ..core import FileSystemResolver, RobotParserError, XacroDetectedError
-
         # Read additional package paths from preferences
-        from ..preferences import get_addon_prefs
-
         prefs = get_addon_prefs(context)
         additional_paths = []
         if prefs and hasattr(prefs, "additional_search_paths") and prefs.additional_search_paths:
-            import os
-
             # Split by comma or os.pathsep (collapsing spaces)
             raw_paths = prefs.additional_search_paths.replace(",", os.pathsep).split(os.pathsep)
             additional_paths = [Path(p.strip()) for p in raw_paths if p.strip()]
 
-        resolver = FileSystemResolver(additional_search_paths=additional_paths)
+        resolver = core.FileSystemResolver(additional_search_paths=additional_paths)
 
         try:
             if not is_xacro:
                 try:
                     # Attempt standard URDF import
-                    robot = URDFParser(sandbox_root=sandbox_root, resource_resolver=resolver).parse(
-                        source_path
-                    )
-                except XacroDetectedError:
+                    robot = core.URDFParser(
+                        sandbox_root=sandbox_root, resource_resolver=resolver
+                    ).parse(source_path)
+                except core.XacroDetectedError:
                     # Explicitly detected Xacro, enable fallback
                     self.report(
                         {"WARNING"},
                         "Detected XACRO content in robot model file. Switching to XACRO parser...",
                     )
                     is_xacro = True
-                except RobotParserError as e:
+                except core.RobotParserError as e:
                     # Real validation error
                     self.report({"ERROR"}, f"URDF Parsing failed: {e}")
                     return {"CANCELLED"}
@@ -154,24 +150,22 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             # XACRO PROCESSING (Triggered by extension OR fallback detection)
             if is_xacro:
                 # Convert XACRO to URDF using native XacroResolver
-                from ..core import XacroResolver
-
                 self.report({"INFO"}, f"Processing XACRO file: {source_path.name}")
 
                 # Pass the additional paths so XACRO includes can find package:// references
-                xacro_resolver = XacroResolver(search_paths=additional_paths)
+                xacro_resolver = core.XacroResolver(search_paths=additional_paths)
                 urdf_string = xacro_resolver.resolve_file(source_path)
 
                 # Parse URDF string with directory for mesh path validation
                 self.report({"INFO"}, "Parsing URDF...")
-                robot = URDFParser(
+                robot = core.URDFParser(
                     sandbox_root=sandbox_root, resource_resolver=resolver
                 ).parse_string(
                     urdf_string,
                     source_directory=source_path.parent,
                     default_name=source_path.stem,
                 )
-        except RobotParserError as e:
+        except core.RobotParserError as e:
             self.report({"ERROR"}, f"Import failed: {e}")
             return {"CANCELLED"}
         except Exception as e:
@@ -188,9 +182,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             return {"CANCELLED"}
 
         # Validate robot structure
-        from ..core import RobotValidator
-
-        validator = RobotValidator()
+        validator = core.RobotValidator()
         result = validator.validate(robot)
 
         if not result.is_valid:
@@ -210,10 +202,9 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             )
 
         # Import to scene (Asynchronous)
-        from ..adapters.context import BlenderContext
-        from ..logic.asynchronous_builder import AsynchronousRobotBuilder
-
-        builder = AsynchronousRobotBuilder(robot, source_path, BlenderContext(context))
+        builder = asynchronous_builder.AsynchronousRobotBuilder(
+            robot, source_path, BlenderContext(context)
+        )
         builder.start()
 
         # We return FINISHED here, but the builder continues in the background via timers.

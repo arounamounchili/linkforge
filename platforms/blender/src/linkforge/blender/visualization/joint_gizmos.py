@@ -11,6 +11,7 @@ matching the professional appearance of RViz.
 
 from __future__ import annotations
 
+import contextlib
 import math
 import typing
 
@@ -29,7 +30,11 @@ from ..core.constants import (
     PI,
 )
 from ..preferences import get_addon_prefs
-from ..utils.scene_utils import get_robot_statistics, is_robot_joint
+from ..utils.scene_utils import (
+    compute_anchor_size,
+    get_robot_statistics,
+    is_robot_joint,
+)
 
 _builtin_shader_name = None
 
@@ -320,8 +325,6 @@ def fix_existing_joints(_dummy: typing.Any = None) -> None:
         return
 
     show_gpu = getattr(addon_prefs, "show_joint_axes", True) if addon_prefs else True
-    from ..utils.scene_utils import compute_anchor_size
-
     joint_anchor = compute_anchor_size(empty_size, show_gpu)
     link_anchor = compute_anchor_size(link_size, show_gpu)
 
@@ -372,8 +375,6 @@ def unregister() -> None:
     # Remove draw handler if it exists (using persistent namespace)
     handler = bpy.app.driver_namespace.get("linkforge_joint_gizmo_handler")
     if handler is not None:
-        import contextlib
-
         with contextlib.suppress(ValueError):
             bpy.types.SpaceView3D.draw_handler_remove(handler, "WINDOW")
 
@@ -403,8 +404,6 @@ def update_viz_handle(context: Context) -> None:
 
     elif not show_axes and current_handler is not None:
         # Remove handler when not in use to save memory
-        import contextlib
-
         with contextlib.suppress(ValueError):
             bpy.types.SpaceView3D.draw_handler_remove(current_handler, "WINDOW")
 

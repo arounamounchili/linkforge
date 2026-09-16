@@ -24,6 +24,7 @@ from ..constants import (
     PROP_ROBOT,
 )
 from ..core import Robot, get_logger
+from ..utils import scene_utils
 from ..utils.joint_utils import resolve_mimic_joints
 
 logger = get_logger(__name__)
@@ -245,7 +246,5 @@ class AsynchronousRobotBuilder:
         else:
             if scene:
                 with contextlib.suppress(Exception):
-                    from ..utils.scene_utils import auto_fit_robot_gizmos
-
-                    auto_fit_robot_gizmos(scene, self.context)
+                    scene_utils.auto_fit_robot_gizmos(scene, self.context)
             logger.info(f"Asynchronous import complete - '{self.robot.name}' is ready.")

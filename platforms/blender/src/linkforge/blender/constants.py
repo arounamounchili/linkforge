@@ -55,6 +55,7 @@ PROP_JOINT: Final[str] = "linkforge_joint"
 PROP_SENSOR: Final[str] = "linkforge_sensor"
 PROP_ROBOT: Final[str] = "linkforge_robot"
 PROP_VALIDATION: Final[str] = "linkforge_validation"
+PROP_GEOM: Final[str] = "linkforge_geom"
 
 
 # ----------------------------------------------------------------------------

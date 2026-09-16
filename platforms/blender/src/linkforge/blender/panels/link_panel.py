@@ -8,13 +8,13 @@ import bpy
 from bpy.types import Context, Panel
 
 from ..constants import (
+    PROP_GEOM,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
 )
 from ..core.constants import (
     GEOM_MESH,
 )
-from ..properties.geom_props import PROP_GEOM
 from ..utils.joint_utils import get_connected_joints_for_link
 from ..utils.property_helpers import get_joint_props, get_link_props
 

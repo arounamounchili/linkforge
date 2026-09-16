@@ -21,6 +21,7 @@ from ..constants import (
     DEFAULT_PRIMITIVE_CONFIG,
     FORMAT_STL,
     PRIMITIVE_MAX_FACES,
+    PROP_GEOM,
     PURPOSE_VISUAL,
 )
 from ..core import (
@@ -43,8 +44,8 @@ from ..core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
-from ..properties.geom_props import PROP_GEOM
 from ..utils.transform_utils import get_local_bounding_box_center
+from . import mesh_io
 
 logger = get_logger(__name__)
 
@@ -177,9 +178,7 @@ def get_object_geometry(
     if actual_geometry_type == GEOM_MESH:
         # Export actual mesh file if meshes_dir is provided
         if meshes_dir and link_name and obj.type == "MESH":
-            from .mesh_io import export_link_mesh
-
-            mesh_path, geom_world_matrix = export_link_mesh(
+            mesh_path, geom_world_matrix = mesh_io.export_link_mesh(
                 obj=obj,
                 link_name=link_name,
                 geometry_type=geom_purpose,

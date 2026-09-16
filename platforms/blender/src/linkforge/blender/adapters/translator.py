@@ -12,6 +12,7 @@ from typing import Any
 
 from ..constants import (
     FORMAT_STL,
+    PROP_GEOM,
     PURPOSE_COLLISION,
     PURPOSE_VISUAL,
     SUFFIX_COLLISION,
@@ -31,7 +32,6 @@ from ..core import (
     JointType,
     LidarInfo,
     LinkBuilder,
-    RobotBuilder,
     RobotValidationError,
     Ros2Control,
     Ros2ControlJoint,
@@ -54,7 +54,6 @@ from ..core.constants import (
     HW_IF_VELOCITY,
     SYLVESTER_TOLERANCE_EPSILON,
 )
-from ..properties.geom_props import PROP_GEOM
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -78,7 +77,7 @@ class LinkTranslator:
     def translate(
         self,
         obj: Any,
-        builder: IComposer | RobotBuilder,
+        builder: IComposer,
         context: IBlenderContext,
         meshes_dir: Path | None = None,
         dry_run: bool = False,
@@ -86,7 +85,7 @@ class LinkTranslator:
         validation_result: ValidationResult | None = None,
         lb: LinkBuilder | None = None,
     ) -> LinkBuilder | None:
-        """Translate a Blender link to a Core Link using IComposer or RobotBuilder."""
+        """Translate a Blender link to a Core Link using IComposer."""
         props = get_link_props(obj)
         if not props:
             return None
@@ -385,11 +384,11 @@ class SensorTranslator:
     def translate(
         self,
         obj: Any,
-        builder: RobotBuilder,
+        builder: IComposer,
         validation_result: ValidationResult | None = None,
         link_frames: dict[str, Any] | None = None,
     ) -> None:
-        """Translate a Blender sensor to a Core Sensor and add it to the robot."""
+        """Translate a Blender sensor to a Core Sensor using IComposer and add it to the robot."""
         try:
             sensor = self._blender_sensor_to_core(obj)
             if sensor:
@@ -554,7 +553,7 @@ class Ros2ControlTranslator:
     def translate(
         self,
         obj: Any,
-        builder: IComposer | RobotBuilder,
+        builder: IComposer,
         validation_result: ValidationResult | None = None,
     ) -> None:
         """Translate centralized ros2_control properties and add to robot."""

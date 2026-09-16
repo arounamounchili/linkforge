@@ -5,6 +5,7 @@ These properties are stored on Blender objects and define link characteristics.
 
 from __future__ import annotations
 
+import contextlib
 import typing
 
 import bpy
@@ -387,8 +388,6 @@ def register() -> None:
 
 def unregister() -> None:
     """Unregister property group."""
-    import contextlib
-
     with contextlib.suppress(AttributeError):
         delattr(bpy.types.Object, PROP_LINK)
 

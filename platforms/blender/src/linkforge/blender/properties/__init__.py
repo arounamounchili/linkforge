@@ -8,6 +8,17 @@ Property groups store data on Blender objects and scenes:
 
 from __future__ import annotations
 
+import contextlib
+
+import bpy
+
+from ..constants import (
+    PROP_GEOM,
+    PROP_JOINT,
+    PROP_LINK,
+    PROP_ROBOT,
+    PROP_SENSOR,
+)
 from . import (
     control_props,
     geom_props,
@@ -38,18 +49,6 @@ def register() -> None:
 
 def unregister() -> None:
     """Unregister all property groups and unpatch global types."""
-    import contextlib
-
-    import bpy
-
-    from ..constants import (
-        PROP_JOINT,
-        PROP_LINK,
-        PROP_ROBOT,
-        PROP_SENSOR,
-    )
-    from .geom_props import PROP_GEOM
-
     # Unpatch global types first to break references
     obj_props = [PROP_GEOM, PROP_LINK, PROP_JOINT, PROP_SENSOR]
     scene_props = [PROP_ROBOT]

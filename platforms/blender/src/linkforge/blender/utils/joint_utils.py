@@ -7,6 +7,7 @@ import contextlib
 import bpy
 
 from ..core import Joint
+from . import scene_utils
 from .property_helpers import get_joint_props
 
 
@@ -93,9 +94,7 @@ def get_connected_joints_for_link(
     parent_joint: bpy.types.Object | None = None
     child_joints: list[bpy.types.Object] = []
 
-    from .scene_utils import get_robot_statistics
-
-    stats = get_robot_statistics(scene)
+    stats = scene_utils.get_robot_statistics(scene)
     all_joints = getattr(stats, "joint_objects", []) or [
         o
         for o in getattr(scene, "objects", [])
