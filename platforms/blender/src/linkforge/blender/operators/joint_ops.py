@@ -7,14 +7,16 @@ import contextlib
 import bpy
 from bpy.types import Context, Operator
 
+from ..constants import DEFAULT_JOINT_GIZMO_SIZE
 from ..core.constants import (
     JOINT_REVOLUTE,
 )
+from ..preferences import get_addon_prefs
 from ..properties.link_props import sanitize_name
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.mode_guard import context_and_mode_guard
 from ..utils.property_helpers import get_joint_props, get_link_props, get_robot_props
-from ..utils.scene_utils import clear_stats_cache
+from ..utils.scene_utils import clear_stats_cache, compute_anchor_size
 
 
 class LINKFORGE_OT_create_joint(Operator):
@@ -66,12 +68,7 @@ class LINKFORGE_OT_create_joint(Operator):
             return {"CANCELLED"}
 
         # Get preferred empty size from addon preferences
-        from ..preferences import get_addon_prefs
-
         addon_prefs = get_addon_prefs(context)
-
-        from ..constants import DEFAULT_JOINT_GIZMO_SIZE
-        from ..utils.scene_utils import compute_anchor_size
 
         raw_size = (
             getattr(addon_prefs, "joint_empty_size", DEFAULT_JOINT_GIZMO_SIZE)

@@ -6,7 +6,7 @@ We provide security updates and patches for the following versions:
 
 | Version | Supported |
 | :--- | :--- |
-| **1.5.x (Latest: 1.5.2)** | :white_check_mark: Full Support |
+| **1.5.x (Latest: 1.5.3)** | :white_check_mark: Full Support |
 | **1.4.x** | :white_check_mark: Critical Fixes |
 | **1.3.x** | :white_check_mark: Critical Fixes |
 | **< 1.3.0** | :x: Unsupported |

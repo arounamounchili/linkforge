@@ -6,6 +6,7 @@ These properties store the last validation result for display in the UI.
 from __future__ import annotations
 
 import contextlib
+from typing import cast
 
 import bpy
 from bpy.props import BoolProperty, CollectionProperty, IntProperty, StringProperty
@@ -62,9 +63,7 @@ class ValidationIssueProperty(PropertyGroup):
     @property
     def objects_str(self) -> str:
         """Get affected objects as a formatted string."""
-        import typing
-
-        return typing.cast(str, self.affected_objects)
+        return cast(str, self.affected_objects)
 
     @property
     def affected_object_list(self) -> list[str]:
@@ -208,15 +207,11 @@ class ValidationResultProperty(PropertyGroup):
 
     def get_error(self, index: int) -> ValidationIssueProperty:
         """Get error by index."""
-        import typing
-
-        return typing.cast(ValidationIssueProperty, self.errors[index])
+        return cast(ValidationIssueProperty, self.errors[index])
 
     def get_warning(self, index: int) -> ValidationIssueProperty:
         """Get warning by index."""
-        import typing
-
-        return typing.cast(ValidationIssueProperty, self.warnings[index])
+        return cast(ValidationIssueProperty, self.warnings[index])
 
 
 # Registration

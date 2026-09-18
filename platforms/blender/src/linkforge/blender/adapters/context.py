@@ -11,6 +11,8 @@ import typing
 from collections.abc import Iterable
 from typing import Any, runtime_checkable
 
+import bpy
+
 
 @runtime_checkable
 class IBlenderContext(typing.Protocol):
@@ -65,8 +67,6 @@ class BlenderContext:
 
     def __init__(self, bpy_instance: Any = None):
         """Initialize with a specific bpy instance (defaults to global bpy)."""
-        import bpy
-
         self._global_bpy = bpy
         if bpy_instance is None:
             self._bpy = bpy

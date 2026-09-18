@@ -5,6 +5,7 @@ These properties are stored on Empty objects and define sensor characteristics.
 
 from __future__ import annotations
 
+import contextlib
 import typing
 
 import bpy
@@ -21,7 +22,7 @@ from bpy.types import Context, PropertyGroup
 from ..constants import (
     PROP_SENSOR,
 )
-from ..core._utils.string_utils import sanitize_name
+from ..core import sanitize_name
 from ..core.constants import (
     CAM_FORMAT_BAYER_BGGR8,
     CAM_FORMAT_BAYER_RGGB8,
@@ -451,8 +452,6 @@ def register() -> None:
 
 def unregister() -> None:
     """Unregister property group."""
-    import contextlib
-
     with contextlib.suppress(AttributeError):
         delattr(bpy.types.Object, PROP_SENSOR)
 

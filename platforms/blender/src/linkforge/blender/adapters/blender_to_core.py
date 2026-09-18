@@ -16,6 +16,7 @@ from ..constants import SUFFIX_VISUAL
 from ..core import (
     GazeboElement,
     GazeboPlugin,
+    IComposer,
     Robot,
     RobotBuilder,
     RobotValidationError,
@@ -24,13 +25,15 @@ from ..core import (
     get_logger,
 )
 from ..core.constants import DEFAULT_MATERIAL_RGBA
+from ..handlers.name_sync_handler import sync_scene_identities
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
     get_robot_props,
 )
+from ..utils.scene_utils import get_robot_statistics
 from . import translator
-from .context import IBlenderContext
+from .context import BlenderContext, IBlenderContext
 from .geometry_extractor import get_object_material
 
 logger = get_logger(__name__)
@@ -59,9 +62,6 @@ def _categorize_scene_objects(
         Tuple of (link_objects, joint_objects, sensor_objects,
                  joints_map, root_link)
     """
-    from ..handlers.name_sync_handler import sync_scene_identities
-    from ..utils.scene_utils import get_robot_statistics
-
     sync_scene_identities(scene)
     stats = get_robot_statistics(scene, force_refresh=True)
     return (
@@ -147,6 +147,7 @@ class SceneToRobotTranslator:
         meshes_dir: Path | None = None,
         dry_run: bool = False,
         depsgraph: Any | None = None,
+        builder: IComposer | None = None,
     ):
         self.context = context
         self.meshes_dir = meshes_dir
@@ -161,7 +162,7 @@ class SceneToRobotTranslator:
             )
 
         self.robot_name = self.robot_props.robot_name if self.robot_props.robot_name else "robot"
-        self.builder = RobotBuilder(self.robot_name)
+        self.builder = builder if builder is not None else RobotBuilder(self.robot_name)
         self.validation_result = ValidationResult(robot_name=self.robot_name)
 
         # Translators (instantiated per translation run)
@@ -478,13 +479,8 @@ def scene_to_robot(
     dry_run: bool = False,
     raise_on_error: bool = True,
 ) -> tuple[Robot, ValidationResult]:
-    """Convert entire Blender scene to Core Robot using the Translator orchestrator."""
-    from .context import BlenderContext
-
     # Auto-wrap raw context if passed directly
     if not isinstance(context, IBlenderContext):
-        import bpy
-
         context = BlenderContext(bpy)
 
     translator = SceneToRobotTranslator(context, meshes_dir, dry_run)

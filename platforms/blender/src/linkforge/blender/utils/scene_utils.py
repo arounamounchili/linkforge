@@ -10,7 +10,16 @@ from typing import Any
 import bpy
 from mathutils import Vector
 
+from .. import preferences
 from ..constants import (
+    ANCHOR_DISPLAY_MAX,
+    ANCHOR_DISPLAY_MIN,
+    ANCHOR_DISPLAY_RATIO,
+    DEFAULT_JOINT_GIZMO_SIZE,
+    GIZMO_SCALE_FACTOR,
+    GIZMO_SIZE_MAX,
+    GIZMO_SIZE_MIN,
+    PROP_GEOM,
     SUFFIX_COLLISION,
 )
 from ..core.constants import (
@@ -190,7 +199,7 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
     manual_inertia_objects: list[Any] = []
     root_link: tuple[str, Any] | None = None
 
-    if not scene or not hasattr(scene, "objects"):
+    if scene is None or not hasattr(scene, "objects"):
         return RobotSceneStatistics(
             num_links=0,
             total_mass=0.0,
@@ -224,10 +233,6 @@ def get_robot_statistics(scene: Any, force_refresh: bool = False) -> RobotSceneS
             if collision_obj:
                 detected_type = GEOM_MESH
                 is_primitive = False
-                # Defer import to avoid circular dependency:
-                # scene_utils -> geom_props -> properties -> joint_props -> scene_utils
-                from ..properties.geom_props import PROP_GEOM  # noqa: PLC0415
-
                 geom_props = getattr(collision_obj, PROP_GEOM, None)
                 if geom_props:
                     detected_type = geom_props.geometry_type
@@ -344,7 +349,7 @@ def move_to_collection(
         obj: Blender object to move
         collection: Target Blender collection
     """
-    if not obj or not collection:
+    if obj is None or collection is None:
         return
 
     # Unlink from all current collections
@@ -369,10 +374,10 @@ def sync_object_collections(
     preventing "leaks" to the scene root.
 
     Args:
-        target_obj: The object to be moved/linked.
-        source_obj: The reference object whose collections should be matched.
+        target_obj: Child object to move into collection
+        source_obj: Parent reference object whose collections to mirror
     """
-    if not target_obj or not source_obj:
+    if target_obj is None or source_obj is None:
         return
 
     # Link to all collections where source_obj resides
@@ -403,7 +408,7 @@ def calculate_robot_bounds(scene: Any) -> tuple[Vector, Vector, float] | None:
     Returns:
         Tuple of (min_corner, max_corner, diagonal_length) or None if no components found.
     """
-    if not scene:
+    if scene is None:
         return None
 
     stats = get_robot_statistics(scene)
@@ -413,7 +418,7 @@ def calculate_robot_bounds(scene: Any) -> tuple[Vector, Vector, float] | None:
     points: list[Vector] = []
 
     for link_obj in stats.link_objects.values():
-        if not link_obj:
+        if link_obj is None:
             continue
 
         # Add link origin translation
@@ -457,20 +462,6 @@ def auto_fit_robot_gizmos(scene: Any, context: Any = None) -> tuple[float, float
     Returns:
         Tuple of (recommended_size, diagonal) or None if no robot components found.
     """
-    from ..constants import (
-        DEFAULT_JOINT_GIZMO_SIZE,
-        GIZMO_SCALE_FACTOR,
-        GIZMO_SIZE_MAX,
-        GIZMO_SIZE_MIN,
-    )
-    from ..preferences import (
-        get_addon_prefs,
-        update_inertia_size,
-        update_joint_empty_size,
-        update_link_empty_size,
-        update_sensor_empty_size,
-    )
-
     if context is None or not hasattr(context, "preferences"):
         context = bpy.context
 
@@ -485,7 +476,7 @@ def auto_fit_robot_gizmos(scene: Any, context: Any = None) -> tuple[float, float
         raw_size = diagonal * GIZMO_SCALE_FACTOR
         recommended_size = max(GIZMO_SIZE_MIN, min(GIZMO_SIZE_MAX, raw_size))
 
-    prefs = get_addon_prefs(context)
+    prefs = preferences.get_addon_prefs(context)
     if prefs:
         prefs.joint_empty_size = recommended_size
         prefs.link_empty_size = recommended_size * 0.8
@@ -493,10 +484,10 @@ def auto_fit_robot_gizmos(scene: Any, context: Any = None) -> tuple[float, float
         prefs.inertia_gizmo_size = recommended_size * 0.6
 
         # Update scene empties and redraw viewports
-        update_joint_empty_size(prefs, context)
-        update_link_empty_size(prefs, context)
-        update_sensor_empty_size(prefs, context)
-        update_inertia_size(prefs, context)
+        preferences.update_joint_empty_size(prefs, context)
+        preferences.update_link_empty_size(prefs, context)
+        preferences.update_sensor_empty_size(prefs, context)
+        preferences.update_inertia_size(prefs, context)
 
     return (recommended_size, diagonal)
 
@@ -515,13 +506,6 @@ def compute_anchor_size(gizmo_size: float, show_gpu_axes: bool = True) -> float:
     Returns:
         Compact anchor size in meters.
     """
-    from ..constants import (
-        ANCHOR_DISPLAY_MAX,
-        ANCHOR_DISPLAY_MIN,
-        ANCHOR_DISPLAY_RATIO,
-        DEFAULT_JOINT_GIZMO_SIZE,
-    )
-
     try:
         size = float(gizmo_size)
     except (TypeError, ValueError):

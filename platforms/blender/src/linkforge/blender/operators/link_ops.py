@@ -16,6 +16,7 @@ from ..adapters.geometry_extractor import (
 from ..constants import (
     DEFAULT_LINK_GIZMO_SIZE,
     GEOM_AUTO,
+    PROP_GEOM,
     PROP_LINK,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
@@ -31,11 +32,16 @@ from ..logic.collision_builder import (
     create_collision_for_link,
     regenerate_collision_mesh,
 )
-from ..properties.geom_props import PROP_GEOM
-from ..properties.link_props import LinkPropertyGroup, sanitize_name
+from ..preferences import get_addon_prefs
+from ..properties.link_props import (
+    LinkPropertyGroup,
+    sanitize_name,
+    update_active_collision,
+    update_active_visual,
+)
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.mode_guard import context_and_mode_guard
-from ..utils.scene_utils import clear_stats_cache
+from ..utils.scene_utils import clear_stats_cache, compute_anchor_size
 
 logger = get_logger(__name__)
 
@@ -226,8 +232,6 @@ class LINKFORGE_OT_add_empty_link(Operator):
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the operator."""
-        from ..preferences import get_addon_prefs
-
         scene = context.scene
         if not scene:
             return {"CANCELLED"}
@@ -241,8 +245,6 @@ class LINKFORGE_OT_add_empty_link(Operator):
             else DEFAULT_LINK_GIZMO_SIZE
         )
         show_gpu = getattr(addon_prefs, "show_joint_axes", True) if addon_prefs else True
-        from ..utils.scene_utils import compute_anchor_size
-
         empty_size = compute_anchor_size(raw_size, show_gpu)
 
         # Create Empty object as link frame
@@ -346,8 +348,6 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
         if not link_name:
             link_name = "link"
 
-        from ..preferences import get_addon_prefs
-
         addon_prefs = get_addon_prefs(context)
         raw_size = (
             getattr(addon_prefs, "link_empty_size", DEFAULT_LINK_GIZMO_SIZE)
@@ -355,8 +355,6 @@ class LINKFORGE_OT_create_link_from_mesh(Operator):
             else DEFAULT_LINK_GIZMO_SIZE
         )
         show_gpu = getattr(addon_prefs, "show_joint_axes", True) if addon_prefs else True
-        from ..utils.scene_utils import compute_anchor_size
-
         empty_size = compute_anchor_size(raw_size, show_gpu)
 
         # Rename mesh FIRST to free up the name for the Empty
@@ -984,13 +982,9 @@ class LINKFORGE_OT_set_active_geometry(Operator):
 
         if self.geometry_type == "VISUAL":
             lf.active_visual_index = self.index
-            from ..properties.link_props import update_active_visual
-
             update_active_visual(lf, context)
         elif self.geometry_type == "COLLISION":
             lf.active_collision_index = self.index
-            from ..properties.link_props import update_active_collision
-
             update_active_collision(lf, context)
 
         return {"FINISHED"}

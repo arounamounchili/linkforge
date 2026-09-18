@@ -159,7 +159,7 @@ def test_read_urdf_from_string_path(mocker, tmp_path):
     urdf_file = tmp_path / "robot.urdf"
     urdf_file.write_text("<robot name='test'/>")
 
-    # Pass as string, not Path — exercises the str->Path->parse branch (io.py line 50)
+    # Pass as string, not Path - exercises the str->Path->parse branch (io.py line 50)
     read_urdf(str(urdf_file))
 
     mock_parser.return_value.parse.assert_called_once()
@@ -172,7 +172,7 @@ def test_read_srdf_from_string_path(mocker, tmp_path):
     srdf_file.write_text("<robot name='test'/>")
     robot = Robot(name="test")
 
-    # Pass as string, not Path — exercises the str->Path->parse branch (io.py line 121)
+    # Pass as string, not Path - exercises the str->Path->parse branch (io.py line 121)
     read_srdf(str(srdf_file), robot=robot)
 
     mock_parser.return_value.parse.assert_called_once()

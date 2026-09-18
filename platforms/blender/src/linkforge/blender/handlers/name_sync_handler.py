@@ -10,7 +10,7 @@ import typing
 
 import bpy
 
-from ..core._utils.string_utils import sanitize_name
+from ..core import sanitize_name
 from ..utils.property_helpers import (
     PENDING_RENAMES,
     flush_deferred_renames,

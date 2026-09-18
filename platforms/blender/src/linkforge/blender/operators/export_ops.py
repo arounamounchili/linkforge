@@ -16,6 +16,8 @@ import bpy
 from bpy.types import Context, Event, Operator
 from bpy_extras.io_utils import ExportHelper
 
+from ..adapters import blender_to_core
+from ..adapters.context import BlenderContext
 from ..constants import (
     PROP_ROBOT,
     PROP_VALIDATION,
@@ -87,9 +89,6 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
         """Execute the export."""
-        from ..adapters.blender_to_core import scene_to_robot
-        from ..adapters.context import BlenderContext
-
         if not context.scene or not hasattr(context.scene, PROP_ROBOT):
             return {"CANCELLED"}
 
@@ -118,7 +117,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
 
         if robot_props.validate_before_export:
             try:
-                robot_dry_run, conversion_result = scene_to_robot(
+                robot_dry_run, conversion_result = blender_to_core.scene_to_robot(
                     lf_context, meshes_dir=meshes_dir, dry_run=True
                 )
             except Exception as e:
@@ -141,7 +140,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
 
         should_write_meshes = robot_props.export_meshes
         try:
-            robot, _ = scene_to_robot(
+            robot, _ = blender_to_core.scene_to_robot(
                 lf_context,
                 meshes_dir=meshes_dir,
                 dry_run=not should_write_meshes,
@@ -209,12 +208,11 @@ class LINKFORGE_OT_validate_robot(Operator):
         )
         validation_props.clear()
 
-        from ..adapters.blender_to_core import scene_to_robot
-        from ..adapters.context import BlenderContext
-
         lf_context = BlenderContext(bpy_instance=bpy)
         try:
-            robot, conversion_result = scene_to_robot(lf_context, raise_on_error=False)
+            robot, conversion_result = blender_to_core.scene_to_robot(
+                lf_context, raise_on_error=False
+            )
         except RobotValidationError as e:
             validation_props.has_results = True
             validation_props.is_valid = False
