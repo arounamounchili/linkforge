@@ -239,12 +239,11 @@ If you use LinkForge in academic research, please cite it using the provided `CI
 
 ## License
 
-LinkForge follows a **Split-License Model** designed for both community-driven innovation and industrial-scale integration:
+LinkForge is an open-source project using:
 
-- **`linkforge-core` (The Engine)**: Licensed under the **Apache License 2.0**. This permissive license allows industrial partners to integrate the core engine into proprietary pipelines and commercial products.
-- **`platforms/blender` (The UI)**: Licensed under the **GNU General Public License v3.0**. This ensures the visual modeling experience and its community-driven improvements remain open-source.
+- **`linkforge-core`**: [Apache License 2.0](core/LICENSE) - Permissive license for maximum flexibility in research, personal, and commercial projects.
+- **`platforms/blender`**: [GNU General Public License v3.0](LICENSE) - Standard for the Blender ecosystem, ensuring the add-on remains free and open-source.
 
-For more details, see the [LICENSE](LICENSE) (GPL) and [core/LICENSE](core/LICENSE) (Apache) files.
 For third-party component licenses, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Our Contributors

@@ -12,6 +12,7 @@ from mathutils import Matrix
 from ..constants import (
     DEFAULT_JOINT_GIZMO_SIZE,
     DEFAULT_LINK_GIZMO_SIZE,
+    PROP_GEOM,
     PROP_LINK,
     PROP_ROBOT,
     PROP_SENSOR,
@@ -57,11 +58,14 @@ from ..core.constants import (
     SENSOR_LIDAR,
 )
 from ..preferences import get_addon_prefs
-from ..properties.geom_props import PROP_GEOM
 from ..utils.joint_utils import resolve_mimic_joints
 from ..utils.property_helpers import get_joint_props, get_link_props
-from ..utils.scene_utils import move_to_collection, sync_object_collections
-from .context import IBlenderContext
+from ..utils.scene_utils import (
+    compute_anchor_size,
+    move_to_collection,
+    sync_object_collections,
+)
+from .context import BlenderContext, IBlenderContext
 
 logger = get_logger(__name__)
 
@@ -424,8 +428,6 @@ def create_link_object(
     prefs = get_addon_prefs()
     raw_size = prefs.link_empty_size if prefs else DEFAULT_LINK_GIZMO_SIZE
     show_gpu = prefs.show_joint_axes if prefs else True
-    from ..utils.scene_utils import compute_anchor_size
-
     link_obj.empty_display_size = compute_anchor_size(raw_size, show_gpu)
 
     if collection:
@@ -671,8 +673,6 @@ def create_joint_object(
         else DEFAULT_JOINT_GIZMO_SIZE
     )
     show_gpu = getattr(prefs, "show_joint_axes", True) if prefs else True
-    from ..utils.scene_utils import compute_anchor_size
-
     empty_size = compute_anchor_size(raw_size, show_gpu)
 
     empty = context.data.objects.new(joint.name, None)
@@ -1019,8 +1019,6 @@ def import_robot_to_scene(
         source_path: Path to source file
         context: Blender context (real or adapter)
     """
-    from .context import BlenderContext
-
     # Auto-wrap raw context if passed directly
     if not isinstance(context, IBlenderContext):
         context = BlenderContext(context)

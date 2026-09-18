@@ -53,6 +53,7 @@ from linkforge.core import (
     Color,
     Cylinder,
     GeometryType,
+    IComposer,
     Joint,
     JointType,
     Link,
@@ -63,8 +64,8 @@ from linkforge.core import (
     SensorType,
     Sphere,
     ValidationErrorCode,
+    sanitize_name,
 )
-from linkforge.core._utils.string_utils import sanitize_name
 
 
 def translate_link_to_model(obj, context):
@@ -2509,3 +2510,36 @@ class TestJointDefinitionValidation:
             err.title == "Duplicate Child Link Assignment" and "shared_child" in err.message
             for err in validation_result.errors
         )
+
+
+def test_scene_to_robot_translator_injected_builder(scene, blender_context) -> None:
+    """Verify SceneToRobotTranslator accepts an injected IComposer builder."""
+    root = create_test_object("base_link", None, scene)
+    safe_get_linkforge(root).is_robot_link = True
+
+    custom_builder: IComposer = RobotBuilder("injected_robot")
+    translator = SceneToRobotTranslator(blender_context, builder=custom_builder)
+    assert translator.builder is custom_builder
+
+    robot, val_result = translator.translate(raise_on_error=False)
+    assert robot.name == "injected_robot"
+    assert robot.has_link("base_link")
+
+
+def test_sensor_translator_accepts_icomposer(scene) -> None:
+    """Verify SensorTranslator works with an IComposer protocol instance."""
+    link_obj = create_test_object("base_link", None, scene=scene)
+    safe_get_linkforge(link_obj).is_robot_link = True
+
+    sensor_obj = create_test_object("test_imu", None, scene=scene)
+    s_props = safe_get_sensor(sensor_obj, scene)
+    s_props.is_robot_sensor = True
+    s_props.sensor_type = "IMU"
+    s_props.attached_link = link_obj
+
+    builder: IComposer = RobotBuilder("robot_with_sensor")
+    builder.link("base_link").commit()
+    SensorTranslator().translate(sensor_obj, builder)
+    assert len(builder.robot.sensors) == 1
+    assert builder.robot.sensors[0].name == "test_imu"
+    assert builder.robot.sensors[0].link_name == "base_link"

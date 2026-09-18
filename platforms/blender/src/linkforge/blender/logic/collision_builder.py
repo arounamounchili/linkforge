@@ -16,6 +16,7 @@ from bpy.types import Context
 from ..adapters.geometry_extractor import detect_primitive_type
 from ..constants import (
     GEOM_AUTO,
+    PROP_GEOM,
     PROP_LINK,
     SUFFIX_COLLISION,
     SUFFIX_VISUAL,
@@ -27,7 +28,6 @@ from ..core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
-from ..properties.geom_props import PROP_GEOM
 from ..properties.link_props import LinkPropertyGroup
 from ..utils.mode_guard import context_and_mode_guard
 from ..utils.scene_utils import sync_object_collections

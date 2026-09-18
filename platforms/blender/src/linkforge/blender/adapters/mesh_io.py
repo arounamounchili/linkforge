@@ -19,8 +19,7 @@ from ..constants import (
     FORMAT_STL,
     PURPOSE_COLLISION,
 )
-from ..core import get_logger
-from ..core._utils.string_utils import sanitize_name
+from ..core import get_logger, sanitize_name
 from ..core.constants import (
     EPSILON,
 )

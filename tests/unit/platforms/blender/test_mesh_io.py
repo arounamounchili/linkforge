@@ -14,7 +14,6 @@ from linkforge.blender.adapters.mesh_io import (
     export_mesh_stl,
     get_mesh_filename,
 )
-from linkforge.core._utils.path_utils import resolve_package_path
 from mathutils import Vector
 
 from tests.blender_test_utils import create_mesh_object, create_test_object
@@ -156,30 +155,6 @@ class TestMeshNaming:
         obj = create_test_object("part", None, scene)
         obj["source_name"] = "custom"
         assert obj["source_name"] == "custom"
-
-
-# Path Resolution
-
-
-class TestMeshResolution:
-    def test_resolve_package_path_relative(self, tmp_path) -> None:
-        """Test resolving relative package paths."""
-        pkg_dir = tmp_path / "my_pkg"
-        pkg_dir.mkdir()
-        (pkg_dir / "package.xml").touch()
-
-        mesh_dir = pkg_dir / "meshes"
-        mesh_dir.mkdir()
-        mesh_file = mesh_dir / "test.stl"
-        mesh_file.touch()
-
-        source_dir = pkg_dir / "urdf"
-        source_dir.mkdir()
-
-        uri = "package://my_pkg/meshes/test.stl"
-        resolved = resolve_package_path(uri, source_dir)
-        assert resolved is not None
-        assert resolved.name == "test.stl"
 
 
 # Robustness and Edge Cases

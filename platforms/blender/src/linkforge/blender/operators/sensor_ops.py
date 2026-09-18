@@ -15,6 +15,7 @@ from ..constants import (
 from ..core.constants import (
     DEFAULT_SENSOR_TYPE,
 )
+from ..preferences import get_addon_prefs
 from ..properties.link_props import sanitize_name
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.mode_guard import context_and_mode_guard
@@ -76,8 +77,6 @@ class LINKFORGE_OT_create_sensor(Operator):
 
         # Get preferred empty size from addon preferences
         empty_size = DEFAULT_SENSOR_GIZMO_SIZE  # Default fallback
-        from ..preferences import get_addon_prefs
-
         addon_prefs = get_addon_prefs(context)
         if addon_prefs:
             empty_size = getattr(addon_prefs, "sensor_empty_size", empty_size)

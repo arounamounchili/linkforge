@@ -740,7 +740,7 @@ class TestRobotBuilder:
         builder.push_parent("mid_link")
         builder.push_parent("top_link")
 
-        # Pop the middle entry by name — exercises the `remove` branch
+        # Pop the middle entry by name - exercises the `remove` branch
         builder.pop_parent("mid_link")
         assert "mid_link" not in builder._parent_stack
         assert builder._parent_stack == ["base_link", "top_link"]
@@ -750,7 +750,7 @@ class TestRobotBuilder:
         builder = RobotBuilder("test_robot")
         builder.push_parent("base_link")
 
-        # Pop a name that doesn't exist — should not raise
+        # Pop a name that doesn't exist - should not raise
         builder.pop_parent("nonexistent")
         assert builder._parent_stack == ["base_link"]
 
