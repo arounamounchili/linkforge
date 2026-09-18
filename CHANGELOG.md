@@ -5,6 +5,19 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4](https://github.com/arounamounchili/linkforge/compare/v1.5.3...v1.5.4) (2026-09-18)
+
+
+### 🐞 Bug Fixes
+
+* **core,blender:** support virtual reference frames and fix docs build ([bbb3a5d](https://github.com/arounamounchili/linkforge/commit/bbb3a5dd96b6fe12ea3f905504e39c0d57615112))
+* **core:** ensure deterministic XML export for URDF, SRDF, and XACRO ([86dd720](https://github.com/arounamounchili/linkforge/commit/86dd720f5af93dab724023a8c70ecf2a9f0d7d76))
+
+
+### 🛠️ Refactors
+
+* decouple platform layer, hoist imports, and consolidate test suite ([0a3e3d5](https://github.com/arounamounchili/linkforge/commit/0a3e3d5191c5f3786e5b10fd4dc5dafcd0e269cf))
+
 ## [1.5.3](https://github.com/arounamounchili/linkforge/compare/v1.5.2...v1.5.3) (2026-09-12)
 
 
