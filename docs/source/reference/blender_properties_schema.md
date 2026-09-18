@@ -247,7 +247,7 @@ Stored directly on child **Mesh** objects (both visual and collision geometry).
 |---|---|---|---|
 | `geom_role` | `str` | `"AUTO"` | Geometry role: `"AUTO"` (determined by `_visual`/`_collision` suffix), `"VISUAL"`, or `"COLLISION"` |
 | `geometry_type` | `str` | `"mesh"` | Shape representation: `"box"`, `"cylinder"`, `"sphere"`, or `"mesh"` |
-| `collision_quality` | `float` | `50.0` | Mesh simplification percentage (1–100%). Only used when `geometry_type` is `"mesh"` |
+| `collision_quality` | `float` | `50.0` | Mesh simplification percentage (1-100%). Only used when `geometry_type` is `"mesh"` |
 
 ---
 

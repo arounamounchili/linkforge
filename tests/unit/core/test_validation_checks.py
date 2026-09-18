@@ -557,7 +557,7 @@ def test_semantic_consistency_check_coverage(empty_robot, result):
 def test_mass_properties_diagonal_triangle_inequality(empty_robot, result):
     """Test that MassPropertiesCheck catches diagonal tensor triangle inequality violations.
 
-    Covers checks.py line 371 — the `else` branch for tensors with zero off-diagonals.
+    Covers checks.py line 371 - the `else` branch for tensors with zero off-diagonals.
     """
     # Create a tensor that has zero off-diagonals but violates triangle inequality.
     # Use object.__new__ to bypass the InertiaTensor constructor validation.

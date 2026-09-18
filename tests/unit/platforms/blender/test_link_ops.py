@@ -867,7 +867,7 @@ class TestResolveActiveLink:
         cleanup_blender_scene(scene)
 
     def test_resolve_from_direct_link(self, scene, blender_context) -> None:
-        """Active object is a robot link — should resolve directly."""
+        """Active object is a robot link - should resolve directly."""
         link_obj = create_robot_link("direct_link", scene)
         bpy.context.view_layer.objects.active = link_obj
         link_obj.select_set(True)
@@ -876,7 +876,7 @@ class TestResolveActiveLink:
         assert result is link_obj
 
     def test_resolve_from_visual_child(self, scene, blender_context) -> None:
-        """Active object is a visual child — should resolve to parent link."""
+        """Active object is a visual child - should resolve to parent link."""
         link_obj = create_robot_link("parent_link", scene, with_visual=True)
         visual_child = link_obj.children[0]
         bpy.context.view_layer.objects.active = visual_child
@@ -886,7 +886,7 @@ class TestResolveActiveLink:
         assert result is link_obj
 
     def test_resolve_from_selected_objects(self, scene, blender_context) -> None:
-        """Active object is a loose mesh but a link is selected — resolve from selection."""
+        """Active object is a loose mesh but a link is selected - resolve from selection."""
         link_obj = create_robot_link("sel_link", scene, with_visual=False, with_collision=False)
         loose_mesh = create_mesh_object("loose", scene)
 
@@ -909,7 +909,7 @@ class TestResolveActiveLink:
         assert result is link_obj
 
     def test_resolve_returns_none(self, scene, blender_context) -> None:
-        """No link or link child anywhere — should return None."""
+        """No link or link child anywhere - should return None."""
         loose = create_mesh_object("unrelated", scene)
         bpy.context.view_layer.objects.active = loose
         loose.select_set(True)
@@ -918,7 +918,7 @@ class TestResolveActiveLink:
         assert result is None
 
     def test_resolve_no_active_object(self, scene, blender_context) -> None:
-        """No active object — should return None."""
+        """No active object - should return None."""
         bpy.context.view_layer.objects.active = None
         result = link_ops._resolve_active_link(bpy.context)
         assert result is None
@@ -1134,7 +1134,7 @@ class TestRemoveLinkWithVisuals:
         cleanup_blender_scene(scene)
 
     def test_remove_link_restores_visuals(self, scene, blender_context) -> None:
-        """Remove link with visual children — visuals should be unparented and restored."""
+        """Remove link with visual children - visuals should be unparented and restored."""
         link_obj = create_robot_link("rl_link", scene, with_visual=True, with_collision=True)
         visual_child = [c for c in link_obj.children if "_visual" in c.name.lower()][0]
 
@@ -1199,7 +1199,7 @@ class TestCalculateInertiaAllBranches:
         """Calculate inertia all with some failures."""
         # Create link with visual that has cube (should succeed)
         create_robot_link("ia_ok", scene, with_visual=True, with_collision=False)
-        # Create link with empty visual (no geometry — should exercise the failure path)
+        # Create link with empty visual (no geometry - should exercise the failure path)
         create_robot_link(
             "ia_empty", scene, with_visual=True, with_collision=False, with_cube=False
         )

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import typing
 
 import bpy
 from bpy.props import EnumProperty, FloatProperty
 from bpy.types import PropertyGroup
 
+from ..constants import PROP_GEOM as PROP_GEOM
 from ..core.constants import GEOM_BOX, GEOM_CYLINDER, GEOM_MESH, GEOM_SPHERE
-
-PROP_GEOM = "linkforge_geom"
 
 
 def _on_collision_geom_update(self: GeomPropertyGroup, _context: bpy.types.Context) -> None:
@@ -93,8 +93,6 @@ def register() -> None:
 
 def unregister() -> None:
     """Unregister property group."""
-    import contextlib
-
     with contextlib.suppress(AttributeError):
         delattr(bpy.types.Object, PROP_GEOM)
 

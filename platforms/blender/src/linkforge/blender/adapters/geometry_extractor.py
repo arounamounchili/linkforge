@@ -21,6 +21,7 @@ from ..constants import (
     DEFAULT_PRIMITIVE_CONFIG,
     FORMAT_STL,
     PRIMITIVE_MAX_FACES,
+    PROP_GEOM,
     PURPOSE_VISUAL,
 )
 from ..core import (
@@ -33,8 +34,8 @@ from ..core import (
     Sphere,
     Vector3,
     get_logger,
+    sanitize_name,
 )
-from ..core._utils.string_utils import sanitize_name
 from ..core.constants import (
     DEFAULT_MATERIAL_RGBA,
     GEOM_BOX,
@@ -43,8 +44,8 @@ from ..core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
-from ..properties.geom_props import PROP_GEOM
 from ..utils.transform_utils import get_local_bounding_box_center
+from . import mesh_io
 
 logger = get_logger(__name__)
 
@@ -177,9 +178,7 @@ def get_object_geometry(
     if actual_geometry_type == GEOM_MESH:
         # Export actual mesh file if meshes_dir is provided
         if meshes_dir and link_name and obj.type == "MESH":
-            from .mesh_io import export_link_mesh
-
-            mesh_path, geom_world_matrix = export_link_mesh(
+            mesh_path, geom_world_matrix = mesh_io.export_link_mesh(
                 obj=obj,
                 link_name=link_name,
                 geometry_type=geom_purpose,
@@ -320,13 +319,13 @@ def get_object_material(obj: Any, props: Any) -> Material | None:
         return None
 
     mat_name = f"{sanitize_name(obj.name)}_material"
-    if obj.material_slots and obj.material_slots[0].material:
+    if obj.material_slots and len(obj.material_slots) > 0 and obj.material_slots[0].material:
         # Sanitize material name to be valid Python identifier (required for XACRO)
         mat_name = sanitize_name(obj.material_slots[0].material.name)
 
     # Extract color from Blender material (if assigned)
     color = None
-    if obj.material_slots and obj.material_slots[0].material:
+    if obj.material_slots and len(obj.material_slots) > 0 and obj.material_slots[0].material:
         blender_mat = obj.material_slots[0].material
 
         # Try to get color from Principled BSDF node (modern Blender)

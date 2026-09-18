@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import typing
+
+import mathutils
 import pytest
 from linkforge.blender.utils.transform_utils import (
     clear_parent_keep_transform,
     get_local_bounding_box_center,
+    matrix_to_transform,
     set_parent_keep_transform,
 )
 
 from tests.blender_test_utils import create_robot_link, create_test_object
+from tests.mock_bpy_env import MockEuler, MockMatrix
 
 # Transform Utilities
 
@@ -80,6 +85,23 @@ class TestTransformUtilities:
         assert center.x == 1.0
         assert center.y == 2.0
         assert center.z == 3.0
+
+    def test_matrix_to_transform_mocked(self) -> None:
+        """Verify matrix_to_transform works with a pure mock matrix object."""
+        mock_matrix = MockMatrix.Identity(4)
+        mock_matrix.data[0][3] = 1.0
+        mock_matrix.data[1][3] = 2.0
+        mock_matrix.data[2][3] = 3.0
+        mock_matrix._euler_hint = MockEuler(0.1, 0.2, 0.3)
+
+        transform = matrix_to_transform(typing.cast(mathutils.Matrix, mock_matrix))
+
+        assert transform.xyz.x == 1.0
+        assert transform.xyz.y == 2.0
+        assert transform.xyz.z == 3.0
+        assert transform.rpy.x == 0.1
+        assert transform.rpy.y == 0.2
+        assert transform.rpy.z == 0.3
 
 
 # Rotation Normalization
