@@ -581,6 +581,16 @@ class TestSensorPanel:
         panel.draw(bpy.context)
         mock_layout.prop.assert_any_call(sp, "lidar_horizontal_samples")
 
+        # Vertical scan angles are only shown for 3D (multi-row) LIDAR
+        assert (
+            (sp, "lidar_vertical_min_angle"),
+            {},
+        ) not in mock_layout.prop.call_args_list
+        sp.lidar_vertical_samples = 16
+        panel.draw(bpy.context)
+        mock_layout.prop.assert_any_call(sp, "lidar_vertical_min_angle")
+        mock_layout.prop.assert_any_call(sp, "lidar_vertical_max_angle")
+
         sp.sensor_type = "contact"
         panel.draw(bpy.context)
         mock_layout.prop.assert_any_call(sp, "contact_collision")
