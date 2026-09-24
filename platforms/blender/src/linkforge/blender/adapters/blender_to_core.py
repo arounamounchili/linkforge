@@ -32,6 +32,7 @@ from ..utils.property_helpers import (
     get_robot_props,
 )
 from ..utils.scene_utils import get_robot_statistics
+from ..utils.transform_utils import live_world_matrix
 from . import translator
 from .context import BlenderContext, IBlenderContext
 from .geometry_extractor import get_object_material
@@ -94,7 +95,7 @@ def _calculate_link_frames(
         root_name, root_obj = root_link
         link_frames[root_name] = Matrix.Identity(4)
 
-        root_world = root_obj.matrix_world.copy()
+        root_world = live_world_matrix(root_obj)
         root_translation = root_world.to_translation()
         root_rotation = root_world.to_quaternion()
         root_transform = Matrix.Translation(root_translation) @ root_rotation.to_matrix().to_4x4()
@@ -106,7 +107,7 @@ def _calculate_link_frames(
                 if parent == parent_name and child_name not in link_frames:
                     child_obj = link_objects.get(child_name)
                     if child_obj:
-                        child_world = child_obj.matrix_world.copy()
+                        child_world = live_world_matrix(child_obj)
                         child_translation = child_world.to_translation()
                         child_rotation = child_world.to_quaternion()
                         child_transform = (
@@ -122,7 +123,7 @@ def _calculate_link_frames(
         # Calculate frames for any disconnected links/islands in the scene relative to the primary root
         for name, obj in link_objects.items():
             if name not in link_frames:
-                obj_world = obj.matrix_world.copy()
+                obj_world = live_world_matrix(obj)
                 obj_translation = obj_world.to_translation()
                 obj_rotation = obj_world.to_quaternion()
                 obj_transform = (

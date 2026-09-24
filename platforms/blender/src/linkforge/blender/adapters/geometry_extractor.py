@@ -44,7 +44,7 @@ from ..core.constants import (
     GEOM_MESH,
     GEOM_SPHERE,
 )
-from ..utils.transform_utils import get_local_bounding_box_center
+from ..utils.transform_utils import get_local_bounding_box_center, live_world_matrix
 from . import mesh_io
 
 logger = get_logger(__name__)
@@ -202,7 +202,7 @@ def get_object_geometry(
         # Calculate local geometric center from bounding box
         local_center = get_local_bounding_box_center(obj)
         # Apply offset to get the true center of the geometry
-        geom_world_matrix = obj.matrix_world @ Matrix.Translation(local_center)
+        geom_world_matrix = live_world_matrix(obj) @ Matrix.Translation(local_center)
 
         dimensions = getattr(obj, "dimensions", None)
         if dimensions is None:
