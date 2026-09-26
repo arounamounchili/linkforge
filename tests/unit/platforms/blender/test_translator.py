@@ -827,13 +827,10 @@ def test_sensor_translator_comprehensive(scene, blender_context):
     sp.plugin_filename = "libgazebo_ros_camera.so"
     sp.topic_name = "/camera/image_raw"
 
-    link_matrix = Matrix.Translation((2.0, 0.0, 0.0))
-    link_frames = {"parent_link_name": link_matrix}
-
     # First add parent link to robot model
     builder.link("parent_link_name").commit()
 
-    translator.translate(dummy_obj, builder, link_frames=link_frames)
+    translator.translate(dummy_obj, builder)
     sensor = builder.robot.sensors[0]
     assert sensor.name == "test_sensor"
     assert sensor.type == SensorType.CAMERA
@@ -1083,3 +1080,75 @@ def test_ros2_control_translator_missing_joint(scene, blender_context) -> None:
     assert val_result.errors[0].code == ValidationErrorCode.NOT_FOUND
     assert "ROS2 Control Missing Joint" in val_result.errors[0].title
     assert builder.robot.get_ros2_control("MissingJointControl") is None
+
+
+def test_sensor_relative_origin_when_parent_link_translated(scene) -> None:
+    """Verify that sensor origin is relative to parent link when the link is translated in world space."""
+    cleanup_blender_scene(scene)
+
+    # Parent link positioned at (3.0, 5.0, 2.0)
+    link_obj = create_test_object("chassis_link", None, scene=scene)
+    link_lp = safe_get_linkforge(link_obj, scene)
+    link_lp.is_robot_link = True
+    link_lp.link_name = "chassis"
+    link_obj.location = (3.0, 5.0, 2.0)
+
+    # Sensor parented to link_obj with local offset (0.0, 0.0, 0.5)
+    sensor_obj = create_test_object("lidar_sensor", None, scene=scene)
+    sensor_obj.parent = link_obj
+    sensor_obj.matrix_parent_inverse.identity()
+    sensor_obj.location = (0.0, 0.0, 0.5)
+
+    sp = safe_get_sensor(sensor_obj, scene)
+    sp.is_robot_sensor = True
+    sp.sensor_name = "lidar_1"
+    sp.sensor_type = "LIDAR"
+    sp.attached_link = link_obj
+    sp.lidar_vertical_samples = 1
+
+    builder = RobotBuilder("test_robot")
+    builder.link("chassis").commit()
+
+    translator = SensorTranslator()
+    translator.translate(sensor_obj, builder)
+
+    sensor = builder.robot.sensors[0]
+    assert sensor.origin is not None
+    assert sensor.origin.xyz.x == pytest.approx(0.0, abs=1e-5)
+    assert sensor.origin.xyz.y == pytest.approx(0.0, abs=1e-5)
+    assert sensor.origin.xyz.z == pytest.approx(0.5, abs=1e-5)
+
+
+def test_sensor_relative_origin_unparented_object(scene) -> None:
+    """Verify that sensor origin is correctly computed relative to attached_link even if unparented in hierarchy."""
+    cleanup_blender_scene(scene)
+
+    # Link at (3.0, 5.0, 2.0)
+    link_obj = create_test_object("chassis_link", None, scene=scene)
+    link_lp = safe_get_linkforge(link_obj, scene)
+    link_lp.is_robot_link = True
+    link_lp.link_name = "chassis"
+    link_obj.location = (3.0, 5.0, 2.0)
+
+    # Sensor at world position (3.0, 5.0, 2.5) without Blender hierarchy parenting
+    sensor_obj = create_test_object("lidar_sensor", None, scene=scene)
+    sensor_obj.location = (3.0, 5.0, 2.5)
+
+    sp = safe_get_sensor(sensor_obj, scene)
+    sp.is_robot_sensor = True
+    sp.sensor_name = "lidar_1"
+    sp.sensor_type = "LIDAR"
+    sp.attached_link = link_obj
+    sp.lidar_vertical_samples = 1
+
+    builder = RobotBuilder("test_robot")
+    builder.link("chassis").commit()
+
+    translator = SensorTranslator()
+    translator.translate(sensor_obj, builder)
+
+    sensor = builder.robot.sensors[0]
+    assert sensor.origin is not None
+    assert sensor.origin.xyz.x == pytest.approx(0.0, abs=1e-5)
+    assert sensor.origin.xyz.y == pytest.approx(0.0, abs=1e-5)
+    assert sensor.origin.xyz.z == pytest.approx(0.5, abs=1e-5)
