@@ -5,6 +5,28 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4](https://github.com/arounamounchili/linkforge/compare/v1.5.3...v1.5.4) (2026-09-26)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** export live geometry origins and preserve LiDAR vertical scan settings ([204e7ce](https://github.com/arounamounchili/linkforge/commit/204e7cebb357ce723dd4af199c2354eda81a2d70))
+* **blender:** preserve sensor relative origin when robot is translated in world ([29d1312](https://github.com/arounamounchili/linkforge/commit/29d1312b1ee797f3c4f1fdcdb2493ebee68749b6))
+* **core,blender:** support virtual reference frames and fix docs build ([bbb3a5d](https://github.com/arounamounchili/linkforge/commit/bbb3a5dd96b6fe12ea3f905504e39c0d57615112))
+* **core:** ensure deterministic XML export for URDF, SRDF, and XACRO ([86dd720](https://github.com/arounamounchili/linkforge/commit/86dd720f5af93dab724023a8c70ecf2a9f0d7d76))
+
+
+### 📚 Documentation
+
+* add IliTheButterfly as a contributor for code, bug, and test ([203d40b](https://github.com/arounamounchili/linkforge/commit/203d40b9a9b7fc63aa9f854e8be266eee8f74122))
+* add you as a contributor for test ([7ddb581](https://github.com/arounamounchili/linkforge/commit/7ddb58104ec7f66ee33eafcb4ac6f3d94b640eae))
+* revert accidental contributor addition ([a5b21e2](https://github.com/arounamounchili/linkforge/commit/a5b21e2c377dd80aa75b54e11d2cb28554dd8653))
+
+
+### 🛠️ Refactors
+
+* decouple platform layer, hoist imports, and consolidate test suite ([0a3e3d5](https://github.com/arounamounchili/linkforge/commit/0a3e3d5191c5f3786e5b10fd4dc5dafcd0e269cf))
+
 ## [1.5.3](https://github.com/arounamounchili/linkforge/compare/v1.5.2...v1.5.3) (2026-09-12)
 
 
