@@ -98,6 +98,17 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "IliTheButterfly",
+      "name": "IliTheButterfly",
+      "avatar_url": "https://avatars.githubusercontent.com/u/29800847?v=4",
+      "profile": "https://github.com/IliTheButterfly",
+      "contributions": [
+        "code",
+        "bug",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
