@@ -987,6 +987,35 @@ class TestURDFParser:
         robot = parser.parse_string(xml)
         assert len(robot.sensors) == 1
 
+    def test_parse_lidar_vertical_scan(self) -> None:
+        """3D lidar vertical samples and angle range are parsed from <scan><vertical>."""
+        xml = """<robot name="r">
+            <link name="base"/>
+            <gazebo reference="base">
+                <sensor type="ray" name="lidar_3d">
+                    <ray>
+                        <scan>
+                            <horizontal><samples>360</samples></horizontal>
+                            <vertical>
+                                <samples>16</samples>
+                                <resolution>1</resolution>
+                                <min_angle>-0.26</min_angle>
+                                <max_angle>0.26</max_angle>
+                            </vertical>
+                        </scan>
+                        <range><min>0.1</min><max>30.0</max></range>
+                    </ray>
+                </sensor>
+            </gazebo>
+        </robot>"""
+        robot = URDFParser().parse_string(xml)
+        lidar = robot.sensors[0].lidar_info
+        assert lidar is not None
+        assert lidar.vertical_samples == 16
+        assert lidar.vertical_resolution == pytest.approx(1.0)
+        assert lidar.vertical_min_angle == pytest.approx(-0.26)
+        assert lidar.vertical_max_angle == pytest.approx(0.26)
+
     def test_parse_imu_with_empty_angular_and_linear_elements(self) -> None:
         """IMU sensor with empty angular_velocity and linear_acceleration elements parses cleanly."""
         xml = """<robot name="r">

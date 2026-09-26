@@ -191,6 +191,10 @@ class LINKFORGE_PT_perceive(Panel):
         box.separator()
         box.label(text="Vertical Scan:")
         box.prop(props, "lidar_vertical_samples")
+        if props.lidar_vertical_samples > 1:
+            row = box.row(align=True)
+            row.prop(props, "lidar_vertical_min_angle")
+            row.prop(props, "lidar_vertical_max_angle")
 
         # Range
         box.separator()

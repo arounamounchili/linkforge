@@ -1140,10 +1140,10 @@ class MockObject(MockPropertyGroup):
 
         self._selected = False
         self._parent = None
+        self.parent_type = "OBJECT"
         self._matrix_world = MockMatrix.Identity(4)
         self._matrix_local = MockMatrix.Identity(4)
         self.matrix_parent_inverse = MockMatrix.Identity(4)
-        self.matrix_basis = MockMatrix.Identity(4)
         self._location = MockVector(0, 0, 0)
         self._rotation_euler = MockEuler(0, 0, 0)
         self.rotation_mode = "XYZ"
@@ -1248,6 +1248,16 @@ class MockObject(MockPropertyGroup):
     def matrix_local(self, value):
         self._matrix_local = MockMatrix(value)
         self._update_transforms_from_matrix_local()
+
+    @property
+    def matrix_basis(self):
+        # In this mock, world = parent_world @ matrix_parent_inverse @ matrix_local,
+        # so matrix_local plays the role of Blender's matrix_basis.
+        return self._matrix_local
+
+    @matrix_basis.setter
+    def matrix_basis(self, value):
+        self.matrix_local = value
 
     @property
     def parent(self):

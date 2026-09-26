@@ -88,6 +88,33 @@ def clear_parent_keep_transform(child_obj: Any) -> None:
     child_obj.matrix_world = pk_mw
 
 
+def live_world_matrix(obj: Any) -> Any:
+    """Return the object's world matrix recomposed from its parent chain.
+
+    ``obj.matrix_world`` is only refreshed by depsgraph evaluation, and the depsgraph
+    skips objects that are disabled in viewports (``hide_viewport``). Collision objects
+    are hidden whenever collision display is off (the default for imported robots), so
+    their ``matrix_world`` goes stale as soon as they or their link are moved, and an
+    exported ``<origin>`` would describe where the object was last evaluated instead of
+    where it is now.
+
+    This recomposes the world matrix from ``matrix_basis`` and ``matrix_parent_inverse``
+    up the parent chain, which is always current. Objects with constraints or
+    non-OBJECT parenting (bones, vertices) fall back to ``matrix_world``.
+
+    Args:
+        obj: Blender object
+
+    Returns:
+        A new 4x4 world matrix.
+    """
+    if obj.constraints or (obj.parent is not None and obj.parent_type != "OBJECT"):
+        return obj.matrix_world.copy()
+    if obj.parent is None:
+        return obj.matrix_basis.copy()
+    return live_world_matrix(obj.parent) @ obj.matrix_parent_inverse @ obj.matrix_basis
+
+
 def get_local_bounding_box_center(obj: Any) -> Any:
     """Calculate the geometric center of an object's bounding box in local space.
 

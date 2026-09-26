@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import typing
+from types import SimpleNamespace
 
 import mathutils
 import pytest
 from linkforge.blender.utils.transform_utils import (
     clear_parent_keep_transform,
     get_local_bounding_box_center,
+    live_world_matrix,
     matrix_to_transform,
     set_parent_keep_transform,
 )
@@ -102,6 +104,60 @@ class TestTransformUtilities:
         assert transform.rpy.x == 0.1
         assert transform.rpy.y == 0.2
         assert transform.rpy.z == 0.3
+
+    def test_live_world_matrix_ignores_stale_matrix_world(self) -> None:
+        """A hidden child's cached matrix_world can be stale; the live matrix is not."""
+        link = SimpleNamespace(
+            parent=None,
+            parent_type="OBJECT",
+            constraints=[],
+            matrix_basis=MockMatrix.Translation((1.0, 2.0, 3.0)),
+        )
+        collision = SimpleNamespace(
+            parent=link,
+            parent_type="OBJECT",
+            constraints=[],
+            matrix_parent_inverse=MockMatrix.Identity(4),
+            matrix_basis=MockMatrix.Translation((0.0, 0.0, 0.25)),
+            # Stale: last evaluated before the link was moved
+            matrix_world=MockMatrix.Translation((0.0, 0.0, 0.25)),
+        )
+
+        world = live_world_matrix(collision).translation
+
+        assert world.x == pytest.approx(1.0)
+        assert world.y == pytest.approx(2.0)
+        assert world.z == pytest.approx(3.25)
+
+    def test_live_world_matrix_falls_back_for_constraints(self) -> None:
+        """Objects driven by constraints keep using their evaluated matrix_world."""
+        constrained = SimpleNamespace(
+            parent=None,
+            parent_type="OBJECT",
+            constraints=["COPY_LOCATION"],
+            matrix_basis=MockMatrix.Identity(4),
+            matrix_world=MockMatrix.Translation((4.0, 5.0, 6.0)),
+        )
+
+        world = live_world_matrix(constrained).translation
+
+        assert world.x == pytest.approx(4.0)
+        assert world.z == pytest.approx(6.0)
+
+    def test_live_world_matrix_matches_matrix_world_for_parented_object(self, scene) -> None:
+        """For up-to-date objects the live matrix equals matrix_world."""
+        parent_obj = create_test_object("LiveParent", None, scene)
+        parent_obj.location = (1, 0, 0)
+        child_obj = create_test_object("LiveChild", None, scene)
+        child_obj.parent = parent_obj
+        child_obj.location = (0, 2, 0)
+
+        live = live_world_matrix(child_obj).translation
+        cached = child_obj.matrix_world.translation
+
+        assert live.x == pytest.approx(cached.x)
+        assert live.y == pytest.approx(cached.y)
+        assert live.z == pytest.approx(cached.z)
 
 
 # Rotation Normalization
