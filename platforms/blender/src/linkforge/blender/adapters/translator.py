@@ -386,19 +386,11 @@ class SensorTranslator:
         obj: Any,
         builder: IComposer,
         validation_result: ValidationResult | None = None,
-        link_frames: dict[str, Any] | None = None,
     ) -> None:
         """Translate a Blender sensor to a Core Sensor using IComposer and add it to the robot."""
         try:
             sensor = self._blender_sensor_to_core(obj)
             if sensor:
-                link_name = sensor.link_name
-                if link_frames and link_name in link_frames:
-                    link_frame_inv = link_frames[link_name].inverted()
-                    sensor_relative = link_frame_inv @ live_world_matrix(obj)
-                    corrected_origin = matrix_to_transform(sensor_relative)
-                    sensor = replace(sensor, origin=corrected_origin)
-
                 builder.robot.add_sensor(sensor)
         except Exception as e:
             if validation_result:
@@ -444,8 +436,12 @@ class SensorTranslator:
                 value=sensor_name,
             )
 
-        # Build sensor origin from object transform
-        origin = matrix_to_transform(live_world_matrix(obj))
+        # Build sensor origin relative to parent link
+        if link_obj is not None:
+            sensor_relative = live_world_matrix(link_obj).inverted() @ live_world_matrix(obj)
+            origin = matrix_to_transform(sensor_relative)
+        else:
+            origin = matrix_to_transform(live_world_matrix(obj))
 
         # Type-specific info
         camera_info = None

@@ -211,7 +211,7 @@ class SceneToRobotTranslator:
             )
 
         # Translate orphaned components (Sensors)
-        self._translate_sensors(sensor_objects, link_frames)
+        self._translate_sensors(sensor_objects)
         self._translate_ros2_control()
         self._translate_scene_gazebo_plugins()
 
@@ -411,14 +411,13 @@ class SceneToRobotTranslator:
                 affected_objects=[link_name],
             )
 
-    def _translate_sensors(self, sensor_objects: list[Any], link_frames: dict[str, Any]) -> None:
+    def _translate_sensors(self, sensor_objects: list[Any]) -> None:
         """Translate sensors using specialized SensorTranslator."""
         for obj in sensor_objects:
             self.sensor_translator.translate(
                 obj=obj,
                 builder=self.builder,
                 validation_result=self.validation_result,
-                link_frames=link_frames,
             )
 
     def _translate_ros2_control(self) -> None:
