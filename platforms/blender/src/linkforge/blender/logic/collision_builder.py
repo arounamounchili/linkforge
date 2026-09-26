@@ -31,6 +31,7 @@ from ..core.constants import (
 from ..properties.link_props import LinkPropertyGroup
 from ..utils.mode_guard import context_and_mode_guard
 from ..utils.scene_utils import sync_object_collections
+from ..utils.transform_utils import live_world_matrix
 
 logger = get_logger(__name__)
 
@@ -212,7 +213,7 @@ def _create_primitive_collision(
     # CRITICAL: Match World Pose (Location/Rotation) first
     # We include local_center offset to align primitive with specific geometry volume
     if collision_obj:
-        collision_obj.matrix_world = visual_obj.matrix_world @ mathutils.Matrix.Translation(
+        collision_obj.matrix_world = live_world_matrix(visual_obj) @ mathutils.Matrix.Translation(
             local_center
         )
 
@@ -277,7 +278,7 @@ def _merge_visual_meshes(
 
         # Apply transforms to bake local position (relative to link) into geometry
         dup.parent = None
-        dup.matrix_world = link_obj.matrix_world.inverted() @ visual_obj.matrix_world
+        dup.matrix_world = live_world_matrix(link_obj).inverted() @ live_world_matrix(visual_obj)
 
         # Select and make active for transform application
         ops = getattr(context, "ops", None) or bpy.ops
@@ -316,7 +317,7 @@ def _merge_visual_meshes(
 
     # CRITICAL: Align merged object with link world frame
     # Vertices were baked relative to Link, so the object definition must be AT the Link.
-    merged_obj.matrix_world = link_obj.matrix_world.copy()
+    merged_obj.matrix_world = live_world_matrix(link_obj).copy()
 
     logger.debug(
         f"Compound collision created: {merged_obj.name} "

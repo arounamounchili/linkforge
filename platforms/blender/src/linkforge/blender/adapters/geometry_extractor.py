@@ -266,7 +266,7 @@ def extract_mesh_triangles(
     # We use the scale matrix (not full world matrix) to get correct dimensions
     # but keep the object centered at its local origin for proper inertia calculation
     # The inertia tensor is always computed relative to the object's center of mass
-    scale_matrix = obj.matrix_world.to_scale()
+    scale_matrix = live_world_matrix(obj).to_scale()
 
     if np is not None:
         num_verts = len(mesh_data.vertices)
