@@ -398,6 +398,31 @@ def test_create_sensor_object_lidar(scene, blender_context) -> None:
     assert props.sensor_type == "lidar"
 
 
+def test_create_sensor_object_lidar_vertical_angles(scene, blender_context) -> None:
+    """Verify that 3D LIDAR vertical scan angles survive import."""
+    link_obj = create_test_object("base_link", None, scene)
+    link_objects = {"base_link": link_obj}
+
+    sensor = Sensor(
+        name="lidar_3d",
+        type=SensorType.LIDAR,
+        link_name="base_link",
+        lidar_info=LidarInfo(
+            vertical_samples=16,
+            vertical_min_angle=-0.26,
+            vertical_max_angle=0.26,
+        ),
+    )
+
+    sensor_obj = create_sensor_object(blender_context, sensor, link_objects)
+
+    assert sensor_obj is not None
+    props = safe_get_sensor(sensor_obj)
+    assert props.lidar_vertical_samples == 16
+    assert props.lidar_vertical_min_angle == pytest.approx(-0.26)
+    assert props.lidar_vertical_max_angle == pytest.approx(0.26)
+
+
 def test_create_sensor_object_imu_gps_camera(scene, blender_context) -> None:
     """Verify that IMU, GPS, and Camera sensors are correctly created in Blender."""
     link_obj = create_test_object("base_link", None, scene)

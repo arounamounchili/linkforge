@@ -23,7 +23,7 @@ from ..core import get_logger, sanitize_name
 from ..core.constants import (
     EPSILON,
 )
-from ..utils.transform_utils import get_local_bounding_box_center
+from ..utils.transform_utils import get_local_bounding_box_center, live_world_matrix
 
 logger = get_logger(__name__)
 
@@ -274,7 +274,7 @@ def export_link_mesh(
     filepath = meshes_dir / filename
 
     if dry_run:
-        return filepath, obj.matrix_world.copy()
+        return filepath, live_world_matrix(obj)
 
     # Create a temporary clone for mesh export.
     temp_export_obj = obj.copy()
@@ -329,7 +329,7 @@ def export_link_mesh(
 
         # The World Pose of this centered geometry is: Obj_World @ Translation(local_center)
         # This correctly accounts for the object's rotation while incorporating the centering shift.
-        geom_world_matrix = obj.matrix_world @ Matrix.Translation(local_center)
+        geom_world_matrix = live_world_matrix(obj) @ Matrix.Translation(local_center)
 
         # Simplify if requested for collision
         export_obj = temp_export_obj

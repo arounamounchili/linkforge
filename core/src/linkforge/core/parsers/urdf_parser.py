@@ -47,6 +47,10 @@ from ..constants import (
     DEFAULT_LIDAR_RANGE_MAX,
     DEFAULT_LIDAR_RANGE_MIN,
     DEFAULT_LIDAR_SAMPLES,
+    DEFAULT_LIDAR_VERTICAL_MAX_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_MIN_ANGLE,
+    DEFAULT_LIDAR_VERTICAL_RESOLUTION,
+    DEFAULT_LIDAR_VERTICAL_SAMPLES,
     DEFAULT_UPDATE_RATE,
     DEFAULT_URDF_AXIS_XYZ,
     DEFAULT_URDF_AXIS_XYZ_STR,
@@ -770,6 +774,25 @@ class URDFParser(RobotXMLParser[Robot]):
                         ray_elem.findtext("{*}scan/{*}horizontal/{*}max_angle"),
                         attribute_name="max_angle",
                         default=DEFAULT_LIDAR_MAX_ANGLE,
+                    ),
+                    vertical_samples=parse_int(
+                        ray_elem.findtext("{*}scan/{*}vertical/{*}samples"),
+                        default=DEFAULT_LIDAR_VERTICAL_SAMPLES,
+                    ),
+                    vertical_resolution=parse_float(
+                        ray_elem.findtext("{*}scan/{*}vertical/{*}resolution"),
+                        attribute_name="vertical_resolution",
+                        default=DEFAULT_LIDAR_VERTICAL_RESOLUTION,
+                    ),
+                    vertical_min_angle=parse_float(
+                        ray_elem.findtext("{*}scan/{*}vertical/{*}min_angle"),
+                        attribute_name="vertical_min_angle",
+                        default=DEFAULT_LIDAR_VERTICAL_MIN_ANGLE,
+                    ),
+                    vertical_max_angle=parse_float(
+                        ray_elem.findtext("{*}scan/{*}vertical/{*}max_angle"),
+                        attribute_name="vertical_max_angle",
+                        default=DEFAULT_LIDAR_VERTICAL_MAX_ANGLE,
                     ),
                     range_min=parse_float(
                         ray_elem.findtext("{*}range/{*}min"),

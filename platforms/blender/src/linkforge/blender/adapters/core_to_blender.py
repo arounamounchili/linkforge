@@ -881,6 +881,8 @@ def create_sensor_object(
             props.lidar_horizontal_max_angle = lidar.horizontal_max_angle
             if lidar.vertical_samples:
                 props.lidar_vertical_samples = lidar.vertical_samples
+            props.lidar_vertical_min_angle = lidar.vertical_min_angle
+            props.lidar_vertical_max_angle = lidar.vertical_max_angle
             props.lidar_range_min = lidar.range_min
             props.lidar_range_max = lidar.range_max
 

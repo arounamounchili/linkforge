@@ -60,7 +60,7 @@ from ..utils.property_helpers import (
     get_robot_props,
     get_sensor_props,
 )
-from ..utils.transform_utils import matrix_to_transform
+from ..utils.transform_utils import live_world_matrix, matrix_to_transform
 from .context import IBlenderContext
 from .geometry_extractor import (
     extract_mesh_triangles,
@@ -118,7 +118,7 @@ class LinkTranslator:
                     builder.robot.materials[mat.name] = mat
 
                 if geom:
-                    rel_mat = obj.matrix_world.inverted() @ world_mat
+                    rel_mat = live_world_matrix(obj).inverted() @ world_mat
                     origin = matrix_to_transform(rel_mat)
                     active_lb.visual(
                         geom,
@@ -154,7 +154,7 @@ class LinkTranslator:
                     depsgraph=depsgraph,
                 )
                 if geom:
-                    rel_mat = obj.matrix_world.inverted() @ world_mat
+                    rel_mat = live_world_matrix(obj).inverted() @ world_mat
                     origin = matrix_to_transform(rel_mat)
                     active_lb.collision(
                         geom,
@@ -288,9 +288,9 @@ class JointTranslator:
                 joint_relative = parent_frame.inverted() @ child_frame
                 origin = matrix_to_transform(joint_relative)
             else:
-                origin = matrix_to_transform(obj.matrix_world)
+                origin = matrix_to_transform(live_world_matrix(obj))
         else:
-            origin = matrix_to_transform(obj.matrix_world)
+            origin = matrix_to_transform(live_world_matrix(obj))
 
         # Joint Axis
         axis: tuple[float, float, float]
@@ -395,7 +395,7 @@ class SensorTranslator:
                 link_name = sensor.link_name
                 if link_frames and link_name in link_frames:
                     link_frame_inv = link_frames[link_name].inverted()
-                    sensor_relative = link_frame_inv @ obj.matrix_world
+                    sensor_relative = link_frame_inv @ live_world_matrix(obj)
                     corrected_origin = matrix_to_transform(sensor_relative)
                     sensor = replace(sensor, origin=corrected_origin)
 
@@ -445,7 +445,7 @@ class SensorTranslator:
             )
 
         # Build sensor origin from object transform
-        origin = matrix_to_transform(obj.matrix_world)
+        origin = matrix_to_transform(live_world_matrix(obj))
 
         # Type-specific info
         camera_info = None
