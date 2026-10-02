@@ -109,6 +109,15 @@
         "bug",
         "test"
       ]
+    },
+    {
+      "login": "Armmy2530",
+      "name": "Sutthikan panla",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42490759?v=4",
+      "profile": "https://github.com/Armmy2530",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
