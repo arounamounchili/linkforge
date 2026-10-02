@@ -5,6 +5,19 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5](https://github.com/arounamounchili/linkforge/compare/v1.5.4...v1.5.5) (2026-10-02)
+
+
+### 🐞 Bug Fixes
+
+* **blender:** center scaled mesh vertices using scaled bounding box offset ([7fdaa7c](https://github.com/arounamounchili/linkforge/commit/7fdaa7c6e53784e687948effd784b7615d21546c))
+
+
+### 📚 Documentation
+
+* add Armmy2530 as a contributor for bug ([1749d8d](https://github.com/arounamounchili/linkforge/commit/1749d8d43390942e7ffc64555942ca1cfe7671ba))
+* add vssinghh as a contributor for code ([1144022](https://github.com/arounamounchili/linkforge/commit/114402211d5db37acce26169a2bc1ca6a31e194f))
+
 ## [1.5.4](https://github.com/arounamounchili/linkforge/compare/v1.5.3...v1.5.4) (2026-09-26)
 
 
