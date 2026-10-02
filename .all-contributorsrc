@@ -109,6 +109,15 @@
         "bug",
         "test"
       ]
+    },
+    {
+      "login": "vssinghh",
+      "name": "vssingh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11586143?v=4",
+      "profile": "https://github.com/vssinghh",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
