@@ -313,10 +313,11 @@ def export_link_mesh(
         # Apply Scale to final data
         final_mesh_data.transform(scale_matrix)
 
-        # Local Centering: Shift vertices to origin
-        if local_center.length > EPSILON:
-            logger.info(f"Localizing mesh data for '{obj.name}' (center: {local_center})")
-            final_mesh_data.transform(Matrix.Translation(-local_center))
+        # Local Centering: Shift scaled vertices to origin
+        scaled_center = scale_matrix @ local_center
+        if scaled_center.length > EPSILON:
+            logger.info(f"Localizing mesh data for '{obj.name}' (center: {scaled_center})")
+            final_mesh_data.transform(Matrix.Translation(-scaled_center))
 
         # Update temporary object to use this centered data
         temp_export_obj.data = final_mesh_data
