@@ -2204,9 +2204,18 @@ def setup_mock_bpy():
     mock_data.meshes.new = lambda name: (
         mock_data.meshes.append(MockMesh(name=name)) or mock_data.meshes[-1]
     )
-    mock_data.meshes.new_from_object = lambda obj, **kwargs: (
-        mock_data.meshes.append(MockMesh(name=f"{obj.name}_mesh")) or mock_data.meshes[-1]
-    )
+
+    def _new_mesh_from_object(obj, **kwargs):
+        mesh = (
+            obj.data.copy()
+            if isinstance(getattr(obj, "data", None), MockMesh)
+            else MockMesh(name=f"{obj.name}_mesh")
+        )
+        mesh.name = f"{obj.name}_mesh"
+        mock_data.meshes.append(mesh)
+        return mesh
+
+    mock_data.meshes.new_from_object = _new_mesh_from_object
     mock_data.materials.new = lambda name: (
         mock_data.materials.append(MockMaterial(name=name)) or mock_data.materials[-1]
     )
