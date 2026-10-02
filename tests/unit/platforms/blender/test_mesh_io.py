@@ -368,6 +368,42 @@ class TestMeshExhaustiveCoverage:
         # Bounding box center should be shifted by 2 on the X axis, so offset should reflect that
         assert abs(offset.translation.x - 2.0) < 1e-5
 
+    def test_export_link_mesh_scaled_centering(self, mocker, scene, tmp_path) -> None:
+        """Verify export_link_mesh centers scaled mesh vertices by the scaled bounding box center."""
+        obj = create_mesh_object("scaled_cube_mm", scene=scene, with_cube=False)
+        corners = [
+            (0.0, 0.0, 0.0),
+            (100.0, 0.0, 0.0),
+            (100.0, 100.0, 0.0),
+            (0.0, 100.0, 0.0),
+            (0.0, 0.0, 100.0),
+            (100.0, 0.0, 100.0),
+            (100.0, 100.0, 100.0),
+            (0.0, 100.0, 100.0),
+        ]
+        for corner in corners:
+            vert = obj.data.vertices.add()
+            vert.co = Vector(corner)
+        obj.bound_box = [Vector(corner) for corner in corners]
+        obj.scale = (0.001, 0.001, 0.001)
+
+        exported_coords: list[tuple[float, float, float]] = []
+
+        def capture_stl(export_obj, _filepath):
+            for vert in export_obj.data.vertices:
+                exported_coords.append((vert.co.x, vert.co.y, vert.co.z))
+            return True
+
+        mocker.patch("linkforge.blender.adapters.mesh_io.export_mesh_stl", side_effect=capture_stl)
+
+        filepath, offset = export_link_mesh(obj, "base_link", "visual", "STL", tmp_path)
+        assert filepath is not None
+        assert offset.translation.x == pytest.approx(0.05)
+        assert offset.translation.y == pytest.approx(0.05)
+        assert offset.translation.z == pytest.approx(0.05)
+        assert exported_coords[0] == pytest.approx((-0.05, -0.05, -0.05))
+        assert exported_coords[6] == pytest.approx((0.05, 0.05, 0.05))
+
     def test_export_link_mesh_finally_cleanup_different_data(self, mocker, scene, tmp_path) -> None:
         """Verify the finally block clean up path when final_mesh_data is different from temp_export_obj.data."""
         obj = create_mesh_object("diff_data_mesh", scene=scene, with_cube=True)
