@@ -181,6 +181,31 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             )
             return {"CANCELLED"}
 
+        # Auto-detect and parse companion SRDF file if present
+        base_stem = (
+            source_path.name[:-11] if source_path.name.endswith(".urdf.xacro") else source_path.stem
+        )
+        srdf_candidates = [
+            source_path.parent / f"{base_stem}.srdf",
+            source_path.parent / f"{robot.name}.srdf",
+            source_path.parent.parent / "config" / f"{base_stem}.srdf",
+            source_path.parent.parent / "config" / f"{robot.name}.srdf",
+            source_path.parent.parent / "srdf" / f"{base_stem}.srdf",
+            source_path.parent.parent / "srdf" / f"{robot.name}.srdf",
+        ]
+        for srdf_candidate in srdf_candidates:
+            if srdf_candidate.is_file():
+                try:
+                    robot.semantic = core.SRDFParser(
+                        sandbox_root=sandbox_root, resource_resolver=resolver
+                    ).parse(srdf_candidate, robot=robot, validate=False)
+                    logger.info(f"Auto-loaded companion SRDF: {srdf_candidate.name}")
+                except Exception as srdf_err:
+                    logger.warning(
+                        f"Failed to parse companion SRDF '{srdf_candidate.name}': {srdf_err}"
+                    )
+                break
+
         # Validate robot structure
         validator = core.RobotValidator()
         result = validator.validate(robot)

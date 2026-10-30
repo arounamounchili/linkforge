@@ -10,7 +10,7 @@ When a joint is created, LinkForge renders a small coordinate frame at the joint
 
 ## 2. Quick Viewport Overlays (Forge Panel)
 Starting in LinkForge 1.5.3+, you can manage viewport visual clarity without opening Preferences.
-In the **Forge** tab (Step 1), the **Viewport Overlays** box provides instant controls:
+In the **Forge** tab, the **Viewport Overlays** box provides instant controls:
 
 - **Collisions**: One-click toggle to show/hide all robot collision meshes (hidden by default).
 - **Joints**: Toggle visibility of all joint coordinate frames and arrow empties.

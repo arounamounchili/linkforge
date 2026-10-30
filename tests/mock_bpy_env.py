@@ -580,6 +580,37 @@ DEFAULT_PROPERTY_VALUES = {
     "link_name": "",
     "sensor_name": "",
     "use_material": True,
+    "use_srdf": False,
+    "use_virtual_joint": True,
+    "virtual_joint_name": "world_joint",
+    "virtual_joint_type": "fixed",
+    "virtual_joint_parent_frame": "world",
+    "virtual_joint_child_link": None,
+    "virtual_joint_child_link_name": "",
+    "planning_active_group_index": 0,
+    "planning_active_ee_index": 0,
+    "planning_active_state_index": 0,
+    "planning_active_collision_index": 0,
+    "active_joint_index": 0,
+    "previous_name": "",
+    "group_type": "CHAIN",
+    "base_link_name": "",
+    "tip_link_name": "",
+    "links_csv": "",
+    "subgroups_csv": "",
+    "extra_chains_csv": "",
+    "group": "",
+    "parent_link_name": "",
+    "parent_group": "",
+    "link1_name": "",
+    "link2_name": "",
+    "reason": "Adjacent",
+    "value": 0.0,
+    "show_virtual_joint": True,
+    "show_planning_groups": True,
+    "show_end_effectors": True,
+    "show_group_states": True,
+    "show_disabled_collisions": True,
 }
 
 
@@ -663,8 +694,41 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
             "child_link",
             "attached_link",
             "contact_collision",
+            "base_link",
+            "tip_link",
+            "link1",
+            "link2",
+            "virtual_joint_child_link",
         ):
             return None
+
+        if key in (
+            "joints",
+            "joint_values",
+            "planning_groups",
+            "end_effectors",
+            "group_states",
+            "disabled_collisions",
+            "parameters",
+        ):
+            item_cls = MockPropertyGroup
+            p_mod = sys.modules.get("linkforge.blender.properties.planning_props")
+            if p_mod is not None:
+                type_map = {
+                    "joint_values": getattr(
+                        p_mod, "GroupStateJointValueProperty", MockPropertyGroup
+                    ),
+                    "planning_groups": getattr(p_mod, "PlanningGroupProperty", MockPropertyGroup),
+                    "end_effectors": getattr(p_mod, "EndEffectorProperty", MockPropertyGroup),
+                    "group_states": getattr(p_mod, "GroupStateProperty", MockPropertyGroup),
+                    "disabled_collisions": getattr(
+                        p_mod, "CollisionPairProperty", MockPropertyGroup
+                    ),
+                }
+                item_cls = type_map.get(key, MockPropertyGroup)
+            coll: MockCollection[MockPropertyGroup] = MockCollection(prop_type=item_cls)
+            self._values[key] = coll
+            return coll
 
         if key in RESERVED_RNA_PROPS:
             raise AttributeError(
@@ -1458,6 +1522,17 @@ class MockScene(MockPropertyGroup):
         self.linkforge.use_ros2_control = True
         self.linkforge.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
         self.linkforge.ros2_control_parameters = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.use_srdf = False
+        self.linkforge.use_virtual_joint = True
+        self.linkforge.virtual_joint_name = "world_joint"
+        self.linkforge.virtual_joint_type = "fixed"
+        self.linkforge.virtual_joint_parent_frame = "world"
+        self.linkforge.virtual_joint_child_link = None
+        self.linkforge.virtual_joint_child_link_name = ""
+        self.linkforge.planning_groups = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.end_effectors = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.group_states = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.disabled_collisions = MockCollection(prop_type=MockPropertyGroup)
 
         self.linkforge_robot = self.linkforge
         self.linkforge_validation = MockPropertyGroup(name="linkforge_validation")

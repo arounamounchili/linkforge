@@ -1010,6 +1010,135 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
             if plugin_found:
                 break
 
+    # Populate SRDF semantic planning settings if present
+    if hasattr(scene, PROP_ROBOT):
+        lp = getattr(scene, PROP_ROBOT)
+        if hasattr(lp, "planning_groups"):
+            lp.planning_groups.clear()
+            lp.end_effectors.clear()
+            lp.group_states.clear()
+            lp.disabled_collisions.clear()
+            lp.planning_active_group_index = 0
+            lp.planning_active_ee_index = 0
+            lp.planning_active_state_index = 0
+            lp.planning_active_collision_index = 0
+            lp.use_virtual_joint = False
+            lp.virtual_joint_child_link = None
+            lp.virtual_joint_child_link_name = ""
+            lp.use_srdf = False
+
+            semantic = getattr(robot, "semantic", None)
+            has_semantic_data = bool(
+                semantic
+                and (
+                    semantic.virtual_joints
+                    or semantic.groups
+                    or semantic.end_effectors
+                    or semantic.group_states
+                    or semantic.disabled_collisions
+                )
+            )
+            if semantic and has_semantic_data:
+                lp.use_srdf = True
+
+                if semantic.virtual_joints:
+                    vj = semantic.virtual_joints[0]
+                    lp.use_virtual_joint = True
+                    lp.virtual_joint_name = vj.name
+                    lp.virtual_joint_type = vj.type
+                    lp.virtual_joint_parent_frame = vj.parent_frame
+                    lp.virtual_joint_child_link_name = vj.child_link
+
+                for grp in semantic.groups:
+                    g_item = lp.planning_groups.add()
+                    g_item.name = grp.name
+                    if grp.chains:
+                        g_item.group_type = "CHAIN"
+                        g_item.base_link_name = grp.chains[0].base_link
+                        g_item.tip_link_name = grp.chains[0].tip_link
+                        if len(grp.chains) > 1:
+                            g_item.extra_chains_csv = ",".join(
+                                f"{c.base_link}:{c.tip_link}" for c in grp.chains[1:]
+                            )
+                    elif grp.joints:
+                        g_item.group_type = "JOINTS"
+                        for j_name in grp.joints:
+                            j_item = g_item.joints.add()
+                            j_item.name = j_name
+                    else:
+                        g_item.group_type = "CHAIN"
+
+                    if grp.links:
+                        g_item.links_csv = ",".join(grp.links)
+                    if grp.subgroups:
+                        g_item.subgroups_csv = ",".join(grp.subgroups)
+
+                for ee in semantic.end_effectors:
+                    ee_item = lp.end_effectors.add()
+                    ee_item.name = ee.name
+                    ee_item.group = ee.group
+                    ee_item.parent_link_name = ee.parent_link
+                    ee_item.parent_group = ee.parent_group or ""
+
+                for state in semantic.group_states:
+                    s_item = lp.group_states.add()
+                    s_item.name = state.name
+                    s_item.group = state.group
+                    s_item.joint_values.clear()
+                    for j_name, vals in state.joint_values.items():
+                        jv_item = s_item.joint_values.add()
+                        jv_item.name = j_name
+                        jv_item.joint_name = j_name
+                        jv_item.value = float(vals[0]) if vals else 0.0
+
+                valid_reasons = {"Adjacent", "Never", "Default", "Always", "User"}
+                for dc in semantic.disabled_collisions:
+                    dc_item = lp.disabled_collisions.add()
+                    dc_item.name = f"{dc.link1} <-> {dc.link2}"
+                    dc_item.link1_name = dc.link1
+                    dc_item.link2_name = dc.link2
+                    dc_item.reason = dc.reason if dc.reason in valid_reasons else "User"
+
+
+def bind_semantic_scene_objects(
+    lp: typing.Any,
+    link_objects: dict[str, bpy.types.Object],
+    joint_objects: dict[str, bpy.types.Object],
+) -> None:
+    """Resolve SRDF planning PointerProperty references to newly created Blender objects."""
+    if not lp or not hasattr(lp, "planning_groups"):
+        return
+
+    with contextlib.suppress(Exception):
+        vj_link_name = getattr(lp, "virtual_joint_child_link_name", "")
+        if vj_link_name and vj_link_name in link_objects:
+            lp.virtual_joint_child_link = link_objects[vj_link_name]
+
+        for grp in lp.planning_groups:
+            if grp.base_link_name and grp.base_link_name in link_objects:
+                grp.base_link = link_objects[grp.base_link_name]
+            if grp.tip_link_name and grp.tip_link_name in link_objects:
+                grp.tip_link = link_objects[grp.tip_link_name]
+            for j_item in grp.joints:
+                if j_item.name and j_item.name in joint_objects:
+                    j_item.joint_obj = joint_objects[j_item.name]
+
+        for ee in lp.end_effectors:
+            if ee.parent_link_name and ee.parent_link_name in link_objects:
+                ee.parent_link = link_objects[ee.parent_link_name]
+
+        for state in lp.group_states:
+            for jv in state.joint_values:
+                j_key = jv.joint_name or jv.name
+                if j_key and j_key in joint_objects:
+                    jv.joint_obj = joint_objects[j_key]
+
+        for dc in lp.disabled_collisions:
+            if dc.link1_name and dc.link1_name in link_objects:
+                dc.link1 = link_objects[dc.link1_name]
+            if dc.link2_name and dc.link2_name in link_objects:
+                dc.link2 = link_objects[dc.link2_name]
+
 
 def import_robot_to_scene(
     robot: Robot, source_path: Path, context: IBlenderContext | bpy.types.Context
@@ -1060,7 +1189,7 @@ def import_robot_to_scene(
     all_joints_list = list(robot.joints)
     resolve_mimic_joints(all_joints_list, joint_objects)
 
-    # Bind ros2_control joint pointers to scene objects
+    # Bind ros2_control and SRDF semantic pointers to scene objects
     scene = getattr(context, "scene", None)
     if scene and hasattr(scene, PROP_ROBOT):
         lp = getattr(scene, PROP_ROBOT)
@@ -1073,6 +1202,7 @@ def import_robot_to_scene(
                             item.joint_obj = joint_objects[item.name]
             except TypeError:
                 pass
+        bind_semantic_scene_objects(lp, link_objects, joint_objects)
 
     sensors_created = 0
     if hasattr(robot, "sensors") and robot.sensors:

@@ -83,7 +83,7 @@ class LINKFORGE_PT_joints(Panel):
         box.separator()
         row = box.row()
         row.label(text="Connection:", icon="LINKED")
-        row.operator("linkforge.auto_detect_parent_child", icon="AUTO", text="Detect")
+        row.operator("linkforge.auto_detect_parent_child", icon="VIEWZOOM", text="Detect")
 
         # Parent Link with 1-click select
         p_row = box.row(align=True)

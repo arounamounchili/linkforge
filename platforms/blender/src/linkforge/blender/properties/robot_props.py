@@ -16,7 +16,14 @@ from __future__ import annotations
 import contextlib
 
 import bpy
-from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    PointerProperty,
+    StringProperty,
+)
 from bpy.types import PropertyGroup
 
 from ..constants import (
@@ -32,9 +39,20 @@ from ..core.constants import (
     CONTROL_TYPE_SYSTEM,
     ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
     ROS2_CONTROL_DEFAULT_PLUGIN,
+    SRDF_VJOIN_FIXED,
+    SRDF_VJOIN_FLOATING,
+    SRDF_VJOIN_PLANAR,
 )
 from ..utils.property_helpers import get_link_props
 from .control_props import Ros2ControlJointProperty, Ros2ControlParameterProperty
+from .planning_props import (
+    CollisionPairProperty,
+    EndEffectorProperty,
+    GroupStateProperty,
+    PlanningGroupProperty,
+    poll_planning_link,
+    update_virtual_joint_child_link,
+)
 
 
 def update_collision_visibility(self: RobotPropertyGroup, context: bpy.types.Context) -> None:
@@ -128,6 +146,75 @@ class RobotPropertyGroup(PropertyGroup):
     # Global hardware parameters
     ros2_control_parameters: CollectionProperty(type=Ros2ControlParameterProperty)  # type: ignore
     show_ros2_control_parameters: BoolProperty(name="Show Parameters", default=True)  # type: ignore
+
+    # SRDF (MoveIt 2 Semantic Planning) Configuration
+    use_srdf: BoolProperty(  # type: ignore
+        name="Include SRDF",
+        description="Write a companion .srdf (Semantic Robot Description Format) file alongside the exported robot model",
+        default=False,
+    )
+
+    use_virtual_joint: BoolProperty(  # type: ignore
+        name="Virtual Joint",
+        description="Include a virtual joint connecting the robot's root link to an external world frame",
+        default=False,
+    )
+
+    virtual_joint_name: StringProperty(  # type: ignore
+        name="Name",
+        description="Name of the virtual joint (e.g., world_joint)",
+        default="world_joint",
+    )
+
+    virtual_joint_type: EnumProperty(  # type: ignore
+        name="Type",
+        description="Type of virtual joint connection to the world frame",
+        items=[
+            (SRDF_VJOIN_FIXED, "Fixed", "Robot base is fixed to the world frame"),
+            (SRDF_VJOIN_FLOATING, "Floating", "6-DOF floating base (e.g., humanoids, drones)"),
+            (SRDF_VJOIN_PLANAR, "Planar", "3-DOF planar mobile base (X, Y, Yaw)"),
+        ],
+        default=SRDF_VJOIN_FIXED,
+    )
+
+    virtual_joint_parent_frame: StringProperty(  # type: ignore
+        name="Parent Frame",
+        description="External world frame name (e.g., world, map, odom)",
+        default="world",
+    )
+
+    virtual_joint_child_link: PointerProperty(  # type: ignore
+        name="Child Link",
+        description="Root link of the robot connected to the world frame (e.g., base_link)",
+        type=bpy.types.Object,
+        poll=poll_planning_link,
+        update=update_virtual_joint_child_link,
+    )
+
+    virtual_joint_child_link_name: StringProperty(  # type: ignore
+        name="Child Link Name",
+        description="Fallback child link name when object pointer is unresolved",
+        default="",
+    )
+
+    planning_groups: CollectionProperty(type=PlanningGroupProperty)  # type: ignore
+    planning_active_group_index: IntProperty(default=0)  # type: ignore
+
+    end_effectors: CollectionProperty(type=EndEffectorProperty)  # type: ignore
+    planning_active_ee_index: IntProperty(default=0)  # type: ignore
+
+    group_states: CollectionProperty(type=GroupStateProperty)  # type: ignore
+    planning_active_state_index: IntProperty(default=0)  # type: ignore
+
+    disabled_collisions: CollectionProperty(type=CollisionPairProperty)  # type: ignore
+    planning_active_collision_index: IntProperty(default=0)  # type: ignore
+
+    # UI collapsible states for Planning sections
+    show_virtual_joint: BoolProperty(name="Show Virtual Joint", default=True)  # type: ignore
+    show_planning_groups: BoolProperty(name="Show Planning Groups", default=True)  # type: ignore
+    show_end_effectors: BoolProperty(name="Show End Effectors", default=True)  # type: ignore
+    show_group_states: BoolProperty(name="Show Group States", default=True)  # type: ignore
+    show_disabled_collisions: BoolProperty(name="Show Disabled Collisions", default=True)  # type: ignore
 
     export_meshes: BoolProperty(  # type: ignore
         name="Export Meshes",

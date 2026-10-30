@@ -65,9 +65,10 @@ pip install linkforge-core
 Choose your preferred entry point:
 
 ### Visual Workflow (Blender UI)
-1. **Create Links**: Select a mesh and click **Create Link** in the LinkForge panel.
+1. **Create Links**: Select a mesh and click **Create Link** in the **Forge** panel.
 2. **Connect Joints**: Select a child link and click **Create Joint** to specify constraints.
-3. **Validate & Export**: Run the validator in the UI and click **Export URDF/XACRO**.
+3. **Configure Sensors, Control & Planning** *(Optional)*: Add sensors in **Perceive**, hardware interfaces in **Control**, and MoveIt 2 planning groups in **Planning**.
+4. **Validate & Export**: Run the validator in **Validate & Export** and export to URDF, XACRO, and companion SRDF.
 
 ### Programmatic Workflow (Python API)
 Create, validate, and export a complete kinematic robot description programmatically:
@@ -112,7 +113,8 @@ Start here if you are new to LinkForge. Step-by-step lessons to build your first
 Practical guides to help you achieve specific goals or solve problems.
 ^^^
 - [Adding Sensors](how_to/add_sensors)
-- [Defining Joints](how_to/index)
+- [Control Dashboard](how_to/control_dashboard)
+- [MoveIt 2 Planning (SRDF)](how_to/srdf)
 :::
 
 :::{grid-item-card} Explanation

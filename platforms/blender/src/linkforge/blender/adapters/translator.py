@@ -22,6 +22,7 @@ from ..constants import (
 )
 from ..core import (
     CameraInfo,
+    Chain,
     ContactInfo,
     ForceTorqueInfo,
     GazeboPlugin,
@@ -53,6 +54,11 @@ from ..core.constants import (
     HW_IF_POSITION,
     HW_IF_VELOCITY,
     SYLVESTER_TOLERANCE_EPSILON,
+)
+from ..properties.planning_props import (
+    get_planning_joint_name,
+    get_planning_link_name,
+    has_planning_data,
 )
 from ..utils.property_helpers import (
     get_joint_props,
@@ -665,3 +671,198 @@ class Ros2ControlTranslator:
             hardware_plugin=props.hardware_plugin,
             joints=joints,
         )
+
+
+class SemanticTranslator:
+    """Translates centralized Blender SRDF planning properties to Core SemanticRobotDescription."""
+
+    def translate(
+        self,
+        obj: Any,
+        builder: IComposer,
+        validation_result: ValidationResult | None = None,
+    ) -> None:
+        """Translate Blender SRDF planning properties using the SemanticBuilder API."""
+        if not obj or not has_planning_data(obj):
+            return
+
+        try:
+            semantic = builder.semantic
+
+            # 1. Virtual Joint
+            if getattr(obj, "use_virtual_joint", False):
+                child_link = get_planning_link_name(
+                    getattr(obj, "virtual_joint_child_link", None),
+                    getattr(obj, "virtual_joint_child_link_name", ""),
+                )
+                vj_name = str(getattr(obj, "virtual_joint_name", "") or "world_joint").strip()
+                vj_type = str(getattr(obj, "virtual_joint_type", "fixed") or "fixed").strip()
+                parent_frame = str(
+                    getattr(obj, "virtual_joint_parent_frame", "") or "world"
+                ).strip()
+                if child_link:
+                    semantic.virtual_joint(
+                        name=vj_name,
+                        child_link=child_link,
+                        parent_frame=parent_frame,
+                        joint_type=vj_type,
+                    )
+
+            # 2. Planning Groups
+            for grp in getattr(obj, "planning_groups", ()):
+                grp_name = str(getattr(grp, "name", "") or "").strip()
+                if not grp_name:
+                    continue
+
+                links = [
+                    s.strip()
+                    for s in str(getattr(grp, "links_csv", "") or "").split(",")
+                    if s.strip()
+                ]
+                subgroups = [
+                    s.strip()
+                    for s in str(getattr(grp, "subgroups_csv", "") or "").split(",")
+                    if s.strip()
+                ]
+                chains: list[Chain] = []
+                joints: list[str] = []
+
+                grp_type = str(getattr(grp, "group_type", "CHAIN") or "CHAIN")
+                if grp_type == "CHAIN":
+                    base_link = get_planning_link_name(
+                        getattr(grp, "base_link", None),
+                        getattr(grp, "base_link_name", ""),
+                    )
+                    tip_link = get_planning_link_name(
+                        getattr(grp, "tip_link", None),
+                        getattr(grp, "tip_link_name", ""),
+                    )
+                    if base_link and tip_link:
+                        chains.append(Chain(base_link=base_link, tip_link=tip_link))
+                    elif (base_link or tip_link) and validation_result:
+                        validation_result.add_error(
+                            title="Incomplete planning group chain",
+                            message=(
+                                f"Planning group '{grp_name}' requires both a Base Link "
+                                "and a Tip Link."
+                            ),
+                            code=ValidationErrorCode.INVALID_VALUE,
+                            affected_objects=[grp_name],
+                        )
+
+                    for extra in str(getattr(grp, "extra_chains_csv", "") or "").split(","):
+                        if ":" in extra:
+                            b_str, t_str = extra.split(":", 1)
+                            if b_str.strip() and t_str.strip():
+                                chains.append(
+                                    Chain(base_link=b_str.strip(), tip_link=t_str.strip())
+                                )
+                else:
+                    for j_item in getattr(grp, "joints", ()):
+                        j_name = get_planning_joint_name(
+                            getattr(j_item, "joint_obj", None),
+                            getattr(j_item, "name", ""),
+                        )
+                        if j_name and j_name not in joints:
+                            joints.append(j_name)
+
+                if not any([links, joints, chains, subgroups]):
+                    if validation_result and not (grp_type == "CHAIN" and (base_link or tip_link)):
+                        validation_result.add_error(
+                            title="Empty planning group",
+                            message=(
+                                f"Planning group '{grp_name}' must contain at least one chain, "
+                                "joint, link, or subgroup."
+                            ),
+                            code=ValidationErrorCode.VALUE_EMPTY,
+                            affected_objects=[grp_name],
+                        )
+                    continue
+
+                semantic.group(
+                    name=grp_name,
+                    links=links or None,
+                    joints=joints or None,
+                    chains=chains or None,
+                    subgroups=subgroups or None,
+                )
+
+            # 3. End Effectors
+            for ee in getattr(obj, "end_effectors", ()):
+                ee_name = str(getattr(ee, "name", "") or "").strip()
+                ee_group = str(getattr(ee, "group", "") or "").strip()
+                parent_link = get_planning_link_name(
+                    getattr(ee, "parent_link", None),
+                    getattr(ee, "parent_link_name", ""),
+                )
+                parent_group_raw = str(getattr(ee, "parent_group", "") or "").strip()
+                parent_group = parent_group_raw if parent_group_raw else None
+                if ee_name and ee_group and parent_link:
+                    semantic.end_effector(
+                        name=ee_name,
+                        group=ee_group,
+                        parent_link=parent_link,
+                        parent_group=parent_group,
+                    )
+                elif ee_name and validation_result:
+                    validation_result.add_error(
+                        title="Incomplete end effector",
+                        message=(
+                            f"End effector '{ee_name}' requires both a Group and a Parent Link."
+                        ),
+                        code=ValidationErrorCode.INVALID_VALUE,
+                        affected_objects=[ee_name],
+                    )
+
+            # 4. Group States
+            for state in getattr(obj, "group_states", ()):
+                state_name = str(getattr(state, "name", "") or "").strip()
+                state_group = str(getattr(state, "group", "") or "").strip()
+                if not state_name:
+                    continue
+                if not state_group:
+                    if validation_result:
+                        validation_result.add_error(
+                            title="Incomplete group state",
+                            message=f"Group state '{state_name}' requires a target Planning Group.",
+                            code=ValidationErrorCode.INVALID_VALUE,
+                            affected_objects=[state_name],
+                        )
+                    continue
+                values: dict[str, float | tuple[float, ...]] = {}
+                for jv in getattr(state, "joint_values", ()):
+                    j_name = get_planning_joint_name(
+                        getattr(jv, "joint_obj", None),
+                        getattr(jv, "joint_name", "") or getattr(jv, "name", ""),
+                    )
+                    if j_name:
+                        values[j_name] = float(getattr(jv, "value", 0.0))
+                semantic.group_state(name=state_name, group=state_group, values=values)
+
+            # 5. Disabled Collisions
+            for pair in getattr(obj, "disabled_collisions", ()):
+                l1 = get_planning_link_name(
+                    getattr(pair, "link1", None),
+                    getattr(pair, "link1_name", ""),
+                )
+                l2 = get_planning_link_name(
+                    getattr(pair, "link2", None),
+                    getattr(pair, "link2_name", ""),
+                )
+                reason = str(getattr(pair, "reason", "Adjacent") or "Adjacent")
+                if l1 and l2:
+                    semantic.disable_collisions(link1=l1, link2=l2, reason=reason)
+                elif (l1 or l2) and validation_result:
+                    validation_result.add_error(
+                        title="Incomplete disabled collision pair",
+                        message="Disabled collision pair requires both Link 1 and Link 2.",
+                        code=ValidationErrorCode.INVALID_VALUE,
+                    )
+
+        except Exception as e:
+            if validation_result:
+                validation_result.add_error(
+                    title="SRDF semantic translation failed",
+                    message=str(e),
+                    code=ValidationErrorCode.INVALID_VALUE,
+                )

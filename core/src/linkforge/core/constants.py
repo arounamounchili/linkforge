@@ -223,6 +223,10 @@ SRDF_VJOIN_PLANAR: Final[str] = "planar"
 SRDF_VJOIN_FLOATING: Final[str] = "floating"
 
 SRDF_REASON_ADJACENT: Final[str] = "Adjacent"
+SRDF_REASON_NEVER: Final[str] = "Never"
+SRDF_REASON_DEFAULT: Final[str] = "Default"
+SRDF_REASON_ALWAYS: Final[str] = "Always"
+SRDF_REASON_USER: Final[str] = "User"
 
 # Standard Fallback Names
 UNNAMED_LINK: Final[str] = "unnamed_link"

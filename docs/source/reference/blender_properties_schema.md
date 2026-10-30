@@ -267,7 +267,7 @@ using `object["key"] = value`. They are visible in glTF exports as metadata.
 
 ## `linkforge_robot`: Scene Properties
 
-Stored on `bpy.context.scene.linkforge_robot` to configure robot-level metadata and viewport overlay toggles.
+Stored on `bpy.context.scene.linkforge_robot` to configure robot-level metadata, MoveIt 2 SRDF planning semantics, and viewport overlay toggles.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -277,6 +277,16 @@ Stored on `bpy.context.scene.linkforge_robot` to configure robot-level metadata 
 | `joint_gizmo_size` | `float` | `0.05` | Active scale multiplier for joint coordinate frames |
 | `enable_joint_axes_gizmo` | `bool` | `true` | Enable RViz-style 3D joint coordinate arrows |
 | `enable_joint_limits_gizmo` | `bool` | `true` | Enable angular/prismatic kinematic limit arc overlay |
+| `use_srdf` | `bool` | `false` | Write a companion `.srdf` file alongside `.urdf` / `.xacro` on export |
+| `use_virtual_joint` | `bool` | `true` | Include a `<virtual_joint>` attaching the robot's root link to a global frame |
+| `virtual_joint_name` | `str` | `"world_joint"` | Name of the virtual joint in SRDF |
+| `virtual_joint_type` | `enum` | `"fixed"` | Virtual joint type: `"fixed"`, `"floating"`, or `"planar"` |
+| `virtual_joint_parent_frame` | `str` | `"world"` | Global reference frame name |
+| `virtual_joint_child_link` | `PointerProperty` | `None` | Reference to the robot's root link object |
+| `planning_groups` | `CollectionProperty` | `[]` | MoveIt 2 planning groups (`PlanningGroupProperty`) |
+| `end_effectors` | `CollectionProperty` | `[]` | MoveIt 2 end effectors (`EndEffectorProperty`) |
+| `group_states` | `CollectionProperty` | `[]` | Named joint configurations (`GroupStateProperty`) |
+| `disabled_collisions` | `CollectionProperty` | `[]` | Disabled link collision pairs (`CollisionPairProperty`) |
 
 ---
 
