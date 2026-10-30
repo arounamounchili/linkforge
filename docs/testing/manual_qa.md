@@ -148,7 +148,7 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 ### `TC-VIEW-01`: Viewport Overlays, Auto-Fit & Progressive Disclosure
 * Verify viewport hygiene controls, automatic bounding-box scaling, and occlusion filtering.
 - [ ] **Action**:
-  1. In the **Forge** tab (Step 1), locate the **Viewport Overlays** box.
+  1. In the **Forge** tab, locate the **Viewport Overlays** box.
   2. Toggle the **Collisions** icon button: verify collision meshes switch between visible and hidden for all robot links.
   3. Toggle the **Joints** and **Inertia** buttons: verify corresponding empties and visual overlays toggle on/off.
   4. Manually change the **Size** slider to an arbitrary value (e.g. `0.2m`), then click **Fit Gizmos to Robot**. Verify gizmo sizes proportionally rescale to the robot's physical dimensions.
@@ -161,7 +161,7 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 
 ---
 
-## Phase 5: Perception Suite & ROS 2 Control Dashboard
+## Phase 5: Perception Suite, ROS 2 Control & MoveIt 2 Planning
 
 ### `TC-SENS-01`: Sensor Configuration & Attachment
 * Verify attachment and parameterization of perception hardware.
@@ -197,6 +197,19 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 - [ ] **Expected**:
   - Orphaned joint entry is cleanly removed from the control list.
   - Remaining joint parameters and controller assignments remain intact.
+
+### `TC-PLAN-01`: MoveIt 2 SRDF Configuration Panel
+* Verify configuration of Virtual Joint, Planning Groups, End Effectors, Group States, and Disabled Collisions.
+- [ ] **Action**:
+  1. Open the `Planning` panel. Under `Virtual Joint`, click the `Detect Root Link` (`AUTO`) button and verify `Child Link` populates with the root link.
+  2. Under `Planning Groups`, click `+` to add an `arm` group in `Chain (Base -> Tip)` mode, pick `Base Link` and `Tip Link`, and verify `Resolved Active Joints` updates. Add a second `hand` group in `Joint Collection` mode and add a gripper joint.
+  3. Under `End Effectors`, click `+` to attach `hand` to `Parent Link` and `Parent Group` (`arm`).
+  4. Under `Group States (Poses)`, click `+` to create a `home` pose for `arm`, and drag the joint sliders across their `[lower, upper]` bounds.
+  5. Under `Disabled Collisions`, click `Auto-Disable Adjacent Links`.
+- [ ] **Expected**:
+  - All `UIList` rows display live link/joint summaries and dynamically update if links or joints are renamed in the Outliner.
+  - Joint sliders in `Group States` clamp values to the joint's defined `[limit_lower, limit_upper]` range.
+  - `Include SRDF` in the `Validate & Export` panel is automatically enabled, and exporting writes a valid companion `[robot_name].srdf` alongside `[robot_name].urdf` / `.xacro`.
 
 ---
 

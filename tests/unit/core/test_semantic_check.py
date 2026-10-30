@@ -68,6 +68,9 @@ def test_semantic_check_valid_elements():
 
     # Access the semantic builder to add valid elements
     semantic = builder.semantic
+    semantic.virtual_joint(
+        "world_joint", child_link="base", parent_frame="world", joint_type="fixed"
+    )
     # Group with valid link and joint
     semantic.group("hand", links=["tip"])
     semantic.group("arm", links=["base", "tip"], joints=["j1"], subgroups=["hand"])
@@ -88,3 +91,30 @@ def test_semantic_check_valid_elements():
 
     # Everything should be 100% valid!
     assert not result.errors
+
+
+def test_semantic_check_virtual_joint_and_group_state_joint_invalid():
+    builder = RobotBuilder("invalid_vj_state_robot")
+    builder.link("base").root()
+
+    semantic = builder.semantic
+    semantic.virtual_joint(
+        "world_joint", child_link="missing_root", parent_frame="world", joint_type="fixed"
+    )
+    semantic.group("arm", links=["base"])
+    semantic.group_state("home", group="arm", values={"missing_joint": 0.0})
+
+    robot = builder.build(validate=False)
+    check = SemanticCheck()
+    result = ValidationResult()
+    check.run(robot, result)
+
+    assert any(
+        "Virtual joint 'world_joint' references non-existent child link 'missing_root'"
+        in str(issue)
+        for issue in result.errors
+    )
+    assert any(
+        "State 'home' references non-existent joint 'missing_joint'" in str(issue)
+        for issue in result.errors
+    )

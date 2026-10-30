@@ -82,7 +82,7 @@ class LINKFORGE_PT_control(bpy.types.Panel):
     """Panel for configuring motor control and centralized ros2_control."""
 
     bl_label = "Control"
-    bl_description = "Step 3: Configure centralized ros2_control system and interfaces"
+    bl_description = "Configure centralized ros2_control system and interfaces"
     bl_idname = "LINKFORGE_PT_control"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"

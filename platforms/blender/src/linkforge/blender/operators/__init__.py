@@ -15,6 +15,7 @@ from . import (
     import_ops,
     joint_ops,
     link_ops,
+    planning_ops,
     selection_ops,
     sensor_ops,
 )
@@ -25,6 +26,7 @@ modules = [
     joint_ops,
     sensor_ops,
     control_ops,
+    planning_ops,
     selection_ops,
     display_ops,
     import_ops,

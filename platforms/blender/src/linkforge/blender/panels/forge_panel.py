@@ -21,7 +21,7 @@ class LINKFORGE_PT_forge(Panel):
     """Parent panel for building robot structure."""
 
     bl_label = "Forge"
-    bl_description = "Step 1: Create robot structure with links and joints"
+    bl_description = "Create robot structure with links and joints"
     bl_idname = "LINKFORGE_PT_forge"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"

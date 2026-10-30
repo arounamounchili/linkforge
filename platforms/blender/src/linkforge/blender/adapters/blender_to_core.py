@@ -171,6 +171,7 @@ class SceneToRobotTranslator:
         self.joint_translator: translator.JointTranslator = translator.JointTranslator()
         self.sensor_translator: translator.SensorTranslator = translator.SensorTranslator()
         self.ros2_translator: translator.Ros2ControlTranslator = translator.Ros2ControlTranslator()
+        self.semantic_translator: translator.SemanticTranslator = translator.SemanticTranslator()
 
     def translate(self, raise_on_error: bool = True) -> tuple[Robot, ValidationResult]:
         """Perform the translation and return the built Robot model."""
@@ -178,6 +179,7 @@ class SceneToRobotTranslator:
         self.joint_translator = translator.JointTranslator()
         self.sensor_translator = translator.SensorTranslator()
         self.ros2_translator = translator.Ros2ControlTranslator()
+        self.semantic_translator = translator.SemanticTranslator()
         # Categorize scene objects
         link_objects, joint_objects, sensor_objects, joints_map, root = _categorize_scene_objects(
             self.context.scene
@@ -213,6 +215,7 @@ class SceneToRobotTranslator:
         # Translate orphaned components (Sensors)
         self._translate_sensors(sensor_objects)
         self._translate_ros2_control()
+        self._translate_semantic()
         self._translate_scene_gazebo_plugins()
 
         # Finalize and return
@@ -424,6 +427,15 @@ class SceneToRobotTranslator:
         """Translate ROS2 Control settings from robot properties."""
         if self.robot_props and getattr(self.robot_props, "use_ros2_control", False):
             self.ros2_translator.translate(
+                obj=self.robot_props,
+                builder=self.builder,
+                validation_result=self.validation_result,
+            )
+
+    def _translate_semantic(self) -> None:
+        """Translate SRDF semantic planning settings from robot properties."""
+        if self.robot_props:
+            self.semantic_translator.translate(
                 obj=self.robot_props,
                 builder=self.builder,
                 validation_result=self.validation_result,

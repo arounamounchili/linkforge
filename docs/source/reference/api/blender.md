@@ -39,6 +39,11 @@ User actions and commands.
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: linkforge.blender.operators.planning_ops
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: linkforge.blender.operators.selection_ops
    :members:
    :undoc-members:
@@ -76,6 +81,11 @@ UI Panels for managing robot data.
    :show-inheritance:
 
 .. automodule:: linkforge.blender.panels.control_panel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.panels.planning_panel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -121,6 +131,11 @@ Blender scene properties for storing robot data.
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: linkforge.blender.properties.planning_props
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: linkforge.blender.properties.validation_props
    :members:
    :undoc-members:
@@ -138,6 +153,11 @@ Conversion between Blender and core models.
    :show-inheritance:
 
 .. automodule:: linkforge.blender.adapters.core_to_blender
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: linkforge.blender.adapters.translator
    :members:
    :undoc-members:
    :show-inheritance:

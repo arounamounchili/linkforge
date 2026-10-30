@@ -243,7 +243,10 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             raise RobotParserXMLRootError(root.tag)
 
         try:
-            return self._parse_from_context(context, root)
+            semantic = self._parse_from_context(context, root)
+            if (robot := _kwargs.get("robot")) is not None:
+                robot.semantic = semantic
+            return semantic
         except ET.ParseError as e:
             raise RobotParserUnexpectedError(source_area="SRDF parse", original_error=e) from e
         except RobotParserError:
@@ -556,7 +559,10 @@ class SRDFParser(RobotXMLParser[SemanticRobotDescription]):
             if strip_xml_namespace(root.tag) != "robot":
                 raise RobotParserXMLRootError(root.tag)
 
-            return self._parse_from_context(context, root)
+            semantic = self._parse_from_context(context, root)
+            if (robot := _kwargs.get("robot")) is not None:
+                robot.semantic = semantic
+            return semantic
 
         except ET.ParseError as e:
             raise RobotParserUnexpectedError(source_area="SRDF file parse", original_error=e) from e

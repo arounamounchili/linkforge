@@ -111,6 +111,7 @@ Design robots visually in Blender - all physics validation and export pipelines 
 | **Joints** | ✅ Full | All 6 types (Fixed, Revolute, Prismatic, etc.) + **Mimic Joints** |
 | **Sensors** | ✅ Full | Camera, LiDAR, IMU, GPS, **Contact**, **Force/Torque** |
 | **Control** | ✅ Full | `ros2_control` Dashboard & Gazebo Plugin Integration |
+| **Planning** | ✅ Full | MoveIt 2 SRDF Panel (Virtual Joint, Planning Groups, End Effectors, Group States, Collision Matrix) |
 | **Validation** | ✅ Pro | Kinematic linter catches topology errors, disconnected links, non-physical inertias |
 | **Fidelity** | ✅ Pro | **Round-Trip Precision** for concrete URDF & SRDF (preserves geometry, limits, and vendor tags) |
 | **Formats** | ✅ Full | URDF 1.0 (lossless round-trip), XACRO (evaluated & compiled), **SRDF (MoveIt 2)** |
@@ -162,7 +163,8 @@ just develop  # Links workspace into Blender for live development
 2. **Connect with Joints**: Select child link → **Forge** panel → **Create Joint**. Set type, limits, axis, and dynamics.
 3. **Add Sensors** *(Optional)*: Select a link → **Perceive** panel → **Add Sensor**.
 4. **Configure Control** *(Optional)*: Go to **Control** panel → Enable **Use ROS2 Control** → configure command/state interfaces.
-5. **Validate & Export**: **Validate & Export** panel → click **Validate Robot** → choose URDF or XACRO → click **Export**.
+5. **Configure Planning** *(Optional)*: Go to **Planning** panel → define MoveIt 2 planning groups, end effectors, group states, and disabled collisions.
+6. **Validate & Export**: **Validate & Export** panel → click **Validate Robot** → choose URDF or XACRO (and optionally **Include SRDF**) → click **Export**.
 
 ### Importing Existing URDF
 
@@ -201,7 +203,7 @@ Programmatic tutorials in the documentation:
 - [x] **v1.3.0**: Performance & Control (Depsgraph evaluation, ROS 2 Control enhancements).
 - [x] **v1.4.0**: Headless core decoupling, Composer API, Namespaced Merging, and MoveIt 2 SRDF generation.
 - [x] **v1.5.x**: Multi-Geometry Management (Multiple Visuals/Collisions per link, UILists, Primitive Controls & Realtime Viewport Sync).
-- [ ] **v1.6.0**: SRDF Configuration Panel (Expose MoveIt 2 planning logic directly in Blender UI).
+- [x] **v1.6.0**: SRDF Configuration Panel (Expose MoveIt 2 planning logic directly in Blender UI).
 - [ ] **v1.7.0**: LinkForge CLI & GitHub Actions (Headless verification and export in CI pipelines).
 
 ### Phase 2: Multi-Physics Interoperability (Upcoming v2.x)

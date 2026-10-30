@@ -12,6 +12,7 @@ from ..constants import (
     PROP_ROBOT,
     PROP_VALIDATION,
 )
+from ..properties.planning_props import has_planning_data
 from ..utils.scene_utils import (
     build_tree_from_stats,
     get_robot_statistics,
@@ -22,12 +23,12 @@ class LINKFORGE_PT_export_panel(Panel):
     """Validate & Export panel - robot configuration, validation, and export settings."""
 
     bl_label = "Validate & Export"
-    bl_description = "Step 4: Validate robot structure and export to robot model file"
+    bl_description = "Validate robot structure and export to robot model file"
     bl_idname = "LINKFORGE_PT_export_panel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "LinkForge"
-    bl_order = 3
+    bl_order = 4
     bl_options = {"DEFAULT_CLOSED"}
 
     def draw(self, context: Context) -> None:
@@ -185,8 +186,12 @@ class LINKFORGE_PT_export_panel(Panel):
                 export_box.prop(props, "mesh_format")
                 export_box.prop(props, "mesh_directory_name")
 
-            # Validation option
+            # Validation and companion SRDF options
             export_box.separator()
+            srdf_row = export_box.row()
+            if srdf_row:
+                srdf_row.enabled = has_planning_data(props)
+                srdf_row.prop(props, "use_srdf", text="Include SRDF")
             export_box.prop(props, "validate_before_export")
 
             # === EXPORT BUTTON ===

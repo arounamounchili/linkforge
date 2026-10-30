@@ -27,10 +27,12 @@ from ..core import (
     RobotGeneratorError,
     RobotValidationError,
     RobotValidator,
+    SRDFGenerator,
     URDFGenerator,
     XACROGenerator,
     get_logger,
 )
+from ..properties.planning_props import has_planning_data
 from ..properties.robot_props import RobotPropertyGroup
 from ..properties.validation_props import ValidationResultProperty
 from ..utils.decorators import OperatorReturn, safe_execute
@@ -164,10 +166,6 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
             )
             urdf_generator.write(robot, output_path, validate=False)
             msg = f"Exported URDF to {output_path}"
-            if meshes_dir:
-                msg += f" (meshes in {meshes_dir})"
-            self.report({"INFO"}, msg)
-            logger.info(msg)
         else:  # XACRO
             xacro_generator = XACROGenerator(
                 pretty_print=True,
@@ -181,10 +179,20 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
             )
             xacro_generator.write(robot, output_path, validate=False)
             msg = f"Exported XACRO to {output_path}"
-            if meshes_dir:
-                msg += f" (meshes in {meshes_dir})"
-            self.report({"INFO"}, msg)
-            logger.info(msg)
+
+        # Export companion SRDF if enabled and planning data exists
+        if getattr(robot_props, "use_srdf", False) is True and has_planning_data(robot_props):
+            srdf_path = output_path.with_suffix(".srdf")
+            if output_path.name.endswith(".urdf.xacro"):
+                srdf_path = output_path.parent / f"{output_path.name[:-11]}.srdf"
+            srdf_generator = SRDFGenerator(pretty_print=True, srdf_path=srdf_path)
+            srdf_generator.write(robot, srdf_path, validate=False)
+            msg += f" + SRDF ({srdf_path.name})"
+
+        if meshes_dir:
+            msg += f" (meshes in {meshes_dir})"
+        self.report({"INFO"}, msg)
+        logger.info(msg)
 
         return {"FINISHED"}
 

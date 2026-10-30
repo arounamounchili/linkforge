@@ -39,9 +39,9 @@ Platform-independent robot modeling and URDF/XACRO processing.
 Blender-specific UI and scene integration:
 
 - **Adapters**: Bi-directional conversion between Blender datablocks and core IR (`blender_to_core`, `core_to_blender`, `geometry_extractor`, `mesh_io`)
-- **Operators**: User actions and commands (`export_ops`, `import_ops`, `link_ops`, `joint_ops`, `sensor_ops`, `control_ops`, `selection_ops`)
-- **Panels**: Viewport sidebar UI panels (`forge_panel`, `link_panel`, `joint_panel`, `sensor_panel`, `control_panel`, `export_panel`)
-- **Properties**: Structured Blender scene and object custom properties
+- **Operators**: User actions and commands (`export_ops`, `import_ops`, `link_ops`, `joint_ops`, `sensor_ops`, `control_ops`, `planning_ops`, `selection_ops`)
+- **Panels**: Viewport sidebar UI panels (`forge_panel`, `link_panel`, `joint_panel`, `sensor_panel`, `control_panel`, `planning_panel`, `export_panel`)
+- **Properties**: Structured Blender scene and object custom properties (`robot_props`, `link_props`, `joint_props`, `sensor_props`, `control_props`, `planning_props`, `validation_props`)
 - **Logic**: Asynchronous builders and collision generation pipelines
 - **Handlers**: Scene lifecycle and real-time name synchronization
 - **Visualization**: 3D viewport gizmos for inertia and kinematic limits
