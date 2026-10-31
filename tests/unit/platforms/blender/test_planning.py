@@ -809,6 +809,38 @@ class TestPlanningOperators:
         assert props.disabled_collisions[1].link2 is None
         assert props.disabled_collisions[1].link2_name == "missing_link"
 
+        # Fully matching SRDF (unresolved_count == 0 -> INFO report)
+        perfect_srdf = tmp_path / "perfect.srdf"
+        perfect_srdf.write_text(
+            """<?xml version="1.0"?>
+<robot name="arm_robot">
+    <group name="arm">
+        <chain base_link="base_link" tip_link="link2"/>
+    </group>
+    <disable_collisions link1="base_link" link2="link1" reason="Adjacent"/>
+</robot>"""
+        )
+        op.filepath = str(perfect_srdf)
+        assert op.execute(bpy.context) == {"FINISHED"}
+
+        # SRDF with unresolved joints group, unresolved base/tip, and unresolved end effector
+        unresolved_srdf = tmp_path / "unresolved.srdf"
+        unresolved_srdf.write_text(
+            """<?xml version="1.0"?>
+<robot name="arm_robot">
+    <group name="broken_chain">
+        <chain base_link="ghost_base" tip_link="ghost_tip"/>
+    </group>
+    <group name="broken_joints">
+        <joint name="ghost_joint"/>
+    </group>
+    <end_effector name="ghost_ee" group="broken_chain" parent_link="ghost_parent"/>
+    <disable_collisions link1="ghost_link1" link2="link1" reason="Adjacent"/>
+</robot>"""
+        )
+        op.filepath = str(unresolved_srdf)
+        assert op.execute(bpy.context) == {"FINISHED"}
+
     def test_planning_ops_null_scene_and_registration(self) -> None:
         no_scene_ctx = types.SimpleNamespace(scene=None)
         for cls in planning_ops.classes:
