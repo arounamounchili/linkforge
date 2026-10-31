@@ -211,6 +211,18 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   - Joint sliders in `Group States` clamp values to the joint's defined `[limit_lower, limit_upper]` range.
   - `Include SRDF` in the `Validate & Export` panel is automatically enabled, and exporting writes a valid companion `[robot_name].srdf` alongside `[robot_name].urdf` / `.xacro`.
 
+### `TC-SRDF-02`: Manual SRDF Import & Scene Matching
+* Verify manual SRDF import, empty-scene protection, and graceful mismatch handling.
+- [ ] **Action**:
+  1. Open a blank Blender file (no robot in scene). Verify the `Planning` panel displays `No robot in scene` and `Create links in Forge panel to start`.
+  2. Create or import a robot model. Verify the `Planning` panel unlocks and shows `Import SRDF...`.
+  3. Click `Import SRDF...` and select an SRDF file.
+- [ ] **Expected**:
+  1. Operator polls false when scene is empty; no crashes occur.
+  2. When a robot is present, planning groups, virtual joints, poses, and disabled collisions are populated.
+  3. Any links/joints in the SRDF that do not exist in the scene are preserved as string fallbacks, and an informative warning reports the count of unresolved references without discarding data.
+  4. Pressing `Ctrl+Z` cleanly undoes the import.
+
 ---
 
 ## Phase 6: Structural Validation & Security Sandbox

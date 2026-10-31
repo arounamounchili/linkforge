@@ -63,7 +63,8 @@ By default, MoveIt 2 checks for collisions between every pair of links. You can 
 ### 6. Exporting & Importing Companion SRDF
 
 - **Exporting**: Adding any planning group, end effector, group state, or disabled collision automatically enables **Include SRDF** in the **Validate & Export** panel. Clicking **Export Robot** writes both `<robot>.urdf` (or `<robot>.xacro`) and `<robot>.srdf` to the same directory in one click.
-- **Importing**: When importing a `.urdf` or `.xacro` file, LinkForge automatically detects any companion `.srdf` file in the same directory and populates the **Planning** panel.
+- **Automatic Companion Import**: When importing a `.urdf` or `.xacro` file via **Forge > Import Robot Model**, LinkForge automatically searches for a companion `.srdf` file (beside the URDF, or in standard `config/` or `srdf/` directories) and populates the **Planning** panel.
+- **Manual SRDF Import**: In the **Planning** panel, click **Import SRDF...** (`IMPORT`) to load any `.srdf` file from disk directly onto your scene's robot. LinkForge matches links and joints to scene objects, preserves unresolved references without data loss, and supports full undo (`Ctrl+Z`). Click **Reset** (`FILE_REFRESH`) to clear all semantic planning data at any time.
 
 ---
 

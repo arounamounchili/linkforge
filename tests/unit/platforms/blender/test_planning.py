@@ -34,6 +34,7 @@ from linkforge.blender.operators.planning_ops import (
     LINKFORGE_OT_add_planning_group_joint,
     LINKFORGE_OT_auto_disable_adjacent_collisions,
     LINKFORGE_OT_detect_virtual_joint_root,
+    LINKFORGE_OT_import_srdf,
     LINKFORGE_OT_move_disabled_collision,
     LINKFORGE_OT_move_end_effector,
     LINKFORGE_OT_move_group_state,
@@ -752,6 +753,61 @@ class TestPlanningOperators:
         props.planning_active_collision_index = 0
         assert LINKFORGE_OT_remove_disabled_collision().execute(bpy.context) == {"FINISHED"}
         assert props.use_srdf is False
+
+    def test_import_srdf_operator(self, scene, tmp_path) -> None:
+        # Empty scene: poll should be False
+        assert not LINKFORGE_OT_import_srdf.poll(bpy.context)
+
+        # Create robot in scene
+        base, link1, link2, j1, j2 = _setup_3_link_arm(scene)
+        assert LINKFORGE_OT_import_srdf.poll(bpy.context)
+
+        op = LINKFORGE_OT_import_srdf()
+
+        # Missing file
+        op.filepath = str(tmp_path / "non_existent.srdf")
+        assert op.execute(bpy.context) == {"CANCELLED"}
+
+        # Malformed XML
+        bad_srdf = tmp_path / "bad.srdf"
+        bad_srdf.write_text("<robot><broken")
+        op.filepath = str(bad_srdf)
+        assert op.execute(bpy.context) == {"CANCELLED"}
+
+        # Valid SRDF with matching and unresolved links
+        valid_srdf = tmp_path / "robot.srdf"
+        valid_srdf.write_text(
+            """<?xml version="1.0"?>
+<robot name="arm_robot">
+    <virtual_joint name="world_joint" type="fixed" parent_frame="world" child_link="base_link"/>
+    <group name="arm">
+        <chain base_link="base_link" tip_link="link2"/>
+    </group>
+    <end_effector name="gripper" group="arm" parent_link="link2"/>
+    <group_state name="home" group="arm">
+        <joint name="joint1" value="0.5"/>
+    </group_state>
+    <disable_collisions link1="base_link" link2="link1" reason="Adjacent"/>
+    <disable_collisions link1="base_link" link2="missing_link" reason="Never"/>
+</robot>"""
+        )
+        op.filepath = str(valid_srdf)
+        assert op.execute(bpy.context) == {"FINISHED"}
+
+        props = safe_get_linkforge_scene(scene)
+        assert props.use_srdf is True
+        assert props.use_virtual_joint is True
+        assert props.virtual_joint_child_link == base
+        assert len(props.planning_groups) == 1
+        assert props.planning_groups[0].base_link == base
+        assert props.planning_groups[0].tip_link == link2
+        assert len(props.end_effectors) == 1
+        assert props.end_effectors[0].parent_link == link2
+        assert len(props.group_states) == 1
+        assert len(props.disabled_collisions) == 2
+        # missing_link should have preserved link2_name but link2 pointer is None
+        assert props.disabled_collisions[1].link2 is None
+        assert props.disabled_collisions[1].link2_name == "missing_link"
 
     def test_planning_ops_null_scene_and_registration(self) -> None:
         no_scene_ctx = types.SimpleNamespace(scene=None)

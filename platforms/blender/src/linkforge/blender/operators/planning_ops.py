@@ -6,10 +6,18 @@ Group States, and Disabled Collisions in the LinkForge Planning panel.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import bpy
 from bpy.props import StringProperty
 from bpy.types import Context, Operator
+from bpy_extras.io_utils import ImportHelper
 
+from .. import core
+from ..adapters.core_to_blender import (
+    bind_semantic_scene_objects,
+    populate_planning_properties_from_semantic,
+)
 from ..core.constants import SRDF_REASON_ADJACENT
 from ..properties.planning_props import (
     get_planning_joint_name,
@@ -19,6 +27,7 @@ from ..properties.planning_props import (
 )
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.property_helpers import get_joint_props, get_link_props, get_robot_props
+from ..utils.scene_utils import get_robot_statistics
 
 
 def _unique_item_name(collection: object, base_name: str) -> str:
@@ -786,6 +795,106 @@ class LINKFORGE_OT_purge_planning_data(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
+    """Import a MoveIt 2 SRDF file and configure Planning properties for the scene robot."""
+
+    bl_idname = "linkforge.import_srdf"
+    bl_label = "Import SRDF"
+    bl_description = (
+        "Import a MoveIt 2 SRDF file to configure planning groups, poses, and collisions"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    filename_ext = ".srdf"
+    filter_glob: StringProperty(  # type: ignore
+        default="*.srdf",
+        options={"HIDDEN"},
+        maxlen=255,
+    )
+    filepath: StringProperty(subtype="FILE_PATH")  # type: ignore
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Only allow importing SRDF when a robot exists in the scene."""
+        scene = context.scene
+        if not scene:
+            return False
+        stats = get_robot_statistics(scene)
+        return stats.num_links > 0
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Parse and populate SRDF planning properties from the selected file."""
+        scene = context.scene
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
+
+        srdf_path = Path(self.filepath)
+        if not srdf_path.is_file():
+            self.report({"ERROR"}, f"File not found: {srdf_path}")
+            return {"CANCELLED"}
+
+        try:
+            semantic = core.SRDFParser().parse(srdf_path, validate=False)
+        except Exception as e:
+            self.report({"ERROR"}, f"Failed to parse SRDF '{srdf_path.name}': {e}")
+            return {"CANCELLED"}
+
+        link_objects: dict[str, bpy.types.Object] = {}
+        joint_objects: dict[str, bpy.types.Object] = {}
+        for obj in scene.objects:
+            if (lp := get_link_props(obj)) and lp.is_robot_link:
+                if lp.link_name:
+                    link_objects[lp.link_name] = obj
+                link_objects[obj.name] = obj
+            if (jp := get_joint_props(obj)) and jp.is_robot_joint:
+                if jp.joint_name:
+                    joint_objects[jp.joint_name] = obj
+                joint_objects[obj.name] = obj
+
+        populate_planning_properties_from_semantic(props, semantic)
+        bind_semantic_scene_objects(props, link_objects, joint_objects)
+
+        # Count unresolved references
+        unresolved_count = 0
+        for grp in props.planning_groups:
+            if grp.group_type == "CHAIN":
+                if grp.base_link_name and not grp.base_link:
+                    unresolved_count += 1
+                if grp.tip_link_name and not grp.tip_link:
+                    unresolved_count += 1
+            else:
+                for j in grp.joints:
+                    if j.name and not j.joint_obj:
+                        unresolved_count += 1
+
+        for ee in props.end_effectors:
+            if ee.parent_link_name and not ee.parent_link:
+                unresolved_count += 1
+
+        for dc in props.disabled_collisions:
+            if dc.link1_name and not dc.link1:
+                unresolved_count += 1
+            if dc.link2_name and not dc.link2:
+                unresolved_count += 1
+
+        msg = (
+            f"Imported SRDF '{srdf_path.name}': "
+            f"{len(props.planning_groups)} group(s), "
+            f"{len(props.end_effectors)} end effector(s), "
+            f"{len(props.disabled_collisions)} collision rule(s)"
+        )
+        if unresolved_count > 0:
+            self.report(
+                {"WARNING"},
+                f"{msg} ({unresolved_count} unresolved reference(s) - check Validate panel)",
+            )
+        else:
+            self.report({"INFO"}, msg)
+
+        return {"FINISHED"}
+
+
 classes = [
     LINKFORGE_OT_detect_virtual_joint_root,
     LINKFORGE_OT_add_planning_group,
@@ -806,6 +915,7 @@ classes = [
     LINKFORGE_OT_move_disabled_collision,
     LINKFORGE_OT_auto_disable_adjacent_collisions,
     LINKFORGE_OT_purge_planning_data,
+    LINKFORGE_OT_import_srdf,
 ]
 
 

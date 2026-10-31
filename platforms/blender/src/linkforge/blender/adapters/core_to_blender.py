@@ -31,6 +31,7 @@ from ..core import (
     LinkPhysics,
     Mesh,
     Robot,
+    SemanticRobotDescription,
     Sphere,
     get_logger,
 )
@@ -1013,91 +1014,104 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
     # Populate SRDF semantic planning settings if present
     if hasattr(scene, PROP_ROBOT):
         lp = getattr(scene, PROP_ROBOT)
-        if hasattr(lp, "planning_groups"):
-            lp.planning_groups.clear()
-            lp.end_effectors.clear()
-            lp.group_states.clear()
-            lp.disabled_collisions.clear()
-            lp.planning_active_group_index = 0
-            lp.planning_active_ee_index = 0
-            lp.planning_active_state_index = 0
-            lp.planning_active_collision_index = 0
-            lp.use_virtual_joint = False
-            lp.virtual_joint_child_link = None
-            lp.virtual_joint_child_link_name = ""
-            lp.use_srdf = False
+        populate_planning_properties_from_semantic(lp, getattr(robot, "semantic", None))
 
-            semantic = getattr(robot, "semantic", None)
-            has_semantic_data = bool(
-                semantic
-                and (
-                    semantic.virtual_joints
-                    or semantic.groups
-                    or semantic.end_effectors
-                    or semantic.group_states
-                    or semantic.disabled_collisions
+
+def populate_planning_properties_from_semantic(
+    lp: typing.Any,
+    semantic: SemanticRobotDescription | None,
+) -> bool:
+    """Populate Blender scene robot properties from a core SemanticRobotDescription model."""
+    if not lp or not hasattr(lp, "planning_groups"):
+        return False
+
+    lp.planning_groups.clear()
+    lp.end_effectors.clear()
+    lp.group_states.clear()
+    lp.disabled_collisions.clear()
+    lp.planning_active_group_index = 0
+    lp.planning_active_ee_index = 0
+    lp.planning_active_state_index = 0
+    lp.planning_active_collision_index = 0
+    lp.use_virtual_joint = False
+    lp.virtual_joint_child_link = None
+    lp.virtual_joint_child_link_name = ""
+    lp.use_srdf = False
+
+    has_semantic_data = bool(
+        semantic
+        and (
+            semantic.virtual_joints
+            or semantic.groups
+            or semantic.end_effectors
+            or semantic.group_states
+            or semantic.disabled_collisions
+        )
+    )
+    if not (semantic and has_semantic_data):
+        return False
+
+    lp.use_srdf = True
+
+    if semantic.virtual_joints:
+        vj = semantic.virtual_joints[0]
+        lp.use_virtual_joint = True
+        lp.virtual_joint_name = vj.name
+        lp.virtual_joint_type = vj.type
+        lp.virtual_joint_parent_frame = vj.parent_frame
+        lp.virtual_joint_child_link_name = vj.child_link
+
+    for grp in semantic.groups:
+        g_item = lp.planning_groups.add()
+        g_item.name = grp.name
+        if grp.chains:
+            g_item.group_type = "CHAIN"
+            g_item.base_link_name = grp.chains[0].base_link
+            g_item.tip_link_name = grp.chains[0].tip_link
+            if len(grp.chains) > 1:
+                g_item.extra_chains_csv = ",".join(
+                    f"{c.base_link}:{c.tip_link}" for c in grp.chains[1:]
                 )
-            )
-            if semantic and has_semantic_data:
-                lp.use_srdf = True
+        elif grp.joints:
+            g_item.group_type = "JOINTS"
+            for j_name in grp.joints:
+                j_item = g_item.joints.add()
+                j_item.name = j_name
+        else:
+            g_item.group_type = "CHAIN"
 
-                if semantic.virtual_joints:
-                    vj = semantic.virtual_joints[0]
-                    lp.use_virtual_joint = True
-                    lp.virtual_joint_name = vj.name
-                    lp.virtual_joint_type = vj.type
-                    lp.virtual_joint_parent_frame = vj.parent_frame
-                    lp.virtual_joint_child_link_name = vj.child_link
+        if grp.links:
+            g_item.links_csv = ",".join(grp.links)
+        if grp.subgroups:
+            g_item.subgroups_csv = ",".join(grp.subgroups)
 
-                for grp in semantic.groups:
-                    g_item = lp.planning_groups.add()
-                    g_item.name = grp.name
-                    if grp.chains:
-                        g_item.group_type = "CHAIN"
-                        g_item.base_link_name = grp.chains[0].base_link
-                        g_item.tip_link_name = grp.chains[0].tip_link
-                        if len(grp.chains) > 1:
-                            g_item.extra_chains_csv = ",".join(
-                                f"{c.base_link}:{c.tip_link}" for c in grp.chains[1:]
-                            )
-                    elif grp.joints:
-                        g_item.group_type = "JOINTS"
-                        for j_name in grp.joints:
-                            j_item = g_item.joints.add()
-                            j_item.name = j_name
-                    else:
-                        g_item.group_type = "CHAIN"
+    for ee in semantic.end_effectors:
+        ee_item = lp.end_effectors.add()
+        ee_item.name = ee.name
+        ee_item.group = ee.group
+        ee_item.parent_link_name = ee.parent_link
+        ee_item.parent_group = ee.parent_group or ""
 
-                    if grp.links:
-                        g_item.links_csv = ",".join(grp.links)
-                    if grp.subgroups:
-                        g_item.subgroups_csv = ",".join(grp.subgroups)
+    for state in semantic.group_states:
+        s_item = lp.group_states.add()
+        s_item.name = state.name
+        s_item.group = state.group
+        s_item.joint_values.clear()
+        for j_name, vals in state.joint_values.items():
+            jv_item = s_item.joint_values.add()
+            jv_item.name = j_name
+            jv_item.joint_name = j_name
+            jv_item.value = float(vals[0]) if vals else 0.0
 
-                for ee in semantic.end_effectors:
-                    ee_item = lp.end_effectors.add()
-                    ee_item.name = ee.name
-                    ee_item.group = ee.group
-                    ee_item.parent_link_name = ee.parent_link
-                    ee_item.parent_group = ee.parent_group or ""
+    valid_reasons = {"Adjacent", "Never", "Default", "Always", "User"}
+    for dc in semantic.disabled_collisions:
+        dc_item = lp.disabled_collisions.add()
+        dc_item.name = f"{dc.link1} <-> {dc.link2}"
+        dc_item.link1_name = dc.link1
+        dc_item.link2_name = dc.link2
+        dc_item.reason = dc.reason if dc.reason in valid_reasons else "User"
 
-                for state in semantic.group_states:
-                    s_item = lp.group_states.add()
-                    s_item.name = state.name
-                    s_item.group = state.group
-                    s_item.joint_values.clear()
-                    for j_name, vals in state.joint_values.items():
-                        jv_item = s_item.joint_values.add()
-                        jv_item.name = j_name
-                        jv_item.joint_name = j_name
-                        jv_item.value = float(vals[0]) if vals else 0.0
-
-                valid_reasons = {"Adjacent", "Never", "Default", "Always", "User"}
-                for dc in semantic.disabled_collisions:
-                    dc_item = lp.disabled_collisions.add()
-                    dc_item.name = f"{dc.link1} <-> {dc.link2}"
-                    dc_item.link1_name = dc.link1
-                    dc_item.link2_name = dc.link2
-                    dc_item.reason = dc.reason if dc.reason in valid_reasons else "User"
+    return True
 
 
 def bind_semantic_scene_objects(

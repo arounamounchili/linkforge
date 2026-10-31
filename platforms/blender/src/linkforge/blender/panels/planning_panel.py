@@ -348,11 +348,11 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                 box.label(text="Create links in Forge panel to start", icon="FORWARD")
             return
 
-        # Top utility bar when planning data exists
+        # Top utility bar for importing/resetting SRDF
+        top_row = layout.row(align=True)
+        top_row.operator("linkforge.import_srdf", text="Import SRDF...", icon="IMPORT")
         if has_planning_data(props):
-            top_row = layout.row(align=True)
-            top_row.label(text="MoveIt 2 SRDF Configured", icon="CHECKMARK")
-            top_row.operator("linkforge.purge_planning_data", text="", icon="FILE_REFRESH")
+            top_row.operator("linkforge.purge_planning_data", text="Reset", icon="FILE_REFRESH")
 
         # === 1. VIRTUAL JOINT ===
         vj_box = layout.box()
