@@ -93,6 +93,67 @@ def has_planning_data(props: typing.Any) -> bool:
     )
 
 
+def inspect_chain_path(
+    scene: bpy.types.Scene | None,
+    group: PlanningGroupProperty,
+) -> tuple[list[tuple[str, bpy.types.Object | None]], list[str], bool]:
+    """Inspect kinematic chain from tip_link up to base_link.
+
+    Returns:
+        (active_joints, non_active_joints, path_found)
+    """
+    if scene is None:
+        return ([], [], False)
+
+    base_name = get_planning_link_name(group.base_link, fallback=group.base_link_name)
+    tip_name = get_planning_link_name(group.tip_link, fallback=group.tip_link_name)
+    if not base_name or not tip_name or base_name == tip_name:
+        return ([], [], False)
+
+    # Map child_link_name -> (parent_link_name, joint_obj, joint_props)
+    child_to_joint: dict[str, tuple[str, bpy.types.Object, typing.Any]] = {}
+    for obj in scene.objects:
+        jp = get_joint_props(obj)
+        if not jp or not jp.is_robot_joint:
+            continue
+        if not jp.parent_link or not jp.child_link:
+            continue
+        p_name = get_planning_link_name(jp.parent_link)
+        c_name = get_planning_link_name(jp.child_link)
+        child_to_joint[c_name] = (p_name, obj, jp)
+
+    active_joints: list[tuple[str, bpy.types.Object | None]] = []
+    non_active_joints: list[str] = []
+    visited: set[str] = set()
+    current = tip_name
+    found = False
+
+    while True:
+        if current == base_name:
+            found = True
+            break
+        if current in visited:
+            break
+        visited.add(current)
+        entry = child_to_joint.get(current)
+        if entry is None:
+            break
+        parent_name, j_obj, jp = entry
+        j_name = get_planning_joint_name(j_obj) or "unnamed_joint"
+        if jp.joint_type.lower() != JOINT_FIXED and not jp.use_mimic:
+            active_joints.append((j_name, j_obj))
+        else:
+            non_active_joints.append(j_name)
+        current = parent_name
+
+    if not found:
+        return ([], [], False)
+
+    active_joints.reverse()
+    non_active_joints.reverse()
+    return (active_joints, non_active_joints, True)
+
+
 def resolve_planning_group_joints(
     scene: bpy.types.Scene | None,
     group: PlanningGroupProperty,
@@ -131,53 +192,8 @@ def resolve_planning_group_joints(
             resolved.append((j_name, j_obj))
         return resolved
 
-    # CHAIN mode: walk from tip_link up to base_link
-    if scene is None:
-        return []
-
-    base_name = get_planning_link_name(group.base_link, fallback=group.base_link_name)
-    tip_name = get_planning_link_name(group.tip_link, fallback=group.tip_link_name)
-    if not base_name or not tip_name or base_name == tip_name:
-        return []
-
-    # Map child_link_name -> (parent_link_name, joint_obj, joint_props)
-    child_to_joint: dict[str, tuple[str, bpy.types.Object, typing.Any]] = {}
-    for obj in scene.objects:
-        jp = get_joint_props(obj)
-        if not jp or not jp.is_robot_joint:
-            continue
-        if not jp.parent_link or not jp.child_link:
-            continue
-        p_name = get_planning_link_name(jp.parent_link)
-        c_name = get_planning_link_name(jp.child_link)
-        child_to_joint[c_name] = (p_name, obj, jp)
-
-    chain_joints: list[tuple[str, bpy.types.Object | None]] = []
-    visited: set[str] = set()
-    current = tip_name
-    found = False
-
-    while True:
-        if current == base_name:
-            found = True
-            break
-        if current in visited:
-            break
-        visited.add(current)
-        entry = child_to_joint.get(current)
-        if entry is None:
-            break
-        parent_name, j_obj, jp = entry
-        if jp.joint_type.lower() != JOINT_FIXED and not jp.use_mimic:
-            j_name = get_planning_joint_name(j_obj)
-            chain_joints.append((j_name, j_obj))
-        current = parent_name
-
-    if not found:
-        return []
-
-    chain_joints.reverse()
-    return chain_joints
+    active, _, found = inspect_chain_path(scene, group)
+    return active if found else []
 
 
 def update_group_state_joint_value(

@@ -12,7 +12,7 @@ from ..properties.planning_props import (
     get_planning_joint_name,
     get_planning_link_name,
     has_planning_data,
-    resolve_planning_group_joints,
+    inspect_chain_path,
 )
 from ..utils.property_helpers import get_joint_props, get_robot_props
 from ..utils.scene_utils import get_robot_statistics
@@ -39,11 +39,14 @@ class LINKFORGE_UL_planning_groups(bpy.types.UIList):
             row.label(text=item.name or "Unnamed", icon="ARMATURE_DATA")
 
             if item.group_type == "CHAIN":
-                base_str = get_planning_link_name(item.base_link, item.base_link_name) or "?"
-                tip_str = get_planning_link_name(item.tip_link, item.tip_link_name) or "?"
-                row.label(text=f"[{base_str} → {tip_str}]", icon="NONE")
+                base_str = get_planning_link_name(item.base_link, item.base_link_name)
+                tip_str = get_planning_link_name(item.tip_link, item.tip_link_name)
+                if base_str and tip_str:
+                    row.label(text=f"[Chain: {base_str} → {tip_str}]", icon="NONE")
+                else:
+                    row.label(text="[Chain: Unconfigured]", icon="NONE")
             else:
-                row.label(text=f"[{len(item.joints)} joint(s)]", icon="NONE")
+                row.label(text=f"[Collection: {len(item.joints)} joint(s)]", icon="NONE")
         elif self.layout_type == "GRID":
             layout.alignment = "CENTER"
             layout.label(text="", icon="ARMATURE_DATA")
@@ -206,21 +209,36 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             base_name = get_planning_link_name(group_item.base_link, group_item.base_link_name)
             tip_name = get_planning_link_name(group_item.tip_link, group_item.tip_link_name)
             if base_name and tip_name:
-                resolved = resolve_planning_group_joints(scene, group_item)
                 j_box = inner.box()
-                if resolved:
+                if base_name == tip_name:
                     j_box.label(
-                        text=f"Active Joints ({len(resolved)})",
-                        icon="EMPTY_AXIS",
+                        text="Base Link and Tip Link must be different",
+                        icon="ERROR",
                     )
-                    j_col = j_box.column(align=True)
-                    for j_name, _ in resolved:
-                        j_col.label(text=j_name, icon="DOT")
                 else:
-                    j_box.label(
-                        text="No active joints found on path (Base → Tip)",
-                        icon="INFO",
-                    )
+                    active, non_active, found = inspect_chain_path(scene, group_item)
+                    if active:
+                        j_box.label(
+                            text=f"Active Joints ({len(active)})",
+                            icon="EMPTY_AXIS",
+                        )
+                        j_col = j_box.column(align=True)
+                        for j_name, _ in active:
+                            j_col.label(text=j_name, icon="DOT")
+                    elif found and non_active:
+                        j_box.label(
+                            text=f"Path has {len(non_active)} fixed/mimic joint(s) ({', '.join(non_active)})",
+                            icon="INFO",
+                        )
+                        j_box.label(
+                            text="MoveIt planning requires actuated joints (revolute/prismatic/continuous)",
+                            icon="FORWARD",
+                        )
+                    else:
+                        j_box.label(
+                            text="No kinematic path connects Base Link to Tip Link",
+                            icon="ERROR",
+                        )
         else:
             j_box = inner.box()
             header = j_box.row()
@@ -349,10 +367,12 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             return
 
         # Top utility bar for importing/resetting SRDF
-        top_row = layout.row(align=True)
-        top_row.operator("linkforge.import_srdf", text="Import SRDF...", icon="IMPORT")
         if has_planning_data(props):
-            top_row.operator("linkforge.purge_planning_data", text="Reset", icon="FILE_REFRESH")
+            top_split = layout.split(factor=0.88, align=True)
+            top_split.operator("linkforge.import_srdf", text="Import SRDF...", icon="IMPORT")
+            top_split.operator("linkforge.purge_planning_data", text="", icon="TRASH")
+        else:
+            layout.operator("linkforge.import_srdf", text="Import SRDF...", icon="IMPORT")
 
         # === 1. VIRTUAL JOINT ===
         vj_box = layout.box()
@@ -380,7 +400,7 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                 c_row.prop(props, "virtual_joint_child_link")
                 c_row.operator(
                     "linkforge.detect_virtual_joint_root",
-                    text="Detect",
+                    text="",
                     icon="VIEWZOOM",
                 )
             else:

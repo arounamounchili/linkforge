@@ -880,6 +880,10 @@ class TestPlanningPanelAndUILists:
         grp_chain.base_link = base
         grp_chain.tip_link = link2
 
+        grp_unconf = props.planning_groups.add()
+        grp_unconf.name = "unconf"
+        grp_unconf.group_type = "CHAIN"
+
         grp_joints = props.planning_groups.add()
         grp_joints.name = "hand"
         grp_joints.group_type = "JOINTS"
@@ -900,6 +904,7 @@ class TestPlanningPanelAndUILists:
 
         for ul_cls, item in [
             (LINKFORGE_UL_planning_groups, grp_chain),
+            (LINKFORGE_UL_planning_groups, grp_unconf),
             (LINKFORGE_UL_planning_groups, grp_joints),
             (LINKFORGE_UL_end_effectors, ee),
             (LINKFORGE_UL_group_states, st),
@@ -976,9 +981,18 @@ class TestPlanningPanelAndUILists:
         grp.base_link = link2
         grp.tip_link = base
         panel.draw(bpy.context)
-        # Draw with valid chain (base -> tip)
+        # Draw with identical base and tip (base == tip)
+        grp.base_link = base
+        grp.tip_link = base
+        panel.draw(bpy.context)
+        # Draw with connected path containing only fixed joints
+        safe_get_joint(j1, scene).joint_type = "FIXED"
+        safe_get_joint(j2, scene).joint_type = "FIXED"
         grp.base_link = base
         grp.tip_link = link2
+        panel.draw(bpy.context)
+        safe_get_joint(j1, scene).joint_type = "REVOLUTE"
+        safe_get_joint(j2, scene).joint_type = "REVOLUTE"
 
         ee = props.end_effectors.add()
         ee.name = "gripper"
