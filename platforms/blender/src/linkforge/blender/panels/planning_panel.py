@@ -376,10 +376,11 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                 vj_col.prop(props, "virtual_joint_name")
                 vj_col.prop(props, "virtual_joint_type")
                 vj_col.prop(props, "virtual_joint_parent_frame")
-                vj_col.prop(props, "virtual_joint_child_link")
-                vj_box.operator(
+                c_row = vj_col.row(align=True)
+                c_row.prop(props, "virtual_joint_child_link")
+                c_row.operator(
                     "linkforge.detect_virtual_joint_root",
-                    text="Detect Root Link",
+                    text="Detect",
                     icon="VIEWZOOM",
                 )
             else:
