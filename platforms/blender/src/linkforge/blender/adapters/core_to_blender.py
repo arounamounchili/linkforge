@@ -1021,7 +1021,15 @@ def populate_planning_properties_from_semantic(
     lp: typing.Any,
     semantic: SemanticRobotDescription | None,
 ) -> bool:
-    """Populate Blender scene robot properties from a core SemanticRobotDescription model."""
+    """Populate Blender scene robot properties from a core SemanticRobotDescription model.
+
+    Args:
+        lp: The robot property group on the Blender scene (RobotPropertyGroup).
+        semantic: The core SemanticRobotDescription data model, or None.
+
+    Returns:
+        True if semantic planning data was populated and SRDF enabled, False otherwise.
+    """
     if not lp or not hasattr(lp, "planning_groups"):
         return False
 
@@ -1119,7 +1127,17 @@ def bind_semantic_scene_objects(
     link_objects: dict[str, bpy.types.Object],
     joint_objects: dict[str, bpy.types.Object],
 ) -> None:
-    """Resolve SRDF planning PointerProperty references to newly created Blender objects."""
+    """Resolve SRDF planning PointerProperty references to newly created Blender objects.
+
+    Matches fallback link and joint name strings recorded during import to the
+    newly created Blender Object instances in the scene and establishes direct
+    PointerProperty bindings.
+
+    Args:
+        lp: The robot property group on the Blender scene (RobotPropertyGroup).
+        link_objects: Mapping of robot link names and Blender object names to Object instances.
+        joint_objects: Mapping of robot joint names and Blender object names to Object instances.
+    """
     if not lp or not hasattr(lp, "planning_groups"):
         return
 

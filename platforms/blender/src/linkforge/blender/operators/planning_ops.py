@@ -32,7 +32,15 @@ from ..utils.scene_utils import get_robot_statistics
 
 
 def _unique_item_name(collection: object, base_name: str) -> str:
-    """Generate a unique name within a Blender CollectionProperty."""
+    """Generate a unique name within a Blender CollectionProperty.
+
+    Args:
+        collection: The Blender collection property to check for existing names.
+        base_name: Desired base name prefix (e.g., 'group', 'end_effector', 'pose').
+
+    Returns:
+        A unique item name that does not collide with existing items in the collection.
+    """
     existing = {
         str(getattr(item, "name", "")) for item in getattr(collection, "__iter__", lambda: ())()
     }
@@ -54,12 +62,26 @@ class LINKFORGE_OT_detect_virtual_joint_root(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the scene has LinkForge properties initialized, False otherwise.
+        """
         return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Detect and assign the root link."""
+        """Detect and assign the root link.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -88,12 +110,26 @@ class LINKFORGE_OT_add_planning_group(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the scene has LinkForge properties initialized, False otherwise.
+        """
         return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Add a new planning group and auto-enable SRDF export."""
+        """Add a new planning group and auto-enable SRDF export.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -121,14 +157,28 @@ class LINKFORGE_OT_remove_planning_group(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if at least one planning group exists, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.planning_groups) > 0
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Remove the active planning group."""
+        """Remove the active planning group.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -158,14 +208,28 @@ class LINKFORGE_OT_move_planning_group(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if multiple planning groups exist, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.planning_groups) > 1
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Move the active planning group."""
+        """Move the active planning group.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -195,7 +259,14 @@ class LINKFORGE_OT_add_planning_group_joint(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if a valid planning group is selected, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_group_index
@@ -203,7 +274,14 @@ class LINKFORGE_OT_add_planning_group_joint(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Add the joint to the active planning group."""
+        """Add the joint to the active planning group.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -263,7 +341,14 @@ class LINKFORGE_OT_remove_planning_group_joint(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the active planning group has joints to remove, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_group_index
@@ -273,7 +358,14 @@ class LINKFORGE_OT_remove_planning_group_joint(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Remove a joint from the active planning group."""
+        """Remove a joint from the active planning group.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -311,12 +403,26 @@ class LINKFORGE_OT_add_end_effector(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the scene has LinkForge properties initialized, False otherwise.
+        """
         return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Add an end effector."""
+        """Add an end effector.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -340,14 +446,28 @@ class LINKFORGE_OT_remove_end_effector(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if at least one end effector exists, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.end_effectors) > 0
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Remove the active end effector."""
+        """Remove the active end effector.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -377,14 +497,28 @@ class LINKFORGE_OT_move_end_effector(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if multiple end effectors exist, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.end_effectors) > 1
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Move the active end effector."""
+        """Move the active end effector.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -412,12 +546,26 @@ class LINKFORGE_OT_add_group_state(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the scene has LinkForge properties initialized, False otherwise.
+        """
         return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Add a group state and sync its joints if a planning group is available."""
+        """Add a group state and sync its joints if a planning group is available.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -448,14 +596,28 @@ class LINKFORGE_OT_remove_group_state(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if at least one group state exists, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.group_states) > 0
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Remove the active group state."""
+        """Remove the active group state.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -485,14 +647,28 @@ class LINKFORGE_OT_move_group_state(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if multiple group states exist, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.group_states) > 1
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Move the active group state."""
+        """Move the active group state.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -520,7 +696,14 @@ class LINKFORGE_OT_sync_group_state_joints(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if a group state with a valid group name is selected, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_state_index
@@ -528,7 +711,14 @@ class LINKFORGE_OT_sync_group_state_joints(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Sync active joints from the referenced planning group."""
+        """Sync active joints from the referenced planning group.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -553,7 +743,14 @@ class LINKFORGE_OT_reset_group_state_values(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the active group state contains joint values, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_state_index
@@ -561,7 +758,14 @@ class LINKFORGE_OT_reset_group_state_values(Operator):
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Reset all joint values to 0.0."""
+        """Reset all joint values to 0.0.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -588,12 +792,26 @@ class LINKFORGE_OT_add_disabled_collision(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the scene has LinkForge properties initialized, False otherwise.
+        """
         return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Add a disabled collision pair."""
+        """Add a disabled collision pair.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -617,14 +835,28 @@ class LINKFORGE_OT_remove_disabled_collision(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if at least one disabled collision pair exists, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.disabled_collisions) > 0
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Remove the active disabled collision pair."""
+        """Remove the active disabled collision pair.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -653,14 +885,28 @@ class LINKFORGE_OT_move_disabled_collision(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if multiple disabled collision pairs exist, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return len(props.disabled_collisions) > 1
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Move the active disabled collision pair."""
+        """Move the active disabled collision pair.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -691,12 +937,26 @@ class LINKFORGE_OT_auto_disable_adjacent_collisions(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the scene has LinkForge properties initialized, False otherwise.
+        """
         return bool(context.scene and get_robot_props(context.scene))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Generate adjacent disabled collision pairs from scene joints."""
+        """Generate adjacent disabled collision pairs from scene joints.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -754,14 +1014,28 @@ class LINKFORGE_OT_purge_planning_data(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Check if operator can run."""
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if any planning data exists to purge, False otherwise.
+        """
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         return has_planning_data(props)
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Clear all SRDF planning properties."""
+        """Clear all SRDF planning properties.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
@@ -804,7 +1078,14 @@ class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        """Only allow importing SRDF when a robot exists in the scene."""
+        """Only allow importing SRDF when a robot exists in the scene.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if robot links exist in the scene, False otherwise.
+        """
         scene = context.scene
         if not scene:
             return False
@@ -813,7 +1094,14 @@ class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
-        """Parse and populate SRDF planning properties from the selected file."""
+        """Parse and populate SRDF planning properties from the selected file.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
         scene = context.scene
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}

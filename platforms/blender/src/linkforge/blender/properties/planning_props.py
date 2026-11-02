@@ -36,7 +36,14 @@ from ..utils.property_helpers import get_joint_props, get_link_props, get_robot_
 
 
 def _resolve_to_link_obj(obj: bpy.types.Object | None) -> bpy.types.Object | None:
-    """Return the robot link object, or its parent link if obj is a visual/collision child."""
+    """Return the robot link object, or its parent link if obj is a visual/collision child.
+
+    Args:
+        obj: The Blender object to inspect, or None.
+
+    Returns:
+        The resolved robot link Object, or None if obj is None or has no link relationship.
+    """
     if obj is None:
         return None
     if (lp := get_link_props(obj)) and lp.is_robot_link:
@@ -48,17 +55,41 @@ def _resolve_to_link_obj(obj: bpy.types.Object | None) -> bpy.types.Object | Non
 
 
 def poll_planning_link(_self: typing.Any, obj: bpy.types.Object) -> bool:
-    """Filter to only allow robot link objects in pointer selection."""
+    """Filter to only allow robot link objects in pointer selection.
+
+    Args:
+        _self: The property group instance (unused).
+        obj: The candidate Blender object.
+
+    Returns:
+        True if the object is marked as a robot link, False otherwise.
+    """
     return bool((props := get_link_props(obj)) and props.is_robot_link)
 
 
 def poll_planning_joint(_self: typing.Any, obj: bpy.types.Object) -> bool:
-    """Filter to only allow robot joint objects in pointer selection."""
+    """Filter to only allow robot joint objects in pointer selection.
+
+    Args:
+        _self: The property group instance (unused).
+        obj: The candidate Blender object.
+
+    Returns:
+        True if the object is marked as a robot joint, False otherwise.
+    """
     return bool((props := get_joint_props(obj)) and props.is_robot_joint)
 
 
 def get_planning_link_name(obj: bpy.types.Object | None, fallback: str = "") -> str:
-    """Resolve the logical robot link name from a Blender object pointer or fallback."""
+    """Resolve the logical robot link name from a Blender object pointer or fallback.
+
+    Args:
+        obj: The Blender object representing the robot link, or None.
+        fallback: String to return if obj is None or unresolved.
+
+    Returns:
+        The logical link name from link properties, object name, or the fallback string.
+    """
     link_obj = _resolve_to_link_obj(obj) or obj
     if link_obj is not None:
         lp = get_link_props(link_obj)
@@ -67,7 +98,15 @@ def get_planning_link_name(obj: bpy.types.Object | None, fallback: str = "") -> 
 
 
 def get_planning_joint_name(obj: bpy.types.Object | None, fallback: str = "") -> str:
-    """Resolve the logical robot joint name from a Blender object pointer or fallback."""
+    """Resolve the logical robot joint name from a Blender object pointer or fallback.
+
+    Args:
+        obj: The Blender object representing the robot joint, or None.
+        fallback: String to return if obj is None or unresolved.
+
+    Returns:
+        The logical joint name from joint properties, object name, or the fallback string.
+    """
     if obj is not None:
         jp = get_joint_props(obj)
         return str(jp.joint_name) if jp and jp.joint_name else str(obj.name)
@@ -75,7 +114,14 @@ def get_planning_joint_name(obj: bpy.types.Object | None, fallback: str = "") ->
 
 
 def has_planning_data(props: typing.Any) -> bool:
-    """Check whether any SRDF semantic planning data is configured on the scene."""
+    """Check whether any SRDF semantic planning data is configured on the scene.
+
+    Args:
+        props: The RobotPropertyGroup instance on the scene.
+
+    Returns:
+        True if virtual joint, planning groups, end effectors, poses, or collision pairs exist.
+    """
     if not props:
         return False
     vj_obj = getattr(props, "virtual_joint_child_link", None)
@@ -99,8 +145,18 @@ def inspect_chain_path(
 ) -> tuple[list[tuple[str, bpy.types.Object | None]], list[str], bool]:
     """Inspect kinematic chain from tip_link up to base_link.
 
+    Walks the parent-child joint tree from tip to base, separating actuated
+    joints from fixed/mimic joints.
+
+    Args:
+        scene: The active Blender scene containing the robot hierarchy.
+        group: The PlanningGroupProperty whose chain (base_link to tip_link) is inspected.
+
     Returns:
-        (active_joints, non_active_joints, path_found)
+        A tuple of (active_joints, non_active_joints, path_found), where:
+            - active_joints: list of (joint_name, joint_obj) in base -> tip order.
+            - non_active_joints: list of joint_name for fixed or mimic joints.
+            - path_found: True if a continuous chain connects tip to base, False otherwise.
     """
     if scene is None:
         return ([], [], False)
@@ -163,6 +219,13 @@ def resolve_planning_group_joints(
     For ``CHAIN`` groups, walks the scene's kinematic tree from ``tip_link`` up to
     ``base_link`` and returns the actuated joints in ``base_link -> tip_link`` order.
     For ``JOINTS`` groups, returns the explicitly assigned joints in order.
+
+    Args:
+        scene: The active Blender scene containing the robot hierarchy.
+        group: The PlanningGroupProperty being inspected.
+
+    Returns:
+        List of (joint_name, joint_obj) tuples for all actuated joints in the group.
     """
     if group.group_type == "JOINTS":
         resolved: list[tuple[str, bpy.types.Object | None]] = []
@@ -200,7 +263,12 @@ def update_group_state_joint_value(
     self: GroupStateJointValueProperty,
     _context: Context | None,
 ) -> None:
-    """Clamp joint state value to the joint's kinematic limits when applicable."""
+    """Clamp joint state value to the joint's kinematic limits when applicable.
+
+    Args:
+        self: The GroupStateJointValueProperty being modified.
+        _context: Current Blender context (unused).
+    """
     j_obj = self.joint_obj
     if j_obj is None:
         return
@@ -227,6 +295,13 @@ def sync_group_state_joints(
 
     Preserves existing joint values for joints that remain in the group and
     initializes newly added joints to 0.0 (clamped to joint limits).
+
+    Args:
+        state: The GroupStateProperty being synchronized.
+        scene: The active Blender scene containing the robot hierarchy.
+
+    Returns:
+        The number of resolved active joints synchronized into the group state.
     """
     if scene is None:
         return 0
@@ -263,7 +338,12 @@ def update_group_state_group(
     self: GroupStateProperty,
     context: Context | None,
 ) -> None:
-    """Automatically sync active joints when a GroupState's target group changes."""
+    """Automatically sync active joints when a GroupState's target group changes.
+
+    Args:
+        self: The GroupStateProperty whose target group name was modified.
+        context: Current Blender context.
+    """
     scene = getattr(context, "scene", None) if context else getattr(bpy.context, "scene", None)
     if scene is not None and self.group:
         sync_group_state_joints(self, scene)
@@ -274,7 +354,13 @@ def _safe_redirect_pointer(
     attr: str,
     target: bpy.types.Object | None,
 ) -> None:
-    """Safely update a PointerProperty, deferring via timer in GUI mode to avoid RNA re-entrancy."""
+    """Safely update a PointerProperty, deferring via timer in GUI mode to avoid RNA re-entrancy.
+
+    Args:
+        prop_owner: The Blender property group or object holding the pointer.
+        attr: The string attribute name of the PointerProperty.
+        target: The target Blender Object to assign, or None.
+    """
     if not getattr(bpy.app, "background", False) and hasattr(bpy.app, "timers"):
 
         def _deferred() -> None:
@@ -288,7 +374,17 @@ def _safe_redirect_pointer(
 
 
 def find_robot_root_link(scene: bpy.types.Scene | None) -> tuple[bpy.types.Object | None, str]:
-    """Find the robot's kinematic root link in the scene."""
+    """Find the robot's kinematic root link in the scene.
+
+    Checks all link objects and identifies any link that is not designated as a
+    child link by any robot joint in the scene.
+
+    Args:
+        scene: The active Blender scene, or None.
+
+    Returns:
+        A tuple of (root_obj, root_name), or (None, "") if no root link is detected.
+    """
     if scene is None:
         return None, ""
     child_links: set[bpy.types.Object] = set()
@@ -311,7 +407,12 @@ def update_use_virtual_joint(
     self: typing.Any,
     context: Context | None,
 ) -> None:
-    """When enabling virtual joint, auto-populate child link with the root link if unset."""
+    """When enabling virtual joint, auto-populate child link with the root link if unset.
+
+    Args:
+        self: The RobotPropertyGroup instance.
+        context: Current Blender context.
+    """
     if not getattr(self, "use_virtual_joint", False):
         return
     cur_link = getattr(self, "virtual_joint_child_link", None)
@@ -330,7 +431,12 @@ def update_virtual_joint_child_link(
     self: typing.Any,
     _context: Context | None,
 ) -> None:
-    """Redirect visual/collision child meshes to their parent robot link."""
+    """Redirect visual/collision child meshes to their parent robot link.
+
+    Args:
+        self: The RobotPropertyGroup instance.
+        _context: Current Blender context (unused).
+    """
     cur = getattr(self, "virtual_joint_child_link", None)
     resolved = _resolve_to_link_obj(cur)
     if resolved is not None and resolved != cur:
@@ -341,7 +447,12 @@ def update_planning_group_topology(
     self: PlanningGroupProperty,
     context: Context | None,
 ) -> None:
-    """Redirect visual/collision child meshes and sync GroupStates referencing this group."""
+    """Redirect visual/collision child meshes and sync GroupStates referencing this group.
+
+    Args:
+        self: The PlanningGroupProperty whose base or tip link was modified.
+        context: Current Blender context.
+    """
     for attr in ("base_link", "tip_link"):
         cur = getattr(self, attr, None)
         resolved = _resolve_to_link_obj(cur)
@@ -360,7 +471,12 @@ def update_end_effector_link(
     self: EndEffectorProperty,
     _context: Context | None,
 ) -> None:
-    """Redirect visual/collision child meshes to their parent robot link."""
+    """Redirect visual/collision child meshes to their parent robot link.
+
+    Args:
+        self: The EndEffectorProperty being updated.
+        _context: Current Blender context (unused).
+    """
     resolved = _resolve_to_link_obj(self.parent_link)
     if resolved is not None and resolved != self.parent_link:
         _safe_redirect_pointer(self, "parent_link", resolved)
@@ -370,7 +486,12 @@ def update_collision_pair_links(
     self: CollisionPairProperty,
     _context: Context | None,
 ) -> None:
-    """Redirect visual/collision child meshes to their parent robot link."""
+    """Redirect visual/collision child meshes to their parent robot link.
+
+    Args:
+        self: The CollisionPairProperty being updated.
+        _context: Current Blender context (unused).
+    """
     for attr in ("link1", "link2"):
         cur = getattr(self, attr, None)
         resolved = _resolve_to_link_obj(cur)
@@ -383,7 +504,12 @@ def update_planning_group_name(
     self: PlanningGroupProperty,
     context: Context | None,
 ) -> None:
-    """Propagate planning group renames to End Effectors and Group States."""
+    """Propagate planning group renames to End Effectors and Group States.
+
+    Args:
+        self: The PlanningGroupProperty being renamed.
+        context: Current Blender context.
+    """
     old_name = getattr(self, "previous_name", "")
     new_name = self.name
     if old_name and old_name != new_name:

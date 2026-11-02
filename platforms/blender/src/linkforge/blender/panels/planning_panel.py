@@ -33,7 +33,19 @@ class LINKFORGE_UL_planning_groups(bpy.types.UIList):
         _index: int | None = 0,
         _flt_flag: int | None = 0,
     ) -> None:
-        """Draw a planning group row in the UIList."""
+        """Draw a planning group row in the UIList.
+
+        Args:
+            _context: The current Blender context (unused, required by API).
+            layout: The parent UILayout row.
+            _data: Property group collection owner (unused, required by API).
+            item: The PlanningGroupProperty item being rendered.
+            _icon: Icon ID (unused, required by API).
+            _active_data: Pointer to active collection data (unused, required by API).
+            _active_propname: Name of active property (unused, required by API).
+            _index: Index of the item in the collection.
+            _flt_flag: UIList filter flags.
+        """
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             row.label(text=item.name or "Unnamed", icon="ARMATURE_DATA")
@@ -69,7 +81,19 @@ class LINKFORGE_UL_end_effectors(bpy.types.UIList):
         _index: int | None = 0,
         _flt_flag: int | None = 0,
     ) -> None:
-        """Draw an end effector row in the UIList."""
+        """Draw an end effector row in the UIList.
+
+        Args:
+            _context: The current Blender context (unused, required by API).
+            layout: The parent UILayout row.
+            _data: Property group collection owner (unused, required by API).
+            item: The EndEffectorProperty item being rendered.
+            _icon: Icon ID (unused, required by API).
+            _active_data: Pointer to active collection data (unused, required by API).
+            _active_propname: Name of active property (unused, required by API).
+            _index: Index of the item in the collection.
+            _flt_flag: UIList filter flags.
+        """
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             row.label(text=item.name or "Unnamed", icon="MOD_SKIN")
@@ -103,7 +127,19 @@ class LINKFORGE_UL_group_states(bpy.types.UIList):
         _index: int | None = 0,
         _flt_flag: int | None = 0,
     ) -> None:
-        """Draw a group state row in the UIList."""
+        """Draw a group state row in the UIList.
+
+        Args:
+            _context: The current Blender context (unused, required by API).
+            layout: The parent UILayout row.
+            _data: Property group collection owner (unused, required by API).
+            item: The GroupStateProperty item being rendered.
+            _icon: Icon ID (unused, required by API).
+            _active_data: Pointer to active collection data (unused, required by API).
+            _active_propname: Name of active property (unused, required by API).
+            _index: Index of the item in the collection.
+            _flt_flag: UIList filter flags.
+        """
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             row.label(text=item.name or "Unnamed", icon="POSE_HLT")
@@ -129,7 +165,19 @@ class LINKFORGE_UL_disabled_collisions(bpy.types.UIList):
         _index: int | None = 0,
         _flt_flag: int | None = 0,
     ) -> None:
-        """Draw a disabled collision pair row in the UIList."""
+        """Draw a disabled collision pair row in the UIList.
+
+        Args:
+            _context: The current Blender context (unused, required by API).
+            layout: The parent UILayout row.
+            _data: Property group collection owner (unused, required by API).
+            item: The CollisionPairProperty item being rendered.
+            _icon: Icon ID (unused, required by API).
+            _active_data: Pointer to active collection data (unused, required by API).
+            _active_propname: Name of active property (unused, required by API).
+            _index: Index of the item in the collection.
+            _flt_flag: UIList filter flags.
+        """
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             l1 = get_planning_link_name(item.link1, item.link1_name) or "?"
@@ -147,7 +195,11 @@ class LINKFORGE_MT_add_planning_group_joint(bpy.types.Menu):
     bl_label = "Add Joint to Group"
 
     def draw(self, context: bpy.types.Context) -> None:
-        """Draw available scene joints not yet in the active planning group."""
+        """Draw available scene joints not yet in the active planning group.
+
+        Args:
+            context: The current Blender context.
+        """
         layout = self.layout
         scene = context.scene
         if not (layout and scene):
@@ -201,7 +253,13 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         group_item: typing.Any,
         scene: bpy.types.Scene | None = None,
     ) -> None:
-        """Draw the detailed configuration box for the selected Planning Group."""
+        """Draw the detailed configuration box for the selected Planning Group.
+
+        Args:
+            layout: The parent UILayout to draw into.
+            group_item: The PlanningGroupProperty item currently selected.
+            scene: The active Blender scene, used for kinematic chain inspection.
+        """
         inner = layout.box()
         inner.label(text=f"Group: {group_item.name}", icon="SETTINGS")
 
@@ -271,7 +329,13 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         props: typing.Any,
         ee_item: typing.Any,
     ) -> None:
-        """Draw the detailed configuration box for the selected End Effector."""
+        """Draw the detailed configuration box for the selected End Effector.
+
+        Args:
+            layout: The parent UILayout to draw into.
+            props: The global LinkForge scene property group.
+            ee_item: The EndEffectorProperty item currently selected.
+        """
         inner = layout.box()
         inner.label(text=f"End Effector: {ee_item.name}", icon="SETTINGS")
 
@@ -301,7 +365,13 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         props: typing.Any,
         state_item: typing.Any,
     ) -> None:
-        """Draw the detailed configuration box and joint sliders for the selected Group State."""
+        """Draw the detailed configuration box and joint sliders for the selected Group State.
+
+        Args:
+            layout: The parent UILayout to draw into.
+            props: The global LinkForge scene property group.
+            state_item: The GroupStateProperty item currently selected.
+        """
         inner = layout.box()
         inner.label(text=f"Pose: {state_item.name}", icon="SETTINGS")
 
@@ -345,7 +415,12 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         layout: bpy.types.UILayout,
         pair_item: typing.Any,
     ) -> None:
-        """Draw the detailed configuration box for the selected Disabled Collision pair."""
+        """Draw the detailed configuration box for the selected Disabled Collision pair.
+
+        Args:
+            layout: The parent UILayout to draw into.
+            pair_item: The CollisionPairProperty item currently selected.
+        """
         inner = layout.box()
         l1 = get_planning_link_name(pair_item.link1, pair_item.link1_name) or "?"
         l2 = get_planning_link_name(pair_item.link2, pair_item.link2_name) or "?"
@@ -357,7 +432,11 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         col.prop(pair_item, "reason")
 
     def draw(self, context: bpy.types.Context) -> None:
-        """Draw the Planning panel."""
+        """Draw the Planning panel.
+
+        Args:
+            context: The current Blender context.
+        """
         layout = self.layout
         scene = context.scene
         if not (layout and scene):

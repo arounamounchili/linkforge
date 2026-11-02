@@ -682,7 +682,17 @@ class SemanticTranslator:
         builder: IComposer,
         validation_result: ValidationResult | None = None,
     ) -> None:
-        """Translate Blender SRDF planning properties using the SemanticBuilder API."""
+        """Translate Blender SRDF planning properties using the SemanticBuilder API.
+
+        Extracts Virtual Joint, Planning Groups (chains and joint collections),
+        End Effectors, Group States (named poses), and Disabled Collision pairs from
+        the Blender scene properties, reporting validation errors for incomplete entries.
+
+        Args:
+            obj: The robot property group (RobotPropertyGroup) containing planning settings.
+            builder: The LinkForge core IComposer builder whose semantic API is used.
+            validation_result: Optional validation result collector for logging semantic errors.
+        """
         if not obj or not has_planning_data(obj):
             return
 
