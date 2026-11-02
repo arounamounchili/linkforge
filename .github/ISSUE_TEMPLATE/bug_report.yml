@@ -7,7 +7,7 @@ body:
       value: |
         **Thanks for taking the time to report a bug!**
 
-        Please fill out the form below to help us investigate. If you have any questions, feel free to ask in our [Discussions](https://github.com/arounapatouossamounchili/linkforge/discussions).
+        Please fill out the form below to help us investigate. If you have any questions, feel free to ask in our [Discussions](https://github.com/arounamounchili/linkforge/discussions).
   - type: input
     id: linkforge_version
     attributes:
