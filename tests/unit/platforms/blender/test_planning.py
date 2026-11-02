@@ -994,6 +994,23 @@ class TestPlanningPanelAndUILists:
         safe_get_joint(j1, scene).joint_type = "REVOLUTE"
         safe_get_joint(j2, scene).joint_type = "REVOLUTE"
 
+        # 1-joint chain
+        grp.tip_link = link1
+        panel.draw(bpy.context)
+
+        # 2-joint chain
+        grp.tip_link = link2
+        panel.draw(bpy.context)
+
+        # 3+-joint chain (DOF range)
+        link3 = create_robot_link("link3", scene, with_visual=False, with_collision=False)
+        safe_get_linkforge(link3, scene).link_name = "link3"
+        j3 = create_robot_joint("j3", link2, link3, scene, joint_type="REVOLUTE")
+        safe_get_joint(j3, scene).joint_name = "j3"
+        grp.tip_link = link3
+        panel.draw(bpy.context)
+        grp.tip_link = link2
+
         ee = props.end_effectors.add()
         ee.name = "gripper"
         ee.group = "arm"

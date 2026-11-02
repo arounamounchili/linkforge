@@ -209,33 +209,32 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             base_name = get_planning_link_name(group_item.base_link, group_item.base_link_name)
             tip_name = get_planning_link_name(group_item.tip_link, group_item.tip_link_name)
             if base_name and tip_name:
-                j_box = inner.box()
                 if base_name == tip_name:
-                    j_box.label(
+                    inner.label(
                         text="Base Link and Tip Link must be different",
                         icon="ERROR",
                     )
                 else:
                     active, non_active, found = inspect_chain_path(scene, group_item)
                     if active:
-                        j_box.label(
-                            text=f"Active Joints ({len(active)})",
-                            icon="EMPTY_AXIS",
-                        )
-                        j_col = j_box.column(align=True)
-                        for j_name, _ in active:
-                            j_col.label(text=j_name, icon="DOT")
+                        if len(active) == 1:
+                            summary_text = f"Active Joints (1): {active[0][0]}"
+                        elif len(active) == 2:
+                            summary_text = f"Active Joints (2): {active[0][0]}, {active[1][0]}"
+                        else:
+                            summary_text = f"Active Joints ({len(active)} DOF): {active[0][0]} → {active[-1][0]}"
+                        inner.label(text=summary_text, icon="CHECKMARK")
                     elif found and non_active:
-                        j_box.label(
+                        inner.label(
                             text=f"Path has {len(non_active)} fixed/mimic joint(s) ({', '.join(non_active)})",
                             icon="INFO",
                         )
-                        j_box.label(
-                            text="MoveIt planning requires actuated joints (revolute/prismatic/continuous)",
+                        inner.label(
+                            text="MoveIt requires actuated joints (revolute/prismatic/continuous)",
                             icon="FORWARD",
                         )
                     else:
-                        j_box.label(
+                        inner.label(
                             text="No kinematic path connects Base Link to Tip Link",
                             icon="ERROR",
                         )
