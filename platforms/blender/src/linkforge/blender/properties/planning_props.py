@@ -291,7 +291,7 @@ def find_robot_root_link(scene: bpy.types.Scene | None) -> tuple[bpy.types.Objec
     """Find the robot's kinematic root link in the scene."""
     if scene is None:
         return None, ""
-    child_links: set[str] = set()
+    child_links: set[bpy.types.Object] = set()
     link_objs: list[bpy.types.Object] = []
     for obj in scene.objects:
         if (lp := get_link_props(obj)) and lp.is_robot_link:
