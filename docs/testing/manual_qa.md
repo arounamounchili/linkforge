@@ -201,11 +201,11 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 ### `TC-PLAN-01`: MoveIt 2 SRDF Configuration Panel
 * Verify configuration of Virtual Joint, Planning Groups, End Effectors, Group States, and Disabled Collisions.
 - [ ] **Action**:
-  1. Open the `Planning` panel. Under `Virtual Joint`, check `Virtual Joint` and verify `Child Link` automatically populates with the root link.
-  2. Under `Planning Groups`, click `+` to add an `arm` group in `Kinematic Chain` mode, pick `Base Link` and `Tip Link`, and verify the compact `Active Joints` status row updates with a green checkmark. Add a second `hand` group in `Joint Collection` mode and add a gripper joint.
-  3. Under `End Effectors`, click `+` to attach `hand` to `Parent Link` and `Parent Group` (`arm`).
-  4. Under `Group States (Poses)`, click `+` to create a `home` pose for `arm`, and drag the joint sliders across their `[lower, upper]` bounds.
-  5. Under `Disabled Collisions`, click `Auto-Disable Adjacent Links`.
+  1. Open the `Planning` panel. In `Virtual Joint`, check the box on the right and verify `Child Link` automatically populates with the root link.
+  2. In `Planning Groups`, click `+` to add an `arm` group in `Kinematic Chain` mode, pick `Base Link` and `Tip Link`, and verify the compact `Active Joints` status row updates with a green checkmark. Add a second `hand` group in `Joint Collection` mode and use the `+` menu to add a gripper joint.
+  3. In `End Effectors`, click `+` to attach `hand` to `Parent Link` and `Parent Group` (`arm`).
+  4. In `Group States`, click `+` to create a `home` pose for `arm`, and drag the joint sliders across their `[lower, upper]` bounds.
+  5. In `Disabled Collisions`, click `Auto-Disable Adjacent Links`.
 - [ ] **Expected**:
   - All `UIList` rows display live link/joint summaries and dynamically update if links or joints are renamed in the Outliner.
   - Joint sliders in `Group States` clamp values to the joint's defined `[limit_lower, limit_upper]` range.
@@ -217,11 +217,13 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   1. Open a blank Blender file (no robot in scene). Verify the `Planning` panel displays `No robot in scene` and `Create links in Forge panel to start`.
   2. Create or import a robot model. Verify the `Planning` panel unlocks and shows `Import SRDF...`.
   3. Click `Import SRDF...` and select an SRDF file.
+  4. Click the `Trash` (`TRASH`) icon button next to `Import SRDF...` to purge all planning data.
 - [ ] **Expected**:
   1. Operator polls false when scene is empty; no crashes occur.
   2. When a robot is present, planning groups, virtual joints, poses, and disabled collisions are populated.
   3. Any links/joints in the SRDF that do not exist in the scene are preserved as string fallbacks, and an informative warning reports the count of unresolved references without discarding data.
   4. Pressing `Ctrl+Z` cleanly undoes the import.
+  5. Clicking `Trash` clears all planning configuration and resets `Include SRDF` in `Validate & Export`.
 
 ---
 

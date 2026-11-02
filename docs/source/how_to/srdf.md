@@ -12,11 +12,15 @@ LinkForge lets you configure SRDF either visually in the Blender **Planning** pa
 
 Open the **Planning** panel in the LinkForge N-Panel sidebar (located between **Control** and **Validate & Export**).
 
+:::{note}
+**Empty Scene Guard**: If no robot exists in the scene, the panel displays `No robot in scene` and guides you to create links in the **Forge** panel. Once links are present, all planning sections unlock.
+:::
+
 ### 1. Virtual Joint
 
 A virtual joint attaches your robot's root link to a global reference frame (such as `world` or `odom`).
 
-1. Enable **Virtual Joint** in the **Planning** panel. LinkForge automatically detects and assigns the kinematic tree's root link to **Child Link** (or pick a link from the scene selector).
+1. In the **Virtual Joint** header, check the enable box on the right. LinkForge automatically detects the kinematic root link and assigns it to **Child Link** (or select another link object using the eyedropper).
 2. Configure **Name** (default: `world_joint`), **Parent Frame** (default: `world`), and **Type**:
    - **Fixed**: Manipulators bolted to a table or floor.
    - **Planar**: Differential-drive or omnidirectional mobile bases (`x`, `y`, `theta`).
@@ -27,10 +31,10 @@ A virtual joint attaches your robot's root link to a global reference frame (suc
 Planning groups define kinematic chains or joint sets that MoveIt 2 plans for together (e.g., `arm` or `hand`).
 
 1. In the **Planning Groups** section, click **Add (`+`)**.
-2. Set the group **Name** and choose a **Type**:
-   - **Kinematic Chain**: Select a **Base Link** and **Tip Link**. LinkForge automatically walks the kinematic tree and resolves all active joints between them.
-   - **Joint Collection**: Click **`+` (Add)** to pick specific joints from your robot's kinematic tree (ideal for multi-finger grippers or non-serial mechanisms).
-3. Check the live **Active Joints** status row at the bottom of the group card to verify that the kinematic chain is connected.
+2. Set the group **Name** and choose a **Type** using the segmented toggle:
+   - **Kinematic Chain**: Select a **Base Link** and **Tip Link**. LinkForge automatically walks the kinematic tree and resolves all active joints between them, displaying a live status row (`✓ Active Joints (n DOF): base_joint → tip_joint` or diagnostics if broken).
+   - **Joint Collection**: Click **`+` (Add)** in the `Joints (n)` header to pick specific joints from your robot's kinematic tree (ideal for multi-finger grippers or non-serial mechanisms).
+3. The UIList row displays a live summary badge: `[Chain: base_link → tip_link]` or `[Collection: n joints]`. Use **`▲` / `▼`** to reorder groups or **`-`** to remove a group.
 
 ### 3. End Effectors
 
@@ -39,31 +43,37 @@ An end effector associates a gripper or tool group with the manipulator group an
 1. In the **End Effectors** section, click **Add (`+`)**.
 2. Configure:
    - **Name**: Identifier for the end effector (e.g., `gripper`).
-   - **Group**: The planning group representing the end effector itself (e.g., `hand`).
-   - **Parent Link**: The link where the end effector is mounted (e.g., `wrist_link`).
+   - **Group**: The planning group representing the end effector itself (searchable dropdown of existing planning groups).
+   - **Parent Link**: The physical link where the end effector is mounted (e.g., `wrist_link`).
    - **Parent Group**: The planning group that carries the end effector (e.g., `arm`).
+3. The UIList row displays a live status badge (e.g., `[hand @ wrist_link]` or `[Unconfigured]`).
 
 ### 4. Group States (Named Poses)
 
 Group states store named joint configurations (such as `home`, `ready`, or `stow`) for a planning group.
 
-1. In the **Group States (Poses)** section, click **Add (`+`)**.
-2. Set the pose **Name** and select the target **Group**.
+1. In the **Group States** section, click **Add (`+`)**.
+2. Set the pose **Name** and select the target **Group** from the searchable dropdown.
 3. LinkForge automatically populates a slider for each active joint in the group, displaying its physical limits `[lower, upper]` and clamping values to those bounds.
-4. Use **Sync** (`FILE_REFRESH`) if you modify the group's topology, or **Reset (`0.0`)** (`LOOP_BACK`) to reset all joint positions to zero (clamped to valid limits).
+4. In the **Active Joints** sub-box:
+   - **Sync** (`FILE_REFRESH`): Updates the joint list if you modified the group's joints or kinematic chain.
+   - **Reset** (`LOOP_BACK`): Resets all joint sliders to `0.000` (clamped to the nearest valid joint limit).
+5. The UIList row displays a live summary badge: `[arm · 6 DOF]`.
 
 ### 5. Disabled Collisions
 
-By default, MoveIt 2 checks for collisions between every pair of links. You can disable pairs that are guaranteed never to collide or that touch by design at a joint.
+By default, MoveIt 2 checks for collisions between every pair of links. You can disable pairs that are guaranteed never to collide or that touch by design at a joint to accelerate planning.
 
-- **Auto-Disable Adjacent Links**: Click **Auto-Disable Adjacent Links** to automatically walk the kinematic tree and add every parent–child link pair with reason `Adjacent`.
+- **Auto-Disable Adjacent Links**: Click **Auto-Disable Adjacent Links** (`FILE_REFRESH`) to automatically walk the kinematic tree and add every parent–child link pair with reason `Adjacent`.
 - **Custom Pairs**: Click **Add (`+`)** to add a specific link pair (`Link 1` and `Link 2`) and select a standard MoveIt 2 **Reason** (`Adjacent`, `Never`, `Default`, `Always`, or `User`).
+- The UIList row displays link pairs and their filter reason: `base_link ↔ link_1 [Adjacent]`.
 
 ### 6. Exporting & Importing Companion SRDF
 
-- **Exporting**: Adding any planning group, end effector, group state, or disabled collision automatically enables **Include SRDF** in the **Validate & Export** panel. Clicking **Export Robot** writes both `<robot>.urdf` (or `<robot>.xacro`) and `<robot>.srdf` to the same directory in one click.
+- **Exporting**: Adding any planning group, end effector, group state, or disabled collision automatically enables **Include SRDF** in the **Validate & Export** panel. Clicking **Export Robot** writes both `<robot_name>.urdf` (or `<robot_name>.xacro`) and `<robot_name>.srdf` to the same directory in one click.
 - **Automatic Companion Import**: When importing a `.urdf` or `.xacro` file via **Forge > Import Robot Model**, LinkForge automatically searches for a companion `.srdf` file (beside the URDF, or in standard `config/` or `srdf/` directories) and populates the **Planning** panel.
-- **Manual SRDF Import**: In the **Planning** panel, click **Import SRDF...** (`IMPORT`) to load any `.srdf` file from disk directly onto your scene's robot. LinkForge matches links and joints to scene objects, preserves unresolved references without data loss, and supports full undo (`Ctrl+Z`). Click **Reset** (`FILE_REFRESH`) to clear all semantic planning data at any time.
+- **Manual SRDF Import**: In the **Planning** panel, click **Import SRDF...** (`IMPORT`) to load any `.srdf` file from disk directly onto your scene's robot. LinkForge matches links and joints to scene objects, preserves unresolved references without data loss, and supports full undo (`Ctrl+Z`).
+- **Purge Planning Data**: Click the **Trash** (`TRASH`) icon button next to **Import SRDF...** to clear all planning groups, end effectors, poses, disabled collisions, and virtual joint settings at once.
 
 ---
 
