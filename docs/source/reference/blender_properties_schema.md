@@ -278,7 +278,7 @@ Stored on `bpy.context.scene.linkforge_robot` to configure robot-level metadata,
 | `enable_joint_axes_gizmo` | `bool` | `true` | Enable RViz-style 3D joint coordinate arrows |
 | `enable_joint_limits_gizmo` | `bool` | `true` | Enable angular/prismatic kinematic limit arc overlay |
 | `use_srdf` | `bool` | `false` | Write a companion `.srdf` file alongside `.urdf` / `.xacro` on export |
-| `use_virtual_joint` | `bool` | `true` | Include a `<virtual_joint>` attaching the robot's root link to a global frame |
+| `use_virtual_joint` | `bool` | `false` | Include a `<virtual_joint>` attaching the robot's root link to a global frame |
 | `virtual_joint_name` | `str` | `"world_joint"` | Name of the virtual joint in SRDF |
 | `virtual_joint_type` | `enum` | `"fixed"` | Virtual joint type: `"fixed"`, `"floating"`, or `"planar"` |
 | `virtual_joint_parent_frame` | `str` | `"world"` | Global reference frame name |
