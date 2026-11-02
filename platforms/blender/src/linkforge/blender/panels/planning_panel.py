@@ -46,7 +46,9 @@ class LINKFORGE_UL_planning_groups(bpy.types.UIList):
                 else:
                     row.label(text="[Chain: Unconfigured]", icon="NONE")
             else:
-                row.label(text=f"[Collection: {len(item.joints)} joint(s)]", icon="NONE")
+                n_joints = len(item.joints)
+                joint_str = "1 joint" if n_joints == 1 else f"{n_joints} joints"
+                row.label(text=f"[Collection: {joint_str}]", icon="NONE")
         elif self.layout_type == "GRID":
             layout.alignment = "CENTER"
             layout.label(text="", icon="ARMATURE_DATA")
@@ -246,18 +248,18 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                             icon="ERROR",
                         )
         else:
-            j_box = inner.box()
-            header = j_box.row()
+            header = inner.row()
             header.label(text=f"Joints ({len(group_item.joints)})", icon="EMPTY_AXIS")
             header.menu("LINKFORGE_MT_add_planning_group_joint", icon="ADD", text="")
 
             if len(group_item.joints) == 0:
-                j_box.label(text="Add joints to this group using '+'", icon="INFO")
+                inner.label(text="Add joints to this group using '+'", icon="INFO")
             else:
+                j_col = inner.column(align=True)
                 for i, j_item in enumerate(group_item.joints):
-                    j_row = j_box.row(align=True)
+                    j_row = j_col.row(align=True)
                     j_name = get_planning_joint_name(j_item.joint_obj, j_item.name) or "Unnamed"
-                    j_row.label(text=j_name, icon="EMPTY_AXIS")
+                    j_row.label(text=j_name, icon="DOT")
                     rem_op = j_row.operator(
                         "linkforge.remove_planning_group_joint", icon="REMOVE", text=""
                     )
