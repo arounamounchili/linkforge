@@ -27,10 +27,10 @@ A virtual joint attaches your robot's root link to a global reference frame (suc
 Planning groups define kinematic chains or joint sets that MoveIt 2 plans for together (e.g., `arm` or `hand`).
 
 1. In the **Planning Groups** section, click **Add (`+`)**.
-2. Set the group **Name** and choose a **Mode**:
-   - **Chain (Base -> Tip)**: Select a **Base Link** and **Tip Link**. LinkForge automatically walks the kinematic tree and resolves all active joints between them.
-   - **Joint Collection**: Click **Add Joint** to pick specific joints from your robot's kinematic tree (ideal for multi-finger grippers or non-serial mechanisms).
-3. Check the live **Resolved Active Joints** counter at the bottom of the group box to verify that the kinematic chain is connected.
+2. Set the group **Name** and choose a **Type**:
+   - **Kinematic Chain**: Select a **Base Link** and **Tip Link**. LinkForge automatically walks the kinematic tree and resolves all active joints between them.
+   - **Joint Collection**: Click **`+` (Add)** to pick specific joints from your robot's kinematic tree (ideal for multi-finger grippers or non-serial mechanisms).
+3. Check the live **Active Joints** status row at the bottom of the group card to verify that the kinematic chain is connected.
 
 ### 3. End Effectors
 
