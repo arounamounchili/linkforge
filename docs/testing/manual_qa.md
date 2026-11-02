@@ -201,8 +201,8 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
 ### `TC-PLAN-01`: MoveIt 2 SRDF Configuration Panel
 * Verify configuration of Virtual Joint, Planning Groups, End Effectors, Group States, and Disabled Collisions.
 - [ ] **Action**:
-  1. Open the `Planning` panel. Under `Virtual Joint`, click the `Detect Root Link` (`AUTO`) button and verify `Child Link` populates with the root link.
-  2. Under `Planning Groups`, click `+` to add an `arm` group in `Chain (Base -> Tip)` mode, pick `Base Link` and `Tip Link`, and verify `Resolved Active Joints` updates. Add a second `hand` group in `Joint Collection` mode and add a gripper joint.
+  1. Open the `Planning` panel. Under `Virtual Joint`, check `Virtual Joint` and verify `Child Link` automatically populates with the root link.
+  2. Under `Planning Groups`, click `+` to add an `arm` group in `Chain (Base -> Tip)` mode, pick `Base Link` and `Tip Link`, and verify the compact `Active Joints` status row updates with a green checkmark. Add a second `hand` group in `Joint Collection` mode and add a gripper joint.
   3. Under `End Effectors`, click `+` to attach `hand` to `Parent Link` and `Parent Group` (`arm`).
   4. Under `Group States (Poses)`, click `+` to create a `home` pose for `arm`, and drag the joint sliders across their `[lower, upper]` bounds.
   5. Under `Disabled Collisions`, click `Auto-Disable Adjacent Links`.

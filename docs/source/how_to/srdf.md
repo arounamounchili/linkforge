@@ -16,9 +16,8 @@ Open the **Planning** panel in the LinkForge N-Panel sidebar (located between **
 
 A virtual joint attaches your robot's root link to a global reference frame (such as `world` or `odom`).
 
-1. Enable **Virtual Joint** in the **Planning** panel.
-2. Click the **Detect Root Link** button to automatically assign the kinematic tree's root link, or pick a link from the scene selector.
-3. Configure **Name** (default: `world_joint`), **Parent Frame** (default: `world`), and **Type**:
+1. Enable **Virtual Joint** in the **Planning** panel. LinkForge automatically detects and assigns the kinematic tree's root link to **Child Link** (or pick a link from the scene selector).
+2. Configure **Name** (default: `world_joint`), **Parent Frame** (default: `world`), and **Type**:
    - **Fixed**: Manipulators bolted to a table or floor.
    - **Planar**: Differential-drive or omnidirectional mobile bases (`x`, `y`, `theta`).
    - **Floating**: Humanoids, quadrupeds, drones, or free-floating platforms (6-DOF).
