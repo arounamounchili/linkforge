@@ -184,7 +184,7 @@ class ValidationResultProperty(PropertyGroup):
     show_errors: BoolProperty(  # type: ignore[valid-type]
         name="Show Errors",
         description="Expand errors section",
-        default=True,
+        default=False,
     )
 
     show_warnings: BoolProperty(  # type: ignore[valid-type]
