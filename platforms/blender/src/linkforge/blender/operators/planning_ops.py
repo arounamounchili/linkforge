@@ -20,6 +20,7 @@ from ..adapters.core_to_blender import (
 )
 from ..core.constants import SRDF_REASON_ADJACENT
 from ..properties.planning_props import (
+    find_robot_root_link,
     get_planning_joint_name,
     get_planning_link_name,
     has_planning_data,
@@ -63,22 +64,10 @@ class LINKFORGE_OT_detect_virtual_joint_root(Operator):
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
 
-        child_links = set()
-        link_objs = []
-        for obj in scene.objects:
-            if (lp := get_link_props(obj)) and lp.is_robot_link:
-                link_objs.append(obj)
-            if (jp := get_joint_props(obj)) and jp.is_robot_joint and jp.child_link:
-                child_links.add(jp.child_link)
-
-        root_candidates = [obj for obj in link_objs if obj not in child_links]
-        if not root_candidates:
+        root_obj, root_name = find_robot_root_link(scene)
+        if not root_obj:
             self.report({"WARNING"}, "No root robot link found in the scene")
             return {"CANCELLED"}
-
-        root_candidates.sort(key=lambda o: get_planning_link_name(o))
-        root_obj = root_candidates[0]
-        root_name = get_planning_link_name(root_obj)
 
         props.use_virtual_joint = True
         props.virtual_joint_child_link = root_obj

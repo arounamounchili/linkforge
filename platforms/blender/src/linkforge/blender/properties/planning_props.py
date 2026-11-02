@@ -287,6 +287,45 @@ def _safe_redirect_pointer(
         setattr(prop_owner, attr, target)
 
 
+def find_robot_root_link(scene: bpy.types.Scene | None) -> tuple[bpy.types.Object | None, str]:
+    """Find the robot's kinematic root link in the scene."""
+    if scene is None:
+        return None, ""
+    child_links: set[str] = set()
+    link_objs: list[bpy.types.Object] = []
+    for obj in scene.objects:
+        if (lp := get_link_props(obj)) and lp.is_robot_link:
+            link_objs.append(obj)
+        if (jp := get_joint_props(obj)) and jp.is_robot_joint and jp.child_link:
+            child_links.add(jp.child_link)
+
+    root_candidates = [obj for obj in link_objs if obj not in child_links]
+    if not root_candidates:
+        return None, ""
+    root_candidates.sort(key=lambda o: get_planning_link_name(o))
+    root_obj = root_candidates[0]
+    return root_obj, get_planning_link_name(root_obj)
+
+
+def update_use_virtual_joint(
+    self: typing.Any,
+    context: Context | None,
+) -> None:
+    """When enabling virtual joint, auto-populate child link with the root link if unset."""
+    if not getattr(self, "use_virtual_joint", False):
+        return
+    cur_link = getattr(self, "virtual_joint_child_link", None)
+    cur_name = getattr(self, "virtual_joint_child_link_name", "")
+    if cur_link is not None or (isinstance(cur_name, str) and bool(cur_name.strip())):
+        return
+    scene = getattr(context, "scene", None) if context else getattr(bpy.context, "scene", None)
+    root_obj, root_name = find_robot_root_link(scene)
+    if root_obj is not None:
+        _safe_redirect_pointer(self, "virtual_joint_child_link", root_obj)
+        if hasattr(self, "virtual_joint_child_link_name"):
+            self.virtual_joint_child_link_name = root_name
+
+
 def update_virtual_joint_child_link(
     self: typing.Any,
     _context: Context | None,

@@ -51,6 +51,7 @@ from .planning_props import (
     GroupStateProperty,
     PlanningGroupProperty,
     poll_planning_link,
+    update_use_virtual_joint,
     update_virtual_joint_child_link,
 )
 
@@ -158,6 +159,7 @@ class RobotPropertyGroup(PropertyGroup):
         name="Virtual Joint",
         description="Include a virtual joint connecting the robot's root link to an external world frame",
         default=False,
+        update=update_use_virtual_joint,
     )
 
     virtual_joint_name: StringProperty(  # type: ignore

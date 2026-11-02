@@ -62,6 +62,7 @@ from linkforge.blender.properties.planning_props import (
     GroupStateJointValueProperty,
     GroupStateProperty,
     PlanningGroupProperty,
+    find_robot_root_link,
     get_planning_joint_name,
     get_planning_link_name,
     has_planning_data,
@@ -75,6 +76,7 @@ from linkforge.blender.properties.planning_props import (
     update_group_state_joint_value,
     update_planning_group_name,
     update_planning_group_topology,
+    update_use_virtual_joint,
     update_virtual_joint_child_link,
 )
 
@@ -440,6 +442,40 @@ class TestPlanningPropsHelpers:
             _safe_redirect_pointer(broken, "target", target_obj)
             assert len(callbacks) == 2
             assert callbacks[1]() is None
+
+    def test_find_robot_root_link_and_auto_populate(self, scene) -> None:
+        """Test root link detection helper and auto-populating virtual joint child link."""
+        assert find_robot_root_link(None) == (None, "")
+        assert find_robot_root_link(scene) == (None, "")
+
+        base, link1, link2, j1, j2 = _setup_3_link_arm(scene)
+        root_obj, root_name = find_robot_root_link(scene)
+        assert root_obj == base
+        assert root_name == "base_link"
+
+        props = safe_get_linkforge_scene(scene)
+        # When use_virtual_joint is False -> no-op
+        props.use_virtual_joint = False
+        update_use_virtual_joint(props, bpy.context)
+        assert props.virtual_joint_child_link is None
+
+        # When enabled -> auto-populates root link
+        props.use_virtual_joint = True
+        update_use_virtual_joint(props, bpy.context)
+        assert props.virtual_joint_child_link == base
+        assert props.virtual_joint_child_link_name == "base_link"
+
+        # When already set -> does not overwrite
+        props.virtual_joint_child_link = link1
+        props.virtual_joint_child_link_name = "link1"
+        update_use_virtual_joint(props, bpy.context)
+        assert props.virtual_joint_child_link == link1
+
+        # Fallback when no context
+        props.virtual_joint_child_link = None
+        props.virtual_joint_child_link_name = ""
+        update_use_virtual_joint(props, None)
+        assert props.virtual_joint_child_link == base
 
     def test_planning_props_registration(self) -> None:
         planning_props.register()
