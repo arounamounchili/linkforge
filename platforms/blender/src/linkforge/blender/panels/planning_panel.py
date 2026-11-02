@@ -71,9 +71,16 @@ class LINKFORGE_UL_end_effectors(bpy.types.UIList):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             row.label(text=item.name or "Unnamed", icon="MOD_SKIN")
-            p_link = get_planning_link_name(item.parent_link, item.parent_link_name) or "?"
-            grp = item.group or "?"
-            row.label(text=f"[{grp} @ {p_link}]", icon="NONE")
+            p_link = get_planning_link_name(item.parent_link, item.parent_link_name)
+            grp = item.group
+            if grp and p_link:
+                row.label(text=f"[{grp} @ {p_link}]", icon="NONE")
+            elif grp:
+                row.label(text=f"[{grp} @ Unassigned]", icon="NONE")
+            elif p_link:
+                row.label(text=f"[Unassigned @ {p_link}]", icon="NONE")
+            else:
+                row.label(text="[Unconfigured]", icon="NONE")
         elif self.layout_type == "GRID":
             layout.alignment = "CENTER"
             layout.label(text="", icon="MOD_SKIN")

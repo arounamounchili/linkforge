@@ -893,6 +893,17 @@ class TestPlanningPanelAndUILists:
         ee.group = "hand"
         ee.parent_link = link2
 
+        ee_unconf = props.end_effectors.add()
+        ee_unconf.name = "unconf_ee"
+
+        ee_grp_only = props.end_effectors.add()
+        ee_grp_only.name = "grp_only"
+        ee_grp_only.group = "hand"
+
+        ee_link_only = props.end_effectors.add()
+        ee_link_only.name = "link_only"
+        ee_link_only.parent_link = link2
+
         st = props.group_states.add()
         st.name = "home"
         st.group = "arm"
@@ -907,6 +918,9 @@ class TestPlanningPanelAndUILists:
             (LINKFORGE_UL_planning_groups, grp_unconf),
             (LINKFORGE_UL_planning_groups, grp_joints),
             (LINKFORGE_UL_end_effectors, ee),
+            (LINKFORGE_UL_end_effectors, ee_unconf),
+            (LINKFORGE_UL_end_effectors, ee_grp_only),
+            (LINKFORGE_UL_end_effectors, ee_link_only),
             (LINKFORGE_UL_group_states, st),
             (LINKFORGE_UL_disabled_collisions, dc),
         ]:
