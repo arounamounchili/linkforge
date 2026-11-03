@@ -8,7 +8,12 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+import bpy
+
+if TYPE_CHECKING:
+    from ..properties.robot_props import RobotPropertyGroup
 
 from ..constants import (
     AXIS_CUSTOM,
@@ -52,7 +57,6 @@ from ..core import (
 from ..core.constants import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
-    CONTROL_TYPE_SYSTEM,
     DEFAULT_AXIS_XYZ,
     DEFAULT_VIRTUAL_JOINT_NAME,
     DEFAULT_WORLD_FRAME,
@@ -430,7 +434,7 @@ class SensorTranslator:
         if not props or not props.is_robot_sensor:
             return None
 
-        potential_sensor_name = getattr(props, "sensor_name", "")
+        potential_sensor_name = props.sensor_name
         sensor_name = (
             potential_sensor_name
             if isinstance(potential_sensor_name, str) and potential_sensor_name
@@ -565,13 +569,20 @@ class Ros2ControlTranslator:
 
     def translate(
         self,
-        obj: Any,
+        obj: RobotPropertyGroup | bpy.types.Scene | Any,
         builder: IComposer,
         validation_result: ValidationResult | None = None,
     ) -> None:
-        """Translate centralized ros2_control properties and add to robot."""
+        """Translate centralized ros2_control properties and add to robot.
+
+        Args:
+            obj: The robot property group (RobotPropertyGroup) or Scene containing control settings.
+            builder: The LinkForge core IComposer builder whose robot model is updated.
+            validation_result: Optional validation result collector for logging control errors.
+        """
+        props = get_robot_props(obj) if isinstance(obj, bpy.types.Scene) else obj
         try:
-            control = self._blender_ros2_control_to_core(obj)
+            control = self._blender_ros2_control_to_core(props)
             if control:
                 valid_joints: list[Ros2ControlJoint] = []
                 for ctrl_joint in control.joints:
@@ -597,28 +608,28 @@ class Ros2ControlTranslator:
                     code=ValidationErrorCode.INVALID_VALUE,
                 )
 
-    def _blender_ros2_control_to_core(self, props: Any) -> Ros2Control | None:
+    def _blender_ros2_control_to_core(self, props: RobotPropertyGroup | Any) -> Ros2Control | None:
         """Convert centralized Blender ros2_control properties to Core model."""
         if props is None or not getattr(props, "use_ros2_control", False):
             return None
 
-        ros2_control_type = getattr(props, "ros2_control_type", CONTROL_TYPE_SYSTEM)
+        ros2_control_type = props.ros2_control_type
         joints: list[Ros2ControlJoint] = []
-        for item in getattr(props, "ros2_control_joints", []):
+        for item in props.ros2_control_joints:
             cmd_ifs = []
-            if getattr(item, "cmd_position", False):
+            if item.cmd_position:
                 cmd_ifs.append(HW_IF_POSITION)
-            if getattr(item, "cmd_velocity", False):
+            if item.cmd_velocity:
                 cmd_ifs.append(HW_IF_VELOCITY)
-            if getattr(item, "cmd_effort", False):
+            if item.cmd_effort:
                 cmd_ifs.append(HW_IF_EFFORT)
 
             state_ifs = []
-            if getattr(item, "state_position", False):
+            if item.state_position:
                 state_ifs.append(HW_IF_POSITION)
-            if getattr(item, "state_velocity", False):
+            if item.state_velocity:
                 state_ifs.append(HW_IF_VELOCITY)
-            if getattr(item, "state_effort", False):
+            if item.state_effort:
                 state_ifs.append(HW_IF_EFFORT)
 
             # Intelligent defaults
@@ -626,7 +637,7 @@ class Ros2ControlTranslator:
                 if cmd_ifs:
                     logger.warning(
                         f"ROS2 Control: Hardware type 'sensor' cannot have command interfaces. "
-                        f"Stripping {cmd_ifs} from joint '{getattr(item, 'name', 'unknown')}'."
+                        f"Stripping {cmd_ifs} from joint '{item.name or 'unknown'}'."
                     )
                     cmd_ifs = []
                 if not state_ifs:
@@ -638,19 +649,17 @@ class Ros2ControlTranslator:
                     state_ifs.append(HW_IF_POSITION)
 
             # Extract joint-level parameters
-            parameters = {p.name: p.value for p in getattr(item, "parameters", []) if p.name}
+            parameters = {p.name: p.value for p in item.parameters if p.name}
 
             # Determine the correct joint name
-            joint_obj = getattr(item, "joint_obj", None)
+            joint_obj = item.joint_obj
             joint_props = get_joint_props(joint_obj)
             joint_name = ""
-            if joint_props:
-                potential_name = joint_props.joint_name
-                if isinstance(potential_name, str):
-                    joint_name = potential_name
+            if joint_props and isinstance(joint_props.joint_name, str):
+                joint_name = joint_props.joint_name
 
             if not joint_name:
-                item_name = getattr(item, "name", UNNAMED_JOINT)
+                item_name = item.name
                 joint_name = (
                     item_name if isinstance(item_name, str) and item_name else UNNAMED_JOINT
                 )
@@ -691,7 +700,7 @@ class SemanticTranslator:
 
     def translate(
         self,
-        obj: Any,
+        obj: RobotPropertyGroup | bpy.types.Scene | Any,
         builder: IComposer,
         validation_result: ValidationResult | None = None,
     ) -> None:
@@ -702,31 +711,26 @@ class SemanticTranslator:
         the Blender scene properties, reporting validation errors for incomplete entries.
 
         Args:
-            obj: The robot property group (RobotPropertyGroup) containing planning settings.
+            obj: The robot property group (RobotPropertyGroup) or Scene containing planning settings.
             builder: The LinkForge core IComposer builder whose semantic API is used.
             validation_result: Optional validation result collector for logging semantic errors.
         """
-        if not obj or not has_planning_data(obj):
+        props = get_robot_props(obj) if isinstance(obj, bpy.types.Scene) else obj
+        if not props or not has_planning_data(props):
             return
 
         try:
             semantic = builder.semantic
 
             # 1. Virtual Joint
-            if getattr(obj, "use_virtual_joint", False):
+            if props.use_virtual_joint:
                 child_link = get_planning_link_name(
-                    getattr(obj, "virtual_joint_child_link", None),
-                    getattr(obj, "virtual_joint_child_link_name", ""),
+                    props.virtual_joint_child_link,
+                    props.virtual_joint_child_link_name,
                 )
-                vj_name = str(
-                    getattr(obj, "virtual_joint_name", "") or DEFAULT_VIRTUAL_JOINT_NAME
-                ).strip()
-                vj_type = str(
-                    getattr(obj, "virtual_joint_type", SRDF_VJOIN_FIXED) or SRDF_VJOIN_FIXED
-                ).strip()
-                parent_frame = str(
-                    getattr(obj, "virtual_joint_parent_frame", "") or DEFAULT_WORLD_FRAME
-                ).strip()
+                vj_name = str(props.virtual_joint_name or DEFAULT_VIRTUAL_JOINT_NAME).strip()
+                vj_type = str(props.virtual_joint_type or SRDF_VJOIN_FIXED).strip()
+                parent_frame = str(props.virtual_joint_parent_frame or DEFAULT_WORLD_FRAME).strip()
                 if child_link:
                     semantic.virtual_joint(
                         name=vj_name,
@@ -736,35 +740,27 @@ class SemanticTranslator:
                     )
 
             # 2. Planning Groups
-            for grp in getattr(obj, "planning_groups", ()):
-                grp_name = str(getattr(grp, "name", "") or "").strip()
+            for grp in props.planning_groups:
+                grp_name = str(grp.name or "").strip()
                 if not grp_name:
                     continue
 
-                links = [
-                    s.strip()
-                    for s in str(getattr(grp, "links_csv", "") or "").split(",")
-                    if s.strip()
-                ]
+                links = [s.strip() for s in str(grp.links_csv or "").split(",") if s.strip()]
                 subgroups = [
-                    s.strip()
-                    for s in str(getattr(grp, "subgroups_csv", "") or "").split(",")
-                    if s.strip()
+                    s.strip() for s in str(grp.subgroups_csv or "").split(",") if s.strip()
                 ]
                 chains: list[Chain] = []
                 joints: list[str] = []
 
-                grp_type = str(
-                    getattr(grp, "group_type", PLANNING_GROUP_CHAIN) or PLANNING_GROUP_CHAIN
-                )
+                grp_type = str(grp.group_type or PLANNING_GROUP_CHAIN)
                 if grp_type == PLANNING_GROUP_CHAIN:
                     base_link = get_planning_link_name(
-                        getattr(grp, "base_link", None),
-                        getattr(grp, "base_link_name", ""),
+                        grp.base_link,
+                        grp.base_link_name,
                     )
                     tip_link = get_planning_link_name(
-                        getattr(grp, "tip_link", None),
-                        getattr(grp, "tip_link_name", ""),
+                        grp.tip_link,
+                        grp.tip_link_name,
                     )
                     if base_link and tip_link:
                         chains.append(Chain(base_link=base_link, tip_link=tip_link))
@@ -779,7 +775,7 @@ class SemanticTranslator:
                             affected_objects=[grp_name],
                         )
 
-                    for extra in str(getattr(grp, "extra_chains_csv", "") or "").split(","):
+                    for extra in str(grp.extra_chains_csv or "").split(","):
                         if ":" in extra:
                             b_str, t_str = extra.split(":", 1)
                             if b_str.strip() and t_str.strip():
@@ -787,10 +783,10 @@ class SemanticTranslator:
                                     Chain(base_link=b_str.strip(), tip_link=t_str.strip())
                                 )
                 else:
-                    for j_item in getattr(grp, "joints", ()):
+                    for j_item in grp.joints:
                         j_name = get_planning_joint_name(
-                            getattr(j_item, "joint_obj", None),
-                            getattr(j_item, "name", ""),
+                            j_item.joint_obj,
+                            j_item.name,
                         )
                         if j_name and j_name not in joints:
                             joints.append(j_name)
@@ -819,14 +815,14 @@ class SemanticTranslator:
                 )
 
             # 3. End Effectors
-            for ee in getattr(obj, "end_effectors", ()):
-                ee_name = str(getattr(ee, "name", "") or "").strip()
-                ee_group = str(getattr(ee, "group", "") or "").strip()
+            for ee in props.end_effectors:
+                ee_name = str(ee.name or "").strip()
+                ee_group = str(ee.group or "").strip()
                 parent_link = get_planning_link_name(
-                    getattr(ee, "parent_link", None),
-                    getattr(ee, "parent_link_name", ""),
+                    ee.parent_link,
+                    ee.parent_link_name,
                 )
-                parent_group_raw = str(getattr(ee, "parent_group", "") or "").strip()
+                parent_group_raw = str(ee.parent_group or "").strip()
                 parent_group = parent_group_raw if parent_group_raw else None
                 if ee_name and ee_group and parent_link:
                     semantic.end_effector(
@@ -846,9 +842,9 @@ class SemanticTranslator:
                     )
 
             # 4. Group States
-            for state in getattr(obj, "group_states", ()):
-                state_name = str(getattr(state, "name", "") or "").strip()
-                state_group = str(getattr(state, "group", "") or "").strip()
+            for state in props.group_states:
+                state_name = str(state.name or "").strip()
+                state_group = str(state.group or "").strip()
                 if not state_name:
                     continue
                 if not state_group:
@@ -861,26 +857,26 @@ class SemanticTranslator:
                         )
                     continue
                 values: dict[str, float | tuple[float, ...]] = {}
-                for jv in getattr(state, "joint_values", ()):
+                for jv in state.joint_values:
                     j_name = get_planning_joint_name(
-                        getattr(jv, "joint_obj", None),
-                        getattr(jv, "joint_name", "") or getattr(jv, "name", ""),
+                        jv.joint_obj,
+                        jv.joint_name or jv.name,
                     )
                     if j_name:
-                        values[j_name] = float(getattr(jv, "value", 0.0))
+                        values[j_name] = float(jv.value)
                 semantic.group_state(name=state_name, group=state_group, values=values)
 
             # 5. Disabled Collisions
-            for pair in getattr(obj, "disabled_collisions", ()):
+            for pair in props.disabled_collisions:
                 l1 = get_planning_link_name(
-                    getattr(pair, "link1", None),
-                    getattr(pair, "link1_name", ""),
+                    pair.link1,
+                    pair.link1_name,
                 )
                 l2 = get_planning_link_name(
-                    getattr(pair, "link2", None),
-                    getattr(pair, "link2_name", ""),
+                    pair.link2,
+                    pair.link2_name,
                 )
-                reason = str(getattr(pair, "reason", SRDF_REASON_ADJACENT) or SRDF_REASON_ADJACENT)
+                reason = str(pair.reason or SRDF_REASON_ADJACENT)
                 if l1 and l2:
                     semantic.disable_collisions(link1=l1, link2=l2, reason=reason)
                 elif (l1 or l2) and validation_result:
