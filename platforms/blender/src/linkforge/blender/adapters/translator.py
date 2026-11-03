@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from ..constants import (
+    AXIS_CUSTOM,
+    AXIS_X,
+    AXIS_Y,
+    AXIS_Z,
     FORMAT_STL,
     PROP_GEOM,
     PURPOSE_COLLISION,
@@ -56,9 +60,11 @@ from ..core.constants import (
     HW_IF_POSITION,
     HW_IF_VELOCITY,
     PLANNING_GROUP_CHAIN,
+    ROS2_CONTROL_DEFAULT_NAME,
     SRDF_REASON_ADJACENT,
     SRDF_VJOIN_FIXED,
     SYLVESTER_TOLERANCE_EPSILON,
+    UNNAMED_JOINT,
 )
 from ..properties.planning_props import (
     get_planning_joint_name,
@@ -305,13 +311,13 @@ class JointTranslator:
 
         # Joint Axis
         axis: tuple[float, float, float]
-        if props.axis == "X":
+        if props.axis == AXIS_X:
             axis = (1.0, 0.0, 0.0)
-        elif props.axis == "Y":
+        elif props.axis == AXIS_Y:
             axis = (0.0, 1.0, 0.0)
-        elif props.axis == "Z":
+        elif props.axis == AXIS_Z:
             axis = (0.0, 0.0, 1.0)
-        elif props.axis == "CUSTOM":
+        elif props.axis == AXIS_CUSTOM:
             axis = (
                 float(props.custom_axis_x),
                 float(props.custom_axis_y),
@@ -644,8 +650,10 @@ class Ros2ControlTranslator:
                     joint_name = potential_name
 
             if not joint_name:
-                item_name = getattr(item, "name", "joint")
-                joint_name = item_name if isinstance(item_name, str) else "joint"
+                item_name = getattr(item, "name", UNNAMED_JOINT)
+                joint_name = (
+                    item_name if isinstance(item_name, str) and item_name else UNNAMED_JOINT
+                )
 
             if cmd_ifs or state_ifs:
                 joints.append(
@@ -671,7 +679,7 @@ class Ros2ControlTranslator:
         core_type = ros2_control_type
 
         return Ros2Control(
-            name=props.ros2_control_name if props.ros2_control_name else "RobotControl",
+            name=props.ros2_control_name if props.ros2_control_name else ROS2_CONTROL_DEFAULT_NAME,
             type=core_type,
             hardware_plugin=props.hardware_plugin,
             joints=joints,

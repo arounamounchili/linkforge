@@ -10,6 +10,10 @@ import bpy
 from mathutils import Matrix
 
 from ..constants import (
+    AXIS_CUSTOM,
+    AXIS_X,
+    AXIS_Y,
+    AXIS_Z,
     DEFAULT_JOINT_GIZMO_SIZE,
     DEFAULT_LINK_GIZMO_SIZE,
     PROP_GEOM,
@@ -51,6 +55,7 @@ from ..core.constants import (
     JOINT_REVOLUTE,
     PLANNING_GROUP_CHAIN,
     PLANNING_GROUP_JOINTS,
+    ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
     SENSOR_CAMERA,
     SENSOR_CONTACT,
     SENSOR_DEPTH_CAMERA,
@@ -720,14 +725,14 @@ def create_joint_object(
         if joint.axis:
             # Check if it's a standard axis (X, Y, or Z)
             if joint.axis.x == 1.0 and joint.axis.y == 0.0 and joint.axis.z == 0.0:
-                props.axis = "X"
+                props.axis = AXIS_X
             elif joint.axis.x == 0.0 and joint.axis.y == 1.0 and joint.axis.z == 0.0:
-                props.axis = "Y"
+                props.axis = AXIS_Y
             elif joint.axis.x == 0.0 and joint.axis.y == 0.0 and joint.axis.z == 1.0:
-                props.axis = "Z"
+                props.axis = AXIS_Z
             else:
                 # Custom axis
-                props.axis = "CUSTOM"
+                props.axis = AXIS_CUSTOM
                 props.custom_axis_x = joint.axis.x
                 props.custom_axis_y = joint.axis.y
                 props.custom_axis_z = joint.axis.z
@@ -1000,7 +1005,7 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
         lp.use_ros2_control = False
         lp.ros2_control_joints.clear()
         lp.ros2_control_parameters.clear()
-        lp.gazebo_plugin_name = "gz_ros2_control::GazeboSimROS2ControlPlugin"  # Default
+        lp.gazebo_plugin_name = ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN  # Default
         lp.controllers_yaml_path = ""
 
     # Map Gazebo simulation settings if present

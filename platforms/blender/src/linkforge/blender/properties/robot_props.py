@@ -30,6 +30,8 @@ from ..constants import (
     FORMAT_GLB,
     FORMAT_OBJ,
     FORMAT_STL,
+    FORMAT_URDF,
+    FORMAT_XACRO,
     PROP_ROBOT,
     SUFFIX_COLLISION,
 )
@@ -37,9 +39,11 @@ from ..core.constants import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
     CONTROL_TYPE_SYSTEM,
+    DEFAULT_ROBOT_NAME,
     DEFAULT_VIRTUAL_JOINT_NAME,
     DEFAULT_WORLD_FRAME,
     ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
+    ROS2_CONTROL_DEFAULT_NAME,
     ROS2_CONTROL_DEFAULT_PLUGIN,
     SRDF_VJOIN_FIXED,
     SRDF_VJOIN_FLOATING,
@@ -85,7 +89,7 @@ class RobotPropertyGroup(PropertyGroup):
     robot_name: StringProperty(  # type: ignore
         name="Robot Name",
         description="Name of your robot (used in robot model file)",
-        default="my_robot",
+        default=DEFAULT_ROBOT_NAME,
         maxlen=64,
     )
 
@@ -94,10 +98,10 @@ class RobotPropertyGroup(PropertyGroup):
         name="Format",
         description="File format for export",
         items=[
-            ("URDF", "URDF", "Unified Robot Description Format (XML)"),
-            ("XACRO", "XACRO", "XACRO (XML Macros for URDF)"),
+            (FORMAT_URDF, "URDF", "Unified Robot Description Format (XML)"),
+            (FORMAT_XACRO, "XACRO", "XACRO (XML Macros for URDF)"),
         ],
-        default="URDF",
+        default=FORMAT_URDF,
     )
 
     use_ros2_control: BoolProperty(  # type: ignore
@@ -109,7 +113,7 @@ class RobotPropertyGroup(PropertyGroup):
     ros2_control_name: StringProperty(  # type: ignore
         name="System Name",
         description="Name of the ros2_control system",
-        default="GazeboSimSystem",
+        default=ROS2_CONTROL_DEFAULT_NAME,
     )
 
     ros2_control_type: EnumProperty(  # type: ignore

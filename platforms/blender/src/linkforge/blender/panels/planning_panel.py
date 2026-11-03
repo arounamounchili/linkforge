@@ -7,6 +7,7 @@ import typing
 
 import bpy
 
+from ..constants import DIRECTION_DOWN, DIRECTION_UP
 from ..core.constants import JOINT_PRISMATIC, JOINT_REVOLUTE, PLANNING_GROUP_CHAIN
 from ..properties.planning_props import (
     get_planning_joint_name,
@@ -515,10 +516,12 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             col.operator("linkforge.add_planning_group", icon="ADD", text="")
             col.operator("linkforge.remove_planning_group", icon="REMOVE", text="")
             col.separator()
-            col.operator("linkforge.move_planning_group", icon="TRIA_UP", text="").direction = "UP"
+            col.operator(
+                "linkforge.move_planning_group", icon="TRIA_UP", text=""
+            ).direction = DIRECTION_UP
             col.operator(
                 "linkforge.move_planning_group", icon="TRIA_DOWN", text=""
-            ).direction = "DOWN"
+            ).direction = DIRECTION_DOWN
 
             active_grp_idx = props.planning_active_group_index
             if 0 <= active_grp_idx < len(props.planning_groups):
@@ -554,10 +557,12 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             col.operator("linkforge.add_end_effector", icon="ADD", text="")
             col.operator("linkforge.remove_end_effector", icon="REMOVE", text="")
             col.separator()
-            col.operator("linkforge.move_end_effector", icon="TRIA_UP", text="").direction = "UP"
+            col.operator(
+                "linkforge.move_end_effector", icon="TRIA_UP", text=""
+            ).direction = DIRECTION_UP
             col.operator(
                 "linkforge.move_end_effector", icon="TRIA_DOWN", text=""
-            ).direction = "DOWN"
+            ).direction = DIRECTION_DOWN
 
             active_ee_idx = props.planning_active_ee_index
             if 0 <= active_ee_idx < len(props.end_effectors):
@@ -591,8 +596,12 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             col.operator("linkforge.add_group_state", icon="ADD", text="")
             col.operator("linkforge.remove_group_state", icon="REMOVE", text="")
             col.separator()
-            col.operator("linkforge.move_group_state", icon="TRIA_UP", text="").direction = "UP"
-            col.operator("linkforge.move_group_state", icon="TRIA_DOWN", text="").direction = "DOWN"
+            col.operator(
+                "linkforge.move_group_state", icon="TRIA_UP", text=""
+            ).direction = DIRECTION_UP
+            col.operator(
+                "linkforge.move_group_state", icon="TRIA_DOWN", text=""
+            ).direction = DIRECTION_DOWN
 
             active_gs_idx = props.planning_active_state_index
             if 0 <= active_gs_idx < len(props.group_states):
@@ -635,10 +644,10 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             col.separator()
             col.operator(
                 "linkforge.move_disabled_collision", icon="TRIA_UP", text=""
-            ).direction = "UP"
+            ).direction = DIRECTION_UP
             col.operator(
                 "linkforge.move_disabled_collision", icon="TRIA_DOWN", text=""
-            ).direction = "DOWN"
+            ).direction = DIRECTION_DOWN
 
             active_dc_idx = props.planning_active_collision_index
             if 0 <= active_dc_idx < len(props.disabled_collisions):

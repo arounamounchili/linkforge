@@ -7,6 +7,7 @@ import contextlib
 import bpy
 from bpy.types import Context, Panel
 
+from ..constants import AXIS_CUSTOM
 from ..core.constants import (
     JOINT_CONTINUOUS,
     JOINT_PRISMATIC,
@@ -107,7 +108,7 @@ class LINKFORGE_PT_joints(Panel):
             box.label(text="Axis:", icon="ORIENTATION_GIMBAL")
             box.prop(props, "axis", expand=True)
 
-            if props.axis == "CUSTOM":
+            if props.axis == AXIS_CUSTOM:
                 col = box.column(align=True)
                 col.prop(props, "custom_axis_x", text="X")
                 col.prop(props, "custom_axis_y", text="Y")

@@ -18,6 +18,7 @@ from ..adapters.core_to_blender import (
     bind_semantic_scene_objects,
     populate_planning_properties_from_semantic,
 )
+from ..constants import DIRECTION_DOWN, DIRECTION_UP, EXT_SRDF
 from ..core.constants import PLANNING_GROUP_CHAIN, SRDF_REASON_ADJACENT
 from ..properties.planning_props import (
     find_robot_root_link,
@@ -235,9 +236,9 @@ class LINKFORGE_OT_move_planning_group(Operator):
             return {"CANCELLED"}
 
         index = props.planning_active_group_index
-        if self.direction == "UP" and index > 0:
+        if self.direction == DIRECTION_UP and index > 0:
             new_index = index - 1
-        elif self.direction == "DOWN" and index < len(props.planning_groups) - 1:
+        elif self.direction == DIRECTION_DOWN and index < len(props.planning_groups) - 1:
             new_index = index + 1
         else:
             return {"CANCELLED"}
@@ -524,9 +525,9 @@ class LINKFORGE_OT_move_end_effector(Operator):
             return {"CANCELLED"}
 
         index = props.planning_active_ee_index
-        if self.direction == "UP" and index > 0:
+        if self.direction == DIRECTION_UP and index > 0:
             new_index = index - 1
-        elif self.direction == "DOWN" and index < len(props.end_effectors) - 1:
+        elif self.direction == DIRECTION_DOWN and index < len(props.end_effectors) - 1:
             new_index = index + 1
         else:
             return {"CANCELLED"}
@@ -674,9 +675,9 @@ class LINKFORGE_OT_move_group_state(Operator):
             return {"CANCELLED"}
 
         index = props.planning_active_state_index
-        if self.direction == "UP" and index > 0:
+        if self.direction == DIRECTION_UP and index > 0:
             new_index = index - 1
-        elif self.direction == "DOWN" and index < len(props.group_states) - 1:
+        elif self.direction == DIRECTION_DOWN and index < len(props.group_states) - 1:
             new_index = index + 1
         else:
             return {"CANCELLED"}
@@ -912,9 +913,9 @@ class LINKFORGE_OT_move_disabled_collision(Operator):
             return {"CANCELLED"}
 
         index = props.planning_active_collision_index
-        if self.direction == "UP" and index > 0:
+        if self.direction == DIRECTION_UP and index > 0:
             new_index = index - 1
-        elif self.direction == "DOWN" and index < len(props.disabled_collisions) - 1:
+        elif self.direction == DIRECTION_DOWN and index < len(props.disabled_collisions) - 1:
             new_index = index + 1
         else:
             return {"CANCELLED"}
@@ -1068,9 +1069,9 @@ class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
     )
     bl_options = {"REGISTER", "UNDO"}
 
-    filename_ext = ".srdf"
+    filename_ext = EXT_SRDF
     filter_glob: StringProperty(  # type: ignore
-        default="*.srdf",
+        default=f"*{EXT_SRDF}",
         options={"HIDDEN"},
         maxlen=255,
     )

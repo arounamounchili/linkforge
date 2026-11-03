@@ -9,6 +9,7 @@ import bpy
 from bpy.types import Context, Panel, UILayout
 
 from ..constants import (
+    FORMAT_XACRO,
     PROP_ROBOT,
     PROP_VALIDATION,
 )
@@ -159,7 +160,7 @@ class LINKFORGE_PT_export_panel(Panel):
             export_box.prop(props, "export_format", expand=True)
 
             # XACRO specific settings
-            if props.export_format == "XACRO":
+            if props.export_format == FORMAT_XACRO:
                 export_box.separator()
                 row = export_box.row()
                 if row:

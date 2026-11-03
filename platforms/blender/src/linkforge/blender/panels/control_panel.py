@@ -7,6 +7,7 @@ import typing
 
 import bpy
 
+from ..constants import DIRECTION_DOWN, DIRECTION_UP
 from ..utils.joint_utils import is_control_joint_missing
 from ..utils.property_helpers import get_joint_props, get_robot_props
 
@@ -240,10 +241,12 @@ class LINKFORGE_PT_control(bpy.types.Panel):
         col.menu("LINKFORGE_MT_add_control_joint", icon="ADD", text="")
         col.operator("linkforge.remove_ros2_control_joint", icon="REMOVE", text="")
         col.separator()
-        col.operator("linkforge.move_ros2_control_joint", icon="TRIA_UP", text="").direction = "UP"
+        col.operator(
+            "linkforge.move_ros2_control_joint", icon="TRIA_UP", text=""
+        ).direction = DIRECTION_UP
         col.operator(
             "linkforge.move_ros2_control_joint", icon="TRIA_DOWN", text=""
-        ).direction = "DOWN"
+        ).direction = DIRECTION_DOWN
         col.separator()
         if any(is_control_joint_missing(j, context.scene) for j in props.ros2_control_joints):
             sub = col.column(align=True)

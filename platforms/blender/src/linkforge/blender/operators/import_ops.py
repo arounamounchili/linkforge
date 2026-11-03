@@ -17,6 +17,14 @@ from bpy_extras.io_utils import ImportHelper
 
 from .. import core
 from ..adapters.context import BlenderContext
+from ..constants import (
+    EXT_SRDF,
+    EXT_URDF,
+    EXT_URDF_XACRO,
+    EXT_XACRO,
+    FORMAT_URDF,
+    FORMAT_XACRO,
+)
 from ..core import get_logger
 from ..core.validation import find_sandbox_root
 from ..logic import asynchronous_builder
@@ -79,16 +87,18 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
         # If user selects a folder, try to find the main robot file automatically.
         if source_path.is_dir():
             candidates = [
-                source_path / f"{source_path.name}.urdf",
-                source_path / f"{source_path.name}.xacro",
-                source_path / f"{source_path.name}.urdf.xacro",
-                source_path / "robot.urdf",
-                source_path / "robot.xacro",
-                source_path / "robot.urdf.xacro",
+                source_path / f"{source_path.name}{EXT_URDF}",
+                source_path / f"{source_path.name}{EXT_XACRO}",
+                source_path / f"{source_path.name}{EXT_URDF_XACRO}",
+                source_path / f"robot{EXT_URDF}",
+                source_path / f"robot{EXT_XACRO}",
+                source_path / f"robot{EXT_URDF_XACRO}",
             ]
 
             found = [f for f in candidates if f.is_file()]
-            valid_files = list(source_path.glob("*.urdf")) + list(source_path.glob("*.xacro"))
+            valid_files = list(source_path.glob(f"*{EXT_URDF}")) + list(
+                source_path.glob(f"*{EXT_XACRO}")
+            )
 
             if found:
                 # Pick the first "best guess" match
@@ -101,7 +111,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             else:
                 self.report(
                     {"ERROR"},
-                    "Directory selected but no obvious robot file found. Please select a .urdf or .xacro file directly.",
+                    f"Directory selected but no obvious robot file found. Please select a {EXT_URDF} or {EXT_XACRO} file directly.",
                 )
                 return {"CANCELLED"}
 
@@ -110,7 +120,9 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
             self.report({"ERROR"}, f"File not found: {source_path}")
             return {"CANCELLED"}
 
-        is_xacro = source_path.suffix == ".xacro" or source_path.name.endswith(".urdf.xacro")
+        is_xacro = source_path.suffix.lower() == EXT_XACRO or source_path.name.lower().endswith(
+            EXT_URDF_XACRO
+        )
 
         # Detect Sandbox Root for security (allows sibling folders like meshes/)
         sandbox_root = find_sandbox_root(source_path)
@@ -183,15 +195,17 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
 
         # Auto-detect and parse companion SRDF file if present
         base_stem = (
-            source_path.name[:-11] if source_path.name.endswith(".urdf.xacro") else source_path.stem
+            source_path.name.removesuffix(EXT_URDF_XACRO)
+            if source_path.name.endswith(EXT_URDF_XACRO)
+            else source_path.stem
         )
         srdf_candidates = [
-            source_path.parent / f"{base_stem}.srdf",
-            source_path.parent / f"{robot.name}.srdf",
-            source_path.parent.parent / "config" / f"{base_stem}.srdf",
-            source_path.parent.parent / "config" / f"{robot.name}.srdf",
-            source_path.parent.parent / "srdf" / f"{base_stem}.srdf",
-            source_path.parent.parent / "srdf" / f"{robot.name}.srdf",
+            source_path.parent / f"{base_stem}{EXT_SRDF}",
+            source_path.parent / f"{robot.name}{EXT_SRDF}",
+            source_path.parent.parent / "config" / f"{base_stem}{EXT_SRDF}",
+            source_path.parent.parent / "config" / f"{robot.name}{EXT_SRDF}",
+            source_path.parent.parent / "srdf" / f"{base_stem}{EXT_SRDF}",
+            source_path.parent.parent / "srdf" / f"{robot.name}{EXT_SRDF}",
         ]
         for srdf_candidate in srdf_candidates:
             if srdf_candidate.is_file():
@@ -234,7 +248,7 @@ class LINKFORGE_OT_import_robot_model(Operator, ImportHelper):  # type: ignore[m
 
         # We return FINISHED here, but the builder continues in the background via timers.
         # This is standard for long-running non-blocking tasks in Blender.
-        file_type = "XACRO" if is_xacro else "URDF"
+        file_type = FORMAT_XACRO if is_xacro else FORMAT_URDF
         self.report(
             {"INFO"},
             f"Started background import of {file_type}: '{robot.name}'...",

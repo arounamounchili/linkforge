@@ -19,6 +19,12 @@ from bpy_extras.io_utils import ExportHelper
 from ..adapters import blender_to_core
 from ..adapters.context import BlenderContext
 from ..constants import (
+    EXT_SRDF,
+    EXT_URDF,
+    EXT_URDF_XACRO,
+    EXT_XACRO,
+    FORMAT_URDF,
+    FORMAT_XACRO,
     PROP_ROBOT,
     PROP_VALIDATION,
 )
@@ -79,10 +85,10 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
             return {"CANCELLED"}
 
         robot_props = getattr(context.scene, PROP_ROBOT)
-        if robot_props.export_format == "XACRO":
-            self.filename_ext = ".xacro"
+        if robot_props.export_format == FORMAT_XACRO:
+            self.filename_ext = EXT_XACRO
         else:
-            self.filename_ext = ".urdf"
+            self.filename_ext = EXT_URDF
 
         # Call parent invoke to open file browser
         # ExportHelper.invoke returns a set of strings
@@ -103,10 +109,10 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         output_path = Path(self.filepath)
 
         # Ensure correct file extension matches format
-        if robot_props.export_format == "XACRO" and output_path.suffix != ".xacro":
-            output_path = output_path.with_suffix(".xacro")
-        elif robot_props.export_format == "URDF" and output_path.suffix != ".urdf":
-            output_path = output_path.with_suffix(".urdf")
+        if robot_props.export_format == FORMAT_XACRO and output_path.suffix != EXT_XACRO:
+            output_path = output_path.with_suffix(EXT_XACRO)
+        elif robot_props.export_format == FORMAT_URDF and output_path.suffix != EXT_URDF:
+            output_path = output_path.with_suffix(EXT_URDF)
 
         # Update self.filepath to reflect the corrected path
         self.filepath = str(output_path)
@@ -158,7 +164,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
             return {"CANCELLED"}
 
         # Generate URDF/XACRO
-        if robot_props.export_format == "URDF":
+        if robot_props.export_format == FORMAT_URDF:
             urdf_generator = URDFGenerator(
                 pretty_print=True,
                 output_path=output_path,
@@ -182,9 +188,10 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
 
         # Export companion SRDF if enabled and planning data exists
         if getattr(robot_props, "use_srdf", False) is True and has_planning_data(robot_props):
-            srdf_path = output_path.with_suffix(".srdf")
-            if output_path.name.endswith(".urdf.xacro"):
-                srdf_path = output_path.parent / f"{output_path.name[:-11]}.srdf"
+            srdf_path = output_path.with_suffix(EXT_SRDF)
+            if output_path.name.endswith(EXT_URDF_XACRO):
+                base_stem = output_path.name.removesuffix(EXT_URDF_XACRO)
+                srdf_path = output_path.parent / f"{base_stem}{EXT_SRDF}"
             srdf_generator = SRDFGenerator(pretty_print=True, srdf_path=srdf_path)
             srdf_generator.write(robot, srdf_path, validate=False)
             msg += f" + SRDF ({srdf_path.name})"

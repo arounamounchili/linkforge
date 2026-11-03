@@ -237,6 +237,7 @@ SRDF_REASON_USER: Final[str] = "User"
 # Standard Fallback Names
 UNNAMED_LINK: Final[str] = "unnamed_link"
 UNNAMED_JOINT: Final[str] = "unnamed_joint"
+DEFAULT_ROBOT_NAME: Final[str] = "my_robot"
 
 # Sensor Update Rates (Industry Standard Defaults)
 DEFAULT_UPDATE_RATE_IMU: Final[float] = 100.0  # Hz
@@ -285,7 +286,18 @@ XACRO_PARAM_XYZ: Final[str] = "xyz"
 XACRO_PARAM_RPY: Final[str] = "rpy"
 XACRO_DEFAULT_PARAMS: Final[str] = "name parent xyz rpy"
 
+# Description Formats and Extensions
+FORMAT_URDF: Final[str] = "URDF"
+FORMAT_XACRO: Final[str] = "XACRO"
+FORMAT_SRDF: Final[str] = "SRDF"
+
+EXT_URDF: Final[str] = ".urdf"
+EXT_XACRO: Final[str] = ".xacro"
+EXT_SRDF: Final[str] = ".srdf"
+EXT_URDF_XACRO: Final[str] = ".urdf.xacro"
+
 # ROS2 Control Defaults
+ROS2_CONTROL_DEFAULT_NAME: Final[str] = "GazeboSimSystem"
 ROS2_CONTROL_DEFAULT_PLUGIN: Final[str] = "gz_ros2_control/GazeboSimSystem"
 ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN: Final[str] = "gz_ros2_control::GazeboSimROS2ControlPlugin"
 

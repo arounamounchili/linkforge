@@ -11,6 +11,7 @@ import bpy
 from bpy.props import IntProperty, StringProperty
 from bpy.types import Context, Operator
 
+from ..constants import DIRECTION_DOWN, DIRECTION_UP
 from ..utils.decorators import OperatorReturn, safe_execute
 from ..utils.joint_utils import is_control_joint_missing
 from ..utils.property_helpers import get_joint_props, get_robot_props
@@ -192,9 +193,9 @@ class LINKFORGE_OT_move_ros2_control_joint(Operator):
         index = props.ros2_control_active_joint_index
         new_index = index
 
-        if self.direction == "UP" and index > 0:
+        if self.direction == DIRECTION_UP and index > 0:
             new_index = index - 1
-        elif self.direction == "DOWN" and index < len(props.ros2_control_joints) - 1:
+        elif self.direction == DIRECTION_DOWN and index < len(props.ros2_control_joints) - 1:
             new_index = index + 1
         else:
             return {"CANCELLED"}
