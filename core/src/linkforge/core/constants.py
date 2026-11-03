@@ -222,6 +222,12 @@ SRDF_VJOIN_FIXED: Final[str] = "fixed"
 SRDF_VJOIN_PLANAR: Final[str] = "planar"
 SRDF_VJOIN_FLOATING: Final[str] = "floating"
 
+PLANNING_GROUP_CHAIN: Final[str] = "CHAIN"
+PLANNING_GROUP_JOINTS: Final[str] = "JOINTS"
+
+DEFAULT_VIRTUAL_JOINT_NAME: Final[str] = "world_joint"
+DEFAULT_WORLD_FRAME: Final[str] = "world"
+
 SRDF_REASON_ADJACENT: Final[str] = "Adjacent"
 SRDF_REASON_NEVER: Final[str] = "Never"
 SRDF_REASON_DEFAULT: Final[str] = "Default"

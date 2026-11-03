@@ -49,6 +49,8 @@ from ..core.constants import (
     JOINT_PLANAR,
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
+    PLANNING_GROUP_CHAIN,
+    PLANNING_GROUP_JOINTS,
     SENSOR_CAMERA,
     SENSOR_CONTACT,
     SENSOR_DEPTH_CAMERA,
@@ -57,6 +59,11 @@ from ..core.constants import (
     SENSOR_GPU_LIDAR,
     SENSOR_IMU,
     SENSOR_LIDAR,
+    SRDF_REASON_ADJACENT,
+    SRDF_REASON_ALWAYS,
+    SRDF_REASON_DEFAULT,
+    SRDF_REASON_NEVER,
+    SRDF_REASON_USER,
 )
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
@@ -1073,7 +1080,7 @@ def populate_planning_properties_from_semantic(
         g_item = lp.planning_groups.add()
         g_item.name = grp.name
         if grp.chains:
-            g_item.group_type = "CHAIN"
+            g_item.group_type = PLANNING_GROUP_CHAIN
             g_item.base_link_name = grp.chains[0].base_link
             g_item.tip_link_name = grp.chains[0].tip_link
             if len(grp.chains) > 1:
@@ -1081,12 +1088,12 @@ def populate_planning_properties_from_semantic(
                     f"{c.base_link}:{c.tip_link}" for c in grp.chains[1:]
                 )
         elif grp.joints:
-            g_item.group_type = "JOINTS"
+            g_item.group_type = PLANNING_GROUP_JOINTS
             for j_name in grp.joints:
                 j_item = g_item.joints.add()
                 j_item.name = j_name
         else:
-            g_item.group_type = "CHAIN"
+            g_item.group_type = PLANNING_GROUP_CHAIN
 
         if grp.links:
             g_item.links_csv = ",".join(grp.links)
@@ -1111,13 +1118,19 @@ def populate_planning_properties_from_semantic(
             jv_item.joint_name = j_name
             jv_item.value = float(vals[0]) if vals else 0.0
 
-    valid_reasons = {"Adjacent", "Never", "Default", "Always", "User"}
+    valid_reasons = {
+        SRDF_REASON_ADJACENT,
+        SRDF_REASON_NEVER,
+        SRDF_REASON_DEFAULT,
+        SRDF_REASON_ALWAYS,
+        SRDF_REASON_USER,
+    }
     for dc in semantic.disabled_collisions:
         dc_item = lp.disabled_collisions.add()
         dc_item.name = f"{dc.link1} <-> {dc.link2}"
         dc_item.link1_name = dc.link1
         dc_item.link2_name = dc.link2
-        dc_item.reason = dc.reason if dc.reason in valid_reasons else "User"
+        dc_item.reason = dc.reason if dc.reason in valid_reasons else SRDF_REASON_USER
 
     return True
 

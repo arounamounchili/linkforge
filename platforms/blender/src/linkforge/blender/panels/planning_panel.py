@@ -7,7 +7,7 @@ import typing
 
 import bpy
 
-from ..core.constants import JOINT_PRISMATIC, JOINT_REVOLUTE
+from ..core.constants import JOINT_PRISMATIC, JOINT_REVOLUTE, PLANNING_GROUP_CHAIN
 from ..properties.planning_props import (
     get_planning_joint_name,
     get_planning_link_name,
@@ -50,7 +50,7 @@ class LINKFORGE_UL_planning_groups(bpy.types.UIList):
             row = layout.row(align=True)
             row.label(text=item.name or "Unnamed", icon="ARMATURE_DATA")
 
-            if item.group_type == "CHAIN":
+            if item.group_type == PLANNING_GROUP_CHAIN:
                 base_str = get_planning_link_name(item.base_link, item.base_link_name)
                 tip_str = get_planning_link_name(item.tip_link, item.tip_link_name)
                 if base_str and tip_str:
@@ -269,7 +269,7 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         mode_row = inner.row(align=True)
         mode_row.prop(group_item, "group_type", expand=True)
 
-        if group_item.group_type == "CHAIN":
+        if group_item.group_type == PLANNING_GROUP_CHAIN:
             chain_col = inner.column(align=True)
             chain_col.prop(group_item, "base_link")
             chain_col.prop(group_item, "tip_link")

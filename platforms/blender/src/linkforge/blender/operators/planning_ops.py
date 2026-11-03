@@ -18,7 +18,7 @@ from ..adapters.core_to_blender import (
     bind_semantic_scene_objects,
     populate_planning_properties_from_semantic,
 )
-from ..core.constants import SRDF_REASON_ADJACENT
+from ..core.constants import PLANNING_GROUP_CHAIN, SRDF_REASON_ADJACENT
 from ..properties.planning_props import (
     find_robot_root_link,
     get_planning_joint_name,
@@ -138,7 +138,7 @@ class LINKFORGE_OT_add_planning_group(Operator):
 
         item = props.planning_groups.add()
         item.name = group_name
-        item.group_type = "CHAIN"
+        item.group_type = PLANNING_GROUP_CHAIN
 
         props.planning_active_group_index = len(props.planning_groups) - 1
         props.use_srdf = True
@@ -1135,7 +1135,7 @@ class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
         # Count unresolved references
         unresolved_count = 0
         for grp in props.planning_groups:
-            if grp.group_type == "CHAIN":
+            if grp.group_type == PLANNING_GROUP_CHAIN:
                 if grp.base_link_name and not grp.base_link:
                     unresolved_count += 1
                 if grp.tip_link_name and not grp.tip_link:

@@ -50,9 +50,14 @@ from ..core.constants import (
     CONTROL_TYPE_SENSOR,
     CONTROL_TYPE_SYSTEM,
     DEFAULT_AXIS_XYZ,
+    DEFAULT_VIRTUAL_JOINT_NAME,
+    DEFAULT_WORLD_FRAME,
     HW_IF_EFFORT,
     HW_IF_POSITION,
     HW_IF_VELOCITY,
+    PLANNING_GROUP_CHAIN,
+    SRDF_REASON_ADJACENT,
+    SRDF_VJOIN_FIXED,
     SYLVESTER_TOLERANCE_EPSILON,
 )
 from ..properties.planning_props import (
@@ -705,10 +710,14 @@ class SemanticTranslator:
                     getattr(obj, "virtual_joint_child_link", None),
                     getattr(obj, "virtual_joint_child_link_name", ""),
                 )
-                vj_name = str(getattr(obj, "virtual_joint_name", "") or "world_joint").strip()
-                vj_type = str(getattr(obj, "virtual_joint_type", "fixed") or "fixed").strip()
+                vj_name = str(
+                    getattr(obj, "virtual_joint_name", "") or DEFAULT_VIRTUAL_JOINT_NAME
+                ).strip()
+                vj_type = str(
+                    getattr(obj, "virtual_joint_type", SRDF_VJOIN_FIXED) or SRDF_VJOIN_FIXED
+                ).strip()
                 parent_frame = str(
-                    getattr(obj, "virtual_joint_parent_frame", "") or "world"
+                    getattr(obj, "virtual_joint_parent_frame", "") or DEFAULT_WORLD_FRAME
                 ).strip()
                 if child_link:
                     semantic.virtual_joint(
@@ -737,8 +746,10 @@ class SemanticTranslator:
                 chains: list[Chain] = []
                 joints: list[str] = []
 
-                grp_type = str(getattr(grp, "group_type", "CHAIN") or "CHAIN")
-                if grp_type == "CHAIN":
+                grp_type = str(
+                    getattr(grp, "group_type", PLANNING_GROUP_CHAIN) or PLANNING_GROUP_CHAIN
+                )
+                if grp_type == PLANNING_GROUP_CHAIN:
                     base_link = get_planning_link_name(
                         getattr(grp, "base_link", None),
                         getattr(grp, "base_link_name", ""),
@@ -777,7 +788,9 @@ class SemanticTranslator:
                             joints.append(j_name)
 
                 if not any([links, joints, chains, subgroups]):
-                    if validation_result and not (grp_type == "CHAIN" and (base_link or tip_link)):
+                    if validation_result and not (
+                        grp_type == PLANNING_GROUP_CHAIN and (base_link or tip_link)
+                    ):
                         validation_result.add_error(
                             title="Empty planning group",
                             message=(
@@ -859,7 +872,7 @@ class SemanticTranslator:
                     getattr(pair, "link2", None),
                     getattr(pair, "link2_name", ""),
                 )
-                reason = str(getattr(pair, "reason", "Adjacent") or "Adjacent")
+                reason = str(getattr(pair, "reason", SRDF_REASON_ADJACENT) or SRDF_REASON_ADJACENT)
                 if l1 and l2:
                     semantic.disable_collisions(link1=l1, link2=l2, reason=reason)
                 elif (l1 or l2) and validation_result:

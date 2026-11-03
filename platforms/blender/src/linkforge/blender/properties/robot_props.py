@@ -37,6 +37,8 @@ from ..core.constants import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
     CONTROL_TYPE_SYSTEM,
+    DEFAULT_VIRTUAL_JOINT_NAME,
+    DEFAULT_WORLD_FRAME,
     ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
     ROS2_CONTROL_DEFAULT_PLUGIN,
     SRDF_VJOIN_FIXED,
@@ -165,7 +167,7 @@ class RobotPropertyGroup(PropertyGroup):
     virtual_joint_name: StringProperty(  # type: ignore
         name="Name",
         description="Name of the virtual joint (e.g., world_joint)",
-        default="world_joint",
+        default=DEFAULT_VIRTUAL_JOINT_NAME,
     )
 
     virtual_joint_type: EnumProperty(  # type: ignore
@@ -182,7 +184,7 @@ class RobotPropertyGroup(PropertyGroup):
     virtual_joint_parent_frame: StringProperty(  # type: ignore
         name="Parent Frame",
         description="External world frame name (e.g., world, map, odom)",
-        default="world",
+        default=DEFAULT_WORLD_FRAME,
     )
 
     virtual_joint_child_link: PointerProperty(  # type: ignore

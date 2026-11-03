@@ -26,6 +26,8 @@ from ..core.constants import (
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
     PI,
+    PLANNING_GROUP_CHAIN,
+    PLANNING_GROUP_JOINTS,
     SRDF_REASON_ADJACENT,
     SRDF_REASON_ALWAYS,
     SRDF_REASON_DEFAULT,
@@ -227,7 +229,7 @@ def resolve_planning_group_joints(
     Returns:
         List of (joint_name, joint_obj) tuples for all actuated joints in the group.
     """
-    if group.group_type == "JOINTS":
+    if group.group_type == PLANNING_GROUP_JOINTS:
         resolved: list[tuple[str, bpy.types.Object | None]] = []
         seen: set[str] = set()
         for item in group.joints:
@@ -564,17 +566,17 @@ class PlanningGroupProperty(PropertyGroup):
         description="How the planning group members are defined",
         items=[
             (
-                "CHAIN",
+                PLANNING_GROUP_CHAIN,
                 "Kinematic Chain",
                 "Serial kinematic chain from Base Link to Tip Link (recommended for arms)",
             ),
             (
-                "JOINTS",
+                PLANNING_GROUP_JOINTS,
                 "Joint Collection",
                 "Explicit collection of joints (recommended for multi-finger grippers and hands)",
             ),
         ],
-        default="CHAIN",
+        default=PLANNING_GROUP_CHAIN,
         update=update_planning_group_topology,
     )
 

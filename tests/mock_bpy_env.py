@@ -581,7 +581,7 @@ DEFAULT_PROPERTY_VALUES = {
     "sensor_name": "",
     "use_material": True,
     "use_srdf": False,
-    "use_virtual_joint": True,
+    "use_virtual_joint": False,
     "virtual_joint_name": "world_joint",
     "virtual_joint_type": "fixed",
     "virtual_joint_parent_frame": "world",
@@ -1523,7 +1523,7 @@ class MockScene(MockPropertyGroup):
         self.linkforge.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
         self.linkforge.ros2_control_parameters = MockCollection(prop_type=MockPropertyGroup)
         self.linkforge.use_srdf = False
-        self.linkforge.use_virtual_joint = True
+        self.linkforge.use_virtual_joint = False
         self.linkforge.virtual_joint_name = "world_joint"
         self.linkforge.virtual_joint_type = "fixed"
         self.linkforge.virtual_joint_parent_frame = "world"
