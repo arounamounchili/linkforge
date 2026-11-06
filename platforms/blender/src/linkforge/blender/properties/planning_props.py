@@ -166,6 +166,46 @@ def has_planning_data(props: typing.Any, scene: bpy.types.Scene | None = None) -
     )
 
 
+def get_group_subgroup_names(group: typing.Any) -> list[str]:
+    """Return parsed unique list of subgroup names for a planning group.
+
+    Args:
+        group: PlanningGroupProperty or object with subgroups attributes.
+
+    Returns:
+        list[str]: Clean list of subgroup name strings.
+    """
+    if not group:
+        return []
+    subs: list[str] = [
+        s.strip() for s in str(getattr(group, "subgroups_csv", "") or "").split(",") if s.strip()
+    ]
+    for sg in getattr(group, "subgroups", []):
+        name = str(getattr(sg, "name", "")).strip()
+        if name and name not in subs:
+            subs.append(name)
+    return subs
+
+
+def get_existing_collision_pairs(collection: typing.Any) -> set[tuple[str, str]]:
+    """Return set of normalized bidirectional (link1, link2) pairs from a disabled_collisions collection.
+
+    Args:
+        collection: Iterable of CollisionPairProperty items.
+
+    Returns:
+        set[tuple[str, str]]: Set of (l1, l2) and (l2, l1) tuples.
+    """
+    pairs: set[tuple[str, str]] = set()
+    for item in getattr(collection, "__iter__", lambda: ())():
+        l1 = get_planning_link_name(getattr(item, "link1", None), getattr(item, "link1_name", ""))
+        l2 = get_planning_link_name(getattr(item, "link2", None), getattr(item, "link2_name", ""))
+        if l1 and l2:
+            pairs.add((l1, l2))
+            pairs.add((l2, l1))
+    return pairs
+
+
 def inspect_chain_path(
     scene: bpy.types.Scene | None,
     group: PlanningGroupProperty,
@@ -271,7 +311,7 @@ def resolve_planning_group_joints(
         resolved_sub: list[tuple[str, bpy.types.Object | None]] = []
         seen_sub: set[str] = set()
         if scene is not None and (props := get_robot_props(scene)):
-            sub_names = [s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()]
+            sub_names = get_group_subgroup_names(group)
             for sub_name in sub_names:
                 for other_grp in props.planning_groups:
                     if other_grp.name == sub_name:

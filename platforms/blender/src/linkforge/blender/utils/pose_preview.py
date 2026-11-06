@@ -15,45 +15,19 @@ except ImportError:
     Vector = None  # type: ignore[assignment,misc]
 
 from ..constants import (
-    AXIS_CUSTOM,
     AXIS_X,
     AXIS_Y,
     AXIS_Z,
 )
-from ..core._utils.math_utils import normalize_vector
 from ..core.constants import (
     JOINT_CONTINUOUS,
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
 )
+from .joint_utils import get_joint_axis_vector
 from .property_helpers import get_joint_props, get_robot_props
 
 REST_MATRIX_KEY = "_linkforge_rest_matrix"
-
-
-def get_joint_axis_vector(jp: Any) -> tuple[float, float, float]:
-    """Return normalized 3D axis vector for a robot joint in its local frame.
-
-    Args:
-        jp: JointPropertyGroup instance.
-
-    Returns:
-        tuple[float, float, float]: Unit axis vector (x, y, z).
-    """
-    axis = getattr(jp, "axis", AXIS_Z)
-    if axis == AXIS_X:
-        return (1.0, 0.0, 0.0)
-    if axis == AXIS_Y:
-        return (0.0, 1.0, 0.0)
-    if axis == AXIS_Z:
-        return (0.0, 0.0, 1.0)
-    if axis == AXIS_CUSTOM:
-        cx = float(getattr(jp, "custom_axis_x", 0.0))
-        cy = float(getattr(jp, "custom_axis_y", 0.0))
-        cz = float(getattr(jp, "custom_axis_z", 1.0))
-        norm = normalize_vector(cx, cy, cz)
-        return norm if any(norm) else (0.0, 0.0, 1.0)
-    return (0.0, 0.0, 1.0)
 
 
 def _matrix_to_rows(matrix: Any) -> list[list[float]]:
@@ -339,3 +313,18 @@ def is_pose_preview_active(scene: bpy.types.Scene | None = None) -> bool:
         return True
 
     return any(getattr(s, "is_previewing", False) for s in getattr(props, "group_states", []))
+
+
+def ensure_robot_rest_pose(scene: bpy.types.Scene | None = None) -> bool:
+    """Restore robot to rest pose if pose preview is currently active.
+
+    Args:
+        scene: Active Blender scene (defaults to bpy.context.scene).
+
+    Returns:
+        bool: True if rest pose was restored, False otherwise.
+    """
+    if is_pose_preview_active(scene):
+        restore_robot_rest_pose(scene)
+        return True
+    return False

@@ -15,14 +15,7 @@ except ImportError:
     Matrix = None  # type: ignore[assignment,misc]
     Vector = None  # type: ignore[assignment,misc]
 
-from ..constants import (
-    AXIS_CUSTOM,
-    AXIS_X,
-    AXIS_Y,
-    AXIS_Z,
-    SUFFIX_COLLISION,
-)
-from ..core._utils.math_utils import normalize_vector
+from ..constants import SUFFIX_COLLISION
 from ..core.constants import (
     JOINT_CONTINUOUS,
     JOINT_FIXED,
@@ -33,6 +26,7 @@ from ..core.constants import (
     SRDF_REASON_DEFAULT,
     SRDF_REASON_NEVER,
 )
+from ..utils.joint_utils import get_joint_axis_vector
 from ..utils.property_helpers import get_joint_props, get_link_props
 from ..utils.transform_utils import live_world_matrix
 
@@ -109,24 +103,6 @@ def _get_bounding_sphere(link_obj: Any) -> tuple[tuple[float, float, float], flo
     return (cx, cy, cz), max(rad, 0.02)
 
 
-def _joint_axis_tuple(jp: Any) -> tuple[float, float, float]:
-    """Extract normalized joint axis tuple."""
-    axis = getattr(jp, "axis", AXIS_Z)
-    if axis == AXIS_X:
-        return (1.0, 0.0, 0.0)
-    if axis == AXIS_Y:
-        return (0.0, 1.0, 0.0)
-    if axis == AXIS_Z:
-        return (0.0, 0.0, 1.0)
-    if axis == AXIS_CUSTOM:
-        cx = float(getattr(jp, "custom_axis_x", 0.0))
-        cy = float(getattr(jp, "custom_axis_y", 0.0))
-        cz = float(getattr(jp, "custom_axis_z", 1.0))
-        norm = normalize_vector(cx, cy, cz)
-        return norm if any(norm) else (0.0, 0.0, 1.0)
-    return (0.0, 0.0, 1.0)
-
-
 def compute_allowed_collision_matrix(
     scene: bpy.types.Scene,
     sample_count: int = 500,
@@ -201,7 +177,7 @@ def compute_allowed_collision_matrix(
         parent_map[c_name] = p_name
 
         j_type = str(getattr(jp, "joint_type", JOINT_REVOLUTE)).lower()
-        axis_vec = _joint_axis_tuple(jp)
+        axis_vec = get_joint_axis_vector(jp)
         low = float(getattr(jp, "limit_lower", -math.pi))
         high = float(getattr(jp, "limit_upper", math.pi))
         if low >= high:

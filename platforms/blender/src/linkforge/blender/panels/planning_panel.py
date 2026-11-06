@@ -16,6 +16,7 @@ from ..core.constants import (
     PLANNING_GROUP_SUBGROUPS,
 )
 from ..properties.planning_props import (
+    get_group_subgroup_names,
     get_planning_joint_name,
     get_planning_link_name,
     has_planning_data,
@@ -65,7 +66,7 @@ class LINKFORGE_UL_planning_groups(bpy.types.UIList):
                 else:
                     row.label(text="[Chain: Unconfigured]", icon="NONE")
             elif item.group_type == PLANNING_GROUP_SUBGROUPS:
-                subs = [s.strip() for s in str(item.subgroups_csv or "").split(",") if s.strip()]
+                subs = get_group_subgroup_names(item)
                 sub_count = len(subs)
                 s_str = "1 subgroup" if sub_count == 1 else f"{sub_count} subgroups"
                 row.label(text=f"[Subgroups: {s_str}]", icon="NONE")
@@ -273,7 +274,7 @@ class LINKFORGE_MT_add_planning_subgroup(bpy.types.Menu):
             return
 
         group = props.planning_groups[idx]
-        current_subs = {s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()}
+        current_subs = set(get_group_subgroup_names(group))
 
         available = [
             g.name
@@ -381,7 +382,7 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                     rem_op.index = i
         else:  # PLANNING_GROUP_SUBGROUPS
             header = inner.row()
-            subs = [s.strip() for s in str(group_item.subgroups_csv or "").split(",") if s.strip()]
+            subs = get_group_subgroup_names(group_item)
             header.label(text=f"Subgroups ({len(subs)})", icon="GROUP")
             header.menu("LINKFORGE_MT_add_planning_subgroup", icon="ADD", text="")
 

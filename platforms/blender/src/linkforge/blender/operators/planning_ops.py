@@ -25,8 +25,11 @@ from ..core.constants import (
     PLANNING_GROUP_SUBGROUPS,
     SRDF_REASON_ADJACENT,
 )
+from ..logic.collision_matrix import compute_allowed_collision_matrix
 from ..properties.planning_props import (
     find_robot_root_link,
+    get_existing_collision_pairs,
+    get_group_subgroup_names,
     get_planning_joint_name,
     get_planning_link_name,
     has_planning_data,
@@ -449,7 +452,7 @@ class LINKFORGE_OT_add_planning_subgroup(Operator):
             self.report({"WARNING"}, "Cannot add a planning group as a subgroup of itself")
             return {"CANCELLED"}
 
-        current_subs = [s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()]
+        current_subs = get_group_subgroup_names(group)
         if self.subgroup_name in current_subs:
             self.report(
                 {"WARNING"},
@@ -496,11 +499,7 @@ class LINKFORGE_OT_remove_planning_subgroup(Operator):
         idx = props.planning_active_group_index
         if not (0 <= idx < len(props.planning_groups)):
             return False
-        subs = [
-            s.strip()
-            for s in str(props.planning_groups[idx].subgroups_csv or "").split(",")
-            if s.strip()
-        ]
+        subs = get_group_subgroup_names(props.planning_groups[idx])
         return len(subs) > 0
 
     @safe_execute
@@ -522,7 +521,7 @@ class LINKFORGE_OT_remove_planning_subgroup(Operator):
             return {"CANCELLED"}
 
         group = props.planning_groups[idx]
-        current_subs = [s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()]
+        current_subs = get_group_subgroup_names(group)
 
         if not (0 <= self.index < len(current_subs)):
             return {"CANCELLED"}
@@ -1214,13 +1213,7 @@ class LINKFORGE_OT_auto_disable_adjacent_collisions(Operator):
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
 
-        existing_pairs: set[tuple[str, str]] = set()
-        for item in props.disabled_collisions:
-            l1 = get_planning_link_name(item.link1, item.link1_name)
-            l2 = get_planning_link_name(item.link2, item.link2_name)
-            if l1 and l2:
-                existing_pairs.add((l1, l2))
-                existing_pairs.add((l2, l1))
+        existing_pairs = get_existing_collision_pairs(props.disabled_collisions)
 
         added_count = 0
         for obj in scene.objects:
@@ -1294,8 +1287,6 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
 
-        from ..logic.collision_matrix import compute_allowed_collision_matrix
-
         results = compute_allowed_collision_matrix(
             scene,
             sample_count=int(self.sample_count),
@@ -1312,22 +1303,8 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
         if self.clear_existing:
             props.disabled_collisions.clear()
 
-        existing_pairs: set[tuple[str, str]] = set()
-        for item in props.disabled_collisions:
-            l1 = get_planning_link_name(item.link1, item.link1_name)
-            l2 = get_planning_link_name(item.link2, item.link2_name)
-            if l1 and l2:
-                existing_pairs.add((l1, l2))
-                existing_pairs.add((l2, l1))
-
-        # Map link names to objects
-        link_objects: dict[str, bpy.types.Object] = {}
-        for obj in scene.objects:
-            lp = get_link_props(obj)
-            if lp and lp.is_robot_link:
-                name = str(getattr(lp, "link_name", "") or getattr(obj, "name", "")).strip()
-                if name:
-                    link_objects[name] = obj
+        existing_pairs = get_existing_collision_pairs(props.disabled_collisions)
+        link_objects = get_robot_statistics(scene).link_objects
 
         counts: dict[str, int] = {}
         added_count = 0

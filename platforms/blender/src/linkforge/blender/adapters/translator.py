@@ -16,10 +16,6 @@ if TYPE_CHECKING:
     from ..properties.robot_props import RobotPropertyGroup
 
 from ..constants import (
-    AXIS_CUSTOM,
-    AXIS_X,
-    AXIS_Y,
-    AXIS_Z,
     FORMAT_STL,
     PROP_GEOM,
     PURPOSE_COLLISION,
@@ -57,7 +53,6 @@ from ..core import (
 from ..core.constants import (
     CONTROL_TYPE_ACTUATOR,
     CONTROL_TYPE_SENSOR,
-    DEFAULT_AXIS_XYZ,
     DEFAULT_VIRTUAL_JOINT_NAME,
     DEFAULT_WORLD_FRAME,
     HW_IF_EFFORT,
@@ -69,14 +64,15 @@ from ..core.constants import (
     ROS2_CONTROL_DEFAULT_NAME,
     SRDF_REASON_ADJACENT,
     SRDF_VJOIN_FIXED,
-    SYLVESTER_TOLERANCE_EPSILON,
     UNNAMED_JOINT,
 )
 from ..properties.planning_props import (
+    get_group_subgroup_names,
     get_planning_joint_name,
     get_planning_link_name,
     has_planning_data,
 )
+from ..utils.joint_utils import get_joint_axis_vector
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -316,24 +312,7 @@ class JointTranslator:
             origin = matrix_to_transform(live_world_matrix(obj))
 
         # Joint Axis
-        axis: tuple[float, float, float]
-        if props.axis == AXIS_X:
-            axis = (1.0, 0.0, 0.0)
-        elif props.axis == AXIS_Y:
-            axis = (0.0, 1.0, 0.0)
-        elif props.axis == AXIS_Z:
-            axis = (0.0, 0.0, 1.0)
-        elif props.axis == AXIS_CUSTOM:
-            axis = (
-                float(props.custom_axis_x),
-                float(props.custom_axis_y),
-                float(props.custom_axis_z),
-            )
-            # Fallback for zero axis
-            if all(abs(v) < SYLVESTER_TOLERANCE_EPSILON for v in axis):
-                axis = DEFAULT_AXIS_XYZ
-        else:
-            axis = DEFAULT_AXIS_XYZ
+        axis = get_joint_axis_vector(props, normalize=False)
 
         # Select joint type and configure
         joint_type = JointType(props.joint_type.lower())
@@ -752,13 +731,7 @@ class SemanticTranslator:
                     continue
 
                 links = [s.strip() for s in str(grp.links_csv or "").split(",") if s.strip()]
-                subgroups = [
-                    s.strip() for s in str(grp.subgroups_csv or "").split(",") if s.strip()
-                ]
-                for sg in getattr(grp, "subgroups", []):
-                    sg_n = str(getattr(sg, "name", "")).strip()
-                    if sg_n and sg_n not in subgroups:
-                        subgroups.append(sg_n)
+                subgroups = get_group_subgroup_names(grp)
                 chains: list[Chain] = []
                 joints: list[str] = []
 
