@@ -156,8 +156,10 @@ class LINKFORGE_UL_group_states(bpy.types.UIList):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
             is_prev = getattr(item, "is_previewing", False)
-            icon = "HIDE_OFF" if is_prev else "POSE_HLT"
-            row.label(text=item.name or "Unnamed", icon=icon)
+            if is_prev:
+                row.label(text=item.name or "Unnamed", icon="HIDE_OFF")
+            else:
+                row.label(text=item.name or "Unnamed", icon="POSE_HLT")
             grp = item.group or "Unassigned"
             preview_badge = " [Previewing]" if is_prev else ""
             row.label(text=f"[{grp} · {len(item.joint_values)} DOF]{preview_badge}", icon="NONE")
@@ -485,7 +487,9 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             j_head.label(text=f"Active Joints ({len(state_item.joint_values)})", icon="EMPTY_AXIS")
             j_head.operator("linkforge.sync_group_state_joints", text="Sync", icon="FILE_REFRESH")
             j_head.operator("linkforge.reset_group_state_values", text="Reset", icon="LOOP_BACK")
-            j_head.operator("linkforge.capture_group_state_pose", text="Capture", icon="CAMERA")
+            j_head.operator(
+                "linkforge.capture_group_state_pose", text="Capture", icon="CAMERA_DATA"
+            )
             if is_prev:
                 j_head.operator("linkforge.restore_rest_pose", text="Rest", icon="ARMATURE_DATA")
 

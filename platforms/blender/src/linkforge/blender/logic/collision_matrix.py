@@ -233,9 +233,13 @@ def compute_allowed_collision_matrix(
     # 5. Forward Kinematics Evaluator
     def compute_fk(joint_values: dict[str, float]) -> dict[str, Any]:
         """Compute world matrices for all links given joint values."""
+        if Matrix is None:
+            return {}
         fk_frames: dict[str, Any] = {root_name: Matrix.Identity(4)}
 
         def traverse(p_name: str) -> None:
+            if Matrix is None:
+                return
             p_mat = fk_frames[p_name]
             for jn in child_map.get(p_name, []):
                 q = joint_values.get(jn.name, 0.0)

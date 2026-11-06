@@ -855,7 +855,7 @@ class LINKFORGE_OT_sync_group_state_joints(Operator):
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_state_index
-        return 0 <= idx < len(props.group_states) and bool(props.group_states[idx].group)
+        return bool(0 <= idx < len(props.group_states)) and bool(props.group_states[idx].group)
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -902,7 +902,10 @@ class LINKFORGE_OT_reset_group_state_values(Operator):
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_state_index
-        return 0 <= idx < len(props.group_states) and len(props.group_states[idx].joint_values) > 0
+        return (
+            bool(0 <= idx < len(props.group_states))
+            and len(props.group_states[idx].joint_values) > 0
+        )
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -944,7 +947,7 @@ class LINKFORGE_OT_toggle_group_state_preview(Operator):
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_state_index
-        return 0 <= idx < len(props.group_states)
+        return bool(0 <= idx < len(props.group_states))
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
@@ -989,7 +992,10 @@ class LINKFORGE_OT_capture_group_state_pose(Operator):
         if not context.scene or not (props := get_robot_props(context.scene)):
             return False
         idx = props.planning_active_state_index
-        return 0 <= idx < len(props.group_states) and len(props.group_states[idx].joint_values) > 0
+        return (
+            bool(0 <= idx < len(props.group_states))
+            and len(props.group_states[idx].joint_values) > 0
+        )
 
     @safe_execute
     def execute(self, context: Context) -> OperatorReturn:
