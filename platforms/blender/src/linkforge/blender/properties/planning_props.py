@@ -36,6 +36,12 @@ from ..core.constants import (
     SRDF_REASON_NEVER,
     SRDF_REASON_USER,
 )
+from ..utils.pose_preview import (
+    apply_group_state_pose,
+    apply_joint_value,
+    is_pose_preview_active,
+    restore_robot_rest_pose,
+)
 from ..utils.property_helpers import get_joint_props, get_link_props, get_robot_props
 
 
@@ -343,17 +349,14 @@ def update_group_state_joint_value(
 
     # If the active pose is currently previewed live in the 3D viewport, update the joint empty
     scene = getattr(bpy.context, "scene", None)
-    if scene and j_obj:
-        from ..utils.pose_preview import apply_joint_value, is_pose_preview_active
-
-        if is_pose_preview_active(scene):
-            props = get_robot_props(scene)
-            if props:
-                idx = getattr(props, "planning_active_state_index", -1)
-                if 0 <= idx < len(props.group_states):
-                    active_state = props.group_states[idx]
-                    if getattr(active_state, "is_previewing", False):
-                        apply_joint_value(j_obj, float(self.value))
+    if scene and j_obj and is_pose_preview_active(scene):
+        props = get_robot_props(scene)
+        if props:
+            idx = getattr(props, "planning_active_state_index", -1)
+            if 0 <= idx < len(props.group_states):
+                active_state = props.group_states[idx]
+                if getattr(active_state, "is_previewing", False):
+                    apply_joint_value(j_obj, float(self.value))
 
 
 def update_group_state_preview(
@@ -367,8 +370,6 @@ def update_group_state_preview(
     props = get_robot_props(scene)
     if not props:
         return
-
-    from ..utils.pose_preview import apply_group_state_pose, restore_robot_rest_pose
 
     if getattr(self, "is_previewing", False):
         for other in props.group_states:

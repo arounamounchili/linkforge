@@ -332,6 +332,7 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     item_sys2.name = "joint_sys2"
     item_sys2.cmd_position = True
     item_sys2.state_position = False
+    item_sys2.state_velocity = False
 
     builder.link("link_p1").commit()
     builder.link("link_c1", parent="link_p1", joint_name="joint_sys1").commit()
@@ -384,6 +385,7 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     item_sensor.name = "joint_1"
     item_sensor.cmd_position = True
     item_sensor.state_position = False
+    item_sensor.state_velocity = False
 
     control = translator._blender_ros2_control_to_core(props)
     assert control is not None

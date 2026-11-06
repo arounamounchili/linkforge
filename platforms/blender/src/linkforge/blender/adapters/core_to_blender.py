@@ -1114,13 +1114,19 @@ def populate_planning_properties_from_semantic(
         elif grp.subgroups:
             g_item.group_type = PLANNING_GROUP_SUBGROUPS
             g_item.subgroups_csv = ",".join(grp.subgroups)
+            for sg_name in grp.subgroups:
+                sg_item = g_item.subgroups.add()
+                sg_item.name = sg_name
         else:
             g_item.group_type = PLANNING_GROUP_CHAIN
 
         if grp.links:
             g_item.links_csv = ",".join(grp.links)
-        if grp.subgroups:
+        if grp.subgroups and not g_item.subgroups:
             g_item.subgroups_csv = ",".join(grp.subgroups)
+            for sg_name in grp.subgroups:
+                sg_item = g_item.subgroups.add()
+                sg_item.name = sg_name
 
     for ee in semantic.end_effectors:
         ee_item = lp.end_effectors.add()

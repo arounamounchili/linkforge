@@ -459,6 +459,9 @@ class LINKFORGE_OT_add_planning_subgroup(Operator):
 
         current_subs.append(self.subgroup_name)
         group.subgroups_csv = ",".join(current_subs)
+        if not any(getattr(sg, "name", "") == self.subgroup_name for sg in group.subgroups):
+            sg_item = group.subgroups.add()
+            sg_item.name = self.subgroup_name
 
         for state in props.group_states:
             if state.group == group.name:
@@ -526,6 +529,10 @@ class LINKFORGE_OT_remove_planning_subgroup(Operator):
 
         removed = current_subs.pop(self.index)
         group.subgroups_csv = ",".join(current_subs)
+        for i, sg in enumerate(group.subgroups):
+            if getattr(sg, "name", "") == removed:
+                group.subgroups.remove(i)
+                break
 
         for state in props.group_states:
             if state.group == group.name:
@@ -1291,7 +1298,7 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
 
         results = compute_allowed_collision_matrix(
             scene,
-            sample_count=self.sample_count,
+            sample_count=int(self.sample_count),
             include_adjacent=True,
             include_never=True,
             include_default=True,

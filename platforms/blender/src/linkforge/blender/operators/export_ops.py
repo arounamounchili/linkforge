@@ -42,6 +42,7 @@ from ..properties.planning_props import has_planning_data
 from ..properties.robot_props import RobotPropertyGroup
 from ..properties.validation_props import ValidationResultProperty
 from ..utils.decorators import OperatorReturn, safe_execute
+from ..utils.pose_preview import is_pose_preview_active, restore_robot_rest_pose
 
 logger = get_logger(__name__)
 
@@ -109,8 +110,6 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         output_path = Path(self.filepath)
 
         # Restore robot rest pose if a pose preview is active to guarantee zero origin drift
-        from ..utils.pose_preview import is_pose_preview_active, restore_robot_rest_pose
-
         if is_pose_preview_active(scene):
             restore_robot_rest_pose(scene)
 

@@ -94,6 +94,7 @@ class TestExportPanel:
 
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
         validation.has_results = True
         validation.is_valid = False
         validation.error_count = 1
@@ -119,6 +120,7 @@ class TestExportPanel:
 
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
         validation.has_results = True
         validation.is_valid = False
         validation.error_count = 1
@@ -142,6 +144,7 @@ class TestExportPanel:
 
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
         validation.has_results = True
         validation.is_valid = True
         validation.warning_count = 1
@@ -198,6 +201,7 @@ class TestExportPanel:
 
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
         validation.has_results = True
         validation.is_valid = False
         validation.error_count = 1

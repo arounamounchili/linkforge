@@ -346,6 +346,19 @@ class MockMatrix:
         hint = getattr(self, "_euler_hint", None)
         if hint is not None:
             return hint
+        import math
+
+        r = self.data
+        if len(r) >= 3 and len(r[0]) >= 3:
+            sy = min(max(r[0][2], -1.0), 1.0)
+            y = math.asin(sy)
+            if abs(math.cos(y)) > 1e-6:
+                x = math.atan2(-r[1][2], r[2][2])
+                z = math.atan2(-r[0][1], r[0][0])
+            else:
+                x = math.atan2(r[2][1], r[1][1])
+                z = 0.0
+            return MockEuler(x, y, z, order=order)
         return MockEuler(0, 0, 0, order=order)
 
     def to_4x4(self):
@@ -743,26 +756,57 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
             "joints",
             "joint_values",
             "planning_groups",
+            "subgroups",
             "end_effectors",
             "group_states",
             "disabled_collisions",
+            "ros2_control_joints",
+            "ros2_control_parameters",
             "parameters",
+            "errors",
+            "warnings",
         ):
             item_cls = MockPropertyGroup
             p_mod = sys.modules.get("linkforge.blender.properties.planning_props")
+            v_mod = sys.modules.get("linkforge.blender.properties.validation_props")
+            c_mod = sys.modules.get("linkforge.blender.properties.control_props")
+            type_map = {}
             if p_mod is not None:
-                type_map = {
-                    "joint_values": getattr(
-                        p_mod, "GroupStateJointValueProperty", MockPropertyGroup
-                    ),
-                    "planning_groups": getattr(p_mod, "PlanningGroupProperty", MockPropertyGroup),
-                    "end_effectors": getattr(p_mod, "EndEffectorProperty", MockPropertyGroup),
-                    "group_states": getattr(p_mod, "GroupStateProperty", MockPropertyGroup),
-                    "disabled_collisions": getattr(
-                        p_mod, "CollisionPairProperty", MockPropertyGroup
-                    ),
-                }
-                item_cls = type_map.get(key, MockPropertyGroup)
+                type_map.update(
+                    {
+                        "joint_values": getattr(
+                            p_mod, "GroupStateJointValueProperty", MockPropertyGroup
+                        ),
+                        "planning_groups": getattr(
+                            p_mod, "PlanningGroupProperty", MockPropertyGroup
+                        ),
+                        "subgroups": getattr(p_mod, "PlanningSubgroupProperty", MockPropertyGroup),
+                        "end_effectors": getattr(p_mod, "EndEffectorProperty", MockPropertyGroup),
+                        "group_states": getattr(p_mod, "GroupStateProperty", MockPropertyGroup),
+                        "disabled_collisions": getattr(
+                            p_mod, "CollisionPairProperty", MockPropertyGroup
+                        ),
+                    }
+                )
+            if v_mod is not None:
+                type_map.update(
+                    {
+                        "errors": getattr(v_mod, "ValidationIssueProperty", MockPropertyGroup),
+                        "warnings": getattr(v_mod, "ValidationIssueProperty", MockPropertyGroup),
+                    }
+                )
+            if c_mod is not None:
+                type_map.update(
+                    {
+                        "ros2_control_joints": getattr(
+                            c_mod, "Ros2ControlJointProperty", MockPropertyGroup
+                        ),
+                        "ros2_control_parameters": getattr(
+                            c_mod, "Ros2ControlParameterProperty", MockPropertyGroup
+                        ),
+                    }
+                )
+            item_cls = type_map.get(key, MockPropertyGroup)
             coll: MockCollection[MockPropertyGroup] = MockCollection(prop_type=item_cls)
             self._values[key] = coll
             return coll

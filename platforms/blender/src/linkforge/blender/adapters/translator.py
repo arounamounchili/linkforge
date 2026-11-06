@@ -755,6 +755,10 @@ class SemanticTranslator:
                 subgroups = [
                     s.strip() for s in str(grp.subgroups_csv or "").split(",") if s.strip()
                 ]
+                for sg in getattr(grp, "subgroups", []):
+                    sg_n = str(getattr(sg, "name", "")).strip()
+                    if sg_n and sg_n not in subgroups:
+                        subgroups.append(sg_n)
                 chains: list[Chain] = []
                 joints: list[str] = []
 

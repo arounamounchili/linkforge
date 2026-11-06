@@ -157,6 +157,8 @@ def compute_allowed_collision_matrix(
     if Matrix is None or not scene:
         return []
 
+    sample_count = int(sample_count)
+
     # 1. Gather all robot links
     link_objs: dict[str, Any] = {}
     for obj in getattr(scene, "objects", []):

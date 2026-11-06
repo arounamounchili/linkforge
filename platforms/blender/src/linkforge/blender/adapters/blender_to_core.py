@@ -26,6 +26,7 @@ from ..core import (
 )
 from ..core.constants import DEFAULT_MATERIAL_RGBA
 from ..handlers.name_sync_handler import sync_scene_identities
+from ..utils.pose_preview import is_pose_preview_active, restore_robot_rest_pose
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -182,11 +183,8 @@ class SceneToRobotTranslator:
         self.semantic_translator = translator.SemanticTranslator()
         # Ensure robot is restored to rest pose before extracting coordinate frames
         scene = getattr(self.context, "scene", None)
-        if scene:
-            from ..utils.pose_preview import is_pose_preview_active, restore_robot_rest_pose
-
-            if is_pose_preview_active(scene):
-                restore_robot_rest_pose(scene)
+        if scene and is_pose_preview_active(scene):
+            restore_robot_rest_pose(scene)
 
         # Categorize scene objects
         link_objects, joint_objects, sensor_objects, joints_map, root = _categorize_scene_objects(
