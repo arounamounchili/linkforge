@@ -10,6 +10,7 @@ from bpy.types import Context, Panel
 from ..constants import AXIS_CUSTOM
 from ..core.constants import (
     JOINT_CONTINUOUS,
+    JOINT_FIXED,
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
 )
@@ -181,6 +182,11 @@ class LINKFORGE_PT_joints(Panel):
             sub = row.row()
             sub.active = props.use_calibration_falling
             sub.prop(props, "calibration_falling", text="Falling")
+
+        # Passive joint for MoveIt 2 planning
+        if props.joint_type != JOINT_FIXED:
+            box.separator()
+            box.prop(props, "is_passive", text="Passive Joint (MoveIt 2)", icon="DRIVER")
 
         # Remove Joint button (Danger Zone)
         box.separator()

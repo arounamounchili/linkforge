@@ -12,6 +12,7 @@ import typing
 
 import bpy
 from bpy.props import (
+    BoolProperty,
     CollectionProperty,
     EnumProperty,
     FloatProperty,
@@ -28,6 +29,7 @@ from ..core.constants import (
     PI,
     PLANNING_GROUP_CHAIN,
     PLANNING_GROUP_JOINTS,
+    PLANNING_GROUP_SUBGROUPS,
     SRDF_REASON_ADJACENT,
     SRDF_REASON_ALWAYS,
     SRDF_REASON_DEFAULT,
@@ -115,14 +117,15 @@ def get_planning_joint_name(obj: bpy.types.Object | None, fallback: str = "") ->
     return fallback
 
 
-def has_planning_data(props: typing.Any) -> bool:
+def has_planning_data(props: typing.Any, scene: bpy.types.Scene | None = None) -> bool:
     """Check whether any SRDF semantic planning data is configured on the scene.
 
     Args:
         props: The RobotPropertyGroup instance on the scene.
+        scene: Optional Blender scene to check for passive joints.
 
     Returns:
-        True if virtual joint, planning groups, end effectors, poses, or collision pairs exist.
+        True if virtual joint, planning groups, end effectors, poses, collision pairs, or passive joints exist.
     """
     if not props:
         return False
@@ -132,8 +135,24 @@ def has_planning_data(props: typing.Any) -> bool:
         isinstance(vj_name, str) and bool(vj_name.strip())
     )
     has_vj = bool(getattr(props, "use_virtual_joint", False) is True and has_vj_target)
+
+    # Check for passive joints in scene
+    has_passive = False
+    target_scene = scene
+    if target_scene is None:
+        target_scene = getattr(props, "id_data", None)
+    if not isinstance(target_scene, bpy.types.Scene):
+        target_scene = getattr(bpy.context, "scene", None)
+    if target_scene is not None:
+        for obj in getattr(target_scene, "objects", ()):
+            jp = get_joint_props(obj)
+            if jp and getattr(jp, "is_robot_joint", False) and getattr(jp, "is_passive", False):
+                has_passive = True
+                break
+
     return bool(
         has_vj
+        or has_passive
         or len(getattr(props, "planning_groups", ())) > 0
         or len(getattr(props, "end_effectors", ())) > 0
         or len(getattr(props, "group_states", ())) > 0
@@ -198,7 +217,11 @@ def inspect_chain_path(
             break
         parent_name, j_obj, jp = entry
         j_name = get_planning_joint_name(j_obj) or "unnamed_joint"
-        if jp.joint_type.lower() != JOINT_FIXED and not jp.use_mimic:
+        if (
+            jp.joint_type.lower() != JOINT_FIXED
+            and not jp.use_mimic
+            and not getattr(jp, "is_passive", False)
+        ):
             active_joints.append((j_name, j_obj))
         else:
             non_active_joints.append(j_name)
@@ -215,20 +238,46 @@ def inspect_chain_path(
 def resolve_planning_group_joints(
     scene: bpy.types.Scene | None,
     group: PlanningGroupProperty,
+    visited_groups: set[str] | None = None,
 ) -> list[tuple[str, bpy.types.Object | None]]:
-    """Resolve active (non-fixed, non-mimic) joints belonging to a planning group.
+    """Resolve active (non-fixed, non-mimic, non-passive) joints belonging to a planning group.
 
     For ``CHAIN`` groups, walks the scene's kinematic tree from ``tip_link`` up to
     ``base_link`` and returns the actuated joints in ``base_link -> tip_link`` order.
     For ``JOINTS`` groups, returns the explicitly assigned joints in order.
+    For ``SUBGROUPS`` groups, returns the merged unique active joints belonging to all subgroups.
 
     Args:
         scene: The active Blender scene containing the robot hierarchy.
         group: The PlanningGroupProperty being inspected.
+        visited_groups: Set of group names already visited to prevent cycles.
 
     Returns:
         List of (joint_name, joint_obj) tuples for all actuated joints in the group.
     """
+    if visited_groups is None:
+        visited_groups = set()
+    if group.name in visited_groups:
+        return []
+    visited_groups.add(group.name)
+
+    if group.group_type == PLANNING_GROUP_SUBGROUPS:
+        resolved_sub: list[tuple[str, bpy.types.Object | None]] = []
+        seen_sub: set[str] = set()
+        if scene is not None and (props := get_robot_props(scene)):
+            sub_names = [s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()]
+            for sub_name in sub_names:
+                for other_grp in props.planning_groups:
+                    if other_grp.name == sub_name:
+                        for j_name, j_obj in resolve_planning_group_joints(
+                            scene, other_grp, visited_groups=visited_groups
+                        ):
+                            if j_name not in seen_sub:
+                                seen_sub.add(j_name)
+                                resolved_sub.append((j_name, j_obj))
+                        break
+        return resolved_sub
+
     if group.group_type == PLANNING_GROUP_JOINTS:
         resolved: list[tuple[str, bpy.types.Object | None]] = []
         seen: set[str] = set()
@@ -250,7 +299,11 @@ def resolve_planning_group_joints(
             if (
                 j_obj is not None
                 and (jp := get_joint_props(j_obj))
-                and (jp.joint_type.lower() == JOINT_FIXED or jp.use_mimic)
+                and (
+                    jp.joint_type.lower() == JOINT_FIXED
+                    or jp.use_mimic
+                    or getattr(jp, "is_passive", False)
+                )
             ):
                 continue
             seen.add(j_name)
@@ -287,6 +340,46 @@ def update_group_state_joint_value(
                 self.value = lower
             elif self.value > upper:
                 self.value = upper
+
+    # If the active pose is currently previewed live in the 3D viewport, update the joint empty
+    scene = getattr(bpy.context, "scene", None)
+    if scene and j_obj:
+        from ..utils.pose_preview import apply_joint_value, is_pose_preview_active
+
+        if is_pose_preview_active(scene):
+            props = get_robot_props(scene)
+            if props:
+                idx = getattr(props, "planning_active_state_index", -1)
+                if 0 <= idx < len(props.group_states):
+                    active_state = props.group_states[idx]
+                    if getattr(active_state, "is_previewing", False):
+                        apply_joint_value(j_obj, float(self.value))
+
+
+def update_group_state_preview(
+    self: GroupStateProperty,
+    context: Context | None,
+) -> None:
+    """Handle toggling of pose preview for a GroupStateProperty."""
+    scene = getattr(context, "scene", None) if context else getattr(bpy.context, "scene", None)
+    if not scene:
+        return
+    props = get_robot_props(scene)
+    if not props:
+        return
+
+    from ..utils.pose_preview import apply_group_state_pose, restore_robot_rest_pose
+
+    if getattr(self, "is_previewing", False):
+        for other in props.group_states:
+            if other != self and getattr(other, "is_previewing", False):
+                other.is_previewing = False
+        props.preview_active_state_name = str(self.name or "")
+        apply_group_state_pose(scene, self)
+    else:
+        if props.preview_active_state_name == str(self.name or ""):
+            props.preview_active_state_name = ""
+            restore_robot_rest_pose(scene)
 
 
 def sync_group_state_joints(
@@ -575,6 +668,11 @@ class PlanningGroupProperty(PropertyGroup):
                 "Joint Collection",
                 "Explicit collection of joints (recommended for multi-finger grippers and hands)",
             ),
+            (
+                PLANNING_GROUP_SUBGROUPS,
+                "Subgroups",
+                "Composite group consisting of other planning groups (e.g., dual-arm systems)",
+            ),
         ],
         default=PLANNING_GROUP_CHAIN,
         update=update_planning_group_topology,
@@ -716,6 +814,13 @@ class GroupStateProperty(PropertyGroup):
     )
 
     joint_values: CollectionProperty(type=GroupStateJointValueProperty)  # type: ignore
+
+    is_previewing: BoolProperty(  # type: ignore
+        name="Preview Pose",
+        description="Preview this pose live in the 3D viewport (non-destructive)",
+        default=False,
+        update=update_group_state_preview,
+    )
 
 
 class CollisionPairProperty(PropertyGroup):

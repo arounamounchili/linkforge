@@ -409,6 +409,13 @@ class JointPropertyGroup(PropertyGroup):
         default=False,
     )
 
+    # Passive joint (MoveIt 2 planning / unactuated joint)
+    is_passive: BoolProperty(  # type: ignore
+        name="Passive Joint",
+        description="Designate this joint as unactuated / passive for MoveIt 2 SRDF planning",
+        default=False,
+    )
+
 
 # Registration
 def register() -> None:

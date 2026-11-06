@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import bpy
+from linkforge.blender import core
 from linkforge.blender.adapters import blender_to_core, core_to_blender, translator
 from linkforge.blender.adapters.context import BlenderContext
 from linkforge.blender.core.models.robot import Robot
@@ -66,6 +67,7 @@ from linkforge.blender.properties.planning_props import (
     get_planning_joint_name,
     get_planning_link_name,
     has_planning_data,
+    inspect_chain_path,
     poll_planning_joint,
     poll_planning_link,
     resolve_planning_group_joints,
@@ -78,6 +80,10 @@ from linkforge.blender.properties.planning_props import (
     update_planning_group_topology,
     update_use_virtual_joint,
     update_virtual_joint_child_link,
+)
+from linkforge.blender.utils.property_helpers import (
+    get_joint_props,
+    get_robot_props,
 )
 
 from tests.blender_test_utils import (
@@ -1382,3 +1388,408 @@ class TestSemanticTranslationExportAndImport:
         assert props.group_states[0].joint_values[0].joint_obj == j1
         assert props.disabled_collisions[0].link1 == base
         assert props.disabled_collisions[0].reason == "User"
+
+
+class TestPosePreviewEngine:
+    """Unit tests for the non-destructive visual pose preview engine."""
+
+    def test_pose_preview_toggle_articulation_and_rest(self, scene: bpy.types.Scene) -> None:
+        """Verify that enabling pose preview articulates scene joints and rest restores them."""
+        from linkforge.blender.utils.pose_preview import (
+            is_pose_preview_active,
+        )
+
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene)
+        arm = create_robot_link("arm_link", scene)
+        j1 = create_robot_joint("joint1", base, arm, scene, joint_type="revolute")
+        jp1 = get_joint_props(j1)
+        assert jp1 is not None
+        jp1.limit_lower = -3.14
+        jp1.limit_upper = 3.14
+
+        # Add planning group and group state
+        grp = props.planning_groups.add()
+        grp.name = "arm"
+        grp.group_type = "CHAIN"
+        grp.base_link = base
+        grp.tip_link = arm
+
+        state = props.group_states.add()
+        state.name = "ready"
+        state.group = "arm"
+        props.planning_active_state_index = 0
+
+        jv = state.joint_values.add()
+        jv.name = "joint1"
+        jv.joint_obj = j1
+        jv.value = 1.57
+
+        rest_matrix_data = [list(r) for r in j1.matrix_local.data]
+
+        # Toggle preview ON via operator
+        op_res = bpy.ops.linkforge.toggle_group_state_preview()
+        assert op_res == {"FINISHED"}
+        assert state.is_previewing is True
+        assert is_pose_preview_active(scene) is True
+        assert props.preview_active_state_name == "ready"
+
+        # Verify joint1 local matrix was articulated
+        curr_matrix_data = [list(r) for r in j1.matrix_local.data]
+        assert curr_matrix_data != rest_matrix_data
+
+        # Update joint slider value live
+        jv.value = -1.0
+        new_matrix_data = [list(r) for r in j1.matrix_local.data]
+        assert new_matrix_data != curr_matrix_data
+
+        # Restore rest pose via operator
+        op_rest = bpy.ops.linkforge.restore_rest_pose()
+        assert op_rest == {"FINISHED"}
+        assert state.is_previewing is False
+        assert is_pose_preview_active(scene) is False
+        assert props.preview_active_state_name == ""
+
+        # Verify joint returned to exact rest matrix
+        restored_data = [list(r) for r in j1.matrix_local.data]
+        for r_orig, r_rest in zip(rest_matrix_data, restored_data, strict=True):
+            for v_orig, v_rest in zip(r_orig, r_rest, strict=True):
+                assert abs(v_orig - v_rest) < 1e-4
+
+    def test_pose_preview_capture_scene_pose(self, scene: bpy.types.Scene) -> None:
+        """Verify reading joint values directly from 3D viewport transforms into Group State."""
+        from linkforge.blender.utils.pose_preview import get_rest_matrix
+        from mathutils import Matrix
+
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene)
+        arm = create_robot_link("arm_link", scene)
+        j1 = create_robot_joint("joint1", base, arm, scene, joint_type="revolute")
+        jp1 = get_joint_props(j1)
+        assert jp1 is not None
+        jp1.limit_lower = -3.14
+        jp1.limit_upper = 3.14
+
+        state = props.group_states.add()
+        state.name = "pose_capture"
+        state.group = "arm"
+        props.planning_active_state_index = 0
+
+        jv = state.joint_values.add()
+        jv.name = "joint1"
+        jv.joint_obj = j1
+        jv.value = 0.0
+
+        # Rotate j1 in scene by ~1.0 rad around Z
+        rest_m = get_rest_matrix(j1)
+        j1.matrix_local = rest_m @ Matrix.Rotation(1.0, 4, "Z")
+
+        # Capture pose
+        op_res = bpy.ops.linkforge.capture_group_state_pose()
+        assert op_res == {"FINISHED"}
+        assert abs(jv.value - 1.0) < 1e-2
+
+    def test_pose_preview_export_safety_guard(self, scene: bpy.types.Scene) -> None:
+        """Verify that scene_to_robot automatically restores rest pose before export."""
+        from linkforge.blender.adapters import blender_to_core
+        from linkforge.blender.adapters.context import BlenderContext
+        from linkforge.blender.utils.pose_preview import is_pose_preview_active
+
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene)
+        arm = create_robot_link("arm_link", scene)
+        j1 = create_robot_joint("joint1", base, arm, scene, joint_type="revolute")
+        jp1 = get_joint_props(j1)
+        assert jp1 is not None
+        jp1.limit_lower = -3.14
+        jp1.limit_upper = 3.14
+
+        grp = props.planning_groups.add()
+        grp.name = "arm"
+        grp.group_type = "CHAIN"
+        grp.base_link = base
+        grp.tip_link = arm
+
+        state = props.group_states.add()
+        state.name = "preview_test"
+        state.group = "arm"
+        props.planning_active_state_index = 0
+
+        jv = state.joint_values.add()
+        jv.name = "joint1"
+        jv.joint_obj = j1
+        jv.value = 1.2
+
+        # Activate preview
+        bpy.ops.linkforge.toggle_group_state_preview()
+        assert state.is_previewing is True
+        assert is_pose_preview_active(scene) is True
+
+        # Run scene_to_robot (as export operator does)
+        lf_ctx = BlenderContext(bpy)
+        robot, _res = blender_to_core.scene_to_robot(lf_ctx, dry_run=True)
+
+        # Safety guard should have restored rest pose automatically!
+        assert is_pose_preview_active(scene) is False
+        assert state.is_previewing is False
+
+
+class TestCollisionMatrixSampling:
+    """Unit tests for the Allowed Collision Matrix (ACM) generator."""
+
+    def test_compute_collision_matrix_adjacent_and_never(self, scene: bpy.types.Scene) -> None:
+        """Verify ACM categorizes adjacent links, fixed chains, and disjoint workspaces as Never."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene)
+        base.location = (0, 0, 0)
+        bracket = create_robot_link("bracket", scene)
+        bracket.location = (0, 0, 0.1)
+        link1 = create_robot_link("link1", scene)
+        link1.location = (0, 0, 0.3)
+        link2 = create_robot_link("link2", scene)
+        link2.location = (0, 0, 2.0)  # Far away, can never touch base
+
+        # Fixed joint between base and bracket
+        create_robot_joint("j_fix", base, bracket, scene, joint_type="fixed")
+        # Revolute joint bracket -> link1
+        j1 = create_robot_joint("j1", bracket, link1, scene, joint_type="revolute")
+        jp1 = get_joint_props(j1)
+        assert jp1 is not None
+        jp1.limit_lower = -0.5
+        jp1.limit_upper = 0.5
+        # Revolute joint link1 -> link2
+        j2 = create_robot_joint("j2", link1, link2, scene, joint_type="revolute")
+        jp2 = get_joint_props(j2)
+        assert jp2 is not None
+        jp2.limit_lower = -0.5
+        jp2.limit_upper = 0.5
+
+        from linkforge.blender.logic.collision_matrix import compute_allowed_collision_matrix
+
+        results = compute_allowed_collision_matrix(scene, sample_count=100)
+        assert len(results) > 0
+
+        pair_dict = {frozenset([l1, l2]): reason for l1, l2, reason in results}
+
+        # Direct joints: Adjacent
+        assert pair_dict.get(frozenset(["base_link", "bracket"])) == "Adjacent"
+        assert pair_dict.get(frozenset(["bracket", "link1"])) == "Adjacent"
+        assert pair_dict.get(frozenset(["link1", "link2"])) == "Adjacent"
+        # Disjoint workspace: Never
+        assert pair_dict.get(frozenset(["base_link", "link2"])) == "Never"
+
+        # Test operator execution
+        op_res = bpy.ops.linkforge.compute_collision_matrix(sample_count=100, clear_existing=True)
+        assert op_res == {"FINISHED"}
+        assert len(props.disabled_collisions) >= 4
+        assert props.use_srdf is True
+
+
+class TestSubgroupsAndPassiveJoints:
+    """Unit tests for Phase 3: Subgroups in planning groups and Passive Joints."""
+
+    def test_subgroups_management_and_joint_resolution(self, scene: bpy.types.Scene) -> None:
+        """Verify subgroups addition/removal and recursive joint resolution."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        # Setup 2 links for arm (base -> j1 -> link1)
+        base = create_robot_link("base_link", scene)
+        link1 = create_robot_link("link1", scene)
+        j1 = create_robot_joint("j1", base, link1, scene, joint_type="revolute")
+        jp1 = get_joint_props(j1)
+        assert jp1 is not None
+        jp1.joint_name = "j1"
+
+        # Setup 2 links for gripper (link1 -> j_grip -> finger)
+        finger = create_robot_link("finger", scene)
+        j_grip = create_robot_joint("j_grip", link1, finger, scene, joint_type="prismatic")
+        jp_grip = get_joint_props(j_grip)
+        assert jp_grip is not None
+        jp_grip.joint_name = "j_grip"
+
+        # Create arm group (chain)
+        g_arm = props.planning_groups.add()
+        g_arm.name = "arm"
+        g_arm.group_type = "CHAIN"
+        g_arm.base_link = base
+        g_arm.tip_link = link1
+
+        # Create gripper group (joints)
+        g_grip = props.planning_groups.add()
+        g_grip.name = "gripper"
+        g_grip.group_type = "JOINTS"
+        j_item = g_grip.joints.add()
+        j_item.name = "j_grip"
+        j_item.joint_obj = j_grip
+
+        # Create composite robot group (subgroups)
+        g_robot = props.planning_groups.add()
+        g_robot.name = "entire_robot"
+        g_robot.group_type = "SUBGROUPS"
+
+        props.planning_active_group_index = 2  # active on entire_robot
+
+        # Test operator: Add subgroup
+        res = bpy.ops.linkforge.add_planning_subgroup(subgroup_name="arm")
+        assert res == {"FINISHED"}
+        res = bpy.ops.linkforge.add_planning_subgroup(subgroup_name="gripper")
+        assert res == {"FINISHED"}
+
+        assert g_robot.subgroups_csv == "arm,gripper"
+
+        # Cannot add self
+        res_self = bpy.ops.linkforge.add_planning_subgroup(subgroup_name="entire_robot")
+        assert res_self == {"CANCELLED"}
+
+        # Resolve joints of composite group
+        resolved = resolve_planning_group_joints(scene, g_robot)
+        resolved_names = [name for name, _ in resolved]
+        assert "j1" in resolved_names
+        assert "j_grip" in resolved_names
+        assert len(resolved_names) == 2
+
+        # Cycle prevention test: make arm include entire_robot as subgroup
+        g_arm.subgroups_csv = "entire_robot"
+        cycle_resolved = resolve_planning_group_joints(scene, g_robot)
+        assert len(cycle_resolved) == 2  # Terminated without infinite loop
+
+        # Test operator: Remove subgroup
+        res_rem = bpy.ops.linkforge.remove_planning_subgroup(index=1)
+        assert res_rem == {"FINISHED"}
+        assert g_robot.subgroups_csv == "arm"
+
+    def test_subgroups_translation_and_srdf_export(self, scene: bpy.types.Scene) -> None:
+        """Verify subgroups translate to Core PlanningGroup and produce valid SRDF XML."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        g1 = props.planning_groups.add()
+        g1.name = "left_arm"
+        g1.links_csv = "l_link1,l_link2"
+
+        g2 = props.planning_groups.add()
+        g2.name = "right_arm"
+        g2.links_csv = "r_link1,r_link2"
+
+        g_dual = props.planning_groups.add()
+        g_dual.name = "dual_arm"
+        g_dual.group_type = "SUBGROUPS"
+        g_dual.subgroups_csv = "left_arm,right_arm"
+
+        builder = core.RobotBuilder("dual_robot")
+        translator_inst = translator.SemanticTranslator()
+        translator_inst.translate(props, builder)
+
+        semantic = builder.robot.semantic
+        assert semantic is not None
+        dual_grp = next(g for g in semantic.groups if g.name == "dual_arm")
+        assert dual_grp.subgroups == ("left_arm", "right_arm")
+
+        # Check SRDF Generator output
+        generator = core.SRDFGenerator()
+        xml_str = generator.generate(builder.robot, validate=False)
+        assert '<group name="dual_arm">' in xml_str
+        assert '<group name="left_arm"' in xml_str
+        assert '<group name="right_arm"' in xml_str
+
+    def test_passive_joint_workflow_and_srdf_export(self, scene: bpy.types.Scene) -> None:
+        """Verify passive joint flag is recognized, excluded from actuation, and exported."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene)
+        link1 = create_robot_link("link1", scene)
+        j1 = create_robot_joint("j_passive", base, link1, scene, joint_type="revolute")
+        jp1 = get_joint_props(j1)
+        assert jp1 is not None
+        jp1.joint_name = "j_passive"
+        jp1.is_passive = True
+
+        # Scene with only passive joint has planning data
+        assert has_planning_data(props, scene=scene) is True
+
+        # Chain inspection should mark passive joint as non-active
+        g = props.planning_groups.add()
+        g.name = "test_chain"
+        g.group_type = "CHAIN"
+        g.base_link = base
+        g.tip_link = link1
+
+        active, non_active, found = inspect_chain_path(scene, g)
+        assert found is True
+        assert len(active) == 0
+        assert "j_passive" in non_active
+
+        # Resolve group joints should return empty for passive-only chain
+        resolved = resolve_planning_group_joints(scene, g)
+        assert len(resolved) == 0
+
+        # Translation to Core Robot and Semantic model
+        lf_ctx = BlenderContext(bpy)
+        robot, _res = blender_to_core.scene_to_robot(lf_ctx, dry_run=True, raise_on_error=False)
+
+        semantic = robot.semantic
+        assert semantic is not None
+        assert len(semantic.passive_joints) == 1
+        assert semantic.passive_joints[0].name == "j_passive"
+
+        # SRDF Generator check
+        generator = core.SRDFGenerator()
+        xml_str = generator.generate(robot, validate=False)
+        assert '<passive_joint name="j_passive"' in xml_str
+
+    def test_subgroups_and_passive_roundtrip_import(
+        self, scene: bpy.types.Scene, tmp_path: Path
+    ) -> None:
+        """Verify SRDF import restores subgroup groups and passive joint flags."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        # Build scene robot with links and joint
+        base = create_robot_link("base_link", scene)
+        link1 = create_robot_link("link1", scene)
+        j1 = create_robot_joint("j_caster", base, link1, scene, joint_type="continuous")
+        jp1 = get_joint_props(j1)
+        assert jp1 is not None
+        jp1.joint_name = "j_caster"
+        jp1.is_passive = False
+
+        srdf_content = """<?xml version="1.0" encoding="UTF-8"?>
+<robot name="mobile_base">
+  <group name="left_wheel">
+    <link name="base_link"/>
+  </group>
+  <group name="right_wheel">
+    <link name="link1"/>
+  </group>
+  <group name="base_drive">
+    <group name="left_wheel"/>
+    <group name="right_wheel"/>
+  </group>
+  <passive_joint name="j_caster"/>
+</robot>
+"""
+        srdf_file = tmp_path / "test_subgroups.srdf"
+        srdf_file.write_text(srdf_content, encoding="utf-8")
+
+        res = bpy.ops.linkforge.import_srdf(filepath=str(srdf_file))
+        assert res == {"FINISHED"}
+
+        # Check groups
+        group_map = {g.name: g for g in props.planning_groups}
+        assert "base_drive" in group_map
+        base_drive = group_map["base_drive"]
+        assert base_drive.group_type == "SUBGROUPS"
+        assert base_drive.subgroups_csv == "left_wheel,right_wheel"
+
+        # Check passive joint restored on joint empty
+        assert jp1.is_passive is True

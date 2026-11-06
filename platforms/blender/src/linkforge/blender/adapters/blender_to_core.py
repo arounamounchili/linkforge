@@ -180,6 +180,14 @@ class SceneToRobotTranslator:
         self.sensor_translator = translator.SensorTranslator()
         self.ros2_translator = translator.Ros2ControlTranslator()
         self.semantic_translator = translator.SemanticTranslator()
+        # Ensure robot is restored to rest pose before extracting coordinate frames
+        scene = getattr(self.context, "scene", None)
+        if scene:
+            from ..utils.pose_preview import is_pose_preview_active, restore_robot_rest_pose
+
+            if is_pose_preview_active(scene):
+                restore_robot_rest_pose(scene)
+
         # Categorize scene objects
         link_objects, joint_objects, sensor_objects, joints_map, root = _categorize_scene_objects(
             self.context.scene

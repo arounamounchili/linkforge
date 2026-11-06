@@ -64,6 +64,8 @@ from ..core.constants import (
     HW_IF_POSITION,
     HW_IF_VELOCITY,
     PLANNING_GROUP_CHAIN,
+    PLANNING_GROUP_JOINTS,
+    PLANNING_GROUP_SUBGROUPS,
     ROS2_CONTROL_DEFAULT_NAME,
     SRDF_REASON_ADJACENT,
     SRDF_VJOIN_FIXED,
@@ -664,6 +666,10 @@ class Ros2ControlTranslator:
                     item_name if isinstance(item_name, str) and item_name else UNNAMED_JOINT
                 )
 
+            # Passive joints cannot have command interfaces
+            if joint_props and getattr(joint_props, "is_passive", False):
+                cmd_ifs = []
+
             if cmd_ifs or state_ifs:
                 joints.append(
                     Ros2ControlJoint(
@@ -782,7 +788,7 @@ class SemanticTranslator:
                                 chains.append(
                                     Chain(base_link=b_str.strip(), tip_link=t_str.strip())
                                 )
-                else:
+                elif grp_type == PLANNING_GROUP_JOINTS:
                     for j_item in grp.joints:
                         j_name = get_planning_joint_name(
                             j_item.joint_obj,
@@ -790,6 +796,9 @@ class SemanticTranslator:
                         )
                         if j_name and j_name not in joints:
                             joints.append(j_name)
+                elif grp_type == PLANNING_GROUP_SUBGROUPS:
+                    # Subgroups are populated from subgroups_csv
+                    pass
 
                 if not any([links, joints, chains, subgroups]):
                     if validation_result and not (
@@ -885,6 +894,24 @@ class SemanticTranslator:
                         message="Disabled collision pair requires both Link 1 and Link 2.",
                         code=ValidationErrorCode.INVALID_VALUE,
                     )
+
+            # 6. Passive Joints
+            seen_passive: set[str] = set()
+            scene = obj if isinstance(obj, bpy.types.Scene) else getattr(obj, "id_data", None)
+            if not isinstance(scene, bpy.types.Scene):
+                scene = getattr(bpy.context, "scene", None)
+            if scene is not None:
+                for o in getattr(scene, "objects", ()):
+                    jp = get_joint_props(o)
+                    if (
+                        jp
+                        and getattr(jp, "is_robot_joint", False)
+                        and getattr(jp, "is_passive", False)
+                    ):
+                        j_name = get_planning_joint_name(o)
+                        if j_name and j_name not in seen_passive:
+                            seen_passive.add(j_name)
+                            semantic.passive_joint(name=j_name)
 
         except Exception as e:
             if validation_result:

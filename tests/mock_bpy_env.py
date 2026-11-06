@@ -258,13 +258,47 @@ class MockMatrix:
 
     @staticmethod
     def Rotation(angle, size, axis):  # noqa: N802
+        import math
+
         m = MockMatrix.Identity(size)
+        c = math.cos(angle)
+        s = math.sin(angle)
         if axis == "X":
+            m.data[1][1] = c
+            m.data[1][2] = -s
+            m.data[2][1] = s
+            m.data[2][2] = c
             m._euler_hint = MockEuler(angle, 0, 0)
         elif axis == "Y":
+            m.data[0][0] = c
+            m.data[0][2] = s
+            m.data[2][0] = -s
+            m.data[2][2] = c
             m._euler_hint = MockEuler(0, angle, 0)
         elif axis == "Z":
+            m.data[0][0] = c
+            m.data[0][1] = -s
+            m.data[1][0] = s
+            m.data[1][1] = c
             m._euler_hint = MockEuler(0, 0, angle)
+        elif isinstance(axis, (list, tuple, MockVector)):
+            # Rodrigues' rotation formula for arbitrary axis
+            ax = getattr(axis, "x", axis[0] if len(axis) > 0 else 0.0)
+            ay = getattr(axis, "y", axis[1] if len(axis) > 1 else 0.0)
+            az = getattr(axis, "z", axis[2] if len(axis) > 2 else 0.0)
+            norm = math.sqrt(ax * ax + ay * ay + az * az)
+            if norm > 1e-9:
+                ax, ay, az = ax / norm, ay / norm, az / norm
+                one_c = 1.0 - c
+                m.data[0][0] = c + ax * ax * one_c
+                m.data[0][1] = ax * ay * one_c - az * s
+                m.data[0][2] = ax * az * one_c + ay * s
+                m.data[1][0] = ay * ax * one_c + az * s
+                m.data[1][1] = c + ay * ay * one_c
+                m.data[1][2] = ay * az * one_c - ax * s
+                m.data[2][0] = az * ax * one_c - ay * s
+                m.data[2][1] = az * ay * one_c + ax * s
+                m.data[2][2] = c + az * az * one_c
         return m
 
     @staticmethod
@@ -544,6 +578,7 @@ DEFAULT_PROPERTY_VALUES = {
     "collision_quality": 100.0,
     "collision_geometry_type": "MESH",
     "joint_type": "revolute",
+    "is_passive": False,
     "axis": "Z",
     "use_limit": False,
     "limit_lower": 0.0,
@@ -606,6 +641,8 @@ DEFAULT_PROPERTY_VALUES = {
     "link2_name": "",
     "reason": "Adjacent",
     "value": 0.0,
+    "is_previewing": False,
+    "preview_active_state_name": "",
     "show_virtual_joint": True,
     "show_planning_groups": True,
     "show_end_effectors": True,
@@ -1223,6 +1260,7 @@ class MockObject(MockPropertyGroup):
         self.original = self
         self.hide_viewport = False
         self.hide_render = False
+        self._custom_properties = {}
 
         has_linkforge = any("linkforge" in c.__dict__ for c in type(self).__mro__)
         if not has_linkforge:
@@ -1468,6 +1506,30 @@ class MockObject(MockPropertyGroup):
 
     def select_set(self, state):
         self._selected = state
+
+    def __getitem__(self, key):
+        if not hasattr(self, "_custom_properties"):
+            self._custom_properties = {}
+        return self._custom_properties[key]
+
+    def __setitem__(self, key, value):
+        if not hasattr(self, "_custom_properties"):
+            self._custom_properties = {}
+        self._custom_properties[key] = value
+
+    def __delitem__(self, key):
+        if hasattr(self, "_custom_properties") and key in self._custom_properties:
+            del self._custom_properties[key]
+
+    def __contains__(self, key):
+        if not hasattr(self, "_custom_properties"):
+            return False
+        return key in self._custom_properties
+
+    def get(self, key, default=None):
+        if not hasattr(self, "_custom_properties"):
+            return default
+        return self._custom_properties.get(key, default)
 
     def transform(self, matrix):
         pass
@@ -2239,9 +2301,15 @@ def setup_mock_bpy():
     mock_io_utils.ImportHelper = MockIOHelper
     mock_extras.io_utils = mock_io_utils
 
-    mock_gpu_extras = DynamicModule("gpu_extras")
-    mock_batch = DynamicModule("gpu_extras.batch")
-    mock_gpu_extras.batch = mock_batch
+    if "gpu_extras" in sys.modules and isinstance(sys.modules["gpu_extras"], DynamicModule):
+        mock_gpu_extras = sys.modules["gpu_extras"]
+        mock_batch = sys.modules["gpu_extras.batch"]
+    else:
+        mock_gpu_extras = DynamicModule("gpu_extras")
+        mock_batch = DynamicModule("gpu_extras.batch")
+        mock_gpu_extras.batch = mock_batch
+        sys.modules["gpu_extras"] = typing.cast(types.ModuleType, mock_gpu_extras)
+        sys.modules["gpu_extras.batch"] = typing.cast(types.ModuleType, mock_batch)
 
     sys.modules["bpy"] = typing.cast(types.ModuleType, mock_bpy)
     sys.modules["bpy.data"] = typing.cast(types.ModuleType, mock_data)
@@ -2256,14 +2324,16 @@ def setup_mock_bpy():
     sys.modules["bmesh"] = typing.cast(types.ModuleType, mock_bmesh)
     sys.modules["bpy_extras"] = typing.cast(types.ModuleType, mock_extras)
     sys.modules["bpy_extras.io_utils"] = typing.cast(types.ModuleType, mock_io_utils)
-    sys.modules["gpu_extras"] = typing.cast(types.ModuleType, mock_gpu_extras)
-    sys.modules["gpu_extras.batch"] = typing.cast(types.ModuleType, mock_batch)
-    gpu_mock = DynamicModule("gpu")
-    sys.modules["gpu"] = gpu_mock
-    sys.modules["gpu.state"] = gpu_mock.state
-    sys.modules["gpu.types"] = gpu_mock.types
-    sys.modules["gpu.shader"] = gpu_mock.shader
-    sys.modules["gpu.matrix"] = gpu_mock.matrix
+
+    if "gpu" in sys.modules and isinstance(sys.modules["gpu"], DynamicModule):
+        gpu_mock = sys.modules["gpu"]
+    else:
+        gpu_mock = DynamicModule("gpu")
+        sys.modules["gpu"] = gpu_mock
+        sys.modules["gpu.state"] = gpu_mock.state
+        sys.modules["gpu.types"] = gpu_mock.types
+        sys.modules["gpu.shader"] = gpu_mock.shader
+        sys.modules["gpu.matrix"] = gpu_mock.matrix
 
     # Finalize scene-context links
     def _new_collection(name):

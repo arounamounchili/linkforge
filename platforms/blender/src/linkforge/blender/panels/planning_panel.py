@@ -8,7 +8,13 @@ import typing
 import bpy
 
 from ..constants import DIRECTION_DOWN, DIRECTION_UP
-from ..core.constants import JOINT_PRISMATIC, JOINT_REVOLUTE, PLANNING_GROUP_CHAIN
+from ..core.constants import (
+    JOINT_PRISMATIC,
+    JOINT_REVOLUTE,
+    PLANNING_GROUP_CHAIN,
+    PLANNING_GROUP_JOINTS,
+    PLANNING_GROUP_SUBGROUPS,
+)
 from ..properties.planning_props import (
     get_planning_joint_name,
     get_planning_link_name,
@@ -58,6 +64,11 @@ class LINKFORGE_UL_planning_groups(bpy.types.UIList):
                     row.label(text=f"[Chain: {base_str} → {tip_str}]", icon="NONE")
                 else:
                     row.label(text="[Chain: Unconfigured]", icon="NONE")
+            elif item.group_type == PLANNING_GROUP_SUBGROUPS:
+                subs = [s.strip() for s in str(item.subgroups_csv or "").split(",") if s.strip()]
+                sub_count = len(subs)
+                s_str = "1 subgroup" if sub_count == 1 else f"{sub_count} subgroups"
+                row.label(text=f"[Subgroups: {s_str}]", icon="NONE")
             else:
                 n_joints = len(item.joints)
                 joint_str = "1 joint" if n_joints == 1 else f"{n_joints} joints"
@@ -143,9 +154,12 @@ class LINKFORGE_UL_group_states(bpy.types.UIList):
         """
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
-            row.label(text=item.name or "Unnamed", icon="POSE_HLT")
+            is_prev = getattr(item, "is_previewing", False)
+            icon = "HIDE_OFF" if is_prev else "POSE_HLT"
+            row.label(text=item.name or "Unnamed", icon=icon)
             grp = item.group or "Unassigned"
-            row.label(text=f"[{grp} · {len(item.joint_values)} DOF]", icon="NONE")
+            preview_badge = " [Previewing]" if is_prev else ""
+            row.label(text=f"[{grp} · {len(item.joint_values)} DOF]{preview_badge}", icon="NONE")
         elif self.layout_type == "GRID":
             layout.alignment = "CENTER"
             layout.label(text="", icon="POSE_HLT")
@@ -234,6 +248,48 @@ class LINKFORGE_MT_add_planning_group_joint(bpy.types.Menu):
             op.joint_name = name
 
 
+class LINKFORGE_MT_add_planning_subgroup(bpy.types.Menu):
+    """Menu to add another Planning Group as a subgroup to the active composite group."""
+
+    bl_label = "Add Subgroup to Group"
+
+    def draw(self, context: bpy.types.Context) -> None:
+        """Draw available planning groups not yet in the active group's subgroups.
+
+        Args:
+            context: The current Blender context.
+        """
+        layout = self.layout
+        scene = context.scene
+        if not (layout and scene):
+            return
+
+        if not (props := get_robot_props(scene)):
+            return
+
+        idx = props.planning_active_group_index
+        if not (0 <= idx < len(props.planning_groups)):
+            layout.label(text="No active planning group")
+            return
+
+        group = props.planning_groups[idx]
+        current_subs = {s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()}
+
+        available = [
+            g.name
+            for g in props.planning_groups
+            if g.name and g.name != group.name and g.name not in current_subs
+        ]
+
+        if not available:
+            layout.label(text="No other groups available")
+            return
+
+        for name in sorted(available):
+            op = layout.operator("linkforge.add_planning_subgroup", text=name)
+            op.subgroup_name = name
+
+
 class LINKFORGE_PT_planning(bpy.types.Panel):
     """Panel for configuring MoveIt 2 SRDF planning semantics."""
 
@@ -306,7 +362,7 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                             text="No kinematic path connects Base Link to Tip Link",
                             icon="ERROR",
                         )
-        else:
+        elif group_item.group_type == PLANNING_GROUP_JOINTS:
             header = inner.row()
             header.label(text=f"Joints ({len(group_item.joints)})", icon="EMPTY_AXIS")
             header.menu("LINKFORGE_MT_add_planning_group_joint", icon="ADD", text="")
@@ -321,6 +377,23 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                     j_row.label(text=j_name, icon="DOT")
                     rem_op = j_row.operator(
                         "linkforge.remove_planning_group_joint", icon="REMOVE", text=""
+                    )
+                    rem_op.index = i
+        else:  # PLANNING_GROUP_SUBGROUPS
+            header = inner.row()
+            subs = [s.strip() for s in str(group_item.subgroups_csv or "").split(",") if s.strip()]
+            header.label(text=f"Subgroups ({len(subs)})", icon="GROUP")
+            header.menu("LINKFORGE_MT_add_planning_subgroup", icon="ADD", text="")
+
+            if not subs:
+                inner.label(text="Add subgroups to this group using '+'", icon="INFO")
+            else:
+                s_col = inner.column(align=True)
+                for i, sub_name in enumerate(subs):
+                    s_row = s_col.row(align=True)
+                    s_row.label(text=sub_name, icon="DOT")
+                    rem_op = s_row.operator(
+                        "linkforge.remove_planning_subgroup", icon="REMOVE", text=""
                     )
                     rem_op.index = i
 
@@ -374,7 +447,16 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             state_item: The GroupStateProperty item currently selected.
         """
         inner = layout.box()
-        inner.label(text=f"Pose: {state_item.name}", icon="SETTINGS")
+        head_row = inner.row(align=True)
+        head_row.label(text=f"Pose: {state_item.name}", icon="SETTINGS")
+        is_prev = getattr(state_item, "is_previewing", False)
+        head_row.prop(
+            state_item,
+            "is_previewing",
+            text="Preview Active" if is_prev else "Preview",
+            icon="HIDE_OFF" if is_prev else "HIDE_ON",
+            toggle=True,
+        )
 
         col = inner.column(align=True)
         col.prop(state_item, "name")
@@ -387,6 +469,12 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             icon="ARMATURE_DATA",
         )
 
+        if is_prev:
+            banner = inner.box()
+            b_row = banner.row(align=True)
+            b_row.label(text="Previewing live in 3D Viewport", icon="CHECKMARK")
+            b_row.operator("linkforge.restore_rest_pose", text="Exit Preview", icon="X")
+
         inner.separator()
         if len(state_item.joint_values) == 0:
             inner.label(text="Select a group or click Sync to load active joints.", icon="INFO")
@@ -396,6 +484,9 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             j_head.label(text=f"Active Joints ({len(state_item.joint_values)})", icon="EMPTY_AXIS")
             j_head.operator("linkforge.sync_group_state_joints", text="Sync", icon="FILE_REFRESH")
             j_head.operator("linkforge.reset_group_state_values", text="Reset", icon="LOOP_BACK")
+            j_head.operator("linkforge.capture_group_state_pose", text="Capture", icon="CAMERA")
+            if is_prev:
+                j_head.operator("linkforge.restore_rest_pose", text="Rest", icon="ARMATURE_DATA")
 
             sliders_col = j_box.column(align=True)
             for jv in state_item.joint_values:
@@ -623,8 +714,13 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         if props.show_disabled_collisions:
             auto_row = dc_box.row(align=True)
             auto_row.operator(
+                "linkforge.compute_collision_matrix",
+                text="Generate Matrix (ACM)",
+                icon="MOD_PHYSICS",
+            )
+            auto_row.operator(
                 "linkforge.auto_disable_adjacent_collisions",
-                text="Auto-Disable Adjacent Links",
+                text="Adjacent Only",
                 icon="FILE_REFRESH",
             )
 
@@ -660,6 +756,7 @@ classes = [
     LINKFORGE_UL_group_states,
     LINKFORGE_UL_disabled_collisions,
     LINKFORGE_MT_add_planning_group_joint,
+    LINKFORGE_MT_add_planning_subgroup,
     LINKFORGE_PT_planning,
 ]
 

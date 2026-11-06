@@ -2,7 +2,6 @@ import contextlib
 import os
 from unittest.mock import MagicMock
 
-import bpy
 import pytest
 
 # Relative import from the mock environment package
@@ -14,6 +13,8 @@ from tests.mock_bpy_env import setup_mock_bpy  # noqa: E402
 
 # Check if we are running inside real Blender
 try:
+    import bpy
+
     # Real Blender has a valid binary_path. fake-bpy-module usually has it empty or missing.
     # We also check for 'version' to be sure it's a fully-formed app object.
     is_real_blender = (
@@ -23,6 +24,7 @@ try:
     )
 except (ImportError, AttributeError):
     is_real_blender = False
+    bpy = None
 
 if is_real_blender:
     # Always force registration of linkforge properties to ensure test stability
@@ -41,9 +43,11 @@ else:
 @pytest.fixture
 def blender_context():
     """Returns the Blender context adapter."""
+    import sys
+
     from linkforge.blender.adapters.context import BlenderContext
 
-    return BlenderContext(bpy)
+    return BlenderContext(sys.modules.get("bpy", bpy))
 
 
 @pytest.fixture
@@ -53,10 +57,11 @@ def scene(blender_context):
 
 
 @pytest.fixture(autouse=True)
-def clean_scene(blender_context):
+def clean_scene():
     """Automatically cleans the scene before each test."""
+    global bpy
     if not is_real_blender:
-        setup_mock_bpy()
+        bpy = setup_mock_bpy()
         import linkforge.blender
 
         linkforge.blender.register()
@@ -71,6 +76,14 @@ def clean_scene(blender_context):
             props.ros2_control_joints.clear()
         if hasattr(props, "ros2_control_parameters"):
             props.ros2_control_parameters.clear()
+        if hasattr(props, "planning_groups"):
+            props.planning_groups.clear()
+        if hasattr(props, "end_effectors"):
+            props.end_effectors.clear()
+        if hasattr(props, "group_states"):
+            props.group_states.clear()
+        if hasattr(props, "disabled_collisions"):
+            props.disabled_collisions.clear()
 
     for data_type in ["objects", "meshes", "materials", "armatures", "actions", "collections"]:
         data_block = getattr(bpy.data, data_type)

@@ -224,6 +224,7 @@ SRDF_VJOIN_FLOATING: Final[str] = "floating"
 
 PLANNING_GROUP_CHAIN: Final[str] = "CHAIN"
 PLANNING_GROUP_JOINTS: Final[str] = "JOINTS"
+PLANNING_GROUP_SUBGROUPS: Final[str] = "SUBGROUPS"
 
 DEFAULT_VIRTUAL_JOINT_NAME: Final[str] = "world_joint"
 DEFAULT_WORLD_FRAME: Final[str] = "world"

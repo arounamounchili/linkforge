@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import bpy
-from bpy.props import StringProperty
+from bpy.props import IntProperty, StringProperty
 from bpy.types import Context, Operator
 from bpy_extras.io_utils import ImportHelper
 
@@ -19,7 +19,12 @@ from ..adapters.core_to_blender import (
     populate_planning_properties_from_semantic,
 )
 from ..constants import DIRECTION_DOWN, DIRECTION_UP, EXT_SRDF
-from ..core.constants import PLANNING_GROUP_CHAIN, SRDF_REASON_ADJACENT
+from ..core.constants import (
+    PLANNING_GROUP_CHAIN,
+    PLANNING_GROUP_JOINTS,
+    PLANNING_GROUP_SUBGROUPS,
+    SRDF_REASON_ADJACENT,
+)
 from ..properties.planning_props import (
     find_robot_root_link,
     get_planning_joint_name,
@@ -392,6 +397,142 @@ class LINKFORGE_OT_remove_planning_group_joint(Operator):
             return {"FINISHED"}
 
         return {"CANCELLED"}
+
+
+class LINKFORGE_OT_add_planning_subgroup(Operator):
+    """Add another Planning Group as a subgroup to the active composite Planning Group."""
+
+    bl_idname = "linkforge.add_planning_subgroup"
+    bl_label = "Add Subgroup to Group"
+    bl_description = "Add another planning group as a subgroup"
+    bl_options = {"REGISTER", "UNDO"}
+
+    subgroup_name: StringProperty(name="Subgroup Name")  # type: ignore
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if multiple planning groups exist, False otherwise.
+        """
+        if not context.scene or not (props := get_robot_props(context.scene)):
+            return False
+        return len(props.planning_groups) > 1
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Add the requested subgroup name to the active group.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
+        scene = context.scene
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
+
+        idx = props.planning_active_group_index
+        if not (0 <= idx < len(props.planning_groups)):
+            return {"CANCELLED"}
+
+        group = props.planning_groups[idx]
+        if not self.subgroup_name:
+            return {"CANCELLED"}
+
+        if self.subgroup_name == group.name:
+            self.report({"WARNING"}, "Cannot add a planning group as a subgroup of itself")
+            return {"CANCELLED"}
+
+        current_subs = [s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()]
+        if self.subgroup_name in current_subs:
+            self.report(
+                {"WARNING"},
+                f"'{self.subgroup_name}' is already a subgroup of '{group.name}'",
+            )
+            return {"CANCELLED"}
+
+        current_subs.append(self.subgroup_name)
+        group.subgroups_csv = ",".join(current_subs)
+
+        for state in props.group_states:
+            if state.group == group.name:
+                sync_group_state_joints(state, scene)
+
+        self.report({"INFO"}, f"Added subgroup '{self.subgroup_name}' to group '{group.name}'")
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_remove_planning_subgroup(Operator):
+    """Remove a subgroup from the active composite Planning Group."""
+
+    bl_idname = "linkforge.remove_planning_subgroup"
+    bl_label = "Remove Subgroup from Group"
+    bl_description = "Remove the selected subgroup from the active planning group"
+    bl_options = {"REGISTER", "UNDO"}
+
+    index: IntProperty(default=-1)  # type: ignore
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run.
+
+        Args:
+            context: The current Blender context.
+
+        Returns:
+            True if the active group has at least one subgroup, False otherwise.
+        """
+        if not context.scene or not (props := get_robot_props(context.scene)):
+            return False
+        idx = props.planning_active_group_index
+        if not (0 <= idx < len(props.planning_groups)):
+            return False
+        subs = [
+            s.strip()
+            for s in str(props.planning_groups[idx].subgroups_csv or "").split(",")
+            if s.strip()
+        ]
+        return len(subs) > 0
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Remove the subgroup at the specified index.
+
+        Args:
+            context: The execution context.
+
+        Returns:
+            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
+        """
+        scene = context.scene
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
+
+        idx = props.planning_active_group_index
+        if not (0 <= idx < len(props.planning_groups)):
+            return {"CANCELLED"}
+
+        group = props.planning_groups[idx]
+        current_subs = [s.strip() for s in str(group.subgroups_csv or "").split(",") if s.strip()]
+
+        if not (0 <= self.index < len(current_subs)):
+            return {"CANCELLED"}
+
+        removed = current_subs.pop(self.index)
+        group.subgroups_csv = ",".join(current_subs)
+
+        for state in props.group_states:
+            if state.group == group.name:
+                sync_group_state_joints(state, scene)
+
+        self.report({"INFO"}, f"Removed subgroup '{removed}' from group '{group.name}'")
+        return {"FINISHED"}
 
 
 class LINKFORGE_OT_add_end_effector(Operator):
@@ -783,6 +924,110 @@ class LINKFORGE_OT_reset_group_state_values(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_toggle_group_state_preview(Operator):
+    """Toggle live 3D viewport preview for the active Group State pose."""
+
+    bl_idname = "linkforge.toggle_group_state_preview"
+    bl_label = "Toggle Pose Preview"
+    bl_description = "Toggle live non-destructive preview of this pose in the 3D viewport"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        if not context.scene or not (props := get_robot_props(context.scene)):
+            return False
+        idx = props.planning_active_state_index
+        return 0 <= idx < len(props.group_states)
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Toggle preview on active pose."""
+        scene = context.scene
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
+        idx = props.planning_active_state_index
+        if not (0 <= idx < len(props.group_states)):
+            return {"CANCELLED"}
+        state = props.group_states[idx]
+        state.is_previewing = not state.is_previewing
+
+        from ..utils.pose_preview import apply_group_state_pose, restore_robot_rest_pose
+
+        if state.is_previewing:
+            for other in props.group_states:
+                if other != state and getattr(other, "is_previewing", False):
+                    other.is_previewing = False
+            props.preview_active_state_name = str(state.name or "")
+            apply_group_state_pose(scene, state)
+        else:
+            if props.preview_active_state_name == str(state.name or ""):
+                props.preview_active_state_name = ""
+            restore_robot_rest_pose(scene)
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_capture_group_state_pose(Operator):
+    """Capture current joint angles and positions from the 3D viewport into this Group State."""
+
+    bl_idname = "linkforge.capture_group_state_pose"
+    bl_label = "Capture Scene Pose"
+    bl_description = (
+        "Read current joint rotations and displacements from the 3D viewport into this pose"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        if not context.scene or not (props := get_robot_props(context.scene)):
+            return False
+        idx = props.planning_active_state_index
+        return 0 <= idx < len(props.group_states) and len(props.group_states[idx].joint_values) > 0
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Capture scene pose into active group state."""
+        scene = context.scene
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
+        idx = props.planning_active_state_index
+        if not (0 <= idx < len(props.group_states)):
+            return {"CANCELLED"}
+        state = props.group_states[idx]
+        from ..utils.pose_preview import capture_scene_pose_to_state
+
+        count = capture_scene_pose_to_state(scene, state)
+        self.report({"INFO"}, f"Captured {count} joint position(s) into state '{state.name}'")
+        return {"FINISHED"}
+
+
+class LINKFORGE_OT_restore_rest_pose(Operator):
+    """Restore all joints in the robot to their rest pose."""
+
+    bl_idname = "linkforge.restore_rest_pose"
+    bl_label = "Restore Rest Pose"
+    bl_description = "Reset robot joints back to their pristine zero/rest configuration"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        return bool(context.scene and get_robot_props(context.scene))
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Restore all robot joints to rest pose."""
+        scene = context.scene
+        if not scene:
+            return {"CANCELLED"}
+        from ..utils.pose_preview import restore_robot_rest_pose
+
+        restore_robot_rest_pose(scene)
+        self.report({"INFO"}, "Restored robot to rest pose")
+        return {"FINISHED"}
+
+
 class LINKFORGE_OT_add_disabled_collision(Operator):
     """Add a new Disabled Collision link pair."""
 
@@ -1005,6 +1250,106 @@ class LINKFORGE_OT_auto_disable_adjacent_collisions(Operator):
         return {"FINISHED"}
 
 
+class LINKFORGE_OT_compute_collision_matrix(Operator):
+    """Compute MoveIt-compatible Allowed Collision Matrix (ACM) via kinematic sampling."""
+
+    bl_idname = "linkforge.compute_collision_matrix"
+    bl_label = "Generate Collision Matrix (ACM)"
+    bl_description = (
+        "Generate MoveIt Allowed Collision Matrix using Monte Carlo kinematic sampling "
+        "(detects Adjacent, Fixed Chains, Default, Never, and Always colliding pairs)"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    sample_count: bpy.props.IntProperty(  # type: ignore
+        name="Sample Count",
+        description="Number of random joint configurations to sample",
+        default=500,
+        min=50,
+        max=5000,
+    )
+
+    clear_existing: bpy.props.BoolProperty(  # type: ignore
+        name="Clear Existing",
+        description="Clear existing disabled collision pairs before populating",
+        default=False,
+    )
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        """Check if operator can run."""
+        return bool(context.scene and get_robot_props(context.scene))
+
+    @safe_execute
+    def execute(self, context: Context) -> OperatorReturn:
+        """Execute collision matrix sampling and populate disabled collision pairs."""
+        scene = context.scene
+        if not scene or not (props := get_robot_props(scene)):
+            return {"CANCELLED"}
+
+        from ..logic.collision_matrix import compute_allowed_collision_matrix
+
+        results = compute_allowed_collision_matrix(
+            scene,
+            sample_count=self.sample_count,
+            include_adjacent=True,
+            include_never=True,
+            include_default=True,
+            include_always=True,
+        )
+
+        if not results:
+            self.report({"WARNING"}, "No robot link pairs found to compute collision matrix.")
+            return {"CANCELLED"}
+
+        if self.clear_existing:
+            props.disabled_collisions.clear()
+
+        existing_pairs: set[tuple[str, str]] = set()
+        for item in props.disabled_collisions:
+            l1 = get_planning_link_name(item.link1, item.link1_name)
+            l2 = get_planning_link_name(item.link2, item.link2_name)
+            if l1 and l2:
+                existing_pairs.add((l1, l2))
+                existing_pairs.add((l2, l1))
+
+        # Map link names to objects
+        link_objects: dict[str, bpy.types.Object] = {}
+        for obj in scene.objects:
+            lp = get_link_props(obj)
+            if lp and lp.is_robot_link:
+                name = str(getattr(lp, "link_name", "") or getattr(obj, "name", "")).strip()
+                if name:
+                    link_objects[name] = obj
+
+        counts: dict[str, int] = {}
+        added_count = 0
+        for l1_name, l2_name, reason in results:
+            if (l1_name, l2_name) in existing_pairs or (l2_name, l1_name) in existing_pairs:
+                continue
+
+            pair = props.disabled_collisions.add()
+            pair.name = f"{l1_name} <-> {l2_name}"
+            pair.link1 = link_objects.get(l1_name)
+            pair.link1_name = l1_name
+            pair.link2 = link_objects.get(l2_name)
+            pair.link2_name = l2_name
+            pair.reason = reason
+
+            existing_pairs.add((l1_name, l2_name))
+            existing_pairs.add((l2_name, l1_name))
+            counts[reason] = counts.get(reason, 0) + 1
+            added_count += 1
+
+        if len(props.disabled_collisions) > 0:
+            props.planning_active_collision_index = len(props.disabled_collisions) - 1
+            props.use_srdf = True
+
+        detail_str = ", ".join(f"{r}: {c}" for r, c in sorted(counts.items()))
+        self.report({"INFO"}, f"Added {added_count} collision pairs ({detail_str})")
+        return {"FINISHED"}
+
+
 class LINKFORGE_OT_purge_planning_data(Operator):
     """Clear all SRDF planning configuration from the scene."""
 
@@ -1133,6 +1478,17 @@ class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
         populate_planning_properties_from_semantic(props, semantic)
         bind_semantic_scene_objects(props, link_objects, joint_objects)
 
+        # Mark passive joints in scene
+        imported_passive_count = 0
+        for pj in getattr(semantic, "passive_joints", ()):
+            pj_name = pj.name
+            if pj_name in joint_objects:
+                j_obj = joint_objects[pj_name]
+                jp = get_joint_props(j_obj)
+                if jp:
+                    jp.is_passive = True
+                    imported_passive_count += 1
+
         # Count unresolved references
         unresolved_count = 0
         for grp in props.planning_groups:
@@ -1141,9 +1497,15 @@ class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
                     unresolved_count += 1
                 if grp.tip_link_name and not grp.tip_link:
                     unresolved_count += 1
-            else:
+            elif grp.group_type == PLANNING_GROUP_JOINTS:
                 for j in grp.joints:
                     if j.name and not j.joint_obj:
+                        unresolved_count += 1
+            elif grp.group_type == PLANNING_GROUP_SUBGROUPS:
+                existing_group_names = {g.name for g in props.planning_groups}
+                for s in str(grp.subgroups_csv or "").split(","):
+                    sub = s.strip()
+                    if sub and sub not in existing_group_names:
                         unresolved_count += 1
 
         for ee in props.end_effectors:
@@ -1180,6 +1542,8 @@ classes = [
     LINKFORGE_OT_move_planning_group,
     LINKFORGE_OT_add_planning_group_joint,
     LINKFORGE_OT_remove_planning_group_joint,
+    LINKFORGE_OT_add_planning_subgroup,
+    LINKFORGE_OT_remove_planning_subgroup,
     LINKFORGE_OT_add_end_effector,
     LINKFORGE_OT_remove_end_effector,
     LINKFORGE_OT_move_end_effector,
@@ -1188,10 +1552,14 @@ classes = [
     LINKFORGE_OT_move_group_state,
     LINKFORGE_OT_sync_group_state_joints,
     LINKFORGE_OT_reset_group_state_values,
+    LINKFORGE_OT_toggle_group_state_preview,
+    LINKFORGE_OT_capture_group_state_pose,
+    LINKFORGE_OT_restore_rest_pose,
     LINKFORGE_OT_add_disabled_collision,
     LINKFORGE_OT_remove_disabled_collision,
     LINKFORGE_OT_move_disabled_collision,
     LINKFORGE_OT_auto_disable_adjacent_collisions,
+    LINKFORGE_OT_compute_collision_matrix,
     LINKFORGE_OT_purge_planning_data,
     LINKFORGE_OT_import_srdf,
 ]

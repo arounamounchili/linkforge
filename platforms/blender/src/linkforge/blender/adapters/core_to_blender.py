@@ -55,6 +55,7 @@ from ..core.constants import (
     JOINT_REVOLUTE,
     PLANNING_GROUP_CHAIN,
     PLANNING_GROUP_JOINTS,
+    PLANNING_GROUP_SUBGROUPS,
     ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
     SENSOR_CAMERA,
     SENSOR_CONTACT,
@@ -1028,6 +1029,18 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
         lp = getattr(scene, PROP_ROBOT)
         populate_planning_properties_from_semantic(lp, getattr(robot, "semantic", None))
 
+    # Mark passive joints on scene objects if present
+    if getattr(robot, "semantic", None) and robot.semantic.passive_joints:
+        passive_names = {pj.name for pj in robot.semantic.passive_joints}
+        for obj in getattr(scene, "objects", ()):
+            jp = get_joint_props(obj)
+            if (
+                jp
+                and jp.is_robot_joint
+                and (jp.joint_name in passive_names or obj.name in passive_names)
+            ):
+                jp.is_passive = True
+
 
 def populate_planning_properties_from_semantic(
     lp: typing.Any,
@@ -1066,6 +1079,7 @@ def populate_planning_properties_from_semantic(
             or semantic.end_effectors
             or semantic.group_states
             or semantic.disabled_collisions
+            or semantic.passive_joints
         )
     )
     if not (semantic and has_semantic_data):
@@ -1097,6 +1111,9 @@ def populate_planning_properties_from_semantic(
             for j_name in grp.joints:
                 j_item = g_item.joints.add()
                 j_item.name = j_name
+        elif grp.subgroups:
+            g_item.group_type = PLANNING_GROUP_SUBGROUPS
+            g_item.subgroups_csv = ",".join(grp.subgroups)
         else:
             g_item.group_type = PLANNING_GROUP_CHAIN
 

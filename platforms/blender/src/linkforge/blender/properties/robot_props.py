@@ -213,6 +213,11 @@ class RobotPropertyGroup(PropertyGroup):
 
     group_states: CollectionProperty(type=GroupStateProperty)  # type: ignore
     planning_active_state_index: IntProperty(default=0)  # type: ignore
+    preview_active_state_name: StringProperty(  # type: ignore
+        name="Active Preview State",
+        description="Name of the Group State currently previewed in the 3D viewport",
+        default="",
+    )
 
     disabled_collisions: CollectionProperty(type=CollisionPairProperty)  # type: ignore
     planning_active_collision_index: IntProperty(default=0)  # type: ignore

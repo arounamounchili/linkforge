@@ -108,6 +108,12 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)
 
+        # Restore robot rest pose if a pose preview is active to guarantee zero origin drift
+        from ..utils.pose_preview import is_pose_preview_active, restore_robot_rest_pose
+
+        if is_pose_preview_active(scene):
+            restore_robot_rest_pose(scene)
+
         # Ensure correct file extension matches format
         if robot_props.export_format == FORMAT_XACRO and output_path.suffix != EXT_XACRO:
             output_path = output_path.with_suffix(EXT_XACRO)

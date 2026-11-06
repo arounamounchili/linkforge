@@ -225,6 +225,35 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   4. Pressing `Ctrl+Z` cleanly undoes the import.
   5. Clicking `Trash` clears all planning configuration and resets `Include SRDF` in `Validate & Export`.
 
+### `TC-PLAN-03`: Visual Pose Preview, Interactive Viewport Capture & Rest Guard
+* Verify non-destructive 3D viewport articulation, pose capture, and export rest safety guard.
+- [ ] **Action**:
+  1. Create or import an articulated robot arm with at least 2 revolute joints.
+  2. In `Planning > Group States`, create a pose and click `Preview Pose` (`HIDE_OFF`).
+  3. Drag the joint sliders in the panel and observe the 3D robot moving in the viewport in real time.
+  4. Manually rotate a joint empty in the 3D viewport with Blender's rotate tool (`R`), then click `Capture Scene Pose` (`CAMERA`).
+  5. Click `Rest Pose` (`LOOP_BACK`) to return the robot to its rest pose.
+  6. While `Preview Pose` is active with an articulated pose, click `Export Robot` in `Validate & Export`.
+- [ ] **Expected**:
+  1. Actuating sliders articulates links in the 3D viewport without altering the base coordinate frames on disk.
+  2. `Capture Scene Pose` reads viewport transforms and populates slider values accurately.
+  3. Clicking `Rest Pose` returns all links to their base rest positions.
+  4. Exporting while preview is active triggers the safety guard, restoring rest pose first so the exported URDF origin tags are never corrupted or drifted.
+
+### `TC-PLAN-04`: Sampled Collision Matrix (ACM), Subgroups & Passive Joints
+* Verify Monte Carlo collision matrix generator, composite subgroups, and passive joint tags.
+- [ ] **Action**:
+  1. In `Planning > Disabled Collisions`, click `Generate Matrix (ACM)`.
+  2. Inspect the populated collision list: verify adjacent links are marked `Adjacent` and distant links with non-overlapping reach are marked `Never`.
+  3. In `Planning > Planning Groups`, create a composite group with mode `Subgroups` and add two existing planning groups using `+`.
+  4. In `Joints`, select an unactuated joint (e.g. caster or mimic finger) and check `Passive Joint (MoveIt 2)`.
+  5. Export the robot and inspect `<robot_name>.srdf`.
+- [ ] **Expected**:
+  1. `Generate Matrix (ACM)` computes allowed collision pairs across sampled forward-kinematics poses.
+  2. Composite subgroup outputs `<group name="..."> <group name="..."/> </group>`.
+  3. Passive joint outputs `<passive_joint name="..."/>` and is excluded from active group DOF.
+
+
 ---
 
 ## Phase 6: Structural Validation & Security Sandbox
