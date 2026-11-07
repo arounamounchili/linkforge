@@ -679,6 +679,16 @@ class PlanningGroupJointProperty(PropertyGroup):
     )
 
 
+class PlanningSubgroupProperty(PropertyGroup):
+    """Property group representing a subgroup member within a planning group."""
+
+    name: StringProperty(  # type: ignore
+        name="Subgroup Name",
+        description="Name of the referenced planning group",
+        default="",
+    )
+
+
 class PlanningGroupProperty(PropertyGroup):
     """Property group for a MoveIt 2 SRDF Planning Group."""
 
@@ -749,6 +759,9 @@ class PlanningGroupProperty(PropertyGroup):
 
     joints: CollectionProperty(type=PlanningGroupJointProperty)  # type: ignore
     active_joint_index: IntProperty(default=0)  # type: ignore
+
+    subgroups: CollectionProperty(type=PlanningSubgroupProperty)  # type: ignore
+    active_subgroup_index: IntProperty(default=0)  # type: ignore
 
     # Preserved SRDF group members for lossless round-trip import
     links_csv: StringProperty(  # type: ignore
@@ -936,6 +949,7 @@ class CollisionPairProperty(PropertyGroup):
 
 _CLASSES = [
     PlanningGroupJointProperty,
+    PlanningSubgroupProperty,
     PlanningGroupProperty,
     EndEffectorProperty,
     GroupStateJointValueProperty,

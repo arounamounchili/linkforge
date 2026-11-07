@@ -581,6 +581,9 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                 vj_col.prop(props, "virtual_joint_type")
                 vj_col.prop(props, "virtual_joint_parent_frame")
                 vj_col.prop(props, "virtual_joint_child_link")
+                vj_col.operator(
+                    "linkforge.detect_virtual_joint_root", text="Detect Root Link", icon="AUTO"
+                )
             else:
                 vj_box.label(text="Enable checkbox to attach robot root to world.", icon="INFO")
 

@@ -731,7 +731,7 @@ class SemanticTranslator:
                     continue
 
                 links = [s.strip() for s in str(grp.links_csv or "").split(",") if s.strip()]
-                subgroups = get_group_subgroup_names(grp)
+                subgroups: list[str] = []
                 chains: list[Chain] = []
                 joints: list[str] = []
 
@@ -774,8 +774,7 @@ class SemanticTranslator:
                         if j_name and j_name not in joints:
                             joints.append(j_name)
                 elif grp_type == PLANNING_GROUP_SUBGROUPS:
-                    # Subgroups are populated from subgroups_csv
-                    pass
+                    subgroups = get_group_subgroup_names(grp)
 
                 if not any([links, joints, chains, subgroups]):
                     if validation_result and not (
