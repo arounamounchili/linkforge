@@ -1877,3 +1877,30 @@ class TestPlanningUXRefinements:
         # Center should be shifted around X=2.0
         assert abs(center[0] - 2.0) < 0.1
         assert radius > 0.5
+
+    def test_compute_collision_matrix_rerun_updates_and_preserves_user_pairs(
+        self, scene: bpy.types.Scene
+    ) -> None:
+        """Verify re-running collision matrix updates existing pairs and preserves user-defined pairs."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
+        link1 = create_robot_link("link1", scene, with_visual=False, with_collision=False)
+        create_robot_joint("j1", base, link1, scene, joint_type="revolute")
+
+        # First run populates automated pair
+        assert bpy.ops.linkforge.compute_collision_matrix() == {"FINISHED"}
+        assert len(props.disabled_collisions) == 1
+
+        # Add a custom user pair
+        user_p = props.disabled_collisions.add()
+        user_p.name = "custom_user_pair"
+        user_p.link1_name = "base_link"
+        user_p.link2_name = "link1"
+        user_p.reason = "User"
+
+        # Re-run: should preserve User pair while re-evaluating
+        assert bpy.ops.linkforge.compute_collision_matrix() == {"FINISHED"}
+        reasons = [p.reason for p in props.disabled_collisions]
+        assert "User" in reasons

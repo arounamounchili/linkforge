@@ -7,6 +7,7 @@ Group States, and Disabled Collisions in the LinkForge Planning panel.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import bpy
 from bpy.props import IntProperty, StringProperty
@@ -1228,8 +1229,8 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
 
     clear_existing: bpy.props.BoolProperty(  # type: ignore
         name="Clear Existing",
-        description="Clear existing disabled collision pairs before populating",
-        default=False,
+        description="Clear existing auto-generated disabled collision pairs before populating",
+        default=True,
     )
 
     adjacent_only: bpy.props.BoolProperty(  # type: ignore
@@ -1276,15 +1277,52 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
             return {"CANCELLED"}
 
         if self.clear_existing:
+            # Preserve user-defined custom pairs if any
+            user_pairs = [
+                (
+                    getattr(p, "link1", None),
+                    getattr(p, "link1_name", ""),
+                    getattr(p, "link2", None),
+                    getattr(p, "link2_name", ""),
+                    getattr(p, "reason", "User"),
+                )
+                for p in props.disabled_collisions
+                if getattr(p, "reason", "") == "User"
+            ]
             props.disabled_collisions.clear()
+            for l1_obj, l1_name, l2_obj, l2_name, reason in user_pairs:
+                up = props.disabled_collisions.add()
+                up.name = f"{l1_name} <-> {l2_name}"
+                up.link1 = l1_obj
+                up.link1_name = l1_name
+                up.link2 = l2_obj
+                up.link2_name = l2_name
+                up.reason = reason
 
-        existing_pairs = get_existing_collision_pairs(props.disabled_collisions)
+        # Map existing collision pairs to their collection items
+        pair_item_map: dict[frozenset[str], Any] = {}
+        for p in props.disabled_collisions:
+            p_l1 = getattr(p, "link1_name", "")
+            p_l2 = getattr(p, "link2_name", "")
+            if p_l1 and p_l2:
+                pair_item_map[frozenset([p_l1, p_l2])] = p
+
         link_objects = get_robot_statistics(scene).link_objects
 
         counts: dict[str, int] = {}
         added_count = 0
+        updated_count = 0
         for l1_name, l2_name, reason in results:
-            if (l1_name, l2_name) in existing_pairs or (l2_name, l1_name) in existing_pairs:
+            key = frozenset([l1_name, l2_name])
+            if key in pair_item_map:
+                existing_item = pair_item_map[key]
+                if getattr(existing_item, "reason", "") == "User":
+                    counts["User"] = counts.get("User", 0) + 1
+                    continue
+                if getattr(existing_item, "reason", "") != reason:
+                    existing_item.reason = reason
+                    updated_count += 1
+                counts[reason] = counts.get(reason, 0) + 1
                 continue
 
             pair = props.disabled_collisions.add()
@@ -1295,8 +1333,7 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
             pair.link2_name = l2_name
             pair.reason = reason
 
-            existing_pairs.add((l1_name, l2_name))
-            existing_pairs.add((l2_name, l1_name))
+            pair_item_map[key] = pair
             counts[reason] = counts.get(reason, 0) + 1
             added_count += 1
 
@@ -1305,7 +1342,11 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
             props.use_srdf = True
 
         detail_str = ", ".join(f"{r}: {c}" for r, c in sorted(counts.items()))
-        self.report({"INFO"}, f"Added {added_count} collision pairs ({detail_str})")
+        report_msg = f"Collision matrix: {added_count} added"
+        if updated_count > 0:
+            report_msg += f", {updated_count} updated"
+        report_msg += f" ({detail_str})"
+        self.report({"INFO"}, report_msg)
         return {"FINISHED"}
 
 

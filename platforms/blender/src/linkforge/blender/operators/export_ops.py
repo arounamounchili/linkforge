@@ -69,7 +69,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     # Operator properties for ExportHelper/ImportHelper
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
     filter_glob: bpy.props.StringProperty(  # type: ignore
-        default="*.urdf;*.xacro;*.xml",
+        default="*.urdf;*.xacro;*.srdf;*.xml",
         options={"HIDDEN"},
         maxlen=255,
     )
