@@ -47,8 +47,9 @@ class TestSRDFPlanningIntegration:
 
         safe_update()
 
-        # 1. Detect virtual joint root link via operator
-        assert bpy.ops.linkforge.detect_virtual_joint_root() == {"FINISHED"}
+        # 1. Configure virtual joint root link
+        lf_scene.use_virtual_joint = True
+        lf_scene.virtual_joint_child_link = base
         assert lf_scene.virtual_joint_child_link == base
 
         # 2. Add 'arm' planning group (CHAIN mode) and 'hand' planning group (JOINTS mode)

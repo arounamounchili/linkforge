@@ -34,7 +34,6 @@ from linkforge.blender.operators.planning_ops import (
     LINKFORGE_OT_add_planning_group,
     LINKFORGE_OT_add_planning_group_joint,
     LINKFORGE_OT_auto_disable_adjacent_collisions,
-    LINKFORGE_OT_detect_virtual_joint_root,
     LINKFORGE_OT_import_srdf,
     LINKFORGE_OT_move_disabled_collision,
     LINKFORGE_OT_move_end_effector,
@@ -507,23 +506,13 @@ class TestPlanningPropsHelpers:
 class TestPlanningOperators:
     """Test all operators in planning_ops.py."""
 
-    def test_detect_virtual_joint_root(self, scene) -> None:
+    def test_auto_populate_virtual_joint_root(self, scene) -> None:
         props = safe_get_linkforge_scene(scene)
-        assert LINKFORGE_OT_detect_virtual_joint_root.poll(bpy.context)
-
-        # Empty scene -> CANCELLED
-        op = LINKFORGE_OT_detect_virtual_joint_root()
-        assert op.execute(bpy.context) == {"CANCELLED"}
-
-        # With kinematic tree -> detects base_link
         base, _, _, _, _ = _setup_3_link_arm(scene)
-        assert op.execute(bpy.context) == {"FINISHED"}
+        props.use_virtual_joint = True
+        update_use_virtual_joint(props, bpy.context)
         assert props.virtual_joint_child_link == base
         assert props.virtual_joint_child_link_name == "base_link"
-        assert props.use_virtual_joint is True
-
-        # Missing scene
-        assert op.execute(types.SimpleNamespace(scene=None)) == {"CANCELLED"}
 
     def test_planning_group_crud_and_move(self, scene) -> None:
         props = safe_get_linkforge_scene(scene)

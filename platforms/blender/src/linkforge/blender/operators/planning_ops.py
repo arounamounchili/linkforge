@@ -27,7 +27,6 @@ from ..core.constants import (
 )
 from ..logic.collision_matrix import compute_allowed_collision_matrix
 from ..properties.planning_props import (
-    find_robot_root_link,
     get_existing_collision_pairs,
     get_group_subgroup_names,
     get_planning_joint_name,
@@ -59,54 +58,6 @@ def _unique_item_name(collection: object, base_name: str) -> str:
     while f"{base_name}_{counter}" in existing:
         counter += 1
     return f"{base_name}_{counter}"
-
-
-class LINKFORGE_OT_detect_virtual_joint_root(Operator):
-    """Automatically detect the robot's root link and assign it to the Virtual Joint."""
-
-    bl_idname = "linkforge.detect_virtual_joint_root"
-    bl_label = "Detect Root Link"
-    bl_description = "Automatically detect the kinematic tree root link and assign it as Child Link"
-    bl_options = {"REGISTER", "UNDO"}
-
-    @classmethod
-    def poll(cls, context: Context) -> bool:
-        """Check if operator can run.
-
-        Args:
-            context: The current Blender context.
-
-        Returns:
-            True if the scene has LinkForge properties initialized, False otherwise.
-        """
-        return bool(context.scene and get_robot_props(context.scene))
-
-    @safe_execute
-    def execute(self, context: Context) -> OperatorReturn:
-        """Detect and assign the root link.
-
-        Args:
-            context: The execution context.
-
-        Returns:
-            Set containing the execution state (e.g., {'FINISHED'} or {'CANCELLED'}).
-        """
-        scene = context.scene
-        if not scene or not (props := get_robot_props(scene)):
-            return {"CANCELLED"}
-
-        root_obj, root_name = find_robot_root_link(scene)
-        if not root_obj:
-            self.report({"WARNING"}, "No root robot link found in the scene")
-            return {"CANCELLED"}
-
-        props.use_virtual_joint = True
-        props.virtual_joint_child_link = root_obj
-        props.virtual_joint_child_link_name = root_name
-        props.use_srdf = True
-
-        self.report({"INFO"}, f"Assigned root link '{root_name}' to virtual joint")
-        return {"FINISHED"}
 
 
 class LINKFORGE_OT_add_planning_group(Operator):
@@ -1526,7 +1477,6 @@ class LINKFORGE_OT_import_srdf(Operator, ImportHelper):  # type: ignore[misc]
 
 
 classes = [
-    LINKFORGE_OT_detect_virtual_joint_root,
     LINKFORGE_OT_add_planning_group,
     LINKFORGE_OT_remove_planning_group,
     LINKFORGE_OT_move_planning_group,
