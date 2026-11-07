@@ -223,10 +223,12 @@ class RobotPropertyGroup(PropertyGroup):
     planning_active_collision_index: IntProperty(default=0)  # type: ignore
     acm_sample_count: IntProperty(  # type: ignore
         name="ACM Samples",
-        description="Number of kinematic configurations to sample for Allowed Collision Matrix (ACM)",
+        description="Number of kinematic configurations to sample for Allowed Collision Matrix (ACM) (default: 500, recommended: 100-1000)",
         default=500,
-        min=50,
-        max=5000,
+        min=1,
+        soft_min=50,
+        soft_max=2000,
+        max=10000,
     )
 
     # UI collapsible states for Planning sections
