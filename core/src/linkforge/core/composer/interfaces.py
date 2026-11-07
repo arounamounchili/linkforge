@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from ..models.robot import Robot
     from .link_builder import LinkBuilder
+    from .semantic_builder import SemanticBuilder
 
 
 @runtime_checkable
@@ -18,6 +19,11 @@ class IComposer(Protocol):
     """Interface for a builder that can contain and manage links."""
 
     robot: Robot
+
+    @property
+    def semantic(self) -> SemanticBuilder:
+        """Access the semantic (SRDF/MoveIt) construction API."""
+        ...
 
     def link(
         self, name: str, parent: str | None = None, joint_name: str | None = None

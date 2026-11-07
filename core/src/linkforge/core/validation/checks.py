@@ -488,6 +488,16 @@ class SemanticCheck(ValidationCheck):
         link_names = {link.name for link in robot.links}
         joint_names = {joint.name for joint in robot.joints}
 
+        # Check virtual joints
+        for vj in semantic.virtual_joints:
+            if vj.child_link not in link_names:
+                result.add_error(
+                    title="Invalid virtual joint child link",
+                    message=f"Virtual joint '{vj.name}' references non-existent child link '{vj.child_link}'",
+                    affected_objects=[vj.name],
+                    code=ValidationErrorCode.NOT_FOUND,
+                )
+
         # Check planning groups
         for group in semantic.groups:
             # Check links
@@ -520,6 +530,14 @@ class SemanticCheck(ValidationCheck):
                     affected_objects=[state.name],
                     code=ValidationErrorCode.NOT_FOUND,
                 )
+            for joint_name in state.joint_values:
+                if joint_name not in joint_names:
+                    result.add_error(
+                        title="Invalid group state joint",
+                        message=f"State '{state.name}' references non-existent joint '{joint_name}'",
+                        affected_objects=[state.name],
+                        code=ValidationErrorCode.NOT_FOUND,
+                    )
 
         # Check end effectors
         for ee in semantic.end_effectors:
@@ -721,13 +739,23 @@ class SemanticConsistencyCheck(ValidationCheck):
     ) -> None:
         """Rule 3: EndEffector.parent_link must be a member of its referenced group."""
         group_link_map: dict[str, set[str]] = {g.name: set(g.links) for g in semantic.groups}
+        group_chain_links: dict[str, set[str]] = {
+            g.name: {c.base_link for c in g.chains} | {c.tip_link for c in g.chains}
+            for g in semantic.groups
+        }
 
         for ee in semantic.end_effectors:
             group_links = group_link_map.get(ee.group)
             if group_links is None:
                 continue  # Missing group reported by SemanticCheck
 
-            if group_links and ee.parent_link not in group_links:
+            allowed_links = set(group_links)
+            if ee.parent_group:
+                allowed_links |= group_link_map.get(ee.parent_group, set()) | group_chain_links.get(
+                    ee.parent_group, set()
+                )
+
+            if group_links and ee.parent_link not in allowed_links:
                 result.add_warning(
                     title="End effector parent link not in group",
                     message=(

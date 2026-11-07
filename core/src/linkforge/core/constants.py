@@ -222,11 +222,23 @@ SRDF_VJOIN_FIXED: Final[str] = "fixed"
 SRDF_VJOIN_PLANAR: Final[str] = "planar"
 SRDF_VJOIN_FLOATING: Final[str] = "floating"
 
+PLANNING_GROUP_CHAIN: Final[str] = "CHAIN"
+PLANNING_GROUP_JOINTS: Final[str] = "JOINTS"
+PLANNING_GROUP_SUBGROUPS: Final[str] = "SUBGROUPS"
+
+DEFAULT_VIRTUAL_JOINT_NAME: Final[str] = "world_joint"
+DEFAULT_WORLD_FRAME: Final[str] = "world"
+
 SRDF_REASON_ADJACENT: Final[str] = "Adjacent"
+SRDF_REASON_NEVER: Final[str] = "Never"
+SRDF_REASON_DEFAULT: Final[str] = "Default"
+SRDF_REASON_ALWAYS: Final[str] = "Always"
+SRDF_REASON_USER: Final[str] = "User"
 
 # Standard Fallback Names
 UNNAMED_LINK: Final[str] = "unnamed_link"
 UNNAMED_JOINT: Final[str] = "unnamed_joint"
+DEFAULT_ROBOT_NAME: Final[str] = "my_robot"
 
 # Sensor Update Rates (Industry Standard Defaults)
 DEFAULT_UPDATE_RATE_IMU: Final[float] = 100.0  # Hz
@@ -275,7 +287,18 @@ XACRO_PARAM_XYZ: Final[str] = "xyz"
 XACRO_PARAM_RPY: Final[str] = "rpy"
 XACRO_DEFAULT_PARAMS: Final[str] = "name parent xyz rpy"
 
+# Description Formats and Extensions
+FORMAT_URDF: Final[str] = "URDF"
+FORMAT_XACRO: Final[str] = "XACRO"
+FORMAT_SRDF: Final[str] = "SRDF"
+
+EXT_URDF: Final[str] = ".urdf"
+EXT_XACRO: Final[str] = ".xacro"
+EXT_SRDF: Final[str] = ".srdf"
+EXT_URDF_XACRO: Final[str] = ".urdf.xacro"
+
 # ROS2 Control Defaults
+ROS2_CONTROL_DEFAULT_NAME: Final[str] = "GazeboSimSystem"
 ROS2_CONTROL_DEFAULT_PLUGIN: Final[str] = "gz_ros2_control/GazeboSimSystem"
 ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN: Final[str] = "gz_ros2_control::GazeboSimROS2ControlPlugin"
 

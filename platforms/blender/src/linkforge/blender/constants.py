@@ -15,6 +15,64 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
+from .core.constants import (
+    EXT_SRDF,
+    EXT_URDF,
+    EXT_URDF_XACRO,
+    EXT_XACRO,
+    FORMAT_SRDF,
+    FORMAT_URDF,
+    FORMAT_XACRO,
+)
+
+__all__ = [
+    "ADDON_ID_DEFAULT",
+    "ANCHOR_DISPLAY_MAX",
+    "ANCHOR_DISPLAY_MIN",
+    "ANCHOR_DISPLAY_RATIO",
+    "AXIS_CUSTOM",
+    "AXIS_X",
+    "AXIS_Y",
+    "AXIS_Z",
+    "DEFAULT_INERTIA_GIZMO_SIZE",
+    "DEFAULT_JOINT_GIZMO_SIZE",
+    "DEFAULT_LINK_GIZMO_SIZE",
+    "DEFAULT_PRIMITIVE_CONFIG",
+    "DEFAULT_SENSOR_GIZMO_SIZE",
+    "DIRECTION_DOWN",
+    "DIRECTION_UP",
+    "EXT_SRDF",
+    "EXT_URDF",
+    "EXT_URDF_XACRO",
+    "EXT_XACRO",
+    "FORMAT_GLB",
+    "FORMAT_OBJ",
+    "FORMAT_SRDF",
+    "FORMAT_STL",
+    "FORMAT_URDF",
+    "FORMAT_XACRO",
+    "GEOM_AUTO",
+    "GIZMO_SCALE_FACTOR",
+    "GIZMO_SIZE_MAX",
+    "GIZMO_SIZE_MIN",
+    "PRIMITIVE_MAX_FACES",
+    "PROP_GEOM",
+    "PROP_JOINT",
+    "PROP_LINK",
+    "PROP_ROBOT",
+    "PROP_SENSOR",
+    "PROP_VALIDATION",
+    "PURPOSE_COLLISION",
+    "PURPOSE_VISUAL",
+    "PrimitiveDetectionConfig",
+    "SUFFIX_COLLISION",
+    "SUFFIX_SENSOR",
+    "SUFFIX_VISUAL",
+    "TAG_IMPORTED_SOURCE",
+    "TAG_SENSOR_TYPE",
+    "TAG_SOURCE_NAME",
+]
+
 # ----------------------------------------------------------------------------
 # Addon Metadata
 # ----------------------------------------------------------------------------
@@ -65,6 +123,24 @@ PROP_GEOM: Final[str] = "linkforge_geom"
 FORMAT_STL: Final[str] = "STL"
 FORMAT_OBJ: Final[str] = "OBJ"
 FORMAT_GLB: Final[str] = "GLB"
+
+
+# ----------------------------------------------------------------------------
+# UI Interactions & Directions
+# ----------------------------------------------------------------------------
+
+DIRECTION_UP: Final[str] = "UP"
+DIRECTION_DOWN: Final[str] = "DOWN"
+
+
+# ----------------------------------------------------------------------------
+# Kinematic Axes
+# ----------------------------------------------------------------------------
+
+AXIS_X: Final[str] = "X"
+AXIS_Y: Final[str] = "Y"
+AXIS_Z: Final[str] = "Z"
+AXIS_CUSTOM: Final[str] = "CUSTOM"
 
 
 # ----------------------------------------------------------------------------

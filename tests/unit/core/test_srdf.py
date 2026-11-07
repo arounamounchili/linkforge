@@ -693,7 +693,7 @@ class TestSRDFGeneratorCoverage:
         assert root.find("joint_property") is not None
 
 
-def test_srdf_parser_remaining_coverage(parser) -> None:
+def test_srdf_parser_remaining_coverage(parser, tmp_path) -> None:
     """Verify all remaining branch paths in srdf_parser.py."""
     xml_groups = """<?xml version="1.0"?>
     <robot name="r">
@@ -707,13 +707,22 @@ def test_srdf_parser_remaining_coverage(parser) -> None:
         </group>
     </robot>
     """
-    srdf = parser.parse_string(xml_groups)
+    robot = Robot(name="r")
+    srdf = parser.parse_string(xml_groups, robot=robot)
+    assert robot.semantic == srdf
     assert len(srdf.groups) == 1
     assert len(srdf.groups[0].links) == 1
     assert srdf.groups[0].links[0] == "valid_link"
     assert len(srdf.groups[0].joints) == 0
     assert len(srdf.groups[0].chains) == 0
     assert len(srdf.groups[0].subgroups) == 0
+
+    srdf_file = tmp_path / "r.srdf"
+    srdf_file.write_text(xml_groups, encoding="utf-8")
+    robot2 = Robot(name="r")
+    srdf_from_file = parser.parse(srdf_file, robot=robot2)
+    assert robot2.semantic == srdf_from_file
+    assert parser.parse(srdf_file) == srdf_from_file
 
     xml_joint_val = """<?xml version="1.0"?>
     <robot name="r">

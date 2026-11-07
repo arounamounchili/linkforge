@@ -7,8 +7,10 @@ import contextlib
 import bpy
 from bpy.types import Context, Panel
 
+from ..constants import AXIS_CUSTOM
 from ..core.constants import (
     JOINT_CONTINUOUS,
+    JOINT_FIXED,
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
 )
@@ -83,7 +85,7 @@ class LINKFORGE_PT_joints(Panel):
         box.separator()
         row = box.row()
         row.label(text="Connection:", icon="LINKED")
-        row.operator("linkforge.auto_detect_parent_child", icon="AUTO", text="Detect")
+        row.operator("linkforge.auto_detect_parent_child", icon="VIEWZOOM", text="Detect")
 
         # Parent Link with 1-click select
         p_row = box.row(align=True)
@@ -107,7 +109,7 @@ class LINKFORGE_PT_joints(Panel):
             box.label(text="Axis:", icon="ORIENTATION_GIMBAL")
             box.prop(props, "axis", expand=True)
 
-            if props.axis == "CUSTOM":
+            if props.axis == AXIS_CUSTOM:
                 col = box.column(align=True)
                 col.prop(props, "custom_axis_x", text="X")
                 col.prop(props, "custom_axis_y", text="Y")
@@ -180,6 +182,11 @@ class LINKFORGE_PT_joints(Panel):
             sub = row.row()
             sub.active = props.use_calibration_falling
             sub.prop(props, "calibration_falling", text="Falling")
+
+        # Passive joint for MoveIt 2 planning
+        if props.joint_type != JOINT_FIXED:
+            box.separator()
+            box.prop(props, "is_passive", text="Passive Joint (MoveIt 2)", icon="DRIVER")
 
         # Remove Joint button (Danger Zone)
         box.separator()

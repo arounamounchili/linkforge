@@ -54,6 +54,8 @@ from ..constants import (
     DEFAULT_UPDATE_RATE,
     DEFAULT_URDF_AXIS_XYZ,
     DEFAULT_URDF_AXIS_XYZ_STR,
+    EXT_URDF_XACRO,
+    EXT_XACRO,
     HW_IF_POSITION,
     JOINT_CONTINUOUS,
     JOINT_FIXED,
@@ -971,7 +973,9 @@ class URDFParser(RobotXMLParser[Robot]):
         """Detect if file is XACRO and raise helpful error."""
         is_xacro = False
         if filepath:
-            is_xacro = filepath.suffix.lower() in [".xacro", ".urdf.xacro"]
+            is_xacro = filepath.suffix.lower() == EXT_XACRO or filepath.name.lower().endswith(
+                EXT_URDF_XACRO
+            )
             if not is_xacro:
                 try:
                     content = filepath.read_text(encoding="utf-8")
@@ -1211,7 +1215,7 @@ class URDFParser(RobotXMLParser[Robot]):
         self._validate_file(filepath)
 
         # Check if this is a XACRO file by extension (proactive check)
-        if filepath.suffix == ".xacro" or filepath.name.endswith(".urdf.xacro"):
+        if filepath.suffix.lower() == EXT_XACRO or filepath.name.lower().endswith(EXT_URDF_XACRO):
             raise XacroDetectedError(filepath.name)
 
         try:

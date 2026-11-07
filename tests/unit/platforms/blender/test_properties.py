@@ -414,6 +414,10 @@ class TestGlobalPropertiesAndCallbacks:
             ]:
                 runpy.run_module(mod_name, run_name="__main__")
 
+        from tests.blender_test_utils import ensure_linkforge_registered
+
+        ensure_linkforge_registered()
+
     def test_joint_properties_and_callbacks(self, scene, blender_context) -> None:
         """Test getters, setters, polls and hierarchy updates in JointPropertyGroup."""
         from linkforge.blender.properties.joint_props import (

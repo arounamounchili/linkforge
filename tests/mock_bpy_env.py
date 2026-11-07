@@ -258,13 +258,47 @@ class MockMatrix:
 
     @staticmethod
     def Rotation(angle, size, axis):  # noqa: N802
+        import math
+
         m = MockMatrix.Identity(size)
+        c = math.cos(angle)
+        s = math.sin(angle)
         if axis == "X":
+            m.data[1][1] = c
+            m.data[1][2] = -s
+            m.data[2][1] = s
+            m.data[2][2] = c
             m._euler_hint = MockEuler(angle, 0, 0)
         elif axis == "Y":
+            m.data[0][0] = c
+            m.data[0][2] = s
+            m.data[2][0] = -s
+            m.data[2][2] = c
             m._euler_hint = MockEuler(0, angle, 0)
         elif axis == "Z":
+            m.data[0][0] = c
+            m.data[0][1] = -s
+            m.data[1][0] = s
+            m.data[1][1] = c
             m._euler_hint = MockEuler(0, 0, angle)
+        elif isinstance(axis, (list, tuple, MockVector)):
+            # Rodrigues' rotation formula for arbitrary axis
+            ax = getattr(axis, "x", axis[0] if len(axis) > 0 else 0.0)
+            ay = getattr(axis, "y", axis[1] if len(axis) > 1 else 0.0)
+            az = getattr(axis, "z", axis[2] if len(axis) > 2 else 0.0)
+            norm = math.sqrt(ax * ax + ay * ay + az * az)
+            if norm > 1e-9:
+                ax, ay, az = ax / norm, ay / norm, az / norm
+                one_c = 1.0 - c
+                m.data[0][0] = c + ax * ax * one_c
+                m.data[0][1] = ax * ay * one_c - az * s
+                m.data[0][2] = ax * az * one_c + ay * s
+                m.data[1][0] = ay * ax * one_c + az * s
+                m.data[1][1] = c + ay * ay * one_c
+                m.data[1][2] = ay * az * one_c - ax * s
+                m.data[2][0] = az * ax * one_c - ay * s
+                m.data[2][1] = az * ay * one_c + ax * s
+                m.data[2][2] = c + az * az * one_c
         return m
 
     @staticmethod
@@ -312,6 +346,19 @@ class MockMatrix:
         hint = getattr(self, "_euler_hint", None)
         if hint is not None:
             return hint
+        import math
+
+        r = self.data
+        if len(r) >= 3 and len(r[0]) >= 3:
+            sy = min(max(r[0][2], -1.0), 1.0)
+            y = math.asin(sy)
+            if abs(math.cos(y)) > 1e-6:
+                x = math.atan2(-r[1][2], r[2][2])
+                z = math.atan2(-r[0][1], r[0][0])
+            else:
+                x = math.atan2(r[2][1], r[1][1])
+                z = 0.0
+            return MockEuler(x, y, z, order=order)
         return MockEuler(0, 0, 0, order=order)
 
     def to_4x4(self):
@@ -543,8 +590,9 @@ DEFAULT_PROPERTY_VALUES = {
     "inertia_iyz": 0.0,
     "collision_quality": 100.0,
     "collision_geometry_type": "MESH",
-    "joint_type": "FIXED",
-    "axis": (0.0, 0.0, 1.0),
+    "joint_type": "revolute",
+    "is_passive": False,
+    "axis": "Z",
     "use_limit": False,
     "limit_lower": 0.0,
     "limit_upper": 0.0,
@@ -552,8 +600,8 @@ DEFAULT_PROPERTY_VALUES = {
     "child_link": None,
     "parent_link": None,
     "ros2_control_type": "system",
-    "ros2_control_name": "DefaultControl",
-    "hardware_plugin": "fake_components/GenericSystem",
+    "ros2_control_name": "GazeboSimSystem",
+    "hardware_plugin": "gz_ros2_control/GazeboSimSystem",
     "cmd_position": False,
     "cmd_velocity": False,
     "cmd_effort": False,
@@ -580,6 +628,39 @@ DEFAULT_PROPERTY_VALUES = {
     "link_name": "",
     "sensor_name": "",
     "use_material": True,
+    "use_srdf": False,
+    "use_virtual_joint": False,
+    "virtual_joint_name": "world_joint",
+    "virtual_joint_type": "fixed",
+    "virtual_joint_parent_frame": "world",
+    "virtual_joint_child_link": None,
+    "virtual_joint_child_link_name": "",
+    "planning_active_group_index": 0,
+    "planning_active_ee_index": 0,
+    "planning_active_state_index": 0,
+    "planning_active_collision_index": 0,
+    "active_joint_index": 0,
+    "previous_name": "",
+    "group_type": "CHAIN",
+    "base_link_name": "",
+    "tip_link_name": "",
+    "links_csv": "",
+    "subgroups_csv": "",
+    "extra_chains_csv": "",
+    "group": "",
+    "parent_link_name": "",
+    "parent_group": "",
+    "link1_name": "",
+    "link2_name": "",
+    "reason": "Adjacent",
+    "value": 0.0,
+    "is_previewing": False,
+    "preview_active_state_name": "",
+    "show_virtual_joint": True,
+    "show_planning_groups": True,
+    "show_end_effectors": True,
+    "show_group_states": True,
+    "show_disabled_collisions": True,
 }
 
 
@@ -663,8 +744,72 @@ class MockPropertyGroup(metaclass=PropertyMetaclass):
             "child_link",
             "attached_link",
             "contact_collision",
+            "base_link",
+            "tip_link",
+            "link1",
+            "link2",
+            "virtual_joint_child_link",
         ):
             return None
+
+        if key in (
+            "joints",
+            "joint_values",
+            "planning_groups",
+            "subgroups",
+            "end_effectors",
+            "group_states",
+            "disabled_collisions",
+            "ros2_control_joints",
+            "ros2_control_parameters",
+            "parameters",
+            "errors",
+            "warnings",
+        ):
+            item_cls = MockPropertyGroup
+            p_mod = sys.modules.get("linkforge.blender.properties.planning_props")
+            v_mod = sys.modules.get("linkforge.blender.properties.validation_props")
+            c_mod = sys.modules.get("linkforge.blender.properties.control_props")
+            type_map = {}
+            if p_mod is not None:
+                type_map.update(
+                    {
+                        "joint_values": getattr(
+                            p_mod, "GroupStateJointValueProperty", MockPropertyGroup
+                        ),
+                        "planning_groups": getattr(
+                            p_mod, "PlanningGroupProperty", MockPropertyGroup
+                        ),
+                        "subgroups": getattr(p_mod, "PlanningSubgroupProperty", MockPropertyGroup),
+                        "end_effectors": getattr(p_mod, "EndEffectorProperty", MockPropertyGroup),
+                        "group_states": getattr(p_mod, "GroupStateProperty", MockPropertyGroup),
+                        "disabled_collisions": getattr(
+                            p_mod, "CollisionPairProperty", MockPropertyGroup
+                        ),
+                    }
+                )
+            if v_mod is not None:
+                type_map.update(
+                    {
+                        "errors": getattr(v_mod, "ValidationIssueProperty", MockPropertyGroup),
+                        "warnings": getattr(v_mod, "ValidationIssueProperty", MockPropertyGroup),
+                    }
+                )
+            if c_mod is not None:
+                type_map.update(
+                    {
+                        "ros2_control_joints": getattr(
+                            c_mod, "Ros2ControlJointProperty", MockPropertyGroup
+                        ),
+                        "ros2_control_parameters": getattr(
+                            c_mod, "Ros2ControlParameterProperty", MockPropertyGroup
+                        ),
+                    }
+                )
+            item_cls = type_map.get(key, MockPropertyGroup)
+            coll: MockCollection[MockPropertyGroup] = MockCollection(prop_type=item_cls)
+            self._values[key] = coll
+            return coll
 
         if key in RESERVED_RNA_PROPS:
             raise AttributeError(
@@ -1159,6 +1304,7 @@ class MockObject(MockPropertyGroup):
         self.original = self
         self.hide_viewport = False
         self.hide_render = False
+        self._custom_properties = {}
 
         has_linkforge = any("linkforge" in c.__dict__ for c in type(self).__mro__)
         if not has_linkforge:
@@ -1405,6 +1551,30 @@ class MockObject(MockPropertyGroup):
     def select_set(self, state):
         self._selected = state
 
+    def __getitem__(self, key):
+        if not hasattr(self, "_custom_properties"):
+            self._custom_properties = {}
+        return self._custom_properties[key]
+
+    def __setitem__(self, key, value):
+        if not hasattr(self, "_custom_properties"):
+            self._custom_properties = {}
+        self._custom_properties[key] = value
+
+    def __delitem__(self, key):
+        if hasattr(self, "_custom_properties") and key in self._custom_properties:
+            del self._custom_properties[key]
+
+    def __contains__(self, key):
+        if not hasattr(self, "_custom_properties"):
+            return False
+        return key in self._custom_properties
+
+    def get(self, key, default=None):
+        if not hasattr(self, "_custom_properties"):
+            return default
+        return self._custom_properties.get(key, default)
+
     def transform(self, matrix):
         pass
 
@@ -1458,6 +1628,17 @@ class MockScene(MockPropertyGroup):
         self.linkforge.use_ros2_control = True
         self.linkforge.ros2_control_joints = MockCollection(prop_type=MockPropertyGroup)
         self.linkforge.ros2_control_parameters = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.use_srdf = False
+        self.linkforge.use_virtual_joint = False
+        self.linkforge.virtual_joint_name = "world_joint"
+        self.linkforge.virtual_joint_type = "fixed"
+        self.linkforge.virtual_joint_parent_frame = "world"
+        self.linkforge.virtual_joint_child_link = None
+        self.linkforge.virtual_joint_child_link_name = ""
+        self.linkforge.planning_groups = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.end_effectors = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.group_states = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.disabled_collisions = MockCollection(prop_type=MockPropertyGroup)
 
         self.linkforge_robot = self.linkforge
         self.linkforge_validation = MockPropertyGroup(name="linkforge_validation")
@@ -2164,9 +2345,15 @@ def setup_mock_bpy():
     mock_io_utils.ImportHelper = MockIOHelper
     mock_extras.io_utils = mock_io_utils
 
-    mock_gpu_extras = DynamicModule("gpu_extras")
-    mock_batch = DynamicModule("gpu_extras.batch")
-    mock_gpu_extras.batch = mock_batch
+    if "gpu_extras" in sys.modules and isinstance(sys.modules["gpu_extras"], DynamicModule):
+        mock_gpu_extras = sys.modules["gpu_extras"]
+        mock_batch = sys.modules["gpu_extras.batch"]
+    else:
+        mock_gpu_extras = DynamicModule("gpu_extras")
+        mock_batch = DynamicModule("gpu_extras.batch")
+        mock_gpu_extras.batch = mock_batch
+        sys.modules["gpu_extras"] = typing.cast(types.ModuleType, mock_gpu_extras)
+        sys.modules["gpu_extras.batch"] = typing.cast(types.ModuleType, mock_batch)
 
     sys.modules["bpy"] = typing.cast(types.ModuleType, mock_bpy)
     sys.modules["bpy.data"] = typing.cast(types.ModuleType, mock_data)
@@ -2181,14 +2368,16 @@ def setup_mock_bpy():
     sys.modules["bmesh"] = typing.cast(types.ModuleType, mock_bmesh)
     sys.modules["bpy_extras"] = typing.cast(types.ModuleType, mock_extras)
     sys.modules["bpy_extras.io_utils"] = typing.cast(types.ModuleType, mock_io_utils)
-    sys.modules["gpu_extras"] = typing.cast(types.ModuleType, mock_gpu_extras)
-    sys.modules["gpu_extras.batch"] = typing.cast(types.ModuleType, mock_batch)
-    gpu_mock = DynamicModule("gpu")
-    sys.modules["gpu"] = gpu_mock
-    sys.modules["gpu.state"] = gpu_mock.state
-    sys.modules["gpu.types"] = gpu_mock.types
-    sys.modules["gpu.shader"] = gpu_mock.shader
-    sys.modules["gpu.matrix"] = gpu_mock.matrix
+
+    if "gpu" in sys.modules and isinstance(sys.modules["gpu"], DynamicModule):
+        gpu_mock = sys.modules["gpu"]
+    else:
+        gpu_mock = DynamicModule("gpu")
+        sys.modules["gpu"] = gpu_mock
+        sys.modules["gpu.state"] = gpu_mock.state
+        sys.modules["gpu.types"] = gpu_mock.types
+        sys.modules["gpu.shader"] = gpu_mock.shader
+        sys.modules["gpu.matrix"] = gpu_mock.matrix
 
     # Finalize scene-context links
     def _new_collection(name):

@@ -24,6 +24,7 @@ from . import (
     geom_props,
     joint_props,
     link_props,
+    planning_props,
     robot_props,
     sensor_props,
     validation_props,
@@ -36,6 +37,7 @@ modules = [
     joint_props,
     sensor_props,
     control_props,
+    planning_props,
     robot_props,
     validation_props,
 ]

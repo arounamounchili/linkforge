@@ -22,6 +22,7 @@ from linkforge.core import (
     ValidationResult,
     Vector3,
 )
+from linkforge.core.constants import ROS2_CONTROL_DEFAULT_NAME, UNNAMED_JOINT
 from mathutils import Matrix
 
 from tests.blender_test_utils import (
@@ -315,7 +316,9 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
 
     # Translate valid system hardware type with state interfaces but no command interfaces fallback
     props.use_ros2_control = True
-    props.ros2_control_name = ""  # Cover empty ros2_control_name fallback to "RobotControl"
+    props.ros2_control_name = (
+        ""  # Cover empty ros2_control_name fallback to ROS2_CONTROL_DEFAULT_NAME
+    )
     props.ros2_control_type = "system"
     props.hardware_plugin = "mock_plugin"
     props.ros2_control_joints.clear()
@@ -329,22 +332,23 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     item_sys2.name = "joint_sys2"
     item_sys2.cmd_position = True
     item_sys2.state_position = False
+    item_sys2.state_velocity = False
 
     builder.link("link_p1").commit()
     builder.link("link_c1", parent="link_p1", joint_name="joint_sys1").commit()
     builder.link("link_c2", parent="link_p1", joint_name="joint_sys2").commit()
 
     translator.translate(props, builder)
-    assert builder.robot.get_ros2_control("RobotControl") is not None
-    assert list(builder.robot.get_ros2_control("RobotControl").joints[0].command_interfaces) == [
-        "position"
-    ]
-    assert list(builder.robot.get_ros2_control("RobotControl").joints[1].state_interfaces) == [
-        "position"
-    ]
+    assert builder.robot.get_ros2_control(ROS2_CONTROL_DEFAULT_NAME) is not None
+    assert list(
+        builder.robot.get_ros2_control(ROS2_CONTROL_DEFAULT_NAME).joints[0].command_interfaces
+    ) == ["position"]
+    assert list(
+        builder.robot.get_ros2_control(ROS2_CONTROL_DEFAULT_NAME).joints[1].state_interfaces
+    ) == ["position"]
 
     # ROS2 Control: joint_obj present, joint_props.joint_name is non-string → fallback to item.name
-    # When item.name is also None → final fallback becomes "joint"
+    # When item.name is also None → final fallback becomes UNNAMED_JOINT
     joint_obj_non_str = create_test_object("joint_sys_non_str_obj2", None, scene=scene)
 
     mock_joint_item = MagicMock()
@@ -371,7 +375,7 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     ):
         control_obj = translator._blender_ros2_control_to_core(mock_props)
     assert control_obj is not None
-    assert control_obj.joints[0].name == "joint"
+    assert control_obj.joints[0].name == UNNAMED_JOINT
 
     props.ros2_control_name = "sensor_control"
     props.ros2_control_type = "sensor"
@@ -381,6 +385,7 @@ def test_ros2_control_translator_uncovered_branches(scene, blender_context):
     item_sensor.name = "joint_1"
     item_sensor.cmd_position = True
     item_sensor.state_position = False
+    item_sensor.state_velocity = False
 
     control = translator._blender_ros2_control_to_core(props)
     assert control is not None
