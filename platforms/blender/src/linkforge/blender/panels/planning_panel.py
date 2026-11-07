@@ -490,8 +490,6 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
             j_head.operator(
                 "linkforge.capture_group_state_pose", text="Capture", icon="CAMERA_DATA"
             )
-            if is_prev:
-                j_head.operator("linkforge.restore_rest_pose", text="Rest", icon="ARMATURE_DATA")
 
             sliders_col = j_box.column(align=True)
             for jv in state_item.joint_values:
