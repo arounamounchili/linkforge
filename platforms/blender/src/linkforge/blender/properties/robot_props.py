@@ -221,6 +221,13 @@ class RobotPropertyGroup(PropertyGroup):
 
     disabled_collisions: CollectionProperty(type=CollisionPairProperty)  # type: ignore
     planning_active_collision_index: IntProperty(default=0)  # type: ignore
+    acm_sample_count: IntProperty(  # type: ignore
+        name="ACM Samples",
+        description="Number of kinematic configurations to sample for Allowed Collision Matrix (ACM)",
+        default=500,
+        min=50,
+        max=5000,
+    )
 
     # UI collapsible states for Planning sections
     show_virtual_joint: BoolProperty(name="Show Virtual Joint", default=True)  # type: ignore

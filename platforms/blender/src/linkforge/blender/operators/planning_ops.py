@@ -1250,9 +1250,21 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
         if not scene or not (props := get_robot_props(scene)):
             return {"CANCELLED"}
 
+        if (
+            hasattr(self, "properties")
+            and self.properties is not None
+            and hasattr(self.properties, "is_property_set")
+            and self.properties.is_property_set("sample_count")
+        ):
+            sample_cnt = int(self.sample_count)
+        elif getattr(props, "acm_sample_count", 0):
+            sample_cnt = int(props.acm_sample_count)
+        else:
+            sample_cnt = int(getattr(self, "sample_count", 500))
+
         results = compute_allowed_collision_matrix(
             scene,
-            sample_count=0 if self.adjacent_only else int(self.sample_count),
+            sample_count=0 if self.adjacent_only else sample_cnt,
             include_adjacent=True,
             include_never=not self.adjacent_only,
             include_default=not self.adjacent_only,

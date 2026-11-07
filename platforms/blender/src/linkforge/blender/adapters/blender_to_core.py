@@ -26,7 +26,7 @@ from ..core import (
 )
 from ..core.constants import DEFAULT_MATERIAL_RGBA
 from ..handlers.name_sync_handler import sync_scene_identities
-from ..utils.pose_preview import ensure_robot_rest_pose
+from ..utils.pose_preview import temporary_rest_pose
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -176,69 +176,68 @@ class SceneToRobotTranslator:
 
     def translate(self, raise_on_error: bool = True) -> tuple[Robot, ValidationResult]:
         """Perform the translation and return the built Robot model."""
-        self.link_translator = translator.LinkTranslator()
-        self.joint_translator = translator.JointTranslator()
-        self.sensor_translator = translator.SensorTranslator()
-        self.ros2_translator = translator.Ros2ControlTranslator()
-        self.semantic_translator = translator.SemanticTranslator()
-        # Ensure robot is restored to rest pose before extracting coordinate frames
-        ensure_robot_rest_pose(getattr(self.context, "scene", None))
+        with temporary_rest_pose(getattr(self.context, "scene", None)):
+            self.link_translator = translator.LinkTranslator()
+            self.joint_translator = translator.JointTranslator()
+            self.sensor_translator = translator.SensorTranslator()
+            self.ros2_translator = translator.Ros2ControlTranslator()
+            self.semantic_translator = translator.SemanticTranslator()
 
-        # Categorize scene objects
-        link_objects, joint_objects, sensor_objects, joints_map, root = _categorize_scene_objects(
-            self.context.scene
-        )
-
-        # Validate joint definitions (parent/child references, self-loops, duplicates)
-        self._validate_joint_definitions(joint_objects)
-
-        # Calculate coordinate frames (needed for joint relative origins)
-        link_frames = _calculate_link_frames(link_objects, joints_map, root)
-
-        # Translate Materials globally (Centralized management)
-        self._translate_global_materials(link_objects)
-
-        # Build Kinematic Tree recursively (The "Composer" way)
-        if root:
-            root_name, _ = root
-            self._build_link_recursive(root_name, None, link_objects, joints_map, link_frames)
-
-            # Translate any orphaned links/islands that are not connected to the main root's tree
-            for orphaned_link_name in link_objects:
-                if not self.builder.robot.has_link(orphaned_link_name):
-                    self._build_link_recursive(
-                        orphaned_link_name, None, link_objects, joints_map, link_frames
-                    )
-        else:
-            self.validation_result.add_error(
-                title="No root link",
-                message="No root link found in scene. Ensure at least one link has no parent joint.",
-                code=ValidationErrorCode.NO_ROOT,
+            # Categorize scene objects
+            link_objects, joint_objects, sensor_objects, joints_map, root = (
+                _categorize_scene_objects(self.context.scene)
             )
 
-        # Translate orphaned components (Sensors)
-        self._translate_sensors(sensor_objects)
-        self._translate_ros2_control()
-        self._translate_semantic()
-        self._translate_scene_gazebo_plugins()
+            # Validate joint definitions (parent/child references, self-loops, duplicates)
+            self._validate_joint_definitions(joint_objects)
 
-        # Finalize and return
-        try:
-            robot = self.builder.build(validate=False)
-        except Exception as e:
-            self.validation_result.add_error(
-                title="Build failed", message=str(e), code=ValidationErrorCode.INVALID_VALUE
-            )
-            robot = Robot(name=self.robot_name)
+            # Calculate coordinate frames (needed for joint relative origins)
+            link_frames = _calculate_link_frames(link_objects, joints_map, root)
 
-        if raise_on_error and self.validation_result.errors:
-            first_err = self.validation_result.errors[0]
-            raise RobotValidationError(
-                ValidationErrorCode.INVALID_VALUE,
-                f"Multiple configuration errors found ({len(self.validation_result.errors)}). First: {first_err.title} - {first_err.message}",
-            )
+            # Translate Materials globally (Centralized management)
+            self._translate_global_materials(link_objects)
 
-        return robot, self.validation_result
+            # Build Kinematic Tree recursively (The "Composer" way)
+            if root:
+                root_name, _ = root
+                self._build_link_recursive(root_name, None, link_objects, joints_map, link_frames)
+
+                # Translate any orphaned links/islands that are not connected to the main root's tree
+                for orphaned_link_name in link_objects:
+                    if not self.builder.robot.has_link(orphaned_link_name):
+                        self._build_link_recursive(
+                            orphaned_link_name, None, link_objects, joints_map, link_frames
+                        )
+            else:
+                self.validation_result.add_error(
+                    title="No root link",
+                    message="No root link found in scene. Ensure at least one link has no parent joint.",
+                    code=ValidationErrorCode.NO_ROOT,
+                )
+
+            # Translate orphaned components (Sensors)
+            self._translate_sensors(sensor_objects)
+            self._translate_ros2_control()
+            self._translate_semantic()
+            self._translate_scene_gazebo_plugins()
+
+            # Finalize and return
+            try:
+                robot = self.builder.build(validate=False)
+            except Exception as e:
+                self.validation_result.add_error(
+                    title="Build failed", message=str(e), code=ValidationErrorCode.INVALID_VALUE
+                )
+                robot = Robot(name=self.robot_name)
+
+            if raise_on_error and self.validation_result.errors:
+                first_err = self.validation_result.errors[0]
+                raise RobotValidationError(
+                    ValidationErrorCode.INVALID_VALUE,
+                    f"Multiple configuration errors found ({len(self.validation_result.errors)}). First: {first_err.title} - {first_err.message}",
+                )
+
+            return robot, self.validation_result
 
     def _validate_joint_definitions(self, joint_objects: list[Any]) -> None:
         """Validate that all robot joints in the scene have valid parent and child links."""

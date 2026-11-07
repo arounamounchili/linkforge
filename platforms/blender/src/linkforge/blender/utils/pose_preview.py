@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import math
+from collections.abc import Iterator
 from typing import Any
 
 import bpy
@@ -328,3 +329,43 @@ def ensure_robot_rest_pose(scene: bpy.types.Scene | None = None) -> bool:
         restore_robot_rest_pose(scene)
         return True
     return False
+
+
+@contextlib.contextmanager
+def temporary_rest_pose(scene: bpy.types.Scene | None = None) -> Iterator[None]:
+    """Context manager that temporarily restores the robot to rest pose.
+
+    If a pose preview is active, this restores the neutral rest pose for the duration
+    of the block (e.g. for kinematic frame extraction, URDF export, or validation),
+    and then seamlessly restores the user's active preview pose afterwards.
+
+    Args:
+        scene: Active Blender scene (defaults to bpy.context.scene).
+    """
+    if scene is None:
+        scene = getattr(bpy.context, "scene", None)
+
+    active_state_name = ""
+    props = get_robot_props(scene) if scene else None
+    if props:
+        active_state_name = str(getattr(props, "preview_active_state_name", "") or "")
+        if not active_state_name:
+            for s in getattr(props, "group_states", []):
+                if getattr(s, "is_previewing", False):
+                    active_state_name = str(getattr(s, "name", "") or "")
+                    break
+
+    had_preview = bool(active_state_name)
+    if had_preview:
+        restore_robot_rest_pose(scene)
+
+    try:
+        yield
+    finally:
+        if had_preview and scene and props and active_state_name:
+            for s in getattr(props, "group_states", []):
+                if getattr(s, "name", "") == active_state_name:
+                    s.is_previewing = True
+                    props.preview_active_state_name = active_state_name
+                    apply_group_state_pose(scene, s)
+                    break

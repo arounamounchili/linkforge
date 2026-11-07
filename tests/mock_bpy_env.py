@@ -1639,6 +1639,7 @@ class MockScene(MockPropertyGroup):
         self.linkforge.end_effectors = MockCollection(prop_type=MockPropertyGroup)
         self.linkforge.group_states = MockCollection(prop_type=MockPropertyGroup)
         self.linkforge.disabled_collisions = MockCollection(prop_type=MockPropertyGroup)
+        self.linkforge.acm_sample_count = 500
 
         self.linkforge_robot = self.linkforge
         self.linkforge_validation = MockPropertyGroup(name="linkforge_validation")

@@ -721,6 +721,7 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
                 text="Generate Collision Matrix (ACM)",
                 icon="MOD_PHYSICS",
             )
+            btn_row.prop(props, "acm_sample_count", text="Samples")
 
             row = dc_box.row()
             row.template_list(
