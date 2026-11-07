@@ -42,13 +42,20 @@ Modern robotics (ROS 2) separates the *description* of the robot from its *contr
 
 ---
 
+### 5. The Planning Layer (MoveIt 2 SRDF)
+Just as `ros2_control` separates hardware actuation from geometry, **SRDF (Semantic Robot Description Format)** separates motion-planning semantics from the physical kinematic tree:
+- **Unified Planning Panel**: The **Planning** panel in Blender exposes virtual joints, kinematic planning groups (serial chains and joint collections), end effectors, limit-clamped named poses, and disabled collision pairs directly on the scene model.
+- **Live Kinematic Sync**: Because planning groups and collision rules hold direct Blender `PointerProperty` references to link and joint objects, renaming objects in the Outliner or tightening joint limits in the **Joints** panel automatically keeps your SRDF configuration synchronized.
+
+---
+
 :::{tip}
 For a technical breakdown of naming conventions and object types, see the [Robot Structure Reference](../reference/robot_structure.md).
 :::
 
 ---
 
-### 5. The Assembly Layer
+### 6. The Assembly Layer
 
 While the Blender UI covers the most common workflow, LinkForge also provides a
 programmatic assembly API for engineers who need to build robots dynamically in Python.

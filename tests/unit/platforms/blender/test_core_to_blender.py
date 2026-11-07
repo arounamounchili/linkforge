@@ -1557,44 +1557,53 @@ class TestCoreToBlenderExhaustiveCoverage:
             assert sensor_obj is not None
             assert sensor_props.topic_name == "/camera/image_raw"
 
-        scene.linkforge_robot = mock.Mock()
-        rc_joint = Ros2ControlJoint(
-            name="joint_1",
-            command_interfaces=["position"],
-            state_interfaces=["position"],
-            parameters={"joint_p": "j_val"},
-        )
-        rc = Ros2Control(
-            name="test_control",
-            type="system",
-            hardware_plugin="mock_hw",
-            parameters={"global_p": "g_val"},
-            joints=[rc_joint],
-        )
-        gz_plugin = GazeboPlugin(
-            name="test_ros2_control",
-            filename="libgz_ros2_control.so",
-            parameters={"parameters": "test_controllers.yaml"},
-        )
-        gz_element = GazeboElement(plugins=(gz_plugin,))
-        robot_rc = Robot(
-            name="rc_bot",
-            links=[Link("base"), Link("child")],
-            joints=[Joint("joint_1", JointType.FIXED, "base", "child")],
-            ros2_controls=[rc],
-            gazebo_elements=(gz_element,),
-        )
-        with (
-            mock.patch("linkforge.blender.adapters.core_to_blender.setup_scene_for_robot"),
-            mock.patch(
-                "linkforge.blender.adapters.core_to_blender.create_link_object", return_value=None
-            ),
-            mock.patch(
-                "linkforge.blender.adapters.core_to_blender.create_joint_object", return_value=None
-            ),
-        ):
-            success = import_robot_to_scene(robot_rc, Path("test.urdf"), blender_context)
-            assert success is True
+        orig_robot = getattr(scene, "linkforge_robot", None)
+        try:
+            scene.linkforge_robot = mock.Mock()
+            rc_joint = Ros2ControlJoint(
+                name="joint_1",
+                command_interfaces=["position"],
+                state_interfaces=["position"],
+                parameters={"joint_p": "j_val"},
+            )
+            rc = Ros2Control(
+                name="test_control",
+                type="system",
+                hardware_plugin="mock_hw",
+                parameters={"global_p": "g_val"},
+                joints=[rc_joint],
+            )
+            gz_plugin = GazeboPlugin(
+                name="test_ros2_control",
+                filename="libgz_ros2_control.so",
+                parameters={"parameters": "test_controllers.yaml"},
+            )
+            gz_element = GazeboElement(plugins=(gz_plugin,))
+            robot_rc = Robot(
+                name="rc_bot",
+                links=[Link("base"), Link("child")],
+                joints=[Joint("joint_1", JointType.FIXED, "base", "child")],
+                ros2_controls=[rc],
+                gazebo_elements=(gz_element,),
+            )
+            with (
+                mock.patch("linkforge.blender.adapters.core_to_blender.setup_scene_for_robot"),
+                mock.patch(
+                    "linkforge.blender.adapters.core_to_blender.create_link_object",
+                    return_value=None,
+                ),
+                mock.patch(
+                    "linkforge.blender.adapters.core_to_blender.create_joint_object",
+                    return_value=None,
+                ),
+            ):
+                success = import_robot_to_scene(robot_rc, Path("test.urdf"), blender_context)
+                assert success is True
+        finally:
+            if orig_robot is not None:
+                scene.linkforge_robot = orig_robot
+            elif hasattr(scene, "linkforge_robot"):
+                delattr(scene, "linkforge_robot")
 
         from linkforge.blender.adapters.core_to_blender import _get_geometry_type_str
 
@@ -1938,11 +1947,18 @@ class TestCoreToBlenderExhaustiveCoverage:
         lp.ros2_control_joints.add.return_value = mock_joint
         lp.ros2_control_joints.__getitem__ = lambda *args, **kwargs: mock_joint
 
-        scene.linkforge_robot = lp
+        orig_robot = getattr(scene, "linkforge_robot", None)
+        try:
+            scene.linkforge_robot = lp
 
-        setup_scene_for_robot(blender_context, robot_scene)
+            setup_scene_for_robot(blender_context, robot_scene)
 
-        assert lp.use_ros2_control is True
-        assert lp.ros2_control_parameters[0].name == "global_param"
-        assert lp.ros2_control_joints[0].parameters[0].name == "kp"
-        assert lp.controllers_yaml_path == "config.yaml"
+            assert lp.use_ros2_control is True
+            assert lp.ros2_control_parameters[0].name == "global_param"
+            assert lp.ros2_control_joints[0].parameters[0].name == "kp"
+            assert lp.controllers_yaml_path == "config.yaml"
+        finally:
+            if orig_robot is not None:
+                scene.linkforge_robot = orig_robot
+            elif hasattr(scene, "linkforge_robot"):
+                delattr(scene, "linkforge_robot")

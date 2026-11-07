@@ -19,6 +19,10 @@ from bpy.props import (
 from bpy.types import Context, PropertyGroup
 
 from ..constants import (
+    AXIS_CUSTOM,
+    AXIS_X,
+    AXIS_Y,
+    AXIS_Z,
     PROP_JOINT,
 )
 from ..core import sanitize_name
@@ -221,12 +225,12 @@ class JointPropertyGroup(PropertyGroup):
         name="Axis",
         description="Which direction the joint moves (rotation or sliding axis)",
         items=[
-            ("X", "X", "X axis (red)"),
-            ("Y", "Y", "Y axis (green)"),
-            ("Z", "Z", "Z axis (blue)"),
-            ("CUSTOM", "Custom", "Custom axis direction"),
+            (AXIS_X, "X", "X axis (red)"),
+            (AXIS_Y, "Y", "Y axis (green)"),
+            (AXIS_Z, "Z", "Z axis (blue)"),
+            (AXIS_CUSTOM, "Custom", "Custom axis direction"),
         ],
-        default="Z",
+        default=AXIS_Z,
     )
 
     # Custom axis (when axis is CUSTOM)
@@ -402,6 +406,13 @@ class JointPropertyGroup(PropertyGroup):
     use_calibration_falling: BoolProperty(  # type: ignore
         name="Specify Falling Edge",
         description="Whether to include the falling edge in calibration",
+        default=False,
+    )
+
+    # Passive joint (MoveIt 2 planning / unactuated joint)
+    is_passive: BoolProperty(  # type: ignore
+        name="Passive Joint",
+        description="Designate this joint as unactuated / passive for MoveIt 2 SRDF planning",
         default=False,
     )
 

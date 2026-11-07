@@ -21,7 +21,7 @@ class LINKFORGE_PT_perceive(Panel):
     """Panel for adding sensors to perceive the environment."""
 
     bl_label = "Perceive"
-    bl_description = "Step 2: Add sensors for perception (cameras, LiDAR, IMU, GPS)"
+    bl_description = "Add sensors for perception (cameras, LiDAR, IMU, GPS)"
     bl_idname = "LINKFORGE_PT_perceive"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"

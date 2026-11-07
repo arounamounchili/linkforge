@@ -254,6 +254,29 @@ class TestEndEffectorParentInGroup:
         # Empty links set → check is skipped, no warning
         assert not any("End effector parent link not in group" in w.title for w in result.warnings)
 
+    def test_end_effector_parent_in_parent_group_chain_is_valid(self) -> None:
+        """If parent_link belongs to parent_group's chain, Rule 3 is satisfied."""
+        robot = _make_arm_robot()
+        robot.semantic = SemanticRobotDescription(
+            groups=[
+                PlanningGroup(
+                    name="arm",
+                    chains=[Chain(base_link="base_link", tip_link="link_2")],
+                ),
+                PlanningGroup(name="hand", links=["link_1"]),
+            ],
+            end_effectors=[
+                EndEffector(
+                    name="gripper",
+                    group="hand",
+                    parent_link="link_2",
+                    parent_group="arm",
+                )
+            ],
+        )
+        result = _run(robot)
+        assert not any("End effector parent link not in group" in w.title for w in result.warnings)
+
 
 # ===========================================================================
 # Rule 4: Passive joint vs. command_interface contradiction

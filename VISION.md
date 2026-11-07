@@ -1,7 +1,5 @@
 # LinkForge: The Missing Link in Robotics
 
-![LinkForge: The Universal Robotics Bridge](docs/assets/linkforge_master_vision.png)
-
 ## Mission
 
 **Today**: LinkForge provides a programmable Intermediate Representation (IR) for robotics. It acts as a rigorous Python engine to build, validate, and compile robot descriptions without writing XML by hand. It runs headlessly in CI pipelines and ML training clusters, and visually through a native Blender integration.

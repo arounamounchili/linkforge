@@ -94,6 +94,7 @@ class TestExportPanel:
 
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
         validation.has_results = True
         validation.is_valid = False
         validation.error_count = 1
@@ -111,12 +112,39 @@ class TestExportPanel:
             validation, "show_errors", toggle=True, text="Show 1 Error(s)", icon="TRIA_DOWN"
         )
 
+    def test_export_panel_draw_error_results_collapsed(
+        self, scene, blender_context, mock_layout
+    ) -> None:
+        """Test drawing collapsed errors in validation results in the export panel."""
+        create_robot_link("base_link", scene)
+
+        wm = bpy.context.window_manager
+        validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
+        validation.has_results = True
+        validation.is_valid = False
+        validation.error_count = 1
+        error = validation.errors.add()
+        error.title = "Test Error"
+        error.message = "Something is wrong"
+        validation.show_errors = False
+
+        panel = LINKFORGE_PT_export_panel()
+        panel.layout = mock_layout
+
+        panel.draw(bpy.context)
+
+        mock_layout.prop.assert_any_call(
+            validation, "show_errors", toggle=True, text="Show 1 Error(s)", icon="TRIA_RIGHT"
+        )
+
     def test_export_panel_draw_warning_results(self, scene, blender_context, mock_layout) -> None:
         """Test drawing warnings in validation results in the export panel."""
         create_robot_link("base_link", scene)
 
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
         validation.has_results = True
         validation.is_valid = True
         validation.warning_count = 1
@@ -173,6 +201,7 @@ class TestExportPanel:
 
         wm = bpy.context.window_manager
         validation = getattr(wm, PROP_VALIDATION)
+        validation.clear()
         validation.has_results = True
         validation.is_valid = False
         validation.error_count = 1

@@ -348,6 +348,17 @@ def cleanup_blender_scene(scene: typing.Any | None = None) -> None:
         props.ros2_control_joints.clear()
         props.gazebo_plugin_name = "libgazebo_ros2_control.so"
         props.controllers_yaml_path = ""
+        props.use_srdf = False
+        props.use_virtual_joint = True
+        props.virtual_joint_name = "world_joint"
+        props.virtual_joint_type = "fixed"
+        props.virtual_joint_parent_frame = "world"
+        props.virtual_joint_child_link = None
+        props.virtual_joint_child_link_name = ""
+        props.planning_groups.clear()
+        props.end_effectors.clear()
+        props.group_states.clear()
+        props.disabled_collisions.clear()
 
     # Clear architectural statistics cache for test isolation
     from linkforge.blender.utils.scene_utils import clear_stats_cache

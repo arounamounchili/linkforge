@@ -5,12 +5,13 @@
 > Please ensure your PR title follows the [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat: add lidar sensor`, `fix: core logic bug`).
 
 ## 📝 Description
-<!-- Summarize the changes and link the relevant issue -->
 - Fixes # (issue)
+
+<!-- Summarize the changes, motivations, and architectural impact -->
 
 ## 🖼️ Visual Proof
 > [!TIP]
-> - **Required for**: UI changes, 3D viewport features, or URDF exports.
+> - **Required for**: UI changes, 3D viewport features, or visual exports.
 > - **Optional for**: core logic changes, refactors, or documentation.
 > Drag and drop screenshots or GIFs here.
 
@@ -21,9 +22,8 @@
 3. Verify result Y...
 
 ## 💻 Environment
-- **LinkForge Version:** <!-- e.g., 1.1.0-dev -->
-- **Blender Version:** <!-- e.g., 4.2.0 -->
-- **Operating System:** <!-- e.g., macOS Sonoma, Windows 11 -->
+- **Blender Version:** <!-- e.g., 4.2 LTS, 5.2 -->
+- **Operating System:** <!-- e.g., macOS Sonoma, Ubuntu 24.04, Windows 11 -->
 
 ## 🛠️ Type of change
 - [ ] 🚀 New feature (feat)
@@ -37,8 +37,7 @@
 - [ ] ⚠️ Breaking change
 
 ## ✅ Checklist
-- [ ] `just test-core` passes (Core unit + integration)
-- [ ] `just test-unit-blender` passes (Blender unit tests)
-- [ ] `just pre-commit` passes (format, lint, type checks)
+- [ ] `just check` passes (formatting, linting, and type checking)
+- [ ] `just test` passes (Core + Blender unit and integration tests)
 - [ ] I have verified the changes manually in the Blender viewport
 - [ ] I have updated the documentation or verified no changes are needed

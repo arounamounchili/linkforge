@@ -26,6 +26,8 @@ from ..constants import (
     HW_IF_EFFORT,
     HW_IF_POSITION,
     HW_IF_VELOCITY,
+    ROS2_CONTROL_DEFAULT_NAME,
+    ROS2_CONTROL_DEFAULT_PLUGIN,
     SENSOR_CAMERA,
     SENSOR_CONTACT,
     SENSOR_DEPTH_CAMERA,
@@ -985,15 +987,14 @@ class URDFGenerator(RobotXMLGenerator):
 
         """
         # Create ros2_control element with Gazebo Sim system
-        # Using "gz_ros2_control/GazeboSimSystem" which is the modern standard
         rc_elem = ET.SubElement(
-            parent, "ros2_control", name="GazeboSimSystem", type=CONTROL_TYPE_SYSTEM
+            parent, "ros2_control", name=ROS2_CONTROL_DEFAULT_NAME, type=CONTROL_TYPE_SYSTEM
         )
 
         # Hardware plugin for Gazebo Sim
         hw_elem = ET.SubElement(rc_elem, "hardware")
         plugin_elem = ET.SubElement(hw_elem, "plugin")
-        plugin_elem.text = "gz_ros2_control/GazeboSimSystem"
+        plugin_elem.text = ROS2_CONTROL_DEFAULT_PLUGIN
 
         # Process transmissions to extract joint interfaces (sort for deterministic output)
         for trans in sorted(robot.transmissions, key=lambda t: t.name):

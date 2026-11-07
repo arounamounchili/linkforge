@@ -409,3 +409,67 @@ class TestImportRobotModelOperator:
             res = op.execute(bpy.context)
             assert res == {"FINISHED"}
             op.report.assert_any_call({"INFO"}, "Imported robot 'warn_only_robot' with 3 warnings.")
+
+    def test_draw_method(self, blender_context) -> None:
+        """Test operator draw method in file dialog."""
+        op = LINKFORGE_OT_import_robot_model()
+        op.layout = MagicMock()
+        op.draw(bpy.context)
+        op.layout.box.assert_called_once()
+
+    @patch("linkforge.core.URDFParser")
+    @patch("linkforge.core.SRDFParser")
+    def test_execute_with_companion_srdf_toggle(
+        self, mock_srdf_parser, mock_urdf_parser, tmp_path, scene, blender_context
+    ) -> None:
+        """Test import_companion_srdf toggle respects user choice."""
+        urdf_path = tmp_path / "arm.urdf"
+        urdf_path.write_text("<robot name='arm'/>")
+        srdf_path = tmp_path / "arm.srdf"
+        srdf_path.write_text("<robot name='arm'/>")
+
+        mock_robot = MagicMock()
+        mock_robot.name = "arm"
+        mock_robot.links = ["base"]
+        mock_robot.joints = []
+        mock_urdf_parser.return_value.parse.return_value = mock_robot
+
+        mock_semantic = MagicMock()
+        mock_srdf_parser.return_value.parse.return_value = mock_semantic
+
+        mock_val_res = MagicMock()
+        mock_val_res.is_valid = True
+        mock_val_res.has_warnings = False
+
+        # 1. Enabled (default) -> loads companion SRDF
+        op_on = LINKFORGE_OT_import_robot_model()
+        op_on.filepath = str(urdf_path)
+        op_on.import_companion_srdf = True
+        op_on.report = MagicMock()
+
+        with (
+            patch("linkforge.core.RobotValidator.validate", return_value=mock_val_res),
+            patch("linkforge.blender.preferences.get_addon_prefs", return_value=None),
+            patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
+        ):
+            assert op_on.execute(bpy.context) == {"FINISHED"}
+            mock_srdf_parser.return_value.parse.assert_called_once()
+            op_on.report.assert_any_call(
+                {"INFO"}, "Imported robot 'arm' + companion SRDF (arm.srdf) successfully."
+            )
+
+        # 2. Disabled -> does NOT load companion SRDF
+        mock_srdf_parser.reset_mock()
+        op_off = LINKFORGE_OT_import_robot_model()
+        op_off.filepath = str(urdf_path)
+        op_off.import_companion_srdf = False
+        op_off.report = MagicMock()
+
+        with (
+            patch("linkforge.core.RobotValidator.validate", return_value=mock_val_res),
+            patch("linkforge.blender.preferences.get_addon_prefs", return_value=None),
+            patch("linkforge.blender.logic.asynchronous_builder.AsynchronousRobotBuilder"),
+        ):
+            assert op_off.execute(bpy.context) == {"FINISHED"}
+            mock_srdf_parser.return_value.parse.assert_not_called()
+            op_off.report.assert_any_call({"INFO"}, "Imported robot 'arm' successfully.")

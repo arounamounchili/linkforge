@@ -506,6 +506,7 @@ class TestJointVisualization:
 
     def test_update_viz_handle_switching(self, mocker, scene, blender_context) -> None:
         """Test registering and unregistering the draw handler based on prefs."""
+        bpy.app.driver_namespace.pop("linkforge_joint_gizmo_handler", None)
         mock_add = mocker.patch("bpy.types.SpaceView3D.draw_handler_add", return_value="handle_123")
         mock_remove = mocker.patch("bpy.types.SpaceView3D.draw_handler_remove")
         mock_prefs = mocker.patch("linkforge.blender.visualization.joint_gizmos.get_addon_prefs")

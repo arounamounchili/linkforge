@@ -26,6 +26,7 @@ from ..core import (
 )
 from ..core.constants import DEFAULT_MATERIAL_RGBA
 from ..handlers.name_sync_handler import sync_scene_identities
+from ..utils.pose_preview import ensure_robot_rest_pose
 from ..utils.property_helpers import (
     get_joint_props,
     get_link_props,
@@ -171,6 +172,7 @@ class SceneToRobotTranslator:
         self.joint_translator: translator.JointTranslator = translator.JointTranslator()
         self.sensor_translator: translator.SensorTranslator = translator.SensorTranslator()
         self.ros2_translator: translator.Ros2ControlTranslator = translator.Ros2ControlTranslator()
+        self.semantic_translator: translator.SemanticTranslator = translator.SemanticTranslator()
 
     def translate(self, raise_on_error: bool = True) -> tuple[Robot, ValidationResult]:
         """Perform the translation and return the built Robot model."""
@@ -178,6 +180,10 @@ class SceneToRobotTranslator:
         self.joint_translator = translator.JointTranslator()
         self.sensor_translator = translator.SensorTranslator()
         self.ros2_translator = translator.Ros2ControlTranslator()
+        self.semantic_translator = translator.SemanticTranslator()
+        # Ensure robot is restored to rest pose before extracting coordinate frames
+        ensure_robot_rest_pose(getattr(self.context, "scene", None))
+
         # Categorize scene objects
         link_objects, joint_objects, sensor_objects, joints_map, root = _categorize_scene_objects(
             self.context.scene
@@ -213,6 +219,7 @@ class SceneToRobotTranslator:
         # Translate orphaned components (Sensors)
         self._translate_sensors(sensor_objects)
         self._translate_ros2_control()
+        self._translate_semantic()
         self._translate_scene_gazebo_plugins()
 
         # Finalize and return
@@ -424,6 +431,15 @@ class SceneToRobotTranslator:
         """Translate ROS2 Control settings from robot properties."""
         if self.robot_props and getattr(self.robot_props, "use_ros2_control", False):
             self.ros2_translator.translate(
+                obj=self.robot_props,
+                builder=self.builder,
+                validation_result=self.validation_result,
+            )
+
+    def _translate_semantic(self) -> None:
+        """Translate SRDF semantic planning settings from robot properties."""
+        if self.robot_props:
+            self.semantic_translator.translate(
                 obj=self.robot_props,
                 builder=self.builder,
                 validation_result=self.validation_result,

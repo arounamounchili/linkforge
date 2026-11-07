@@ -15,6 +15,7 @@ import bpy
 
 from ..adapters.context import IBlenderContext
 from ..adapters.core_to_blender import (
+    bind_semantic_scene_objects,
     create_joint_object,
     create_link_object,
     create_sensor_object,
@@ -222,6 +223,7 @@ class AsynchronousRobotBuilder:
                                 logger.debug(
                                     f"Auto-linked ROS2 Control joint '{rc_joint.name}' to {target_obj.name}"
                                 )
+                    bind_semantic_scene_objects(lp, self.link_objects, self.joint_objects)
         except Exception as e:
             logger.debug(f"Task {task_type} failed: {e}")
             raise

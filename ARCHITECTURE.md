@@ -90,7 +90,7 @@ sequenceDiagram
         Adapter->>File: Write .stl / .obj / .dae
     end
     UI->>Generator: write(robot, output_path)
-    Generator->>File: Write .urdf / .xacro
+    Generator->>File: Write .urdf / .xacro (+ companion .srdf)
 ```
 
 ## Core Engineering Principles

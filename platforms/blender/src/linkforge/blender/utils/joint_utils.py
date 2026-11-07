@@ -3,12 +3,55 @@
 from __future__ import annotations
 
 import contextlib
+from typing import Any
 
 import bpy
 
+from ..constants import (
+    AXIS_CUSTOM,
+    AXIS_X,
+    AXIS_Y,
+    AXIS_Z,
+)
 from ..core import Joint
+from ..core._utils.math_utils import normalize_vector
+from ..core.constants import DEFAULT_AXIS_XYZ, SYLVESTER_TOLERANCE_EPSILON
 from . import scene_utils
 from .property_helpers import get_joint_props
+
+
+def get_joint_axis_vector(
+    jp: Any,
+    normalize: bool = True,
+) -> tuple[float, float, float]:
+    """Return 3D axis vector for a robot joint in its local frame.
+
+    Args:
+        jp: JointPropertyGroup or object with axis attributes.
+        normalize: Whether to normalize custom axis vectors.
+
+    Returns:
+        tuple[float, float, float]: Normalized or raw axis vector (x, y, z).
+    """
+    axis = getattr(jp, "axis", AXIS_Z)
+    if axis == AXIS_X:
+        return (1.0, 0.0, 0.0)
+    if axis == AXIS_Y:
+        return (0.0, 1.0, 0.0)
+    if axis == AXIS_Z:
+        return (0.0, 0.0, 1.0)
+    if axis == AXIS_CUSTOM:
+        cx = float(getattr(jp, "custom_axis_x", 0.0))
+        cy = float(getattr(jp, "custom_axis_y", 0.0))
+        cz = float(getattr(jp, "custom_axis_z", 1.0))
+        if normalize:
+            norm = normalize_vector(cx, cy, cz)
+            return norm if any(norm) else (0.0, 0.0, 1.0)
+        # Fallback for near-zero axis
+        if all(abs(v) < SYLVESTER_TOLERANCE_EPSILON for v in (cx, cy, cz)):
+            return DEFAULT_AXIS_XYZ
+        return (cx, cy, cz)
+    return (0.0, 0.0, 1.0)
 
 
 def resolve_mimic_joints(joints: list[Joint], joint_objects: dict[str, bpy.types.Object]) -> None:

@@ -10,6 +10,10 @@ import bpy
 from mathutils import Matrix
 
 from ..constants import (
+    AXIS_CUSTOM,
+    AXIS_X,
+    AXIS_Y,
+    AXIS_Z,
     DEFAULT_JOINT_GIZMO_SIZE,
     DEFAULT_LINK_GIZMO_SIZE,
     PROP_GEOM,
@@ -31,6 +35,7 @@ from ..core import (
     LinkPhysics,
     Mesh,
     Robot,
+    SemanticRobotDescription,
     Sphere,
     get_logger,
 )
@@ -48,6 +53,10 @@ from ..core.constants import (
     JOINT_PLANAR,
     JOINT_PRISMATIC,
     JOINT_REVOLUTE,
+    PLANNING_GROUP_CHAIN,
+    PLANNING_GROUP_JOINTS,
+    PLANNING_GROUP_SUBGROUPS,
+    ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN,
     SENSOR_CAMERA,
     SENSOR_CONTACT,
     SENSOR_DEPTH_CAMERA,
@@ -56,6 +65,11 @@ from ..core.constants import (
     SENSOR_GPU_LIDAR,
     SENSOR_IMU,
     SENSOR_LIDAR,
+    SRDF_REASON_ADJACENT,
+    SRDF_REASON_ALWAYS,
+    SRDF_REASON_DEFAULT,
+    SRDF_REASON_NEVER,
+    SRDF_REASON_USER,
 )
 from ..preferences import get_addon_prefs
 from ..utils.joint_utils import resolve_mimic_joints
@@ -712,14 +726,14 @@ def create_joint_object(
         if joint.axis:
             # Check if it's a standard axis (X, Y, or Z)
             if joint.axis.x == 1.0 and joint.axis.y == 0.0 and joint.axis.z == 0.0:
-                props.axis = "X"
+                props.axis = AXIS_X
             elif joint.axis.x == 0.0 and joint.axis.y == 1.0 and joint.axis.z == 0.0:
-                props.axis = "Y"
+                props.axis = AXIS_Y
             elif joint.axis.x == 0.0 and joint.axis.y == 0.0 and joint.axis.z == 1.0:
-                props.axis = "Z"
+                props.axis = AXIS_Z
             else:
                 # Custom axis
-                props.axis = "CUSTOM"
+                props.axis = AXIS_CUSTOM
                 props.custom_axis_x = joint.axis.x
                 props.custom_axis_y = joint.axis.y
                 props.custom_axis_z = joint.axis.z
@@ -992,7 +1006,7 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
         lp.use_ros2_control = False
         lp.ros2_control_joints.clear()
         lp.ros2_control_parameters.clear()
-        lp.gazebo_plugin_name = "gz_ros2_control::GazeboSimROS2ControlPlugin"  # Default
+        lp.gazebo_plugin_name = ROS2_CONTROL_DEFAULT_GAZEBO_PLUGIN  # Default
         lp.controllers_yaml_path = ""
 
     # Map Gazebo simulation settings if present
@@ -1009,6 +1023,194 @@ def setup_scene_for_robot(context: IBlenderContext, robot: Robot) -> None:
                     break
             if plugin_found:
                 break
+
+    # Populate SRDF semantic planning settings if present
+    if hasattr(scene, PROP_ROBOT):
+        lp = getattr(scene, PROP_ROBOT)
+        populate_planning_properties_from_semantic(lp, getattr(robot, "semantic", None))
+
+    # Mark passive joints on scene objects if present
+    if getattr(robot, "semantic", None) and robot.semantic.passive_joints:
+        passive_names = {pj.name for pj in robot.semantic.passive_joints}
+        for obj in getattr(scene, "objects", ()):
+            jp = get_joint_props(obj)
+            if (
+                jp
+                and jp.is_robot_joint
+                and (jp.joint_name in passive_names or obj.name in passive_names)
+            ):
+                jp.is_passive = True
+
+
+def populate_planning_properties_from_semantic(
+    lp: typing.Any,
+    semantic: SemanticRobotDescription | None,
+) -> bool:
+    """Populate Blender scene robot properties from a core SemanticRobotDescription model.
+
+    Args:
+        lp: The robot property group on the Blender scene (RobotPropertyGroup).
+        semantic: The core SemanticRobotDescription data model, or None.
+
+    Returns:
+        True if semantic planning data was populated and SRDF enabled, False otherwise.
+    """
+    if not lp or not hasattr(lp, "planning_groups"):
+        return False
+
+    lp.planning_groups.clear()
+    lp.end_effectors.clear()
+    lp.group_states.clear()
+    lp.disabled_collisions.clear()
+    lp.planning_active_group_index = 0
+    lp.planning_active_ee_index = 0
+    lp.planning_active_state_index = 0
+    lp.planning_active_collision_index = 0
+    lp.use_virtual_joint = False
+    lp.virtual_joint_child_link = None
+    lp.virtual_joint_child_link_name = ""
+    lp.use_srdf = False
+
+    has_semantic_data = bool(
+        semantic
+        and (
+            semantic.virtual_joints
+            or semantic.groups
+            or semantic.end_effectors
+            or semantic.group_states
+            or semantic.disabled_collisions
+            or semantic.passive_joints
+        )
+    )
+    if not (semantic and has_semantic_data):
+        return False
+
+    lp.use_srdf = True
+
+    if semantic.virtual_joints:
+        vj = semantic.virtual_joints[0]
+        lp.use_virtual_joint = True
+        lp.virtual_joint_name = vj.name
+        lp.virtual_joint_type = vj.type
+        lp.virtual_joint_parent_frame = vj.parent_frame
+        lp.virtual_joint_child_link_name = vj.child_link
+
+    for grp in semantic.groups:
+        g_item = lp.planning_groups.add()
+        g_item.name = grp.name
+        if grp.chains:
+            g_item.group_type = PLANNING_GROUP_CHAIN
+            g_item.base_link_name = grp.chains[0].base_link
+            g_item.tip_link_name = grp.chains[0].tip_link
+            if len(grp.chains) > 1:
+                g_item.extra_chains_csv = ",".join(
+                    f"{c.base_link}:{c.tip_link}" for c in grp.chains[1:]
+                )
+        elif grp.joints:
+            g_item.group_type = PLANNING_GROUP_JOINTS
+            for j_name in grp.joints:
+                j_item = g_item.joints.add()
+                j_item.name = j_name
+        elif grp.subgroups:
+            g_item.group_type = PLANNING_GROUP_SUBGROUPS
+            g_item.subgroups_csv = ",".join(grp.subgroups)
+            for sg_name in grp.subgroups:
+                sg_item = g_item.subgroups.add()
+                sg_item.name = sg_name
+        else:
+            g_item.group_type = PLANNING_GROUP_CHAIN
+
+        if grp.links:
+            g_item.links_csv = ",".join(grp.links)
+        if grp.subgroups and not g_item.subgroups:
+            g_item.subgroups_csv = ",".join(grp.subgroups)
+            for sg_name in grp.subgroups:
+                sg_item = g_item.subgroups.add()
+                sg_item.name = sg_name
+
+    for ee in semantic.end_effectors:
+        ee_item = lp.end_effectors.add()
+        ee_item.name = ee.name
+        ee_item.group = ee.group
+        ee_item.parent_link_name = ee.parent_link
+        ee_item.parent_group = ee.parent_group or ""
+
+    for state in semantic.group_states:
+        s_item = lp.group_states.add()
+        s_item.name = state.name
+        s_item.group = state.group
+        s_item.joint_values.clear()
+        for j_name, vals in state.joint_values.items():
+            jv_item = s_item.joint_values.add()
+            jv_item.name = j_name
+            jv_item.joint_name = j_name
+            jv_item.value = float(vals[0]) if vals else 0.0
+
+    valid_reasons = {
+        SRDF_REASON_ADJACENT,
+        SRDF_REASON_NEVER,
+        SRDF_REASON_DEFAULT,
+        SRDF_REASON_ALWAYS,
+        SRDF_REASON_USER,
+    }
+    for dc in semantic.disabled_collisions:
+        dc_item = lp.disabled_collisions.add()
+        dc_item.name = f"{dc.link1} <-> {dc.link2}"
+        dc_item.link1_name = dc.link1
+        dc_item.link2_name = dc.link2
+        dc_item.reason = dc.reason if dc.reason in valid_reasons else SRDF_REASON_USER
+
+    return True
+
+
+def bind_semantic_scene_objects(
+    lp: typing.Any,
+    link_objects: dict[str, bpy.types.Object],
+    joint_objects: dict[str, bpy.types.Object],
+) -> None:
+    """Resolve SRDF planning PointerProperty references to newly created Blender objects.
+
+    Matches fallback link and joint name strings recorded during import to the
+    newly created Blender Object instances in the scene and establishes direct
+    PointerProperty bindings.
+
+    Args:
+        lp: The robot property group on the Blender scene (RobotPropertyGroup).
+        link_objects: Mapping of robot link names and Blender object names to Object instances.
+        joint_objects: Mapping of robot joint names and Blender object names to Object instances.
+    """
+    if not lp or not hasattr(lp, "planning_groups"):
+        return
+
+    with contextlib.suppress(Exception):
+        vj_link_name = getattr(lp, "virtual_joint_child_link_name", "")
+        if vj_link_name and vj_link_name in link_objects:
+            lp.virtual_joint_child_link = link_objects[vj_link_name]
+
+        for grp in lp.planning_groups:
+            if grp.base_link_name and grp.base_link_name in link_objects:
+                grp.base_link = link_objects[grp.base_link_name]
+            if grp.tip_link_name and grp.tip_link_name in link_objects:
+                grp.tip_link = link_objects[grp.tip_link_name]
+            for j_item in grp.joints:
+                if j_item.name and j_item.name in joint_objects:
+                    j_item.joint_obj = joint_objects[j_item.name]
+
+        for ee in lp.end_effectors:
+            if ee.parent_link_name and ee.parent_link_name in link_objects:
+                ee.parent_link = link_objects[ee.parent_link_name]
+
+        for state in lp.group_states:
+            for jv in state.joint_values:
+                j_key = jv.joint_name or jv.name
+                if j_key and j_key in joint_objects:
+                    jv.joint_obj = joint_objects[j_key]
+
+        for dc in lp.disabled_collisions:
+            if dc.link1_name and dc.link1_name in link_objects:
+                dc.link1 = link_objects[dc.link1_name]
+            if dc.link2_name and dc.link2_name in link_objects:
+                dc.link2 = link_objects[dc.link2_name]
 
 
 def import_robot_to_scene(
@@ -1060,7 +1262,7 @@ def import_robot_to_scene(
     all_joints_list = list(robot.joints)
     resolve_mimic_joints(all_joints_list, joint_objects)
 
-    # Bind ros2_control joint pointers to scene objects
+    # Bind ros2_control and SRDF semantic pointers to scene objects
     scene = getattr(context, "scene", None)
     if scene and hasattr(scene, PROP_ROBOT):
         lp = getattr(scene, PROP_ROBOT)
@@ -1073,6 +1275,7 @@ def import_robot_to_scene(
                             item.joint_obj = joint_objects[item.name]
             except TypeError:
                 pass
+        bind_semantic_scene_objects(lp, link_objects, joint_objects)
 
     sensors_created = 0
     if hasattr(robot, "sensors") and robot.sensors:
