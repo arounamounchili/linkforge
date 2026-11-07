@@ -717,16 +717,11 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         )
 
         if props.show_disabled_collisions:
-            auto_row = dc_box.row(align=True)
-            auto_row.operator(
+            btn_row = dc_box.row(align=True)
+            btn_row.operator(
                 "linkforge.compute_collision_matrix",
-                text="Generate Matrix (ACM)",
+                text="Generate Collision Matrix (ACM)",
                 icon="MOD_PHYSICS",
-            )
-            auto_row.operator(
-                "linkforge.auto_disable_adjacent_collisions",
-                text="Adjacent Only",
-                icon="FILE_REFRESH",
             )
 
             row = dc_box.row()

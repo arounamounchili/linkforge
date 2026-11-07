@@ -1581,6 +1581,14 @@ class TestCollisionMatrixSampling:
         assert len(props.disabled_collisions) >= 4
         assert props.use_srdf is True
 
+        # Test operator with adjacent_only=True
+        op_res_adj = bpy.ops.linkforge.compute_collision_matrix(
+            clear_existing=True, adjacent_only=True
+        )
+        assert op_res_adj == {"FINISHED"}
+        assert len(props.disabled_collisions) >= 2
+        assert all(dc.reason == "Adjacent" for dc in props.disabled_collisions)
+
 
 class TestSubgroupsAndPassiveJoints:
     """Unit tests for Phase 3: Subgroups in planning groups and Passive Joints."""

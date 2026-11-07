@@ -1232,6 +1232,12 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
         default=False,
     )
 
+    adjacent_only: bpy.props.BoolProperty(  # type: ignore
+        name="Adjacent Only",
+        description="Only detect adjacent and fixed link pairs (skip kinematic sampling)",
+        default=False,
+    )
+
     @classmethod
     def poll(cls, context: Context) -> bool:
         """Check if operator can run."""
@@ -1246,11 +1252,11 @@ class LINKFORGE_OT_compute_collision_matrix(Operator):
 
         results = compute_allowed_collision_matrix(
             scene,
-            sample_count=int(self.sample_count),
+            sample_count=0 if self.adjacent_only else int(self.sample_count),
             include_adjacent=True,
-            include_never=True,
-            include_default=True,
-            include_always=True,
+            include_never=not self.adjacent_only,
+            include_default=not self.adjacent_only,
+            include_always=not self.adjacent_only,
         )
 
         if not results:
