@@ -12,6 +12,18 @@ from typing import Any
 
 from .._utils.math_utils import format_float
 from .._utils.xml_utils import create_xml_element, serialize_xml
+from ..constants import (
+    COMMENT_COLLISION_SPHERES,
+    COMMENT_DISABLED_COLLISIONS,
+    COMMENT_DISABLED_DEFAULT_COLLISIONS,
+    COMMENT_ENABLED_COLLISIONS,
+    COMMENT_END_EFFECTORS,
+    COMMENT_GROUP_STATES,
+    COMMENT_JOINT_PROPERTIES,
+    COMMENT_PASSIVE_JOINTS,
+    COMMENT_PLANNING_GROUPS,
+    COMMENT_VIRTUAL_JOINTS,
+)
 from ..exceptions import RobotGeneratorError
 from ..logging_config import get_logger
 from ..models.robot import Robot
@@ -104,6 +116,9 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def _add_virtual_joints(self, root: ET.Element, virtual_joints: list[VirtualJoint]) -> None:
         """Add virtual joint elements to root."""
+        if not virtual_joints:
+            return
+        root.append(ET.Comment(COMMENT_VIRTUAL_JOINTS))
         for vj in virtual_joints:
             create_xml_element(
                 root,
@@ -117,6 +132,9 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def _add_groups(self, root: ET.Element, groups: list[PlanningGroup]) -> None:
         """Add planning group elements to root."""
+        if not groups:
+            return
+        root.append(ET.Comment(COMMENT_PLANNING_GROUPS))
         for group in groups:
             group_elem = ET.SubElement(root, "group", name=group.name)
             for link_name in group.links:
@@ -132,6 +150,9 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def _add_group_states(self, root: ET.Element, states: list[GroupState]) -> None:
         """Add group state elements to root."""
+        if not states:
+            return
+        root.append(ET.Comment(COMMENT_GROUP_STATES))
         for state in states:
             state_elem = ET.SubElement(root, "group_state", name=state.name, group=state.group)
             for j_name in sorted(state.joint_values.keys()):
@@ -141,6 +162,9 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def _add_end_effectors(self, root: ET.Element, end_effectors: list[EndEffector]) -> None:
         """Add end effector elements to root."""
+        if not end_effectors:
+            return
+        root.append(ET.Comment(COMMENT_END_EFFECTORS))
         for ee in end_effectors:
             create_xml_element(
                 root,
@@ -154,6 +178,9 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def _add_passive_joints(self, root: ET.Element, passive_joints: list[PassiveJoint]) -> None:
         """Add passive joint elements to root."""
+        if not passive_joints:
+            return
+        root.append(ET.Comment(COMMENT_PASSIVE_JOINTS))
         for pj in passive_joints:
             ET.SubElement(root, "passive_joint", name=pj.name)
 
@@ -161,6 +188,9 @@ class SRDFGenerator(RobotXMLGenerator):
         self, root: ET.Element, disabled_collisions: list[CollisionPair]
     ) -> None:
         """Add disabled collision elements to root."""
+        if not disabled_collisions:
+            return
+        root.append(ET.Comment(COMMENT_DISABLED_COLLISIONS))
         for dc in disabled_collisions:
             create_xml_element(
                 root,
@@ -175,6 +205,9 @@ class SRDFGenerator(RobotXMLGenerator):
         self, root: ET.Element, enabled_collisions: list[CollisionPair]
     ) -> None:
         """Add enabled collision elements to root."""
+        if not enabled_collisions:
+            return
+        root.append(ET.Comment(COMMENT_ENABLED_COLLISIONS))
         for ec in enabled_collisions:
             create_xml_element(
                 root,
@@ -187,6 +220,9 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def _add_no_default_collision_links(self, root: ET.Element, links: list[str]) -> None:
         """Add disable default collisions elements to root."""
+        if not links:
+            return
+        root.append(ET.Comment(COMMENT_DISABLED_DEFAULT_COLLISIONS))
         for link in links:
             ET.SubElement(root, "disable_default_collisions", link=link)
 
@@ -194,6 +230,9 @@ class SRDFGenerator(RobotXMLGenerator):
         self, root: ET.Element, approximations: list[LinkSphereApproximation]
     ) -> None:
         """Add link sphere approximation elements to root."""
+        if not approximations:
+            return
+        root.append(ET.Comment(COMMENT_COLLISION_SPHERES))
         for lsa in approximations:
             lsa_elem = ET.SubElement(root, "link_sphere_approximation", link=lsa.link)
             for sphere in lsa.spheres:
@@ -208,6 +247,9 @@ class SRDFGenerator(RobotXMLGenerator):
 
     def _add_joint_properties(self, root: ET.Element, properties: list[JointProperty]) -> None:
         """Add joint property elements to root."""
+        if not properties:
+            return
+        root.append(ET.Comment(COMMENT_JOINT_PROPERTIES))
         for jp in properties:
             ET.SubElement(
                 root,

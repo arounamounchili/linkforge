@@ -715,12 +715,13 @@ class LINKFORGE_PT_planning(bpy.types.Panel):
         )
 
         if props.show_disabled_collisions:
-            btn_row = dc_box.row(align=True)
+            btn_row = dc_box.split(factor=0.68, align=True)
             btn_row.operator(
                 "linkforge.compute_collision_matrix",
-                text="Generate Collision Matrix (ACM)",
+                text="Generate Matrix (ACM)",
                 icon="MOD_PHYSICS",
             )
+            btn_row.prop(props, "acm_sample_count", text="Samples")
 
             row = dc_box.row()
             row.template_list(

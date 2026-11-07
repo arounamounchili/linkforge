@@ -183,10 +183,10 @@ class LINKFORGE_PT_joints(Panel):
             sub.active = props.use_calibration_falling
             sub.prop(props, "calibration_falling", text="Falling")
 
-        # Passive joint for MoveIt 2 planning
+        # Passive joint for semantic motion planning (SRDF)
         if props.joint_type != JOINT_FIXED:
             box.separator()
-            box.prop(props, "is_passive", text="Passive Joint (MoveIt 2)", icon="DRIVER")
+            box.prop(props, "is_passive", text="Passive Joint", icon="DRIVER")
 
         # Remove Joint button (Danger Zone)
         box.separator()

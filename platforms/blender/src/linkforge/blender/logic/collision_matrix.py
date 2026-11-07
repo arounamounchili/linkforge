@@ -84,14 +84,24 @@ def _get_bounding_sphere(link_obj: Any) -> tuple[tuple[float, float, float], flo
             return (cx, cy, cz), max(rad, 0.02)
         return (0.0, 0.0, 0.0), 0.05
 
-    # Aggregate bounding boxes from mesh objects
+    # Aggregate bounding boxes from mesh objects transformed to link frame
     all_pts: list[tuple[float, float, float]] = []
     for m in mesh_objs:
         bb = getattr(m, "bound_box", None)
         if bb and len(bb) >= 8:
+            mat = getattr(m, "matrix_local", None)
             for p in bb:
-                # Local to link transform
-                all_pts.append((float(p[0]), float(p[1]), float(p[2])))
+                px, py, pz = float(p[0]), float(p[1]), float(p[2])
+                if mat is not None and hasattr(mat, "__getitem__"):
+                    try:
+                        tx = float(mat[0][0] * px + mat[0][1] * py + mat[0][2] * pz + mat[0][3])
+                        ty = float(mat[1][0] * px + mat[1][1] * py + mat[1][2] * pz + mat[1][3])
+                        tz = float(mat[2][0] * px + mat[2][1] * py + mat[2][2] * pz + mat[2][3])
+                        all_pts.append((tx, ty, tz))
+                    except Exception:
+                        all_pts.append((px, py, pz))
+                else:
+                    all_pts.append((px, py, pz))
 
     if not all_pts:
         return (0.0, 0.0, 0.0), 0.05

@@ -24,6 +24,10 @@ from linkforge.blender.core.models.srdf import (
 )
 from linkforge.blender.core.validation import ValidationResult
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
+from linkforge.blender.logic.collision_matrix import (
+    _get_bounding_sphere,
+    compute_allowed_collision_matrix,
+)
 from linkforge.blender.operators import planning_ops
 from linkforge.blender.operators.export_ops import LINKFORGE_OT_export_robot_model
 from linkforge.blender.operators.import_ops import LINKFORGE_OT_import_robot_model
@@ -62,6 +66,7 @@ from linkforge.blender.properties.planning_props import (
     GroupStateJointValueProperty,
     GroupStateProperty,
     PlanningGroupProperty,
+    _safe_redirect_pointer,
     find_robot_root_link,
     get_planning_joint_name,
     get_planning_link_name,
@@ -80,10 +85,21 @@ from linkforge.blender.properties.planning_props import (
     update_use_virtual_joint,
     update_virtual_joint_child_link,
 )
+from linkforge.blender.utils.pose_preview import (
+    ensure_robot_rest_pose,
+    get_rest_matrix,
+    is_pose_preview_active,
+    temporary_rest_pose,
+)
 from linkforge.blender.utils.property_helpers import (
     get_joint_props,
     get_robot_props,
 )
+
+try:
+    from mathutils import Matrix
+except ImportError:
+    Matrix = None  # type: ignore[assignment,misc]
 
 from tests.blender_test_utils import (
     create_robot_joint,
@@ -416,8 +432,6 @@ class TestPlanningPropsHelpers:
         update_collision_pair_links(dc, bpy.context)
 
     def test_safe_redirect_pointer_gui_timer(self, scene) -> None:
-        from linkforge.blender.properties.planning_props import _safe_redirect_pointer
-
         class DummyOwner:
             target = None
 
@@ -1384,10 +1398,6 @@ class TestPosePreviewEngine:
 
     def test_pose_preview_toggle_articulation_and_rest(self, scene: bpy.types.Scene) -> None:
         """Verify that enabling pose preview articulates scene joints and rest restores them."""
-        from linkforge.blender.utils.pose_preview import (
-            is_pose_preview_active,
-        )
-
         props = get_robot_props(scene)
         assert props is not None
 
@@ -1449,9 +1459,6 @@ class TestPosePreviewEngine:
 
     def test_pose_preview_capture_scene_pose(self, scene: bpy.types.Scene) -> None:
         """Verify reading joint values directly from 3D viewport transforms into Group State."""
-        from linkforge.blender.utils.pose_preview import get_rest_matrix
-        from mathutils import Matrix
-
         props = get_robot_props(scene)
         assert props is not None
 
@@ -1484,10 +1491,6 @@ class TestPosePreviewEngine:
 
     def test_pose_preview_export_safety_guard(self, scene: bpy.types.Scene) -> None:
         """Verify that scene_to_robot automatically restores rest pose before export."""
-        from linkforge.blender.adapters import blender_to_core
-        from linkforge.blender.adapters.context import BlenderContext
-        from linkforge.blender.utils.pose_preview import is_pose_preview_active
-
         props = get_robot_props(scene)
         assert props is not None
 
@@ -1524,7 +1527,14 @@ class TestPosePreviewEngine:
         lf_ctx = BlenderContext(bpy)
         robot, _res = blender_to_core.scene_to_robot(lf_ctx, dry_run=True)
 
-        # Safety guard should have restored rest pose automatically!
+        # Safety guard restores rest pose during translation, ensuring clean model,
+        # and seamlessly re-applies preview for the user afterwards!
+        assert robot.has_joint("joint1")
+        assert is_pose_preview_active(scene) is True
+        assert state.is_previewing is True
+
+        # Explicit rest pose restoration returns scene to rest
+        ensure_robot_rest_pose(scene)
         assert is_pose_preview_active(scene) is False
         assert state.is_previewing is False
 
@@ -1560,8 +1570,6 @@ class TestCollisionMatrixSampling:
         assert jp2 is not None
         jp2.limit_lower = -0.5
         jp2.limit_upper = 0.5
-
-        from linkforge.blender.logic.collision_matrix import compute_allowed_collision_matrix
 
         results = compute_allowed_collision_matrix(scene, sample_count=100)
         assert len(results) > 0
@@ -1790,3 +1798,109 @@ class TestSubgroupsAndPassiveJoints:
 
         # Check passive joint restored on joint empty
         assert jp1.is_passive is True
+
+
+class TestPlanningUXRefinements:
+    """Tests for seamless pose preview, ACM sample count, and bounding sphere transforms."""
+
+    def test_temporary_rest_pose_context_manager(self, scene: bpy.types.Scene) -> None:
+        """Verify temporary_rest_pose restores preview afterwards."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene)
+        arm = create_robot_link("arm_link", scene)
+        j1 = create_robot_joint("joint1", base, arm, scene, joint_type="revolute")
+
+        grp = props.planning_groups.add()
+        grp.name = "arm"
+        grp.base_link = base
+        grp.tip_link = arm
+
+        state = props.group_states.add()
+        state.name = "test_pose"
+        state.group = "arm"
+        jv = state.joint_values.add()
+        jv.name = "joint1"
+        jv.joint_obj = j1
+        jv.value = 0.75
+
+        # Manually activate preview
+        state.is_previewing = True
+        props.preview_active_state_name = "test_pose"
+        assert is_pose_preview_active(scene) is True
+
+        with temporary_rest_pose(scene):
+            # Inside block, rest pose should be active (preview cleared)
+            assert is_pose_preview_active(scene) is False
+
+        # Outside block, preview should be seamlessly restored
+        assert is_pose_preview_active(scene) is True
+        assert state.is_previewing is True
+        assert props.preview_active_state_name == "test_pose"
+
+    def test_acm_sample_count_property_and_override(self, scene: bpy.types.Scene) -> None:
+        """Verify ACM sample count defaults to 500, uses scene prop, and respects operator override."""
+        props = get_robot_props(scene)
+        assert props is not None
+        assert props.acm_sample_count == 500
+
+        base = create_robot_link("base_link", scene)
+        link1 = create_robot_link("link1", scene)
+        create_robot_joint("j1", base, link1, scene, joint_type="revolute")
+
+        props.acm_sample_count = 150
+        res = bpy.ops.linkforge.compute_collision_matrix()
+        assert res == {"FINISHED"}
+        assert len(props.disabled_collisions) > 0
+
+    def test_bounding_sphere_with_child_transform(self, scene: bpy.types.Scene) -> None:
+        """Verify child mesh matrix_local is factored into link bounding sphere."""
+        base = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
+        # Add collision child with offset
+        col_mesh = create_test_object("base_link_collision", None, scene)
+        col_mesh.type = "MESH"
+        col_mesh.parent = base
+        col_mesh.matrix_local[0][3] = 2.0  # offset X by 2 meters
+        col_mesh.bound_box = [
+            (-0.5, -0.5, -0.5),
+            (0.5, -0.5, -0.5),
+            (0.5, 0.5, -0.5),
+            (-0.5, 0.5, -0.5),
+            (-0.5, -0.5, 0.5),
+            (0.5, -0.5, 0.5),
+            (0.5, 0.5, 0.5),
+            (-0.5, 0.5, 0.5),
+        ]
+
+        center, radius = _get_bounding_sphere(base)
+        # Center should be shifted around X=2.0
+        assert abs(center[0] - 2.0) < 0.1
+        assert radius > 0.5
+
+    def test_compute_collision_matrix_rerun_updates_and_preserves_user_pairs(
+        self, scene: bpy.types.Scene
+    ) -> None:
+        """Verify re-running collision matrix updates existing pairs and preserves user-defined pairs."""
+        props = get_robot_props(scene)
+        assert props is not None
+
+        base = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
+        link1 = create_robot_link("link1", scene, with_visual=False, with_collision=False)
+        create_robot_joint("j1", base, link1, scene, joint_type="revolute")
+
+        # First run populates automated pair
+        assert bpy.ops.linkforge.compute_collision_matrix() == {"FINISHED"}
+        assert len(props.disabled_collisions) == 1
+
+        # Add a custom user pair
+        user_p = props.disabled_collisions.add()
+        user_p.name = "custom_user_pair"
+        user_p.link1_name = "base_link"
+        user_p.link2_name = "link1"
+        user_p.reason = "User"
+
+        # Re-run: should preserve User pair while re-evaluating
+        assert bpy.ops.linkforge.compute_collision_matrix() == {"FINISHED"}
+        reasons = [p.reason for p in props.disabled_collisions]
+        assert "User" in reasons

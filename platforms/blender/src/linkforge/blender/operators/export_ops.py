@@ -42,7 +42,7 @@ from ..properties.planning_props import has_planning_data
 from ..properties.robot_props import RobotPropertyGroup
 from ..properties.validation_props import ValidationResultProperty
 from ..utils.decorators import OperatorReturn, safe_execute
-from ..utils.pose_preview import ensure_robot_rest_pose
+from ..utils.pose_preview import temporary_rest_pose
 
 logger = get_logger(__name__)
 
@@ -69,7 +69,7 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
     # Operator properties for ExportHelper/ImportHelper
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")  # type: ignore
     filter_glob: bpy.props.StringProperty(  # type: ignore
-        default="*.urdf;*.xacro;*.xml",
+        default="*.urdf;*.xacro;*.srdf;*.xml",
         options={"HIDDEN"},
         maxlen=255,
     )
@@ -109,103 +109,102 @@ class LINKFORGE_OT_export_robot_model(Operator, ExportHelper):
         # Prepare meshes directory if exporting meshes
         output_path = Path(self.filepath)
 
-        # Restore robot rest pose if a pose preview is active to guarantee zero origin drift
-        ensure_robot_rest_pose(scene)
+        # Ensure rest pose is used during export and seamlessly restored afterwards
+        with temporary_rest_pose(scene):
+            # Ensure correct file extension matches format
+            if robot_props.export_format == FORMAT_XACRO and output_path.suffix != EXT_XACRO:
+                output_path = output_path.with_suffix(EXT_XACRO)
+            elif robot_props.export_format == FORMAT_URDF and output_path.suffix != EXT_URDF:
+                output_path = output_path.with_suffix(EXT_URDF)
 
-        # Ensure correct file extension matches format
-        if robot_props.export_format == FORMAT_XACRO and output_path.suffix != EXT_XACRO:
-            output_path = output_path.with_suffix(EXT_XACRO)
-        elif robot_props.export_format == FORMAT_URDF and output_path.suffix != EXT_URDF:
-            output_path = output_path.with_suffix(EXT_URDF)
+            # Update self.filepath to reflect the corrected path
+            self.filepath = str(output_path)
 
-        # Update self.filepath to reflect the corrected path
-        self.filepath = str(output_path)
+            # Always define meshes_dir so URDF can reference it
+            meshes_dir = output_path.parent / (robot_props.mesh_directory_name or "meshes")
 
-        # Always define meshes_dir so URDF can reference it
-        meshes_dir = output_path.parent / (robot_props.mesh_directory_name or "meshes")
+            logger.info(f"Exporting robot to: {output_path}")
+            logger.debug(f"Mesh directory: {meshes_dir}")
 
-        logger.info(f"Exporting robot to: {output_path}")
-        logger.debug(f"Mesh directory: {meshes_dir}")
+            if robot_props.validate_before_export:
+                try:
+                    robot_dry_run, conversion_result = blender_to_core.scene_to_robot(
+                        lf_context, meshes_dir=meshes_dir, dry_run=True
+                    )
+                except Exception as e:
+                    self.report({"ERROR"}, f"Failed to build robot model: {e}")
+                    return {"CANCELLED"}
 
-        if robot_props.validate_before_export:
+                validator = RobotValidator()
+                result = validator.validate(robot_dry_run)
+
+                # Merge conversion issues
+                result.issues.extend(conversion_result.issues)
+
+                if not result.is_valid:
+                    self.report(
+                        {"ERROR"},
+                        f"Cannot export: {result.error_count} validation error(s). "
+                        f"Run validation to see details.",
+                    )
+                    return {"CANCELLED"}
+
+            should_write_meshes = robot_props.export_meshes
             try:
-                robot_dry_run, conversion_result = blender_to_core.scene_to_robot(
-                    lf_context, meshes_dir=meshes_dir, dry_run=True
+                robot, _ = blender_to_core.scene_to_robot(
+                    lf_context,
+                    meshes_dir=meshes_dir,
+                    dry_run=not should_write_meshes,
                 )
+            except (LinkForgeError, RobotGeneratorError) as e:
+                # LinkForge specific errors are already user-friendly
+                self.report({"ERROR"}, f"Build failed: {e}")
+                return {"CANCELLED"}
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to build robot model: {e}")
+                # Catch unexpected internal crashes
+                self.report({"ERROR"}, f"Unexpected internal error: {e}")
+                logger.exception("Export build crashed")
                 return {"CANCELLED"}
 
-            validator = RobotValidator()
-            result = validator.validate(robot_dry_run)
-
-            # Merge conversion issues
-            result.issues.extend(conversion_result.issues)
-
-            if not result.is_valid:
-                self.report(
-                    {"ERROR"},
-                    f"Cannot export: {result.error_count} validation error(s). "
-                    f"Run validation to see details.",
+            # Generate URDF/XACRO
+            if robot_props.export_format == FORMAT_URDF:
+                urdf_generator = URDFGenerator(
+                    pretty_print=True,
+                    output_path=output_path,
+                    use_ros2_control=robot_props.use_ros2_control,
                 )
-                return {"CANCELLED"}
+                urdf_generator.write(robot, output_path, validate=False)
+                msg = f"Exported URDF to {output_path}"
+            else:  # XACRO
+                xacro_generator = XACROGenerator(
+                    pretty_print=True,
+                    advanced_mode=True,
+                    extract_materials=robot_props.xacro_extract_materials,
+                    extract_dimensions=robot_props.xacro_extract_dimensions,
+                    generate_macros=robot_props.xacro_generate_macros,
+                    split_files=robot_props.xacro_split_files,
+                    output_path=output_path,
+                    use_ros2_control=robot_props.use_ros2_control,
+                )
+                xacro_generator.write(robot, output_path, validate=False)
+                msg = f"Exported XACRO to {output_path}"
 
-        should_write_meshes = robot_props.export_meshes
-        try:
-            robot, _ = blender_to_core.scene_to_robot(
-                lf_context,
-                meshes_dir=meshes_dir,
-                dry_run=not should_write_meshes,
-            )
-        except (LinkForgeError, RobotGeneratorError) as e:
-            # LinkForge specific errors are already user-friendly
-            self.report({"ERROR"}, f"Build failed: {e}")
-            return {"CANCELLED"}
-        except Exception as e:
-            # Catch unexpected internal crashes
-            self.report({"ERROR"}, f"Unexpected internal error: {e}")
-            logger.exception("Export build crashed")
-            return {"CANCELLED"}
+            # Export companion SRDF if enabled and planning data exists
+            if getattr(robot_props, "use_srdf", False) is True and has_planning_data(robot_props):
+                srdf_path = output_path.with_suffix(EXT_SRDF)
+                if output_path.name.endswith(EXT_URDF_XACRO):
+                    base_stem = output_path.name.removesuffix(EXT_URDF_XACRO)
+                    srdf_path = output_path.parent / f"{base_stem}{EXT_SRDF}"
+                srdf_generator = SRDFGenerator(pretty_print=True, srdf_path=srdf_path)
+                srdf_generator.write(robot, srdf_path, validate=False)
+                msg += f" + SRDF ({srdf_path.name})"
 
-        # Generate URDF/XACRO
-        if robot_props.export_format == FORMAT_URDF:
-            urdf_generator = URDFGenerator(
-                pretty_print=True,
-                output_path=output_path,
-                use_ros2_control=robot_props.use_ros2_control,
-            )
-            urdf_generator.write(robot, output_path, validate=False)
-            msg = f"Exported URDF to {output_path}"
-        else:  # XACRO
-            xacro_generator = XACROGenerator(
-                pretty_print=True,
-                advanced_mode=True,
-                extract_materials=robot_props.xacro_extract_materials,
-                extract_dimensions=robot_props.xacro_extract_dimensions,
-                generate_macros=robot_props.xacro_generate_macros,
-                split_files=robot_props.xacro_split_files,
-                output_path=output_path,
-                use_ros2_control=robot_props.use_ros2_control,
-            )
-            xacro_generator.write(robot, output_path, validate=False)
-            msg = f"Exported XACRO to {output_path}"
+            if meshes_dir:
+                msg += f" (meshes in {meshes_dir})"
+            self.report({"INFO"}, msg)
+            logger.info(msg)
 
-        # Export companion SRDF if enabled and planning data exists
-        if getattr(robot_props, "use_srdf", False) is True and has_planning_data(robot_props):
-            srdf_path = output_path.with_suffix(EXT_SRDF)
-            if output_path.name.endswith(EXT_URDF_XACRO):
-                base_stem = output_path.name.removesuffix(EXT_URDF_XACRO)
-                srdf_path = output_path.parent / f"{base_stem}{EXT_SRDF}"
-            srdf_generator = SRDFGenerator(pretty_print=True, srdf_path=srdf_path)
-            srdf_generator.write(robot, srdf_path, validate=False)
-            msg += f" + SRDF ({srdf_path.name})"
-
-        if meshes_dir:
-            msg += f" (meshes in {meshes_dir})"
-        self.report({"INFO"}, msg)
-        logger.info(msg)
-
-        return {"FINISHED"}
+            return {"FINISHED"}
 
 
 class LINKFORGE_OT_validate_robot(Operator):

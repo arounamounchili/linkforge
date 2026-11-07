@@ -74,12 +74,12 @@ Group states store named joint configurations (such as `home`, `ready`, or `stow
 
 By default, MoveIt 2 checks for collisions between every pair of links. You can disable pairs that are guaranteed never to collide or that touch by design at a joint to accelerate planning by up to 10×.
 
-- **Generate Collision Matrix (ACM)** (`MOD_PHYSICS`): Runs a Monte Carlo forward-kinematics sampler across the robot's workspace to compute an Allowed Collision Matrix (ACM) in sub-second time. LinkForge samples random configurations within joint limits, computes forward-kinematics bounding spheres, and classifies link pairs into MoveIt 2 standard reasons:
+- **Generate Collision Matrix (ACM)** (`MOD_PHYSICS`): Runs a Monte Carlo forward-kinematics sampler across the robot's workspace using the configurable **Samples** input (default: 500) to compute an Allowed Collision Matrix (ACM) in sub-second time. LinkForge samples random configurations within joint limits, computes forward-kinematics bounding spheres, and classifies link pairs into MoveIt 2 standard reasons:
   - `Adjacent`: Links connected directly by a joint (or belonging to fixed joint clusters).
   - `Default`: Links that touch or collide in the default rest pose.
   - `Never`: Links that can never collide anywhere across reachable joint configurations.
   - `Always`: Links that collide in 100% of sampled configurations.
-  *(Optional: set `adjacent_only=True` in the operator pop-up if you wish to skip sampling and only disable adjacent kinematic links).*
+  *(Optional: set `adjacent_only=True` in the operator redo panel if you wish to skip sampling and only disable adjacent kinematic links).*
 - **Custom Pairs**: Click **Add (`+`)** to add an individual link pair (`Link 1` and `Link 2`) and assign a reason manually.
 
 ### 6. Passive Joints
@@ -87,7 +87,7 @@ By default, MoveIt 2 checks for collisions between every pair of links. You can 
 Unactuated joints (such as rocker-bogie differential pivots, passive casters, suspension linkages, or unpowered mimic fingers) should not be planned for by MoveIt 2 motion planners:
 
 1. Select the joint object in the 3D viewport or Outliner.
-2. In the **Joint** panel, check **Passive Joint (MoveIt 2)** (`DRIVER`).
+2. In the **Joint** panel, check **Passive Joint** (`DRIVER`).
 3. LinkForge automatically:
    - Excludes the passive joint from active planning group DOF and pose sliders.
    - Prevents command interfaces from being erroneously assigned to it in `ros2_control`.

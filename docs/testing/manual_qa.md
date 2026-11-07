@@ -248,7 +248,7 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   1. In `Planning > Disabled Collisions`, click `Generate Collision Matrix (ACM)`.
   2. Inspect the populated collision list: verify adjacent links are marked `Adjacent` and distant links with non-overlapping reach are marked `Never`.
   3. In `Planning > Planning Groups`, create a composite group with mode `Subgroups` and add two existing planning groups using `+`.
-  4. In `Joints`, select an unactuated joint (e.g. caster or mimic finger) and check `Passive Joint (MoveIt 2)`.
+  4. In `Joints`, select an unactuated joint (e.g. caster or mimic finger) and check `Passive Joint`.
   5. Export the robot and inspect `<robot_name>.srdf`.
 - [ ] **Expected**:
   1. `Generate Collision Matrix (ACM)` computes allowed collision pairs across sampled forward-kinematics poses.

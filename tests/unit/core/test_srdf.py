@@ -692,6 +692,18 @@ class TestSRDFGeneratorCoverage:
         assert root.find("link_sphere_approximation") is not None
         assert root.find("joint_property") is not None
 
+        # Verify section comments are present
+        assert "<!-- Virtual Joints -->" in xml_str
+        assert "<!-- Planning Groups -->" in xml_str
+        assert "<!-- Group States -->" in xml_str
+        assert "<!-- End Effectors -->" in xml_str
+        assert "<!-- Passive Joints -->" in xml_str
+        assert "<!-- Disabled Collisions -->" in xml_str
+        assert "<!-- Enabled Collisions -->" in xml_str
+        assert "<!-- Disabled Default Collisions -->" in xml_str
+        assert "<!-- Collision Spheres -->" in xml_str
+        assert "<!-- Joint Properties -->" in xml_str
+
 
 def test_srdf_parser_remaining_coverage(parser, tmp_path) -> None:
     """Verify all remaining branch paths in srdf_parser.py."""

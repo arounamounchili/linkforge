@@ -210,7 +210,13 @@ class TestSRDFPlanningIntegration:
         }
         # CRITICAL: URDF coordinate frames and joint origins must be 100% identical!
         assert preview_urdf.read_text() == rest_content
-        # Rest pose must be automatically restored after export
+        # Active viewport preview is seamlessly preserved for the user after clean export
+        assert state.is_previewing is True
+        assert lf_scene.preview_active_state_name == "bent_pose"
+        assert abs(j_arm.matrix_local.to_euler().z - 1.25) < 1e-3
+
+        # Exiting preview explicitly restores rest pose
+        assert bpy.ops.linkforge.restore_rest_pose() == {"FINISHED"}
         assert state.is_previewing is False
         assert lf_scene.preview_active_state_name == ""
         assert abs(j_arm.matrix_local.to_euler().z) < 1e-4

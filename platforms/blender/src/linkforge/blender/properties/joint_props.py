@@ -409,10 +409,10 @@ class JointPropertyGroup(PropertyGroup):
         default=False,
     )
 
-    # Passive joint (MoveIt 2 planning / unactuated joint)
+    # Passive joint (unactuated joint for semantic motion planning)
     is_passive: BoolProperty(  # type: ignore
         name="Passive Joint",
-        description="Designate this joint as unactuated / passive for MoveIt 2 SRDF planning",
+        description="Designate this joint as unactuated (passive). Excludes it from active planning group DOF and ros2_control command interfaces, and exports <passive_joint> in SRDF",
         default=False,
     )
 
