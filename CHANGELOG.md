@@ -5,6 +5,14 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0](https://github.com/arounamounchili/linkforge/compare/v1.5.5...v1.6.0) (2026-11-07)
+
+
+### 🚀 Features
+
+* **blender:** expose MoveIt 2 SRDF planning configuration panel ([a035e5b](https://github.com/arounamounchili/linkforge/commit/a035e5b7823af38e8e7f11ab2ec28453e96b36f8))
+* **planning:** refine MoveIt 2 SRDF planning UX, collision matrix controls, and export workflow ([ebd37fe](https://github.com/arounamounchili/linkforge/commit/ebd37febb85223d90f34e18f278b968f184945ae))
+
 ## [1.5.5](https://github.com/arounamounchili/linkforge/compare/v1.5.4...v1.5.5) (2026-10-02)
 
 
