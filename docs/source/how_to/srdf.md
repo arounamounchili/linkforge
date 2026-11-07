@@ -59,26 +59,27 @@ Group states store named joint configurations (such as `home`, `ready`, or `stow
 4. **Live 3D Pose Preview**:
    - Click **Preview Pose** (`HIDE_OFF`) to articulate the robot in the 3D viewport in real time.
    - Adjusting joint sliders immediately articulates the robot's physical links, with full support for revolute, prismatic, continuous, and recursive mimic joint propagation.
-   - A live `[Previewing]` badge appears in the poses list. Click **Preview Pose** again or **Rest Pose** (`LOOP_BACK`) to return the robot to its exact rest pose.
+   - A live `[Previewing]` badge appears in the poses list. Click **Preview Active** again or **Exit Preview** on the banner to return the robot to its exact rest pose.
 5. **Interactive Viewport Capture**:
    - Alternatively, use Blender's native transform tools (Rotate `R` / Grab `G`) to position the robot's joint empties visually in the 3D viewport.
-   - Click **Capture Scene Pose** (`CAMERA`): LinkForge extracts the current relative rotations and translations into the group state's joint sliders with one click.
+   - Click **Capture Scene Pose** (`CAMERA_DATA`): LinkForge extracts the current relative rotations and translations into the group state's joint sliders with one click, clamping to joint limits and projecting onto the exact 1-DOF joint axis.
 6. **Zero Transform Drift**:
    - All preview articulation uses an in-memory transform cache. Any URDF export or coordinate-frame calculation automatically restores the robot's base rest pose first, ensuring exported origin tags are never corrupted.
 7. In the **Active Joints** sub-box:
    - **Sync** (`FILE_REFRESH`): Updates the joint list if you modified the group's joints or kinematic chain.
    - **Reset** (`LOOP_BACK`): Resets all joint sliders to `0.000` (clamped to the nearest valid joint limit).
+   - **Capture** (`CAMERA_DATA`): Captures current 3D viewport joint angles into the pose sliders.
 
 ### 5. Disabled Collisions & Sampled Collision Matrix (ACM)
 
 By default, MoveIt 2 checks for collisions between every pair of links. You can disable pairs that are guaranteed never to collide or that touch by design at a joint to accelerate planning by up to 10×.
 
-- **Generate Matrix (ACM)** (`MOD_PHYSICS`): Runs a Monte Carlo forward-kinematics sampler across the robot's workspace to compute an Allowed Collision Matrix (ACM). LinkForge samples random configurations within joint limits, computes forward-kinematics bounding spheres, and classifies link pairs into MoveIt 2 standard reasons:
-  - `Adjacent`: Links connected by a joint.
-  - `Default`: Links that collide in the default rest pose.
-  - `Never`: Links that can never collide anywhere across the joint limits (disjoint workspaces).
-  - `Always`: Links that collide in every sampled valid configuration.
-- **Adjacent Only** (`FILE_REFRESH`): Heuristic operator that disables collisions only for directly connected parent–child links.
+- **Generate Collision Matrix (ACM)** (`MOD_PHYSICS`): Runs a Monte Carlo forward-kinematics sampler across the robot's workspace to compute an Allowed Collision Matrix (ACM) in sub-second time. LinkForge samples random configurations within joint limits, computes forward-kinematics bounding spheres, and classifies link pairs into MoveIt 2 standard reasons:
+  - `Adjacent`: Links connected directly by a joint (or belonging to fixed joint clusters).
+  - `Default`: Links that touch or collide in the default rest pose.
+  - `Never`: Links that can never collide anywhere across reachable joint configurations.
+  - `Always`: Links that collide in 100% of sampled configurations.
+  *(Optional: set `adjacent_only=True` in the operator pop-up if you wish to skip sampling and only disable adjacent kinematic links).*
 - **Custom Pairs**: Click **Add (`+`)** to add an individual link pair (`Link 1` and `Link 2`) and assign a reason manually.
 
 ### 6. Passive Joints
@@ -95,7 +96,7 @@ Unactuated joints (such as rocker-bogie differential pivots, passive casters, su
 ### 7. Exporting & Importing Companion SRDF
 
 - **Exporting**: Adding any planning group, end effector, group state, or disabled collision automatically enables **Include SRDF** in the **Validate & Export** panel. Clicking **Export Robot** writes both `<robot_name>.urdf` (or `<robot_name>.xacro`) and `<robot_name>.srdf` to the same directory in one click.
-- **Automatic Companion Import**: When importing a `.urdf` or `.xacro` file via **Forge > Import Robot Model**, LinkForge automatically searches for a companion `.srdf` file (beside the URDF, or in standard `config/` or `srdf/` directories) and populates the **Planning** panel.
+- **Automatic Companion Import**: When importing a `.urdf` or `.xacro` file via **Forge > Import Robot Model**, the file dialog includes an **Import Companion SRDF** option (enabled by default). When checked, LinkForge automatically searches for a companion `.srdf` file (beside the URDF, or in standard `config/` or `srdf/` directories) and populates the **Planning** panel with clear status feedback. Unchecking it imports purely the URDF/XACRO model in isolation.
 - **Manual SRDF Import**: In the **Planning** panel, click **Import SRDF...** (`IMPORT`) to load any `.srdf` file from disk directly onto your scene's robot. LinkForge matches links and joints to scene objects, preserves unresolved references without data loss, and supports full undo (`Ctrl+Z`).
 - **Purge Planning Data**: Click the **Trash** (`TRASH`) icon button next to **Import SRDF...** to clear all planning groups, end effectors, poses, disabled collisions, and virtual joint settings at once.
 

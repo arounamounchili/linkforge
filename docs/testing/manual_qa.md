@@ -205,25 +205,27 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   2. In `Planning Groups`, click `+` to add an `arm` group in `Kinematic Chain` mode, pick `Base Link` and `Tip Link`, and verify the compact `Active Joints` status row updates with a green checkmark. Add a second `hand` group in `Joint Collection` mode and use the `+` menu to add a gripper joint.
   3. In `End Effectors`, click `+` to attach `hand` to `Parent Link` and `Parent Group` (`arm`).
   4. In `Group States`, click `+` to create a `home` pose for `arm`, and drag the joint sliders across their `[lower, upper]` bounds.
-  5. In `Disabled Collisions`, click `Auto-Disable Adjacent Links`.
+  5. In `Disabled Collisions`, click `Generate Collision Matrix (ACM)`.
 - [ ] **Expected**:
   - All `UIList` rows display live link/joint summaries and dynamically update if links or joints are renamed in the Outliner.
   - Joint sliders in `Group States` clamp values to the joint's defined `[limit_lower, limit_upper]` range.
   - `Include SRDF` in the `Validate & Export` panel is automatically enabled, and exporting writes a valid companion `[robot_name].srdf` alongside `[robot_name].urdf` / `.xacro`.
 
-### `TC-SRDF-02`: Manual SRDF Import & Scene Matching
-* Verify manual SRDF import, empty-scene protection, and graceful mismatch handling.
+### `TC-SRDF-02`: Manual & Companion SRDF Import
+* Verify manual and companion SRDF import, companion toggle, empty-scene protection, and graceful mismatch handling.
 - [ ] **Action**:
   1. Open a blank Blender file (no robot in scene). Verify the `Planning` panel displays `No robot in scene` and `Create links in Forge panel to start`.
   2. Create or import a robot model. Verify the `Planning` panel unlocks and shows `Import SRDF...`.
-  3. Click `Import SRDF...` and select an SRDF file.
-  4. Click the `Trash` (`TRASH`) icon button next to `Import SRDF...` to purge all planning data.
+  3. When importing via `Import Robot Model`, verify the file dialog properties sidebar includes `Import Companion SRDF` (checked by default). Test importing with it unchecked (pure URDF) vs checked (URDF + SRDF).
+  4. In the Planning panel, click `Import SRDF...` and select an SRDF file.
+  5. Click the `Trash` (`TRASH`) icon button next to `Import SRDF...` to purge all planning data.
 - [ ] **Expected**:
   1. Operator polls false when scene is empty; no crashes occur.
   2. When a robot is present, planning groups, virtual joints, poses, and disabled collisions are populated.
-  3. Any links/joints in the SRDF that do not exist in the scene are preserved as string fallbacks, and an informative warning reports the count of unresolved references without discarding data.
-  4. Pressing `Ctrl+Z` cleanly undoes the import.
-  5. Clicking `Trash` clears all planning configuration and resets `Include SRDF` in `Validate & Export`.
+  3. Unchecking `Import Companion SRDF` skips loading any `.srdf` on disk; leaving it checked loads the companion file and displays status info.
+  4. Any links/joints in the SRDF that do not exist in the scene are preserved as string fallbacks, and an informative warning reports the count of unresolved references without discarding data.
+  5. Pressing `Ctrl+Z` cleanly undoes the import.
+  6. Clicking `Trash` clears all planning configuration and resets `Include SRDF` in `Validate & Export`.
 
 ### `TC-PLAN-03`: Visual Pose Preview, Interactive Viewport Capture & Rest Guard
 * Verify non-destructive 3D viewport articulation, pose capture, and export rest safety guard.
@@ -231,25 +233,25 @@ Automated unit tests and headless integration tests cannot fully simulate Blende
   1. Create or import an articulated robot arm with at least 2 revolute joints.
   2. In `Planning > Group States`, create a pose and click `Preview Pose` (`HIDE_OFF`).
   3. Drag the joint sliders in the panel and observe the 3D robot moving in the viewport in real time.
-  4. Manually rotate a joint empty in the 3D viewport with Blender's rotate tool (`R`), then click `Capture Scene Pose` (`CAMERA`).
-  5. Click `Rest Pose` (`LOOP_BACK`) to return the robot to its rest pose.
-  6. While `Preview Pose` is active with an articulated pose, click `Export Robot` in `Validate & Export`.
+  4. Manually rotate a joint empty in the 3D viewport with Blender's rotate tool (`R`), then click `Capture` (`CAMERA_DATA`).
+  5. Click `Exit Preview` on the preview banner (or toggle `Preview Active` off) to return the robot to its rest pose.
+  6. While `Preview Pose` is active with an articulated pose, click `Export Robot Model` in `Validate & Export`.
 - [ ] **Expected**:
   1. Actuating sliders articulates links in the 3D viewport without altering the base coordinate frames on disk.
-  2. `Capture Scene Pose` reads viewport transforms and populates slider values accurately.
-  3. Clicking `Rest Pose` returns all links to their base rest positions.
+  2. `Capture` reads viewport transforms, clamps to joint limits, and populates slider values accurately.
+  3. Exiting preview returns all links to their base rest positions.
   4. Exporting while preview is active triggers the safety guard, restoring rest pose first so the exported URDF origin tags are never corrupted or drifted.
 
 ### `TC-PLAN-04`: Sampled Collision Matrix (ACM), Subgroups & Passive Joints
 * Verify Monte Carlo collision matrix generator, composite subgroups, and passive joint tags.
 - [ ] **Action**:
-  1. In `Planning > Disabled Collisions`, click `Generate Matrix (ACM)`.
+  1. In `Planning > Disabled Collisions`, click `Generate Collision Matrix (ACM)`.
   2. Inspect the populated collision list: verify adjacent links are marked `Adjacent` and distant links with non-overlapping reach are marked `Never`.
   3. In `Planning > Planning Groups`, create a composite group with mode `Subgroups` and add two existing planning groups using `+`.
   4. In `Joints`, select an unactuated joint (e.g. caster or mimic finger) and check `Passive Joint (MoveIt 2)`.
   5. Export the robot and inspect `<robot_name>.srdf`.
 - [ ] **Expected**:
-  1. `Generate Matrix (ACM)` computes allowed collision pairs across sampled forward-kinematics poses.
+  1. `Generate Collision Matrix (ACM)` computes allowed collision pairs across sampled forward-kinematics poses.
   2. Composite subgroup outputs `<group name="..."> <group name="..."/> </group>`.
   3. Passive joint outputs `<passive_joint name="..."/>` and is excluded from active group DOF.
 
