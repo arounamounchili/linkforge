@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-from linkforge.core.constants import (
+from .core.constants import (
     EXT_SRDF,
     EXT_URDF,
     EXT_URDF_XACRO,
