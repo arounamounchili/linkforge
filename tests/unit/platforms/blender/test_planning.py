@@ -24,6 +24,10 @@ from linkforge.blender.core.models.srdf import (
 )
 from linkforge.blender.core.validation import ValidationResult
 from linkforge.blender.logic.asynchronous_builder import AsynchronousRobotBuilder
+from linkforge.blender.logic.collision_matrix import (
+    _get_bounding_sphere,
+    compute_allowed_collision_matrix,
+)
 from linkforge.blender.operators import planning_ops
 from linkforge.blender.operators.export_ops import LINKFORGE_OT_export_robot_model
 from linkforge.blender.operators.import_ops import LINKFORGE_OT_import_robot_model
@@ -62,6 +66,7 @@ from linkforge.blender.properties.planning_props import (
     GroupStateJointValueProperty,
     GroupStateProperty,
     PlanningGroupProperty,
+    _safe_redirect_pointer,
     find_robot_root_link,
     get_planning_joint_name,
     get_planning_link_name,
@@ -80,10 +85,21 @@ from linkforge.blender.properties.planning_props import (
     update_use_virtual_joint,
     update_virtual_joint_child_link,
 )
+from linkforge.blender.utils.pose_preview import (
+    ensure_robot_rest_pose,
+    get_rest_matrix,
+    is_pose_preview_active,
+    temporary_rest_pose,
+)
 from linkforge.blender.utils.property_helpers import (
     get_joint_props,
     get_robot_props,
 )
+
+try:
+    from mathutils import Matrix
+except ImportError:
+    Matrix = None  # type: ignore[assignment,misc]
 
 from tests.blender_test_utils import (
     create_robot_joint,
@@ -416,8 +432,6 @@ class TestPlanningPropsHelpers:
         update_collision_pair_links(dc, bpy.context)
 
     def test_safe_redirect_pointer_gui_timer(self, scene) -> None:
-        from linkforge.blender.properties.planning_props import _safe_redirect_pointer
-
         class DummyOwner:
             target = None
 
@@ -1384,10 +1398,6 @@ class TestPosePreviewEngine:
 
     def test_pose_preview_toggle_articulation_and_rest(self, scene: bpy.types.Scene) -> None:
         """Verify that enabling pose preview articulates scene joints and rest restores them."""
-        from linkforge.blender.utils.pose_preview import (
-            is_pose_preview_active,
-        )
-
         props = get_robot_props(scene)
         assert props is not None
 
@@ -1449,9 +1459,6 @@ class TestPosePreviewEngine:
 
     def test_pose_preview_capture_scene_pose(self, scene: bpy.types.Scene) -> None:
         """Verify reading joint values directly from 3D viewport transforms into Group State."""
-        from linkforge.blender.utils.pose_preview import get_rest_matrix
-        from mathutils import Matrix
-
         props = get_robot_props(scene)
         assert props is not None
 
@@ -1484,13 +1491,6 @@ class TestPosePreviewEngine:
 
     def test_pose_preview_export_safety_guard(self, scene: bpy.types.Scene) -> None:
         """Verify that scene_to_robot automatically restores rest pose before export."""
-        from linkforge.blender.adapters import blender_to_core
-        from linkforge.blender.adapters.context import BlenderContext
-        from linkforge.blender.utils.pose_preview import (
-            ensure_robot_rest_pose,
-            is_pose_preview_active,
-        )
-
         props = get_robot_props(scene)
         assert props is not None
 
@@ -1570,8 +1570,6 @@ class TestCollisionMatrixSampling:
         assert jp2 is not None
         jp2.limit_lower = -0.5
         jp2.limit_upper = 0.5
-
-        from linkforge.blender.logic.collision_matrix import compute_allowed_collision_matrix
 
         results = compute_allowed_collision_matrix(scene, sample_count=100)
         assert len(results) > 0
@@ -1807,11 +1805,6 @@ class TestPlanningUXRefinements:
 
     def test_temporary_rest_pose_context_manager(self, scene: bpy.types.Scene) -> None:
         """Verify temporary_rest_pose restores preview afterwards."""
-        from linkforge.blender.utils.pose_preview import (
-            is_pose_preview_active,
-            temporary_rest_pose,
-        )
-
         props = get_robot_props(scene)
         assert props is not None
 
@@ -1863,8 +1856,6 @@ class TestPlanningUXRefinements:
 
     def test_bounding_sphere_with_child_transform(self, scene: bpy.types.Scene) -> None:
         """Verify child mesh matrix_local is factored into link bounding sphere."""
-        from linkforge.blender.logic.collision_matrix import _get_bounding_sphere
-
         base = create_robot_link("base_link", scene, with_visual=False, with_collision=False)
         # Add collision child with offset
         col_mesh = create_test_object("base_link_collision", None, scene)
