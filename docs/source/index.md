@@ -101,7 +101,7 @@ urdf_xml = builder.export_urdf()
 :link-type: doc
 
 Start here if you are new to LinkForge. Step-by-step lessons to build your first robot.
-^^^
+
 - [Visual: Building a Diff-Drive Robot](tutorials/building_diff_drive)
 - [Programmatic: Building a Diff-Drive Robot](tutorials/building_diff_drive_programmatic)
 :::
@@ -111,7 +111,7 @@ Start here if you are new to LinkForge. Step-by-step lessons to build your first
 :link-type: doc
 
 Practical guides to help you achieve specific goals or solve problems.
-^^^
+
 - [Adding Sensors](how_to/add_sensors)
 - [Control Dashboard](how_to/control_dashboard)
 - [MoveIt 2 Planning (SRDF)](how_to/srdf)
@@ -122,7 +122,7 @@ Practical guides to help you achieve specific goals or solve problems.
 :link-type: doc
 
 Deep dives into the architecture, theory, and design of LinkForge.
-^^^
+
 - [Architecture Guide](explanation/ARCHITECTURE)
 - [Data Model](explanation/data_model)
 :::
@@ -132,7 +132,7 @@ Deep dives into the architecture, theory, and design of LinkForge.
 :link-type: doc
 
 Technical descriptions, API documentation, and specifications.
-^^^
+
 - [Python API Reference](reference/api/index)
 - [URDF Specification](reference/index)
 :::
