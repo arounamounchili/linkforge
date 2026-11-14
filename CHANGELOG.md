@@ -5,6 +5,13 @@ All notable changes to LinkForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1](https://github.com/arounamounchili/linkforge/compare/v1.6.0...v1.6.1) (2026-11-14)
+
+
+### 📚 Documentation
+
+* document GLB coordinate convention, refresh v1.6.0 docs, and split CI link checks ([b218ca2](https://github.com/arounamounchili/linkforge/commit/b218ca24d1ec10223e97bccf10d44c70523a69f2))
+
 ## [1.6.0](https://github.com/arounamounchili/linkforge/compare/v1.5.5...v1.6.0) (2026-11-07)
 
 
