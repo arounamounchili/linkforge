@@ -41,6 +41,13 @@ This guide addresses common challenges in the LinkForge-to-Simulation workflow, 
 
 ##  Asset & Export Management
 
+### GLB visual mesh is rotated 90° in RViz2 or Gazebo
+**Cause**: LinkForge exports `.glb` files in **+Y up** per the glTF 2.0 specification (which is why Blender re-imports them cleanly and Foxglove, Isaac Sim, and web viewers render them upright), whereas `.stl` collision meshes and `.obj` visual meshes export in **+Z up**. Older RViz2 builds (such as standard ROS 2 Jazzy) and Gazebo (`gz-rendering`) load glTF assets without converting Y-up to ROS's Z-up frame.
+**Solutions**:
+- **Use OBJ for RViz2/Gazebo**: Set **Mesh Format** to `OBJ` in the export panel; OBJ exports in Z-up with materials.
+- **Offset in URDF/Xacro**: If you prefer `.glb`, add a +90° X-axis rotation (`rpy="1.570796 0 0"`) to the `<visual><origin>` element.
+- **Use a newer RViz2 build**: Newer upstream RViz2 releases (Rolling and newer) automatically handle glTF's +Y-up convention on load.
+
 ### Invisible Robot or Broken Meshes in Gazebo
 **Cause**: Incorrect mesh export paths or missing package metadata.
 **Solutions**:

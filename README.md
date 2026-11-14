@@ -101,7 +101,7 @@ srdf_xml = base_builder.export_srdf()
 
 ### Blender Visual Designer (Full Platform)
 
-Design robots visually in Blender - all physics validation and export pipelines are backed by the same `linkforge-core` engine. See the **[Installation](#-installation)** section below to set it up.
+Design robots visually in Blender - all physics validation and export pipelines are backed by the same `linkforge-core` engine. See the **[Installation](#installation)** section below to set it up.
 
 ## Technical Specifications
 
@@ -114,7 +114,7 @@ Design robots visually in Blender - all physics validation and export pipelines 
 | **Planning** | ✅ Full | MoveIt 2 SRDF Panel (Virtual Joint, Planning Groups, End Effectors, Group States, Collision Matrix) |
 | **Validation** | ✅ Pro | Kinematic linter catches topology errors, disconnected links, non-physical inertias |
 | **Fidelity** | ✅ Pro | **Round-Trip Precision** for concrete URDF & SRDF (preserves geometry, limits, and vendor tags) |
-| **Formats** | ✅ Full | URDF 1.0 (lossless round-trip), XACRO (evaluated & compiled), **SRDF (MoveIt 2)** |
+| **Formats** | ✅ Full | URDF 1.0 (lossless round-trip), XACRO (evaluated & compiled), **SRDF (MoveIt 2)**, Meshes (`OBJ`, `STL`, `GLB`) |
 | **Headless** | ✅ Full | Zero-dependency `linkforge-core` runs in CI/CD, HPC clusters, RL training loops |
 | **Composition** | ✅ Full | Modular assembly via `attach()` with automatic prefix-based namespace resolution |
 | **Physics** | ✅ Full | Scientifically accurate inertia tensor calculation for primitives and arbitrary meshes |
@@ -173,27 +173,12 @@ just develop  # Links workspace into Blender for live development
 3. Select your file and edit the robot structure normally.
 4. Export back via the **Validate & Export** panel.
 
-## Examples & Documentation
+## Documentation
 
-### Example Files
-
-Complete examples in the `examples/` directory:
-
-| File | Description |
-| :--- | :--- |
-| `urdf/mobile_robot.urdf` | Simple mobile robot base |
-| `urdf/diff_drive_robot.urdf` | Differential drive robot with wheels |
-| `urdf/quadruped_robot.urdf` | 4-legged robot demonstrating complex kinematic chains |
-
-Programmatic tutorials in the documentation:
-- **Parametric Robotic Arm** - Build a fully-jointed manipulator from mathematical definitions using `RobotBuilder`.
-- **Modular Differential Drive** - Compose a chassis with automated wheel spacing, track calculations, and SRDF collision matrices.
-
-### Documentation Links
-
-- **[User Guide](https://linkforge.readthedocs.io/en/latest/tutorials/index.html)** - Comprehensive tutorials and getting started.
-- **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** - Technical reference for the `linkforge-core` library.
+- **[User Guide](https://linkforge.readthedocs.io/en/latest/tutorials/index.html)** - Tutorials and getting started.
+- **[API Reference](https://linkforge.readthedocs.io/en/latest/reference/api/index.html)** - Technical reference for `linkforge-core`.
 - **[Architecture Guide](https://linkforge.readthedocs.io/en/latest/explanation/ARCHITECTURE.html)** - System design, Hexagonal Core, and data flow.
+- **[Example Robots](examples/)** - Sample URDF and XACRO files for testing imports.
 - **[CHANGELOG](CHANGELOG.md)** - Version history.
 
 ## Roadmap
@@ -211,27 +196,10 @@ Programmatic tutorials in the documentation:
 - [ ] **v2.x Target**: Native MuJoCo / MJCF compilation (Kinematics, actuators, sites, and contact dynamics).
 - [ ] **v2.x Target**: Native NVIDIA Isaac Sim / OpenUSD target (Zero-dependency ASCII USDA with `UsdPhysics` and `PhysxSchema`).
 
-## Development
-
-```bash
-# 1. Install 'just' command runner (see Contributing Guide for OS-specific instructions)
-# 2. Clone repository
-git clone https://github.com/arounamounchili/linkforge.git
-cd linkforge
-
-# 3. Install dependencies and setup venv
-just install
-
-# 4. Link to Blender for live development
-just develop
-```
-
-For complete instructions on testing, linting, and building, see our [Contributing Guide](CONTRIBUTING.md).
-
 ## Contributing
 
 We welcome contributions! LinkForge is a community-driven project.
-- Review our [Contributing Guide](CONTRIBUTING.md).
+- Review our [Contributing Guide](CONTRIBUTING.md) for development setup (`just install`, `just develop`), testing, and linting.
 - Check our [Architecture](ARCHITECTURE.md) to understand the internals.
 - Join the conversation on [GitHub Discussions](https://github.com/arounamounchili/linkforge/discussions).
 
@@ -250,7 +218,7 @@ For third-party component licenses, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOT
 
 ## Our Contributors
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/en/reference/emoji-key/)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
@@ -282,8 +250,3 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/allcontributors.org) specification. Contributions of any kind welcome!
-
-<p align="center">
-  <b>Made with ❤️ for roboticists worldwide</b><br/>
-  <i>Precision engineering meets creative modeling.</i>
-</p>

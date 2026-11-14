@@ -107,5 +107,5 @@ sequenceDiagram
 *   **Linear Scaling**: Inertia and Topology checks scale linearly with vertex/triangle count ($O(V+T)$).
 *   **Resource Guards**: Hard limits on XML nesting (2000 levels) and file sizes (100MB) to prevent resource exhaustion attacks.
 
-**Last Updated:** 2026-09-16
-**Version:** 1.5.3
+**Last Updated:** 2026-11-07
+**Version:** 1.6.0

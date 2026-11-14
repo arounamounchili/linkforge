@@ -80,10 +80,10 @@ LinkForge uses a **Ports & Adapters (Hexagonal) Architecture** to keep the physi
        │  Parsers · Generators · Validation     │
        └────────────────────────────────────────┘
             |                        |
-       [URDF / XACRO]        [SRDF / MJCF / SDF]
+       [URDF / XACRO / SRDF]  [MJCF / USD (Planned)]
 ```
 
-- **The Core** (`linkforge-core`): Zero-dependency Python. Contains all physics logic, the IR data models, parsers, generators, and the validation engine.
+- **The Core** (`linkforge-core`): Lightweight pure-Python library (only PyYAML). Contains all physics logic, the IR data models, parsers, generators, and the validation engine.
 - **The Platform Layer**: Thin adapters that translate host-specific data (e.g., Blender mesh geometry, object properties) into Core IR models.
 - **The Headless Strategy**: Because the core has zero GUI dependencies, it runs directly in CI pipelines, HPC clusters, and ML training loops for programmatic robot generation and domain randomization.
 

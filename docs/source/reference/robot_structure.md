@@ -30,7 +30,7 @@ This document provides a technical specification of how LinkForge maps Blender o
 | **Box** | `size: (x, y, z)` | Defined as half-extents or full size based on export. |
 | **Cylinder** | `radius, length` | Axis of rotation is aligned with Z (standard URDF). |
 | **Sphere** | `radius` | Pure mathematical sphere. |
-| **Mesh** | `filename, scale` | Supports `.stl`, `.obj`, and `.dae`. |
+| **Mesh** | `filename, scale` | Export: `.stl`, `.obj`, `.glb`. Import: `.stl`, `.obj`, `.glb`/`.gltf` (legacy `.dae` on Blender 4.x only). |
 
 
 ## Geometry Roles and Types
@@ -75,6 +75,10 @@ Joints in LinkForge operate differently than standard Blender parent-child relat
 
 ### 3. Coordinate Systems
 Both Blender and URDF use **Z-up, right-handed** coordinate systems. LinkForge uses **direct 1:1 coordinate mapping** (no rotations applied during import/export).
+
+:::{note}
+**Mesh Format Conventions:** `.stl` and `.obj` meshes are exported directly in **Z-up**. `.glb` meshes follow the glTF 2.0 specification (**+Y up**), which ensures proper round-tripping in Blender and compatibility with Foxglove, Isaac Sim, and web viewers. See [Troubleshooting](../how_to/troubleshooting.md#glb-visual-mesh-is-rotated-90-in-rviz2-or-gazebo) if using `.glb` with unpatched RViz2 or Gazebo.
+:::
 
 ## Data Integrity & Status
 When working with imported robots, LinkForge displays status labels on the Link Empty to communicate data safety:
