@@ -32,7 +32,6 @@ jobs:
             --exclude "https://www.conventionalcommits.org/"
             --exclude "https://github.com/[^/]+$"
             --exclude "https://github.com/.*/commits.*"
-            --exclude "https://allcontributors.org/docs/en/emoji-key"
             --exclude-path "docs/source/.*[a-z0-9]$"
             README.md docs/
           fail: true

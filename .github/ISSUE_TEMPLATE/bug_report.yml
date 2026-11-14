@@ -12,7 +12,7 @@ body:
     id: linkforge_version
     attributes:
       label: "LinkForge Version"
-      placeholder: "e.g. 1.5.5, main, or git commit"
+      placeholder: "e.g. 1.6.0, main, or git commit"
     validations:
       required: true
   - type: input
