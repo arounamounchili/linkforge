@@ -6,10 +6,9 @@ We provide security updates and patches for the following versions:
 
 | Version | Supported |
 | :--- | :--- |
-| **1.5.x** | :white_check_mark: Full Support |
-| **1.4.x** | :white_check_mark: Critical Fixes |
-| **1.3.x** | :white_check_mark: Critical Fixes |
-| **< 1.3.0** | :x: Unsupported |
+| **1.6.x** | :white_check_mark: Full Support |
+| **1.5.x** | :white_check_mark: Critical Fixes |
+| **< 1.5.0** | :x: Unsupported |
 
 ---
 
@@ -19,7 +18,7 @@ LinkForge processes external, third-party robot descriptions and meshes. Our sec
 
 * **Resource Sandboxing**: Resource paths (`package://` and relative file paths) are strictly jailed to declared package roots, preventing path traversal attacks.
 * **Safe Expression Evaluation**: XACRO mathematical expressions are evaluated within a restricted scope without access to arbitrary Python built-ins or system commands.
-* **Hardened XML Ingestion**: Defense against XML entity expansion (e.g. Billion Laughs attacks) and quadratic blowout.
+* **Bounded XML Ingestion**: File/buffer size limits (`max_file_size`) and nesting depth limits (`MAX_XML_DEPTH`) in URDF/SRDF parsing to prevent resource exhaustion from malformed inputs.
 
 ---
 
@@ -42,4 +41,4 @@ Instead, please report it privately through one of the following channels:
 ### Response Timeline
 * **Initial Acknowledgment**: Within 48 hours.
 * **Triage & Severity Assessment**: Within 5 business days.
-* **Coordinated Disclosure**: Fixes will be prepared in a private fork and published alongside an official release and CVE attribution (unless you prefer anonymity).
+* **Coordinated Disclosure**: Fixes will be prepared in a private fork and published alongside an official release and CVE attribution when applicable (unless you prefer anonymity).

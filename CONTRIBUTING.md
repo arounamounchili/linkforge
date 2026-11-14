@@ -492,7 +492,7 @@ If you've contributed (code, docs, ideas, etc.), you can ask the bot to add you 
 @all-contributors please add @username for <contribution-type>
 ```
 
-Replace `<contribution-type>` with one of the [valid contribution types](https://allcontributors.org/docs/en/emoji-key) (e.g., `code`, `doc`, `bug`, etc.).
+Replace `<contribution-type>` with one of the [valid contribution types](https://allcontributors.org/en/reference/emoji-key/) (e.g., `code`, `doc`, `bug`, etc.).
 
 ### Academic Recognition
 For profound core contributions (e.g., advanced mathematical noise models, novel simulator integrations, or deep physics engine refinements), we may invite you to be listed as a co-author in the `CITATION.cff` file and the official documentation. This ensures your high-level domain expertise is properly attributed in future academic research using LinkForge.
